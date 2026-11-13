@@ -1069,7 +1069,7 @@ fn run_docs(spec: &Value, env: &Env<'_>) -> Result<Value, CallError> {
                             "text".into(),
                             Value::from(String::from_utf8_lossy(&bytes).into_owned()),
                         );
-                        out.insert("copy".into(), info_out(copy.as_ref()));
+                        out.insert("copy".into(), info_out(copy.as_deref()));
                     }
                     DocsOpenRecovery::Original => {
                         out.insert("action".into(), text("original"));
@@ -1131,7 +1131,7 @@ fn run_docs(spec: &Value, env: &Env<'_>) -> Result<Value, CallError> {
 
 /// `hex` as the bytes it spells
 fn hex_bytes(hex: &str) -> Result<Vec<u8>, CallError> {
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return Err(bad("an even hex string"));
     }
     (0..hex.len())

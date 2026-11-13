@@ -196,11 +196,10 @@ impl<V> Ordered<V> {
     }
 
     fn entry(&mut self, id: i64, make: impl FnOnce() -> V) -> &mut V {
-        if !self.map.contains_key(&id) {
+        self.map.entry(id).or_insert_with(|| {
             self.order.push(id);
-            self.map.insert(id, make());
-        }
-        self.map.get_mut(&id).expect("just set")
+            make()
+        })
     }
 
     fn get(&self, id: i64) -> Option<&V> {

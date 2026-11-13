@@ -74,7 +74,7 @@ pub enum DocsOpenRecovery {
     Original,
     Restore {
         bytes: Vec<u8>,
-        copy: Option<RecoveryCopyInfo>,
+        copy: Option<Box<RecoveryCopyInfo>>,
     },
 }
 
@@ -462,7 +462,7 @@ impl<'s> DocsRecovery<'s> {
                 let Some(bytes) = self.store.read_copy(&identity) else {
                     return Ok(DocsOpenRecovery::Original);
                 };
-                let copy = self.store.copy_info(&identity)?;
+                let copy = self.store.copy_info(&identity)?.map(Box::new);
                 self.store.mark_copy_loaded(&identity)?;
                 return Ok(DocsOpenRecovery::Restore { bytes, copy });
             }
@@ -480,7 +480,7 @@ impl<'s> DocsRecovery<'s> {
         Ok(match result {
             RecoveryOpenResult::Restore { bytes, copy } => DocsOpenRecovery::Restore {
                 bytes,
-                copy: Some(*copy),
+                copy: Some(copy),
             },
             RecoveryOpenResult::Original => DocsOpenRecovery::Original,
         })

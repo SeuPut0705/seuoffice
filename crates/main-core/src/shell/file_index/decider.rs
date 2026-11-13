@@ -241,8 +241,12 @@ pub trait JevTransport {
     ) -> Result<JevResponse, String>;
 
     /// `sleep(ms, signal)`: `Err` when the signal aborts first
-    fn sleep(&mut self, ms: f64, abort_at_ms: f64) -> Result<(), ()>;
+    fn sleep(&mut self, ms: f64, abort_at_ms: f64) -> Result<(), Aborted>;
 }
+
+/// The signal of a [`JevTransport`] call aborted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Aborted;
 
 fn clip(text: &str, n: usize) -> String {
     text.chars().take(n).collect()
@@ -677,7 +681,7 @@ pub fn evaluate(
             }
             transport
                 .sleep(math_max(0.0, wait), deadline)
-                .map_err(|()| DecisionError::of("cancelled"))?;
+                .map_err(|Aborted| DecisionError::of("cancelled"))?;
             continue;
         }
         if r.status != 200.0 {

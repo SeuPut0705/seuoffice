@@ -193,6 +193,7 @@ impl SearchReranker {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn rerank(
         &mut self,
         store: &FileIndexStore,

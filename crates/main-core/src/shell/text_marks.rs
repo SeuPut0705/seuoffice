@@ -122,7 +122,7 @@ pub fn find_ranges<S: AsRef<str>>(
 }
 
 fn merge_ranges(mut ranges: Vec<Range>) -> Vec<Range> {
-    ranges.sort_by(|a, b| a.0.cmp(&b.0));
+    ranges.sort_by_key(|a| a.0);
     let mut merged: Vec<Range> = Vec::new();
     for r in ranges {
         match merged.last_mut() {

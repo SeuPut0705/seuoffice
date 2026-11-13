@@ -691,7 +691,7 @@ impl FileIndexer {
                 self.apply(store, &st, Extracted::NameOnly, IndexStatus::Cloud);
                 let task = self.drain_task.as_mut().expect("a drain is running");
                 task.name_only_run += 1;
-                if task.name_only_run % NAME_ONLY_BATCH == 0 {
+                if task.name_only_run.is_multiple_of(NAME_ONLY_BATCH) {
                     task.wait = DrainWait::Immediate;
                     host.set_immediate();
                     return;

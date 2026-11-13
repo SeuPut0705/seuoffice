@@ -246,7 +246,11 @@ impl JevTransport for Scripted {
         })
     }
 
-    fn sleep(&mut self, _ms: f64, _abort_at_ms: f64) -> Result<(), ()> {
+    fn sleep(
+        &mut self,
+        _ms: f64,
+        _abort_at_ms: f64,
+    ) -> Result<(), crate::shell::file_index::decider::Aborted> {
         Ok(())
     }
 }
@@ -1025,16 +1029,16 @@ fn indexer_steps(
                 }
             }
             "message" => {
-                if worker >= 1 && worker <= world.spawned {
-                    if let Some(message) = step.get("msg").and_then(worker_response_of) {
-                        indexer
-                            .on_worker_message(world, store, message)
-                            .map_err(fail)?;
-                    }
+                if (1..=world.spawned).contains(&worker)
+                    && let Some(message) = step.get("msg").and_then(worker_response_of)
+                {
+                    indexer
+                        .on_worker_message(world, store, message)
+                        .map_err(fail)?;
                 }
             }
             "error" | "exit" => {
-                if worker >= 1 && worker <= world.spawned {
+                if (1..=world.spawned).contains(&worker) {
                     indexer.on_worker_drop(world, store, worker).map_err(fail)?;
                 }
             }

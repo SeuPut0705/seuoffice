@@ -1782,14 +1782,13 @@ fn shell_call(args: &[Value], cx: &mut Context) -> Answer {
                                 &mut watched.borrow_mut(),
                                 Box::new(move |id| {
                                     tabs_env.log.push(vec![text("tabIdFor"), num(id)]);
-                                    let found = tabs_env
+                                    tabs_env
                                         .world
                                         .borrow()
                                         .get("tabs")
                                         .and_then(|tabs| tabs.get(number_to_string(id)))
                                         .and_then(Value::as_str)
-                                        .map(str::to_owned);
-                                    found
+                                        .map(str::to_owned)
                                 }),
                                 on_event,
                             )

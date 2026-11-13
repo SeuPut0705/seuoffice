@@ -83,8 +83,8 @@
   {
     "name": "the ranges are not sorted by start",
     "file": "main-core/src/shell/text_marks.rs",
-    "find": "ranges.sort_by(|a, b| a.0.cmp(&b.0));",
-    "replace": "ranges.sort_by(|a, b| b.0.cmp(&a.0));",
+    "find": "ranges.sort_by_key(|a| a.0);",
+    "replace": "ranges.sort_by_key(|a| std::cmp::Reverse(a.0));",
     "fn": ["text-marks.findRanges", "text-marks.markText"]
   },
   {
@@ -275,8 +275,8 @@
   {
     "name": "a range start is excluded",
     "file": "main-core/src/shell/file_index/tokenize.rs",
-    "find": "cp >= lo && cp <= hi",
-    "replace": "cp > lo && cp <= hi",
+    "find": "(lo..=hi).contains(&cp)",
+    "replace": "(lo + 1..=hi).contains(&cp)",
     "fn": ["tokenize.isCjk", "tokenize.tokenize"]
   },
   {

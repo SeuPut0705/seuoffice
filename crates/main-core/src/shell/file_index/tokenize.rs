@@ -41,7 +41,7 @@ const CJK_RANGES: [(u32, u32); 14] = [
 ];
 
 pub fn is_cjk(cp: u32) -> bool {
-    CJK_RANGES.iter().any(|&(lo, hi)| cp >= lo && cp <= hi)
+    CJK_RANGES.iter().any(|&(lo, hi)| (lo..=hi).contains(&cp))
 }
 
 /// `RunKind`
