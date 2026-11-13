@@ -184,10 +184,11 @@ impl KbServices for FakeKb {
         let none = Value::Null;
         let parsed = self.entry(&self.case["parsed"], path).unwrap_or(&none);
         let text = parsed["text"].as_str();
-        if parsed["ok"].as_bool() == Some(true) && parsed["kind"].as_str() == Some("text") {
-            if let Some(text) = text {
-                return Ok(text.to_owned());
-            }
+        if parsed["ok"].as_bool() == Some(true)
+            && parsed["kind"].as_str() == Some("text")
+            && let Some(text) = text
+        {
+            return Ok(text.to_owned());
         }
         Err(parsed["error"].as_str().map(str::to_owned))
     }

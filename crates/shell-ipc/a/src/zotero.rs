@@ -280,9 +280,11 @@ pub struct NumberedRequestIds;
 /// case's Zotero to settle, and keeps its connection off the pool the probe
 /// waits on)
 #[cfg(feature = "probe")]
-pub struct ProbeConnector(
-    pub Arc<dyn Fn(Arc<dyn Workers>) -> Arc<dyn ZoteroConnector> + Send + Sync>,
-);
+pub struct ProbeConnector(pub Arc<MakeConnector>);
+
+/// Makes a connector from the shell's workers
+#[cfg(feature = "probe")]
+pub type MakeConnector = dyn Fn(Arc<dyn Workers>) -> Arc<dyn ZoteroConnector> + Send + Sync;
 
 #[cfg(feature = "probe")]
 fn numbered_request_ids() -> RequestIds {

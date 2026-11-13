@@ -591,22 +591,22 @@ impl DriveClient for FakeDrive {
 
     fn load(&self) {
         *self.loading.lock().unwrap() = Some(thread::current().id());
-        if self.client {
-            if let Some(token) = self.vault.load() {
-                let adopted = {
-                    let mut conn = self.conn.lock().unwrap();
-                    if conn.refresh.is_none() {
-                        conn.refresh = Some(token);
-                        conn.persisted = true;
-                        true
-                    } else {
-                        false
-                    }
-                };
-                if adopted {
-                    self.emit();
-                    self.fetch_account();
+        if self.client
+            && let Some(token) = self.vault.load()
+        {
+            let adopted = {
+                let mut conn = self.conn.lock().unwrap();
+                if conn.refresh.is_none() {
+                    conn.refresh = Some(token);
+                    conn.persisted = true;
+                    true
+                } else {
+                    false
                 }
+            };
+            if adopted {
+                self.emit();
+                self.fetch_account();
             }
         }
         *self.loading.lock().unwrap() = None;
