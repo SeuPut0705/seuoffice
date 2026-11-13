@@ -447,6 +447,14 @@ The HWP/HWPX engine in vendor/rhwp-core is rhwp, Copyright (c) 2025-2026
 Edward Kim, MIT License (vendor/rhwp-core/LICENSE), with the IeumOffice
 patches in vendor/rhwp-core/patches.
 
+The CEF runtime of the desktop shell, crates/vendor/tauri-runtime-cef, is
+tauri-runtime-cef 3.0.0-alpha.7, Copyright 2019-2024 Tauri Programme within The
+Commons Conservancy, licensed Apache-2.0 OR MIT (crates/vendor/tauri-runtime-cef/
+LICENSE-APACHE-2.0 and LICENSE-MIT; the crates.io archive ships neither, they are
+the Tauri project's own copies). seuoffice patches it to let the application take
+over the page's context menu: crates/vendor/tauri-runtime-cef/patches and
+VENDORED.md.
+
 seuoffice does not include GenOffice's ee/ directory or anything under the
 GenOffice Enterprise License.
 

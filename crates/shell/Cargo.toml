@@ -73,7 +73,8 @@ shell-ipc-w = { path = "../shell-ipc/w" }
 shell-ipc-d1 = { path = "../shell-ipc/d1" }
 shell-ipc-d2 = { path = "../shell-ipc/d2" }
 main-core = { path = "../main-core" }
-# the AI runtime's JS errors (host/net/http.rs)
+# the JSON values main-core's dialog and save-image ports take (host/menu/context.rs)
+# and the AI runtime's JS errors (host/net/http.rs)
 jscompat = { path = "../jscompat" }
 
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
@@ -111,6 +112,8 @@ shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
 
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
+# the context-menu hook batch M needs (crates/vendor/tauri-runtime-cef/VENDORED.md)
+tauri-runtime-cef = { path = "../vendor/tauri-runtime-cef" }
 
 [profile.release]
 opt-level = 3
