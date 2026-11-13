@@ -288,12 +288,11 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
             let unknown = format!("unknown trigger {name}");
             let args = call["args"].clone();
             let (answer, drained) = {
+                let (tx, rx) = mpsc::channel::<Reply>();
                 let reply = run_on(core.as_ref(), move || {
-                    let slot: Rc<RefCell<Option<Reply>>> = Rc::default();
-                    let then = {
-                        let slot = slot.clone();
-                        Box::new(move |r| *slot.borrow_mut() = Some(r))
-                    };
+                    let then = Box::new(move |r| {
+                        let _ = tx.send(r);
+                    });
                     let known = PROVIDED.with(|p| {
                         let p = p.borrow();
                         let provided = p.as_ref().expect("the case's provided");
@@ -304,11 +303,21 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                         //           &name, ViewId(view), &args, &services, provided, then),
                         //       _ => false,
                         //   }
-                        let _ = (&name, view, &args, &services, provided, then);
-                        false
+                        match name.split_once('/').map(|(batch, _)| batch) {
+                            Some("d2") => shell_ipc_d2::probe_trigger(
+                                &name,
+                                ViewId(view),
+                                &args,
+                                &services,
+                                provided,
+                                then,
+                            ),
+                            _ => false,
+                        }
                     });
-                    known.then(|| slot.borrow_mut().take())
+                    known.then_some(())
                 });
+                let reply = reply.map(|()| rx.recv_timeout(CALL_TIMEOUT).ok());
                 let drained = drain(&core, &ui, &tracked);
                 let answer = match reply {
                     None => json!({ "thrown": unknown }),
