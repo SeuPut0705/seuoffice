@@ -26,7 +26,7 @@ describe('stand-in-boxes.json (tools/build-stand-in-boxes.py)', () => {
   })
 
   it('overrides and size-adjust fold into the bundled box (Aptos GO = Carlito x 1.063)', () => {
-    expect(data.bundled['carlito go']).toEqual({ ascent: 0.75, descent: 0.25 })
+    expect(data.bundled['seuoffice sans go']).toEqual({ ascent: 0.75, descent: 0.25 })
     expect(data.bundled['aptos go']).toEqual({ ascent: 0.7988, descent: 0.2663 })
     expect(data.bundled.caladea).toEqual({ ascent: 0.95, descent: 0.222 })
     expect(data.installed['times new roman']).toEqual({ ascent: 0.8911, descent: 0.2163 })

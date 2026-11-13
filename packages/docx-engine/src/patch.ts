@@ -5,7 +5,6 @@ import {
   cleanMoveRangeMarkers,
   resolvePropChangeXml,
 } from './revision-xml'
-import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 import {
   applyImageWrap,
   generateParagraphXml,
@@ -123,7 +122,7 @@ import {
   overWithheld,
   parseEntry,
   runsText,
-  withRedactNamespace,
+  withRedactRoot,
 } from './withheld'
 import {
   buildContentControlXml,
@@ -2114,61 +2113,10 @@ export async function saveDocx(
   // The same for the "withheld from the model" marker. An undeclared prefix is
   // not a warning, it is a parse error: Word and LibreOffice both offer to
   // repair the file and drop the run that carried it, which loses the reader's
-  // mark and hands the span back to the model on the next open.
-  //
-  // `mc:Ignorable` is the mechanism OOXML provides for exactly this — an
-  // element in a namespace the consumer does not know is skipped rather than
-  // treated as a schema violation, so the label rides along without the
-  // border's run failing a strict validator.
-  //
-  // A root that already declares `xmlns:mc` (every Word-saved file does) must
-  // not get a second one: a duplicate attribute is the same parse error this
-  // block exists to prevent. Its existing Ignorable list is extended instead.
-  const docRoot = findStartTag(newDocumentXml, 'w:document')
-  if (
-    newDocumentXml.includes(`<${REDACT_EL}`) &&
-    docRoot &&
-    !docRoot.text.includes(`xmlns:${REDACT_PREFIX}=`)
-  ) {
-    let next = docRoot.text
-    if (!/xmlns:mc=/.test(next)) {
-      next = next.replace(
-        '<w:document',
-        '<w:document xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"',
-      )
-    }
-    next = next.replace('<w:document', `<w:document xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
-    const ignorable = /mc:Ignorable="([^"]*)"/.exec(next)
-    if (ignorable) {
-      if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
-        const existing = (ignorable[1] ?? '').trim()
-        next = next.replace(
-          /mc:Ignorable="[^"]*"/,
-          `mc:Ignorable="${existing ? `${existing} ${REDACT_PREFIX}` : REDACT_PREFIX}"`,
-        )
-      }
-    } else {
-      next = next.replace('<w:document', `<w:document mc:Ignorable="${REDACT_PREFIX}"`)
-    }
-    // a Word re-save drops every element whose namespace it does not process
-    // unless the root asks for it to be preserved verbatim — and a root that
-    // already preserves other elements needs ours added to that list, the
-    // same way the Ignorable list above is extended
-    const preserve = /mc:PreserveElements="([^"]*)"/.exec(next)
-    if (preserve) {
-      if (!new RegExp(`\\b${REDACT_EL}\\b`).test(preserve[1] ?? '')) {
-        const existing = (preserve[1] ?? '').trim()
-        next = next.replace(
-          /mc:PreserveElements="[^"]*"/,
-          `mc:PreserveElements="${existing ? `${existing} ${REDACT_EL}` : REDACT_EL}"`,
-        )
-      }
-    } else {
-      next = next.replace('<w:document', `<w:document mc:PreserveElements="${REDACT_EL}"`)
-    }
-    newDocumentXml =
-      newDocumentXml.slice(0, docRoot.start) + next + newDocumentXml.slice(docRoot.end)
-  }
+  // mark and hands the span back to the model on the next open. The root also
+  // lists the mark as ignorable and preserved (withRedactRoot), as every other
+  // story part written here does.
+  newDocumentXml = withRedactRoot(newDocumentXml)
 
   if (newDocumentXml.includes(' w16du:dateUtc=')) {
     const root = findStartTag(newDocumentXml, 'w:document')
@@ -2365,7 +2313,7 @@ export async function saveDocx(
     if (name === docPath) {
       out.file(name, newDocumentXml, { date: entry.date })
     } else if (hfPart) {
-      out.file(name, hfPart.xml, { date: entry.date })
+      out.file(name, withRedactRoot(hfPart.xml), { date: entry.date })
     } else if (hfRelsOut.has(name)) {
       out.file(name, hfRelsOut.get(name)!, { date: entry.date })
     } else if (name === relsPath && relsChanged && relsXml) {
@@ -2399,9 +2347,16 @@ export async function saveDocx(
     } else if (name === CORE_PROPS_PATH && coreXmlOut !== null) {
       out.file(name, coreXmlOut, { date: entry.date })
     } else if (options.partXml && ownValue(options.partXml, name) !== undefined) {
-      out.file(name, options.partXml[name], { date: entry.date })
+      out.file(name, withRedactRoot(options.partXml[name]!), { date: entry.date })
     } else if (options.partBinary && ownValue(options.partBinary, name) !== undefined) {
       out.file(name, options.partBinary[name], { base64: true, date: entry.date })
+    } else if (/^word\/[^/]+\.xml$/.test(name)) {
+      // a story part kept as it was still carries its marks into the copy:
+      // its root says so (withRedactRoot), as the parts written anew do
+      const xml = await entry.async('string')
+      const marked = withRedactRoot(xml)
+      if (marked === xml) out.file(name, await entry.async('uint8array'), { date: entry.date })
+      else out.file(name, marked, { date: entry.date })
     } else {
       out.file(name, await entry.async('uint8array'), { date: entry.date })
     }
@@ -2410,7 +2365,7 @@ export async function saveDocx(
     out.file(media.path, media.base64, { base64: true })
   }
   for (const part of hfParts) {
-    if (!zip.file(part.path)) out.file(part.path, part.xml)
+    if (!zip.file(part.path)) out.file(part.path, withRedactRoot(part.xml))
   }
   for (const [path, xml] of hfRelsOut) {
     if (!zip.file(path)) out.file(path, xml)
@@ -2605,7 +2560,7 @@ function withWatermarkNs(openTag: string): string {
     'xmlns:o="urn:schemas-microsoft-com:office:office"',
     'xmlns:w10="urn:schemas-microsoft-com:office:word"',
   ]) {
-    if (!out.includes(ns.split('=')[0] + '=')) out = out.replace(/>$/, ` ${ns}>`)
+    if (!new RegExp(`\\s${ns.split('=')[0]}\\s*=`).test(out)) out = out.replace(/>$/, ` ${ns}>`)
   }
   return out
 }
@@ -2941,9 +2896,8 @@ function buildCommentsXml(
         }
       : {}),
   })
-  return withRedactNamespace(
+  return withRedactRoot(
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`,
-    'w:comments',
   )
 }
 

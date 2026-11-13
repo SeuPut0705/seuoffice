@@ -35,7 +35,7 @@ import type {
   ZoteroRendererRequest,
   MergeOutputRequest,
 } from '../shared/ipc'
-import type { DocFormat } from '../shared/open-file'
+import type { DocFormat, MarkedExportFormat } from '../shared/open-file'
 import type { ProjectApi } from '@seuoffice/project-store'
 import { installDropOpenBridge } from '@seuoffice/electron-utils/drop-open'
 
@@ -183,7 +183,8 @@ const api: DesktopApi = {
   ) => ipcRenderer.invoke('docs:save-as-pick', defaultName, sourcePath, format, offerExports),
   saveDocxAs: (path: string, data: ArrayBuffer, sourcePath?: string | null) =>
     ipcRenderer.invoke('docs:save-as', path, data, sourcePath ?? null),
-  confirmMarkedOdt: () => ipcRenderer.invoke('docs:confirm-marked-odt'),
+  confirmMarkedExport: (format: MarkedExportFormat) =>
+    ipcRenderer.invoke('docs:confirm-marked-export', format),
   materializeDocx: (data: ArrayBuffer) => ipcRenderer.invoke('docs:materialize-docx', data),
   captureRect: (rect: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke('docs:capture-rect', rect),

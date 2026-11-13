@@ -76,12 +76,6 @@ jobs:
       - name: Check dependency licenses
         run: npm run licenses
 
-      - name: Check Rust dependency licenses (xlsx-sidecar)
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
-        with:
-          command: check licenses
-          manifest-path: apps/sheets/native/xlsx-engine/Cargo.toml
-
       - name: Check formatting
         env:
           FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -193,6 +187,60 @@ jobs:
         run: |
           npm run fixtures -w @seuoffice/sheets
           npm run compat -w @seuoffice/sheets
+
+  rust-licenses:
+    # seuoffice: every Rust graph that ships is held to deny.toml (licences and
+    # bans): the xlsx sidecar the desktop app runs, its WASI build the web app
+    # loads, and the rhwp engine compiled into vendor/rhwp-core with its patches
+    # and the features vendor/rhwp-core/package.json names. crates/, once it is
+    # in the tree, is checked against its own deny.toml.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          toolchain: stable
+
+      - name: Install cargo-deny
+        # pinned: 0.20 takes --config before the subcommand, not after `check`
+        run: cargo install cargo-deny --locked --version 0.20.2
+
+      - name: rhwp source at the pinned commit with the vendor patches
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      # each check runs whether or not an earlier one failed, so one run lists
+      # every graph that breaks the policy
+      - name: xlsx sidecar
+        if: ${{ !cancelled() }}
+        run: cargo deny --config deny.toml --manifest-path apps/sheets/native/xlsx-engine/Cargo.toml --all-features --locked check licenses bans
+
+      - name: xlsx sidecar for the web (xlsx-wasm)
+        if: ${{ !cancelled() }}
+        run: cargo deny --config deny.toml --manifest-path apps/sheets/native/xlsx-wasm/Cargo.toml --all-features --locked check licenses bans
+
+      # what ships is the wasm32 build: rhwp's native-only dependencies (ureq,
+      # skia) and its test dependencies are not in rhwp_bg.wasm
+      - name: rhwp engine (vendor/rhwp-core)
+        if: ${{ !cancelled() }}
+        run: |
+          tag=$(node -p "require('./vendor/rhwp-core/package.json').rhwp.tag")
+          features=$(node -p "(require('./vendor/rhwp-core/package.json').rhwp.features ?? []).join(',')")
+          set -- --manifest-path "crates/.rhwp-source/$tag/Cargo.toml" --target wasm32-unknown-unknown --exclude-dev
+          if [ -n "$features" ]; then set -- "$@" --no-default-features --features "$features"; fi
+          cargo deny --config deny.toml "$@" check licenses bans
+
+      - name: crates/ (the Rust engines), when this tree has them
+        if: ${{ !cancelled() && hashFiles('crates/Cargo.toml') != '' }}
+        run: cargo deny --config crates/deny.toml --manifest-path crates/Cargo.toml --all-features check licenses bans
 
   e2e:
     # 22.04, not -latest: 24.04's AppArmor hardening blocks Electron renderer

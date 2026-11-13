@@ -27,6 +27,8 @@ export const en = {
   appExportPdfProgress: 'Exporting PDF…',
   appExportPdfDone: 'Exported PDF: {path}',
   appExportPdfFailed: 'PDF export failed: {error}',
+  appExportRefusedHidden:
+    'Nothing was exported: this deck has content hidden from the AI, and a copy would hold it with no hidden-from-AI mark. Export it from the File menu, where you can choose.',
   appStatusBgAppliedAll: 'Background color applied to all slides',
   appStatusThemeApplied: 'Applied theme "{name}"',
   appStatusThemeApplyFailed: 'Failed to apply theme: {error}',

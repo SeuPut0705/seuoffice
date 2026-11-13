@@ -54,6 +54,9 @@ _scratch-*
 
 # Copied from the repo root by scripts/seuoffice-prepack.mjs when a seuoffice package is packed
 /packages/embed/LICENSE
+/packages/embed/LICENSE-APACHE
 /packages/embed/NOTICE
 /apps/web/LICENSE
+/apps/web/LICENSE-APACHE
 /apps/web/NOTICE
+/apps/web/THIRD-PARTY-NOTICES.txt

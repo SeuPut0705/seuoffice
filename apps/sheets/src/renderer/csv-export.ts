@@ -266,7 +266,7 @@ export async function handleExportCsv(ctx: CsvExportContext, targetPath?: string
     // Before anything is serialized or asked: a CSV records no mark, so the
     // person chooses. Only an explicit "without the marks" writes the values.
     if (csvWouldExposeWithheld(ctx.redactions(), sheet.getSheetId(), sheet.getSheetName())) {
-      const choice = await window.desktopApi.askWithheldCsv()
+      const choice = await window.desktopApi.askWithheldExport('CSV')
       if (choice === 'xlsx') {
         ctx.requestSaveAs()
         return

@@ -1,16 +1,17 @@
 import { clearHiddenMarks, docxHoldsHiddenContent } from '@seuoffice/docx-engine'
 
 /**
- * An ODT cannot hold the mark that hides content from AI: a marked run written
- * into one reads as plain words to every reader. Every write of an ODT from
- * the Word editor goes through here with the docx the editor serialized (body,
- * headers, footers, comments, notes and hidden pictures all sit in it): what
- * comes back is what may be written, or the reason it may not.
+ * An ODT, a PDF, page images, HTML, Markdown and a Hangul file cannot hold the
+ * mark that hides content from AI: a marked run written into one reads as
+ * plain words to every reader. Every write of such a file from the Word editor
+ * goes through here with the docx the editor serialized (body, headers,
+ * footers, comments, notes and hidden pictures all sit in it): what comes back
+ * is what may be written, or the reason it may not.
  */
 export type MarkedOdtChoice = 'docx' | 'clear' | 'cancel'
 
-export type OdtWritePlan =
-  /** write this docx as ODT: the editor's own when nothing is hidden, else the marks-cleared copy */
+export type MarkedWritePlan =
+  /** write from this docx: the editor's own when nothing is hidden, else the marks-cleared copy */
   | { kind: 'write'; docx: Uint8Array }
   /** marked content: the person asked for Word instead */
   | { kind: 'save-as-docx' }
@@ -19,12 +20,13 @@ export type OdtWritePlan =
 
 /**
  * `ask` shows the choice; null when nobody can be asked (an automatic save, an
- * MCP-driven save): marked content is then declined, never written.
+ * MCP-driven save, a headless or automation export): marked content is then
+ * declined, never written.
  */
-export async function planOdtWrite(
+export async function planMarkedWrite(
   docx: Uint8Array,
   ask: (() => Promise<MarkedOdtChoice>) | null,
-): Promise<OdtWritePlan> {
+): Promise<MarkedWritePlan> {
   if (!(await docxHoldsHiddenContent(docx))) return { kind: 'write', docx }
   if (!ask) return { kind: 'declined' }
   const choice = await ask()

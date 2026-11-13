@@ -104,7 +104,7 @@ import type { AiToolCapabilities, MediaToolErrorCode } from '@seuoffice/ai-searc
 import type { HeadlessExportTarget } from '@seuoffice/electron-utils/headless-export'
 import type { FaceVerticalMetrics } from '@seuoffice/font-metrics'
 import type { AiPanelPrefs, FontFamilyInfo } from '@seuoffice/ui'
-import type { DocFormat, SaveAsKind } from './open-file'
+import type { DocFormat, MarkedExportFormat, SaveAsKind } from './open-file'
 
 export type { FaceVerticalMetrics }
 
@@ -572,9 +572,12 @@ export interface DesktopApi {
     format: DocFormat,
     offerExports?: boolean,
   ): Promise<{ path: string; kind?: SaveAsKind; dir?: string; pdfPath?: string } | null>
-  /** Content hidden from AI cannot be written into an ODT: asks the person (one
-   *  message box) to save as Word instead, or to clear the marks and write the ODT */
-  confirmMarkedOdt(): Promise<'docx' | 'clear' | 'cancel'>
+  /** Content hidden from AI cannot be written into `format` (an ODT, PDF, page
+   *  images, HTML, Markdown or Hangul file): asks the person (one message box)
+   *  to save as Word instead, or to write the file without the marks ('clear';
+   *  for an ODT the marks are cleared in the written copy). The document keeps
+   *  its marks either way. Closing the box is 'cancel'. */
+  confirmMarkedExport(format: MarkedExportFormat): Promise<'docx' | 'clear' | 'cancel'>
   /** Save As, step two: write to the path step one returned (nothing else is
    *  accepted), docx or ODT bytes as its extension says. sourcePath: the
    *  document's current path — a docx write uses its desired next-save password

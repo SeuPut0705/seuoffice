@@ -687,10 +687,11 @@ const desktopApi: DesktopApi = {
     }
     return result
   },
-  async askWithheldCsv() {
-    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.csvWithheldChoice)
+  async askWithheldExport(format) {
+    if (format !== 'CSV' && format !== 'PDF') throw new Error('Invalid export format.')
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.withheldExportChoice, format)
     if (result !== 'xlsx' && result !== 'export' && result !== 'cancel') {
-      throw new Error('Invalid CSV choice response.')
+      throw new Error('Invalid export choice response.')
     }
     return result
   },
