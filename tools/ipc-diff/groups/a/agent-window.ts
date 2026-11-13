@@ -31,6 +31,11 @@
  * cases: the manager's own list is not reachable from here), and a closed window
  * is not reachable on either side (no case destroys a view).
  *
+ * A session folder is made in `temp` with a random name and removed in the background once
+ * its session stops (on both sides), so a case that starts a session ends with the stop of
+ * each session and the trigger `a/agent-settle`, which waits until no `ieum-agent-*` folder is
+ * left: the case's folder is compared after its last call.
+ *
  * Not covered here: opening the window (`home:open-agent-window`
  * is W's channel; the window is open from the start when `hosts.a.agent.window`
  * names its view), the cards the template buttons need (they come with the
@@ -47,10 +52,12 @@ import {
   setProjectSkills,
 } from '../../../../apps/shell/src/main/agent/project-skills.ts'
 import { normalizeAgentPrefs } from '../../../../apps/shell/src/shared/agent-api.ts'
+import { normalizeAiSettings } from '../../../../packages/ai-provider/src/legacy-settings.ts'
 import type { Call, Case, Group, LoadContext, TriggerContext, View } from '../../types.ts'
 import { entryStatements } from './lib/entry-source.ts'
 import os from 'node:os'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
+import { setTimeout as sleep } from 'node:timers/promises'
 
 const REAL_HOMEDIR = os.homedir
 const REAL_TMPDIR = os.tmpdir
@@ -97,9 +104,9 @@ function numberAgentUuids(): void {
   Object.defineProperty(crypto, 'randomUUID', {
     value: () => {
       const stack = new Error().stack ?? ''
-      return stack.includes('agent-sessions') || stack.includes('agent-window')
-        ? countedUuid()
-        : real()
+      // the settings file's temporary name draws one too, below the window's start: not counted
+      const own = stack.includes('agent-sessions') || stack.includes('agent-window')
+      return own && !stack.includes('app-settings') ? countedUuid() : real()
     },
     writable: true,
     configurable: true,
@@ -181,7 +188,7 @@ async function load(cx: LoadContext): Promise<void> {
     currentLang: () => hostsA.lang ?? 'ko',
     currentTheme: () => world.theme ?? 'system',
     sharedSubscriptionStatuses: () => world.statuses ?? {},
-    readStoredAiSettings: () => world.settings ?? {},
+    readStoredAiSettings: () => normalizeAiSettings(world.settings ?? {}),
     normalizeAgentPrefs,
     readAppSettings,
     writeAgentPrefs,
@@ -314,6 +321,14 @@ const triggers: NonNullable<Group['triggers']> = {
     const [sessionId, projectRoot, address] = args as [string, string, string]
     await skillTools(cx, view, sessionId, projectRoot).proposeInstall(address)
   },
+  // a stopped session's folder is removed in the background: wait until none is left
+  'a/agent-settle': async (cx) => {
+    const temp = join(cx.dir, 'temp')
+    for (let i = 0; i < 100; i++) {
+      if (!readdirSync(temp).some((name) => name.startsWith('ieum-agent-'))) return
+      await sleep(50)
+    }
+  },
 }
 
 // ---- cases ---------------------------------------------------------------------------------
@@ -370,6 +385,15 @@ const proposeInstall = (address: string): Call => ({
   view: 2,
   args: [SESSION, '$DIR/project', address],
 })
+/** the end of a case that made a session folder: the stopped session's folder is gone */
+const settle: Call = {
+  channel: 'a/agent-settle',
+  kind: 'trigger',
+  name: 'a/agent-settle',
+  view: 2,
+  args: [],
+}
+const SECOND_SESSION = '00000000-0000-4000-8000-000000000002'
 const listed = [
   { id: 'user:summarize', source: 'user', name: 'summarize', title: 'Summarize', owned: true },
   { id: 'project:review', source: 'project', name: 'review', title: 'Review', owned: false },
@@ -398,6 +422,8 @@ const cases: Case[] = [
         targetId: 'summarize',
       }),
       proposeInstall('https://github.com/example/skills/tree/main/review'),
+      call('agent-window:stop', [SESSION]),
+      settle,
     ],
   },
   {
@@ -421,6 +447,8 @@ const cases: Case[] = [
         body: 'b',
         targetId: 'project:review',
       }),
+      call('agent-window:stop', [SESSION]),
+      settle,
     ],
   },
   {
@@ -570,6 +598,7 @@ const cases: Case[] = [
       call('agent-window:send', [SESSION, 'from another page'], 3),
       call('agent-window:stop', [SESSION]),
       call('agent-window:send', [SESSION, 'after the stop']),
+      settle,
     ],
   },
   {
@@ -586,6 +615,7 @@ const cases: Case[] = [
       call('agent-window:send', [SESSION, 'hello']),
       call('agent-window:open-file', [SESSION, 'report.docx']),
       call('agent-window:stop', [SESSION]),
+      settle,
     ],
   },
   {
@@ -625,6 +655,8 @@ const cases: Case[] = [
       call('agent-window:set-project-skills', ['$DIR/project', true]),
       call('agent-window:stop', [SESSION]),
       start('claude-code', 'trust-project'),
+      call('agent-window:stop', [SECOND_SESSION]),
+      settle,
     ],
   },
   {

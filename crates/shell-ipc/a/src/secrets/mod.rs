@@ -181,9 +181,11 @@ mod tests {
 
     /// A unit test never reads the person's keychain item or DPAPI key: the
     /// storage of a test build has no key, whatever its place names
+    // a test build has no OS key store: it does not compile otherwise
+    const _: () = assert!(!OS_KEY_STORE);
+
     #[test]
     fn a_test_build_never_reaches_the_os_key_store() {
-        assert!(!OS_KEY_STORE);
         let storage = OsSafeStorage::new(KeyPlace {
             app_name: "seuoffice".into(),
             user_data: std::env::temp_dir().join("shell-a-no-keychain"),

@@ -52,6 +52,8 @@ import type { Call, Case, Group, LoadContext, View } from '../../types.ts'
 import { entryStatements, runWith } from './lib/entry-source.ts'
 
 const HOST = Symbol.for('ipc-diff.a.app-ai-image')
+const AI_SEARCH = new URL('../../../../packages/ai-search/src/index.ts', import.meta.url).href
+const AI_SEARCH_STUB = 'ipc-diff:ai-search'
 const SUBSCRIPTION = 'ipc-diff:ai-provider-subscription'
 /** the real module the stand-in re-exports, found when the specifier is first resolved */
 const real: Record<string, string> = {}
@@ -63,9 +65,23 @@ registerHooks({
       real[SUBSCRIPTION] = next(specifier, context).url
       return { url: SUBSCRIPTION, shortCircuit: true }
     }
+    if (specifier === '@seuoffice/ai-search') {
+      // `cx.fresh` loads hwp and mindmap with a query, and the loader then gives their whole
+      // import graph copies of its own: the generator slot and the availability flag this group
+      // sets would be invisible to them. A stand-in that re-exports the group's own instance
+      // gives them that instance.
+      return { url: AI_SEARCH_STUB, shortCircuit: true }
+    }
     return next(specifier, context)
   },
   load(url, context, next) {
+    if (url === AI_SEARCH_STUB) {
+      return {
+        format: 'module',
+        source: `export * from ${JSON.stringify(AI_SEARCH)}`,
+        shortCircuit: true,
+      }
+    }
     if (url === SUBSCRIPTION) {
       const forward = `export const sharedSubscriptionStatuses = () => globalThis[Symbol.for('ipc-diff.a.app-ai-image')].sharedSubscriptionStatuses()`
       return {
@@ -109,7 +125,7 @@ const STATUS_TEXT: Record<number, string> = {
 }
 
 /** `FakeNet` of crates/shell-ipc/a/src/runtime/testing.rs for the text bodies this group scripts */
-function fakeFetch(rules: FetchRule[], log: unknown[][]): typeof fetch {
+function fakeFetch(rules: FetchRule[], log: unknown[]): typeof fetch {
   const used = rules.map(() => 0)
   let count = 0
   return (async (input: unknown, init: RequestInit = {}) => {
@@ -193,6 +209,13 @@ async function load(cx: LoadContext): Promise<void> {
   globalThis.fetch = fakeFetch(net.fetch ?? [], cx.electron.log)
 
   const electron = cx.electron as unknown as { ipcMain: unknown; app: unknown }
+  // a real webContents has `removeListener`, which `withMediaCallSignal` calls when a call ends;
+  // the fake keeps `once` listeners for good (no case destroys a view), so there is nothing to take off
+  for (const v of cx.case.views ?? []) {
+    cx.electron.contents(v.view).removeListener = function (this: unknown) {
+      return this
+    }
+  }
   // hwp and mindmap: the modules as they are
   const hwp = await cx.fresh<typeof HwpImage>('apps/hwp/src/main/ai-image.ts')
   hwp.registerHwpImageIpc({ filePathOf: () => null })
