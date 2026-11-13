@@ -2,159 +2,311 @@
 //! dialog is open. A dialog can stay open for minutes, and other threads
 //! (M's Save Image As, D2's dialogs) take the same memory meanwhile.
 //!
-//! The rule: copy the memory under a short lock, show the dialog with the
-//! copy, and on a confirmed pick write the copy back under a short lock even
-//! when it equals what was copied. A cancel writes nothing. The last confirmed
-//! pick wins, as with TypeScript's single `lastUsedDirectoryByDialog` map: A
-//! copies /old, B confirms /new, A confirms /old, and /old stays.
+//! The rule: copy the memory under a short lock and build the dialog's
+//! options from the copy; the moment the native dialog returns, record its
+//! answer in the shared memory under a short lock, by main-core's own rule
+//! (a confirmed pick is remembered even when it equals what was copied; a
+//! cancel records nothing). Whatever the caller does after the dialog (a
+//! file write that stalls) cannot move that moment. The last confirmed pick
+//! wins, as with TypeScript's single `lastUsedDirectoryByDialog` map:
+//! - A copies /old, B confirms /new, A confirms /old: /old stays;
+//! - A confirms /a and its write stalls, B confirms /b, A's write ends: /b stays.
 
-use std::sync::Mutex;
+use std::marker::PhantomData;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use jscompat::JsonValue;
+use jscompat::{JsObject, JsonValue};
+use main_core::packages::electron_utils::dialog_memory::{
+    Dialog, DialogMemory, show_open_dialog_with_memory, show_save_dialog_with_memory,
+};
 
-/// Runs `show` with a copy of `shared`. `show` answers its result and
-/// whether the user confirmed a pick; only a confirmed pick writes the copy
-/// back. The lock is never held while `show` runs.
-pub fn with_shared_memory<M: Clone, R>(
-    shared: &Mutex<M>,
-    show: impl FnOnce(&mut M) -> (R, bool),
+/// Runs `run` with a copy of `shared` and `dialog` wrapped so each answer
+/// is recorded in `shared` as the dialog returns it. `run` passes both to
+/// main-core's `show_*_dialog_with_memory` (or `save_fetched_image` and the
+/// like). The lock is never held while the dialog is open.
+pub fn with_shared_memory<D: Dialog, R>(
+    shared: &Mutex<DialogMemory>,
+    dialog: &mut D,
+    run: impl FnOnce(&mut DialogMemory, &mut Recording<'_, D>) -> R,
 ) -> R {
     let mut copy = lock(shared).clone();
-    let (result, confirmed) = show(&mut copy);
-    if confirmed {
-        *lock(shared) = copy;
-    }
-    result
+    run(&mut copy, &mut Recording { dialog, shared })
 }
 
-fn lock<M>(shared: &Mutex<M>) -> std::sync::MutexGuard<'_, M> {
+/// A dialog whose answers go to the shared memory as they come back
+pub struct Recording<'a, D> {
+    dialog: &'a mut D,
+    shared: &'a Mutex<DialogMemory>,
+}
+
+impl<D: Dialog> Dialog for Recording<'_, D> {
+    type Window = D::Window;
+
+    fn show_open_dialog(
+        &mut self,
+        parent: Option<&Self::Window>,
+        options: &JsObject<JsonValue>,
+    ) -> JsonValue {
+        let answer = self.dialog.show_open_dialog(parent, options);
+        // main-core remembers it or not, by `properties` and `filePaths`,
+        // both unchanged in the options the dialog got
+        show_open_dialog_with_memory(
+            &mut lock(self.shared),
+            &mut Answered::new(&answer),
+            parent,
+            options,
+            None,
+        );
+        answer
+    }
+
+    fn show_save_dialog(
+        &mut self,
+        parent: Option<&Self::Window>,
+        options: &JsObject<JsonValue>,
+    ) -> JsonValue {
+        let answer = self.dialog.show_save_dialog(parent, options);
+        show_save_dialog_with_memory(
+            &mut lock(self.shared),
+            &mut Answered::new(&answer),
+            parent,
+            options,
+            None,
+        );
+        answer
+    }
+}
+
+/// A dialog that answers what the user already answered
+struct Answered<'a, W> {
+    answer: &'a JsonValue,
+    window: PhantomData<fn(&W)>,
+}
+
+impl<'a, W> Answered<'a, W> {
+    fn new(answer: &'a JsonValue) -> Self {
+        Self {
+            answer,
+            window: PhantomData,
+        }
+    }
+}
+
+impl<W> Dialog for Answered<'_, W> {
+    type Window = W;
+    fn show_open_dialog(&mut self, _: Option<&W>, _: &JsObject<JsonValue>) -> JsonValue {
+        self.answer.clone()
+    }
+    fn show_save_dialog(&mut self, _: Option<&W>, _: &JsObject<JsonValue>) -> JsonValue {
+        self.answer.clone()
+    }
+}
+
+fn lock(shared: &Mutex<DialogMemory>) -> MutexGuard<'_, DialogMemory> {
     // a dialog that panicked left a whole value behind: the memory stays usable
-    shared
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-}
-
-fn canceled(result: &JsonValue) -> bool {
-    match result {
-        JsonValue::Object(object) => object.get("canceled").is_some_and(JsonValue::truthy),
-        _ => false,
-    }
-}
-
-/// The pick `showOpenDialogWithMemory` remembers: not canceled, with a
-/// non-empty `filePaths[0]`
-pub fn open_confirmed(result: &JsonValue) -> bool {
-    let JsonValue::Object(object) = result else {
-        return false;
-    };
-    let first = match object.get("filePaths") {
-        Some(JsonValue::Array(paths)) => paths.first(),
-        _ => None,
-    };
-    !canceled(result) && matches!(first, Some(JsonValue::String(path)) if !path.is_empty())
-}
-
-/// The pick `showSaveDialogWithMemory` remembers: not canceled, with a
-/// non-empty `filePath`
-pub fn save_confirmed(result: &JsonValue) -> bool {
-    let JsonValue::Object(object) = result else {
-        return false;
-    };
-    !canceled(result)
-        && matches!(object.get("filePath"), Some(JsonValue::String(path)) if !path.is_empty())
+    shared.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jscompat::JsObject;
 
-    fn pick(confirmed: bool, path: &str) -> JsonValue {
-        let mut result = JsObject::new();
-        result.set("canceled", JsonValue::Bool(!confirmed));
-        result.set(
-            "filePaths",
-            JsonValue::Array(if confirmed {
-                vec![JsonValue::String(path.into())]
-            } else {
-                vec![]
-            }),
-        );
-        JsonValue::Object(result)
+    fn object(pairs: &[(&str, JsonValue)]) -> JsonValue {
+        let mut o = JsObject::new();
+        for (k, v) in pairs {
+            o.set(*k, v.clone());
+        }
+        JsonValue::Object(o)
     }
 
-    /// One dialog that remembers the folder of its pick, as the memory does
-    fn dialog(shared: &Mutex<String>, answer: JsonValue, meanwhile: impl FnOnce()) -> JsonValue {
-        with_shared_memory(shared, |memory| {
-            // the dialog is open: another thread can take the memory
+    fn open_pick(path: &str) -> JsonValue {
+        object(&[
+            ("canceled", JsonValue::Bool(false)),
+            (
+                "filePaths",
+                JsonValue::Array(vec![JsonValue::String(path.into())]),
+            ),
+        ])
+    }
+
+    fn save_pick(path: &str) -> JsonValue {
+        object(&[
+            ("canceled", JsonValue::Bool(false)),
+            ("filePath", JsonValue::String(path.into())),
+        ])
+    }
+
+    fn cancel() -> JsonValue {
+        object(&[
+            ("canceled", JsonValue::Bool(true)),
+            ("filePaths", JsonValue::Array(vec![])),
+        ])
+    }
+
+    /// The user's answer, given after `meanwhile` (other dialogs that ran
+    /// while this one was open); asserts the shared lock is free then
+    struct User<'a> {
+        shared: &'a Mutex<DialogMemory>,
+        answer: JsonValue,
+        meanwhile: Option<Box<dyn FnOnce() + 'a>>,
+    }
+
+    impl User<'_> {
+        fn answer(&mut self) -> JsonValue {
             assert!(
-                shared.try_lock().is_ok(),
+                self.shared.try_lock().is_ok(),
                 "the lock is held while the dialog is open"
             );
-            meanwhile();
-            let confirmed = open_confirmed(&answer);
-            if confirmed
-                && let JsonValue::Object(o) = &answer
-                && let Some(JsonValue::Array(paths)) = o.get("filePaths")
-                && let Some(JsonValue::String(path)) = paths.first()
-            {
-                *memory = path.clone();
+            if let Some(meanwhile) = self.meanwhile.take() {
+                meanwhile();
             }
-            (answer, confirmed)
-        })
+            self.answer.clone()
+        }
+    }
+
+    impl Dialog for User<'_> {
+        type Window = ();
+        fn show_open_dialog(&mut self, _: Option<&()>, _: &JsObject<JsonValue>) -> JsonValue {
+            self.answer()
+        }
+        fn show_save_dialog(&mut self, _: Option<&()>, _: &JsObject<JsonValue>) -> JsonValue {
+            self.answer()
+        }
+    }
+
+    fn user<'a>(
+        shared: &'a Mutex<DialogMemory>,
+        answer: JsonValue,
+        meanwhile: impl FnOnce() + 'a,
+    ) -> User<'a> {
+        User {
+            shared,
+            answer,
+            meanwhile: Some(Box::new(meanwhile)),
+        }
+    }
+
+    /// An open dialog through the helper; `after` runs once it returned,
+    /// still inside the operation (the file write of a save)
+    fn open<'a>(
+        shared: &'a Mutex<DialogMemory>,
+        answer: JsonValue,
+        meanwhile: impl FnOnce() + 'a,
+        after: impl FnOnce(),
+    ) {
+        with_shared_memory(shared, &mut user(shared, answer, meanwhile), |m, d| {
+            show_open_dialog_with_memory(m, d, None, &JsObject::new(), None);
+            after();
+        });
+    }
+
+    fn save<'a>(
+        shared: &'a Mutex<DialogMemory>,
+        answer: JsonValue,
+        meanwhile: impl FnOnce() + 'a,
+        after: impl FnOnce(),
+    ) {
+        with_shared_memory(shared, &mut user(shared, answer, meanwhile), |m, d| {
+            show_save_dialog_with_memory(m, d, None, &JsObject::new(), None);
+            after();
+        });
+    }
+
+    /// The folder the shared memory would offer the next dialog
+    fn remembered(shared: &Mutex<DialogMemory>) -> Option<String> {
+        struct Offered(Option<JsonValue>);
+        impl Dialog for Offered {
+            type Window = ();
+            fn show_open_dialog(&mut self, _: Option<&()>, o: &JsObject<JsonValue>) -> JsonValue {
+                self.0 = o.get("defaultPath").cloned();
+                cancel()
+            }
+            fn show_save_dialog(&mut self, _: Option<&()>, _: &JsObject<JsonValue>) -> JsonValue {
+                unreachable!()
+            }
+        }
+        let mut offered = Offered(None);
+        show_open_dialog_with_memory(
+            &mut lock(shared),
+            &mut offered,
+            None,
+            &JsObject::new(),
+            None,
+        );
+        match offered.0 {
+            Some(JsonValue::String(dir)) => Some(dir),
+            _ => None,
+        }
+    }
+
+    fn remembering(dir: &str) -> Mutex<DialogMemory> {
+        let shared = Mutex::new(DialogMemory::new());
+        open(&shared, open_pick(&format!("{dir}/f.txt")), || {}, || {});
+        assert_eq!(remembered(&shared).as_deref(), Some(dir));
+        shared
     }
 
     #[test]
     fn the_last_confirmed_pick_wins_even_when_it_equals_the_copy() {
-        let shared = Mutex::new(String::from("/old"));
+        let shared = remembering("/old");
         // A copies /old; while A's dialog is open, B confirms /new; A confirms /old
-        dialog(&shared, pick(true, "/old"), || {
-            dialog(&shared, pick(true, "/new"), || {});
-            assert_eq!(*shared.lock().unwrap(), "/new");
-        });
-        assert_eq!(*shared.lock().unwrap(), "/old");
+        open(
+            &shared,
+            open_pick("/old/a.txt"),
+            || {
+                open(&shared, open_pick("/new/b.txt"), || {}, || {});
+                assert_eq!(remembered(&shared).as_deref(), Some("/new"));
+            },
+            || {},
+        );
+        assert_eq!(remembered(&shared).as_deref(), Some("/old"));
     }
 
     #[test]
-    fn a_cancel_writes_nothing() {
-        let shared = Mutex::new(String::from("/old"));
+    fn a_cancel_records_nothing() {
+        let shared = remembering("/old");
         // B confirms /new while A's dialog is open; A cancels: B's pick stays
-        let answer = dialog(&shared, pick(false, ""), || {
-            dialog(&shared, pick(true, "/new"), || {});
-        });
-        assert!(!open_confirmed(&answer));
-        assert_eq!(*shared.lock().unwrap(), "/new");
+        open(
+            &shared,
+            cancel(),
+            || open(&shared, open_pick("/new/b.txt"), || {}, || {}),
+            || {},
+        );
+        assert_eq!(remembered(&shared).as_deref(), Some("/new"));
     }
 
     #[test]
-    fn confirmation_follows_the_memorys_own_rule() {
-        let object = |pairs: &[(&str, JsonValue)]| {
-            let mut o = JsObject::new();
-            for (k, v) in pairs {
-                o.set(*k, v.clone());
-            }
-            JsonValue::Object(o)
+    fn a_pick_is_recorded_when_the_dialog_returns_not_when_the_operation_ends() {
+        let shared = remembering("/old");
+        // A confirms /a and its write stalls; B confirms /b and finishes; A's
+        // write ends: B confirmed last, /b stays
+        save(
+            &shared,
+            save_pick("/a/one.png"),
+            || {},
+            || {
+                assert_eq!(remembered(&shared).as_deref(), Some("/a"));
+                save(&shared, save_pick("/b/two.png"), || {}, || {});
+            },
+        );
+        assert_eq!(remembered(&shared).as_deref(), Some("/b"));
+    }
+
+    #[test]
+    fn a_folder_pick_remembers_the_folder_itself() {
+        let shared = Mutex::new(DialogMemory::new());
+        let options = object(&[(
+            "properties",
+            JsonValue::Array(vec![JsonValue::String("openDirectory".into())]),
+        )]);
+        let JsonValue::Object(options) = options else {
+            unreachable!()
         };
-        let s = |t: &str| JsonValue::String(t.into());
-        assert!(open_confirmed(&pick(true, "/a/b")));
-        assert!(!open_confirmed(&pick(true, "")));
-        assert!(!open_confirmed(&object(&[
-            ("canceled", JsonValue::Bool(true)),
-            ("filePaths", JsonValue::Array(vec![s("/a")])),
-        ])));
-        assert!(save_confirmed(&object(&[
-            ("canceled", JsonValue::Bool(false)),
-            ("filePath", s("/a/b.docx"))
-        ])));
-        assert!(save_confirmed(&object(&[("filePath", s("/a/b.docx"))])));
-        assert!(!save_confirmed(&object(&[
-            ("canceled", JsonValue::Bool(true)),
-            ("filePath", s("/a/b.docx"))
-        ])));
-        assert!(!save_confirmed(&object(&[
-            ("canceled", JsonValue::Bool(false)),
-            ("filePath", s(""))
-        ])));
-        assert!(!save_confirmed(&JsonValue::Null));
+        with_shared_memory(
+            &shared,
+            &mut user(&shared, open_pick("/picked/dir"), || {}),
+            |m, d| show_open_dialog_with_memory(m, d, None, &options, None),
+        );
+        assert_eq!(remembered(&shared).as_deref(), Some("/picked/dir"));
     }
 }

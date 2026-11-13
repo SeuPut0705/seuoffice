@@ -27,8 +27,6 @@ use main_core::packages::electron_utils::default_save_dir::{
     PathProvider, Thrown as SaveDirThrown, configured_default_save_dir, default_save_dir_fallback,
 };
 use main_core::packages::electron_utils::dialog_memory::{Dialog, show_open_dialog_with_memory};
-
-use crate::shared_dialog::{open_confirmed, with_shared_memory};
 use main_core::packages::electron_utils::message_box::ParentWindow;
 use main_core::packages::i18n::{Lang, install_lang, normalize_lang};
 use main_core::shell::app_routing::rename_stays_in_app;
@@ -62,6 +60,7 @@ use shell_contract::slides::SlidesTemplateSelectionHooks;
 use shell_contract::{Batch, DialogsHost, IpcValue, MainWindowHost, OsShellHost, WindowId};
 
 use crate::handle;
+use crate::shared_dialog::with_shared_memory;
 
 // ---- hosts -----------------------------------------------------------------
 
@@ -982,18 +981,11 @@ impl Home {
         parent: Option<WindowId>,
         options: &JsObject<JsonValue>,
     ) -> (bool, Vec<String>) {
-        let result = with_shared_memory(&self.dialog_memory, |memory| {
-            let result = show_open_dialog_with_memory(
-                memory,
-                &mut OpenDialog {
-                    dialogs: &self.dialogs,
-                },
-                parent.as_ref(),
-                options,
-                None,
-            );
-            let confirmed = open_confirmed(&result);
-            (result, confirmed)
+        let mut dialog = OpenDialog {
+            dialogs: &self.dialogs,
+        };
+        let result = with_shared_memory(&self.dialog_memory, &mut dialog, |memory, dialog| {
+            show_open_dialog_with_memory(memory, dialog, parent.as_ref(), options, None)
         });
         let canceled = matches!(
             result.get("canceled").as_deref(),

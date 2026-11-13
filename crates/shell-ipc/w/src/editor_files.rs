@@ -18,8 +18,6 @@ use jscompat::node_path::host::{basename, extname, is_absolute, join};
 use jscompat::{JsObject, JsonValue, base64, to_iso_string};
 use main_core::node_fs::node_error as fs_error;
 use main_core::packages::electron_utils::dialog_memory::{Dialog, show_open_dialog_with_memory};
-
-use crate::shared_dialog::{open_confirmed, with_shared_memory};
 use main_core::packages::electron_utils::safe_external_url::safe_external_url;
 use main_core::packages::electron_utils::unsaved_files::{
     OpenFileState, OpenFilesHolder, OpenFilesSourceFailed, assert_file_saved,
@@ -34,6 +32,7 @@ use shell_contract::{Batch, ContentsHost, DialogsHost, IpcValue, MainWindowHost,
 
 use crate::convert::field;
 use crate::handle;
+use crate::shared_dialog::with_shared_memory;
 
 // ---- hosts ----
 
@@ -984,11 +983,8 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             ),
         );
         let mut dialog = HostDialog(dialogs.clone());
-        let result = with_shared_memory(&memory, |memory| {
-            let result =
-                show_open_dialog_with_memory(memory, &mut dialog, parent.as_ref(), &options, None);
-            let confirmed = open_confirmed(&result);
-            (result, confirmed)
+        let result = with_shared_memory(&memory, &mut dialog, |memory, dialog| {
+            show_open_dialog_with_memory(memory, dialog, parent.as_ref(), &options, None)
         });
         let JsonValue::Object(result) = result else {
             return Ok(IpcValue::Null);
