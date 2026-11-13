@@ -6,5 +6,6 @@
 import type { Group } from '../types.ts'
 import { cloud } from './b3-projects-cloud.ts'
 import { foundation } from './b3-projects-foundation.ts'
+import { guard } from './b3-projects-guard.ts'
 
-export const group: Group = { ...foundation, ...cloud }
+export const group: Group = { ...foundation, ...cloud, ...guard }

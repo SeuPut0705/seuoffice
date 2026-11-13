@@ -3,12 +3,17 @@
 
 pub mod cloud_cache;
 pub mod cloud_files;
+pub mod context;
 pub mod folder_files;
+pub mod identity;
 pub mod ignore;
 pub mod memory;
+pub mod new_documents;
 pub mod paths;
 pub mod project_files;
 pub mod project_guide;
+pub mod selection;
 pub mod stand_ins;
 pub mod trust;
 pub mod visibility;
+pub mod write_guard;

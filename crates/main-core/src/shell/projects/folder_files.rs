@@ -39,7 +39,7 @@ fn lstat_or_null(path: &str) -> Option<Metadata> {
 /// `info.nlink`: how many names the file has. Windows has no answer in the
 /// standard library (engine-waiting: the file handle's link count), so a file
 /// there counts as having one name.
-fn link_count(info: &Metadata) -> u64 {
+pub(super) fn link_count(info: &Metadata) -> u64 {
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;

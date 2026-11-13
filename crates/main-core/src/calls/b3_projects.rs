@@ -5,6 +5,7 @@
 
 mod cloud;
 mod foundation;
+mod guard;
 
 use serde_json::Value;
 
@@ -12,7 +13,7 @@ use super::{Answer, Context};
 
 type Part = fn(&str, &[Value], &mut Context) -> Option<Answer>;
 
-const PARTS: &[Part] = &[foundation::call, cloud::call];
+const PARTS: &[Part] = &[foundation::call, cloud::call, guard::call];
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     PARTS.iter().find_map(|part| part(name, args, cx))

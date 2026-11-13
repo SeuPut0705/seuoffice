@@ -20,6 +20,7 @@ use crate::packages::project_store::{
     ProjectFileEntry, ProjectId, ProjectTrustAnswer, ProjectTrustPrompt,
 };
 
+pub use super::context::INSTRUCTIONS_LIMIT_CHARS;
 pub use super::memory::MEMORY_SOFT_LIMIT_CHARS;
 
 /// `TrustAsk`: shows the first-time trust prompt; answers the person's
