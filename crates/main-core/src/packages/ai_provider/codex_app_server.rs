@@ -1474,11 +1474,16 @@ where
         action(client.clone()).await
     }
     .await;
+    // `return await action(client)`: the await of the action's promise takes a
+    // turn of the microtask queue before the `finally`
+    tick(rt).await;
     // cancelled by the user or by the watchdog, at whatever step
     if signal.is_some_and(Signal::aborted) {
         client.stop_when_unused();
     }
     client.release();
+    // and the caller's await of this async function takes one more
+    tick(rt).await;
     outcome
 }
 
