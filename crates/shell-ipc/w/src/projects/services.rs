@@ -19,7 +19,7 @@ use std::sync::Arc;
 use jscompat::{JsMap, JsObject, JsonValue, base64, to_iso_string};
 use main_core::packages::ai_provider::agent_session_policy::process_platform;
 use main_core::packages::electron_utils::default_save_dir::{
-    PathProvider, SaveDirState, Thrown, configured_default_save_dir,
+    PathProvider, Thrown, configured_default_save_dir,
 };
 use main_core::packages::electron_utils::message_box::MessageBoxOptions;
 use main_core::packages::electron_utils::unsaved_files::OpenFilesHolder;
@@ -116,6 +116,8 @@ pub(super) struct Shell {
     pub views: Arc<dyn Views>,
     pub paths: Arc<dyn AppPaths>,
     pub provided: Rc<Provided>,
+    /// the process's one default-save-folder state
+    pub save_dir: crate::SharedSaveDirState,
 }
 
 impl Shell {
@@ -1041,11 +1043,10 @@ impl Services {
             user_data: shell.at(PathName::UserData),
             default_parent_dir: {
                 let shell = shell.clone();
-                let mut state = SaveDirState::new();
                 Box::new(move || {
                     configured_default_save_dir(
                         &Paths(shell.paths.as_ref()),
-                        &mut state,
+                        &mut shell.save_dir.lock().unwrap(),
                         shell.home.now_ms(),
                     )
                     .unwrap_or_default()
