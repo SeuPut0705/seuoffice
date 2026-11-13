@@ -474,8 +474,8 @@
   {
     "name": "taskkill shows a window",
     "file": "main-core/src/packages/ai_provider/subscription_process.rs",
-    "find": "windows_hide: true,",
-    "replace": "windows_hide: false,",
+    "find": "stdio: \"ignore\",\n            windows_hide: true,",
+    "replace": "stdio: \"ignore\",\n            windows_hide: false,",
     "fn": ["ai-provider/subscription/process.killProcessTree"]
   },
   {

@@ -20,7 +20,10 @@
  *   aborts. A fetch past the end rejects with `TypeError: fetch failed`.
  * - `children`: one per spawn, in order. `{ pid=4242+i | null, error:
  *   { message, code }, stdout: chunks, stderr: chunks, replies: [{ stdout,
- *   stderr }] (the k-th after the k-th write to stdin), exit: { code=0,
+ *   stderr }] (the k-th after the k-th write to stdin the `answers` do not
+ *   take), answers: { [method]: [{ stdout, stderr }] } (a JSON request line
+ *   `{ method, id }` takes the next entry of its method, in order, and `$ID`
+ *   in its string chunks is the request's id as JSON), exit: { code=0,
  *   signal=null }, closeOn: 'start' | 'end' | 'kill' | n (after n writes) |
  *   'never' (default 'end') }`. A spawn past the end is a child that did not
  *   start (`spawn ENOENT`).
@@ -108,6 +111,7 @@ export interface ChildSpec {
   stdout?: Chunk[]
   stderr?: Chunk[]
   replies?: { stdout?: Chunk[]; stderr?: Chunk[] }[]
+  answers?: Record<string, { stdout?: Chunk[]; stderr?: Chunk[] }[]>
   exit?: { code?: number | null; signal?: string | null }
   closeOn?: 'start' | 'end' | 'kill' | 'never' | number
 }
@@ -493,6 +497,31 @@ export class WorldRun {
     child.stderr = stdio[2] === 'pipe' ? stream() : null
     let closed = false
     let writes = 0
+    let plain = 0
+    const answered: Record<string, number> = {}
+    /** the reply of a write: by its request's method when `answers` has one left, else by order */
+    const replyTo = (data: string): { stdout?: Chunk[]; stderr?: Chunk[] } | undefined => {
+      let request: unknown
+      try {
+        request = JSON.parse(data)
+      } catch {
+        request = undefined
+      }
+      const r = request as { method?: unknown; id?: unknown } | null | undefined
+      if (r && typeof r === 'object' && typeof r.method === 'string' && r.id !== undefined) {
+        const list = spec.answers?.[r.method]
+        const n = answered[r.method] ?? 0
+        if (list && n < list.length) {
+          answered[r.method] = n + 1
+          const id = JSON.stringify(r.id)
+          const fill = (chunks: Chunk[] | undefined): Chunk[] | undefined =>
+            chunks?.map((c) => (typeof c === 'string' ? c.split('$ID').join(id) : c))
+          return { stdout: fill(list[n].stdout), stderr: fill(list[n].stderr) }
+        }
+      }
+      plain += 1
+      return spec.replies?.[plain - 1]
+    }
     const exit = spec.exit ?? {}
     const close = (signal?: string | null): void => {
       if (closed) return
@@ -518,7 +547,7 @@ export class WorldRun {
             write: (data: unknown) => {
               this.log('stdin', i, String(data))
               writes += 1
-              const reply = spec.replies?.[writes - 1]
+              const reply = replyTo(String(data))
               const closeNow = spec.closeOn === writes
               this.emitLater(() => {
                 if (closed) return

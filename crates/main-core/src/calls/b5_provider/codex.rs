@@ -344,6 +344,9 @@ fn field_list(step: &Value, key: &str) -> Option<Vec<JsonValue>> {
         .map(|a| a.iter().map(json_value_from_serde).collect())
 }
 
+/// a step run inside another (boxed: `run_step` recurses)
+type StepFuture<'a> = std::pin::Pin<Box<dyn std::future::Future<Output = Value> + 'a>>;
+
 async fn run_step(rt: &Rt, app: &CodexApp, signal: &Signal, sink: &Sink, step: &Value) -> Value {
     let hooks = codex_hooks(app);
     let given = |s: &Value| -> Option<Signal> {
@@ -380,6 +383,15 @@ async fn run_step(rt: &Rt, app: &CodexApp, signal: &Signal, sink: &Sink, step: &
             }
         }
         return Value::Null;
+    }
+    if let Some(Value::Array(steps)) = step.get("seq") {
+        // one after the other, inside an `all`
+        let mut out = Vec::new();
+        for one in steps {
+            let next: StepFuture<'_> = Box::pin(run_step(rt, app, signal, sink, one));
+            out.push(next.await);
+        }
+        return Value::Array(out);
     }
     if let Some(Value::Array(steps)) = step.get("all") {
         // started together, as `Promise.all` starts them

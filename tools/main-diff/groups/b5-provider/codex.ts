@@ -192,6 +192,7 @@ type Step =
   | { models: { cliPath?: string } }
   | { subModels: { cliPath?: string; signal?: boolean; aborted?: boolean } }
   | { all: Step[] }
+  | { seq: Step[] }
   | { forget: true }
   | { login: true }
   | { off: boolean }
@@ -255,6 +256,12 @@ async function runStep(step: Step, cx: TsContext, signal: AbortSignal): Promise<
         if (name.startsWith('seuoffice-codex-app-server-'))
           await fsp.rm(join(root, name), { recursive: true, force: true })
       return null
+    }
+    if ('seq' in step) {
+      // one after the other, inside an `all`
+      const out: unknown[] = []
+      for (const one of step.seq) out.push(await runStep(one, cx, signal))
+      return out
     }
     if ('all' in step) {
       // started together, as `Promise.all` does
@@ -1694,6 +1701,39 @@ const mcpPages = (last: string | null): Kid => {
   return kid.turn(done('paged'))
 }
 
+/** the answer to a request of any id (the world fills `$ID`), then `after` */
+const answer = (result: unknown, after = ''): { stdout: Chunk[] } => ({
+  stdout: [`{"id":$ID,"result":${JSON.stringify(result)}}\n${after}`],
+})
+
+/**
+ * Two streams in flight on one process, each answered by its request's method
+ * and id: the first waits for its turn to end while the second starts, makes
+ * its folder and opens its thread; the second turn's answer ends both turns.
+ */
+const twoTurns = (): Record<string, unknown> => ({
+  answers: {
+    initialize: [answer({ userAgent: 'codex/1.0' })],
+    'account/read': [answer(CHATGPT), answer(CHATGPT)],
+    'config/read': [
+      answer({ config: { mcp_servers: {} } }),
+      answer({ config: { mcp_servers: {} } }),
+    ],
+    'thread/start': [answer(thread('thread-1')), answer(thread('thread-2'))],
+    'mcpServerStatus/list': [
+      answer({ data: [], nextCursor: null }),
+      answer({ data: [], nextCursor: null }),
+    ],
+    'turn/start': [
+      answer({ turn: { id: 'turn-1' } }),
+      answer(
+        { turn: { id: 'turn-2' } },
+        done('one', [], 'turn-1', 'thread-1') + done('two', [], 'turn-2', 'thread-2'),
+      ),
+    ],
+  },
+})
+
 const started = note('turn/started', { threadId: 'thread-1', turn: { id: 'turn-1' } })
 
 const moreStreamCases: Case[] = [
@@ -1780,6 +1820,14 @@ const moreStreamCases: Case[] = [
       stream({ config: { cliPath: 'C:\\Tools\\Codex.EXE' }, sessionId: 'a' }),
       stream({ config: { cliPath: 'c:\\tools\\codex.exe' }, sessionId: 'b' }),
     ),
+  ),
+  // two streams in flight at once on one process, both through folder, config/read, thread/start
+  // and turn/start: the second starts once the first waits for its turn's end
+  c(
+    w([twoTurns()]),
+    steps({
+      all: [stream({ sessionId: 'a' }), { seq: [{ sleep: 1 }, stream({ sessionId: 'b' })] }],
+    }),
   ),
 ]
 streams['codex.streamCodexAppServer']!.cases.push(...moreStreamCases)
