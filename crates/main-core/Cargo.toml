@@ -8,7 +8,8 @@ publish.workspace = true
 
 [dependencies]
 jscompat.workspace = true
-# JSZip's zip writer, for the skill zip of packages/cli_agent_skills
+# JSZip: the skill zip of packages/cli_agent_skills, and loadAsync of the MCP
+# runtime archives (shell/mcp_client/runtime_archive)
 ooxml-pkg.workspace = true
 serde.workspace = true
 serde_json.workspace = true

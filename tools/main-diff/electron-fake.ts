@@ -32,6 +32,7 @@ const NAMES = [
   'net',
   'protocol',
   'screen',
+  'safeStorage',
   'session',
   'shell',
   'webContents',

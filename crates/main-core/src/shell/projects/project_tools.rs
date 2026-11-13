@@ -42,9 +42,9 @@ use super::project_files::{
     to_entry, with_cloud_flags,
 };
 use super::project_guide::ProjectAiVisibility;
-use super::stand_ins::{is_supported_tree_file, kb_read_max_bytes, process_platform};
 use super::visibility::is_ai_visible_path;
 use crate::node_fs::namespaced;
+use crate::packages::ai_provider::agent_session_policy::process_platform;
 use crate::packages::electron_utils::default_save_dir::Thrown;
 use crate::packages::electron_utils::unsaved_files::{
     OpenFilesHolder, UNSAVED_CHANGES_MESSAGE, file_has_unsaved_changes, without_unsaved_files,
@@ -53,6 +53,8 @@ use crate::packages::project_store::{
     ProjectId, ProjectListFilesResult, ProjectReadRefusal, ProjectReadResult, ProjectSearchHit,
     ProjectSearchResult,
 };
+use crate::shell::folder_tree::is_supported_tree_file;
+use crate::shell::knowledge_base::kb_read_max_bytes;
 
 /// `PROJECT_SCOPE_UNKNOWN`: a call named no scope, a scope main does not hold,
 /// another window's, or a starred-only scope

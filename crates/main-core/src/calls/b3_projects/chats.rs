@@ -19,6 +19,7 @@ use jscompat::{json_value_from_serde, to_iso_string};
 use serde_json::{Value, json};
 
 use super::super::{Answer, CallError, Context, arg};
+use crate::packages::ai_provider::agent_session_policy::process_platform;
 use crate::packages::project_store::{
     ProjectChatRef, ProjectSelection, ProjectTrustState, ProjectWriteResult,
 };
@@ -31,7 +32,6 @@ use crate::shell::projects::chat_store::{
 use crate::shell::projects::folder_files::data_dir_name;
 use crate::shell::projects::paths::{canonical_path, relative_inside};
 use crate::shell::projects::project_guide::{DataUpdateOutcome, SelectionTarget};
-use crate::shell::projects::stand_ins::process_platform;
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     Some(match name {

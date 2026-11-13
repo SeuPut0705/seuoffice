@@ -23,7 +23,7 @@
 use jscompat::node_path::{posix, win32};
 use jscompat::{JsMap, JsObject, base64, js_regex, to_int32, to_number, truthy};
 
-use crate::shell::projects::stand_ins::{windows_system_dir, windows_system_tool};
+use crate::packages::ai_provider::subscription_process::{windows_system_dir, windows_system_tool};
 
 pub const FILE_ATTRIBUTE_OFFLINE: i32 = 0x1000;
 pub const FILE_ATTRIBUTE_RECALL_ON_OPEN: i32 = 0x40000;
@@ -271,7 +271,8 @@ impl<R: ListingRun> AttributeReader for PowerShellAttributeReader<R> {
         dirs: &[String],
         timeout_ms: f64,
     ) -> Result<JsMap<DirectoryAttributes>, ListingFailure> {
-        let file = windows_system_tool(&self.env, &["WindowsPowerShell", "v1.0", "powershell.exe"]);
+        let env = |key: &str| self.env.get(key).cloned();
+        let file = windows_system_tool(&env, &["WindowsPowerShell", "v1.0", "powershell.exe"]);
         let args = [
             "-NoLogo".to_string(),
             "-NoProfile".to_string(),
@@ -279,7 +280,7 @@ impl<R: ListingRun> AttributeReader for PowerShellAttributeReader<R> {
             "-EncodedCommand".to_string(),
             self.encoded.clone(),
         ];
-        let cwd = windows_system_dir(&self.env);
+        let cwd = windows_system_dir(&env);
         let input = format!("{}\n", dirs.join("\n"));
         let stdout = self.run.run(
             &file,

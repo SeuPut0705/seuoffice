@@ -47,9 +47,9 @@ use serde::Serialize;
 
 use super::folder_files::{data_dir_name, plain_file_in, plain_folder_entries, read_folder_text};
 use super::project_guide::{DataUpdateOutcome, SelectionTarget};
-use super::stand_ins::process_platform;
 use super::trust::has_foreign_message;
 use crate::node_fs::{NodeError, namespaced, node_error, node_error_fd};
+use crate::packages::ai_provider::agent_session_policy::process_platform;
 use crate::packages::project_store::{
     PROJECT_EDITORS, PROJECT_FORMAT_VERSION, ProjectChatListItem, ProjectChatRef, ProjectEditor,
     ProjectId, ProjectSelection, ProjectTrustState, ProjectWriteResult, is_valid_project_id, nfc,

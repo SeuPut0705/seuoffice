@@ -81,7 +81,6 @@ use super::selection::{
     ResolvedSelectionTarget, delete_key, drop_from_list, find_unregistered_project,
     record_outside_chat, record_selection, selection_for,
 };
-use super::stand_ins::process_platform;
 use super::trust::{TrustScanInput, read_hashed_texts, scan_for_trust};
 use super::visibility::is_ai_visible_path;
 use super::write_guard::{
@@ -89,6 +88,7 @@ use super::write_guard::{
     WriteGuardError,
 };
 use crate::node_fs::{NodeError, namespaced};
+use crate::packages::ai_provider::agent_session_policy::process_platform;
 use crate::packages::electron_utils::default_save_dir::Thrown;
 use crate::packages::project_store::{
     AddFolderResult, AddFolderStage, ApplyMemoryConsolidationArgs, ApplyMemoryConsolidationResult,

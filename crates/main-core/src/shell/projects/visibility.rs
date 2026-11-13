@@ -14,7 +14,7 @@ use jscompat::node_path::host::{is_absolute, join};
 use super::folder_files::is_data_dir_name;
 use super::ignore::IgnoreMatcher;
 use crate::packages::electron_utils::atomic_write::is_save_temp_name;
-use crate::shell::projects::stand_ins::is_hidden_entry;
+use crate::shell::folder_tree::is_hidden_entry;
 
 /// `isAiVisiblePath(root, relPath, matcher, isDir)`; `isDir` is `false` where
 /// the TypeScript leaves it out. `Err` is a search of `ignore` that reached

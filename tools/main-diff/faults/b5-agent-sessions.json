@@ -749,21 +749,21 @@
   {
     "name": "agent-sessions: everything below home is home",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "if root == comparable_path(home_dir, home_dir, platform) {",
-    "replace": "if root.starts_with(&comparable_path(home_dir, home_dir, platform)) {",
+    "find": "if root == comparable_path(home_dir, home_dir, Some(platform)) {",
+    "replace": "if root.starts_with(&comparable_path(home_dir, home_dir, Some(platform))) {",
     "fn": ["agent-sessions.projectFolderProblem", "agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a folder inside a protected one is fine",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "is_inside_path(&root, &guard, platform) ||",
-    "replace": "",
+    "find": "if is_inside_path(&root, &guard, Some(platform))\n            ||",
+    "replace": "if",
     "fn": ["agent-sessions.projectFolderProblem"]
   },
   {
     "name": "agent-sessions: a folder holding a protected one is fine",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "|| is_inside_path(&guard, &root, platform) {",
+    "find": "|| is_inside_path(&guard, &root, Some(platform))\n        {",
     "replace": "{",
     "fn": ["agent-sessions.projectFolderProblem"]
   },
@@ -1216,7 +1216,7 @@
   {
     "name": "agent-sessions: documents are told apart by their spelling",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "let key = comparable_path(path, path, &self.platform);",
+    "find": "let key = comparable_path(path, path, Some(&self.platform));",
     "replace": "let key = path.clone();",
     "fn": ["agent-sessions.createAgentManager"]
   },
@@ -1300,7 +1300,7 @@
   {
     "name": "agent-sessions: a path outside the folder opens",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "if !is_inside_path(&comparable_path(&full, &root, platform), &root, platform) {",
+    "find": "if !is_inside_path(\n        &comparable_path(&full, &root, Some(platform)),\n        &root,\n        Some(platform),\n    ) {",
     "replace": "if false {",
     "fn": ["agent-sessions.openableProjectFile"]
   },

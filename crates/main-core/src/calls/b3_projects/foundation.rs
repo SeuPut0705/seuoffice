@@ -37,10 +37,6 @@ use crate::shell::projects::paths::{
     RefusalContext, canonical_path, comparable_path, folder_refusal, is_inside_folder,
     is_plain_segment, location_refusal, path_api, relative_inside, same_path,
 };
-use crate::shell::projects::stand_ins::{
-    SCAN_MAX_DEPTH, TREE_FILE_EXTENSIONS, agent_protected_paths, is_hidden_entry,
-    is_supported_tree_file,
-};
 use crate::shell::projects::trust::{
     HashedTexts, TrustScanInput, has_foreign_message, hashes_of, list_foreign_chats,
     read_hashed_texts, scan_for_trust,
@@ -181,19 +177,10 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
         "folder-api.MEMORY_BACKUP_PATTERN" => {
             str_arg(args, 0).map(|n| Some(Value::from(memory_backup_pattern().test(n))))
         }
-        "folder-tree.TREE_FILE_EXTENSIONS" => Ok(Some(Value::from(TREE_FILE_EXTENSIONS.to_vec()))),
-        "folder-tree.isSupportedTreeFile" => {
-            str_arg(args, 0).map(|n| Some(Value::from(is_supported_tree_file(n))))
-        }
-        "folder-tree.isHiddenEntry" => hidden_call(args),
-        "agent-sessions.agentProtectedPaths" => both(args, |home, data| {
-            Value::from(agent_protected_paths(home, data))
-        }),
         "sources.folderHoldsData" => on_folder(args, |a| {
             let depth = arg(a, 1).and_then(Value::as_i64).unwrap_or(3);
             Ok(Value::from(folder_holds_data(str_arg(a, 0)?, depth)))
         }),
-        "scan.SCAN_MAX_DEPTH" => Ok(Some(Value::from(SCAN_MAX_DEPTH))),
         _ => return None,
     })
 }
@@ -234,14 +221,6 @@ fn strings(value: Option<&Value>) -> Result<Vec<String>, CallError> {
                 .ok_or_else(|| bad("a list of strings"))
         })
         .collect()
-}
-
-fn hidden_call(args: &[Value]) -> Answer {
-    Ok(Some(Value::from(is_hidden_entry(
-        str_arg(args, 0)?,
-        str_arg(args, 1)?,
-        arg(args, 2).and_then(Value::as_bool).unwrap_or(false),
-    ))))
 }
 
 /// makes the links of a case: `[[linkPath, target], ...]`

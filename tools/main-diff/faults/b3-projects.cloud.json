@@ -296,37 +296,37 @@
   },
   {
     "name": "process: SYSTEMROOT is not read",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "\"SYSTEMROOT\"",
-    "replace": "\"SYSTEMROOX\"",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "env(\"SYSTEMROOT\")",
+    "replace": "env(\"SYSTEMROOX\")",
     "fn": ["cloud-files.createPowerShellAttributeReader"]
   },
   {
     "name": "process: a percent sign is allowed in the system folder",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "|%\\r\\n]",
-    "replace": "|\\r\\n]",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "'|' | '%' | '\\r'",
+    "replace": "'|' | '\\r'",
     "fn": ["cloud-files.createPowerShellAttributeReader"]
   },
   {
     "name": "process: a trailing separator is refused",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "\\\\?$",
-    "replace": "$",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "let names = names.strip_suffix('\\\\').unwrap_or(names);",
+    "replace": "let names = names;",
     "fn": ["cloud-files.createPowerShellAttributeReader"]
   },
   {
     "name": "process: only one folder level is allowed",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "+)+",
-    "replace": "+)",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "    names.split('\\\\').all(|name| {",
+    "replace": "    !names.contains('\\\\') && names.split('\\\\').all(|name| {",
     "fn": ["cloud-files.createPowerShellAttributeReader"]
   },
   {
     "name": "process: the default system folder",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "\"C:\\\\Windows\"",
-    "replace": "\"C:\\\\WinNT\"",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "unwrap_or(\"C:\\\\Windows\")",
+    "replace": "unwrap_or(\"C:\\\\WinNT\")",
     "fn": [
       "cloud-files.createPowerShellAttributeReader",
       "cloud-files.detectCloudOnlyFiles",

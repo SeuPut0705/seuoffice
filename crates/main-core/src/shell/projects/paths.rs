@@ -10,7 +10,7 @@ use jscompat::node_path::{ParsedPath, host, posix, win32};
 
 use crate::node_fs::namespaced;
 use crate::packages::project_store::{FolderRefusalReason, canonical_path_key, nfc};
-use crate::shell::projects::stand_ins::agent_protected_paths;
+use crate::shell::agent::agent_sessions::agent_protected_paths;
 
 /// `typeof win32`: the `node:path` flavour `pathApi(platform)` answers
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

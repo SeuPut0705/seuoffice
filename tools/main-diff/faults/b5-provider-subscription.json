@@ -1,0 +1,864 @@
+[
+  {
+    "name": "a version below the floor passes",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "return difference > 0.0;",
+    "replace": "return difference < 0.0;",
+    "fn": [
+      "subscription/contract.subscriptionVersionAtLeast",
+      "subscription/contract.subscriptionNeedsUpdate"
+    ]
+  },
+  {
+    "name": "the floor of Claude Code moves",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"claude-code\", Some(\"2.1.248\")),",
+    "replace": "(\"claude-code\", Some(\"2.1.249\")),",
+    "fn": [
+      "subscription/contract.SUBSCRIPTION_MIN_VERSIONS",
+      "subscription/contract.subscriptionNeedsUpdate"
+    ]
+  },
+  {
+    "name": "the install command of Claude Code is not the vendor one",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "\"irm https://claude.ai/install.ps1 | iex\"",
+    "replace": "\"irm https://claude.ai/install.ps1\"",
+    "fn": ["subscription/contract.SUBSCRIPTION_INSTALL_COMMANDS"]
+  },
+  {
+    "name": "the install page of Codex is another",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "\"https://developers.openai.com/codex/cli\"",
+    "replace": "\"https://developers.openai.com/codex\"",
+    "fn": ["subscription/contract.SUBSCRIPTION_INSTALL_URLS"]
+  },
+  {
+    "name": "a channel is renamed",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"recheck\", \"ai:subscription-recheck\"),",
+    "replace": "(\"recheck\", \"ai:subscription-recheck2\"),",
+    "fn": ["subscription/contract.SUBSCRIPTION_IPC_CHANNELS"]
+  },
+  {
+    "name": "the update command of Claude Code is not the vendor one",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "Some(\"claude update\")",
+    "replace": "Some(\"claude upgrade\")",
+    "fn": [
+      "subscription/contract.SUBSCRIPTION_UPDATE_COMMANDS",
+      "subscription/contract.subscriptionNeedsUpdate"
+    ]
+  },
+  {
+    "name": "a Homebrew copy is updated by another command",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "format!(\"brew upgrade {cask}\")",
+    "replace": "format!(\"brew install {cask}\")",
+    "fn": ["subscription/contract.subscriptionNeedsUpdate"]
+  },
+  {
+    "name": "a version at the floor needs an update",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "if subscription_version_at_least(version, minimum) {",
+    "replace": "if !subscription_version_at_least(version, minimum) {",
+    "fn": ["subscription/contract.subscriptionNeedsUpdate"]
+  },
+  {
+    "name": "the version number is not the first one found",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "js_regex!(r\"\\d+\\.\\d+\\.\\d+\")",
+    "replace": "js_regex!(r\"\\d+\\.\\d+\")",
+    "fn": ["subscription/contract.subscriptionVersionOf"]
+  },
+  {
+    "name": "an error text is joined without a blank",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "format!(\"{kind}: {detail}\")",
+    "replace": "format!(\"{kind}:{detail}\")",
+    "fn": ["subscription/contract.subscriptionStatusErrorText"]
+  },
+  {
+    "name": "a timeout error needs no colon",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "text.starts_with(\"timeout:\")",
+    "replace": "text.starts_with(\"timeout\")",
+    "fn": [
+      "subscription/contract.subscriptionStatusErrorKind",
+      "subscription/contract.subscriptionStatusMapOf"
+    ]
+  },
+  {
+    "name": "a program path is cut one unit later",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "const SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH: usize = 32_767;",
+    "replace": "const SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH: usize = 32_768;",
+    "fn": ["subscription/contract.subscriptionProgramPathOf"]
+  },
+  {
+    "name": "only a NUL is a control character of a path",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "value.chars().any(char::is_control)",
+    "replace": "value.chars().any(|c| c == '\\0')",
+    "fn": ["subscription/contract.subscriptionProgramPathOf"]
+  },
+  {
+    "name": "ChatGPT is no provider id",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "const SUBSCRIPTION_PROVIDER_IDS: [&str; 3] = [\"claude-code\", \"chatgpt\", \"codex\"];",
+    "replace": "const SUBSCRIPTION_PROVIDER_IDS: [&str; 3] = [\"claude-code\", \"claude-code\", \"codex\"];",
+    "fn": ["subscription/contract.isSubscriptionProviderId"]
+  },
+  {
+    "name": "an account may have a local part one character longer",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(1..=64).contains(&local.chars().count())",
+    "replace": "(1..=65).contains(&local.chars().count())",
+    "fn": [
+      "subscription/contract.subscriptionAccountOf",
+      "subscription/contract.subscriptionStatusMapOf"
+    ]
+  },
+  {
+    "name": "an account needs no dot in its domain",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "labels.len() >= 2",
+    "replace": "labels.len() >= 1",
+    "fn": [
+      "subscription/contract.subscriptionAccountOf",
+      "subscription/contract.subscriptionStatusMapOf"
+    ]
+  },
+  {
+    "name": "a domain label may be 64 characters",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(1..=63).contains(&label.chars().count())",
+    "replace": "(1..=64).contains(&label.chars().count())",
+    "fn": ["subscription/contract.subscriptionAccountOf"]
+  },
+  {
+    "name": "an account is not trimmed",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "let account = trim(as_str(value)?);",
+    "replace": "let account = as_str(value)?;",
+    "fn": ["subscription/contract.subscriptionAccountOf"]
+  },
+  {
+    "name": "an account may be 255 units long",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "pub const SUBSCRIPTION_ACCOUNT_MAX_LENGTH: usize = 254;",
+    "replace": "pub const SUBSCRIPTION_ACCOUNT_MAX_LENGTH: usize = 255;",
+    "fn": [
+      "subscription/contract.SUBSCRIPTION_ACCOUNT_MAX_LENGTH",
+      "subscription/contract.subscriptionAccountOf"
+    ]
+  },
+  {
+    "name": "a model id may be 129 characters",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "{0,127}$",
+    "replace": "{0,128}$",
+    "fn": ["subscription/contract.subscriptionModelsOf"]
+  },
+  {
+    "name": "a list may hold 51 models",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "pub const SUBSCRIPTION_MODELS_MAX: usize = 50;",
+    "replace": "pub const SUBSCRIPTION_MODELS_MAX: usize = 51;",
+    "fn": [
+      "subscription/contract.SUBSCRIPTION_MODELS_MAX",
+      "subscription/contract.subscriptionModelsOf"
+    ]
+  },
+  {
+    "name": "a label may be 81 units long",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "const SUBSCRIPTION_MODEL_LABEL_MAX: usize = 80;",
+    "replace": "const SUBSCRIPTION_MODEL_LABEL_MAX: usize = 81;",
+    "fn": ["subscription/contract.subscriptionModelsOf"]
+  },
+  {
+    "name": "a default entry without what it resolves to is kept",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "if is_default_entry && resolved.is_none() {",
+    "replace": "if false && resolved.is_none() {",
+    "fn": ["subscription/contract.subscriptionModelsOf"]
+  },
+  {
+    "name": "a default effort the model does not take is kept",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "&& efforts.contains(&default_effort)",
+    "replace": "&& !efforts.is_empty()",
+    "fn": ["subscription/contract.subscriptionModelsOf"]
+  },
+  {
+    "name": "an empty id is the default entry only with an explicit flag",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "if is_default_entry || matches!(record.get(\"isDefault\"), Some(JsonValue::Bool(true))) {",
+    "replace": "if matches!(record.get(\"isDefault\"), Some(JsonValue::Bool(true))) {",
+    "fn": ["subscription/contract.subscriptionModelsOf"]
+  },
+  {
+    "name": "a status code of 600 is a login status",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(100.0..=599.0).contains(status)",
+    "replace": "(100.0..=600.0).contains(status)",
+    "fn": ["subscription/contract.subscriptionLoginFailureOf"]
+  },
+  {
+    "name": "an OAuth error code may be 65 characters",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "js_regex!(r\"^[a-z0-9_.-]{1,64}$\")",
+    "replace": "js_regex!(r\"^[a-z0-9_.-]{1,65}$\")",
+    "fn": [
+      "subscription/contract.SUBSCRIPTION_LOGIN_ERROR_CODE",
+      "subscription/contract.subscriptionLoginFailureOf"
+    ]
+  },
+  {
+    "name": "a missing ChatGPT status reads as checking",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "&& provider == \"chatgpt\"",
+    "replace": "&& provider == \"codex\"",
+    "fn": ["subscription/contract.subscriptionStatusMapOf"]
+  },
+  {
+    "name": "a metered login shows no account",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "let signed_in = read_state == \"ready\" || read_state == \"metered\";",
+    "replace": "let signed_in = read_state == \"ready\";",
+    "fn": ["subscription/contract.subscriptionStatusMapOf"]
+  },
+  {
+    "name": "an unfinished login is shown on any state",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "if read_state == \"signed-out\"",
+    "replace": "if read_state != \"\"",
+    "fn": ["subscription/contract.subscriptionStatusMapOf"]
+  },
+  {
+    "name": "a launch failure of another name is invalid",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": ".unwrap_or(\"failed\");",
+    "replace": ".unwrap_or(\"invalid\");",
+    "fn": ["subscription/contract.subscriptionLaunchResultOf"]
+  },
+  {
+    "name": "a turned-off status is a checking one",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"state\", text(\"off\")),",
+    "replace": "(\"state\", text(\"checking\")),",
+    "fn": ["subscription/contract.offSubscriptionStatus"]
+  },
+  {
+    "name": "a variable that moves the CLI to the API is kept",
+    "file": "main-core/src/packages/ai_provider/subscription_env.rs",
+    "find": "\"CODEX_ACCESS_TOKEN\",",
+    "replace": "\"CODEX_ACCESS_TOKEN_UNUSED\",",
+    "fn": [
+      "subscription/env.SUBSCRIPTION_STRIPPED_ENV_VARS",
+      "subscription/env.subscriptionChildEnv"
+    ]
+  },
+  {
+    "name": "Windows matches variable names with their case",
+    "file": "main-core/src/packages/ai_provider/subscription_env.rs",
+    "find": "name.to_uppercase()",
+    "replace": "name.to_owned()",
+    "fn": ["subscription/env.subscriptionChildEnv"]
+  },
+  {
+    "name": "HOME is not filled from USERPROFILE when empty",
+    "file": "main-core/src/packages/ai_provider/subscription_env.rs",
+    "find": "env.get(\"HOME\").is_none_or(|home| home.is_empty())",
+    "replace": "env.get(\"HOME\").is_none()",
+    "fn": ["subscription/env.subscriptionChildEnv"]
+  },
+  {
+    "name": "the directory of the program goes behind PATH",
+    "file": "main-core/src/packages/ai_provider/subscription_env.rs",
+    "find": "format!(\"{}{}{}\", host::dirname(command), host::DELIMITER, current)",
+    "replace": "format!(\"{}{}{}\", current, host::DELIMITER, host::dirname(command))",
+    "fn": ["subscription/env.subscriptionChildEnv"]
+  },
+  {
+    "name": "what the launch needs is not applied",
+    "file": "main-core/src/packages/ai_provider/subscription_env.rs",
+    "find": "env.assign(&record_of(&options.extra));",
+    "replace": "let _ = &options.extra;",
+    "fn": ["subscription/env.subscriptionChildEnv"]
+  },
+  {
+    "name": "the OLD prefixes are not named",
+    "file": "main-core/src/packages/ai_provider/subscription_old_names.rs",
+    "find": "\"genoffice-claude-code-\"",
+    "replace": "\"genoffice-claude-code\"",
+    "fn": [
+      "subscription/old-names.OLD_TRACKED_TEMP_PREFIXES",
+      "subscription/temp-dirs.cleanupTrackedTempDirs"
+    ]
+  },
+  {
+    "name": "the source is not aborted when the reading is over",
+    "file": "main-core/src/packages/ai_provider/subscription_models.rs",
+    "find": "controller.abort(None);",
+    "replace": "let _ = &controller;",
+    "fn": ["subscription/models.listSubscriptionModels"]
+  },
+  {
+    "name": "a model list is given 1 s",
+    "file": "main-core/src/packages/ai_provider/subscription_models.rs",
+    "find": "pub const SUBSCRIPTION_MODELS_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "pub const SUBSCRIPTION_MODELS_TIMEOUT_MS: f64 = 1_000.0;",
+    "fn": [
+      "subscription/models.SUBSCRIPTION_MODELS_TIMEOUT_MS",
+      "subscription/models.listSubscriptionModels"
+    ]
+  },
+  {
+    "name": "a failed reading is an empty list",
+    "file": "main-core/src/packages/ai_provider/subscription_models.rs",
+    "find": "Err(_) => None,",
+    "replace": "Err(_) => Some(JsonValue::Array(Vec::new())),",
+    "fn": ["subscription/models.listSubscriptionModels"]
+  },
+  {
+    "name": "a registered source is not removed",
+    "file": "main-core/src/packages/ai_provider/subscription_models.rs",
+    "find": "state.sources.delete(provider);",
+    "replace": "let _ = provider;",
+    "fn": ["subscription/models.listSubscriptionModels"]
+  },
+  {
+    "name": "the start slack of an owner is 1 s",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "const OWNER_START_SLACK_MS: f64 = 10_000.0;",
+    "replace": "const OWNER_START_SLACK_MS: f64 = 1_000.0;",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  },
+  {
+    "name": "the old prefixes are not removable",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": ".chain(OLD_TRACKED_TEMP_PREFIXES)",
+    "replace": ".chain([].into_iter())",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  },
+  {
+    "name": "a live owner does not keep its folder",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "if record.owner_pid != rt.pid() && alive(record.owner_pid) {",
+    "replace": "if false && alive(record.owner_pid) {",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  },
+  {
+    "name": "a folder anywhere is removed",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "if !is_tracked_path(rt, &record.path, &temp_root) {",
+    "replace": "if false {",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  },
+  {
+    "name": "a file is removed as a folder",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "recursive: is_directory,",
+    "replace": "recursive: true,",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  },
+  {
+    "name": "a record is named by one digit fewer",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "&digest[..16]",
+    "replace": "&digest[..15]",
+    "fn": [
+      "subscription/temp-dirs.createTrackedTempDir",
+      "subscription/temp-dirs.removeTrackedTempDir"
+    ]
+  },
+  {
+    "name": "an empty record directory is a directory",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": ".filter(|dir| !dir.is_empty())\n}",
+    "replace": "\n}",
+    "fn": ["subscription/temp-dirs.createTrackedTempDir"]
+  },
+  {
+    "name": "a made folder records another owner",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "number(options.owner_pid.unwrap_or_else(|| rt.pid())),",
+    "replace": "number(rt.pid()),",
+    "fn": ["subscription/temp-dirs.createTrackedTempDir"]
+  },
+  {
+    "name": "a removed folder keeps its record",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "remove_quietly(rt, &host::join(&[&dir, &record_name(path)])).await;",
+    "replace": "let _ = &dir;",
+    "fn": ["subscription/temp-dirs.removeTrackedTempDir"]
+  },
+  {
+    "name": "an acceptance given for an unknown login kind counts as unknown",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "detection.login_method.as_deref() == Some(\"metered\")",
+    "replace": "detection.login_method.as_deref() != Some(\"unknown\")",
+    "fn": ["subscription/metered.meteredLoginFingerprint"]
+  },
+  {
+    "name": "a check that could not tell clears the acceptance",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "if detection.state == \"error\" || detection.state == \"not-installed\" {",
+    "replace": "if detection.state == \"error\" {",
+    "fn": ["subscription/metered.reconcileMeteredAcceptance"]
+  },
+  {
+    "name": "a stored kind alone is nothing stored",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "let has_stored = stored_accepted || fingerprint.is_some_and(|f| !f.is_empty());",
+    "replace": "let has_stored = stored_accepted;",
+    "fn": ["subscription/metered.reconcileMeteredAcceptance"]
+  },
+  {
+    "name": "an acceptance needs no stored flag",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "        && stored_accepted\n",
+    "replace": "",
+    "fn": ["subscription/metered.reconcileMeteredAcceptance"]
+  },
+  {
+    "name": "the record file is named otherwise",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "pub const SUBSCRIPTION_METERED_FILE: &str = \"subscription-metered.json\";",
+    "replace": "pub const SUBSCRIPTION_METERED_FILE: &str = \"subscription-metered.jsn\";",
+    "fn": [
+      "subscription/metered.SUBSCRIPTION_METERED_FILE",
+      "subscription/metered.createMeteredAcceptanceFileStore"
+    ]
+  },
+  {
+    "name": "a value an earlier build wrote is read as an acceptance",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "&& METERED_LOGIN_FINGERPRINTS.iter().any(|f| f == value)\n                {\n                    record.set(provider, text(value));",
+    "replace": "&& !value.is_empty()\n                {\n                    record.set(provider, text(value));",
+    "fn": ["subscription/metered.createMeteredAcceptanceFileStore"]
+  },
+  {
+    "name": "a child that started 1 s after its record is not the recorded one",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "const STARTED_AFTER_RECORD_MS: f64 = 1_500.0;",
+    "replace": "const STARTED_AFTER_RECORD_MS: f64 = 1_000.0;",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "a child that started 10 s before its record is not the recorded one",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "const STARTED_BEFORE_RECORD_MS: f64 = 10_000.0;",
+    "replace": "const STARTED_BEFORE_RECORD_MS: f64 = 5_000.0;",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "the start slack of an owner is 1 s",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "const OWNER_START_SLACK_MS: f64 = 10_000.0;",
+    "replace": "const OWNER_START_SLACK_MS: f64 = 1_000.0;",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "a start time that could not be read is a match",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "if !info.started_at.is_finite() {",
+    "replace": "if false {",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "a server the app started is not its child",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": ".filter(|kind| *kind == USER_MCP_CHILD_KIND || AI_SUBSCRIPTION_PROVIDERS.contains(kind))",
+    "replace": ".filter(|kind| AI_SUBSCRIPTION_PROVIDERS.contains(kind))",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "Windows compares the program file with its case",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "path.replace('/', \"\\\\\").to_lowercase()",
+    "replace": "path.replace('/', \"\\\\\")",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "the calling process may be ended",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "if !untouchable.contains(&child.pid)",
+    "replace": "if true",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "an unverifiable check ends the records anyway",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "let Ok(processes) = inspected else {",
+    "replace": "let Ok(processes) = inspected.or(Ok::<ProcessMap, JsError>(Vec::new())) else {",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "a handled record stays",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "        remove_quietly(rt, file).await;\n    }\n    result",
+    "replace": "    }\n    result",
+    "fn": ["subscription/leftovers.cleanupLeftoverSubscriptionChildren"]
+  },
+  {
+    "name": "ps is not run in the C locale",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "env.set(\"LC_ALL\", \"C\".to_owned());",
+    "replace": "env.set(\"LC_ALL\", \"en_US.UTF-8\".to_owned());",
+    "fn": [
+      "subscription/leftovers.inspectProcesses",
+      "subscription/leftovers.cleanupLeftoverSubscriptionChildren"
+    ]
+  },
+  {
+    "name": "a process query is given 14 s",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "const INSPECT_TIMEOUT_MS: f64 = 15_000.0;",
+    "replace": "const INSPECT_TIMEOUT_MS: f64 = 14_000.0;",
+    "fn": ["subscription/leftovers.inspectProcesses"]
+  },
+  {
+    "name": "a process query may print 2 MiB",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "const MAX_TOOL_OUTPUT_BYTES: usize = 1024 * 1024;",
+    "replace": "const MAX_TOOL_OUTPUT_BYTES: usize = 2 * 1024 * 1024;",
+    "fn": ["subscription/leftovers.inspectProcesses"]
+  },
+  {
+    "name": "a Windows query starts in the working directory",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "Some(windows_system_dir(&env_get)),",
+    "replace": "None,",
+    "fn": ["subscription/leftovers.inspectProcesses"]
+  },
+  {
+    "name": "a pid is looked up twice",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "if valid_pid(*pid) && !valid.contains(pid) {",
+    "replace": "if valid_pid(*pid) {",
+    "fn": ["subscription/leftovers.inspectProcesses"]
+  },
+  {
+    "name": "a command may print 512 KiB",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "const MAX_COMMAND_OUTPUT_BYTES: usize = 256 * 1024;",
+    "replace": "const MAX_COMMAND_OUTPUT_BYTES: usize = 512 * 1024;",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "a child on POSIX leads no group of its own",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "detached: platform != \"win32\",",
+    "replace": "detached: false,",
+    "fn": [
+      "subscription/process.spawnSubscriptionProgram",
+      "subscription/process.runSubscriptionProgram"
+    ]
+  },
+  {
+    "name": "a run starts with stdin open",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "stdio: Some([Stdio::Ignore, Stdio::Pipe, Stdio::Pipe]),",
+    "replace": "stdio: Some([Stdio::Pipe, Stdio::Pipe, Stdio::Pipe]),",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "a run starts in the root directory",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "cwd: Some(options.cwd.clone().unwrap_or_else(|| rt.tmpdir())),",
+    "replace": "cwd: Some(options.cwd.clone().unwrap_or_else(|| \"/\".to_owned())),",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "a cancelled run says another thing",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "\"The command was cancelled\"",
+    "replace": "\"The command was aborted\"",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "a timed-out run names no number",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "\"The command did not finish within {} ms\"",
+    "replace": "\"The command did not finish within {} s\"",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "a run that gives up ends the program softly",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "kill_process_tree_rt(&rt, pid, true);",
+    "replace": "kill_process_tree_rt(&rt, pid, false);",
+    "fn": ["subscription/process.runSubscriptionProgram"]
+  },
+  {
+    "name": "the variables of the options do not reach the child",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "program.env.iter().chain(options.env.iter())",
+    "replace": "program.env.iter().chain([].iter())",
+    "fn": ["subscription/process.spawnSubscriptionProgram"]
+  },
+  {
+    "name": "a child that exits stays registered",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "shared_exit.forget(&rt_exit, ticket);",
+    "replace": "let _ = (&shared_exit, &rt_exit, ticket);",
+    "fn": [
+      "subscription/process.spawnSubscriptionProgram",
+      "subscription/process.trackSubscriptionChild"
+    ]
+  },
+  {
+    "name": "a child asked to go unregistered is registered",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "RegistryChoice::None => {}",
+    "replace": "RegistryChoice::None => {\n            track_subscription_child(rt, shared, child, info);\n        }",
+    "fn": ["subscription/process.spawnSubscriptionProgram"]
+  },
+  {
+    "name": "shutdown ends a tree softly",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "kill_process_tree_rt(self.rt, Some(pid), true);",
+    "replace": "kill_process_tree_rt(self.rt, Some(pid), false);",
+    "fn": ["subscription/process.trackSubscriptionChild"]
+  },
+  {
+    "name": "taskkill is given pipes",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "stdio: [Stdio::Ignore; 3],",
+    "replace": "stdio: [Stdio::Pipe; 3],",
+    "fn": ["subscription/process.trackSubscriptionChild"]
+  },
+  {
+    "name": "a failed taskkill leaves the root alone",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "Err(_) => on_killer_error(pid, &mut RtKillHost { rt: rt.clone() }),",
+    "replace": "Err(_) => {}",
+    "fn": ["subscription/process.trackSubscriptionChild"]
+  },
+  {
+    "name": "the record of the registry is written for another owner",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "(self.rt.pid(), self.owner_started_at)",
+    "replace": "(0.0, self.owner_started_at)",
+    "fn": [
+      "subscription/process.trackSubscriptionChild",
+      "subscription/process.spawnSubscriptionProgram"
+    ]
+  },
+  {
+    "name": "the usage page of ChatGPT is another",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "\"https://chatgpt.com/#settings/Usage\"",
+    "replace": "\"https://chatgpt.com/#settings\"",
+    "fn": ["subscription/contract.SUBSCRIPTION_CHATGPT_USAGE_URL"]
+  },
+  {
+    "name": "a status nothing is known about is signed out",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"state\", text(\"checking\")),",
+    "replace": "(\"state\", text(\"signed-out\")),",
+    "fn": [
+      "subscription/contract.checkingSubscriptionStatus",
+      "subscription/contract.checkingSubscriptionStatuses",
+      "subscription/contract.subscriptionStatusMapOf"
+    ]
+  },
+  {
+    "name": "the status of ChatGPT is the one of Codex",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"chatgpt\", checking_subscription_status(\"chatgpt\")),",
+    "replace": "(\"chatgpt\", checking_subscription_status(\"codex\")),",
+    "fn": ["subscription/contract.checkingSubscriptionStatuses"]
+  },
+  {
+    "name": "the statuses of an answer are dropped",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "(\"statuses\", subscription_status_map_of(get(\"statuses\"))),",
+    "replace": "(\"statuses\", subscription_status_map_of(None)),",
+    "fn": [
+      "subscription/contract.subscriptionMeteredResultOf",
+      "subscription/contract.subscriptionOffResultOf"
+    ]
+  },
+  {
+    "name": "a turning off answers as a launch result",
+    "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
+    "find": "    subscription_metered_result_of(result)\n}",
+    "replace": "    subscription_launch_result_of(result)\n}",
+    "fn": ["subscription/contract.subscriptionOffResultOf"]
+  },
+  {
+    "name": "a tracked prefix is cut",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "\"seuoffice-claude-code-\"]",
+    "replace": "\"seuoffice-claude-code\"]",
+    "fn": ["subscription/temp-dirs.TRACKED_TEMP_PREFIXES"]
+  },
+  {
+    "name": "a login method of unknown is not listed",
+    "file": "main-core/src/packages/ai_provider/subscription_metered.rs",
+    "find": "[\"metered\", \"unknown\"]",
+    "replace": "[\"metered\", \"unknown2\"]",
+    "fn": ["subscription/metered.METERED_LOGIN_FINGERPRINTS"]
+  },
+  {
+    "name": "the start-up does not set the record directory of the temporary folders",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "set_subscription_temp_record_dir(&mut temp.borrow_mut(), Some(dir));",
+    "replace": "let _ = (&temp, dir);",
+    "fn": ["subscription/leftovers.initSubscriptionChildTracking"]
+  },
+  {
+    "name": "the start-up leaves the temporary folders of the last run",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "cleanup_tracked_temp_dirs(rt, temp, dir, &CleanupTempDirsOptions::default()).await;",
+    "replace": "let _ = (rt, temp, dir);",
+    "fn": ["subscription/leftovers.initSubscriptionChildTracking"]
+  },
+  {
+    "name": "the start-up does not keep this run's record",
+    "file": "main-core/src/packages/ai_provider/subscription_leftovers.rs",
+    "find": "shared.record_in(rt, Some(dir));",
+    "replace": "let _ = shared;",
+    "fn": ["subscription/leftovers.initSubscriptionChildTracking"]
+  },
+  {
+    "name": "a JS entry is no JS entry unless it is .cjs",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "\".js\" | \".cjs\" | \".mjs\"",
+    "replace": "\".cjs\" | \".mjs\"",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "a version run is given 4 s",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "const VERSION_TIMEOUT_MS: f64 = 5_000.0;",
+    "replace": "const VERSION_TIMEOUT_MS: f64 = 4_000.0;",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the oldest release of the app tree wins",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "if difference != 0.0 && !difference.is_nan() {",
+    "replace": "if difference != 0.0 && difference.is_nan() {",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "a release without its helper is as good as a complete one",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "let mut pool = if complete.is_empty() { found } else { complete };",
+    "replace": "let mut pool = if complete.is_empty() { found } else { found };",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the oldest app bundle wins",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "sort_by_number(&mut found, |a, b| b.1 - a.1);",
+    "replace": "sort_by_number(&mut found, |a, b| a.1 - b.1);",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the older of the two copies wins on macOS",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "candidate_time >= current_time",
+    "replace": "candidate_time < current_time",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "ARM has no target triple",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "\"arm64\" => \"aarch64\",",
+    "replace": "\"arm64\" => return None,",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the older vendor layout is not tried on Windows",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "&[\"bin\", \"codex\"]",
+    "replace": "&[\"bin\"]",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the node.exe of a shim is the CLI",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "if name == \"node.exe\" || name == \"node\" {",
+    "replace": "if false {",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "an extension-less shim leads nowhere",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "(extension == \".ps1\" || extension.is_empty())",
+    "replace": "(extension == \".ps1\")",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the installer directory is another source",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "\"native-installer\".to_owned(),",
+    "replace": "\"npm\".to_owned(),",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the common directories are another source",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": ".unwrap_or_else(|| \"path\".to_owned()),",
+    "replace": ".unwrap_or_else(|| \"npm\".to_owned()),",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "the first two copies are not asked about their version",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "if new_enough(read_version(cx, program).await) {",
+    "replace": "if false {",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "package directories are matched with their case",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "js_regex!(r\"^OpenAI\\.Codex_\", \"i\")",
+    "replace": "js_regex!(r\"^OpenAI\\.Codex_\", \"\")",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "a configured path inside the app tree is used",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": ".is_some_and(|root| is_inside(&absolute, root, &platform));",
+    "replace": ".is_some_and(|_| false);",
+    "fn": ["subscription/locate.locateSubscriptionProgram"]
+  },
+  {
+    "name": "Claude Code is named Claude",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "\"claude-code\" => \"Claude Code\",",
+    "replace": "\"claude-code\" => \"Claude\",",
+    "fn": [
+      "subscription/locate.subscriptionProviderLabel",
+      "subscription/locate.resolveSubscriptionProgram"
+    ]
+  },
+  {
+    "name": "a missing program is reported without its word",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "\"{} CLI was not found\"",
+    "replace": "\"{} was not found\"",
+    "fn": ["subscription/locate.resolveSubscriptionProgram"]
+  },
+  {
+    "name": "kill tree: the runtime swallows a failed group kill",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "            .kill_pid(pid, signal.map(Signal::as_str))\n            .map_err(|e| e.message_or_string())",
+    "replace": "            .kill_pid(pid, signal.map(Signal::as_str))\n            .map_err(|e| e.message_or_string())\n            .or(Ok(()))",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "temp dirs: a process of another user counts as gone",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "if code == \"EPERM\"",
+    "replace": "if code == \"EPERN\"",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
+  }
+]

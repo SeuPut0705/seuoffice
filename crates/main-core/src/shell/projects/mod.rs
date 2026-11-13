@@ -18,7 +18,6 @@ pub mod project_index;
 pub mod project_ipc;
 pub mod project_tools;
 pub mod selection;
-pub mod stand_ins;
 pub mod trust;
 pub mod visibility;
 pub mod write_guard;

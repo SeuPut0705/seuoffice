@@ -778,9 +778,9 @@
   },
   {
     "name": "stand-ins: desktop.ini is not OS junk",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "const HIDDEN_FILE_NAMES: [&str; 2] = [\"thumbs.db\", \"desktop.ini\"];",
-    "replace": "const HIDDEN_FILE_NAMES: [&str; 2] = [\"thumbs.db\", \"desktop.in\"];",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "const HIDDEN_FILE_NAMES: &[&str] = &[\"thumbs.db\", \"desktop.ini\"];",
+    "replace": "const HIDDEN_FILE_NAMES: &[&str] = &[\"thumbs.db\", \"desktop.in\"];",
     "fn": ["folder-tree.isHiddenEntry"]
   },
   {

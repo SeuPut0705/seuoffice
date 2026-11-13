@@ -30,10 +30,12 @@ use crate::packages::electron_utils::default_save_dir::Thrown;
 use crate::packages::electron_utils::unsaved_files::{
     OpenFileState, OpenFilesHolder, OpenFilesSource, OpenFilesSourceFailed, assert_file_saved,
 };
+use crate::packages::file_parse::attachable::attachable_max_bytes;
 use crate::packages::i18n::Lang;
 use crate::packages::project_store::{
     ProjectFileEntry, ProjectId, ProjectListItem, ProjectTrustPrompt,
 };
+use crate::shell::knowledge_base::{KB_READ_MAX_BYTES, kb_read_max_bytes};
 use crate::shell::projects::cloud_cache::CacheClock;
 use crate::shell::projects::ignore::{IgnoreOptions, compile_ignore};
 use crate::shell::projects::paths::canonical_path;
@@ -58,9 +60,6 @@ use crate::shell::projects::project_tools::{
     KnowledgePages, PROJECT_LIST_DEFAULT_LIMIT, PROJECT_SCOPE_UNKNOWN,
     PROJECT_SEARCH_DEFAULT_LIMIT, PROJECT_UNAVAILABLE, ProjectFolderTools, ProjectToolsDeps,
     ProjectToolsGuide, ProjectToolsScopes, ProjectToolsStore,
-};
-use crate::shell::projects::stand_ins::{
-    KB_READ_MAX_BYTES, attachable_max_bytes, kb_read_max_bytes,
 };
 
 type Logs = Rc<RefCell<Vec<Vec<Value>>>>;
