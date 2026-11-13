@@ -152,6 +152,14 @@ pub(crate) fn apply_menu(kind: TabKind) {
     }
 }
 
+/// `homeKinds.set`: the home menu and the Dock list the new-document kinds
+pub(crate) fn home_kinds_changed() {
+    if let Some(app) = APP.get() {
+        apply_menu_for(app, TabKind::Home);
+        install_dock_menu(app);
+    }
+}
+
 /// `applyMenuFor(kind)`: the application menu of the active editor. Callable
 /// from any thread; the menu is set on the UI thread.
 pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
@@ -161,7 +169,7 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
     DOCK.call_once(|| install_dock_menu(app));
 }
 
-/// The kinds the Dock offers to create, in home order (`installDockMenu`'s `only`)
+/// The kinds the Dock may offer (`installDockMenu`'s `only`); they appear in home's order
 const DOCK_KINDS: [(&str, &str); 5] = [
     ("docx", "menuNewDoc"),
     ("xlsx", "menuNewSheet"),
@@ -171,7 +179,8 @@ const DOCK_KINDS: [(&str, &str); 5] = [
 ];
 
 /// `installDockMenu()`: Home, then the new-document entries the person did not
-/// hide, in the app's language. At start and after a language change.
+/// hide, in home's order and the app's language. At start, after a language
+/// change and after the home kinds change.
 pub(crate) fn install_dock_menu(app: &AppHandle) {
     let app = app.clone();
     post_core(move |provided, services| {
@@ -186,15 +195,13 @@ pub(crate) fn install_dock_menu(app: &AppHandle) {
             label: menu_label(MenuDict::Shell, lang, "menuHome"),
             action: dock::DockAction::Home,
         }];
-        entries.extend(
-            DOCK_KINDS
-                .iter()
-                .filter(|(kind, _)| visible.iter().any(|v| v == kind))
-                .map(|(kind, key)| dock::DockEntry {
-                    label: menu_label(MenuDict::Shell, lang, key),
-                    action: dock::DockAction::NewDocument(kind),
-                }),
-        );
+        entries.extend(visible.iter().filter_map(|kind| {
+            let (kind, key) = DOCK_KINDS.iter().find(|(k, _)| k == kind)?;
+            Some(dock::DockEntry {
+                label: menu_label(MenuDict::Shell, lang, key),
+                action: dock::DockAction::NewDocument(kind),
+            })
+        }));
         dock::set_dock_menu(
             &app,
             entries,
@@ -310,7 +317,8 @@ impl MHost for ShellM {
     fn refresh_title_bar_overlay(&self) {}
 
     fn rebuild_menus_for_language(&self) {
-        // the language switcher lives on the home page, so the home menu is the active one
+        // the language switcher lives on the home page, so the home menu is the active one;
+        // the editors' Back to Home items are built with each editor menu, in its language
         apply_menu_for(&self.app, TabKind::Home);
         install_dock_menu(&self.app);
     }

@@ -393,7 +393,7 @@ impl HomeApp for Unbuilt {
         unbuilt("HomeApp::delimited_import_limit_changed");
     }
     fn home_kinds_changed(&self) {
-        unbuilt("HomeApp::home_kinds_changed");
+        super::menu::home_kinds_changed();
     }
     fn folder_watchers_changed(&self) {
         unbuilt("HomeApp::folder_watchers_changed");
