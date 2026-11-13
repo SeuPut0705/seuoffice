@@ -25,7 +25,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { setOpenFilesSource } from '../../../../../packages/electron-utils/src/unsaved-files.ts'
-import type { Call, LoadContext } from '../../../types.ts'
+import type { Call, Group, LoadContext } from '../../../types.ts'
 import { answer, ipc, log, startCase, state } from './state.cts'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -125,12 +125,6 @@ export async function loadPdfTools(cx: LoadContext): Promise<void> {
     surface: v.surface ?? 'Shell',
   }))
   const windowOfView = (view: number) => views.find((v) => v.view === view)?.window ?? view
-  // `watch(contents)` listens for the view's end (`destroyed`, `render-process-gone`)
-  for (const v of views) {
-    const contents = cx.electron.contents(v.view)
-    contents.once ??= () => {}
-    contents.on ??= () => {}
-  }
   const { electron } = cx
   const cases = electron.BrowserWindow as Record<string, (...a: unknown[]) => unknown>
   const quit: (() => unknown)[] = []
@@ -257,7 +251,7 @@ export async function loadPdfTools(cx: LoadContext): Promise<void> {
 }
 
 /** the shell's calls into the tools outside a channel, by the name after `d2/pdf-tools:` */
-export const triggers: Record<string, (view: number, args: unknown[]) => unknown> = {
+const byWhat: Record<string, (view: number, args: unknown[]) => unknown> = {
   'open-view': (view, [path]) => {
     const allowed = new Set<string>()
     if (typeof path === 'string' && path && existsSync(path)) allowed.add(path)
@@ -298,11 +292,16 @@ export const triggers: Record<string, (view: number, args: unknown[]) => unknown
   'cancel-all': () => loaded!.quit.reduce<number>((n, f) => n + Number(f()), 0),
 }
 
-/**
- * A `trigger` step of a case (tools/ipc-diff's shared shape for the shell's
- * calls outside a channel); `Call` does not name the kind yet
- */
+/** `Group.triggers`: `d2/pdf-tools:<what>` (crates/shell-ipc/d2's `pdf::tools::probe_trigger`) */
+export const triggers: NonNullable<Group['triggers']> = Object.fromEntries(
+  Object.entries(byWhat).map(([what, run]) => [
+    `d2/pdf-tools:${what}`,
+    (_cx: unknown, view: number, args: unknown[]) => run(view, args),
+  ]),
+)
+
+/** A `trigger` step of a case */
 export function trigger(what: string, view: number, args: unknown[] = []): Call {
-  const step = { kind: 'trigger', name: `d2/pdf-tools:${what}`, view, args }
-  return step as unknown as Call
+  const name = `d2/pdf-tools:${what}`
+  return { channel: name, kind: 'trigger', name, view, args }
 }

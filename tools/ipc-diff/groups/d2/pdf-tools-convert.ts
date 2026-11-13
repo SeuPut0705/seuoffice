@@ -82,7 +82,7 @@ const cases: Case[] = [
   },
 ]
 
-export const group: Group & { triggers: typeof triggers } = {
+export const group: Group = {
   batch: 'D2',
   load: loadPdfTools,
   cases,
