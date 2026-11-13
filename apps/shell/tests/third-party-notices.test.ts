@@ -106,7 +106,12 @@ describe('third-party license aggregation', () => {
     // Apache-2.0 §4(d): the attribution notice, upstream name included, comes first
     expect(text.startsWith(NOTICE)).toBe(true)
     const afterNotice = text.slice(NOTICE.length)
-    expect(afterNotice).toMatch(/^\s+The Apache License, Version 2\.0, .*\n.*LICENSE\.txt next/)
+    // then where the licences are: the FSL beside it, the Apache License for the works above
+    const pointer = afterNotice.slice(0, afterNotice.indexOf(HEADER))
+    expect(pointer).toMatch(
+      /^\s+The Functional Source License, Version 1\.1,[\s\S]*LICENSE\.txt next/,
+    )
+    expect(pointer).toMatch(/Apache License, Version 2\.0,[\s\S]*LICENSE-APACHE\.txt/)
     // the generator's own text starts at its header and names this product only
     const own = afterNotice.slice(afterNotice.indexOf(HEADER))
     expect(afterNotice.indexOf(HEADER)).toBeGreaterThan(0)
