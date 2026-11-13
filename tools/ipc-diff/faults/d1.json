@@ -1,0 +1,366 @@
+[
+  {
+    "name": "open-file answers 'unreadable' for a name that is not a diagram",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "return Ok(status(\"unsupported\"));",
+    "replace": "return Ok(status(\"unreadable\"));",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "an unknown save token has another message",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "return failure(\"diagram: unknown save target\");",
+    "replace": "return failure(\"diagram: unknown save token\");",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "retarget no longer reuses the file's target",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "        if mode != \"saveAs\"\n",
+    "replace": "        if mode == \"save\"\n",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "a view that opens a file is handed a seed",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "            if entry.open_path.is_some() {\n                return None;\n            }\n            entry.seed.take()",
+    "replace": "            entry.seed.take()",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "open-failed keeps 1000 characters",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "Some(2000.0)",
+    "replace": "Some(1000.0)",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "open-link no longer reports a link the system could not open",
+    "file": "shell-ipc/d1/src/diagram/files.rs",
+    "find": "self.0.os_shell.open_external(&target).is_ok(),",
+    "replace": "{ let _ = self.0.os_shell.open_external(&target); true },",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "mail links are not opened",
+    "file": "shell-ipc/d1/src/diagram/formats.rs",
+    "find": "const LINK_PROTOCOLS: [&str; 3] = [\"http:\", \"https:\", \"mailto:\"];",
+    "replace": "const LINK_PROTOCOLS: [&str; 2] = [\"http:\", \"https:\"];",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "a headless export takes recovery copies",
+    "file": "shell-ipc/d1/src/diagram/recovery.rs",
+    "find": "if self.0.shell.is_headless() || !self.recovery_available() || barred {",
+    "replace": "if !self.recovery_available() || barred {",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "a hidden window is told it has no job",
+    "file": "shell-ipc/d1/src/diagram/headless.rs",
+    "find": ".map_or(IpcValue::Null, |running| running.job.clone())",
+    "replace": ".map_or(IpcValue::Null, |_| IpcValue::Null)",
+    "groups": ["d1/diagram"]
+  },
+  {
+    "name": "a page number with a fraction is accepted",
+    "file": "shell-ipc/d1/src/diagram/export.rs",
+    "find": "x.is_finite() && x.trunc() == x && x.abs()",
+    "replace": "x.is_finite() && x.abs()",
+    "groups": ["d1/diagram-export"]
+  },
+  {
+    "name": "existing export files are replaced without asking",
+    "file": "shell-ipc/d1/src/diagram/export.rs",
+    "find": "let unasked = paths.len() != 1 || paths[0] != chosen;",
+    "replace": "let unasked = false;",
+    "groups": ["d1/diagram-export"]
+  },
+  {
+    "name": "a text read hands back at most 10 characters",
+    "file": "shell-ipc/d1/src/diagram/attachments.rs",
+    "find": ".clamp(1.0, ATTACHMENT_READ_MAX_CHARS)",
+    "replace": ".clamp(1.0, 10.0)",
+    "groups": ["d1/diagram-attach"]
+  },
+  {
+    "name": "a stopped split-pane save answers another text",
+    "file": "shell-ipc/d1/src/mindmap/handlers.rs",
+    "find": "failure(\"external-modified\")",
+    "replace": "failure(\"external_modified\")",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "dirty-changed never marks a map dirty",
+    "file": "shell-ipc/d1/src/mindmap/handlers.rs",
+    "find": "            state.dirty.insert(view);",
+    "replace": "            state.dirty.remove(&view);",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a save to the map's own path tells the shell of a new file",
+    "file": "shell-ipc/d1/src/mindmap/app.rs",
+    "find": "if previous_path != Some(target) {",
+    "replace": "if previous_path == Some(target) {",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a saved map keeps its recovery copies",
+    "file": "shell-ipc/d1/src/mindmap/recovery.rs",
+    "find": "self.delete_owned(view, RecoveryDeleteReason::Saved, true);",
+    "replace": "let _ = (view, RecoveryDeleteReason::Saved, true);",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "an export path granted for another kind is taken",
+    "file": "shell-ipc/d1/src/mindmap/export.rs",
+    "find": "if granted_kind == kind && path == *given =>",
+    "replace": "if path == *given =>",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "an SVG export leaves out the XML declaration",
+    "file": "shell-ipc/d1/src/mindmap/export.rs",
+    "find": "format!(\"{XML_DECLARATION}{svg}\")",
+    "replace": "format!(\"{svg}\")",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a picture export takes bytes that are not a PNG",
+    "file": "shell-ipc/d1/src/mindmap/export.rs",
+    "find": "Some(bytes) if is_png(bytes) && bytes.len() <= MAX_PNG_BYTES => bytes,",
+    "replace": "Some(bytes) if bytes.len() <= MAX_PNG_BYTES => bytes,",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "an export dialog's pick is not given the kind's extension",
+    "file": "shell-ipc/d1/src/mindmap/export.rs",
+    "find": ".map(|picked| with_export_extension(picked, kind)),",
+    "replace": ".map(|picked| picked),",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a link preview reads only http pictures",
+    "file": "shell-ipc/d1/src/mindmap/preview.rs",
+    "find": "matches!(url.scheme(), \"http\" | \"https\")",
+    "replace": "matches!(url.scheme(), \"http\")",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a run report keeps only its first path",
+    "file": "shell-ipc/d1/src/mindmap/handlers.rs",
+    "find": ".take(MAX_REPORTED_PATHS)",
+    "replace": ".take(1)",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a copy is taken while Don't Save holds",
+    "file": "shell-ipc/d1/src/mindmap/recovery.rs",
+    "find": "&& (barred.dropped.is_some() || barred.blocked)",
+    "replace": "&& barred.blocked",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a mail link is not opened",
+    "file": "shell-ipc/d1/src/mindmap/handlers.rs",
+    "find": "[\"http:\", \"https:\", \"mailto:\"]",
+    "replace": "[\"http:\", \"https:\", \"mailto-:\"]",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a pasted picture is named another way",
+    "file": "shell-ipc/d1/src/mindmap/attach.rs",
+    "find": "format!(\"pasted-{stamp}-{seq}.{clean_ext}\")",
+    "replace": "format!(\"pasted-{stamp}-{seq}-x.{clean_ext}\")",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a page is at least two characters",
+    "file": "shell-ipc/d1/src/mindmap/attach.rs",
+    "find": ".clamp(1.0, READ_MAX_CHARS)",
+    "replace": ".clamp(2.0, READ_MAX_CHARS)",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "a page of attachment text is cut at another size (positive control)",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "clamp(1.0, 48_000.0)",
+    "replace": "clamp(1.0, 50.0)",
+    "groups": ["d1/sheets-files"]
+  },
+  {
+    "name": "find asks for a limit above zero, not at least one",
+    "file": "shell-ipc/d1/src/sheets/read.rs",
+    "find": "schema::int().at_least(1).max(100_000)",
+    "replace": "schema::int().positive().max(100_000)",
+    "groups": ["d1/sheets-read"]
+  },
+  {
+    "name": "a reversed range is no longer refused when only the rows are reversed",
+    "file": "shell-ipc/d1/src/sheets/read.rs",
+    "find": "\n            if start_row > end_row || start_col > end_col {",
+    "replace": "\n            if start_row > end_row && start_col > end_col {",
+    "groups": ["d1/sheets-read"]
+  },
+  {
+    "name": "a merge source of another type has another message",
+    "file": "shell-ipc/d1/src/sheets/mod.rs",
+    "find": "Unsupported merge source: {ext}",
+    "replace": "Unsupported merge source {ext}",
+    "groups": ["d1/sheets-open"]
+  },
+  {
+    "name": "the text cache of attachments keeps nothing",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "state.attachment_text_cache.len() > 8",
+    "replace": "state.attachment_text_cache.len() > 0",
+    "groups": ["d1/sheets-files"]
+  },
+  {
+    "name": "a chosen pick no longer cancels the other tabs",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "    core.broadcast_pick_cancelled(&pending_id, source);\n    core.env.shell.activate_tab(source);",
+    "replace": "    core.env.shell.activate_tab(source);",
+    "groups": ["d1/sheets-read"]
+  },
+  {
+    "name": "the PDF export dialog gets the default folder like the other saves",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "let selection = save_dialog_plain(",
+    "replace": "let selection = save_dialog(",
+    "groups": ["d1/sheets-save"]
+  },
+  {
+    "name": "a screen permission that is not determined is read as denied",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "status != \"granted\" && status != \"not-determined\"",
+    "replace": "status != \"granted\"",
+    "groups": ["d1/sheets-files"]
+  },
+  {
+    "name": "the file picker for a workbook offers another set of types",
+    "file": "shell-ipc/d1/src/sheets/open.rs",
+    "find": "&[\"xlsx\", \"xlsm\", \"xls\", \"csv\", \"tsv\", \"ods\"],",
+    "replace": "&[\"xlsx\", \"xlsm\", \"xls\", \"csv\", \"tsv\"],",
+    "groups": ["d1/sheets-open"]
+  },
+  {
+    "name": "a pasted picture is stamped with another separator",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": ".map(|c| if c == 'T' { '-' } else { c })",
+    "replace": ".map(|c| if c == 'T' { '_' } else { c })",
+    "groups": ["d1/sheets-files"]
+  },
+  {
+    "name": "an explicit save path has another refusal",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "\"An explicit save path needs Save As.\"",
+    "replace": "\"An explicit save path needs Save As\"",
+    "groups": ["d1/sheets-save"]
+  },
+  {
+    "name": "a request that mixes inline and transferred edits has another message",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "\"Save request mixes inline and transferred edits.\"",
+    "replace": "\"Save request mixes inline and transferred edits\"",
+    "groups": ["d1/sheets-save"]
+  },
+  {
+    "name": "a mailto link is refused as a script link is",
+    "file": "shell-ipc/d1/src/slides/reads.rs",
+    "find": "\"mailto:\".into()]),",
+    "replace": "\"mailto-refused:\".into()]),",
+    "groups": ["d1/slides-reads"]
+  },
+  {
+    "name": "a slide index one past the end reads a slide",
+    "file": "shell-ipc/d1/src/slides/session.rs",
+    "find": "(index.to_string() == key && index < len).then_some(index)",
+    "replace": "(index.to_string() == key && index <= len).then_some(index)",
+    "groups": ["d1/slides-reads", "d1/slides-edits"]
+  },
+  {
+    "name": "a deck with unsaved changes reads as clean",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "            .is_some_and(|s| app.session_dirty(s)),",
+    "replace": "            .is_some_and(|s| !app.session_dirty(s)),",
+    "groups": ["d1/slides-lifecycle", "d1/slides-edits"]
+  },
+  {
+    "name": "the redo button is told what the undo button is",
+    "file": "shell-ipc/d1/src/slides/session.rs",
+    "find": "(\"canUndo\", IpcValue::Bool(changed.can_undo)),",
+    "replace": "(\"canUndo\", IpcValue::Bool(changed.can_redo)),",
+    "groups": ["d1/slides-edits", "d1/slides-reads"]
+  },
+  {
+    "name": "reading a folder as a deck says it failed to open it",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "node_error_fd(&e, \"read\")",
+    "replace": "node_error_fd(&e, \"open\")",
+    "groups": ["d1/slides-lifecycle"]
+  },
+  {
+    "name": "save as with no name throws the wrong error",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "\"TypeError [ERR_INVALID_ARG_TYPE]\".into()",
+    "replace": "\"TypeError\".into()",
+    "groups": ["d1/slides-lifecycle"]
+  },
+  {
+    "name": "a master edit leaves the view when the edit is done",
+    "file": "shell-ipc/d1/src/slides/master.rs",
+    "find": "        s.master_edit = None;",
+    "replace": "        s.master_edit = s.master_edit.take();",
+    "groups": ["d1/slides-master"]
+  },
+  {
+    "name": "a model that is not there is a read error, not a stat error",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "node_error(&e, \"stat\", &path)",
+    "replace": "node_error(&e, \"open\", &path)",
+    "groups": ["d1/slides-inserts"]
+  },
+  {
+    "name": "slides moved to a gap are planned for the first gap",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "number(field(op_value, \"insertAt\"))",
+    "replace": "0.0",
+    "groups": ["d1/slides-inserts"]
+  },
+  {
+    "name": "the show bleeds into the tab strip the wrong way",
+    "file": "shell-ipc/d1/src/slides/presenter.rs",
+    "find": "app.shell.set_bleed(view, true);",
+    "replace": "app.shell.set_bleed(view, false);",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "a swap onto the same display moves the windows",
+    "file": "shell-ipc/d1/src/slides/presenter.rs",
+    "find": "if audience_display.id == host_display.id {",
+    "replace": "if audience_display.id != host_display.id {",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "a generated page is named by another marker",
+    "file": "shell-ipc/d1/src/slides/export.rs",
+    "find": "string(format!(\"{CLOUD_PAGE_PREFIX}{path_text}\"))",
+    "replace": "string(format!(\"page:{path_text}\"))",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "the element clipboard token is not the made one",
+    "file": "shell-ipc/d1/src/slides/clipboard.rs",
+    "find": "            app.shell.random_uuid()",
+    "replace": "            String::from(\"fixed-token\")",
+    "groups": ["d1/slides-clipboard"]
+  },
+  {
+    "name": "the comment author ignores the configured name",
+    "file": "shell-ipc/d1/src/slides/reads.rs",
+    "find": "configured_author_name(&user_data, username.as_deref())",
+    "replace": "configured_author_name(\"\", username.as_deref())",
+    "groups": ["d1/slides-reads"]
+  }
+]
