@@ -1191,10 +1191,10 @@ pub fn set_element_image_fill(
             let Some(slide) = deck.slides.get(slide_index) else {
                 return Ok(None);
             };
-            (
-                image_rel_for(archive, slide, media_path)?,
-                media_path.clone(),
-            )
+            let Some(rid) = image_rel_for(archive, slide, media_path)? else {
+                return Ok(None);
+            };
+            (rid, media_path.clone())
         }
     };
     let tile = opts.tile == Some(true);
