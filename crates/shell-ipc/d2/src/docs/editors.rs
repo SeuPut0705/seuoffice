@@ -98,6 +98,14 @@ impl DocumentEditors for DocsEditors {
 }
 
 impl DocsEditors {
+    /// `activeViewMenuState()` for one view: the last `docs:view-menu-state`
+    /// it sent as `[aiSidebar, darkCanvas, odt]`, `None` before its first
+    /// (the menu then shows the defaults). The Docs menu reads it when it is
+    /// rebuilt for a tab that becomes active.
+    pub fn view_menu_state(&self, view: ViewId) -> Option<[bool; 3]> {
+        self.0.view_menu.get(view)
+    }
+
     /// `markDocsNewBlank(wcId)`
     pub fn mark_new_blank(&self, view: ViewId) {
         self.0.new_blank.borrow_mut().insert(view);

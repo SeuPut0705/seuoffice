@@ -758,6 +758,10 @@ fn only_the_active_tab_patches_the_view_menu() {
             r#"["MenuItem.enabled","docs-menu-insert-comment",false]"#,
         ]
     );
+    // the background tab's state is kept for the menu to read when it is focused
+    let editor = t.editor();
+    assert_eq!(editor.view_menu_state(b.view), Some([true, false, true]));
+    assert_eq!(editor.view_menu_state(ViewId(9)), None);
 }
 
 #[test]
