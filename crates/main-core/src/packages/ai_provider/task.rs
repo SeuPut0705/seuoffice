@@ -604,6 +604,8 @@ struct BodyState {
     /// the `Cmd::Read`s in flight (a reader takes several `read()` calls at
     /// once), which a cancel of the body ends
     reads: Vec<Id>,
+    /// the stream failed: every later `read()` rejects with this
+    failed: Option<JsError>,
     /// the host handed this branch its end or its failure: it freed it
     over: bool,
     /// the program dropped its handle ([`Cmd::Release`])
@@ -1013,6 +1015,9 @@ impl Rt {
                     {
                         return Err(reason);
                     }
+                    if let Some(error) = &b.failed {
+                        return Err(error.clone());
+                    }
                     if b.done {
                         return Ok(None);
                     }
@@ -1030,23 +1035,43 @@ impl Rt {
             b.reads.push(id);
         }
         let outcome = op.await;
-        // `reader.cancel()` took the read: it ends as `{ done: true }`, and
-        // the stream is not over for the body's other branches
-        let cancelled = self
-            .0
-            .st
-            .borrow_mut()
-            .bodies
-            .get_mut(&body)
-            .is_none_or(|b| match b.reads.iter().position(|r| *r == id) {
+        let others = {
+            let mut st = self.0.st.borrow_mut();
+            let Some(b) = st.bodies.get_mut(&body) else {
+                return Ok(None);
+            };
+            match b.reads.iter().position(|r| *r == id) {
                 Some(at) => {
                     b.reads.remove(at);
-                    false
                 }
-                None => true,
-            });
-        if cancelled {
-            return Ok(None);
+                // another settled it: `reader.cancel()` ends it as
+                // `{ done: true }` (the stream is not over for the body's
+                // other branches), the stream's end or failure as the read
+                // that met it
+                None => {
+                    return match &b.failed {
+                        Some(error) => Err(error.clone()),
+                        None => Ok(None),
+                    };
+                }
+            }
+            // the stream closed or failed: it settles every other pending
+            // read alike, and a failure every later one
+            match &outcome {
+                Ok(Answer::Chunk(_)) => Vec::new(),
+                Ok(_) => std::mem::take(&mut b.reads),
+                Err(error) => {
+                    b.failed = Some(error.clone());
+                    std::mem::take(&mut b.reads)
+                }
+            }
+        };
+        for other in others {
+            let alike = match &outcome {
+                Err(error) => Err(error.clone()),
+                Ok(_) => Ok(Answer::End),
+            };
+            self.settle(other, alike);
         }
         match outcome {
             Ok(Answer::Chunk(bytes)) => Ok(Some(bytes)),
