@@ -1090,5 +1090,33 @@
     "find": "self.os.open_external(url)",
     "replace": "Err::<(), String>(\"blocked\".to_owned())",
     "groups": ["a/free-ai"]
+  },
+  {
+    "name": "app-ai-image: prompt not trimmed",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "let prompt = trim(&request.prompt).to_owned();",
+    "replace": "let prompt = request.prompt.clone();",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: ratio dropped from the Codex request",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "            AiImageBackend::Codex => Plan::Codex(CodexImageRequest {\n                prompt,\n                aspect_ratio: request.aspect_ratio.clone(),",
+    "replace": "            AiImageBackend::Codex => Plan::Codex(CodexImageRequest {\n                prompt,\n                aspect_ratio: None,",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: unavailable loses its code",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "                (\"errorCode\", text(\"unavailable\")),",
+    "replace": "",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: a Codex failure rejects",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "let answer = outcome.unwrap_or_else(|error| failure(&error));",
+    "replace": "let answer = outcome.unwrap_or_else(|error| text(error.message.clone()));",
+    "groups": ["a/app-ai-image"]
   }
 ]

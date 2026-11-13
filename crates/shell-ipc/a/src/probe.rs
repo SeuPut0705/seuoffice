@@ -7,6 +7,7 @@
 
 pub mod agent;
 pub mod ai_naming;
+pub mod app_ai_image;
 pub mod drive;
 pub mod free_ai;
 pub mod generate;

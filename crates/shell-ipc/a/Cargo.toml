@@ -22,6 +22,8 @@ aes = "0.8"
 aes-gcm = "0.10"
 cbc = { version = "0.1", features = ["alloc"] }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+# tldts's getDomain with private domains: the FLUX polling address check
+psl = "2"
 
 # the AI runtime's process.kill
 [target.'cfg(unix)'.dependencies]
