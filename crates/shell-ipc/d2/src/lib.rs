@@ -19,11 +19,14 @@ mod pdf;
 mod testing;
 mod text_recovery;
 
-use shell_contract::Batch;
+use std::rc::Rc;
+
 use shell_contract::ipc::{RegisterBatch, RegisterError, Registry};
 use shell_contract::runtime::Services;
+use shell_contract::{Batch, Provided};
 
-type Entries = fn(&Services) -> Result<Vec<kit::Entry>, RegisterError>;
+/// An app's handlers; it adds its [`shell_contract::DocumentEditors`] to `provided`
+type Entries = fn(&Services, &Rc<Provided>) -> Result<Vec<kit::Entry>, RegisterError>;
 
 /// Every app's handlers
 const APPS: &[Entries] = &[
@@ -36,8 +39,9 @@ const APPS: &[Entries] = &[
 ];
 
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
+    let provided = registry.provided();
     for app in APPS {
-        for e in app(services)? {
+        for e in app(services, &provided)? {
             registry.register(Batch::D2, e.channel, e.kind, e.handler)?;
         }
     }

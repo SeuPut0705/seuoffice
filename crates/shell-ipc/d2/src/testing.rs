@@ -405,9 +405,10 @@ impl Rt {
     /// Registers what a module's `entries` gives, as `register` does
     pub fn register(
         &mut self,
-        entries: fn(&Services) -> Result<Vec<Entry>, RegisterError>,
+        entries: fn(&Services, &Rc<Provided>) -> Result<Vec<Entry>, RegisterError>,
     ) -> Result<(), RegisterError> {
-        for e in entries(&self.services)? {
+        let provided = self.table.provided();
+        for e in entries(&self.services, &provided)? {
             self.table
                 .register(Batch::D2, e.channel, e.kind, e.handler)?;
         }

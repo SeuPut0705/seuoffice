@@ -1,11 +1,17 @@
 //! The Word editor (`apps/docs/src/main/docs-main.ts` and its document recovery).
 
+use std::rc::Rc;
+
+use shell_contract::Provided;
 use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
 
 use crate::kit::Entry;
 
-pub(crate) fn entries(_services: &Services) -> Result<Vec<Entry>, RegisterError> {
+pub(crate) fn entries(
+    _services: &Services,
+    _provided: &Rc<Provided>,
+) -> Result<Vec<Entry>, RegisterError> {
     Ok(Vec::new())
 }
 

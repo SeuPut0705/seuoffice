@@ -1,12 +1,19 @@
 //! The PDF editor (`apps/pdf/src/main/pdf-main.ts`), its recovery included.
 
+use std::rc::Rc;
+
+use shell_contract::Provided;
 use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
 
 use super::Grants;
 use crate::kit::Entry;
 
-pub(crate) fn entries(_services: &Services, _grants: &Grants) -> Result<Vec<Entry>, RegisterError> {
+pub(crate) fn entries(
+    _services: &Services,
+    _provided: &Rc<Provided>,
+    _grants: &Grants,
+) -> Result<Vec<Entry>, RegisterError> {
     Ok(Vec::new())
 }
 

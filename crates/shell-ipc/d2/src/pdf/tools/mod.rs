@@ -1,12 +1,19 @@
 //! The shell's PDF tools: structure jobs and the result store, the tools window, the password dialog, the conversion screen, `pdf:convert-office`.
 
+use std::rc::Rc;
+
+use shell_contract::Provided;
 use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
 
 use super::Grants;
 use crate::kit::Entry;
 
-pub(crate) fn entries(_services: &Services, _grants: &Grants) -> Result<Vec<Entry>, RegisterError> {
+pub(crate) fn entries(
+    _services: &Services,
+    _provided: &Rc<Provided>,
+    _grants: &Grants,
+) -> Result<Vec<Entry>, RegisterError> {
     Ok(Vec::new())
 }
 

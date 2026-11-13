@@ -8,10 +8,11 @@ mod editor;
 mod tools;
 
 use std::collections::HashSet;
+use std::rc::Rc;
 
-use shell_contract::ViewId;
 use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
+use shell_contract::{Provided, ViewId};
 
 use crate::kit::{Entry, ViewMap};
 
@@ -27,10 +28,13 @@ impl Grants {
     }
 }
 
-pub(crate) fn entries(services: &Services) -> Result<Vec<Entry>, RegisterError> {
+pub(crate) fn entries(
+    services: &Services,
+    provided: &Rc<Provided>,
+) -> Result<Vec<Entry>, RegisterError> {
     let grants = Grants(ViewMap::new(services));
-    let mut all = editor::entries(services, &grants)?;
-    all.extend(tools::entries(services, &grants)?);
+    let mut all = editor::entries(services, provided, &grants)?;
+    all.extend(tools::entries(services, provided, &grants)?);
     Ok(all)
 }
 
