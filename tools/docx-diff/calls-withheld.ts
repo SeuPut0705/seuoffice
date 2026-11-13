@@ -418,6 +418,9 @@ export const WITHHELD: CallSpec[] = [
       // deleted text and field codes are not shown text
       '<w:comment w:id="1"><w:p><w:del><w:r><w:delText>gone</w:delText></w:r></w:del><w:r><w:t>kept</w:t></w:r></w:p></w:comment>',
       '<w:comment w:id="1"><w:p><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:delInstrText>REF x</w:delInstrText></w:r><w:r><w:t>1</w:t></w:r></w:p></w:comment>',
+      // a w:t inside a skipped element is not read either: the only input where
+      // the skip shows, since the walk reads text nodes nowhere but in w:t
+      '<w:comment w:id="1"><w:p><w:r><w:delText>a<w:t>in del</w:t></w:delText><w:instrText><w:t>in instr</w:t></w:instrText><w:delInstrText><w:t>in delInstr</w:t></w:delInstrText><w:t>b</w:t></w:r></w:p></w:comment>',
     ]),
   },
   {
