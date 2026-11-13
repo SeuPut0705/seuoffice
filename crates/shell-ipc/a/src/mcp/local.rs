@@ -228,7 +228,6 @@ impl Actor {
                 timers: timers.clone(),
                 kill_timers: kill_timers.clone(),
             },
-            kinds: HashMap::new(),
         }));
         let options = LocalMcpOptions {
             client_name: PRODUCT_NAME.to_owned(),
@@ -269,22 +268,10 @@ impl Actor {
         // delivers one event of the world to the connection
         let handle = |adapter: &mut LocalMcpAdapter<'_>, msg: Msg| -> Step {
             match msg {
-                Msg::Ensure(op) => {
-                    world.borrow_mut().kinds.insert(op, CallKind::Ensure);
-                    adapter.ensure(op)
-                }
-                Msg::List(op) => {
-                    world.borrow_mut().kinds.insert(op, CallKind::List);
-                    adapter.list_tools(op)
-                }
-                Msg::Call(op, name, args) => {
-                    world.borrow_mut().kinds.insert(op, CallKind::Tool);
-                    adapter.call_tool(op, &name, &args)
-                }
-                Msg::Stop(op) => {
-                    world.borrow_mut().kinds.insert(op, CallKind::Stop);
-                    adapter.stop(op)
-                }
+                Msg::Ensure(op) => adapter.ensure(op),
+                Msg::List(op) => adapter.list_tools(op),
+                Msg::Call(op, name, args) => adapter.call_tool(op, &name, &args),
+                Msg::Stop(op) => adapter.stop(op),
                 Msg::Retry => adapter.retry(),
                 Msg::SetServer(server) => adapter.set_server(&server),
                 Msg::Abort(op) => adapter.abort(op),
@@ -492,8 +479,6 @@ struct LocalWorld<'a> {
     outbox: Rc<RefCell<Outbox>>,
     children: HashMap<ChildId, Child>,
     killer: Killer,
-    /// what each call of the hub is: the connection's own report of it is not relied on
-    kinds: HashMap<CallId, CallKind>,
 }
 
 impl LocalWorld<'_> {
@@ -698,9 +683,6 @@ impl LocalMcpHost for LocalWorld<'_> {
     }
 
     fn settle(&mut self, call: CallId, kind: CallKind, outcome: Result<CallOutcome, CallFailure>) {
-        // the connection settles a listing with the kind `Ensure`: the call is
-        // what the hub started
-        let kind = self.kinds.remove(&call).unwrap_or(kind);
         self.outbox
             .borrow_mut()
             .settled
