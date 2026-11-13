@@ -28,8 +28,8 @@ use crate::packages::pdf_structure::keys::{
 use crate::packages::pdf_structure::note_links::as_note_links;
 use crate::packages::pdf_structure::reading::{
     HighlightBlockInput, HighlightBlockStatus, HighlightLabel, HighlightRun, HighlightSuggestion,
-    HighlightSuggestionState, InsightsEntry, InsightsTerm, PassageCardInput, PassageKind,
-    as_highlight_block, as_highlight_run, as_insights, as_passage_card, is_segment,
+    HighlightSuggestionState, PassageCardInput, PassageKind, as_highlight_block, as_highlight_run,
+    as_insights, as_passage_card, is_segment,
 };
 use crate::packages::pdf_structure::sentence_ends::{sentence_ends_pair, valid_sentence_ends};
 use crate::packages::pdf_structure::store::{
@@ -468,34 +468,6 @@ fn highlight_block_input(v: &Value) -> R<HighlightBlockInput> {
     })
 }
 
-fn insights_input(v: &Value) -> R<InsightsEntry> {
-    let summary3 = strings_of(v.get("summary3"))?;
-    let summary3: [String; 3] = summary3.try_into().map_err(|_| bad("three summaries"))?;
-    let terms = v
-        .get("terms")
-        .and_then(Value::as_array)
-        .ok_or_else(|| bad("terms"))?
-        .iter()
-        .map(|t| {
-            Ok(InsightsTerm {
-                term: text_of(t.get("term"))?.to_owned(),
-                meaning: text_of(t.get("meaning"))?.to_owned(),
-                page: number_of(t.get("page"))?,
-            })
-        })
-        .collect::<R<Vec<_>>>()?;
-    Ok(InsightsEntry {
-        lang: text_of(v.get("lang"))?.to_owned(),
-        summary3,
-        summary: text_of(v.get("summary"))?.to_owned(),
-        terms,
-        provider: text_of(v.get("provider"))?.to_owned(),
-        model: text_of(v.get("model"))?.to_owned(),
-        created_at: number_of(v.get("createdAt"))?,
-        page_fingerprints: strings_of(v.get("pageFingerprints"))?,
-    })
-}
-
 // ---- the answers ----
 
 fn val(v: JsonValue) -> R<Option<Value>> {
@@ -862,7 +834,7 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
             }
             // insights
             "writeInsights" => {
-                let entry = insights_input(arg(args, 1).ok_or_else(|| bad("an entry"))?)?;
+                let entry = json_value_from_serde(arg(args, 1).ok_or_else(|| bad("an entry"))?);
                 done(store.write_insights(doc()?, &entry))
             }
             "readInsights" => {

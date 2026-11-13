@@ -163,11 +163,12 @@ enum Hit {
     None,
 }
 
-/// `persisted`: the cache object, and whether the file held an array (which
-/// `JSON.stringify` writes without the properties set on it).
+/// `persisted`: the cache object, or the array the file held (which
+/// `JSON.stringify` writes back with its elements and without the properties
+/// set on it).
 struct Persisted {
     entries: JsObject<JsonValue>,
-    is_array: bool,
+    array: Option<JsonValue>,
 }
 
 impl Persisted {
@@ -194,8 +195,8 @@ impl Persisted {
     }
 
     fn json(&self) -> String {
-        if self.is_array {
-            "[]".to_owned()
+        if let Some(array) = &self.array {
+            json_stringify(array)
         } else {
             json_stringify(&JsonValue::Object(self.entries.clone()))
         }
@@ -257,7 +258,7 @@ impl MetricsCache {
         if self.persisted.is_none() {
             let mut persisted = Persisted {
                 entries: JsObject::new(),
-                is_array: false,
+                array: None,
             };
             if let Some(file) = &self.cache_file {
                 // absent or corrupt cache: rebuild lazily
@@ -265,7 +266,7 @@ impl MetricsCache {
                     let text = String::from_utf8_lossy(&bytes);
                     match json_parse(&text) {
                         Ok(JsonValue::Object(entries)) => persisted.entries = entries,
-                        Ok(JsonValue::Array(_)) => persisted.is_array = true,
+                        Ok(array @ JsonValue::Array(_)) => persisted.array = Some(array),
                         _ => {}
                     }
                 }

@@ -541,7 +541,7 @@
   {
     "name": "array cache read as object",
     "file": "main-core/src/packages/font_metrics/metrics.rs",
-    "find": "Ok(JsonValue::Array(_)) => persisted.is_array = true,",
+    "find": "Ok(array @ JsonValue::Array(_)) => persisted.array = Some(array),",
     "replace": "Ok(JsonValue::Array(_)) => {}",
     "fn": ["metrics.familyVerticalMetrics"]
   },
@@ -597,8 +597,8 @@
   {
     "name": "array cache written as object",
     "file": "main-core/src/packages/font_metrics/metrics.rs",
-    "find": "if self.is_array {\n            \"[]\".to_owned()",
-    "replace": "if false {\n            \"[]\".to_owned()",
+    "find": "if let Some(array) = &self.array {\n            json_stringify(array)",
+    "replace": "if let Some(array) = None::<&JsonValue> {\n            json_stringify(array)",
     "fn": ["metrics.familyVerticalMetrics"]
   },
   {

@@ -1877,9 +1877,11 @@ impl ResultStore {
 
     // ---- insights ----
 
-    /// `writeInsights(docHash, entry)`: write (or replace) the overview in its language
-    pub fn write_insights(&mut self, doc_hash: &str, entry: &InsightsEntry) -> StoreResult<()> {
-        let Some(checked) = as_insights(Some(&entry.to_value())) else {
+    /// `writeInsights(docHash, entry)`: write (or replace) the overview in its
+    /// language. The entry is the renderer's JSON, checked here as the
+    /// TypeScript checks it.
+    pub fn write_insights(&mut self, doc_hash: &str, entry: &JsonValue) -> StoreResult<()> {
+        let Some(checked) = as_insights(Some(entry)) else {
             return type_error("result store: invalid insights entry");
         };
         let saved_at = self.now();
