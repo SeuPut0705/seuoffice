@@ -6,8 +6,8 @@
 //!   printing of [`super::print`];
 //! - `MStateRef`: the batch's process state (language and theme caches,
 //!   context-menu claims, ignored words, print guards), one per process;
-//! - `FontQueriesRef`: the installed-font queries, which wait for stage 2's
-//!   port of packages/font-metrics ([`FontsNotPorted`]).
+//! - `FontQueriesRef`: the installed-font queries of main-core's
+//!   packages/font-metrics and the PDF editor's edit fonts ([`fonts`]).
 //!
 //! The application menu ([`apply_menu_for`]) and the context menus live in
 //! the submodules.
@@ -16,6 +16,7 @@ mod app;
 mod cef_ops;
 mod context;
 mod dock;
+mod fonts;
 
 pub(crate) use app::{app_menu_activate, app_menu_popup};
 // what D2's docs host (`DocsShell`) drives: the Docs View and Insert state
@@ -35,13 +36,15 @@ use main_core::packages::electron_utils::default_save_dir::{
     PathProvider, SaveDirState, Thrown, configured_default_save_dir,
 };
 use main_core::packages::electron_utils::printer_options::CommandOutcome;
+use main_core::packages::electron_utils::template_fonts_dir::{
+    TemplateFontsHost, template_fonts_dir,
+};
 use main_core::shell::tab_manager::TabKind;
-use serde_json::Value;
 use shell_contract::Hosts;
 use shell_contract::ids::ViewId;
 use shell_contract::runtime::{AppPaths, PathName, Thread};
 use shell_ipc_m::hosts::{
-    FontQueries, FontQueriesRef, KeyInput, MHost, MHostRef, PrintSurface, PrintWindowSpec, Printer,
+    FontQueriesRef, KeyInput, MHost, MHostRef, PrintSurface, PrintWindowSpec, Printer,
 };
 use shell_ipc_m::state::{MState, MStateRef};
 use shell_ipc_m::{MenuDict, menu_label};
@@ -139,7 +142,7 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let _ = APP.set(cx.app.clone());
     context::install(&cx.app, cx.views.clone(), cx.windows.clone());
     app::install(cx);
-    let host: MHostRef = Arc::new(ShellM {
+    let shell = Arc::new(ShellM {
         app: cx.app.clone(),
         ui: cx.ui.clone(),
         windows: cx.windows.clone(),
@@ -148,9 +151,22 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
         tray: hosts.get::<QuickLookHost>().cloned(),
         save_dir: Mutex::default(),
     });
-    hosts.insert(host);
+    let fonts = fonts::Fonts::new(
+        shell
+            .paths
+            .path(PathName::Home)
+            .to_string_lossy()
+            .into_owned(),
+        template_fonts_dir(&*shell),
+        &shell
+            .paths
+            .path(PathName::UserData)
+            .join("font-metrics")
+            .to_string_lossy(),
+    );
+    hosts.insert::<MHostRef>(shell);
     hosts.insert::<MStateRef>(Arc::new(MState::new()));
-    hosts.insert::<FontQueriesRef>(Arc::new(FontsNotPorted));
+    hosts.insert::<FontQueriesRef>(Arc::new(fonts));
 }
 
 /// [`apply_menu_for`] on the shell's app; nothing before the hosts are installed
@@ -470,41 +486,17 @@ impl MHost for ShellM {
     }
 }
 
-/// The font queries of packages/font-metrics (`familyInfoFor`,
-/// `familyVerticalMetrics`, `familyAliases`) and the PDF editor's
-/// `listEditFonts`, which stage 2 is porting to main-core. Until then every
-/// query answers as a machine with no matching font would, and says so once.
-struct FontsNotPorted;
-
-impl FontsNotPorted {
-    fn note(&self) {
-        static SAID: Mutex<bool> = Mutex::new(false);
-        let mut said = SAID.lock().unwrap();
-        if !*said {
-            *said = true;
-            eprintln!("shell: font queries answer empty until main-core has packages/font-metrics");
-        }
-    }
-}
-
-impl FontQueries for FontsNotPorted {
-    fn family_info_for(&self, _families: &Value) -> Value {
-        self.note();
-        Value::Array(Vec::new())
+/// `templateFontsDir({ isPackaged, getAppPath, resourcesPath })` of the docs module
+impl TemplateFontsHost for ShellM {
+    fn is_packaged(&self) -> bool {
+        MHost::is_packaged(self)
     }
 
-    fn family_vertical_metrics(&self, _family: &str) -> Option<Value> {
-        self.note();
-        None
+    fn get_app_path(&self) -> String {
+        MHost::app_path(self)
     }
 
-    fn family_aliases(&self, _name: &str) -> Vec<String> {
-        self.note();
-        Vec::new()
-    }
-
-    fn list_edit_fonts(&self) -> Vec<String> {
-        self.note();
-        Vec::new()
+    fn resources_path(&self) -> String {
+        MHost::resources_path(self)
     }
 }
