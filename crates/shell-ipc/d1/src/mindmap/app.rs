@@ -358,10 +358,12 @@ impl MindmapApp {
     pub fn run_due(&self, now: Instant) {
         let due: Vec<TimerJob> = {
             let mut state = self.0.state.borrow_mut();
-            let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut state.timers)
+            let (mut due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut state.timers)
                 .into_iter()
                 .partition(|(deadline, _)| *deadline <= now);
             state.timers = rest;
+            // in the order their time came, as timers fire
+            due.sort_by_key(|(deadline, _)| *deadline);
             due.into_iter().map(|(_, job)| job).collect()
         };
         for job in due {

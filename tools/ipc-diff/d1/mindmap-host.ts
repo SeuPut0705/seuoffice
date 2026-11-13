@@ -8,10 +8,13 @@
  * - `@seuoffice/xmind-engine`'s `openXmind`, `@seuoffice/file-parse`'s
  *   `parseFileToText`, `diagramPictureExtOf`, `diagramPictureExtOfName` and its
  *   attachment limits, `@seuoffice/electron-utils`'s `assertFileSaved`,
- *   `.../fetch-image-bytes`'s `fetchImageBytes`, `.../safe-remote-url`'s
- *   `fetchWithSsrfGuard` and `.../generate-handoff`'s two functions are
- *   replaced for the mind map's main files (a wrapper module that re-exports
- *   the real one);
+ *   `.../generate-handoff`'s two functions are replaced for the mind map's main
+ *   files (a wrapper module that re-exports the real one);
+ * - the network sits one level lower: `safe-remote-url` and
+ *   `fetch-image-bytes` run for real, over `node:dns/promises`' `lookup` and
+ *   undici's `fetch`, `getGlobalDispatcher` and `Agent`, which electron-utils
+ *   is given fakes of (`hosts.d1.mindmap.dns`, `.network`, `.proxy`), so the
+ *   SSRF guard is compared as well;
  * - `pageToPdf` runs on a fake `BrowserWindow` whose `printToPDF` logs the page;
  * - the hooks the shell sets (`setMindmap*Hook`, the runtime's project folder
  *   functions) log and answer;
@@ -35,7 +38,7 @@ import type * as MindmapMain from '../../../apps/mindmap/src/main/mindmap-main.t
 import type * as SeedMain from '../../../apps/mindmap/src/main/seed-main.ts'
 import type * as McpQueries from '../../../apps/mindmap/src/main/mcp-queries.ts'
 import type { FakeContents } from '../fakes.ts'
-import type { LoadContext } from '../types.ts'
+import type { Group, LoadContext } from '../types.ts'
 
 const RealDate = Date
 const root = resolve(import.meta.dirname, '../../..')
@@ -67,13 +70,79 @@ const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
 const asObject = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json) : {})
 const text = (v: unknown): string => (typeof v === 'string' ? v : '')
 
-// a timer nobody waits for must not hold the process: a request left open by a case ends with it
-for (const name of ['setTimeout', 'setInterval'] as const) {
-  const original = globalThis[name] as unknown as (...a: unknown[]) => { unref?: () => void }
-  ;(globalThis as Record<string, unknown>)[name] = (...a: unknown[]) => {
-    const timer = original(...a)
-    timer.unref?.()
-    return timer
+interface Pending {
+  fn: (...args: unknown[]) => void
+  args: unknown[]
+  /** `performance.now()` when it is due */
+  due: number
+  /** for an interval: its period */
+  every?: number
+  handle: { unref?: () => void }
+}
+/** the timers the case's code has pending, so a trigger can let time pass (`advanceClock`) */
+let pending: Pending[] = []
+
+// A timer nobody waits for must not hold the process: a request left open by a case ends with it.
+// The image download's retry pauses (500 and 1500 ms, remote-image.ts) are not waited for either:
+// the Rust fetcher's `sleep` does not wait.
+const realTimers = {
+  setTimeout: globalThis.setTimeout,
+  setInterval: globalThis.setInterval,
+  clearTimeout: globalThis.clearTimeout,
+  clearInterval: globalThis.clearInterval,
+}
+function timer(kind: 'setTimeout' | 'setInterval') {
+  return (fn: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+    const ms = kind === 'setTimeout' && (delay === 500 || delay === 1500) ? 0 : (delay ?? 0)
+    const entry: Pending = {
+      fn,
+      args,
+      due: performance.now() + ms,
+      ...(kind === 'setInterval' ? { every: ms } : {}),
+      handle: {},
+    }
+    entry.handle = (realTimers[kind] as (...a: unknown[]) => { unref?: () => void })(
+      (...a: unknown[]) => {
+        if (entry.every === undefined) pending = pending.filter((p) => p !== entry)
+        fn(...a)
+      },
+      ms,
+      ...args,
+    )
+    entry.handle.unref?.()
+    pending.push(entry)
+    return entry.handle
+  }
+}
+function clearer(kind: 'clearTimeout' | 'clearInterval') {
+  return (handle: unknown) => {
+    pending = pending.filter((p) => p.handle !== handle)
+    realTimers[kind](handle as never)
+  }
+}
+Object.assign(globalThis, {
+  setTimeout: timer('setTimeout'),
+  setInterval: timer('setInterval'),
+  clearTimeout: clearer('clearTimeout'),
+  clearInterval: clearer('clearInterval'),
+})
+
+/**
+ * Lets `ms` of time pass: every timer due within it runs once, in the order
+ * their time comes (the Rust side's `run_due`); an interval is due again a
+ * period after it ran
+ */
+function advanceClock(ms: number): void {
+  const horizon = performance.now() + ms
+  const due = pending.filter((p) => p.due <= horizon).sort((a, b) => a.due - b.due)
+  for (const entry of due) {
+    if (entry.every === undefined) {
+      pending = pending.filter((p) => p !== entry)
+      realTimers.clearTimeout(entry.handle as never)
+    } else {
+      entry.due = performance.now() + entry.every
+    }
+    entry.fn(...entry.args)
   }
 }
 
@@ -138,26 +207,65 @@ box.assertFileSaved = async (path: string) => {
   }
 }
 
-box.fetchWithSsrfGuard = async (address: string) => {
-  box.log(['safe-remote-url.fetchWithSsrfGuard', address])
-  const page = asObject(asObject(box.d1.pages)[address])
-  if (Object.keys(page).length === 0) return null
-  if (page.throws === true) throw new Error('fetch failed')
-  const headers: Record<string, string> = {}
-  if (text(page.contentType) !== '') headers['content-type'] = text(page.contentType)
-  const resp = new Response(Buffer.from(text(page.body)), {
-    status: page.ok === false ? 500 : 200,
-    headers,
-  })
-  Object.defineProperty(resp, 'url', { value: text(page.url) })
-  return resp
+box.dnsLookup = async (host: string) => {
+  box.log(['dns.lookup', host])
+  const found = asObject(box.d1.dns)[host]
+  if (!Array.isArray(found)) throw new Error(`getaddrinfo ENOTFOUND ${host}`)
+  return found.map((a: Json) => ({ address: text(a.address), family: a.family ?? 4 }))
 }
 
-box.fetchImageBytes = async (url: unknown) => {
-  box.log(['fetch-image-bytes.fetchImageBytes', typeof url === 'string' ? url : null])
-  const image = asObject(asObject(box.d1.images)[typeof url === 'string' ? url : ''])
-  if (Object.keys(image).length === 0) return null
-  return { base64: text(image.base64), mime: text(image.mime) }
+type Lookup = (
+  host: string,
+  options: { all: boolean },
+  callback: (err: Error | null, address: unknown) => void,
+) => void
+
+class FakeAgent {
+  constructor(private readonly options: { connect: { lookup: Lookup } }) {}
+  /** what the agent answers a connect-time lookup of `host` with */
+  pinned(host: string): unknown {
+    let answer: unknown = null
+    this.options.connect.lookup(host, { all: true }, (_err, address) => {
+      answer = address
+    })
+    return answer
+  }
+  close(): Promise<void> {
+    box.log(['undici.agent.close'])
+    return Promise.resolve()
+  }
+}
+
+box.undici = {
+  Agent: FakeAgent,
+  getGlobalDispatcher: () => (box.d1.proxy === true ? { [Symbol('proxy agent')]: 1 } : {}),
+  fetch: async (url: string, init: Json) => {
+    const shown: Json = {}
+    if (init.headers) shown.headers = init.headers
+    shown.signal = init.signal !== undefined
+    const agent = init.dispatcher as FakeAgent | undefined
+    shown.pinned = agent ? agent.pinned(new URL(url).hostname.toLowerCase()) : null
+    box.log(['undici.fetch', url, shown])
+    const page = asObject(asObject(box.d1.network)[url])
+    if (Object.keys(page).length === 0) throw new TypeError('fetch failed')
+    if (typeof page.throws === 'string') throw new Error(page.throws)
+    const body = page.body
+    const chunks = typeof body === 'string' ? [body] : Array.isArray(body) ? (body as string[]) : []
+    const resp = new Response(
+      new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(Buffer.from(chunk))
+          controller.close()
+        },
+      }),
+      {
+        status: typeof page.status === 'number' ? page.status : 200,
+        headers: asObject(page.headers) as Record<string, string>,
+      },
+    )
+    Object.defineProperty(resp, 'url', { value: url })
+    return resp
+  },
 }
 
 box.takeGenerateHandoff = (target: string, view: number) => {
@@ -190,12 +298,6 @@ const WRAPPERS: Record<string, Record<string, string>> = {
     attachableMaxBytes: `() => ${SELF}.limit('maxBytes', 20 * 1024 * 1024)`,
   },
   '@seuoffice/electron-utils': { assertFileSaved: `(path) => ${SELF}.assertFileSaved(path)` },
-  '@seuoffice/electron-utils/fetch-image-bytes': {
-    fetchImageBytes: `(url) => ${SELF}.fetchImageBytes(url)`,
-  },
-  '@seuoffice/electron-utils/safe-remote-url': {
-    fetchWithSsrfGuard: `(address) => ${SELF}.fetchWithSsrfGuard(address)`,
-  },
   '@seuoffice/electron-utils/generate-handoff': {
     takeGenerateHandoff: `(t, v) => ${SELF}.takeGenerateHandoff(t, v)`,
     reportGenerateRunStarted: `(t, v, p) => ${SELF}.reportGenerateRunStarted(t, v, p)`,
@@ -215,10 +317,24 @@ function wrapperSource(name: string, real: string): string {
   ].join('\n')
 }
 const FAKE = 'ipc-diff-d1-mindmap:'
+const UTILS_PATH = '/packages/electron-utils/src/'
+/** what electron-utils' `safe-remote-url` imports from the network: ES modules over the case's fakes */
+const NETWORK: Record<string, string> = {
+  undici: [
+    `const u = ${SELF}.undici`,
+    'export const fetch = (...a) => u.fetch(...a)',
+    'export const getGlobalDispatcher = () => u.getGlobalDispatcher()',
+    'export const Agent = u.Agent',
+  ].join('\n'),
+  'node:dns/promises': `export const lookup = (...a) => ${SELF}.dnsLookup(...a)`,
+}
 
 registerHooks({
   resolve(specifier, context, next) {
     const parent = context.parentURL ?? ''
+    if (parent.includes(UTILS_PATH) && specifier in NETWORK) {
+      return { url: `${FAKE}net?name=${encodeURIComponent(specifier)}`, shortCircuit: true }
+    }
     if (parent.includes(MAIN_PATH)) {
       if (specifier in WRAPPERS) {
         const real = next(specifier, context).url
@@ -231,6 +347,10 @@ registerHooks({
     return next(specifier, context)
   },
   load(url, context, next) {
+    if (url.startsWith(`${FAKE}net?`)) {
+      const name = new URL(url).searchParams.get('name')!
+      return { format: 'module', shortCircuit: true, source: NETWORK[name] }
+    }
     if (url.startsWith(`${FAKE}wrap?`)) {
       const params = new URL(url).searchParams
       return {
@@ -357,6 +477,9 @@ export async function loadMindmap(cx: LoadContext): Promise<void> {
   const main = load(`${root}/${MAIN}/mindmap-main.ts`) as typeof MindmapMain
   const seeds = load(`${root}/${MAIN}/seed-main.ts`) as typeof SeedMain
   const queries = load(`${root}/${MAIN}/mcp-queries.ts`) as typeof McpQueries
+  box.main = main
+  box.queries = queries
+  pending = []
 
   const writer = box.d1.writeNewDocument
   main.configureMindmapRuntime({
@@ -453,3 +576,42 @@ export async function loadMindmap(cx: LoadContext): Promise<void> {
     }
   }
 }
+
+/** The TypeScript half of `probe_trigger` (mindmap/mod.rs): the exported function each trigger is named after */
+export const mindmapTriggers: NonNullable<Group['triggers']> = {
+  'd1/mindmap:requestMindmapSave': (cx, view, args) =>
+    main().requestMindmapSave(cx.contents(view) as never, args[0] === 'saveAs' ? 'saveAs' : 'save'),
+  'd1/mindmap:requestMindmapClose': (cx, view, args) =>
+    main().requestMindmapClose(
+      cx.contents(view) as never,
+      args[0] === true
+        ? (cx.electron.BrowserWindow as { fromWebContents(wc: unknown): never }).fromWebContents(
+            cx.contents(view),
+          )
+        : undefined,
+    ),
+  'd1/mindmap:mindmapSaveToPath': (cx, view, args) =>
+    main().mindmapSaveToPath(cx.contents(view) as never, text(args[0])),
+  'd1/mindmap:mindmapFileRenamed': (cx, view, args) =>
+    main().mindmapFileRenamed(cx.contents(view) as never, text(args[0]), text(args[1])),
+  'd1/mindmap:sendMindmapMenuCommand': (cx, view, args) =>
+    main().sendMindmapMenuCommand(cx.contents(view) as never, text(args[0]) as never),
+  'd1/mindmap:sendMindmapExportRequest': (cx, view, args) =>
+    main().sendMindmapExportRequest(cx.contents(view) as never, text(args[0]) as never),
+  'd1/mindmap:mindmapReadOutline': (cx, view) =>
+    queries().mindmapReadOutline(cx.contents(view) as never),
+  'd1/mindmap:mindmapReadBytes': (cx, view) =>
+    queries().mindmapReadBytes(cx.contents(view) as never),
+  'd1/mindmap:writeMindmapCopiesNow': (_cx, _view, args) =>
+    main().writeMindmapCopiesNow(typeof args[0] === 'number' ? args[0] : 5000),
+  'd1/mindmap:discardMindmapRecovery': (cx, view) =>
+    main().discardMindmapRecovery(cx.contents(view) as never),
+  'd1/mindmap:mindmapFilePath': (_cx, view) => main().mindmapFilePath(view),
+  'd1/mindmap:mindmapIsDirty': (_cx, view) => main().mindmapIsDirty(view),
+  /** not a TypeScript function: time passes (the Rust side runs the timers due within it) */
+  'd1/mindmap:advanceClock': (_cx, _view, args) =>
+    advanceClock(typeof args[0] === 'number' ? args[0] : 0),
+}
+
+const main = (): typeof MindmapMain => box.main as typeof MindmapMain
+const queries = (): typeof McpQueries => box.queries as typeof McpQueries

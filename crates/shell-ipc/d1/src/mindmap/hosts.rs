@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use main_core::packages::electron_utils::generate_handoff::GenerateHandoff;
+use main_core::packages::electron_utils::safe_remote_url::{Fetcher, Resolver};
 use shell_contract::ViewId;
 
 /// How a file opened, as `@seuoffice/xmind-engine` reports it
@@ -90,36 +91,18 @@ pub trait FileParse: Send + Sync {
 
 pub type FileParseHost = Arc<dyn FileParse>;
 
-/// The `Response` of `fetchWithSsrfGuard`: its status and headers as the
-/// preview reads them, and its body as the chunks a reader would give
-pub struct FetchResponse {
-    /// `resp.ok`
-    pub ok: bool,
-    /// `resp.headers.get('content-type') ?? ''`
-    pub content_type: String,
-    /// `resp.url`: where the page ended after redirects, may be empty
-    pub url: String,
-    /// `resp.body.getReader()`: dropping it cancels the download
-    pub body: Box<dyn Iterator<Item = Vec<u8>> + Send>,
-}
-
-/// A picture `fetchImageBytes` downloaded
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FetchedImage {
-    pub base64: String,
-    pub mime: String,
-}
-
-/// The network of the link preview and the image fetch (not in Rust). Calls
-/// block: handlers run them on a worker.
+/// The lowest level of the network under `main-core`'s SSRF guard
+/// (`fetch_with_ssrf_guard`, `fetch_image_bytes`): the resolver is
+/// `dns.lookup(host, { all: true })` and the fetcher is undici's `fetch` with
+/// its global dispatcher and per-hop `Agent`. The guard's policy, the
+/// redirects, the size caps and the retries run in Rust over these. Both are
+/// made and used on the worker that runs one request, so they need not be
+/// `Send`.
 pub trait LinkNet: Send + Sync {
-    /// `fetchWithSsrfGuard(address, { headers: PAGE_HEADERS, signal:
-    /// AbortSignal.timeout(15 s) })` of `safe-remote-url`: `Ok(None)` is its
-    /// null answer, `Err` a throw
-    fn fetch_with_ssrf_guard(&self, address: &str) -> Result<Option<FetchResponse>, String>;
-    /// `fetchImageBytes(url)` of `fetch-image-bytes`; `None` for what the
-    /// TypeScript is given when it is not a string
-    fn fetch_image_bytes(&self, url: Option<&str>) -> Option<FetchedImage>;
+    /// `dns.lookup` of `node:dns/promises`
+    fn resolver(&self) -> Box<dyn Resolver>;
+    /// `undici.fetch`, `undici.getGlobalDispatcher` and `new undici.Agent`
+    fn fetcher(&self) -> Box<dyn Fetcher>;
 }
 
 pub type LinkNetHost = Arc<dyn LinkNet>;
@@ -194,6 +177,7 @@ mod fakes {
     use serde_json::{Value, json};
 
     use super::*;
+    use crate::mindmap::net;
 
     /// the case's log of host calls, when the harness provides one
     pub type ProbeLog = Arc<Mutex<Vec<Value>>>;
@@ -207,13 +191,13 @@ mod fakes {
     /// - `parseFileToText`: `{"<path>": {ok, kind, text, damaged, error}}`;
     ///   a path not listed is read as text
     /// - `diagramPictureExt`: `{"<path>": "<ext>"}`
-    /// - `pages`: `{"<address>": {ok, contentType, url, body, throws}}`;
-    ///   `images`: `{"<url>": {base64, mime}}`
+    /// - the network under the SSRF guard (`net.rs`): `dns`, `network`, `proxy`
     /// - `openElsewhere`, `unsaved`: lists of paths; `handoff`: `{id, text,
     ///   materials: [{path, name}]}`; `projectDir`; `recoveryTitle`;
     ///   `writeNewDocument`: `{path}` or `{error}`; `pdf`: hex or `{error}`
     pub struct Fake {
         script: Value,
+        net: Arc<net::Net>,
         log: Option<ProbeLog>,
         open_queue: Mutex<VecDeque<OpenOutcome>>,
         handoff: Mutex<Option<GenerateHandoff>>,
@@ -268,6 +252,7 @@ mod fakes {
                         created_at: 0.0,
                     });
             Fake {
+                net: Arc::new(net::Net::new(&script, hosts.get::<ProbeLog>().cloned())),
                 script,
                 log: hosts.get::<ProbeLog>().cloned(),
                 open_queue: Mutex::new(open_queue),
@@ -410,30 +395,12 @@ mod fakes {
     }
 
     impl LinkNet for Fake {
-        fn fetch_with_ssrf_guard(&self, address: &str) -> Result<Option<FetchResponse>, String> {
-            self.note(json!(["safe-remote-url.fetchWithSsrfGuard", address]));
-            let Some(page) = self.table("pages", address) else {
-                return Ok(None);
-            };
-            if page.get("throws").and_then(Value::as_bool).unwrap_or(false) {
-                return Err("fetch failed".into());
-            }
-            let body = text_of(page, "body").into_bytes();
-            Ok(Some(FetchResponse {
-                ok: page.get("ok").and_then(Value::as_bool).unwrap_or(true),
-                content_type: text_of(page, "contentType"),
-                url: text_of(page, "url"),
-                body: Box::new(std::iter::once(body)),
-            }))
+        fn resolver(&self) -> Box<dyn Resolver> {
+            Box::new(net::FakeResolver(self.net.clone()))
         }
 
-        fn fetch_image_bytes(&self, url: Option<&str>) -> Option<FetchedImage> {
-            self.note(json!(["fetch-image-bytes.fetchImageBytes", url]));
-            let image = self.table("images", url?)?;
-            Some(FetchedImage {
-                base64: text_of(image, "base64"),
-                mime: text_of(image, "mime"),
-            })
+        fn fetcher(&self) -> Box<dyn Fetcher> {
+            Box::new(net::FakeFetcher(self.net.clone()))
         }
     }
 

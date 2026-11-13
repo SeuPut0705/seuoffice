@@ -9,11 +9,29 @@ use url::Url;
 use shell_contract::IpcValue;
 
 use super::app::MindmapApp;
+use std::time::{Duration, Instant};
+
+use main_core::packages::electron_utils::fetch_image_bytes::{
+    FetchedImageBytes, FetchedImageMime, fetch_image_bytes,
+};
+use main_core::packages::electron_utils::safe_remote_url::{
+    AbortSignal, FetchError, FetchInit, FetchWithSsrfGuardOptions, Fetcher, GlobalDispatcher,
+    Response, fetch_with_ssrf_guard,
+};
+use shell_contract::runtime::PathName;
+
 use super::hosts::LinkNet;
 use super::util::{slice, utf16_len};
 use crate::route::{self, Route};
 use crate::value::{obj, string};
 
+/// How long the page may take; the picture has its own retries
+const PAGE_TIMEOUT: Duration = Duration::from_secs(15);
+/// What a page is asked with
+const PAGE_HEADERS: [(&str, &str); 2] = [
+    ("User-Agent", "Mozilla/5.0"),
+    ("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5"),
+];
 /// The longest title taken from a page
 const TITLE_MAX: usize = 200;
 
@@ -205,32 +223,77 @@ pub const PAGE_READ_LIMIT: usize = 512 * 1024;
 
 /// `readHead`: the start of a body: up to the end of the page's head, or
 /// `limit` bytes. The rest is never downloaded.
-fn read_head(mut body: impl Iterator<Item = Vec<u8>>, limit: usize) -> Vec<u8> {
+fn read_head(resp: &mut dyn Response, limit: usize) -> Result<Vec<u8>, FetchError> {
+    if !resp.has_body() {
+        let mut bytes = resp.array_buffer()?;
+        bytes.truncate(limit);
+        return Ok(bytes);
+    }
     let mut out: Vec<u8> = Vec::new();
     let mut tail = String::new();
-    while out.len() < limit {
-        let Some(chunk) = body.next() else {
-            break;
-        };
-        // the end of the head can straddle two chunks: keep a little of the last one
-        let seen: String = tail
-            .chars()
-            .chain(chunk.iter().map(|b| char::from(*b)))
-            .collect();
-        out.extend_from_slice(&chunk);
-        if js_regex!(r"<\/head\s*>", "i").test(&seen) {
-            break;
+    let read = (|| -> Result<(), FetchError> {
+        while out.len() < limit {
+            let Some(chunk) = resp.read_chunk()? else {
+                break;
+            };
+            // the end of the head can straddle two chunks: keep a little of the last one
+            let seen: String = tail
+                .chars()
+                .chain(chunk.iter().map(|b| char::from(*b)))
+                .collect();
+            out.extend_from_slice(&chunk);
+            if js_regex!(r"<\/head\s*>", "i").test(&seen) {
+                break;
+            }
+            let keep = seen.chars().count().saturating_sub(16);
+            tail = seen.chars().skip(keep).collect();
         }
-        let keep = seen.chars().count().saturating_sub(16);
-        tail = seen.chars().skip(keep).collect();
-    }
+        Ok(())
+    })();
+    resp.cancel_body();
+    read?;
     out.truncate(limit);
-    out
+    Ok(out)
+}
+
+/// `AbortSignal.timeout(15 s)`
+struct Deadline(Instant);
+
+impl AbortSignal for Deadline {
+    fn aborted(&self) -> bool {
+        Instant::now() >= self.0
+    }
+}
+
+/// A fetcher that remembers the URL of the hop it answered last: `resp.url`
+struct Recording<'a> {
+    inner: &'a mut dyn Fetcher,
+    last_url: String,
+}
+
+impl Fetcher for Recording<'_> {
+    fn global_dispatcher(&mut self) -> GlobalDispatcher {
+        self.inner.global_dispatcher()
+    }
+
+    fn fetch(&mut self, url: &str, init: &FetchInit<'_>) -> Result<Box<dyn Response>, FetchError> {
+        self.last_url = url.to_owned();
+        self.inner.fetch(url, init)
+    }
+
+    fn close_dispatcher(&mut self) {
+        self.inner.close_dispatcher()
+    }
+
+    fn sleep(&mut self, ms: f64) {
+        self.inner.sleep(ms)
+    }
 }
 
 /// `readLinkPreview`: reads the page at `url` and downloads the picture it
-/// names. Blocks on the network: run it on a worker.
-pub fn read_link_preview(net: &dyn LinkNet, url: Option<&str>) -> IpcValue {
+/// names, both through `main-core`'s SSRF guard over the host's resolver and
+/// fetcher. Blocks on the network: run it on a worker. `tmpdir` is `os.tmpdir()`.
+pub fn read_link_preview(net: &dyn LinkNet, tmpdir: &str, url: Option<&str>) -> IpcValue {
     let raw = url.map_or("", trim);
     // only a web address written out in full
     let address = if js_regex!(r"^https?://", "i").test(raw) {
@@ -241,44 +304,73 @@ pub fn read_link_preview(net: &dyn LinkNet, url: Option<&str>) -> IpcValue {
     let Some(address) = address else {
         return reason("not-web");
     };
-    let Ok(Some(resp)) = net.fetch_with_ssrf_guard(&address) else {
+    let mut resolver = net.resolver();
+    let mut inner = net.fetcher();
+    let mut fetcher = Recording {
+        inner: &mut *inner,
+        last_url: String::new(),
+    };
+    let signal = Deadline(Instant::now() + PAGE_TIMEOUT);
+    let mut options = FetchWithSsrfGuardOptions {
+        headers: Some(
+            PAGE_HEADERS
+                .iter()
+                .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+                .collect(),
+        ),
+        signal: Some(&signal),
+        ..FetchWithSsrfGuardOptions::default()
+    };
+    let Ok(Some(mut resp)) =
+        fetch_with_ssrf_guard(&mut *resolver, &mut fetcher, &address, &mut options)
+    else {
         return reason("unreachable");
     };
-    if !resp.ok {
+    if !resp.ok() {
+        resp.cancel_body();
         return reason("unreachable");
     }
-    if !js_regex!(r"html", "i").test(&resp.content_type) {
+    let content_type = resp.header("content-type").unwrap_or_default();
+    if !js_regex!(r"html", "i").test(&content_type) {
+        resp.cancel_body();
         return reason("not-page");
     }
-    let content_type = resp.content_type;
-    let final_url = resp.url;
-    let head = read_head(resp.body, PAGE_READ_LIMIT);
+    let Ok(head) = read_head(&mut *resp, PAGE_READ_LIMIT) else {
+        return reason("unreachable");
+    };
     let html = decode_page(&head, &content_type);
     // a redirect moved the page: its own addresses are relative to where it ended
+    let final_url = fetcher.last_url.clone();
     let base = if js_regex!(r"^https?:", "i").test(&final_url) {
         final_url
     } else {
         address
     };
     let preview = parse_page_preview(&html, &base);
-    let picture = preview
-        .picture_url
-        .as_deref()
-        .and_then(|picture_url| net.fetch_image_bytes(Some(picture_url)));
+    let picture = preview.picture_url.as_deref().and_then(|picture_url| {
+        fetch_image_bytes(&mut *resolver, &mut fetcher, tmpdir, Some(picture_url))
+    });
     obj([
         ("ok", IpcValue::Bool(true)),
         ("title", preview.title.map_or(IpcValue::Null, string)),
         (
             "picture",
             match picture {
-                Some(picture) => obj([
-                    ("base64", string(picture.base64)),
-                    ("mime", string(picture.mime)),
-                ]),
+                Some(picture) => image_value(picture),
                 None => IpcValue::Null,
             },
         ),
     ])
+}
+
+/// `{ base64, mime }` of a downloaded picture
+pub(super) fn image_value(image: FetchedImageBytes) -> IpcValue {
+    let mime = match image.mime {
+        FetchedImageMime::Png => "image/png",
+        FetchedImageMime::Jpeg => "image/jpeg",
+        FetchedImageMime::Gif => "image/gif",
+    };
+    obj([("base64", string(image.base64)), ("mime", string(mime))])
 }
 
 pub(super) fn routes(app: &MindmapApp) -> Vec<Route> {
@@ -287,9 +379,10 @@ pub(super) fn routes(app: &MindmapApp) -> Vec<Route> {
         "mindmap:read-link-preview",
         move |_cx, args, responder| {
             let net = a.0.net.clone();
+            let tmpdir = crate::host::path_string(a.0.services.paths.path(PathName::Temp));
             let url = args.str(0).map(str::to_owned);
             a.offload(
-                move || read_link_preview(&*net, url.as_deref()),
+                move || read_link_preview(&*net, &tmpdir, url.as_deref()),
                 move |_app, answer| responder.reply(Ok(answer)),
             );
         },

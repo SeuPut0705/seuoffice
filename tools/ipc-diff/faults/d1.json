@@ -210,6 +210,27 @@
     "groups": ["d1/mindmap"]
   },
   {
+    "name": "mindmap: the tab that stays after Don't Save is never asked for a new copy",
+    "file": "shell-ipc/d1/src/mindmap/recovery.rs",
+    "find": "\"mindmap:recovery-reset\"",
+    "replace": "\"mindmap:recovery-copy-now\"",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "mindmap: a save to a path that times out says another thing",
+    "file": "shell-ipc/d1/src/mindmap/app.rs",
+    "find": "done(Err(\"timed out saving the map\".into()))",
+    "replace": "done(Err(\"could not save the map\".into()))",
+    "groups": ["d1/mindmap"]
+  },
+  {
+    "name": "mindmap: a read of the map that is never answered gives another error",
+    "file": "shell-ipc/d1/src/mindmap/app.rs",
+    "find": "Err(\"timed out reading the map\".into()),",
+    "replace": "Err(\"no answer\".into()),",
+    "groups": ["d1/mindmap"]
+  },
+  {
     "name": "a page of attachment text is cut at another size (positive control)",
     "file": "shell-ipc/d1/src/sheets/misc.rs",
     "find": "clamp(1.0, 48_000.0)",

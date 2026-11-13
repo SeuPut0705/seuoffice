@@ -9,6 +9,7 @@ use jscompat::node_path::host::{basename, extname, join};
 use jscompat::{JsObject, JsonValue, base64, to_iso_string};
 use main_core::node_fs::node_error;
 use main_core::packages::electron_utils::dialog_memory::show_open_dialog_with_memory;
+use main_core::packages::electron_utils::fetch_image_bytes::fetch_image_bytes;
 use shell_contract::IpcValue;
 use shell_contract::ipc::Responder;
 use shell_contract::runtime::PathName;
@@ -449,15 +450,17 @@ pub(super) fn routes(app: &MindmapApp) -> Vec<Route> {
         "mindmap:fetch-image",
         move |_cx, args, responder| {
             let net = a.0.net.clone();
+            let tmpdir = path_string(a.0.services.paths.path(PathName::Temp));
             let url = args.str(0).map(str::to_owned);
             a.offload(
-                move || net.fetch_image_bytes(url.as_deref()),
+                move || {
+                    let mut resolver = net.resolver();
+                    let mut fetcher = net.fetcher();
+                    fetch_image_bytes(&mut *resolver, &mut *fetcher, &tmpdir, url.as_deref())
+                },
                 move |_app, image| {
                     responder.reply(Ok(match image {
-                        Some(image) => obj([
-                            ("base64", string(image.base64)),
-                            ("mime", string(image.mime)),
-                        ]),
+                        Some(image) => super::preview::image_value(image),
                         None => IpcValue::Null,
                     }))
                 },

@@ -118,3 +118,26 @@ export const save = (bytes: unknown, mode?: string, extra: Record<string, unknow
   call('mindmap:save', [{ bytes, ...(mode ? { mode } : {}), ...extra }])
 export const dirty = (flag: unknown, view?: number) => send('mindmap:dirty-changed', [flag], view)
 export const OPEN_A = call('mindmap:open-file', ['$DIR/a.xmind'])
+
+/** a shell call into the editor (a `trigger`, named after the exported function it runs) */
+export function trigger(
+  what: string,
+  args: unknown[] = [],
+  options: { view?: number; defer?: true } = {},
+): Call {
+  const name = `d1/mindmap:${what}`
+  return {
+    channel: name,
+    kind: 'trigger',
+    name,
+    args,
+    ...(options.view ? { view: options.view } : {}),
+    ...(options.defer ? { defer: true } : {}),
+  }
+}
+
+/** takes the answer of the deferred call at `index` */
+export const answerOf = (index: number): Call => ({ channel: '', args: [], await: index })
+
+/** time passes: the timers due within `ms` run */
+export const advance = (ms: number): Call => trigger('advanceClock', [ms])

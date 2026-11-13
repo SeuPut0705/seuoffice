@@ -24,8 +24,11 @@
  * before any question is dropped by Electron either way, which the fake
  * `ipcMain` shows as a missing handler, so no case sends one.
  */
-import { loadMindmap } from '../../d1/mindmap-host.ts'
+import { loadMindmap, mindmapTriggers } from '../../d1/mindmap-host.ts'
 import {
+  advance,
+  answerOf,
+  trigger,
   CHANGED,
   FILES,
   MAP,
@@ -44,6 +47,8 @@ import {
 } from '../../d1/mindmap-cases.ts'
 import type { Case, Group } from '../../types.ts'
 
+/** a public address: what a hostname of a case resolves to */
+const PUBLIC = [{ address: '93.184.216.34', family: 4 }]
 const FIXED_CLOCK = Date.UTC(2026, 10, 13, 9, 30, 15)
 
 /** the host with a view opened on `name` */
@@ -593,42 +598,162 @@ const cases: Case[] = [
     },
   ),
 
-  // ---- fetch-image, read-link-preview ----
+  // ---- fetch-image, read-link-preview: the SSRF guard runs over a fake network ----
   mindmapCase(
-    'a picture by address',
-    { d1: { images: { 'https://a.example/i.png': { base64: 'QQ==', mime: 'image/png' } } } },
+    'a picture by address is labelled by its content type, anything else as JPEG',
+    {
+      d1: {
+        dns: { 'a.example': PUBLIC },
+        network: {
+          'https://a.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'A' },
+          'https://a.example/j.gif': { headers: { 'content-type': 'image/gif' }, body: ['B', 'C'] },
+          'https://a.example/k': { headers: { 'content-type': 'text/plain' }, body: 'D' },
+          'https://a.example/none.png': { status: 404 },
+          'https://a.example/big.png': {
+            headers: { 'content-type': 'image/png', 'content-length': '99999999999' },
+            body: 'x',
+          },
+          'http://93.184.216.34/lit.png': { headers: { 'content-type': 'image/png' }, body: 'E' },
+        },
+      },
+    },
     [
       call('mindmap:fetch-image', ['https://a.example/i.png']),
+      call('mindmap:fetch-image', ['https://a.example/j.gif']),
+      call('mindmap:fetch-image', ['https://a.example/k']),
       call('mindmap:fetch-image', ['https://a.example/none.png']),
+      call('mindmap:fetch-image', ['https://a.example/big.png']),
+      call('mindmap:fetch-image', ['http://93.184.216.34/lit.png']),
       call('mindmap:fetch-image', [5]),
+      call('mindmap:fetch-image', ['']),
       call('mindmap:fetch-image'),
+    ],
+  ),
+  mindmapCase(
+    'the guard refuses what is not a public web address and asks nothing of it',
+    {
+      d1: {
+        dns: {
+          'inside.example': [{ address: '10.0.0.5', family: 4 }],
+          'mixed.example': [...PUBLIC, { address: '192.168.1.9', family: 4 }],
+          'fake.example': [{ address: '198.18.0.7', family: 4 }],
+          'v6.example': [{ address: '2606:2800:220:1:248:1893:25c8:1946', family: 6 }],
+        },
+        network: {
+          'https://fake.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'F' },
+          'https://v6.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'G' },
+        },
+      },
+    },
+    [
+      call('mindmap:fetch-image', ['https://inside.example/i.png']),
+      call('mindmap:fetch-image', ['https://mixed.example/i.png']),
+      call('mindmap:fetch-image', ['http://127.0.0.1/i.png']),
+      call('mindmap:fetch-image', ['http://[::1]/i.png']),
+      call('mindmap:fetch-image', ['http://[::ffff:127.0.0.1]/i.png']),
+      call('mindmap:fetch-image', ['http://localhost/i.png']),
+      call('mindmap:fetch-image', ['http://app.internal/i.png']),
+      call('mindmap:fetch-image', ['ftp://a.example/i.png']),
+      call('mindmap:fetch-image', ['file:///etc/passwd']),
+      call('mindmap:fetch-image', ['https://nowhere.example/i.png']),
+      call('mindmap:fetch-image', ['https://fake.example/i.png']),
+      call('mindmap:fetch-image', ['https://v6.example/i.png']),
+    ],
+  ),
+  mindmapCase(
+    'a redirect is checked at every hop, and a chain that is too long ends',
+    {
+      d1: {
+        dns: {
+          'a.example': PUBLIC,
+          'b.example': [{ address: '93.184.216.35', family: 4 }],
+          'inside.example': [{ address: '10.0.0.5', family: 4 }],
+        },
+        network: {
+          'https://a.example/go': { status: 302, headers: { location: 'https://b.example/i.png' } },
+          'https://b.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'H' },
+          'https://a.example/bounce': {
+            status: 301,
+            headers: { location: 'https://inside.example/i.png' },
+          },
+          'https://inside.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'x' },
+          'https://a.example/nowhere': { status: 302 },
+          'https://a.example/relative': { status: 307, headers: { location: '/i2.png' } },
+          'https://a.example/i2.png': { headers: { 'content-type': 'image/png' }, body: 'I' },
+          'https://a.example/loop': { status: 302, headers: { location: '/loop' } },
+        },
+      },
+    },
+    [
+      call('mindmap:fetch-image', ['https://a.example/go']),
+      call('mindmap:fetch-image', ['https://a.example/bounce']),
+      call('mindmap:fetch-image', ['https://a.example/nowhere']),
+      call('mindmap:fetch-image', ['https://a.example/relative']),
+      call('mindmap:fetch-image', ['https://a.example/loop']),
+    ],
+  ),
+  mindmapCase(
+    'behind a forward proxy the hop rides it and nothing is pinned',
+    {
+      d1: {
+        proxy: true,
+        dns: { 'a.example': PUBLIC },
+        network: {
+          'https://a.example/i.png': { headers: { 'content-type': 'image/png' }, body: 'A' },
+        },
+      },
+    },
+    [call('mindmap:fetch-image', ['https://a.example/i.png'])],
+  ),
+  mindmapCase(
+    'a transient failure is retried; a body over the cap is dropped',
+    {
+      d1: {
+        dns: { 'a.example': PUBLIC },
+        network: {
+          'https://a.example/busy.png': { status: 503 },
+          'https://a.example/denied.png': { status: 403 },
+          'https://a.example/broken.png': { throws: 'socket hang up' },
+          'https://a.example/gone.png': { status: 410 },
+        },
+      },
+    },
+    [
+      call('mindmap:fetch-image', ['https://a.example/busy.png']),
+      call('mindmap:fetch-image', ['https://a.example/denied.png']),
+      call('mindmap:fetch-image', ['https://a.example/broken.png']),
+      call('mindmap:fetch-image', ['https://a.example/gone.png']),
     ],
   ),
   mindmapCase(
     'a link names its title and picture; a page that gives no picture has none',
     {
       d1: {
-        pages: {
+        dns: { 'a.example': PUBLIC, 'b.example': PUBLIC, 'cdn.example': PUBLIC },
+        network: {
           'https://a.example/p': {
-            contentType: 'text/html; charset=utf-8',
-            url: 'https://a.example/p',
+            headers: { 'content-type': 'text/html; charset=utf-8' },
             body: '<html><head><title> Old &amp; title </title><meta property="og:title" content="Real &quot;title&quot;"><meta property="og:image" content="/img/i.png"></head></html>',
           },
           'https://a.example/q': {
-            contentType: 'text/html',
-            url: '',
+            headers: { 'content-type': 'text/html' },
             body: '<title>Only a title</title><link rel="image_src" href="//cdn.example/x.jpg">',
           },
-          'https://a.example/r': { contentType: 'text/html', url: '', body: '<p>nothing</p>' },
+          'https://a.example/r': {
+            headers: { 'content-type': 'text/html' },
+            body: '<p>nothing</p>',
+          },
           'https://a.example/moved': {
-            contentType: 'text/HTML',
-            url: 'https://b.example/dir/page',
+            status: 302,
+            headers: { location: 'https://b.example/dir/page' },
+          },
+          'https://b.example/dir/page': {
+            headers: { 'content-type': 'text/HTML' },
             body: '<meta name="twitter:image" content="rel.png"><meta name="twitter:title" content="  Moved   page ">',
           },
-        },
-        images: {
-          'https://a.example/img/i.png': { base64: 'QQ==', mime: 'image/png' },
-          'https://b.example/dir/rel.png': { base64: 'Qg==', mime: 'image/gif' },
+          'https://a.example/img/i.png': { headers: { 'content-type': 'image/png' }, body: 'A' },
+          'https://cdn.example/x.jpg': { headers: { 'content-type': 'image/jpeg' }, body: 'J' },
+          'https://b.example/dir/rel.png': { headers: { 'content-type': 'image/gif' }, body: 'B' },
         },
       },
     },
@@ -643,17 +768,30 @@ const cases: Case[] = [
     'a link that is not a page, not a web address, not reachable',
     {
       d1: {
-        pages: {
-          'https://a.example/img': { contentType: 'image/png', body: 'x' },
-          'https://a.example/down': { ok: false, contentType: 'text/html', body: 'x' },
-          'https://a.example/boom': { throws: true },
+        dns: { 'a.example': PUBLIC, 'inside.example': [{ address: '10.0.0.5', family: 4 }] },
+        network: {
+          'https://a.example/img': { headers: { 'content-type': 'image/png' }, body: 'x' },
+          'https://a.example/down': {
+            status: 500,
+            headers: { 'content-type': 'text/html' },
+            body: 'x',
+          },
+          'https://a.example/boom': { throws: 'reset' },
           'https://a.example/latin': {
-            contentType: 'text/html; charset=iso-8859-1',
+            headers: { 'content-type': 'text/html; charset=iso-8859-1' },
             body: '<title>caf\u00e9</title>',
           },
           'https://a.example/meta': {
-            contentType: 'text/html',
+            headers: { 'content-type': 'text/html' },
             body: '<meta charset="euc-kr"><title>x</title>',
+          },
+          'https://a.example/split': {
+            headers: { 'content-type': 'text/html' },
+            body: ['<title>Head only</title></he', 'ad><title>Body</title>'],
+          },
+          'https://inside.example/p': {
+            headers: { 'content-type': 'text/html' },
+            body: '<title>no</title>',
           },
         },
       },
@@ -663,12 +801,14 @@ const cases: Case[] = [
       call('mindmap:read-link-preview', ['https://a.example/down']),
       call('mindmap:read-link-preview', ['https://a.example/boom']),
       call('mindmap:read-link-preview', ['https://a.example/none']),
+      call('mindmap:read-link-preview', ['https://inside.example/p']),
       call('mindmap:read-link-preview', ['ftp://a.example/x']),
       call('mindmap:read-link-preview', ['a.example']),
       call('mindmap:read-link-preview', [5]),
       call('mindmap:read-link-preview'),
       call('mindmap:read-link-preview', ['https://a.example/latin']),
       call('mindmap:read-link-preview', ['https://a.example/meta']),
+      call('mindmap:read-link-preview', ['https://a.example/split']),
     ],
   ),
 
@@ -722,12 +862,188 @@ const cases: Case[] = [
     { d1: { pdf: { error: 'no printer' } }, saves: ['$DIR/doc'] },
     [call('mindmap:export-pdf', [{ html: '<p>x</p>', suggestedName: 'd' }])],
   ),
+
+  // ---- what the shell, the menus and the MCP server ask of the editor (triggers), on their full path ----
+  mindmapCase("a menu save is resumed by the renderer's ack", on('a.xmind'), [
+    OPEN_A,
+    trigger('requestMindmapSave', ['save']),
+    trigger('requestMindmapSave', ['saveAs'], { defer: true }),
+    send('mindmap:save-request-ack', [false]),
+    answerOf(2),
+    trigger('requestMindmapSave', ['saveAs'], { defer: true }),
+    send('mindmap:save-request-ack', [true]),
+    answerOf(5),
+  ]),
+  mindmapCase(
+    "a menu save of a changed map is answered by the renderer's save call",
+    { ...on('a.xmind'), saves: [null, '$DIR/copy'] },
+    [
+      OPEN_A,
+      dirty(true),
+      trigger('requestMindmapSave', ['save'], { defer: true }),
+      save(bin(CHANGED), 'save'),
+      answerOf(2),
+      trigger('mindmapIsDirty'),
+      trigger('requestMindmapSave', ['saveAs'], { defer: true }),
+      save(bin(CHANGED), 'saveAs'),
+      answerOf(6),
+      trigger('requestMindmapSave', ['saveAs'], { defer: true }),
+      save(bin(CHANGED), 'saveAs'),
+      answerOf(9),
+      trigger('mindmapFilePath'),
+    ],
+  ),
+  mindmapCase(
+    'a menu save the renderer never answers is given up on after two minutes; a view that did not open is not asked',
+    { d1: opened('a.xmind', 'bad.xmind') },
+    [
+      call('mindmap:open-file', ['$DIR/bad.xmind'], { view: 2 }),
+      trigger('requestMindmapSave', ['save'], { view: 2 }),
+      trigger('requestMindmapSave', ['saveAs'], { defer: true }),
+      advance(60000),
+      advance(61000),
+      answerOf(2),
+    ],
+    { views: [view(1), view(2)] },
+  ),
+  mindmapCase(
+    'the close prompt: Save is resumed by the close-save result, Cancel and Cancel-by-silence close nothing',
+    { ...on('a.xmind'), messages: [0, 0, 2, 0] },
+    [
+      OPEN_A,
+      trigger('requestMindmapClose', [true]),
+      dirty(true),
+      trigger('requestMindmapClose', [true], { defer: true }),
+      send('mindmap:close-save-result', [true]),
+      answerOf(3),
+      trigger('requestMindmapClose', [false], { defer: true }),
+      send('mindmap:close-save-result', [false]),
+      answerOf(6),
+      trigger('requestMindmapClose', [true]),
+      trigger('requestMindmapClose', [true], { defer: true }),
+      advance(121000),
+      answerOf(10),
+    ],
+  ),
+  mindmapCase(
+    "after Don't Save the tab closes at once, the copies go and a tab that stays is asked for a fresh one",
+    { ...on('a.xmind'), messages: [1] },
+    [
+      OPEN_A,
+      dirty(true),
+      call('mindmap:recovery-copy', [{ bytes: bin(CHANGED) }]),
+      trigger('requestMindmapClose', [true]),
+      call('mindmap:recovery-copy', [{ bytes: bin(CHANGED) }]),
+      advance(4000),
+      advance(2000),
+    ],
+  ),
+  mindmapCase(
+    'a tool closes the map without saving: its copy is dropped and the hold ends in a request for a new one',
+    on('a.xmind'),
+    [
+      OPEN_A,
+      dirty(true),
+      call('mindmap:recovery-copy', [{ bytes: bin(CHANGED) }]),
+      trigger('discardMindmapRecovery'),
+      call('mindmap:recovery-copy', [{ bytes: bin(CHANGED) }]),
+      advance(6000),
+    ],
+  ),
+  mindmapCase(
+    "the MCP server's save to a path points the map there and gives it back when the save fails",
+    on('a.xmind'),
+    [
+      OPEN_A,
+      trigger('mindmapSaveToPath', ['$DIR/elsewhere.xmind'], { defer: true }),
+      trigger('mindmapFilePath'),
+      save(bin(CHANGED), 'save'),
+      answerOf(1),
+      trigger('mindmapFilePath'),
+      trigger('mindmapSaveToPath', ['$DIR/second.xmind'], { defer: true }),
+      send('mindmap:save-request-ack', [false]),
+      answerOf(6),
+      trigger('mindmapFilePath'),
+      trigger('mindmapSaveToPath', ['$DIR/third.xmind'], { defer: true }),
+      advance(121000),
+      answerOf(10),
+      trigger('mindmapFilePath'),
+    ],
+  ),
+  mindmapCase(
+    'a save to a path is refused for a map that did not open',
+    { d1: opened('bad.xmind') },
+    [
+      call('mindmap:open-file', ['$DIR/bad.xmind']),
+      trigger('mindmapSaveToPath', ['$DIR/x.xmind']),
+      trigger('mindmapFilePath'),
+    ],
+  ),
+  mindmapCase(
+    "the MCP server reads the outline: asked again until the renderer answers, with the renderer's error, or not at all",
+    on('a.xmind'),
+    [
+      trigger('mindmapReadOutline', [], { defer: true }),
+      advance(300),
+      send('mindmap:outline-result', ['nope']),
+      send('mindmap:outline-result', [{ other: 1 }]),
+      send('mindmap:outline-result', [{ text: '# map' }]),
+      answerOf(0),
+      trigger('mindmapReadOutline', [], { defer: true }),
+      trigger('mindmapReadOutline', [], { defer: true }),
+      send('mindmap:outline-result', [{ error: 'boom' }]),
+      answerOf(6),
+      answerOf(7),
+      trigger('mindmapReadOutline', [], { defer: true }),
+      advance(31000),
+      answerOf(11),
+    ],
+  ),
+  mindmapCase("the MCP server reads the map's bytes", on('a.xmind'), [
+    trigger('mindmapReadBytes', [], { defer: true }),
+    send('mindmap:bytes-result', [{ bytes: 'text' }]),
+    answerOf(0),
+    trigger('mindmapReadBytes', [], { defer: true }),
+    send('mindmap:bytes-result', [{ bytes: bin('XMIND-live') }]),
+    answerOf(3),
+  ]),
+  mindmapCase(
+    'the OS session ends: each unsaved map is asked for a copy and its report resumes the wait',
+    { d1: opened('a.xmind', 'b.xmind') },
+    [
+      call('mindmap:open-file', ['$DIR/a.xmind']),
+      call('mindmap:open-file', ['$DIR/b.xmind'], { view: 2 }),
+      dirty(true),
+      dirty(true, 2),
+      trigger('writeMindmapCopiesNow', [5000], { defer: true }),
+      send('mindmap:recovery-copy-now-done'),
+      send('mindmap:recovery-copy-now-done', [], 2),
+      answerOf(4),
+      trigger('writeMindmapCopiesNow', [5000], { defer: true }),
+      send('mindmap:recovery-copy-now-done'),
+      advance(6000),
+      answerOf(8),
+      dirty(false),
+      dirty(false, 2),
+      trigger('writeMindmapCopiesNow'),
+    ],
+    { views: [view(1), view(2)] },
+  ),
+  mindmapCase('the shell renames the file and sends menu and export commands', on('a.xmind'), [
+    OPEN_A,
+    trigger('mindmapFileRenamed', ['$DIR/a.xmind', '$DIR/c.xmind']),
+    trigger('mindmapFilePath'),
+    trigger('sendMindmapMenuCommand', ['zoom-fit']),
+    trigger('sendMindmapExportRequest', ['svg']),
+    call('mindmap:consume-pending'),
+  ]),
 ]
 
 export const group: Group = {
   batch: 'D1',
   load: loadMindmap,
   cases,
+  triggers: mindmapTriggers,
   single: {
     'mindmap:consume-pending': 'it takes no argument: its answer is the path the shell queued',
     'mindmap:seed-take': 'it takes no argument: its answer is what the shell queued',

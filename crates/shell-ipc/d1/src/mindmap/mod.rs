@@ -23,6 +23,8 @@ mod editors;
 mod export;
 mod handlers;
 pub mod hosts;
+#[cfg(any(test, feature = "probe"))]
+mod net;
 mod preview;
 #[cfg(any(test, feature = "probe"))]
 mod probe;
@@ -47,9 +49,8 @@ pub use app::{
     SAVE_WAIT, Seed, Wait,
 };
 pub use hosts::{
-    FetchResponse, FetchedImage, FileParse, FileParseHost, LinkNet, LinkNetHost, MindmapShell,
-    MindmapShellHost, OpenOutcome, OpenStatus, PageRenderer, PageRendererHost, ParsedText,
-    XmindEngine, XmindEngineHost,
+    FileParse, FileParseHost, LinkNet, LinkNetHost, MindmapShell, MindmapShellHost, OpenOutcome,
+    OpenStatus, PageRenderer, PageRendererHost, ParsedText, XmindEngine, XmindEngineHost,
 };
 pub use preview::{PagePreview, parse_page_preview, read_link_preview};
 
@@ -110,15 +111,109 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
 }
 
 /// This app's triggers for [`crate::probe_trigger`]: `name` without its
-/// `d1/` prefix; false when it is not one of them
+/// `d1/` prefix; false when it is not one of them. A trigger is what the shell,
+/// a menu or the MCP server does to a map view, named after the TypeScript
+/// function of `mindmap-main.ts` / `mcp-queries.ts` it stands for and run through
+/// the mind map's [`DocumentEditors`] where the contract has the call, else
+/// through [`MindmapApp`]; `advanceClock` is the probe's own: it lets the
+/// timers due within the given milliseconds run.
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
-    _name: &str,
-    _view: shell_contract::ViewId,
-    _args: &serde_json::Value,
+    name: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
     _services: &Services,
-    _provided: &std::rc::Rc<shell_contract::provided::Provided>,
-    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+    provided: &std::rc::Rc<shell_contract::provided::Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
 ) -> bool {
-    false
+    use std::path::PathBuf;
+    use std::time::{Duration, Instant};
+
+    use serde_json::Value;
+    use shell_contract::IpcValue;
+    use shell_contract::editors::{SaveMode, editor_for};
+
+    use crate::value::{buffer, string, thrown};
+
+    let Some(what) = name.strip_prefix("mindmap:") else {
+        return false;
+    };
+    let Some(app) = handle() else {
+        return false;
+    };
+    let text = |i: usize| args.get(i).and_then(Value::as_str).unwrap_or("").to_owned();
+    // the editor of the view as another batch finds it
+    let editor = editor_for(provided, view);
+    let Some(editor) = editor.filter(|_| !matches!(what, "advanceClock")) else {
+        if what == "advanceClock" {
+            let ms = args.get(0).and_then(Value::as_u64).unwrap_or(0);
+            app.run_due(Instant::now() + Duration::from_millis(ms));
+            then(Ok(IpcValue::Undefined));
+            return true;
+        }
+        return false;
+    };
+    match what {
+        "requestMindmapSave" => {
+            let mode = if text(0) == "saveAs" {
+                SaveMode::SaveAs
+            } else {
+                SaveMode::Save
+            };
+            editor.request_save(view, mode, Box::new(move |r| then(r.map(IpcValue::Bool))));
+        }
+        "requestMindmapClose" => {
+            let parent = args
+                .get(0)
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+                .then(|| app.window_of(view))
+                .flatten();
+            editor.request_close(view, parent, Box::new(move |r| then(r.map(IpcValue::Bool))));
+        }
+        "mindmapSaveToPath" => editor.save_to_path(
+            view,
+            PathBuf::from(text(0)),
+            Box::new(move |r| then(r.map(|()| IpcValue::Undefined))),
+        ),
+        "mindmapFileRenamed" => {
+            editor.file_renamed(
+                view,
+                std::path::Path::new(&text(0)),
+                std::path::Path::new(&text(1)),
+            );
+            then(Ok(IpcValue::Undefined));
+        }
+        "sendMindmapMenuCommand" => {
+            app.send_menu_command(view, &text(0));
+            then(Ok(IpcValue::Undefined));
+        }
+        "sendMindmapExportRequest" => {
+            editor.export_request(view, &text(0));
+            then(Ok(IpcValue::Undefined));
+        }
+        "mindmapReadOutline" => {
+            editor.read_text(view, Box::new(move |r| then(r.map(IpcValue::String))))
+        }
+        "mindmapReadBytes" => {
+            app.read_bytes(view, Box::new(move |r| then(r.map(buffer).map_err(thrown))))
+        }
+        "writeMindmapCopiesNow" => {
+            let ms = args.get(0).and_then(Value::as_u64).unwrap_or(5000);
+            app.write_copies_now(
+                Duration::from_millis(ms),
+                Box::new(move || then(Ok(IpcValue::Undefined))),
+            );
+        }
+        "discardMindmapRecovery" => {
+            app.discard_recovery(view);
+            then(Ok(IpcValue::Undefined));
+        }
+        "mindmapFilePath" => then(Ok(editor
+            .document_path(view)
+            .map_or(IpcValue::Undefined, |p| string(p.to_string_lossy())))),
+        "mindmapIsDirty" => then(Ok(IpcValue::Bool(app.is_dirty(view)))),
+        _ => return false,
+    }
+    true
 }

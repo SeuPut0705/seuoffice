@@ -979,11 +979,16 @@ fn attachments_are_judged_by_extension_and_size_and_read_in_pages() {
 fn a_link_preview_reads_the_page_and_its_picture_and_links_open_by_protocol() {
     let h = harness("preview", |_| {
         json!({"mindmap": {
-            "pages": {"https://example.com/p": {
-                "contentType": "text/html; charset=utf-8",
-                "url": "https://example.com/p",
-                "body": "<title>T</title><meta property=\"og:image\" content=\"/i.png\">"}},
-            "images": {"https://example.com/i.png": {"base64": "QQ==", "mime": "image/png"}}}})
+            "dns": {
+                "example.com": [{"address": "93.184.216.34", "family": 4}],
+                "inside.example": [{"address": "10.0.0.5", "family": 4}]},
+            "network": {
+                "https://example.com/p": {
+                    "headers": {"content-type": "text/html; charset=utf-8"},
+                    "body": "<title>T</title><meta property=\"og:image\" content=\"/i.png\">"},
+                "https://example.com/i.png": {
+                    "headers": {"content-type": "image/png"}, "body": "A"},
+                "https://inside.example/p": {"headers": {"content-type": "text/html"}}}}})
     });
     h.app.create_view(ViewId(1), None);
     let preview = h.ok(
@@ -1010,6 +1015,13 @@ fn a_link_preview_reads_the_page_and_its_picture_and_links_open_by_protocol() {
     };
     assert_eq!(reason("ftp://example.com/p"), string("not-web"));
     assert_eq!(reason("https://example.com/none"), string("unreachable"));
+    // a host that resolves into the intranet is never asked
+    assert_eq!(reason("https://inside.example/p"), string("unreachable"));
+    assert!(
+        !h.logged("undici.fetch")
+            .iter()
+            .any(|line| line[1] == "https://inside.example/p")
+    );
 
     assert_eq!(
         h.ok(
