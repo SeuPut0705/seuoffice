@@ -153,7 +153,9 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       return { status: 'ok' as const, written: typeof next === 'string', text: next ?? null }
     },
     dataPath: (id: string, rel: string, dataDir?: string) => {
-      note('guide', 'dataPath', id, rel, dataDir ?? null)
+      // a random id (no ids given) is written as `<random>`, the same on both sides
+      const shown = spec.ids === null ? rel.replace(/^chats\/[^.]+/, 'chats/<random>') : rel
+      note('guide', 'dataPath', id, shown, dataDir ?? null)
       return pathOf(id, rel, dataDir)
     },
     installId: () => {

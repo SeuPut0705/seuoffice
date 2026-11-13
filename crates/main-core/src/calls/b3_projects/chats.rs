@@ -277,9 +277,17 @@ impl ChatStoreGuide for FakeGuide {
     }
 
     fn data_path(&mut self, id: &str, rel_path: &str, data_dir: Option<&str>) -> Option<String> {
+        // a random id (no ids given) is written as `<random>`, as the spec does
+        let shown = match rel_path.strip_prefix("chats/") {
+            Some(rest) if self.world.borrow().ids.is_none() => {
+                let tail = rest.find('.').map_or("", |at| &rest[at..]);
+                format!("chats/<random>{tail}")
+            }
+            _ => rel_path.to_owned(),
+        };
         self.note(
             "dataPath",
-            vec![Value::from(id), Value::from(rel_path), opt(data_dir)],
+            vec![Value::from(id), Value::from(shown), opt(data_dir)],
         );
         path_of(&self.world.borrow(), id, rel_path, data_dir)
     }

@@ -197,8 +197,12 @@ async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
       try {
         value = await runOp(guide, op, ask, {
           note,
-          setClock: (ms) => (clock = ms),
-          pushAnswers: (list) => answers.push(...list),
+          setClock: (ms) => {
+            clock = ms
+          },
+          pushAnswers: (list) => {
+            answers.push(...list)
+          },
           timer: () => timer,
           fire: () => {
             const fired = timer
