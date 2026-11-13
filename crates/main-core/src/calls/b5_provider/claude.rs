@@ -181,8 +181,8 @@ fn program() -> SubscriptionProgram {
 }
 
 /// `depsOf(o, cx)` of the spec: the program finder is a stand-in.
-fn deps_of(o: &Opts, sink: &Sink) -> ClaudeCodeCliDeps {
-    let shared = SharedChildRegistry::new();
+fn deps_of(rt: &Rt, o: &Opts, sink: &Sink) -> ClaudeCodeCliDeps {
+    let shared = SharedChildRegistry::new(rt.now());
     let temp_dirs = Rc::new(RefCell::new(SubscriptionTempState::default()));
     let locate = Rc::new(RefCell::new(SubscriptionLocateState::new(shared.clone())));
     let mut deps = ClaudeCodeCliDeps::new(shared, temp_dirs, locate);
@@ -486,7 +486,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     signal.abort(None);
                 }
                 let cb = callbacks(&sink, signal);
-                let deps = deps_of(&o, &sink);
+                let deps = deps_of(&rt, &o, &sink);
                 outcome(
                     stream_claude_code_cli(
                         &rt,
@@ -508,7 +508,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     signal.abort(None);
                 }
                 let wd = create_stream_watchdog(&rt, Some(&signal), None, None);
-                let deps = deps_of(&o, &sink);
+                let deps = deps_of(&rt, &o, &sink);
                 match wd
                     .guard(chat_claude_code_cli(
                         &rt, &wd, &o.config, &o.system, &o.user, &deps,
@@ -525,7 +525,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 if o.pre_aborted {
                     signal.abort(None);
                 }
-                let deps = deps_of(&o, &sink);
+                let deps = deps_of(&rt, &o, &sink);
                 let request = ClaudeCodeModelsRequest {
                     cli_path: o.cli_path.clone(),
                     signal,

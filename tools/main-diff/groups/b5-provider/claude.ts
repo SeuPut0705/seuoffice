@@ -732,6 +732,8 @@ const lineReader: Group = {
       { args: [wc({ stdout: [{ hex: '61c3' }] })] },
       { args: [wc({ stdout: [{ hex: 'ff0a6f6b0a' }] })] },
       { args: [wc({ stdout: [] })] },
+      { args: [wc({ stdout: [{ hex: 'efbbbf6869' }, '\n', { hex: 'efbbbf0a' }, 'ok\n'] })] },
+      { args: [wc({ stdout: [{ hex: 'efbb' }, { hex: 'bf6869' }] })] },
       { args: [wc({ stdout: ['x\n' + big(4 * 1024 * 1024 + 1)] })], note: 'a line past the cap' },
       {
         args: [
@@ -1776,6 +1778,14 @@ L.push(
   ),
   run(wc({ stdout: [big(4 * 1024 * 1024 + 1)] }), {}, 'an endless line'),
   run(wc(ok({ models: [{ value: 'sonnet' }] })), {}, 'the CLI leaves by itself after the answer'),
+  run(
+    wc({
+      ...ok({ models: [{ value: 'sonnet' }] }),
+      stdout: [{ hex: 'efbbbf' }, '{"type":"assistant"}\n'],
+    }),
+    {},
+    'a byte order mark stays on the first line, which then is no event',
+  ),
   run(
     wc({ ...ok({ models: [{ value: 'sonnet' }] }), closeOn: 'never' }),
     { graceMs: 300 },

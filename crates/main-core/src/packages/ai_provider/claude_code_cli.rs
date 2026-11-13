@@ -21,7 +21,6 @@
 //!   import, is [`install`]: the caller runs it once.
 
 use std::cell::{Cell, RefCell};
-use std::pin::Pin;
 use std::rc::{Rc, Weak};
 
 use jscompat::{
@@ -40,7 +39,9 @@ use super::run_error::ai_run_error;
 use super::subscription_locate::{
     LocateState, SubscriptionLocateOptions, SubscriptionProgram, resolve_subscription_program,
 };
-use super::subscription_models::{SubscriptionModelSource, SubscriptionModelsState};
+use super::subscription_models::{
+    SubscriptionModelSource, SubscriptionModelsState, set_subscription_model_source,
+};
 use super::subscription_process::{
     RegistryChoice, SharedChildRegistry, SubscriptionSpawnOptions, kill_process_tree_rt,
     spawn_subscription_program,
@@ -48,10 +49,11 @@ use super::subscription_process::{
 use super::subscription_temp_dirs::{
     TempDirOptions, TempDirs, create_tracked_temp_dir, remove_tracked_temp_dir,
 };
-use super::task::{Child, ChildEvent, Id, JsError, Rt, Settle, Signal};
+use super::task::{
+    Child, ChildEvent, Id, JsError, LocalBoxFuture, Rt, Settle, Signal, StringDecoder,
+};
 use super::types::AiChatResponse;
 use super::watchdog::{StreamWatchdog, create_stream_watchdog};
-use crate::packages::mcp_sdk::streamable_http_client::Utf8Stream;
 
 const PROVIDER: &str = "claude-code";
 const BUDGET_LABEL: &str = "claude-code-cli";
@@ -982,9 +984,8 @@ fn append_diagnostic(current: &str, chunk: &[u8]) -> String {
 // ── One turn ──
 
 /// The program finder's seam: gets the configured path of the CLI
-pub type ResolveProgram = Rc<
-    dyn Fn(Option<String>) -> Pin<Box<dyn Future<Output = Result<SubscriptionProgram, JsError>>>>,
->;
+pub type ResolveProgram =
+    Rc<dyn Fn(Option<String>) -> LocalBoxFuture<Result<SubscriptionProgram, JsError>>>;
 
 /// `ClaudeCodeCliDeps`: stand-ins for tests; none of them relaxes what a run
 /// requires of the CLI. `shared` and `temp_dirs` are the module state the
@@ -1127,7 +1128,7 @@ pub fn direct_call_input(tool: Option<&JsonValue>, input: Option<&JsonValue>) ->
 
 /// What `readLines` keeps between chunks of a stream
 pub struct LineReader {
-    decoder: Utf8Stream,
+    decoder: StringDecoder,
     pending: String,
     pending_bytes: f64,
     stopped: bool,
@@ -1142,7 +1143,7 @@ impl Default for LineReader {
 impl LineReader {
     pub fn new() -> LineReader {
         LineReader {
-            decoder: Utf8Stream::new(),
+            decoder: StringDecoder::new(),
             pending: String::new(),
             pending_bytes: 0.0,
             stopped: false,
@@ -1155,7 +1156,7 @@ impl LineReader {
             return;
         }
         self.stopped = true;
-        let tail = format!("{}{}", self.pending, self.decoder.decode(&[], true));
+        let tail = format!("{}{}", self.pending, self.decoder.end());
         self.pending = String::new();
         if !trim(&tail).is_empty() {
             on_line(&tail);
@@ -1172,7 +1173,7 @@ impl LineReader {
         if self.stopped {
             return;
         }
-        self.pending.push_str(&self.decoder.decode(chunk, false));
+        self.pending.push_str(&self.decoder.write(chunk));
         let joined = std::mem::take(&mut self.pending);
         let mut parts: Vec<&str> = joined.split('\n').collect();
         self.pending = parts.pop().unwrap_or_default().to_owned();
@@ -2713,5 +2714,5 @@ pub fn install(models: &mut SubscriptionModelsState, rt: &Rt, deps: &ClaudeCodeC
             .await
         })
     });
-    models.set_subscription_model_source(PROVIDER, Some(source));
+    set_subscription_model_source(models, PROVIDER, Some(source));
 }

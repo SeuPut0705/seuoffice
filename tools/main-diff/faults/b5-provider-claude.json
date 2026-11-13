@@ -426,5 +426,12 @@
       "claude-code-cli.chatClaudeCodeCli",
       "claude-code-cli.listClaudeCodeModels"
     ]
+  },
+  {
+    "name": "a byte order mark is dropped",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "self.pending.push_str(&self.decoder.write(chunk));",
+    "replace": "self.pending.push_str(self.decoder.write(chunk).trim_start_matches('\\u{feff}'));",
+    "fn": ["claude-code-cli.readLines", "claude-code-cli.listClaudeCodeModels"]
   }
 ]
