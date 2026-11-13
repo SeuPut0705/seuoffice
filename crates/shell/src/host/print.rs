@@ -313,20 +313,11 @@ impl PrintWindow {
         Ok(())
     }
 
-    /// The page as PDF, with `webContents.print`'s options read as
-    /// `printToPDF`'s (page size, landscape, margins, scale, background)
-    fn pdf_for_print(&self, options: &Value) -> Result<Vec<u8>, String> {
-        let mut params = pdf_params(&ipc_value(&print_as_pdf_options(options)));
-        params["printBackground"] = json!(options["printBackground"] != false);
-        cdp_bytes(&self.webview()?, "Page.printToPDF", params)
-    }
-
     fn silent(&self, options: &Value) -> PrintReport {
-        let pdf = match self.pdf_for_print(options) {
-            Ok(pdf) => pdf,
-            Err(error) => return failed(error),
-        };
-        match spool(&pdf, options) {
+        let printed = self
+            .webview()
+            .and_then(|webview| print_silently(&webview, options));
+        match printed {
             Ok(()) => PrintReport {
                 success: true,
                 failure_reason: String::new(),
@@ -432,6 +423,41 @@ impl PrintSurface for PrintWindow {
 impl Drop for PrintWindow {
     fn drop(&mut self) {
         self.destroy();
+    }
+}
+
+/// `webContents.print({ silent: true, deviceName, ... })` of any webview: the
+/// page as PDF, with the print options read as `printToPDF`'s (page size,
+/// landscape, margins, scale, background), then to the job's printer.
+/// Blocks: call it off the UI thread. Also what the shared `Contents` host
+/// does for a view's own silent print.
+pub(crate) fn print_silently(webview: &tauri::Webview, options: &Value) -> Result<(), String> {
+    let mut params = pdf_params(&ipc_value(&print_as_pdf_options(options)));
+    params["printBackground"] = json!(options["printBackground"] != false);
+    let pdf = cdp_bytes(webview, "Page.printToPDF", params)?;
+    spool(&pdf, options)
+}
+
+/// [`print_silently`] with the options as a handler passed them to
+/// `Contents::print`
+pub(crate) fn print_silently_ipc(webview: &tauri::Webview, options: &IpcValue) -> Result<(), String> {
+    print_silently(webview, &json_of(options))
+}
+
+fn json_of(value: &IpcValue) -> Value {
+    match value {
+        IpcValue::Bool(b) => json!(b),
+        IpcValue::Number(n) => serde_json::Number::from_f64(*n).map_or(Value::Null, Value::Number),
+        IpcValue::String(s) => json!(s),
+        IpcValue::Array(items) => Value::Array(items.iter().map(json_of).collect()),
+        IpcValue::Object(entries) => Value::Object(
+            entries
+                .iter()
+                .filter(|(_, v)| !matches!(v, IpcValue::Undefined))
+                .map(|(k, v)| (k.clone(), json_of(v)))
+                .collect(),
+        ),
+        IpcValue::Undefined | IpcValue::Null | IpcValue::Bytes(..) | IpcValue::Date(_) => Value::Null,
     }
 }
 
