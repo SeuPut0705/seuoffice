@@ -41,6 +41,8 @@ pub enum StoreMethod {
     /// its `blocks` Map comes back as the array of its values
     ReadTranslation,
     UnfinishedJobs,
+    /// the Map comes back as the array of its values
+    ReadAiReadPages,
     WriteAiReadPage,
     WriteTranslationMeta,
     WriteTranslationBlocks,
@@ -77,6 +79,7 @@ impl StoreMethod {
             ListTranslations => "listTranslations",
             ReadTranslation => "readTranslation",
             UnfinishedJobs => "unfinishedJobs",
+            ReadAiReadPages => "readAiReadPages",
             WriteAiReadPage => "writeAiReadPage",
             WriteTranslationMeta => "writeTranslationMeta",
             WriteTranslationBlocks => "writeTranslationBlocks",
@@ -471,8 +474,10 @@ pub(crate) mod fake {
             let Some(answer) = self.answer(&key, record) else {
                 use StoreMethod::*;
                 return Ok(match method {
-                    ListTranslations | UnfinishedJobs | ReadPassages | ListHighlightRuns
-                    | ReadHighlightBlocks | ListJobs => IpcValue::Array(Vec::new()),
+                    ListTranslations | UnfinishedJobs | ReadAiReadPages | ReadPassages
+                    | ListHighlightRuns | ReadHighlightBlocks | ListJobs => {
+                        IpcValue::Array(Vec::new())
+                    }
                     ReadTranslation | ReadInsights => IpcValue::Null,
                     HeartbeatJob | SetHighlightSuggestionStates => IpcValue::Bool(true),
                     DeleteTranslationExceptEdited

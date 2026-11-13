@@ -1167,7 +1167,8 @@ impl Structure {
         ));
         // the reads that take a known document hash and one call's arguments
         type Read = fn(&Args, String) -> Result<Reader, IpcValue>;
-        let reads: [(&'static str, Read); 10] = [
+        let reads: [(&'static str, Read); 11] = [
+            ("pdf:store-ai-read-pages", read_ai_read_pages),
             ("pdf:store-translations", read_translations),
             ("pdf:store-translation", read_translation),
             ("pdf:store-unfinished-jobs", read_unfinished_jobs),
@@ -1210,6 +1211,15 @@ fn iter(v: &IpcValue) -> impl Iterator<Item = &IpcValue> {
 
 fn ok_field(key: &'static str, v: IpcValue) -> IpcValue {
     obj([("ok", true.into_ipc()), (key, v)])
+}
+
+fn read_ai_read_pages(_: &Args, doc_hash: String) -> Result<Reader, IpcValue> {
+    Ok(Box::new(move |e, dir| {
+        Ok(ok_field(
+            "pages",
+            e.store(dir, StoreMethod::ReadAiReadPages, vec![doc_hash.into_ipc()])?,
+        ))
+    }))
 }
 
 fn read_translations(args: &Args, doc_hash: String) -> Result<Reader, IpcValue> {
@@ -1841,6 +1851,40 @@ mod tests {
         assert_eq!(
             j(&t.call("pdf:store-passages", pdf, vec![h]))["error"],
             json!("not-granted")
+        );
+    }
+
+    #[test]
+    fn ai_read_pages_are_the_stored_entries_of_a_known_hash() {
+        let page = json!({ "fingerprint": "f1", "page": 1, "blocks": [] });
+        let mut t = tools(json!({
+            "store.readAiReadPages": [[page], { "$error": "other", "message": "disk gone" }],
+        }));
+        let pdf = t.pdf_view(5);
+        let path = t.file("a.pdf", b"%PDF-1");
+        assert_eq!(
+            j(&t.call("pdf:store-ai-read-pages", pdf, vec!["x".into_ipc()]))["error"],
+            json!("not-granted")
+        );
+        assert!(t.fake.called("store.readAiReadPages").is_empty());
+        t.grant(5, &path);
+        let hash = j(&t.call("pdf:store-doc-hash", pdf, vec![path.into_ipc()]))["docHash"].clone();
+        let h = hash.as_str().unwrap().into_ipc();
+        assert_eq!(
+            j(&t.call("pdf:store-ai-read-pages", pdf, vec![h.clone()])),
+            json!({ "ok": true, "pages": [page] })
+        );
+        assert_eq!(
+            t.fake.called("store.readAiReadPages")[0]["args"],
+            json!([hash])
+        );
+        let failed = j(&t.call("pdf:store-ai-read-pages", pdf, vec![h.clone()]));
+        assert_eq!(failed["ok"], json!(false));
+        assert_eq!(failed["message"], json!("disk gone"));
+        // nothing stored: an empty list
+        assert_eq!(
+            j(&t.call("pdf:store-ai-read-pages", pdf, vec![h])),
+            json!({ "ok": true, "pages": [] })
         );
     }
 
