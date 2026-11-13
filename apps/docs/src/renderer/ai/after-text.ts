@@ -1,5 +1,6 @@
 import type { Mark, Node as PmNode } from '@tiptap/pm/model'
 import { placeholderSource, REDACT_MARK } from './redact'
+import { hiddenWordsOf, repeatedHiddenLabel, type RedactableNode } from './redact-view'
 
 const FIELD_MARKS = new Set(['instrField', 'refField'])
 
@@ -13,6 +14,7 @@ const FIELD_MARKS = new Set(['instrField', 'refField'])
  * run as its placeholder), never the words themselves.
  */
 export function posAfterText(
+  doc: PmNode,
   block: PmNode,
   contentStart: number,
   afterText: string,
@@ -60,9 +62,15 @@ export function posAfterText(
     return { pos: chars[end]! + 1 }
   }
   if (splits) {
-    const label = splits.type.name === 'refField' ? `REF ${splits.attrs.name}` : splits.attrs.instr
+    const field = splits
+    const label = field.type.name === 'refField' ? `REF ${field.attrs.name}` : field.attrs.instr
+    // a field over hidden words, or one whose instruction repeats them, is not quoted
+    const withheld =
+      fields.some((f, i) => hidden[i] && f?.eq(field)) ||
+      repeatedHiddenLabel(String(label), hiddenWordsOf(doc.toJSON() as RedactableNode)) !==
+        undefined
     return {
-      error: `afterText "${afterText}" ends inside the field { ${label} }; include the whole field result or choose text outside it`,
+      error: `afterText "${afterText}" ends inside ${withheld ? 'a field' : `the field { ${label} }`}; include the whole field result or choose text outside it`,
     }
   }
   return {

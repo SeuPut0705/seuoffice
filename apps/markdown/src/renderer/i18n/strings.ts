@@ -35,6 +35,8 @@ export const strings = {
     appExportImagesProgress: 'Exporting {count} images…',
     appExportImagesDone: 'Exported {count} images to {dir}',
     appExportImagesFailed: 'Image export failed: {error}',
+    exportMarkedRefused:
+      'this document has content hidden from AI, and a {format} file cannot keep that; export it as Word, or clear the marks first',
     aiToolReadFm: 'Read document properties',
     aiToolWriteDoc: 'Wrote the content',
     aiToolWriteDocFailed: 'Writing failed',
@@ -341,6 +343,8 @@ export const strings = {
     appExportImagesProgress: '이미지 {count}장 내보내는 중…',
     appExportImagesDone: '이미지 {count}장을 {dir}에 내보냈습니다',
     appExportImagesFailed: '이미지 내보내기 실패: {error}',
+    exportMarkedRefused:
+      '이 문서에는 AI에게 숨긴 내용이 있어 {format} 파일에 담을 수 없습니다. Word로 내보내거나 표시를 먼저 지우세요',
     aiToolReadFm: '문서 속성 읽기',
     aiToolWriteDoc: '본문을 작성했습니다',
     aiToolWriteDocFailed: '본문 작성 실패',

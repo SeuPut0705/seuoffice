@@ -8,8 +8,13 @@
  * export of its own format and reuses the very same renderer pipeline the
  * File menu uses, so GUI and CLI output cannot drift.
  */
-import { existsSync, realpathSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { basename, dirname, extname, join, resolve } from 'node:path'
+
+import {
+  fileHoldsHiddenContent,
+  HIDDEN_CONTENT_EXTENSIONS,
+} from '@seuoffice/file-parse/hidden-content'
 
 import {
   HEADLESS_EXIT,
@@ -41,6 +46,16 @@ export type HeadlessExporters = Record<
   ) => Promise<void | HeadlessExportProduct>
 >
 
+/**
+ * Writes `outPath` as the AI readers' view of a Word document (each hidden span
+ * as its placeholder): the command line's own conversion. Throws when it fails.
+ */
+export type HeadlessPlaceholderExport = (
+  input: string,
+  outPath: string,
+  format: 'html' | 'md',
+) => Promise<void>
+
 /** Disk probes, injected so the host is testable without touching the filesystem. */
 export interface HeadlessFs {
   exists(path: string): boolean
@@ -48,6 +63,8 @@ export interface HeadlessFs {
   /** Canonical path (symlinks resolved); the input itself when it cannot be resolved. */
   realpath?(path: string): string
   mtimeMs?(path: string): number
+  /** The file's bytes, read to tell whether it holds content hidden from AI. */
+  read?(path: string): Uint8Array
 }
 
 const realFs: HeadlessFs = {
@@ -61,6 +78,7 @@ const realFs: HeadlessFs = {
     }
   },
   mtimeMs: (path) => statSync(path).mtimeMs,
+  read: (path) => new Uint8Array(readFileSync(path)),
 }
 
 /** The output may not exist yet, so only its directory is canonicalised. */
@@ -146,6 +164,33 @@ function diagramSwitchProblem(
 }
 
 /**
+ * A copy this host writes (a printed PDF, a page, a picture, a repackaged
+ * file) carries the words a person hid from AI with no mark left on them, and
+ * nobody is here to agree to that: such an input is refused before any window
+ * opens, as `seuoffice convert` refuses it. A Word document's HTML or Markdown
+ * is written as the AI readers' view instead, a placeholder standing in for
+ * each hidden span, as `seuoffice convert` writes it.
+ */
+async function hiddenContentRoute(
+  input: string,
+  module: HeadlessExportModule,
+  format: HeadlessExportFormat,
+  fs: HeadlessFs,
+): Promise<'placeholders' | HeadlessFailure | null> {
+  const ext = extname(input).slice(1).toLowerCase()
+  if (!fs.read || !HIDDEN_CONTENT_EXTENSIONS.includes(ext)) return null
+  if (!(await fileHoldsHiddenContent(fs.read(input), ext))) return null
+  if (module === 'docs' && (format === 'html' || format === 'md')) return 'placeholders'
+  return {
+    ok: false,
+    code: HEADLESS_EXIT.inputError,
+    message:
+      `cannot export ${input} to ${format}: it holds content hidden from AI, and the copy would show it unmarked; ` +
+      'read or convert it with the seuoffice command line, which gives a placeholder for the hidden content where the format allows, or clear the marks in the app first',
+  }
+}
+
+/**
  * Runs one export end to end. Returns the outcome instead of throwing so the
  * caller can render the envelope and pick the exit code in one place.
  */
@@ -153,18 +198,31 @@ export async function runHeadlessExport(
   request: HeadlessExportRequest,
   exporters: HeadlessExporters,
   fs: HeadlessFs = realFs,
+  placeholders?: HeadlessPlaceholderExport,
 ): Promise<HeadlessExportOutcome> {
   const checked = validateHeadlessPaths(request, fs)
   if (!checked.ok) return checked
+  const hidden = await hiddenContentRoute(checked.input, checked.module, request.targetFormat, fs)
+  if (hidden !== null && hidden !== 'placeholders') return hidden
+  if (hidden === 'placeholders' && !placeholders) {
+    return {
+      ok: false,
+      code: HEADLESS_EXIT.conversionFailure,
+      message: `cannot export ${checked.input}: it holds content hidden from AI, and no placeholder export is available`,
+    }
+  }
   const startedAt = Date.now()
   let product: void | HeadlessExportProduct
   try {
-    product = await exporters[checked.module](
-      checked.input,
-      checked.outPath,
-      request.targetFormat,
-      request,
-    )
+    product =
+      hidden === 'placeholders'
+        ? await placeholders!(checked.input, checked.outPath, request.targetFormat as 'html' | 'md')
+        : await exporters[checked.module](
+            checked.input,
+            checked.outPath,
+            request.targetFormat,
+            request,
+          )
   } catch (err) {
     return {
       ok: false,

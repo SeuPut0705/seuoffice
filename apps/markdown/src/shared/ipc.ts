@@ -60,7 +60,7 @@ export const MARKDOWN_CHANNELS = {
   exportRequest: 'markdown:export-request',
   exportDocx: 'markdown:export-docx',
   exportOdt: 'markdown:export-odt',
-  confirmMarkedOdt: 'markdown:confirm-marked-odt',
+  confirmMarkedExport: 'markdown:confirm-marked-export',
   exportPdf: 'markdown:export-pdf',
   printPreview: 'markdown:print-preview',
   printDocument: 'markdown:print-document',
@@ -281,6 +281,12 @@ export interface SaveMarkdownRequest {
    */
   pdfHtml?: string
   /**
+   * Save As only: the document holds content hidden from AI. A picked .pdf is
+   * then not written here (a PDF cannot keep the mark): the renderer asks first
+   * and runs the PDF export to the approved path (`exportAs`).
+   */
+  holdsHiddenContent?: boolean
+  /**
    * Name offered in the save dialog: the model's proposal (the ribbon's "Name
    * with AI"), or for a document that has never been saved its first heading.
    * It prefills the dialog rather than replacing it, so the reader still
@@ -291,9 +297,10 @@ export interface SaveMarkdownRequest {
 
 /**
  * Save As › a format the renderer builds with its export code (Word, ODT, page
- * images). The main process only approves the path; nothing is written yet.
+ * images; the PDF of a document holding hidden content). The main process only
+ * approves the path; nothing is written yet.
  */
-export type SaveAsExportFormat = 'docx' | 'odt' | 'png'
+export type SaveAsExportFormat = 'pdf' | 'docx' | 'odt' | 'png'
 
 export type SaveMarkdownResult =
   | {
@@ -371,6 +378,12 @@ export type ReadUrlResult =
 
 export type ExportFormat = 'pdf' | 'docx' | 'docs' | 'png' | 'odt'
 
+/** the exports whose files cannot carry the mark that hides content from AI (Word can) */
+export type MarkedExportFormat = Exclude<ExportFormat, 'docx' | 'docs'>
+
+/** the button pressed in the box asked for a marked document: Word instead, the export without the marks, or none */
+export type MarkedExportChoice = 'docx' | 'clear' | 'cancel'
+
 export interface ExportDocxRequest {
   /** .docx bytes, base64 */
   base64: string
@@ -398,6 +411,8 @@ export interface ExportPdfRequest {
   suggestedName: string
   /** headless export mode only: write here instead of opening the save dialog */
   outPath?: string
+  /** Save As › PDF: the path the save dialog approved (`exportAs`); no second dialog */
+  saveAsTarget?: string
 }
 
 /** The print preview asks for the very PDF the PDF export writes. */
@@ -591,8 +606,8 @@ export interface MarkdownApi {
   exportDocx(request: ExportDocxRequest): Promise<ExportResult>
   /** save dialog (.odt) → docx → ODT → confirmation when something changes → write */
   exportOdt(request: ExportOdtRequest): Promise<ExportResult>
-  /** content hidden from AI cannot go into an ODT: one message box offers Word instead, or the marks cleared */
-  confirmMarkedOdt(): Promise<'docx' | 'clear' | 'cancel'>
+  /** content hidden from AI cannot go into this format: one message box offers Word instead, or the export without the marks */
+  confirmMarkedExport(format: MarkedExportFormat): Promise<MarkedExportChoice>
   exportPdf(request: ExportPdfRequest): Promise<ExportResult>
   /** the PDF the print preview shows; the same options the PDF export uses */
   renderPrintPreview(request: MarkdownPrintPreviewRequest): Promise<MarkdownPrintPreviewResult>
