@@ -220,14 +220,15 @@ export interface HiddenWord {
 
 /**
  * The words a document hides from AI: each run of hidden text whole, and each
- * of its words of three or more letters or digits, lower-cased.
+ * of its words (letters or digits, however short: a Korean word is often two
+ * syllables), lower-cased.
  */
 export function hiddenWordsOf(node: RedactableNode): HiddenWord[] {
   const out: HiddenWord[] = []
   const add = (text: string, label: string) => {
     const whole = text.trim().toLowerCase()
     if (whole) out.push({ word: whole, label })
-    for (const word of whole.match(/[\p{L}\p{N}]{3,}/gu) ?? []) out.push({ word, label })
+    for (const word of whole.match(/[\p{L}\p{N}]+/gu) ?? []) out.push({ word, label })
   }
   const visit = (n: RedactableNode) => {
     if (!Array.isArray(n.content)) return
