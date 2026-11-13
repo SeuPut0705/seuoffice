@@ -247,7 +247,12 @@ impl McpTabs for ProbeTabs {
 
 pub fn insert(hosts: &mut shell_contract::Hosts, case: &serde_json::Value, log: Option<Log>) {
     let world = &case["mcp"];
-    hosts.insert(crate::mcp::hub_factory());
+    // The TypeScript hub starts (and notifies the windows) only in the groups
+    // that describe MCP servers; every other case keeps the `fake_ports`
+    // stand-in of the hub, which starts nothing. The bridges are always real.
+    if world.get("servers").is_some() {
+        hosts.insert(crate::mcp::hub_factory());
+    }
     hosts.insert(crate::mcp::bridges_factory());
     hosts.insert::<McpNetHost>(Arc::new(ProbeNet {
         servers: world["servers"].clone(),
