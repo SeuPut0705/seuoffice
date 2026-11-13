@@ -125,15 +125,18 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
     )
 }
 
+/// The Explorer hook and the tray are Windows-only; the comparison runs
+/// where `syncQuickLookRuntime` does nothing
 #[cfg(feature = "probe")]
-pub mod probe {
-    use super::*;
+struct NoRuntime;
 
-    /// The Explorer hook and the tray are Windows-only; the comparison runs
-    /// where `syncQuickLookRuntime` does nothing
-    pub struct NoRuntime;
+#[cfg(feature = "probe")]
+impl QuickLookRuntime for NoRuntime {
+    fn sync(&self, _: &QuickLookSettings) {}
+}
 
-    impl QuickLookRuntime for NoRuntime {
-        fn sync(&self, _: &QuickLookSettings) {}
-    }
+#[cfg(feature = "probe")]
+pub fn probe_hosts(hosts: &mut shell_contract::Hosts, _case: &serde_json::Value) {
+    let runtime: QuickLookHost = Arc::new(NoRuntime);
+    hosts.insert(runtime);
 }

@@ -44,8 +44,10 @@ export interface LoadContext {
   dir: string
   /** the case, `$DIR` replaced */
   case: Case
-  /** the Electron of this case (fakes.ts): `ipcMain` collects the handlers; extend it before loading */
+  /** the Electron of this case (fakes.ts): `ipcMain` collects the handlers */
   electron: CaseElectron
+  /** adds or replaces Electron names for this case; call before loading the module */
+  install(names: Record<string, unknown>): void
   /**
    * imports a module afresh for this case (its own module state); the modules
    * it imports are shared by the group's cases, as the module cache keeps them

@@ -32,6 +32,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { useElectron } from '../main-diff/electron-fake.ts'
+import './vite-imports.ts'
 import { Encoder, WireError, decode } from '../../crates/shell/bridge/wire.ts'
 import { CHANNELS, SPECS } from './channels.ts'
 import { caseElectron } from './fakes.ts'
@@ -124,6 +125,10 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
     dir,
     case: c,
     electron,
+    install(names) {
+      Object.assign(electron, names)
+      useElectron(electron)
+    },
     // a query makes a module instance of its own: the module is chosen per case
     fresh: (path) => import(`${pathToFileURL(resolve(root, path)).href}?case=${freshCount++}`),
   })
@@ -368,4 +373,8 @@ else if (!groupNames().includes(only)) {
   const group = await loadGroup(only)
   const seen = new Set(group.cases.flatMap((c) => c.calls.map((call) => call.channel)))
   for (const channel of [...seen].sort()) console.log(`${only}\t${channel}`)
-} else await runGroup(only)
+} else {
+  await runGroup(only)
+  // a loaded app module may keep timers and watchers that hold the process open
+  process.exit()
+}

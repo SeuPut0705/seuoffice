@@ -3,7 +3,20 @@
 //! batch W; nothing else.
 
 mod convert;
+/// `doc-picker:*`: the document picker window
+pub mod doc_picker;
+/// `files:*`, `win:*` (docs-main), `doc:*` attachments, `shell:*` (sheets-main)
+pub mod editor_files;
+/// home's files and folders: recents, starred, folder roots and tree, search, open, reveal, move, rename, delete
+pub mod home_files;
+/// home's settings and app facts: `home:get-*`/`home:set-*`, onboarding, MCP status and logs, help links
+pub mod home_settings;
+/// `projectFolder:*` and `project:*`
+pub mod projects;
+/// `quick-look:*`
 pub mod quick_look;
+/// `tabs:*`, `app:get-split-role`, `app:view-focused`, `app:open-dropped-files`, `home:new-*`
+pub mod tabs;
 
 use std::rc::Rc;
 
@@ -37,7 +50,13 @@ fn handle(
 }
 
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
-    quick_look::register(registry, services)
+    doc_picker::register(registry, services)?;
+    editor_files::register(registry, services)?;
+    home_files::register(registry, services)?;
+    home_settings::register(registry, services)?;
+    projects::register(registry, services)?;
+    quick_look::register(registry, services)?;
+    tabs::register(registry, services)
 }
 
 const _: RegisterBatch = register;
@@ -45,7 +64,12 @@ const _: RegisterBatch = register;
 /// Inserts the fakes of this batch's hosts, answering from the case's
 /// `hosts.w` value (Null when absent; tools/ipc-diff/README.md)
 #[cfg(feature = "probe")]
-pub fn probe_hosts(hosts: &mut shell_contract::Hosts, _case: &serde_json::Value) {
-    let runtime: quick_look::QuickLookHost = std::sync::Arc::new(quick_look::probe::NoRuntime);
-    hosts.insert(runtime);
+pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+    doc_picker::probe_hosts(hosts, case);
+    editor_files::probe_hosts(hosts, case);
+    home_files::probe_hosts(hosts, case);
+    home_settings::probe_hosts(hosts, case);
+    projects::probe_hosts(hosts, case);
+    quick_look::probe_hosts(hosts, case);
+    tabs::probe_hosts(hosts, case);
 }
