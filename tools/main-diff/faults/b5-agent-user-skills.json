@@ -1,0 +1,1006 @@
+[
+  {
+    "name": "service: names compare as written",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "a.to_lowercase() == b.to_lowercase()",
+    "replace": "a == b",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a thrown import error loses its kind",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "Thrown::Import(error) => fail(error.kind),",
+    "replace": "Thrown::Import(_) => fail(\"failed\"),",
+    "fn": ["user-skills-service.createUserSkillsService", "user-skills-service.failureOf"]
+  },
+  {
+    "name": "md: reserved names compare with the spaces",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "RESERVED_USER_SKILL_NAMES.contains(&trim(name).to_lowercase().as_str())",
+    "replace": "RESERVED_USER_SKILL_NAMES.contains(&name.to_lowercase().as_str())",
+    "fn": ["ai-provider/user-skills/names.isReservedUserSkillName"]
+  },
+  {
+    "name": "md: a parent folder is inside",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "rel.is_empty() || (!rel.starts_with(&up) && rel != \"..\" && !host::is_absolute(&rel))",
+    "replace": "rel.is_empty() || (!rel.starts_with(&up) && !host::is_absolute(&rel))",
+    "fn": ["ai-provider/user-skills/folder.isInsideDir"]
+  },
+  {
+    "name": "md: the Codex home path is not checked first",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    if is_inside_dir(path, &codex_home) {\n        return true;\n    }",
+    "replace": "    if false {\n        return true;\n    }",
+    "fn": ["ai-provider/user-skills/sources.isInsideCodexHome"]
+  },
+  {
+    "name": "md: a template may be the folder alone",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "if parts[0] != SKILL_TEMPLATE_FOLDER || parts.len() < 2 {",
+    "replace": "if parts[0] != SKILL_TEMPLATE_FOLDER {",
+    "fn": ["ai-provider/user-skills/folder.normalizeSkillTemplatePath"]
+  },
+  {
+    "name": "md: a template path may climb",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": ".any(|part| part.is_empty() || *part == \".\" || *part == \"..\")",
+    "replace": ".any(|part| part.is_empty() || *part == \".\")",
+    "fn": ["ai-provider/user-skills/folder.normalizeSkillTemplatePath"]
+  },
+  {
+    "name": "md: a template path keeps its spaces",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "let path = trim(value);",
+    "replace": "let path = value;",
+    "fn": ["ai-provider/user-skills/folder.normalizeSkillTemplatePath"]
+  },
+  {
+    "name": "md: a byte order mark stays",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "let source = text.strip_prefix('\\u{feff}').unwrap_or(text);",
+    "replace": "let source = text;",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a carriage return stays on a front matter line",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "let line = line.strip_suffix('\\r').unwrap_or(line);",
+    "replace": "let line = line;",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: \\n reads as n",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "'n' => '\\n',",
+    "replace": "'n' => 'n',",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: \\t reads as a space",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "'t' | '\\t' => '\\t',",
+    "replace": "'t' | '\\t' => ' ',",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a doubled single quote ends the scalar",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "if chars.get(i + 1) == Some(&'\\'') {",
+    "replace": "if false {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a code point past the range is a character",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "if code > 0x10ffff {",
+    "replace": "if code > 0x110000 {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a folded block reads as literal",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "let folded = group(1) == \">\";",
+    "replace": "let folded = false;",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: keep chomping drops the trailing lines",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "        return format!(\"{body}\\n{}\", \"\\n\".repeat(trailing));",
+    "replace": "        return format!(\"{body}\\n\");",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: strip chomping keeps the final newline",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    if chomp == \"-\" {",
+    "replace": "    if false {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a dash item at another indent starts a list item",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "if line.indent as i64 == dash_indent {",
+    "replace": "if true {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: an unclosed flow list is a list",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    if quote.is_some() {",
+    "replace": "    if false {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a trailing comment stays in the value",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "Some(found) => &value[..found.start()],",
+    "replace": "Some(_) => value,",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a __proto__ key is a field",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    if key != \"__proto__\" {",
+    "replace": "    if true {",
+    "fn": ["ai-provider/user-skills/frontmatter.parseSkillMd"]
+  },
+  {
+    "name": "md: a value with a colon is written plain",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "        && !value.contains(\": \")",
+    "replace": "        && true",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: a padded value is written plain",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "        && value == trim(value)",
+    "replace": "        && true",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: a multi-line value is never a literal block",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    let literal = value.contains('\\n')",
+    "replace": "    let literal = false && value.contains('\\n')",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: a literal block with no trailing break keeps one",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "        0 => \"-\",",
+    "replace": "        0 => \"\",",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: a boolean field is written quoted",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "FieldValue::Bool(flag) => vec![format!(\" {flag}\")],",
+    "replace": "FieldValue::Bool(flag) => vec![format!(\" \\\"{flag}\\\"\")],",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: an editors value of the file is always replaced",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "    if input.editors != EditorsText::Keep {",
+    "replace": "    if true {",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: an empty metadata map is written",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "        if kept == 0 {",
+    "replace": "        if false {",
+    "fn": ["ai-provider/user-skills/frontmatter.renderSkillMd"]
+  },
+  {
+    "name": "md: the editors value is kept when it is taken out",
+    "file": "main-core/src/packages/ai_provider/user_skill_md.rs",
+    "find": "            editors: EditorsText::Remove,",
+    "replace": "            editors: EditorsText::Keep,",
+    "fn": ["ai-provider/user-skills/frontmatter.withoutSkillEditors"]
+  },
+  {
+    "name": "names: the longest name is too long",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "if units > NEW_USER_SKILL_NAME_MAX {",
+    "replace": "if units >= NEW_USER_SKILL_NAME_MAX {",
+    "fn": ["ai-provider/user-skills/names.validateNewUserSkillName"]
+  },
+  {
+    "name": "names: a double hyphen is fine",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "if name.contains(\"--\") {",
+    "replace": "if false {",
+    "fn": ["ai-provider/user-skills/names.validateNewUserSkillName"]
+  },
+  {
+    "name": "names: a reserved slug is suggested",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "if !slug.is_empty() && !is_reserved_user_skill_name(&slug) {",
+    "replace": "if !slug.is_empty() {",
+    "fn": ["ai-provider/user-skills/names.suggestUserSkillName"]
+  },
+  {
+    "name": "names: a numbered name is not cut to the limit",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "trim_to_length(&base, NEW_USER_SKILL_NAME_MAX - suffix.len())",
+    "replace": "trim_to_length(&base, NEW_USER_SKILL_NAME_MAX)",
+    "fn": ["ai-provider/user-skills/names.suggestUserSkillName"]
+  },
+  {
+    "name": "names: a plugin id forgets the plugin",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "format!(\"plugin:{}:{name}\", plugin.unwrap_or(\"\"))",
+    "replace": "format!(\"plugin:{name}\")",
+    "fn": ["ai-provider/user-skills/names.userSkillId"]
+  },
+  {
+    "name": "states: project skills start off",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "source == \"builtin\" || source == \"app\" || source == \"project\",",
+    "replace": "source == \"builtin\" || source == \"app\",",
+    "fn": ["ai-provider/user-skills/states.initialUserSkillState"]
+  },
+  {
+    "name": "states: an unreadable project skill is on",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "enabled: skill.unreadable.is_none(),",
+    "replace": "enabled: true,",
+    "fn": ["ai-provider/user-skills/states.resolveUserSkillStates"]
+  },
+  {
+    "name": "states: a later source wins on a shared name",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "return rank(a) < rank(b);",
+    "replace": "return rank(a) > rank(b);",
+    "fn": ["ai-provider/user-skills/states.pickEnabledUserSkills"]
+  },
+  {
+    "name": "states: plugins go by name backwards",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "return string_less_than(&pa, &pb);",
+    "replace": "return string_less_than(&pb, &pa);",
+    "fn": ["ai-provider/user-skills/states.pickEnabledUserSkills"]
+  },
+  {
+    "name": "states: the first skill of a name always wins",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
+    "find": "if current.is_none_or(|current| wins(skill, &skills[current])) {",
+    "replace": "if current.is_none() {",
+    "fn": ["ai-provider/user-skills/states.pickEnabledUserSkills"]
+  },
+  {
+    "name": "folder: files sort backwards",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "files.sort_by(|a, b| cmp_utf16(&a.rel, &b.rel));",
+    "replace": "files.sort_by(|a, b| cmp_utf16(&b.rel, &a.rel));",
+    "fn": ["ai-provider/user-skills/folder.listSkillFolderFiles"]
+  },
+  {
+    "name": "folder: a folder is too large only past both limits",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "self.files.len() > limits.files || self.bytes > limits.bytes",
+    "replace": "self.files.len() > limits.files && self.bytes > limits.bytes",
+    "fn": ["ai-provider/user-skills/folder.listSkillFolderFiles"]
+  },
+  {
+    "name": "folder: the scripts folder is case sensitive",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": ".any(|part| part.to_lowercase() == SKILL_SCRIPTS_FOLDER)",
+    "replace": ".any(|part| *part == SKILL_SCRIPTS_FOLDER)",
+    "fn": ["ai-provider/user-skills/folder.isSkillScriptPath"]
+  },
+  {
+    "name": "folder: a reserved folder name is listed",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "if is_reserved_user_skill_name(&folder_name) {",
+    "replace": "if false {",
+    "fn": ["ai-provider/user-skills/folder.readUserSkillFolder"]
+  },
+  {
+    "name": "folder: a missing front matter is a bad name",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "unreadable.get_or_insert(\"no-frontmatter\");",
+    "replace": "unreadable.get_or_insert(\"bad-name\");",
+    "fn": ["ai-provider/user-skills/folder.readUserSkillFolder"]
+  },
+  {
+    "name": "folder: a bad name reads as no front matter",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "unreadable.get_or_insert(\"bad-name\");",
+    "replace": "unreadable.get_or_insert(\"no-frontmatter\");",
+    "fn": ["ai-provider/user-skills/folder.readUserSkillFolder"]
+  },
+  {
+    "name": "folder: every skill is agent-only",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "let agent_only = source == \"builtin\"",
+    "replace": "let agent_only = true",
+    "fn": ["ai-provider/user-skills/folder.readUserSkillFolder"]
+  },
+  {
+    "name": "folder: the allowed tools of a list are ignored",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "Some(list) => Some(list.clone()),",
+    "replace": "Some(_) => None,",
+    "fn": ["ai-provider/user-skills/folder.mcpServersOfSkillMd"]
+  },
+  {
+    "name": "folder: a device name is a file name",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "r\"^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$\"",
+    "replace": "r\"^(?:cxn|prn|aux|nul|com[1-9]|lpt[1-9])$\"",
+    "fn": [
+      "ai-provider/user-skills/export.skillBundleFileName",
+      "ai-provider/user-skills/export.skillExportInfo"
+    ]
+  },
+  {
+    "name": "folder: a file stem is longer",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "slice_utf16(&undotted, 0.0, Some(100.0))",
+    "replace": "slice_utf16(&undotted, 0.0, Some(101.0))",
+    "fn": ["ai-provider/user-skills/export.skillBundleFileName"]
+  },
+  {
+    "name": "folder: no words give another bundle name",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "SKILL_BUNDLE_FILE_NAME.to_owned()",
+    "replace": "\"bundle.zip\".to_owned()",
+    "fn": ["ai-provider/user-skills/export.skillBundleFileName"]
+  },
+  {
+    "name": "folder: a missing template file is included",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "includes_template: skill.template.is_some() && skill.template_exists,",
+    "replace": "includes_template: skill.template.is_some(),",
+    "fn": ["ai-provider/user-skills/export.skillExportInfo"]
+  },
+  {
+    "name": "folder: the source record is exported",
+    "file": "main-core/src/packages/ai_provider/user_skills_folder.rs",
+    "find": "        .filter(|file| file.rel != IEUM_SOURCE_FILE)",
+    "replace": "        .filter(|_| true)",
+    "fn": ["ai-provider/user-skills/export.skillExportInfo"]
+  },
+  {
+    "name": "import: the time keeps its milliseconds",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "format!(\"{}Z\", &head[..head.len() - 4])",
+    "replace": "format!(\"{}Z\", head)",
+    "fn": ["ai-provider/user-skills/source-record.isoSeconds"]
+  },
+  {
+    "name": "import: the record writes the path as the commit",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "object.set(\"commit\", text(&self.commit));",
+    "replace": "object.set(\"commit\", text(&self.path));",
+    "fn": ["ai-provider/user-skills/source-record.renderIeumSourceRecord"]
+  },
+  {
+    "name": "import: any kind of record is a GitHub record",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "if value.get(\"kind\") != Some(&JsonValue::String(\"github\".to_owned())) {",
+    "replace": "if false {",
+    "fn": ["ai-provider/user-skills/source-record.readIeumSourceRecord"]
+  },
+  {
+    "name": "import: the hash leaves the path out of its input",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "hash.update(format!(\"{}\\0{}\\0\", file.rel, content.len()).as_bytes());",
+    "replace": "hash.update(format!(\"{}\\0\", content.len()).as_bytes());",
+    "fn": ["ai-provider/user-skills/folder.skillContentHash"]
+  },
+  {
+    "name": "import: the app folder itself may be replaced",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "&& !is_inside_dir(app_skills_dir, dir);",
+    "replace": ";",
+    "fn": ["ai-provider/user-skills/import.commitSkillInstall"]
+  },
+  {
+    "name": "import: a taken folder name is overwritten",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "            if exists(&target) {",
+    "replace": "            if false {",
+    "fn": ["ai-provider/user-skills/import.commitSkillInstall"]
+  },
+  {
+    "name": "import: a replaced folder that cannot go is fine",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "if discard(&folder.aside).is_ok() {",
+    "replace": "if true {",
+    "fn": ["ai-provider/user-skills/import.commitSkillInstall"]
+  },
+  {
+    "name": "import: a refused choice is a failed install",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "Thrown::Import(error) => Thrown::Import(error),",
+    "replace": "Thrown::Import(_) => SkillImportError::new(\"failed\", \"Installing the skill failed\").into(),",
+    "fn": ["ai-provider/user-skills/import.commitSkillInstall"]
+  },
+  {
+    "name": "import: the staging folder has no prefix",
+    "file": "main-core/src/packages/ai_provider/user_skills_import.rs",
+    "find": "format!(\"{SKILL_STAGING_PREFIX}{suffix}\")",
+    "replace": "format!(\"{suffix}\")",
+    "fn": ["ai-provider/user-skills/import.commitSkillInstall"]
+  },
+  {
+    "name": "service: a template extension is any extension",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "    \".docx\",\n    \".odt\",",
+    "replace": "    \".exe\",\n    \".odt\",",
+    "fn": ["user-skills-service.templateFileNameOf"]
+  },
+  {
+    "name": "service: a template name may be one letter longer",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "cleaned.is_empty() || units > 150",
+    "replace": "cleaned.is_empty() || units > 151",
+    "fn": ["user-skills-service.templateFileNameOf"]
+  },
+  {
+    "name": "service: a path may climb out of the skill",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": ".any(|part| part.is_empty() || *part == \".\" || *part == \"..\");",
+    "replace": ".any(|part| part.is_empty() || *part == \".\");",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a backslash is a name character",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "let backslashes = rel.replace('\\\\', \"/\");",
+    "replace": "let backslashes = rel.to_owned();",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a leading ./ stays",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "backslashes.strip_prefix(\"./\")",
+    "replace": "backslashes.strip_prefix(\"x/\")",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: any file type is read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "    if !has_text_extension(&wanted) {",
+    "replace": "    if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a missing file is outside",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "return Err(if fs::metadata(&there).is_ok() {",
+    "replace": "return Err(if !fs::metadata(&there).is_ok() {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a cut preview may split a pair",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if (0xd800..=0xdbff).contains(&last) {",
+    "replace": "if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a state equal to the initial one is kept",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "    if next.enabled == Some(initial_enabled) {",
+    "replace": "    if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an invoke equal to the initial one is kept",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "    if next.invoke.as_deref() == Some(initial_invoke) {",
+    "replace": "    if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a choice equal to the file is kept",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "let same_as_file = scope_string(scope.as_deref()) == scope_string(file_editors);",
+    "replace": "let same_as_file = false;",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a save always writes the editors",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if scope_string(wanted.as_deref()) == scope_string(in_file.as_deref()) {",
+    "replace": "if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: every editor is written as unchanged",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        None => EditorsText::Remove,",
+    "replace": "        None => EditorsText::Keep,",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a project id is found",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "parsed.is_none_or(|parsed| parsed.source == \"project\")",
+    "replace": "parsed.is_none()",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an id is found only as written",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "exact.or_else(|| all.iter().position(|skill| same_name(&skill.id, id)))",
+    "replace": "exact",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a name taken by the renamed skill counts",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "Some(except) => taken\n                .iter()\n                .filter(|dir| !is_inside_dir(dir, except))\n                .collect(),",
+    "replace": "Some(_) => taken.iter().collect(),",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a rename keeps no state",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if new_id != old.id {\n            self.change_settings(",
+    "replace": "        if false {\n            self.change_settings(",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an empty description is saved",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if description.is_empty() {\n            return Err(fail(\"empty-description\").into());",
+    "replace": "        if false {\n            return Err(fail(\"empty-description\").into());",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an empty body is saved",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if trim(&request.body).is_empty() {",
+    "replace": "        if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a taken name is a bad name",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "Some(\"taken\") => return Err(fail(\"name-taken\").into()),",
+    "replace": "Some(\"taken\") => return Err(fail(\"exists\").into()),",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a new skill without a name has none",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if target.is_none() && name.is_empty() {",
+    "replace": "        if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a copy always overwrites",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "            if !request.overwrite {",
+    "replace": "            if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a too-large skill is copied",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": ".is_some_and(|target| target.unreadable == Some(\"too-large\"))",
+    "replace": ".is_some_and(|target| target.unreadable == Some(\"nope\"))",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a skill of the codex source has no copy button",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "let other = skill.source == \"user\" || skill.source == \"plugin\" || skill.source == \"codex\";",
+    "replace": "let other = skill.source == \"user\" || skill.source == \"plugin\";",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: every skill can be hidden",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "can.set(\"hide\", JsonValue::Bool(skill.source == \"builtin\"));",
+    "replace": "can.set(\"hide\", JsonValue::Bool(true));",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an update check needs no own skill",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "can.set(\"checkUpdate\", JsonValue::Bool(owned && skill.github));",
+    "replace": "can.set(\"checkUpdate\", JsonValue::Bool(owned || skill.github));",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a hidden builtin is turned on",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if patch.enabled == Some(true) && skill.hidden {",
+    "replace": "if patch.enabled == Some(true) && false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an unreadable skill is turned on",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if patch.enabled == Some(true) && skill.unreadable.is_some() {",
+    "replace": "if patch.enabled == Some(true) && false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an own skill takes a where-used choice",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if patch.editors.is_some() && self.owned_dir(&skill).is_some() {",
+    "replace": "if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: any skill is hidden",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if skill.source != \"builtin\" {\n            return Err(fail(\"invalid\").into());",
+    "replace": "        if false {\n            return Err(fail(\"invalid\").into());",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a name is shown again only as written",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": ".filter(|hidden| names.iter().any(|name| same_name(name, hidden)))",
+    "replace": ".filter(|hidden| names.iter().any(|name| name == *hidden))",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a failed trash is a removal",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if self.host.trash(&dir).is_err() {",
+    "replace": "if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an own skill is copied to mine",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if skill.source == \"app\" || skill.source == \"project\" {",
+    "replace": "if skill.source == \"project\" {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a taken copy name is overwritten without asking",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if !taken.is_empty() && !overwrite {",
+    "replace": "if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a skill of another source is saved over",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "            if target.source != \"app\" {\n                return Err(fail(\"not-owned\").into());",
+    "replace": "            if false {\n                return Err(fail(\"not-owned\").into());",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a skill with no GitHub record is checked",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if !skill.github {\n            return Err(fail(\"not-github\").into());",
+    "replace": "        if false {\n            return Err(fail(\"not-github\").into());",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a builtin folder opens",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "if skill.source == \"builtin\" || skill.source == \"project\" {",
+    "replace": "if skill.source == \"project\" {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an agent-only skill is read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if skill.agent_only {",
+    "replace": "        if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a disabled skill is read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if !skill.enabled {\n            return Err(fail(\"disabled\").into());",
+    "replace": "        if false {\n            return Err(fail(\"disabled\").into());",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: an unreadable skill is read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if skill.unreadable.is_some() {\n            return Err(fail(\"unreadable\").into());\n        }\n        if !skill.enabled {",
+    "replace": "        if false {\n            return Err(fail(\"unreadable\").into());\n        }\n        if !skill.enabled {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: the AI sees every file",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": ".filter(|rel| is_other_text_file(rel))",
+    "replace": ".filter(|_| true)",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a template that is gone is named",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "            if skill.template_exists {",
+    "replace": "            if true {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a folder is a template file",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "Ok(info) if info.is_file() => info,",
+    "replace": "Ok(info) => info,",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a file over the limit is read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "        if size > self.ai_file_max {",
+    "replace": "        if false {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: a disabled skill goes to the agent",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "            .filter(|skill| skill.enabled)\n            .map(|skill| AgentEnabledSkill {",
+    "replace": "            .map(|skill| AgentEnabledSkill {",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: the preview lists every file",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": ".filter(|file| is_other_text_file(&file.rel) && !same_name(&file.rel, \"SKILL.md\"))",
+    "replace": ".filter(|file| !same_name(&file.rel, \"SKILL.md\"))",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "service: the preview names the path as the commit",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "origin.set(\"commit\", text(commit));",
+    "replace": "origin.set(\"commit\", text(path));",
+    "fn": ["user-skills-service.importPreviewOf"]
+  },
+  {
+    "name": "service: the preview drops its empty-body flag",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "view.set(\"emptyBody\", JsonValue::Bool(candidate.empty_body));",
+    "replace": "view.set(\"emptyBody\", JsonValue::Bool(false));",
+    "fn": ["user-skills-service.importPreviewOf"]
+  },
+  {
+    "name": "service: the sources of a plugin lose its name",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "format!(\"plugin:{}\", skill.plugin.clone().unwrap_or_default())",
+    "replace": "\"plugin\".to_owned()",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
+    "name": "ipc: a window may always manage",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "if host.can_manage(sender_id, channel) {",
+    "replace": "if true {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: more dropped files wait",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "pub const DROPPED_SKILLS_MAX: usize = 20;",
+    "replace": "pub const DROPPED_SKILLS_MAX: usize = 21;",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc", "user-skills-ipc.DROPPED_SKILLS_MAX"]
+  },
+  {
+    "name": "ipc: the newest dropped files go first",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "self.dropped.drain(0..extra);",
+    "replace": "self.dropped.truncate(DROPPED_SKILLS_MAX);",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: the newest dropped file is taken first",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "let next = self.dropped.remove(0);",
+    "replace": "let next = self.dropped.pop().expect(\"a dropped entry\");",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a change does not tell the windows",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "        if worked {",
+    "replace": "        if !worked {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a GitHub address may be longer",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "let Some(address) = string_within(address, 2048) else {",
+    "replace": "let Some(address) = string_within(address, 2049) else {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a file path may be longer",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "string_within(rel, 4096)) else {",
+    "replace": "string_within(rel, 4097)) else {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a preview stays after a failed install",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "if done.is_ok() || !needs_choice {",
+    "replace": "if done.is_ok() {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a name choice drops the preview",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "failure.as_fail().reason == \"needs-choice\"",
+    "replace": "failure.as_fail().reason == \"no-choice\"",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a bundle of several skills takes the first name",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "        if ids.len() == 1 {",
+    "replace": "        if ids.len() >= 1 {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a folder that did not open is opened",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "if host.open_path(&dir).is_empty() {",
+    "replace": "if !host.open_path(&dir).is_empty() {",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a dropped no-skills notice is invalid",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "DroppedSkillEntry::NoSkills => return fail_json(\"no-skills\"),",
+    "replace": "DroppedSkillEntry::NoSkills => return fail_json(\"invalid\"),",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a cancelled dialog is not cancelled",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "object.get(\"canceled\").is_some_and(JsonValue::truthy)",
+    "replace": "false",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a throwing notice is due",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "host.agent_notice_due().unwrap_or(false)",
+    "replace": "host.agent_notice_due().unwrap_or(true)",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "ipc: a failed list is null",
+    "file": "main-core/src/shell/user_skills/user_skills_ipc.rs",
+    "find": "Err(_) => JsonValue::Array(Vec::new()),",
+    "replace": "Err(_) => JsonValue::Null,",
+    "fn": ["user-skills-ipc.registerUserSkillsIpc"]
+  },
+  {
+    "name": "tabs: a file name is cut longer",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "slice_utf16(&undotted_end, 0.0, Some(150.0))",
+    "replace": "slice_utf16(&undotted_end, 0.0, Some(151.0))",
+    "fn": ["template-tabs.copyFileNameOf"]
+  },
+  {
+    "name": "tabs: no title names the file doc",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "            \"template\"\n",
+    "replace": "            \"doc\"\n",
+    "fn": ["template-tabs.copyFileNameOf"]
+  },
+  {
+    "name": "tabs: a template of any editor takes the document along",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "if input.with_current && editor.is_some_and(handoff_editor_takes_attachments) {",
+    "replace": "if input.with_current {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a failed document check attaches",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "Some(Err(_)) | None => CurrentDocument::Unsaved,",
+    "replace": "Some(Err(_)) | None => CurrentDocument::Path(String::new()),",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a missing template is a failed copy",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "            return Err(fail(\"no-template\").into());",
+    "replace": "            return Err(fail(\"failed\").into());",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a copy the editor owns is removed again",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "        if !opened.owns_copy {",
+    "replace": "        if true {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: an attached document is not reported",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "Ok((opened.tab_id, attach.is_some()))",
+    "replace": "Ok((opened.tab_id, false))",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a redacted original is saved as it is",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "        if record.original_redacted {",
+    "replace": "        if false {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: the preview forgets its redaction",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "original_redacted: input.original_redacted,",
+    "replace": "original_redacted: false,",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a second end is told again",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "        if record.ended {",
+    "replace": "        if false {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a saved preview is told unsaved when its tab goes",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "            if !record.ended {",
+    "replace": "            if true {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a destroyed owner is told",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "        if !host.owner_is_destroyed(record.owner_id) {",
+    "replace": "        if true {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a copy folder stays when its tab goes",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "            if self.copy_dirs[at].0 == contents_id {",
+    "replace": "            if false {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a tab that is not there is focused",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "        if host.focus_tab(tab_id) {",
+    "replace": "        if !host.focus_tab(tab_id) {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs-ipc: a tab id may be longer",
+    "file": "main-core/src/shell/user_skills/template_tabs_ipc.rs",
+    "find": "short_text(tab_id, 64)",
+    "replace": "short_text(tab_id, 65)",
+    "fn": ["template-tabs-ipc.registerTemplateTabsIpc"]
+  },
+  {
+    "name": "tabs-ipc: a preview id may be longer",
+    "file": "main-core/src/shell/user_skills/template_tabs_ipc.rs",
+    "find": "short_text(preview_id, 128)",
+    "replace": "short_text(preview_id, 129)",
+    "fn": ["template-tabs-ipc.registerTemplateTabsIpc"]
+  },
+  {
+    "name": "tabs-ipc: a rejected open is invalid",
+    "file": "main-core/src/shell/user_skills/template_tabs_ipc.rs",
+    "find": "Failure::Thrown(_) => failed(),",
+    "replace": "Failure::Thrown(_) => invalid(),",
+    "fn": ["template-tabs-ipc.registerTemplateTabsIpc"]
+  },
+  {
+    "name": "builtin-dir: a packaged app reads the repository copy",
+    "file": "main-core/src/shell/user_skills/builtin_dir.rs",
+    "find": "if options.is_packaged {",
+    "replace": "if !options.is_packaged {",
+    "fn": ["builtin-dir.builtinSkillsDirFor"]
+  }
+]

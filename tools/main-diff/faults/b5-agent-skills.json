@@ -1,0 +1,930 @@
+[
+  {
+    "name": "agent-skills: any window may manage, the agent window too",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "windows.is_main_window(sender)\n            || (windows.is_agent_window(sender)",
+    "replace": "windows.is_agent_window(sender)\n            || (windows.is_main_window(sender)",
+    "fn": ["agent-skills.userSkillsManageGate"]
+  },
+  {
+    "name": "agent-skills: the agent window may make any call",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "agent_window_manage_channels().contains(&channel)",
+    "replace": "true",
+    "fn": ["agent-skills.userSkillsManageGate"]
+  },
+  {
+    "name": "agent-skills: the cancel call is not one of the preview calls",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "user_skills_channel(\"cancelImport\"),",
+    "replace": "user_skills_channel(\"importFolder\"),",
+    "fn": ["agent-skills.AGENT_WINDOW_MANAGE_CHANNELS", "agent-skills.userSkillsManageGate"]
+  },
+  {
+    "name": "agent-skills: the install call is left out of the preview calls",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "user_skills_channel(\"install\"),",
+    "replace": "user_skills_channel(\"readImport\"),",
+    "fn": ["agent-skills.AGENT_WINDOW_MANAGE_CHANNELS", "agent-skills.userSkillsManageGate"]
+  },
+  {
+    "name": "agent-skills: a template that is a folder counts",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "info.is_file().then_some(path)",
+    "replace": "Some(path)",
+    "fn": ["agent-skills.agentSessionSkillsOf"]
+  },
+  {
+    "name": "agent-skills: the template path is taken as written",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "normalize_skill_template_path(value).map(|path| path.split('/').map(str::to_owned).collect())",
+    "replace": "value.map(|path| path.split('/').map(str::to_owned).collect())",
+    "fn": ["agent-skills.agentSessionSkillsOf"]
+  },
+  {
+    "name": "agent-skills: a reserved name is shown to the model",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": ".filter(|skill| !is_reserved_user_skill_name(&skill.name))",
+    "replace": ".filter(|_| true)",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the identifier is not tried first",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if let Some(by_id) = shown.iter().find(|skill| skill.id == target_id).copied() {",
+    "replace": "if let Some(by_id) = shown.iter().find(|skill| skill.id == \"-\").copied() {",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the plugin prefix is matched with case",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "target_id.to_lowercase().starts_with(&prefix)",
+    "replace": "target_id.starts_with(&prefix)",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the prefix is cut one short",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "prefix.encode_utf16().count() as f64",
+    "replace": "(prefix.encode_utf16().count() - 1) as f64",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the name is not lowered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "let wanted = bare.to_lowercase();",
+    "replace": "let wanted = bare.clone();",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: a prefixed identifier is not tried",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if bare != target_id {",
+    "replace": "if false {",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the lowest priority wins a name",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "priority_of(a) as f64 - priority_of(b) as f64",
+    "replace": "priority_of(b) as f64 - priority_of(a) as f64",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: a project skill is changed in the card",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if entry.source == \"project\" {",
+    "replace": "if false {",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: an unreadable skill is proposed",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "entry.unreadable.as_ref().is_some_and(JsonValue::truthy)",
+    "replace": "entry.unreadable.is_some()",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: an empty title stays empty",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "title: if entry.title.is_empty() {",
+    "replace": "title: if false {",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: the editors of the target are left out",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "editors: skill_editors_of(entry.editors.as_ref().unwrap_or(&JsonValue::Null)),",
+    "replace": "editors: None,",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: every proposal needs a target",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if !input.target_id.is_empty() {",
+    "replace": "if true {",
+    "fn": ["agent-skills.agentSkillProposalOf"]
+  },
+  {
+    "name": "agent-skills: a lock file is a template",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": " && !name.starts_with(\"~$\")",
+    "replace": "",
+    "fn": ["agent-skills.projectTemplateFiles", "agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a hidden file is a template",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": " && !name.starts_with('.')",
+    "replace": "",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: node_modules is entered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if !name.starts_with('.') && name != \"node_modules\" {",
+    "replace": "if !name.starts_with('.') {",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: hidden folders are entered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if !name.starts_with('.') && name != \"node_modules\" {",
+    "replace": "if name != \"node_modules\" {",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: a link to a file is offered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "EntryKind::Link => {}",
+    "replace": "EntryKind::Link if is_template_file(name) => found.push(join(&[dir, name])),\n                    EntryKind::Link => {}",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: one file more than the limit",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "found.len() as f64 >= max_files",
+    "replace": "found.len() as f64 > max_files",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: the deepest level is not looked through",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "while depth <= max_depth &&",
+    "replace": "while depth < max_depth &&",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: one level too deep by default",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "limits.depth.unwrap_or(MAX_PROJECT_TEMPLATE_DEPTH as f64)",
+    "replace": "limits.depth.unwrap_or(MAX_PROJECT_TEMPLATE_DEPTH as f64 + 1.0)",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: files come in reverse order",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "sort_by_number(&mut entries, |a, b| locale_compare(&a.0, &b.0));",
+    "replace": "sort_by_number(&mut entries, |a, b| locale_compare(&b.0, &a.0));",
+    "fn": ["agent-skills.projectTemplateFiles"]
+  },
+  {
+    "name": "agent-skills: a tab title keeps its extension",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "let stem = &name[..name.len() - extension.len()];",
+    "replace": "let stem = &name[..];",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: the same file is offered twice",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if self.known.contains_key(&key) {",
+    "replace": "if false {",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: candidate ids are one off",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "id: format!(\"c{}\", self.candidates.len()),",
+    "replace": "id: format!(\"c{}\", self.candidates.len() + 1),",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a tab with a relative path is offered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "            && is_absolute(path)\n",
+    "replace": "",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a tab with a lock or binary file is offered",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "            && is_template_file(&basename(path, None))\n",
+    "replace": "",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a tab is never unsaved",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "set.add(path, \"tab\", tab.dirty,",
+    "replace": "set.add(path, \"tab\", false,",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a relative suggestion is not read from the project",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "resolve(&[options.project_root, suggested])",
+    "replace": "suggested.to_owned()",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a link leading out of the project is followed",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "is_inside_path(&set.key(real), &set.key(real_root), platform)",
+    "replace": "true",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a suggested folder is taken",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "fs::metadata(namespaced(&full)).is_ok_and(|s| s.is_file())",
+    "replace": "fs::metadata(namespaced(&full)).is_ok()",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: a suggested file of any kind is taken",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if inside && is_file && is_template_file(&basename(&full, None)) {",
+    "replace": "if inside && is_file {",
+    "fn": ["agent-skills.agentTemplateCandidates"]
+  },
+  {
+    "name": "agent-skills: the window is told the unsaved state wrongly",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "unsaved: candidate.unsaved,",
+    "replace": "unsaved: false,",
+    "fn": ["agent-skills.candidateView"]
+  },
+  {
+    "name": "agent-skills: the extension is read with case",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "extname(file_name).get(1..).unwrap_or(\"\").to_lowercase()",
+    "replace": "extname(file_name).get(1..).unwrap_or(\"\").to_owned()",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: a json file holds no mark",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "\"md\" | \"markdown\" | \"txt\" | \"json\" =>",
+    "replace": "\"md\" | \"markdown\" | \"txt\" =>",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: the markdown mark is read with case",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "js_regex!(r\"data-redaction\", \"i\")",
+    "replace": "js_regex!(r\"data-redaction\", \"\")",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: the html mark of a colon form is missed",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "js_regex!(r\"data-gx-redact|gx:redact:\", \"i\")",
+    "replace": "js_regex!(r\"data-gx-redact\", \"i\")",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: htm is not html",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "\"html\" | \"htm\" =>",
+    "replace": "\"html\" =>",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: a deck that cannot be read has no marks",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "let Ok(entries) = deck.open(bytes) else {\n                return TemplateRedaction::Unknown;",
+    "replace": "let Ok(entries) = deck.open(bytes) else {\n                return TemplateRedaction::None;",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: xml parts are told by their case",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "js_regex!(r\"\\.xml$\", \"i\")",
+    "replace": "js_regex!(r\"\\.xml$\", \"\")",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: only the own namespace is a mark",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "REDACT_NAMESPACES.iter().any(|ns| xml.contains(ns))",
+    "replace": "xml.contains(REDACT_NAMESPACES[0])",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: the deck engine extension is not a mark",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "|| xml.contains(PPTX_REDACT_EXT_URI)",
+    "replace": "|| false",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: a pdf open in a tab has no mark",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if open_in_tab {",
+    "replace": "if !open_in_tab {",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: other documents are not known",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "        _ => TemplateRedaction::None,",
+    "replace": "        _ => TemplateRedaction::Unknown,",
+    "fn": ["agent-skills.templateRedactionOf"]
+  },
+  {
+    "name": "agent-skills: a protected file is read",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if is_protected_path(path, guard, platform) {",
+    "replace": "if false {",
+    "fn": ["agent-skills.readTemplateCandidate"]
+  },
+  {
+    "name": "agent-skills: the Codex home is not protected",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "if is_inside_codex_home(at, &guard.home_dir) {",
+    "replace": "if false {",
+    "fn": ["agent-skills.readTemplateCandidate"]
+  },
+  {
+    "name": "agent-skills: where a file really is is not looked at",
+    "file": "main-core/src/shell/agent/agent_skills.rs",
+    "find": "for at in [path, real.as_str()] {",
+    "replace": "for at in [path] {",
+    "fn": ["agent-skills.readTemplateCandidate"]
+  },
+  {
+    "name": "redact-range: the prefix of the label",
+    "file": "main-core/src/packages/agent_core/redact_range.rs",
+    "find": "pub const REDACT_PREFIX: &str = \"go\";",
+    "replace": "pub const REDACT_PREFIX: &str = \"gx\";",
+    "fn": ["redact-range.REDACT_PREFIX"]
+  },
+  {
+    "name": "redact-range: the element of the label",
+    "file": "main-core/src/packages/agent_core/redact_range.rs",
+    "find": "pub const REDACT_EL: &str = \"go:redact\";",
+    "replace": "pub const REDACT_EL: &str = \"go:redacted\";",
+    "fn": ["redact-range.REDACT_EL"]
+  },
+  {
+    "name": "redact-range: the own namespace",
+    "file": "main-core/src/packages/agent_core/redact_range.rs",
+    "find": "seuoffice/redaction/2026\";\n\n/// `REDACT_NAMESPACES`",
+    "replace": "seuoffice/redaction/2027\";\n\n/// `REDACT_NAMESPACES`",
+    "fn": ["redact-range.OWN_REDACT_NS", "redact-range.REDACT_NAMESPACES"]
+  },
+  {
+    "name": "redact-range: the old namespace",
+    "file": "main-core/src/packages/agent_core/redact_range.rs",
+    "find": "pub const OLD_REDACT_NS: &str = \"https://genspark.ai/genoffice/redaction/2026\";",
+    "replace": "pub const OLD_REDACT_NS: &str = \"https://genspark.ai/genoffice/redaction/2025\";",
+    "fn": [
+      "old-names.OLD_REDACT_NS",
+      "redact-range.REDACT_NAMESPACES",
+      "redact-range.REDACT_NS_WRITTEN"
+    ]
+  },
+  {
+    "name": "redact-range: the label is written under the own namespace",
+    "file": "main-core/src/packages/agent_core/redact_range.rs",
+    "find": "pub const REDACT_NS_WRITTEN: &str = OLD_REDACT_NS;",
+    "replace": "pub const REDACT_NS_WRITTEN: &str = OWN_REDACT_NS;",
+    "fn": ["redact-range.REDACT_NS_WRITTEN"]
+  },
+  {
+    "name": "agent-window: claude code gets the codex choices",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "(provider == \"codex\").then(|| CodexStartChoices {",
+    "replace": "(provider != \"codex\").then(|| CodexStartChoices {",
+    "fn": ["agent-window.agentCodexStartChoices", "agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: codex never reaches the internet",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "network: prefs.codex_network,",
+    "replace": "network: false,",
+    "fn": ["agent-window.agentCodexStartChoices", "agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: a non-boolean allow allows",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if allow != Some(&JsonValue::Bool(true)) {",
+    "replace": "if allow == Some(&JsonValue::Bool(false)) {",
+    "fn": ["agent-window.agentPermissionAnswer"]
+  },
+  {
+    "name": "agent-window: the scope is lost",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if scope == Some(&JsonValue::String(\"session\".to_owned())) {",
+    "replace": "if scope != Some(&JsonValue::String(\"session\".to_owned())) {",
+    "fn": ["agent-window.agentPermissionAnswer"]
+  },
+  {
+    "name": "agent-window: the program name stays in the permission view",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if key != \"id\" && key != \"provider\" {",
+    "replace": "if key != \"id\" {",
+    "fn": ["agent-window.agentEventView"]
+  },
+  {
+    "name": "agent-window: the error kind is lost",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "view.insert(\"kind\".into(), json_value_to_serde(kind));",
+    "replace": "view.insert(\"kind\".into(), json!(\"unknown\"));",
+    "fn": ["agent-window.agentEventView"]
+  },
+  {
+    "name": "agent-window: the unprotected count is zero",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "view.insert(\"count\".into(), json_value_to_serde(&length));",
+    "replace": "view.insert(\"count\".into(), json!(0));",
+    "fn": ["agent-window.agentEventView"]
+  },
+  {
+    "name": "agent-window: a metered program the settings did not accept is accepted",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "&& metered_accepted.and_then(|m| m.get(provider)) == Some(&true) =>",
+    "replace": "&& true =>",
+    "fn": ["agent-window.agentConnections", "agent-window.window"]
+  },
+  {
+    "name": "agent-window: a blocked program is offered",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "let connection = if blocked.contains(&provider) {",
+    "replace": "let connection = if false {",
+    "fn": ["agent-window.agentConnections"]
+  },
+  {
+    "name": "agent-window: an unknown program is off",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "None => \"checking\",",
+    "replace": "None => \"off\",",
+    "fn": ["agent-window.agentConnections"]
+  },
+  {
+    "name": "agent-window: an off program is unavailable",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "\"off\" => \"off\",",
+    "replace": "\"off\" => \"unavailable\",",
+    "fn": ["agent-window.agentConnections"]
+  },
+  {
+    "name": "agent-window: a strange state is ready",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "_ => \"unavailable\",",
+    "replace": "_ => \"ready\",",
+    "fn": ["agent-window.agentConnections"]
+  },
+  {
+    "name": "agent-window: a destroyed window still owns",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(win) if !win.destroyed && sender == win.contents_id => Some(sender),",
+    "replace": "Some(win) if sender == win.contents_id => Some(sender),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: any page owns the window",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(win) if !win.destroyed && sender == win.contents_id => Some(sender),",
+    "replace": "Some(win) if !win.destroyed => Some(sender),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a closed window is still the owner of an event",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(win) => !win.destroyed && win.contents_id == owner_id,",
+    "replace": "Some(win) => win.contents_id == owner_id,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: any window is the owner of an event",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(win) => !win.destroyed && win.contents_id == owner_id,",
+    "replace": "Some(win) => !win.destroyed,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a card of another window is handed over",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if shown.owner_id != owner {",
+    "replace": "if false {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a candidate from a tab is not open in a tab",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "candidate.from == \"tab\"\n",
+    "replace": "false\n",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: open documents are matched with case",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": ".any(|path| path.to_lowercase() == key)",
+    "replace": ".any(|path| *path == candidate.path)",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: no folder is protected from a candidate",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "agent_protected_paths(&home_dir, &host.user_data())",
+    "replace": "Vec::new()",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a request needs both to be valid",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if !AGENT_PROVIDERS.contains(&provider) || !AGENT_MODES.contains(&mode) {",
+    "replace": "if !AGENT_PROVIDERS.contains(&provider) && !AGENT_MODES.contains(&mode) {",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: the warning of the version counts at once",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if prefs.warning_accepted < AGENT_WARNING_VERSION {",
+    "replace": "if prefs.warning_accepted <= AGENT_WARNING_VERSION {",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: an unreadable folder is an unknown failure",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Err(_) => return failed(&AgentStartFailure::BadFolder),",
+    "replace": "Err(_) => return failed(&AgentStartFailure::Unknown),",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: no start failure is recorded",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if let Some(cause) = cause {",
+    "replace": "if let Some(cause) = cause.filter(|_| false) {",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: the failure records another program",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "entry.set(\"program\", JsonValue::String(provider.to_owned()));",
+    "replace": "entry.set(\"program\", JsonValue::String(\"claude-code\".to_owned()));",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: the exit code is zero",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "entry.set(\"exitCode\", JsonValue::Number(*exit_code));",
+    "replace": "entry.set(\"exitCode\", JsonValue::Number(0.0));",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: the folder is not remembered",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "host.write_prefs(&with_recent_folder(&next, folder));",
+    "replace": "host.write_prefs(&next);",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: the program is not remembered",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "next.provider = provider.to_owned();",
+    "replace": "let _ = provider;",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: an empty list of servers is not told",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if let Some(inside) = mcp_keep_inside {",
+    "replace": "if let Some(inside) = mcp_keep_inside.filter(|v| !v.is_empty()) {",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: a missing folder is another one",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "string_of(own(request, \"folder\")).unwrap_or(\"\");",
+    "replace": "string_of(own(request, \"folder\")).unwrap_or(\"/\");",
+    "fn": ["agent-window.startAgentForWindow"]
+  },
+  {
+    "name": "agent-window: a closed home may open the window",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(home) => !home.destroyed && sender == home.contents_id,",
+    "replace": "Some(home) => sender == home.contents_id,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: anyone but home may open the window",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(home) => !home.destroyed && sender == home.contents_id,",
+    "replace": "Some(home) => !home.destroyed && sender != home.contents_id,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a cancelled dialog gives its folder",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "let canceled = picked.get(\"canceled\").is_some_and(|c| c.truthy());",
+    "replace": "let canceled = false;",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: an empty path is a folder",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "JsonValue::String(path) if !path.is_empty() => Some(path.clone()),",
+    "replace": "JsonValue::String(path) => Some(path.clone()),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the dialog picks files",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "\"openDirectory\".to_owned()",
+    "replace": "\"openFile\".to_owned()",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: anyone may pick a folder",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "    agent_owner_of(host, sender)?;\n",
+    "replace": "",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the window prefs update is dropped",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "merged.assign(update);",
+    "replace": "let _ = update;",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the window adds recent folders it chooses",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": ".filter(|folder| patch.recent_folders.contains(folder))",
+    "replace": ".filter(|_| true)",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the window claims a newer warning",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "warning_accepted: math_min(patch.warning_accepted, AGENT_WARNING_VERSION),",
+    "replace": "warning_accepted: patch.warning_accepted,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a relative project folder is read",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "string_of(folder).filter(|folder| is_absolute(folder))",
+    "replace": "string_of(folder)",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a reader that throws gives defaults",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "read_project_prefs_of(host, folder).ok()",
+    "replace": "read_project_prefs_of(host, folder).ok().or(Some(AgentProjectPrefs {\n        codex_web_search: String::new(),\n        codex_network: false,\n    }))",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the window patch is not written",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "&agent_project_prefs_patch(patch)",
+    "replace": "&AgentProjectPrefsPatch::default()",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: project skills viewed without a service",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "host.project_skills_view(folder).ok()",
+    "replace": "host.project_skills_view(folder).ok().or(Some(AgentProjectSkillsView {\n        skills: Vec::new(),\n        allowed: false,\n        changed: false,\n    }))",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: any truthy value turns the project skills on",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "host.project_skills_set(folder, on == Some(&JsonValue::Bool(true)))",
+    "replace": "host.project_skills_set(folder, on.is_some())",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: white space is a message",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if trim(text).is_empty() {",
+    "replace": "if text.is_empty() {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a refused message is said to be sent",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "host.send(owner, session_id, text).is_ok()",
+    "replace": "host.send(owner, session_id, text).is_ok() || true",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: every answer is a refusal",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "agent_permission_answer(allow, scope),\n    );",
+    "replace": "PermissionAnswer::Deny,\n    );",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: stop does not reach the session",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "host.stop(owner, session_id);",
+    "replace": "let _ = (owner, session_id);",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a candidate redaction is not told",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "CandidateRead::Read { redaction, .. } => TemplateCheck::Ok { redaction },",
+    "replace": "CandidateRead::Read { .. } => TemplateCheck::Ok {\n            redaction: TemplateRedaction::None,\n        },",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a refused read is not found",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "CandidateRead::Refused(refusal) => TemplateCheck::Refused(refusal_of(refusal)),",
+    "replace": "CandidateRead::Refused(_) => TemplateCheck::Refused(TemplateRefusal::NotFound),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a document with a mark is saved as it is",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "CandidateRead::Read { redaction, .. } if redaction != TemplateRedaction::None => {",
+    "replace": "CandidateRead::Read { redaction, .. } if redaction == TemplateRedaction::Unknown => {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a mark is said to be unknown",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "TemplateRedaction::Redacted => TemplateRefusal::Redacted,",
+    "replace": "TemplateRedaction::Redacted => TemplateRefusal::Unknown,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the tab title is cut short",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "slice_utf16(title, 0.0, Some(300.0))",
+    "replace": "slice_utf16(title, 0.0, Some(200.0))",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the clearing request is cut short",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "slice_utf16(text, 0.0, Some(10_000.0))",
+    "replace": "slice_utf16(text, 0.0, Some(9_000.0))",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a request with a title or a text goes through",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if tab_title.is_empty() || text.is_empty() {",
+    "replace": "if tab_title.is_empty() && text.is_empty() {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the preview never says the original has a mark",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "original_redacted: redaction != TemplateRedaction::None,",
+    "replace": "original_redacted: false,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a throwing opener is not found",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Err(_) => TemplateBlank::Refused(TemplateRefusal::Failed),",
+    "replace": "Err(_) => TemplateBlank::Refused(TemplateRefusal::NotFound),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the draft is dropped",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "draft: own(request, \"draft\").cloned(),",
+    "replace": "draft: None,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a file nothing could open is said to be opened",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(file) => host.open_path(&file),",
+    "replace": "Some(file) => {\n            host.open_path(&file);\n            true\n        }",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: an event reaches a window that is not the owner",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if !agent_live_owner(host, owner_id) {",
+    "replace": "if false {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a minimized window is not restored",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some((false, minimized)) => Some(minimized),",
+    "replace": "Some((false, _)) => Some(false),",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the title leaves out the product",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "format!(\"{window_title} - {}\", product_name(Some(lang)))",
+    "replace": "format!(\"{window_title}\")",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the window is not sandboxed",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "\"sandbox\": true,",
+    "replace": "\"sandbox\": false,",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: an empty dev server is a server",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "renderer_url.filter(|url| !url.is_empty())",
+    "replace": "renderer_url",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the dev server loads the wrong page",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "format!(\"{url}/agent.html\")",
+    "replace": "format!(\"{url}/index.html\")",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the card is shown while the window is gone",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "        if !d.window_open() {\n            return Err(\"The agent window is closed; the card cannot be shown.\".to_owned());\n        }\n        d.keep(",
+    "replace": "        if false {\n            return Err(\"The agent window is closed; the card cannot be shown.\".to_owned());\n        }\n        d.keep(",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: a card is made for a closed window",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "        if !d.window_open() {\n            return Err(\"The agent window is closed; the card cannot be shown.\".to_owned());\n        }\n        let list",
+    "replace": "        if false {\n            return Err(\"The agent window is closed; the card cannot be shown.\".to_owned());\n        }\n        let list",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: a list that cannot be read stops the card",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "Some(Err(_)) | None => Vec::new(),",
+    "replace": "Some(Err(_)) => return Err(\"list\".to_owned()),\n            None => Vec::new(),",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: tabs that cannot be read stop the card",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "let tabs = d.open_tabs().unwrap_or_default();",
+    "replace": "let Ok(tabs) = d.open_tabs() else {\n            return Err(\"tabs\".to_owned());\n        };",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: the session skills are read before the key",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "let key = d.new_key();\n        let session_skills = d.session_skills();",
+    "replace": "let session_skills = d.session_skills();\n        let key = d.new_key();",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: the card names another session",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "payload.insert(\"sessionId\".into(), json!(self.session.session_id));",
+    "replace": "payload.insert(\"sessionId\".into(), json!(\"other\"));",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: no template is ever selected",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "if let Some(selected) = selected {",
+    "replace": "if let Some(selected) = selected.filter(|_| false) {",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: the card goes out on the install channel",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "agent_channel(\"skillProposal\")",
+    "replace": "agent_channel(\"installProposal\")",
+    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
+  },
+  {
+    "name": "agent-window: an install is proposed to a closed window",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "return Err(\"The agent window is closed; the proposal cannot be shown.\".to_owned());",
+    "replace": "return Ok(());",
+    "fn": ["agent-window.agentSkillToolsFor.proposeInstall"]
+  },
+  {
+    "name": "agent-window: the install key is fixed",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "let key = d.new_key();\n        d.send_to_window(",
+    "replace": "let key = String::from(\"fixed\");\n        d.send_to_window(",
+    "fn": ["agent-window.agentSkillToolsFor.proposeInstall"]
+  }
+]

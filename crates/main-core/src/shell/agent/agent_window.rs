@@ -410,7 +410,7 @@ pub trait AgentWindowHost {
     fn project_root_of(&self, owner_id: i64, session_id: &str) -> Option<String>;
 }
 
-/// `agentOwnerOf`: the sender's id when it is the page of the open window
+/// `ownerOf(event)`: the sender's id when it is the page of the open window
 pub fn agent_owner_of(host: &dyn AgentWindowHost, sender: i64) -> Option<i64> {
     match host.window() {
         Some(win) if !win.destroyed && sender == win.contents_id => Some(sender),
@@ -418,12 +418,12 @@ pub fn agent_owner_of(host: &dyn AgentWindowHost, sender: i64) -> Option<i64> {
     }
 }
 
-/// `agentIsWindowContents`: whether the sender is the page of the open window
+/// `isAgentWindowContents(sender)`: whether the sender is the page of the open window
 pub fn agent_is_window_contents(host: &dyn AgentWindowHost, sender: i64) -> bool {
     agent_owner_of(host, sender).is_some()
 }
 
-/// `agentLiveOwner`: whether the window is open and still the owner of the session
+/// `liveOwner(ownerId)`: whether the window is open and still the owner of the session
 pub fn agent_live_owner(host: &dyn AgentWindowHost, owner_id: i64) -> bool {
     match host.window() {
         Some(win) => !win.destroyed && win.contents_id == owner_id,
@@ -431,7 +431,7 @@ pub fn agent_live_owner(host: &dyn AgentWindowHost, owner_id: i64) -> bool {
     }
 }
 
-/// `agentShownCandidate`: a card's candidate, asked for by the window that
+/// `shownCandidate(event, proposalKey, candidateId)`: a card's candidate, asked for by the window that
 /// was shown the card
 pub fn agent_shown_candidate<'a>(
     host: &dyn AgentWindowHost,
@@ -467,7 +467,7 @@ fn open_in_tab(host: &dyn AgentWindowHost, candidate: &AgentTemplateCandidate) -
         .any(|path| path.to_lowercase() == key)
 }
 
-/// what `agentReadCandidate` answers
+/// what `readCandidate` answers
 #[derive(Debug, Clone, PartialEq)]
 pub enum CandidateRead {
     Read {
@@ -477,7 +477,7 @@ pub enum CandidateRead {
     Refused(TemplateReadRefusal),
 }
 
-/// `agentReadCandidate`: read a candidate and tell whether it can hold a redaction mark
+/// `readCandidate(candidate)`: read a candidate and tell whether it can hold a redaction mark
 pub fn agent_read_candidate(
     host: &mut dyn AgentWindowHost,
     candidate: &AgentTemplateCandidate,
@@ -768,7 +768,7 @@ pub fn start_agent_for_window(
 
 // ---- the handlers ------------------------------------------------------------
 
-/// `agentGetInit(s, sender)`: what the window starts from, `None` for null
+/// the `getInit` handler: what the window starts from, `None` for null
 pub fn agent_get_init(host: &dyn AgentWindowHost, sender: i64) -> Option<Value> {
     if agent_owner_of(host, sender).is_none() || !host.has_deps() {
         return None;
@@ -787,7 +787,7 @@ pub fn agent_get_init(host: &dyn AgentWindowHost, sender: i64) -> Option<Value> 
     }))
 }
 
-/// `agentGetTheme(s)`
+/// the `getTheme` handler
 pub fn agent_get_theme(host: &dyn AgentWindowHost) -> String {
     if host.has_deps() {
         host.theme()
@@ -796,7 +796,7 @@ pub fn agent_get_theme(host: &dyn AgentWindowHost) -> String {
     }
 }
 
-/// `agentHomeMayOpen(s, sender)`: Home opens the window; nothing else may
+/// the Home-open handler: Home opens the window; nothing else may
 pub fn agent_home_may_open(host: &dyn AgentWindowHost, sender: i64) -> bool {
     if !host.has_deps() {
         return false;
@@ -807,7 +807,7 @@ pub fn agent_home_may_open(host: &dyn AgentWindowHost, sender: i64) -> bool {
     }
 }
 
-/// `agentPickFolder(s, sender)`: the folder the person picked, `None` for null
+/// the `pickFolder` handler: the folder the person picked, `None` for null
 pub fn agent_pick_folder(host: &mut dyn AgentWindowHost, sender: i64) -> Option<String> {
     agent_owner_of(host, sender)?;
     let mut options: JsObject<JsonValue> = JsObject::new();
@@ -826,7 +826,7 @@ pub fn agent_pick_folder(host: &mut dyn AgentWindowHost, sender: i64) -> Option<
     if canceled { None } else { first }
 }
 
-/// `agentSetPrefs(s, sender, update)`: the preferences as stored, `None` for null
+/// the `setPrefs` handler: the preferences as stored, `None` for null
 pub fn agent_set_prefs(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -859,7 +859,7 @@ pub fn agent_set_prefs(
     Some(next)
 }
 
-/// `agentGetProjectPrefs(s, sender, folder)`
+/// the `getProjectPrefs` handler
 pub fn agent_get_project_prefs(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -872,7 +872,7 @@ pub fn agent_get_project_prefs(
     read_project_prefs_of(host, folder).ok()
 }
 
-/// `agentSetProjectPrefs(s, sender, folder, patch)`
+/// the `setProjectPrefs` handler
 pub fn agent_set_project_prefs(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -886,7 +886,7 @@ pub fn agent_set_project_prefs(
     write_project_prefs_of(host, folder, &agent_project_prefs_patch(patch)).ok()
 }
 
-/// `agentGetProjectSkills(s, sender, folder)`
+/// the `getProjectSkills` handler
 pub fn agent_get_project_skills(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -899,7 +899,7 @@ pub fn agent_get_project_skills(
     host.project_skills_view(folder).ok()
 }
 
-/// `agentSetProjectSkills(s, sender, folder, on)`
+/// the `setProjectSkills` handler
 pub fn agent_set_project_skills(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -914,7 +914,7 @@ pub fn agent_set_project_skills(
         .ok()
 }
 
-/// `agentStart(s, sender, request)`
+/// the `start` handler
 pub fn agent_start(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -928,7 +928,7 @@ pub fn agent_start(
     start_agent_for_window(host, owner, request, now_ms)
 }
 
-/// `agentSend(s, sender, sessionId, text)`
+/// the `send` handler
 pub fn agent_send(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -950,7 +950,7 @@ pub fn agent_send(
     host.send(owner, session_id, text).is_ok()
 }
 
-/// `agentAnswer(s, sender, sessionId, requestId, allow, scope)`
+/// the `answer` handler
 pub fn agent_answer(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -976,7 +976,7 @@ pub fn agent_answer(
     );
 }
 
-/// `agentStop(s, sender, sessionId)`
+/// the `stop` handler
 pub fn agent_stop(host: &mut dyn AgentWindowHost, sender: i64, session_id: Option<&JsonValue>) {
     let owner = agent_owner_of(host, sender);
     let (Some(owner), true, Some(session_id)) = (owner, host.has_manager(), string_of(session_id))
@@ -1029,7 +1029,7 @@ pub enum TemplateCheck {
     Refused(TemplateRefusal),
 }
 
-/// `agentTemplateCheck(s, sender, proposalKey, candidateId)`
+/// the `templateCheck` handler
 pub fn agent_template_check(
     host: &mut dyn AgentWindowHost,
     shown: &AgentWindowShown,
@@ -1055,7 +1055,7 @@ pub enum TemplateAsIs {
     Refused(TemplateRefusal),
 }
 
-/// `agentTemplateAsIs(s, sender, proposalKey, candidateId)`: "save the
+/// the `templateAsIs` handler: "save the
 /// document as it is": the bytes go to the card's Save only when no mark can
 /// be in them
 pub fn agent_template_as_is(
@@ -1092,7 +1092,7 @@ pub enum TemplateBlank {
     Refused(TemplateRefusal),
 }
 
-/// `agentTemplateBlank(s, sender, proposalKey, candidateId, request)`: "make
+/// the `templateBlank` handler: "make
 /// a blank template": the copy opens in a preview tab whose AI clears it
 pub fn agent_template_blank(
     host: &mut dyn AgentWindowHost,
@@ -1141,7 +1141,7 @@ pub fn agent_template_blank(
     }
 }
 
-/// `agentOpenFile(s, sender, sessionId, path)`
+/// the `openFile` handler
 pub fn agent_open_file(
     host: &mut dyn AgentWindowHost,
     sender: i64,
@@ -1170,7 +1170,7 @@ pub fn agent_open_file(
 
 // ---- events, opening ---------------------------------------------------------
 
-/// `agentEmit(s, ownerId, sessionId, event)`: the payload of the `event`
+/// the `emit` of `configureAgentWindow`: the payload of the `event`
 /// channel, while the window is open and still the session's owner
 pub fn agent_emit(
     host: &dyn AgentWindowHost,
@@ -1184,7 +1184,7 @@ pub fn agent_emit(
     Some(json!({ "sessionId": session_id, "event": agent_event_view(event) }))
 }
 
-/// `agentWindowReuse(existing)`: whether an open window is brought forward,
+/// `openAgentWindow`'s reuse: whether an open window is brought forward,
 /// and whether it is restored first; `None` when a new one is made
 pub fn agent_window_reuse(existing: Option<(bool, bool)>) -> Option<bool> {
     // `(isDestroyed, isMinimized)`
@@ -1194,7 +1194,7 @@ pub fn agent_window_reuse(existing: Option<(bool, bool)>) -> Option<bool> {
     }
 }
 
-/// `agentWindowOptions(lang, windowTitle, preload)`: the options of the
+/// `openAgentWindow`'s options for `new BrowserWindow`: the options of the
 /// window; `window_title` is the strings' `windowTitle` in `lang`
 pub fn agent_window_options(lang: &str, window_title: &str, preload: &str) -> Value {
     json!({
@@ -1216,7 +1216,7 @@ pub fn agent_window_options(lang: &str, window_title: &str, preload: &str) -> Va
     })
 }
 
-/// `agentWindowLoad(rendererUrl, builtFile)`: the page the window loads
+/// `openAgentWindow`'s load: the page the window loads
 pub fn agent_window_load(renderer_url: Option<&str>, built_file: &str) -> Value {
     match renderer_url.filter(|url| !url.is_empty()) {
         Some(url) => json!({ "url": format!("{url}/agent.html") }),
