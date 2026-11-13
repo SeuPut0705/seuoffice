@@ -13,7 +13,7 @@ use jscompat::{JsObject, JsonValue};
 use super::default_save_dir::Thrown;
 
 /// `lastUsedDirectoryByDialog.get(dialog)`
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone)]
 pub struct DialogMemory {
     last_used: Option<String>,
 }

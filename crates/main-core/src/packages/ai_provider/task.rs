@@ -2040,7 +2040,8 @@ mod tests {
     fn a_branch_cancelled_mid_read_leaves_its_clone_to_cancel_the_stream() {
         let mut runtime = Runtime::new(host());
         let rt = runtime.rt().clone();
-        let held: Rc<RefCell<Option<(Rc<Response>, Rc<Response>)>>> = Rc::default();
+        type Pair = (Rc<Response>, Rc<Response>);
+        let held: Rc<RefCell<Option<Pair>>> = Rc::default();
         let slot = held.clone();
         let call = runtime.start(async move {
             let response = rt
