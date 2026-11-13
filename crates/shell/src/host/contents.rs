@@ -233,11 +233,15 @@ impl Contents for ShellContents {
     /// `webContents.print` opens the system's print dialog. Tauri's `print`
     /// shows it and does not report how it ended, so a shown dialog is
     /// `true`; batch M's print host (`host/print.rs`) owns anything finer.
-    fn print(&self, view: ViewId, _options: IpcValue) -> Result<bool, String> {
+    fn print(&self, view: ViewId, options: IpcValue) -> Result<bool, String> {
         let webview = self
             .windows
             .webview(view)
             .ok_or_else(|| format!("no view {}", view.0))?;
+        // a named printer, no dialog: batch M's spooler (host/print.rs)
+        if let Some(IpcValue::Bool(true)) = field(&options, "silent") {
+            return super::print::print_silently_ipc(&webview, &options).map(|()| true);
+        }
         webview.print().map_err(|e| e.to_string())?;
         Ok(true)
     }

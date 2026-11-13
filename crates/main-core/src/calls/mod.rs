@@ -125,6 +125,7 @@ const GROUPS: &[Group] = &[
     b3_projects::call,
     b5_mcp::call,
     b5_provider::call,
+    w_shell::call,
     b5_kb::call,
 ];
 

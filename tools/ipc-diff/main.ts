@@ -36,7 +36,7 @@ import './vite-imports.ts'
 import { Encoder, WireError, decode } from '../../crates/shell/bridge/wire.ts'
 import { CHANNELS, SPECS } from './channels.ts'
 import { caseElectron } from './fakes.ts'
-import { channelAnswers } from './coverage.ts'
+import { type ChannelReport, type GroupReport, channelAnswers, coverage } from './coverage.ts'
 import { cleanUp, setUp, snapshot, substitute, unsubstitute } from './folder.ts'
 import { Probe } from './probe.ts'
 import type { Call, Case, Group, LoadContext } from './types.ts'
@@ -54,20 +54,6 @@ interface Divergence {
   typescript: unknown
   rust: unknown
   reason: string
-}
-
-/** per channel: how many calls, how many distinct answers, whether any call had arguments */
-interface ChannelReport {
-  calls: number
-  answers: string[]
-  withArgs: boolean
-}
-interface GroupReport {
-  batch: string
-  channels: Record<string, ChannelReport>
-  /** the event channels some call emitted, on the TypeScript side */
-  events: string[]
-  single: Record<string, string>
 }
 
 const arg = (flag: string): string | undefined => {
@@ -293,7 +279,7 @@ async function runGroup(name: string): Promise<void> {
       })),
     )
     const rust = await side(c, async (cc, dir) => {
-      const line = JSON.parse(await probe.run(dir, cc)) as Record<string, unknown>
+      const line = JSON.parse(await probe.run(dir, cc, group.batch)) as Record<string, unknown>
       // the TypeScript's JSON.stringify writes numbers as JavaScript does
       return 'calls' in line ? { calls: line.calls, log: line.log } : line
     })
@@ -345,35 +331,6 @@ async function runGroup(name: string): Promise<void> {
   process.exitCode = differences.length > 0 || stale.length > 0 ? 1 : 0
 }
 
-/** Coverage of a required batch over every group's report */
-function coverage(batch: string, reports: GroupReport[]): string[] {
-  const merged = new Map<string, ChannelReport>()
-  const emitted = new Set<string>()
-  const single = new Map<string, string>()
-  for (const r of reports) {
-    for (const [ch, c] of Object.entries(r.channels)) {
-      const m = merged.get(ch) ?? { calls: 0, answers: [], withArgs: false }
-      m.calls += c.calls
-      m.withArgs ||= c.withArgs
-      for (const a of c.answers) if (!m.answers.includes(a)) m.answers.push(a)
-      merged.set(ch, m)
-    }
-    for (const e of r.events) emitted.add(e)
-    for (const [ch, why] of Object.entries(r.single)) single.set(ch, why)
-  }
-  const problems: string[] = []
-  for (const spec of CHANNELS.filter((s) => s.batch === batch)) {
-    const handled = spec.kinds.some((k) => k === 'invoke' || k === 'send' || k === 'sendSync')
-    const c = merged.get(spec.name)
-    if (handled && !c) problems.push(`${spec.name}: no case calls it`)
-    else if (handled && c && c.withArgs && c.answers.length < 2 && !single.has(spec.name))
-      problems.push(`${spec.name}: fewer than two distinct answers`)
-    if (spec.kinds.includes('event') && !emitted.has(spec.name))
-      problems.push(`${spec.name}: no case emits this event`)
-  }
-  return problems
-}
-
 function runEveryGroup(): void {
   let failed = false
   const reports: Record<string, GroupReport> = {}
@@ -406,10 +363,7 @@ function runEveryGroup(): void {
   if (process.argv.includes('--list')) return
   writeFileSync(join(out, 'report.json'), JSON.stringify(reports, null, 2))
   for (const batch of args('--require')) {
-    const problems = coverage(
-      batch,
-      Object.values(reports).filter((r) => r.batch === batch),
-    )
+    const problems = coverage(batch, Object.values(reports), CHANNELS)
     for (const p of problems) console.log(`COVERAGE ${batch} ${p}`)
     console.log(`coverage of ${batch}: ${problems.length} problems`)
     if (problems.length > 0) failed = true

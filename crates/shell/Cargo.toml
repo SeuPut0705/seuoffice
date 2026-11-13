@@ -39,10 +39,26 @@ tauri-runtime-cef = { version = "=3.0.0-alpha.7", features = ["unstable"] }
 cef = "=154.5.0"
 # the shell's one HTTP client, the version tauri already pulls: the updater's
 # feed and download (U, host/update.rs, blocking on workers) and A's network
-# ports (host/net.rs). The system's TLS and trust store and proxy, as
+# ports (host/net/). The system's TLS and trust store and proxy, as
 # Chromium's net in the Electron build used; the four content decoders
 # undici and Chromium both apply.
-reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls", "system-proxy", "stream", "multipart", "http2", "charset", "gzip", "brotli", "deflate", "zstd"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "system-proxy", "stream", "multipart", "http2", "charset", "gzip", "brotli", "deflate", "zstd"] }
+# A's loopback servers of the sign-ins (host/net/http.rs) and the stream the
+# AI runtime reads a body through: all already pulled by reqwest and tauri
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+tokio = { version = "1", features = ["net", "sync", "macros", "rt", "time"] }
+# A's AI hosts (host/net/ai): the ChatGPT sign-in's ID token signature
+# (RS256, ES256), the OAuth PKCE bytes from the OS, the slides AI's image
+# sizes; ring and image are already pulled by tauri and reqwest
+ring = "0.17"
+getrandom = "0.4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
+# A's MCP hub (host/net/tools): a tool's outputSchema, as the MCP SDK's Ajv
+# checked it; no remote or file $ref resolution
+jsonschema = { version = "0.61", default-features = false }
 # the feed's sha512 of a download (host/update.rs)
 sha2 = "0.10"
 # the blockmaps of a differential update are gzipped (U, host/update/feed.rs)
@@ -57,6 +73,9 @@ shell-ipc-w = { path = "../shell-ipc/w" }
 shell-ipc-d1 = { path = "../shell-ipc/d1" }
 shell-ipc-d2 = { path = "../shell-ipc/d2" }
 main-core = { path = "../main-core" }
+# the JSON values main-core's dialog and save-image ports take (host/menu/context.rs)
+# and the AI runtime's JS errors (host/net/http.rs)
+jscompat = { path = "../jscompat" }
 
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 base64 = "0.22"
@@ -86,12 +105,15 @@ block2 = "0.6"
 windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT", "Win32_UI_Controls", "Win32_UI_WindowsAndMessaging"] }
 
 [dev-dependencies]
-# the fakes of M's and U's hosts for the_batches_register_over_the_stubs
+# the fakes of A's, M's and U's hosts for the_batches_register_over_the_stubs
+shell-ipc-a = { path = "../shell-ipc/a", features = ["probe"] }
 shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
 shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
 
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
+# the context-menu hook batch M needs (crates/vendor/tauri-runtime-cef/VENDORED.md)
+tauri-runtime-cef = { path = "../vendor/tauri-runtime-cef" }
 
 [profile.release]
 opt-level = 3

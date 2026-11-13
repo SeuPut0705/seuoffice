@@ -192,6 +192,7 @@ impl ViewTable {
         let listeners: Vec<Listener> = self.listeners.lock().unwrap().clone();
         self.core.post(Box::new(move || {
             crate::ipc::view_destroyed(view);
+            crate::host::menu::document_view_destroyed(view);
             for listener in &listeners {
                 listener(view);
             }

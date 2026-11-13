@@ -1,0 +1,1339 @@
+[
+  {
+    "name": "the panel side defaults to the right",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            _ => \"left\",",
+    "replace": "            _ => \"right\",",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the custom font size is clamped one pixel higher",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "const AI_CUSTOM_FONT_MAX_PX: f64 = 32.0;",
+    "replace": "const AI_CUSTOM_FONT_MAX_PX: f64 = 33.0;",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "an unchanged patch is written and sent",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "        if next == prev {",
+    "replace": "        if next == prev && patch.is_none() {",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "a key sent as undefined keeps the previous value",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "                Some(value) => to_json(value),",
+    "replace": "                Some(value) => to_json(value).or_else(|| prev_json.get(key).map(|v| v.into_owned())),",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the changed preferences reach the shell views only",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": ".emit(Target::All, PREFS_CHANGED",
+    "replace": ".emit(Target::Surface(shell_contract::Surface::Shell), PREFS_CHANGED",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the slides AI fonts read ignores the document language",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            &self.ui.document_locale(),\n",
+    "replace": "            \"ko\",\n",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "model settings open without bringing the shell window forward",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            self.ui.show_home_tab();\n",
+    "replace": "",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "closing the question allows",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "answer.response == 1",
+    "replace": "answer.response != 0",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "a stored false no longer turns the tools off",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "            Some(JsonValue::Bool(false))\n",
+    "replace": "            Some(JsonValue::Bool(true))\n",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "Allow is the default button",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "        default_id: Some(0),",
+    "replace": "        default_id: Some(1),",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "addresses are cut at 200 characters",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "const SHOWN_ADDRESS_CHARS: usize = 300;",
+    "replace": "const SHOWN_ADDRESS_CHARS: usize = 200;",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "the question is put over no window",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "self.dialogs.message(Some(cx.sender.window), &options)",
+    "replace": "self.dialogs.message(None, &options)",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "integrations copy text changed",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.clipboard.write_text(text);",
+    "replace": "self.clipboard.write_text(&text.to_uppercase());",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations pick forgets the picked folder",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "*self.picked.borrow_mut() = chosen.clone();",
+    "replace": "*self.picked.borrow_mut() = None;",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations picked folder is not vouched",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "dirs.extend(self.picked.borrow().clone());",
+    "replace": "let _ = self.picked.borrow().clone();",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations install does not save the ledger",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.save_ledger(ledger)?;\n        self.state_of(&skills_dir)",
+    "replace": "drop(ledger);\n        self.state_of(&skills_dir)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations legacy row needs no copy of ours",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "row.as_ref().is_some_and(|r| r.legacy)",
+    "replace": "false",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations shared row leaves the older copies",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "row.as_ref().is_some_and(|r| r.id == SHARED_AGENT_ID)",
+    "replace": "false",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations rewrites every older copy",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if state.status == \"outdated\" {",
+    "replace": "if state.status != \"installed\" {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations uninstall saves on the wrong branch",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if self.skills.uninstall_skill(&target.skills_dir, &mut ledger) {",
+    "replace": "if !self.skills.uninstall_skill(&target.skills_dir, &mut ledger) {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations folder dialog without createDirectory",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "properties: vec![\"openDirectory\".into(), \"createDirectory\".into()],",
+    "replace": "properties: vec![\"openDirectory\".into()],",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations zip name without the version",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "format!(\"{CLI_COMMAND}-skill-{}.zip\", skill.version)",
+    "replace": "format!(\"{CLI_COMMAND}-skill.zip\")",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations an empty save path is taken",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".filter(|path| !path.as_os_str().is_empty())",
+    "replace": ".filter(|_| true)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a bad package.json reads as 0",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Err(_) => String::new(),",
+    "replace": "Err(_) => \"0\".to_owned(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations ephemeral outside a packaged app",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.is_packaged()",
+    "replace": "true",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations APPIMAGE ignored",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.env(\"APPIMAGE\").as_deref()",
+    "replace": "None",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations wrong launcher file",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "&launcher_file_name(&self.skills.platform()),",
+    "replace": "&launcher_file_name(\"win32\"),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations needs-cli keeps the major only",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ">=\\s*(\\d+\\.\\d+\\.\\d+)",
+    "replace": ">=\\s*(\\d+)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations status reads no ledger",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".skill_rows(&ledger)",
+    "replace": ".skill_rows(&Ledger::new())",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations null target worded as undefined",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(JsonValue::Null) => return Err(type_error(\"null\")),",
+    "replace": "Some(JsonValue::Null) => return Err(type_error(\"undefined\")),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations bundled skill from no bytes",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.bundled_skill_from(bytes)",
+    "replace": "self.skills.bundled_skill_from(Vec::new())",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations zip written empty",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "std::fs::write(&path, zip)",
+    "replace": "std::fs::write(&path, b\"\")",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a null title is the word null",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "None | Some(JsonValue::Null) => String::new(),",
+    "replace": "None => String::new(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations legacy flag not shown",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if row.legacy {",
+    "replace": "if false {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a truthy non-string folder skips the vouched list",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if other.truthy() {",
+    "replace": "if false {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations folder dialog without the shell window",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".open(self.main_window.window(), &options)",
+    "replace": ".open(None, &options)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations save dialog without the shell window",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".save(self.main_window.window(), &options)",
+    "replace": ".save(None, &options)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations ledger ignored",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(JsonValue::Object(raw)) => raw.clone(),",
+    "replace": "Some(JsonValue::Object(_)) => Ledger::new(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations any folder is vouched",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "&& !is_installable_skill_dir(",
+    "replace": "&& is_installable_skill_dir(",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a title that is no string is empty",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(value) => to_primitive(Some(value)).map_or_else(|e| e.0, |p| p.to_js_string()),",
+    "replace": "Some(JsonValue::String(s)) => s.clone(),\n        Some(_) => String::new(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "search limit cap 21",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "const SEARCH_LIMIT_MAX: f64 = 20.0;",
+    "replace": "const SEARCH_LIMIT_MAX: f64 = 21.0;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "free-ai refusal says cancelled",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "return reply.reply(Ok(refused(\"free-ai\")));",
+    "replace": "return reply.reply(Ok(refused(\"cancelled\")));",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "list search text cut at 199",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "slice_utf16(typed, 0, 200)",
+    "replace": "slice_utf16(typed, 0, 199)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "page token of 2000 accepted",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": ".filter(|token| token.encode_utf16().count() < 2000)",
+    "replace": ".filter(|token| token.encode_utf16().count() <= 2000)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "state change reaches shell views only",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": ".emit(Target::All, STATE_CHANGED, vec![self.ui_state()])",
+    "replace": ".emit(Target::Surface(shell_contract::Surface::Shell), STATE_CHANGED, vec![self.ui_state()])",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "any string turns a switch on",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "matches!(args.first(), Some(IpcValue::Bool(true)))",
+    "replace": "matches!(args.first(), Some(IpcValue::Bool(true) | IpcValue::String(_)))",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "search limit may reach zero",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "limit.floor().clamp(1.0, SEARCH_LIMIT_MAX)",
+    "replace": "limit.floor().clamp(0.0, SEARCH_LIMIT_MAX)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "cancelled picker failure is told as failed",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "                            | PickFailure::Cancelled",
+    "replace": "",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "copy button is not the default",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "default_id: answers.iter().position(|a| *a == SyncAnswer::Copy),",
+    "replace": "default_id: answers.iter().position(|a| *a == SyncAnswer::Local),",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "sync dialogs have no parent window",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "let answered = self.dialogs.message(self.main_window.window(), &options);",
+    "replace": "let answered = self.dialogs.message(None, &options);",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "google host prefix without slash",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "target.starts_with(\"https://accounts.google.com/\")",
+    "replace": "target.starts_with(\"https://accounts.google.com\")",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "21 attachments",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "pub const MAX_ATTACH_FILES: usize = 20;",
+    "replace": "pub const MAX_ATTACH_FILES: usize = 21;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "attachment copies pruned after one day",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "const KEEP_MS: f64 = 7.0 * 24.0",
+    "replace": "const KEEP_MS: f64 = 1.0 * 24.0",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "attachment ids not deduplicated",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "if !ids.contains(&id) {",
+    "replace": "if true {",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "AI text cache holds five",
+    "file": "shell-ipc/a/src/drive/ai.rs",
+    "find": "const TEXT_CACHE_MAX: usize = 4;",
+    "replace": "const TEXT_CACHE_MAX: usize = 5;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "AI text cache lasts twenty minutes",
+    "file": "shell-ipc/a/src/drive/ai.rs",
+    "find": "const TEXT_CACHE_MS: u64 = 10 * 60 * 1000;",
+    "replace": "const TEXT_CACHE_MS: u64 = 20 * 60 * 1000;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "vault file version 2",
+    "file": "shell-ipc/a/src/drive/vault.rs",
+    "find": "file.set(\"version\", JsonValue::Number(1.0));",
+    "replace": "file.set(\"version\", JsonValue::Number(2.0));",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "vault ignores the file version",
+    "file": "shell-ipc/a/src/drive/vault.rs",
+    "find": "if *version != 1.0 || !self.cipher.available() {",
+    "replace": "if !self.cipher.available() {",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "Zotero is looked for on the next port",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "port: ZOTERO_INTEGRATION_PORT as u16,",
+    "replace": "port: ZOTERO_INTEGRATION_PORT as u16 + 1,",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the opening frame names template version 2",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"templateVersion\", JsonValue::Number(1.0));",
+    "replace": "object.set(\"templateVersion\", JsonValue::Number(2.0));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a frame with transaction id 1 is ignored instead of 0",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if frame.transaction_id == 0 {",
+    "replace": "if frame.transaction_id == 1 {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an array of two elements passes the command pattern",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Array(items) if items.len() == 1 => command_text(&items[0]),",
+    "replace": "IpcValue::Array(items) if items.len() == 2 => command_text(&items[0]),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a request that does not have the shape is worded differently",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Err(\"Invalid Zotero integration request\".to_owned())",
+    "replace": "Err(\"Invalid Zotero request\".to_owned())",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a request that does not parse is answered without ERR:",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "payload: format!(\"ERR:{message}\"),",
+    "replace": "payload: format!(\"{message}\"),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed answer is not marked ERR:",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Err(message) => format!(\"ERR:{message}\"),",
+    "replace": "Err(message) => format!(\"ERR {message}\"),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed answer without an error is worded differently",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "None => \"Zotero document operation failed\".to_owned(),",
+    "replace": "None => \"Zotero operation failed\".to_owned(),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question event has another name",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "const REQUEST_EVENT: &str = \"zotero:request\";",
+    "replace": "const REQUEST_EVENT: &str = \"zotero:ask\";",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question's arguments are not sent",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"args\", JsonValue::Array(request.args));",
+    "replace": "object.set(\"args\", JsonValue::Array(Vec::new()));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question id is not under requestId",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"requestId\", JsonValue::String(request_id));",
+    "replace": "object.set(\"id\", JsonValue::String(request_id));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question ids have a digit fewer",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "format!(\"00000000-0000-4000-8000-{n:012}\")",
+    "replace": "format!(\"00000000-0000-4000-8000-{n:011}\")",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an answer from another view is taken",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": ".is_none_or(|waiter| waiter.view != cx.sender.view)",
+    "replace": ".is_none_or(|_| false)",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an answer with ok 0 is a success",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Some(IpcValue::Number(n)) => *n != 0.0 && !n.is_nan(),",
+    "replace": "Some(IpcValue::Number(_)) => true,",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an error that is an array is worded as an object",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Array(items) => items\n            .iter()\n            .map(|item| match item {",
+    "replace": "IpcValue::Array(items) if items.is_empty() => items\n            .iter()\n            .map(|item| match item {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "null inside an error array is worded null",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Null | IpcValue::Undefined => String::new(),",
+    "replace": "IpcValue::Null | IpcValue::Undefined => \"null\".to_owned(),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an oversized payload is not a failure of the run",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "socket.destroy(Some(&message));",
+    "replace": "socket.destroy(None);",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "Document_complete does not end the connection",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if command == \"Document_complete\" {",
+    "replace": "if command == \"Document_completed\" {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a refused connection is not told from another failure",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "format!(\"connect ECONNREFUSED {host}:{port}\")",
+    "replace": "format!(\"connect ECONNRESET {host}:{port}\")",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a second command of a running view is let through",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if state.runs.contains_key(&view) {",
+    "replace": "if false && state.runs.contains_key(&view) {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed run is told as a success",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Some(message) => run_failed(&message),\n                        None => command_ok(),",
+    "replace": "Some(_) => command_ok(),\n                        None => command_ok(),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "skills-changed-event-wrong-channel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".emit(Target::All, CHANGED, Vec::new())",
+    "replace": ".emit(Target::All, DROPPED, Vec::new())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "skills-dropped-event-wrong-channel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".emit(Target::All, DROPPED, Vec::new())",
+    "replace": ".emit(Target::All, CHANGED, Vec::new())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "any-window-may-manage",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "self.main == Some(sender.view)",
+    "replace": "self.main.is_some()",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "agent-window-is-a-docs-window",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "sender.surface == Surface::ShellAgent",
+    "replace": "sender.surface == Surface::Docs",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "settings-open-on-wrong-page",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "JsonValue::String(\"skills\".into())",
+    "replace": "JsonValue::String(\"agents\".into())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "import-temp-folder-renamed",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".join(\"seuoffice-skills\")",
+    "replace": ".join(\"skills\")",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "template-copies-folder-renamed",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".join(\"seuoffice-template-copies\")",
+    "replace": ".join(\"template-copies\")",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "preview-end-goes-to-every-view",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "Target::View(view_of(owner_id))",
+    "replace": "Target::All",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "picked-paths-dropped",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "result.set(\"filePaths\", JsonValue::Array(paths));",
+    "replace": "result.set(\"filePaths\", JsonValue::Array(Vec::new()));",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "dialog-properties-dropped",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "properties: strings_of(options.get(\"properties\")),",
+    "replace": "properties: Vec::new(),",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "agent-notice-never-due",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "Ok(agent_skill_notice_due(&self.env.settings_path()))",
+    "replace": "Ok(false)",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "copy-follows-wrong-panel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "view_of(contents_id), view_of(opener_id)",
+    "replace": "view_of(opener_id), view_of(contents_id)",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "preview-original-loses-file-name",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "IpcValue::String(file_name)",
+    "replace": "IpcValue::String(String::new())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "the naming asks in Korean whatever the UI language",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": ".get_or_insert_with(|| ctx.ui_lang())",
+    "replace": ".get_or_insert_with(|| \"ko\".to_owned())",
+    "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "the settings file is read under another name",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": "user_data.join(\"ai-settings.json\")",
+    "replace": "user_data.join(\"ai-settings.jsonx\")",
+    "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "a failed chat is a name",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": "self.timed_out = result.timed_out;\n                result.outcome",
+    "replace": "self.timed_out = result.timed_out;\n                ChatOutcome::Reply { content: Some(\"Fixed\".into()) }",
+    "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "the settings file is not migrated to a notice version on read",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "let raw = match with_migrated_subscription_notice_version(&raw) {",
+    "replace": "let raw = match with_migrated_subscription_notice_version(&raw).and(None::<JsonValue>) {",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "ai:settings-changed is not sent after a settings write",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "events.emit(Target::All, SETTINGS_CHANGED, Vec::new());",
+    "replace": "let _ = (&events, SETTINGS_CHANGED);",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "status changes go to the shell surface only",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "broadcast_events.emit(Target::All, CHANGED, vec![from_json(statuses)]);",
+    "replace": "broadcast_events.emit(Target::Surface(shell_contract::Surface::Shell), CHANGED, vec![from_json(statuses)]);",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "the ChatGPT install help opens a vendor CLI page instead of the usage page",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "if id == \"chatgpt\" {",
+    "replace": "if id == \"chatgpt-never\" {",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "the settings file is read and written under another name",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": ".join(\"ai-settings.json\")",
+    "replace": ".join(\"ai-settings.jsn\")",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "generate-make-outsider-true",
+    "file": "shell-ipc/a/src/generate.rs",
+    "find": "return reply.reply(Ok(IpcValue::Bool(false)));",
+    "replace": "return reply.reply(Ok(IpcValue::Bool(true)));",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-darwin-flipped",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "crate::secrets::PLATFORM == \"darwin\"",
+    "replace": "crate::secrets::PLATFORM != \"darwin\"",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-state-to-all-views",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": ".emit(Target::View(view), channels::STATE, vec![ipc_of(&value)]);",
+    "replace": ".emit(Target::All, channels::STATE, vec![ipc_of(&value)]);",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-window-contents-id-zero",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": ".map_or(f64::NAN, |ViewId(id)| f64::from(id))",
+    "replace": ".map_or(0.0, |ViewId(id)| f64::from(id))",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-conversions-offered",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "self.shell().can_open_converted()",
+    "replace": "true",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-picker-parent-zero",
+    "file": "shell-ipc/a/src/generate.rs",
+    "find": "let parent = WindowId(window as u32);",
+    "replace": "let parent = WindowId(0);",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-size-zero",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "size: meta.len() as f64,",
+    "replace": "size: 0.0,",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "snapshot restore takes the next id",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "Some(IpcValue::Number(id)) => *id,",
+    "replace": "Some(IpcValue::Number(id)) => *id + 1.0,",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "a TypeError is named Error",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "name: Some(if type_error { \"TypeError\" } else { \"Error\" }.into()),",
+    "replace": "name: Some(\"Error\".into()),",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "the invalid template name text changes",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "\"템플릿 이름이 잘못되었습니다\"",
+    "replace": "\"템플릿 이름이 잘못됨\"",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "reject answers the opposite",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": ".is_some_and(|sessions| sessions.proposal_reject(cx.sender.view));",
+    "replace": ".is_some_and(|sessions| !sessions.proposal_reject(cx.sender.view));",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "accept never finds a proposal",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": ".and_then(|sessions| sessions.proposal_accept(cx.sender.view));",
+    "replace": ".and_then(|_sessions| None::<(IpcValue, u64)>);",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "media roots ignore the deck's folder",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "let session_path = core.session_path(view);",
+    "replace": "let session_path: Option<String> = None;",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "the failure log's clock is one millisecond late",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "(self.core.now)());",
+    "replace": "(self.core.now)() + 1.0);",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "disconnect writes nothing",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "disconnect(&mut bridge, arg(&args, 0).as_ref());",
+    "replace": "let _ = (&mut bridge, arg(&args, 0));",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "quota of Gemini is undefined, not null",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "return reply.reply(Ok(IpcValue::Null));",
+    "replace": "return reply.reply(Ok(IpcValue::Undefined));",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "an unknown provider is a network failure",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "FreeConnectResult::Failed(FreeConnectFailure::Invalid).to_json(),",
+    "replace": "FreeConnectResult::Failed(FreeConnectFailure::Network).to_json(),",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "the key page never opens",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "self.os.open_external(url)",
+    "replace": "Err::<(), String>(\"blocked\".to_owned())",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "app-ai-image: prompt not trimmed",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "let prompt = trim(&request.prompt).to_owned();",
+    "replace": "let prompt = request.prompt.clone();",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: ratio dropped from the Codex request",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "            AiImageBackend::Codex => Plan::Codex(CodexImageRequest {\n                prompt,\n                aspect_ratio: request.aspect_ratio.clone(),",
+    "replace": "            AiImageBackend::Codex => Plan::Codex(CodexImageRequest {\n                prompt,\n                aspect_ratio: None,",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: unavailable loses its code",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "                (\"errorCode\", text(\"unavailable\")),",
+    "replace": "",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "app-ai-image: a Codex failure rejects",
+    "file": "shell-ipc/a/src/app_ai_image.rs",
+    "find": "let answer = outcome.unwrap_or_else(|error| failure(&error));",
+    "replace": "let answer = outcome.unwrap_or_else(|error| text(error.message.clone()));",
+    "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "mcp-settings-sender-any",
+    "file": "shell-ipc/a/src/mcp.rs",
+    "find": ".is_some_and(|view| f64::from(view.0) == sender_id)",
+    "replace": ".is_some_and(|_| true)",
+    "groups": ["a/mcp-servers"]
+  },
+  {
+    "name": "mcp-open-settings-no-home-tab",
+    "file": "shell-ipc/a/src/mcp.rs",
+    "find": "env.ui.show_home_tab();",
+    "replace": "let _ = env.ui.clone();",
+    "groups": ["a/mcp-tools"]
+  },
+  {
+    "name": "mcp-docs-command-channel",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "Kind::Docs => \"docs:mcp-command\",",
+    "replace": "Kind::Docs => \"sheets:mcp-command\",",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "mcp-bridge-payload-dropped",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "message.set(\"payload\", payload.clone());",
+    "replace": "let _ = payload;",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "mcp-bridge-alive-always",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "view_of(wc_id).is_some_and(|view| self.common.services.views.sender_of(view).is_some())",
+    "replace": "view_of(wc_id).is_some()",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "ai-core: media test text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "test_failure(\"No media provider to test\")",
+    "replace": "test_failure(\"No media provider to test!\")",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: search test text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "test_failure(\"No search provider to test\")",
+    "replace": "test_failure(\"No search provider to test!\")",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: gif mime",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "\"image/gif\"",
+    "replace": "\"image/webp\"",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: codex off text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "\"Codex is turned off in this app\"",
+    "replace": "\"Codex is off\"",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: headless write",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "if self.host.is_headless_mode() {",
+    "replace": "if !self.host.is_headless_mode() {",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: unknown fields dropped",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "Some(self.codec()), &merged",
+    "replace": "Some(self.codec()), settings",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: settings-changed only to docs",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "self.events.emit(Target::All, SETTINGS_CHANGED, Vec::new());",
+    "replace": "self.events.emit(Target::Surface(shell_contract::Surface::Docs), SETTINGS_CHANGED, Vec::new());",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: stream event name",
+    "file": "shell-ipc/a/src/ai_core/stream.rs",
+    "find": "\"ai:stream-chunk\",",
+    "replace": "\"ai:stream-chunks\",",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "a search without a limit returns nine hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SEARCH_LIMIT_DEFAULT: f64 = 8.0;",
+    "replace": "const KB_SEARCH_LIMIT_DEFAULT: f64 = 9.0;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a search returns up to 21 hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SEARCH_LIMIT_MAX: f64 = 20.0;",
+    "replace": "const KB_SEARCH_LIMIT_MAX: f64 = 21.0;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index is refreshed when 30 seconds stale",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const INDEX_STALE_MS: u64 = 60_000;",
+    "replace": "const INDEX_STALE_MS: u64 = 30_000;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project that is not available opens a scope",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if !available {",
+    "replace": "if !available && false {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project without a visible test sees every file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let within = project_id.and_then(|id| host.project_visible_test(&id));",
+    "replace": "let within = project_id.map(|id| host.project_visible_test(&id).unwrap_or_else(|| Arc::new(|_: &str| true) as VisibleTest));",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "every path reads as starred",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let allowed = self.starred_files().contains(&path)",
+    "replace": "let allowed = true",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the conversion's temporary folder stays",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "    let _ = fs::remove_dir_all(&dir);\n    made",
+    "replace": "    let _ = &dir;\n    made",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a date limit reads as no number",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(IpcValue::Date(ms)) => *ms,",
+    "replace": "Some(IpcValue::Date(_)) => f64::NAN,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a null limit reads as no number",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(IpcValue::Null) => 0.0,",
+    "replace": "Some(IpcValue::Null) => f64::NAN,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a blank query reaches the index",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if trim(&q).is_empty() || !self.host.has_file_index() {",
+    "replace": "if q.is_empty() || !self.host.has_file_index() {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index is not refreshed",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "self.host.refresh_file_index_if_stale(INDEX_STALE_MS);",
+    "replace": "let _ = INDEX_STALE_MS;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a read without a path is checked against the scope first",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if path.is_empty() {",
+    "replace": "if false {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a scope is opened for no window",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let KbOpenScope { group, project_id } = parse_kb_open_scope(raw.as_ref());",
+    "replace": "let owner = 0;\n        let KbOpenScope { group, project_id } = parse_kb_open_scope(raw.as_ref());",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "closing a scope leaves it open",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "lock(&self.scopes).close(i64::from(cx.sender.view.0), call_arg(&args).as_ref());",
+    "replace": "let _ = call_arg(&args);",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a scoped list shows every starred file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "list_knowledge_files(&starred)",
+    "replace": "list_knowledge_files(&self.starred_files())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a group-scoped search looks in every starred file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": ".narrow(owner, raw.as_ref(), &starred, || self.starred_groups())",
+    "replace": ".narrow(owner, raw.as_ref(), &starred, || self.starred_groups())\n                .map(|_| starred.clone())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a stale file is quoted",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let starred = self.host.paths_indexed_as_on_disk(&self.starred_files());",
+    "replace": "let starred = self.starred_files();",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "project hits need not be indexed as on disk",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "&mut |paths| host.paths_indexed_as_on_disk(paths),",
+    "replace": "&mut |paths| paths.to_vec(),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the project's visible files are not searched",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "-> Result<bool, Thrown> { Ok(test(path)) }",
+    "replace": "-> Result<bool, Thrown> {\n            let _ = &test;\n            Ok(false)\n        }",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the open documents are never asked",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "holder.set_open_files_source(Some(Box::new(move || host.open_files())));",
+    "replace": "holder.set_open_files_source(Some(Box::new(move || {\n        let _ = &host;\n        Ok(Vec::new())\n    })));",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the parser's message is dropped",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "self.0.parse_file_to_text(path)",
+    "replace": "self.0\n            .parse_file_to_text(path)\n            .map(|parsed| ParsedFile {\n                error: None,\n                ..parsed\n            })",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project scope with a group reaches every starred file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(JsonValue::String(group)) => KbStarredReach::Group(group),",
+    "replace": "Some(JsonValue::String(_)) => KbStarredReach::All,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project scope without a group reaches no starred file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "None | Some(JsonValue::Null) => KbStarredReach::All,",
+    "replace": "None | Some(JsonValue::Null) => KbStarredReach::None,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project scope accepts a group that is not a name",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(_) => return reply.reply(Err(error(KB_GROUP_EMPTY))),",
+    "replace": "Some(_) => KbStarredReach::All,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project read is made as window 0",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Ok(host.project_read(view, project_id, target, at))",
+    "replace": "Ok(host.project_read(ViewId(0), project_id, target, at))",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project read ignores the offset",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Ok(host.project_read(view, project_id, target, at))",
+    "replace": "Ok(host.project_read(view, project_id, target, 0.0))",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a read always starts at the first page",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let offset = js_number(field(req, \"offset\"));",
+    "replace": "let offset = 0.0 * js_number(field(req, \"offset\"));",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the text cache is forgotten between reads",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let cache = self.cache.clone();",
+    "replace": "let cache = Arc::new(Mutex::new(KbTextCache::new()));",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index pool is one hit short",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "&mut |q, pool, within| host.index_search(q, pool, within),",
+    "replace": "&mut |q, pool, within| host.index_search(q, pool - 1.0, within),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a search limit of 1 gives two hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "limit.floor().max(1.0)",
+    "replace": "limit.floor().max(2.0)",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a new document is not put on the recent list",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "host.record_recent_file(path);",
+    "replace": "let _ = path;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project document is written under another name",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": ".write_project_document(&self.placement, file_name, bytes.to_vec())",
+    "replace": ".write_project_document(&self.placement, \"Untitled.md\", bytes.to_vec())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a document's trailing blanks are cut when written",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "atomic_write_file(path, text.as_bytes())",
+    "replace": "atomic_write_file(path, text.trim_end().as_bytes())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a taken name is overwritten",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Ok(unique_path_in(dir, file_name))",
+    "replace": "Ok(format!(\"{dir}/{file_name}\"))",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a title is used as it is",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Ok(sanitize_file_base(title))",
+    "replace": "Ok(title.to_owned())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a failing CLI is not an error",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "self.host.markdown_to_docx(markdown, out).map_err(Thrown)",
+    "replace": "self.host.markdown_to_docx(markdown, out).or(Ok(()))",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a date scope is read as no scope",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "IpcValue::Date(_) | IpcValue::Bytes(..) => IpcValue::Object(Vec::new()),",
+    "replace": "IpcValue::Date(_) | IpcValue::Bytes(..) => IpcValue::Undefined,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a listed file's size is one byte more",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "IpcValue::Number(file.size_bytes as f64)",
+    "replace": "IpcValue::Number((file.size_bytes + 1) as f64)",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a hit's snippet is its name",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "IpcValue::String(hit.snippet.clone())",
+    "replace": "IpcValue::String(hit.name.clone())",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a page's total is its offset",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "IpcValue::Number(page.total_chars as f64)",
+    "replace": "IpcValue::Number(page.offset)",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the prefs a window sets are not written",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "let _ = write_agent_prefs(&self.sh.app_settings(), &prefs.to_json());",
+    "replace": "let _ = &prefs;",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "project skills are turned on when asked off",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            on,\n            PLATFORM,",
+    "replace": "            !on,\n            PLATFORM,",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the folder dialog asks for nothing",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "                properties,\n                ..FileDialog::default()",
+    "replace": "                properties: Vec::new(),\n                ..FileDialog::default()",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "an allow lasts only once",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            answer.scope.as_deref(),",
+    "replace": "            None,",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the window gets no event of its own session",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "if i64::from(view.0) != owner_id ||",
+    "replace": "if i64::from(view.0) == owner_id ||",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the project skills stay in a session that was not allowed them",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "object.get(\"source\")\n                                        != Some(&JsonValue::String(\"project\".into()))",
+    "replace": "object.get(\"source\")\n                                        == Some(&JsonValue::String(\"project\".into()))",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "answer answers null instead of undefined",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "                    agent_answer(host, manager, sender, a(0), a(1), a(2), a(3));\n                    IpcValue::Undefined",
+    "replace": "                    agent_answer(host, manager, sender, a(0), a(1), a(2), a(3));\n                    IpcValue::Null",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a message refused by the program is answered as sent",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "reply.reply(Ok(IpcValue::Bool(job.resume(answer))));",
+    "replace": "reply.reply(Ok(IpcValue::Bool({ let _ = job.resume(answer); true })));",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a session event does not reach the manager",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            .on_event(&mut w.host.io, owner_id, session_id, event);",
+    "replace": "            .on_event(&mut w.host.io, owner_id, session_id, &JsonValue::Null);",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the runtime ignores the clock it is handed",
+    "file": "shell-ipc/a/src/runtime/mod.rs",
+    "find": "Some(RuntimeClock(clock)) => Box::new(move || clock()),",
+    "replace": "Some(RuntimeClock(_)) => Box::new(now_ms),",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "template selection: a set is not stored",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "                .set(&document, arg(&args, 0).as_ref())",
+    "replace": "                .get(&document)",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: a window without a deck reads the first deck",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": ".find_map(|documents| documents.document(view))",
+    "replace": ".find_map(|documents| documents.document(view).or_else(|| documents.document(ViewId(1))))",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: updatedAt is not sent",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "    object.set(\"updatedAt\", JsonValue::Number(selection.updated_at));",
+    "replace": "",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: the store ignores the pinned clock",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "                        now: self.clock.clone().map(|RuntimeClock(clock)| {",
+    "replace": "                        now: None::<RuntimeClock>.map(|RuntimeClock(clock)| {",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "a skill card or install proposal is sent without its payload",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            vec![from_json(&json_value_from_serde(payload))],",
+    "replace": "            vec![IpcValue::Null],",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a skill card or install proposal is sent on the session event channel",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            Target::View(self.owner),\n            channel,\n",
+    "replace": "            Target::View(self.owner),\n            \"agent-window:event\",\n",
+    "groups": ["a/agent-window"]
+  }
+]

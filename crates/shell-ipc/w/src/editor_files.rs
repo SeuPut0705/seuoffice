@@ -32,6 +32,7 @@ use shell_contract::{Batch, ContentsHost, DialogsHost, IpcValue, MainWindowHost,
 
 use crate::convert::field;
 use crate::handle;
+use crate::shared_dialog::with_shared_memory;
 
 // ---- hosts ----
 
@@ -982,13 +983,9 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             ),
         );
         let mut dialog = HostDialog(dialogs.clone());
-        let result = show_open_dialog_with_memory(
-            &mut memory.lock().unwrap(),
-            &mut dialog,
-            parent.as_ref(),
-            &options,
-            None,
-        );
+        let result = with_shared_memory(&memory, &mut dialog, |memory, dialog| {
+            show_open_dialog_with_memory(memory, dialog, parent.as_ref(), &options, None)
+        });
         let JsonValue::Object(result) = result else {
             return Ok(IpcValue::Null);
         };
