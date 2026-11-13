@@ -39,9 +39,14 @@ pub struct FeedConfig {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Provider {
-    GitHub { owner: String, repo: String },
+    GitHub {
+        owner: String,
+        repo: String,
+    },
     /// `url` ends with `/`
-    Generic { url: String },
+    Generic {
+        url: String,
+    },
 }
 
 impl FeedConfig {
@@ -178,7 +183,10 @@ impl Feed {
         }
     }
 
-    fn check_inner(&self, current: &str) -> Result<(CheckResult, Option<Found>, Value), UpdateError> {
+    fn check_inner(
+        &self,
+        current: &str,
+    ) -> Result<(CheckResult, Option<Found>, Value), UpdateError> {
         let client = client()?;
         let (base, entries) = match &self.config.provider {
             Provider::Generic { url } => (url.clone(), Vec::new()),
@@ -198,10 +206,15 @@ impl Feed {
             }
         };
         let yml = get_text(&client, &format!("{base}{}", self.channel_file()))?;
-        let info = ChannelFile::parse(&yml)
-            .ok_or_else(|| coded("ERR_UPDATER_INVALID_RELEASE_FEED", "the channel file has no version"))?;
+        let info = ChannelFile::parse(&yml).ok_or_else(|| {
+            coded(
+                "ERR_UPDATER_INVALID_RELEASE_FEED",
+                "the channel file has no version",
+            )
+        })?;
         let newer = compare(&info.version, current) == std::cmp::Ordering::Greater
-            || (self.allow_downgrade && compare(&info.version, current) == std::cmp::Ordering::Less);
+            || (self.allow_downgrade
+                && compare(&info.version, current) == std::cmp::Ordering::Less);
         let pre = info.version.contains('-');
         let available = newer && (self.allow_prerelease || !pre);
         let result = CheckResult {
@@ -211,9 +224,12 @@ impl Feed {
         if !available {
             return Ok((result, None, Value::Null));
         }
-        let file = info
-            .pick()
-            .ok_or_else(|| coded("ERR_UPDATER_INVALID_RELEASE_FEED", "no file for this platform"))?;
+        let file = info.pick().ok_or_else(|| {
+            coded(
+                "ERR_UPDATER_INVALID_RELEASE_FEED",
+                "no file for this platform",
+            )
+        })?;
         let notes = if entries.is_empty() {
             info.release_notes.map_or(Value::Null, Value::String)
         } else {
@@ -271,7 +287,9 @@ impl Feed {
         let pending = self.cache_dir().join("pending");
         fs::create_dir_all(&pending).map_err(io)?;
         let target = pending.join(name);
-        if target.is_file() && sha512_of(&target).ok().as_deref() == Some(found.file.sha512.as_str()) {
+        if target.is_file()
+            && sha512_of(&target).ok().as_deref() == Some(found.file.sha512.as_str())
+        {
             return Ok(target);
         }
         let part = pending.join(format!("{name}.part"));
@@ -298,7 +316,11 @@ impl Feed {
         let total = found
             .file
             .size
-            .or_else(|| response.content_length().map(|l| l + if resumed { have } else { 0 }))
+            .or_else(|| {
+                response
+                    .content_length()
+                    .map(|l| l + if resumed { have } else { 0 })
+            })
             .unwrap_or(0);
         let mut transferred = if resumed { have } else { 0 };
         let mut last_percent = -1.0;
@@ -403,7 +425,10 @@ fn get_text(client: &reqwest::blocking::Client, url: &str) -> Result<String, Upd
 }
 
 /// The tag `/releases/latest` redirects to (`.../releases/tag/<tag>`)
-fn latest_release_tag(client: &reqwest::blocking::Client, site: &str) -> Result<String, UpdateError> {
+fn latest_release_tag(
+    client: &reqwest::blocking::Client,
+    site: &str,
+) -> Result<String, UpdateError> {
     let response = client
         .get(format!("{site}/releases/latest"))
         .send()
@@ -438,7 +463,10 @@ fn no_release(message: &str) -> UpdateError {
 
 /// electron-updater's HttpError: its code names the status
 fn http(status: u16) -> UpdateError {
-    coded(&format!("HTTP_ERROR_{status}"), &format!("HttpError: {status}"))
+    coded(
+        &format!("HTTP_ERROR_{status}"),
+        &format!("HttpError: {status}"),
+    )
 }
 
 fn net(error: reqwest::Error) -> UpdateError {
@@ -505,7 +533,9 @@ impl ChannelFile {
                 if let Some((k, v)) = line.split_once(':') {
                     match k.trim() {
                         "version" => version = Some(unquote(v)),
-                        "releaseNotes" => release_notes = Some(unquote(v)).filter(|s| !s.is_empty()),
+                        "releaseNotes" => {
+                            release_notes = Some(unquote(v)).filter(|s| !s.is_empty())
+                        }
                         _ => {}
                     }
                 }
@@ -594,7 +624,9 @@ fn xml_unescape(text: &str) -> String {
 fn compare(a: &str, b: &str) -> std::cmp::Ordering {
     let split = |v: &str| {
         let v = v.trim_start_matches('v');
-        let (core, pre) = v.split_once('-').map_or((v, None), |(c, p)| (c, Some(p.to_owned())));
+        let (core, pre) = v
+            .split_once('-')
+            .map_or((v, None), |(c, p)| (c, Some(p.to_owned())));
         let nums: Vec<u64> = core.split('.').map(|n| n.parse().unwrap_or(0)).collect();
         (nums, pre)
     };
@@ -659,7 +691,8 @@ releaseDate: '2026-11-14T00:00:00.000Z'
             }
         );
         let generic =
-            FeedConfig::parse("provider: generic\nurl: http://127.0.0.1:8765\nchannel: stable\n").unwrap();
+            FeedConfig::parse("provider: generic\nurl: http://127.0.0.1:8765\nchannel: stable\n")
+                .unwrap();
         assert_eq!(
             generic.provider,
             Provider::Generic {
@@ -705,7 +738,11 @@ releaseDate: '2026-11-14T00:00:00.000Z'
         fs::create_dir_all(&dir).unwrap();
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let channel = if cfg!(target_os = "macos") { "latest-mac.yml" } else { "latest.yml" };
+        let channel = if cfg!(target_os = "macos") {
+            "latest-mac.yml"
+        } else {
+            "latest.yml"
+        };
         std::thread::spawn(move || {
             for stream in listener.incoming().take(2).flatten() {
                 let mut stream = stream;
@@ -738,7 +775,9 @@ releaseDate: '2026-11-14T00:00:00.000Z'
                 update_version: Some("0.13.0".into())
             }))
         );
-        assert!(matches!(&newer.events[..], [UpdaterEvent::UpdateAvailable { version, .. }] if version == "0.13.0"));
+        assert!(
+            matches!(&newer.events[..], [UpdaterEvent::UpdateAvailable { version, .. }] if version == "0.13.0")
+        );
         let same = feed.check("0.13.0");
         assert_eq!(
             same.result,

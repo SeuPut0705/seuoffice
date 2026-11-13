@@ -620,6 +620,8 @@ pub fn on_run_event(app: &AppHandle, event: &RunEvent) {
         return;
     }
     api.prevent_exit();
+    // the run ends on purpose: the next start reports no crash
+    super::crash::mark_ended();
     let app = app.clone();
     post_core(move |_, _| {
         with_driver(|updater, shell| {

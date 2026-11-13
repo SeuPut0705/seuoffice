@@ -297,7 +297,9 @@ fn write_start_mark() {
 /// runs it instead; its exit code is this process's
 fn run_as_node() -> i32 {
     let Some(node) = bundled_node() else {
-        eprintln!("seuoffice: the command line's Node runtime is not installed (resources/cli/node)");
+        eprintln!(
+            "seuoffice: the command line's Node runtime is not installed (resources/cli/node)"
+        );
         return 1;
     };
     let mut command = std::process::Command::new(node);
@@ -385,7 +387,10 @@ mod tests {
             .map(str::to_owned)
             .into();
         let paths = collect(&argv, Some(&dir));
-        assert_eq!(paths, vec![dir.join("a.docx").to_string_lossy().into_owned()]);
+        assert_eq!(
+            paths,
+            vec![dir.join("a.docx").to_string_lossy().into_owned()]
+        );
         let _ = fs::remove_dir_all(dir);
     }
 }
