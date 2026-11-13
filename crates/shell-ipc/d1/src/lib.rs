@@ -61,6 +61,33 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     slides::insert_fakes(hosts, case);
 }
 
+/// Runs the trigger `name` (`d1/<app>:<what>`, tools/ipc-diff/README.md):
+/// what the shell or another batch does to a D1 editor outside its channels
+/// (a menu's save, a close, the MCP server's read), so the events it emits
+/// are compared. False when the name is not D1's.
+#[cfg(feature = "probe")]
+pub fn probe_trigger(
+    name: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    provided: &std::rc::Rc<shell_contract::provided::Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
+) -> bool {
+    let Some(what) = name.strip_prefix("d1/") else {
+        return false;
+    };
+    match what.split_once(':').map(|(app, _)| app) {
+        Some("diagram") => diagram::probe_trigger(what, view, args, services, provided, then),
+        Some("mindmap") => mindmap::probe_trigger(what, view, args, services, provided, then),
+        Some("sheets" | "workbook") => {
+            sheets::probe_trigger(what, view, args, services, provided, then)
+        }
+        Some("slides") => slides::probe_trigger(what, view, args, services, provided, then),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use shell_contract::ipc::ChannelKind;

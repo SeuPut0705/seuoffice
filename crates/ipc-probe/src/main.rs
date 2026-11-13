@@ -325,8 +325,17 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                     //           &name, ViewId(view), &args, &services, provided, then),
                     //       _ => false,
                     //   }
-                    let _ = (&name, view, &args, &services, provided, then);
-                    false
+                    match name.split_once('/').map(|(batch, _)| batch) {
+                        Some("d1") => shell_ipc_d1::probe_trigger(
+                            &name,
+                            ViewId(view),
+                            &args,
+                            &services,
+                            provided,
+                            then,
+                        ),
+                        _ => false,
+                    }
                 })
             });
             let answer = if !known {

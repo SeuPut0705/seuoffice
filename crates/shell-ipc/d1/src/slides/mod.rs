@@ -481,3 +481,17 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
 pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
     fake::insert(hosts, case);
 }
+
+/// This app's triggers for [`crate::probe_trigger`]: `name` without its
+/// `d1/` prefix; false when it is not one of them
+#[cfg(feature = "probe")]
+pub fn probe_trigger(
+    _name: &str,
+    _view: shell_contract::ViewId,
+    _args: &serde_json::Value,
+    _services: &Services,
+    _provided: &std::rc::Rc<shell_contract::provided::Provided>,
+    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+) -> bool {
+    false
+}
