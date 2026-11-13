@@ -23,7 +23,16 @@ const A16 = 'http://schemas.microsoft.com/office/drawing/2014/main'
 const shape = (cNvPr: string) =>
   `<p:sp ${NS}><p:nvSpPr>${cNvPr}<p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/>` +
   '<p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang="en-US"/><a:t>x</a:t></a:r></a:p></p:txBody></p:sp>'
-const element = (xml: string) => ({ anchor: { originalXml: xml } }) as unknown as SlideElement
+/** A whole element around `originalXml`: the engine reads a model, not a partial one. */
+const elementOf = (originalXml: string, nvId?: string): SlideElement => ({
+  id: 'el',
+  type: 'passthrough',
+  kind: 'unknown',
+  anchor: { spIndex: 0, originalXml, range: [0, originalXml.length] },
+  transform: { offset: { x: 0, y: 0, cx: 0, cy: 0 }, rot: 0, flipH: false, flipV: false },
+  ...(nvId === undefined ? {} : { nvId }),
+})
+const element = (xml: string) => elementOf(xml)
 
 const listsIn = (xml: string) => xml.match(/<a:extLst\b/g)?.length ?? 0
 const idsIn = (xml: string) => xml.match(/creationId\b/g)?.length ?? 0
@@ -86,7 +95,7 @@ describe.each(CREATION)('a creation id %s', (_form, ext) => {
     const grp = element(
       `<p:grpSp ${NS}><p:nvGrpSpPr><p:cNvPr id="1" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${xml}</p:grpSp>`,
     )
-    const child = { nvId: '7', anchor: { originalXml: '' } } as unknown as SlideElement
+    const child = elementOf('', '7')
     expect(groupChildDurableId(grp, child)).toBe('e_1a2b3c4d')
   })
 })

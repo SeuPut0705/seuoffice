@@ -1,0 +1,50 @@
+name: seuoffice bench pptx
+
+# The render benchmark of the pptx engine's switch to the wasm binding (batch
+# C2, crates/pptx-engine/C2-PLAN.md): tools/pptx-diff/bench-render.ts opens and
+# lays out the five largest decks the gate has, once with the frozen TypeScript
+# engine, once with the binding, and once per render-path export taken from
+# the TypeScript. Started by pushing the commit to measure as bench-pptx/<name>,
+# or by hand once the file is on main:
+#   gh workflow run "seuoffice bench pptx" --ref <branch>
+
+on:
+  push:
+    branches: ['bench-pptx/**']
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: Timed rounds of each configuration, after three that warm up
+        required: false
+        default: '100'
+
+concurrency:
+  group: seuoffice-bench-pptx-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - run: npm ci --ignore-scripts
+      - run: npm run build:wasm
+      - name: Benchmark
+        run: npx tsx tools/pptx-diff/bench-render.ts --rounds ${{ inputs.rounds || '100' }} --json bench-out/pptx-render.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pptx-render-bench
+          path: bench-out/
+          if-no-files-found: ignore

@@ -17,8 +17,8 @@ import {
   setShapeCustomGeometry,
   setShapePresetGeometry,
   patchSlideXml,
-} from '../../packages/pptx-engine/src/index'
-import type { CallSpec, Input } from '../docx-diff/calls-spec'
+} from './reference/index'
+import type { CallSpec } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 
 const PART = 'ppt/slides/slide1.xml'
@@ -68,9 +68,9 @@ const PIC_TEXTS = [
       `<mc:Fallback>${pic(2, BLIP)}</mc:Fallback></mc:AlternateContent>`,
   ),
   // the references as XML allows: spaced `=`, single quotes, a reference, an extra attribute first
-  slideXml(pic(2, "<a:blip r:embed = 'rId9' r:link = \"rId8\"/>")),
+  slideXml(pic(2, '<a:blip r:embed = \'rId9\' r:link = "rId8"/>')),
   slideXml(pic(2, '<a:blip r:embed="rId&#57;"/>')),
-  slideXml(pic(2, "<a:blip note=\"a>b\" r:link = 'rId8'/>")),
+  slideXml(pic(2, '<a:blip note="a>b" r:link = \'rId8\'/>')),
   slideXml(
     '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">' +
       '<mc:Choice Requires="am3d" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
@@ -83,17 +83,38 @@ const PIC_TEXTS = [
   ),
 ]
 const SHAPES = slideXml(
-  sp(2, XFRM + '<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>'),
-  sp(3, XFRM, '<a:bodyPr wrap="none" lIns="1"><a:normAutofit fontScale="50000"/></a:bodyPr>', ' txBox="1"'),
-  sp(4, XFRM + '<a:custGeom><a:pathLst/></a:custGeom><a:ln><a:effectLst/></a:ln>', '<a:bodyPr anchor="b"/>'),
-  sp(5, XFRM + '<a:prstGeom prst="rect"/><a:effectLst><a:outerShdw blurRad="1"/><a:fillOverlay/><a:glow rad="1"/></a:effectLst><a:scene3d/>', '<a:bodyPr><a:prstTxWarp prst="textPlain"/></a:bodyPr>'),
-  sp(6, '<a:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></a:xfrm>', '<a:bodyPr><a:noAutofit/></a:bodyPr>', ' txBox="1"'),
+  sp(
+    2,
+    XFRM +
+      '<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>',
+  ),
+  sp(
+    3,
+    XFRM,
+    '<a:bodyPr wrap="none" lIns="1"><a:normAutofit fontScale="50000"/></a:bodyPr>',
+    ' txBox="1"',
+  ),
+  sp(
+    4,
+    XFRM + '<a:custGeom><a:pathLst/></a:custGeom><a:ln><a:effectLst/></a:ln>',
+    '<a:bodyPr anchor="b"/>',
+  ),
+  sp(
+    5,
+    XFRM +
+      '<a:prstGeom prst="rect"/><a:effectLst><a:outerShdw blurRad="1"/><a:fillOverlay/><a:glow rad="1"/></a:effectLst><a:scene3d/>',
+    '<a:bodyPr><a:prstTxWarp prst="textPlain"/></a:bodyPr>',
+  ),
+  sp(
+    6,
+    '<a:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></a:xfrm>',
+    '<a:bodyPr><a:noAutofit/></a:bodyPr>',
+    ' txBox="1"',
+  ),
   sp(7, XFRM, '<a:bodyPr/>', ' txBox="1"'),
   grp(8, sp(9, XFRM)),
   sp(10, '', '<a:bodyPr vert="vert"></a:bodyPr>', ' txBox="1"'),
 )
-const SPTEXTS = [SHAPES]
-
 const at = (slide: number, element: number, rest: Record<string, unknown> = {}, text?: string) =>
   deckInput(BLANK, { slide, element, ...rest }, { part: PART, text: text ?? SHAPES })
 
@@ -102,8 +123,6 @@ const sid = (o: Parameters<Parameters<typeof deckOp>[2]>[1], args: Record<string
 const bytes = (v: unknown) => (v ? Uint8Array.from(v as number[]) : undefined)
 
 const ELEMENTS = [0, 1, 2, 3, 4, 5, 6, 7, 99]
-const _built = (make: (e: number, text: string) => Input, texts = SPTEXTS): Input[] =>
-  texts.flatMap((t) => ELEMENTS.map((e) => make(e, t)))
 
 interface Ctx {
   opened: Parameters<typeof setElementFill>[0]
@@ -125,9 +144,12 @@ export const DECKSHAPE: CallSpec[] = [
     fn: 'pptxDeckshape.index.editPictureSrcRect',
     call: (t, a) => run(t, a, (c, x) => editPictureSrcRect(c.slide, c.id, x.srcRect ?? null)),
     built: PIC_TEXTS.slice(0, 1).flatMap((t) =>
-      [null, { l: 0, t: 0, r: 0, b: 0 }, { l: 1000, t: 0, r: 0, b: 0 }, { l: 1, t: 2, r: 3, b: 4 }].flatMap(
-        (srcRect) => [0, 1, 99].map((e) => at(0, e, { srcRect }, t)),
-      ),
+      [
+        null,
+        { l: 0, t: 0, r: 0, b: 0 },
+        { l: 1000, t: 0, r: 0, b: 0 },
+        { l: 1, t: 2, r: 3, b: 4 },
+      ].flatMap((srcRect) => [0, 1, 99].map((e) => at(0, e, { srcRect }, t))),
     ),
   },
   {
@@ -141,8 +163,23 @@ export const DECKSHAPE: CallSpec[] = [
     fn: 'pptxDeckshape.index.setShapeCustomGeometry',
     call: (t, a) => run(t, a, (c, x) => setShapeCustomGeometry(c.slide, c.id, x.geom)),
     built: [
-      { w: 100, h: 50, cmds: [{ op: 'M', pts: [0, 0] }, { op: 'L', pts: [100, 50] }, { op: 'Z', pts: [] }] },
-      { w: 100, h: 50, cmds: [{ op: 'M', pts: [0, 0] }, { op: 'C', pts: [1, 2, 3, 4, 5, 6] }] },
+      {
+        w: 100,
+        h: 50,
+        cmds: [
+          { op: 'M', pts: [0, 0] },
+          { op: 'L', pts: [100, 50] },
+          { op: 'Z', pts: [] },
+        ],
+      },
+      {
+        w: 100,
+        h: 50,
+        cmds: [
+          { op: 'M', pts: [0, 0] },
+          { op: 'C', pts: [1, 2, 3, 4, 5, 6] },
+        ],
+      },
       { w: 0, h: 50, cmds: [{ op: 'M', pts: [0, 0] }] },
       { w: 1, h: 1, cmds: [] },
       { w: 1, h: 1, cmds: [{ op: 'L', pts: [0, 0] }] },
@@ -154,19 +191,37 @@ export const DECKSHAPE: CallSpec[] = [
   {
     fn: 'pptxDeckshape.index.setShapeAdjustValues',
     call: (t, a) => run(t, a, (c, x) => setShapeAdjustValues(c.slide, c.id, x.adjust)),
-    built: [{ adj: 12345.6 }, { adj1: 1, adj2: -2.5 }, {}, { 'a b': 1 }, { adj: 1e21 }, { '': 1 }].flatMap(
-      (adjust) => ELEMENTS.map((e) => at(0, e, { adjust })),
-    ),
+    built: [
+      { adj: 12345.6 },
+      { adj1: 1, adj2: -2.5 },
+      {},
+      { 'a b': 1 },
+      { adj: 1e21 },
+      { '': 1 },
+    ].flatMap((adjust) => ELEMENTS.map((e) => at(0, e, { adjust }))),
   },
   {
     fn: 'pptxDeckshape.index.setElementTextAnchor',
     call: (t, a) => run(t, a, (c, x) => setElementTextAnchor(c.slide, c.id, x.anchor)),
-    built: ['top', 'middle', 'bottom'].flatMap((anchor) => ELEMENTS.map((e) => at(0, e, { anchor }))),
+    built: ['top', 'middle', 'bottom'].flatMap((anchor) =>
+      ELEMENTS.map((e) => at(0, e, { anchor })),
+    ),
   },
   {
     fn: 'pptxDeckshape.index.autofitGeneratedTextBoxes',
     call: (t, a) => run(t, a, (c) => autofitGeneratedTextBoxes(c.slide)),
-    built: [at(0, 0), at(0, 1, {}, slideXml(sp(2, XFRM, '<a:bodyPr/>', ' txBox="1"'), sp(3, XFRM, '<a:bodyPr></a:bodyPr>', ' txBox="1"')))],
+    built: [
+      at(0, 0),
+      at(
+        0,
+        1,
+        {},
+        slideXml(
+          sp(2, XFRM, '<a:bodyPr/>', ' txBox="1"'),
+          sp(3, XFRM, '<a:bodyPr></a:bodyPr>', ' txBox="1"'),
+        ),
+      ),
+    ],
   },
   {
     fn: 'pptxDeckshape.index.setElementTextBodyProps',
@@ -192,7 +247,19 @@ export const DECKSHAPE: CallSpec[] = [
     built: [
       {},
       { shadow: { color: '#112233', blurRad: 5.5, dist: 3, dirDeg: -45 } },
-      { shadow: { color: '#11223380', blurRad: 0, dist: 0, dirDeg: 400, sx: 2, sy: 1, kxDeg: 3, kyDeg: 4, algn: 'tl' } },
+      {
+        shadow: {
+          color: '#11223380',
+          blurRad: 0,
+          dist: 0,
+          dirDeg: 400,
+          sx: 2,
+          sy: 1,
+          kxDeg: 3,
+          kyDeg: 4,
+          algn: 'tl',
+        },
+      },
       { shadow: { color: 'zz', blurRad: 1, dist: 1, dirDeg: 0, inner: true, sx: 2 } },
       { shadow: null },
       { glow: { color: '#FF0000', radius: 12.4 } },
@@ -204,31 +271,62 @@ export const DECKSHAPE: CallSpec[] = [
       { softEdge: -2 },
       { softEdge: null },
       { shadow: null, glow: null, reflection: null, softEdge: null },
-    ].flatMap((patch) => [...ELEMENTS, 8].map((e) => at(0, e, { patch }))).concat(
-      [{ shadow: { color: '#000000', blurRad: 1, dist: 1, dirDeg: 1 }, softEdge: 3 }, { softEdge: null }].map(
-        (patch) => at(0, 0, { patch }, PIC_TEXTS[0]!),
+    ]
+      .flatMap((patch) => [...ELEMENTS, 8].map((e) => at(0, e, { patch })))
+      .concat(
+        [
+          { shadow: { color: '#000000', blurRad: 1, dist: 1, dirDeg: 1 }, softEdge: 3 },
+          { softEdge: null },
+        ].map((patch) => at(0, 0, { patch }, PIC_TEXTS[0]!)),
+        [0, 1].map((e) =>
+          at(0, e, { patch: { glow: { color: '#00FF00', radius: 1 } } }, PIC_TEXTS[0]!),
+        ),
       ),
-      [0, 1].map((e) => at(0, e, { patch: { glow: { color: '#00FF00', radius: 1 } } }, PIC_TEXTS[0]!)),
-    ),
   },
   {
     fn: 'pptxDeckshape.index.setElementFill',
     call: (t, a) =>
-      run(t, a, (c, x) => setElementFill(c.opened, c.slide, c.id, x.fill, x.groupId ? { groupId: c.a.slide(x.slide).elements[x.group]?.id ?? '' } : {})),
+      run(t, a, (c, x) =>
+        setElementFill(
+          c.opened,
+          c.slide,
+          c.id,
+          x.fill,
+          x.groupId ? { groupId: c.a.slide(x.slide).elements[x.group]?.id ?? '' } : {},
+        ),
+      ),
     built: [
       'none',
       '#00FF00',
       '#00FF0080',
-      { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#0000FF' }], angle: 5400000 },
-      { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#0000FF' }], radial: true },
-      { stops: [{ pos: 0, color: '#FF0000' }], path: 'rect', fillTo: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 } },
-    ].flatMap((fill) => [...ELEMENTS, 8].map((e) => at(0, e, { fill }))).concat(
-      [6, 7].flatMap((_) => [
-        at(0, 0, { fill: '#123456', groupId: true, group: 6 }),
-        at(0, 0, { fill: 'none', groupId: true, group: 0 }),
-        at(0, 0, { fill: 'none', groupId: true, group: 99 }),
-      ]),
-    ),
+      {
+        stops: [
+          { pos: 0, color: '#FF0000' },
+          { pos: 1, color: '#0000FF' },
+        ],
+        angle: 5400000,
+      },
+      {
+        stops: [
+          { pos: 0, color: '#FF0000' },
+          { pos: 1, color: '#0000FF' },
+        ],
+        radial: true,
+      },
+      {
+        stops: [{ pos: 0, color: '#FF0000' }],
+        path: 'rect',
+        fillTo: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 },
+      },
+    ]
+      .flatMap((fill) => [...ELEMENTS, 8].map((e) => at(0, e, { fill })))
+      .concat(
+        [6, 7].flatMap((_) => [
+          at(0, 0, { fill: '#123456', groupId: true, group: 6 }),
+          at(0, 0, { fill: 'none', groupId: true, group: 0 }),
+          at(0, 0, { fill: 'none', groupId: true, group: 99 }),
+        ]),
+      ),
   },
   {
     fn: 'pptxDeckshape.index.setElementImageFill',
@@ -238,8 +336,13 @@ export const DECKSHAPE: CallSpec[] = [
           c.opened,
           c.slide,
           c.id,
-          x.mediaPath !== undefined ? { mediaPath: x.mediaPath } : { bytes: bytes(x.bytes)!, ext: x.ext },
-          { ...(x.tile !== undefined ? { tile: x.tile } : {}), ...(x.groupId ? { groupId: c.a.slide(x.slide).elements[x.group]?.id ?? '' } : {}) },
+          x.mediaPath !== undefined
+            ? { mediaPath: x.mediaPath }
+            : { bytes: bytes(x.bytes)!, ext: x.ext },
+          {
+            ...(x.tile !== undefined ? { tile: x.tile } : {}),
+            ...(x.groupId ? { groupId: c.a.slide(x.slide).elements[x.group]?.id ?? '' } : {}),
+          },
         ),
       ),
     built: [
@@ -249,10 +352,12 @@ export const DECKSHAPE: CallSpec[] = [
       { mediaPath: 'ppt/media/missing.png' },
       { mediaPath: 'ppt/media/image1.png' },
       { bytes: PNG2, ext: 'jpg', tile: false },
-    ].flatMap((rest) => [0, 1, 6, 7, 99].map((e) => at(0, e, rest))).concat([
-      at(0, 0, { bytes: PNG, ext: 'png', groupId: true, group: 6 }),
-      at(0, 0, { bytes: PNG, ext: 'png', groupId: true, group: 0 }),
-    ]),
+    ]
+      .flatMap((rest) => [0, 1, 6, 7, 99].map((e) => at(0, e, rest)))
+      .concat([
+        at(0, 0, { bytes: PNG, ext: 'png', groupId: true, group: 6 }),
+        at(0, 0, { bytes: PNG, ext: 'png', groupId: true, group: 0 }),
+      ]),
   },
   {
     fn: 'pptxDeckshape.index.setElementRedaction',
@@ -272,7 +377,14 @@ export const DECKSHAPE: CallSpec[] = [
     fn: 'pptxDeckshape.index.replacePictureBytes',
     call: (t, a) =>
       run(t, a, (c, x) =>
-        replacePictureBytes(c.opened, c.slide, c.id, bytes(x.bytes)!, x.ext, x.keep === undefined ? undefined : { keepSrcRect: x.keep }),
+        replacePictureBytes(
+          c.opened,
+          c.slide,
+          c.id,
+          bytes(x.bytes)!,
+          x.ext,
+          x.keep === undefined ? undefined : { keepSrcRect: x.keep },
+        ),
       ),
     built: PIC_TEXTS.flatMap((t) =>
       [

@@ -14,7 +14,9 @@ describe('escapeXmlText XML 1.0 character defence', () => {
   it('drops other forbidden chars: C0 controls, U+FFFE/FFFF, lone surrogates', () => {
     expect(escapeXmlText(`a${String.fromCharCode(0)}b${String.fromCharCode(8)}c`)).toBe('abc')
     expect(escapeXmlText('x￾y￿z')).toBe('xyz')
-    expect(escapeXmlText('a\uD800b')).toBe('ab')
+    // a lone surrogate reaches the engine as U+FFFD, a legal character (the binding's
+    // boundary rule, packages/docx-engine/AGENTS.md: UTF-8 cannot hold half a pair)
+    expect(escapeXmlText('a\uD800b')).toBe('a\uFFFDb')
   })
 
   it('keeps legal whitespace and paired surrogates', () => {

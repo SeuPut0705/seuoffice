@@ -6,15 +6,44 @@
   "type": "module",
   "description": "pptx parsing (Slide element tree with byte anchors + inheritance resolution), OOXML fragment generation, element-patch save",
   "exports": {
-    ".": "./src/index.ts",
-    "./custgeom": "./src/custgeom.ts",
-    "./table-grid": "./src/table-grid.ts",
-    "./identity": "./src/identity.ts",
-    "./chart-workbook": "./src/chart-workbook.ts",
-    "./dgm-hier": "./src/dgm-hier.ts",
-    "./model3d": "./src/model3d.ts",
-    "./named-action": "./src/named-action.ts",
-    "./background-promote": "./src/background-promote.ts"
+    ".": {
+      "node": "./src/node/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./custgeom": {
+      "node": "./src/node/custgeom.ts",
+      "default": "./src/custgeom.ts"
+    },
+    "./table-grid": {
+      "node": "./src/node/table-grid.ts",
+      "default": "./src/table-grid.ts"
+    },
+    "./identity": {
+      "node": "./src/node/identity.ts",
+      "default": "./src/identity.ts"
+    },
+    "./chart-workbook": {
+      "node": "./src/node/chart-workbook.ts",
+      "default": "./src/chart-workbook.ts"
+    },
+    "./dgm-hier": {
+      "node": "./src/node/dgm-hier.ts",
+      "default": "./src/dgm-hier.ts"
+    },
+    "./model3d": {
+      "node": "./src/node/model3d.ts",
+      "default": "./src/model3d.ts"
+    },
+    "./named-action": {
+      "node": "./src/node/named-action.ts",
+      "default": "./src/named-action.ts"
+    },
+    "./background-promote": {
+      "node": "./src/node/background-promote.ts",
+      "default": "./src/background-promote.ts"
+    },
+    "./init": "./src/engine-init.ts",
+    "./engine-url": "./src/engine-url.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -22,10 +51,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@seuoffice/zip-gate": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/engine-wasm": "*",
     "fast-xml-parser": "^5.3.4",
-    "jszip": "^3.10.1",
-    "@seuoffice/agent-core": "*"
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

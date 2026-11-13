@@ -9,13 +9,15 @@ import { EngineError, engineCall, type EngineCallback, type EngineReply } from '
 
 /** Where a Map, a Set or a list of them sits in a reply: a binding's generator writes it from the declared return type. */
 export interface Shape {
-  /** map | set | arr | tuple | obj | rec */
+  /** map | set | arr | tuple | obj | rec | ref */
   k: string
   /** an array whose holes are undefined: the reply writes them as null */
   u?: true
   v?: Shape
   items?: Array<Shape | null>
   f?: Record<string, Shape>
+  /** ref: the shape of this type in `InvokeOptions.types`, so a type that holds itself (a group's children) is shaped at any depth */
+  n?: string
 }
 
 export interface InvokeOptions {
@@ -23,6 +25,8 @@ export interface InvokeOptions {
   names?: readonly string[]
   /** the reply holds Maps, Sets or lists of them at these places */
   shape?: Shape
+  /** the shapes a `ref` of `shape` names, by type */
+  types?: Readonly<Record<string, Shape>>
   /** the TypeScript function returns undefined where Rust has no value: null becomes undefined */
   undef?: boolean
   /** prefixed to the name: the engine's table for this binding (`pptx.`, `fileParse.`; none for docx) */
@@ -171,29 +175,44 @@ function isMarker(value: object, key: string): boolean {
   return key in value && Object.keys(value).length === 1
 }
 
-/** A reply value as the TypeScript function returned it: Maps and Sets from `shape`, bytes from their blobs. */
+/**
+ * A reply value as the TypeScript function returned it: Maps and Sets from `shape`, bytes from
+ * their blobs. A `ref` in the shape stands for the shape of a named type of `types`.
+ */
 export function revive(
   value: unknown,
   blobs: readonly Uint8Array[],
   shape: Shape | undefined,
   input?: Uint8Array,
+  types?: Readonly<Record<string, Shape>>,
 ): unknown {
   if (value === null || typeof value !== 'object' || ArrayBuffer.isView(value)) return value
+  if (shape?.k === 'ref') {
+    const named = types?.[shape.n!]
+    if (!named) throw new Error(`a reply shape names the type ${shape.n} the binding gave none for`)
+    return revive(value, blobs, named, input, types)
+  }
   if (Array.isArray(value)) {
     if (shape?.k === 'map')
       return new Map(
         value.map((pair: unknown[]): [unknown, unknown] => [
-          revive(pair[0], blobs, undefined, input),
-          revive(pair[1], blobs, shape.v, input),
+          revive(pair[0], blobs, undefined, input, types),
+          revive(pair[1], blobs, shape.v, input, types),
         ]),
       )
     if (shape?.k === 'set')
-      return new Set(value.map((item) => revive(item, blobs, undefined, input)))
+      return new Set(value.map((item) => revive(item, blobs, undefined, input, types)))
     if (shape?.k === 'tuple')
-      return value.map((item, i) => revive(item, blobs, shape.items?.[i] ?? undefined, input))
+      return value.map((item, i) =>
+        revive(item, blobs, shape.items?.[i] ?? undefined, input, types),
+      )
     if (shape?.u)
-      return value.map((item) => (item === null ? undefined : revive(item, blobs, shape.v, input)))
-    return value.map((item) => revive(item, blobs, shape?.k === 'arr' ? shape.v : undefined, input))
+      return value.map((item) =>
+        item === null ? undefined : revive(item, blobs, shape.v, input, types),
+      )
+    return value.map((item) =>
+      revive(item, blobs, shape?.k === 'arr' ? shape.v : undefined, input, types),
+    )
   }
   const object = value as Record<string, unknown>
   if (isMarker(object, '$blob')) return blobs[object.$blob as number]
@@ -204,7 +223,7 @@ export function revive(
   const out: Record<string, unknown> = {}
   for (const [name, inner] of Object.entries(object)) {
     const at = shape?.k === 'obj' ? shape.f?.[name] : shape?.k === 'rec' ? shape.v : undefined
-    setOwn(out, name, revive(inner, blobs, at, input))
+    setOwn(out, name, revive(inner, blobs, at, input, types))
   }
   return out
 }
@@ -311,7 +330,7 @@ export function engineInvokeRaw(
     value: owed.length
       ? undefined
       : sameBytesAs(
-          revive(value, reply.blobs, options.shape),
+          revive(value, reply.blobs, options.shape, undefined, options.types),
           wire.blobs.filter((blob) => typeof blob !== 'string'),
         ),
     owed,

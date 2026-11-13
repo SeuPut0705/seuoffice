@@ -7,8 +7,8 @@
 // the decoder's own BitWriter and AHuff, CTF containers and cmap tables byte by
 // byte, MTX payloads of both, and seeded truncations and byte flips of each
 // (the runner mutates text, and these functions read bytes).
-import { ctfToSfnt, sanitizeCmap } from '../../packages/pptx-engine/src/vendor/mtx/ctf'
-import { mtxToSfnt } from '../../packages/pptx-engine/src/vendor/mtx/index'
+import { ctfToSfnt, sanitizeCmap } from './reference/vendor/mtx/ctf'
+import { mtxToSfnt } from './reference/vendor/mtx/index'
 import {
   AHuff,
   BitReader,
@@ -16,7 +16,7 @@ import {
   MtxError,
   unpackLz,
   unpackMtx,
-} from '../../packages/pptx-engine/src/vendor/mtx/lzcomp'
+} from './reference/vendor/mtx/lzcomp'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 

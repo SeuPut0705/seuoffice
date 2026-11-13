@@ -35,6 +35,41 @@ pub fn has_redact_ext_in(xml: &str) -> Result<bool, String> {
     Ok(!our_ext_ranges(xml)?.is_empty())
 }
 
+/// The label a SmartArt data part withholds its text under, or `None` when it
+/// shows no trace of the mark. The shapes drawn for the diagram (its cached
+/// drawing, or the layout made from the data) do not carry the data's marks,
+/// so every word of the diagram is withheld under the first label the data
+/// names (`private` when none can be read): a trace counts, whatever its
+/// spelling.
+pub fn diagram_data_redact_label(data_xml: Option<&str>) -> Result<Option<String>, String> {
+    let Some(data_xml) = data_xml.filter(|xml| !xml.is_empty()) else {
+        return Ok(None);
+    };
+    let text = js_regex!(r"&#(?:x([0-9a-fA-F]+)|(\d+));", "g").replace_all(data_xml, |m| {
+        // a number past u32 is past 0x10FFFF too
+        let code = match m.get(1) {
+            Some(hex) => u32::from_str_radix(hex, 16).ok(),
+            None => m.get(2).and_then(|dec| dec.parse::<u32>().ok()),
+        };
+        code.and_then(char::from_u32)
+            .map_or_else(|| m.as_str().to_owned(), String::from)
+    });
+    if !text.contains(REDACT_EXT_URI) && !js_regex!(r"<(?:[\w.-]+:)?redact[\s/>]").test(&text) {
+        return Ok(None);
+    }
+    let label =
+        try_js_regex!(r#"<(?:[\w.-]+:)?redact\b[^>]*?\slabel\s*=\s*(?:"([^"]*)"|'([^']*)')"#)
+            .try_exec(&text)
+            .map_err(|limit| limit.to_string())?;
+    let value = label.and_then(|m| m.get(1).or_else(|| m.get(2)));
+    Ok(Some(
+        value
+            .filter(|v| !v.is_empty())
+            .unwrap_or("private")
+            .to_owned(),
+    ))
+}
+
 /// Sync our mark on the element named `tag` inside `xml`: `a:rPr` for a run,
 /// `p:spPr` for a picture. No `label` removes it. `tag` is pasted into the
 /// pattern unescaped, as the TypeScript does: one that does not compile
@@ -73,12 +108,20 @@ fn our_ext(ext_lst: Option<&Value>) -> Option<&Value> {
         .find(|ext| ext.get("@_uri").and_then(Value::as_str) == Some(REDACT_EXT_URI))
 }
 
-/// The label, read out of an already-parsed `<a:rPr>` or `<p:spPr>` node.
+/// The label, read out of an already-parsed `<a:rPr>` or `<p:spPr>` node. The engine writes
+/// `go:redact`; another writer may use another prefix or none, so the first key of our extension
+/// that is `redact` under any prefix is the mark. Our extension exists only to carry the mark, so
+/// one whose label cannot be read still withholds, as `private`.
 pub fn read_redact_label(node: Option<&Value>) -> Option<&str> {
     let ext = our_ext(as_xml_node(node).get("a:extLst"))?;
-    match as_xml_node(ext.get(REDACT_EL)).get("@_label") {
+    let mark = ext.as_object().and_then(|object| {
+        object
+            .keys()
+            .find(|key| *key == REDACT_EL || js_regex!(r"^(?:[\w.-]+:)?redact$", "").test(key))
+    });
+    match mark.and_then(|key| as_xml_node(ext.get(key)).get("@_label")) {
         Some(Value::String(label)) if !label.is_empty() => Some(label.as_str()),
-        _ => None,
+        _ => Some("private"),
     }
 }
 

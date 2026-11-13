@@ -14,7 +14,7 @@ import {
   type NewChartOptions,
   addChart,
   writeChartWorkbook,
-} from '../../packages/pptx-engine/src/chart-insert'
+} from './reference/chart-insert'
 import {
   decodeRunLink,
   encodeRunLink,
@@ -24,8 +24,8 @@ import {
   getSlideLinks,
   type LinkTarget,
   setElementLink,
-} from '../../packages/pptx-engine/src/hyperlink'
-import { reparseDeck } from '../../packages/pptx-engine/src/index'
+} from './reference/hyperlink'
+import { reparseDeck } from './reference/index'
 import {
   addMedia,
   addModel3d,
@@ -35,15 +35,15 @@ import {
   type NewModel3dOptions,
   setModel3dView,
   solidPng,
-} from '../../packages/pptx-engine/src/media-insert'
+} from './reference/media-insert'
 import {
   addNarration,
   clearNarration,
   narrationSpids,
   setShowNarration,
-} from '../../packages/pptx-engine/src/narration'
-import type { OpenedPptx } from '../../packages/pptx-engine/src/index'
-import type { Slide } from '../../packages/pptx-engine/src/types'
+} from './reference/narration'
+import type { OpenedPptx } from './reference/index'
+import type { Slide } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 import { withUuid } from './calls-leaves'
@@ -68,7 +68,8 @@ function pngPixels(bytes: Uint8Array): Buffer | null {
     const length = png.readUInt32BE(at)
     const end = at + 12 + length
     if (end > png.length) return null
-    if (png.toString('latin1', at + 4, at + 8) === 'IDAT') idat.push(png.subarray(at + 8, at + 8 + length))
+    if (png.toString('latin1', at + 4, at + 8) === 'IDAT')
+      idat.push(png.subarray(at + 8, at + 8 + length))
     else head.push(png.subarray(at, end))
     at = end
   }
@@ -175,7 +176,10 @@ const run = (text: string, hlink = ''): string =>
 const hl = (attrs: string): string => `<a:hlinkClick ${attrs}/>`
 
 const PLAIN = sp(2, '<p:cNvPr id="{id}" name="Plain"/>')
-const PAIRED = sp(3, '<p:cNvPr id="{id}" name="Paired"><a:extLst><a:ext uri="x"/></a:extLst></p:cNvPr>')
+const PAIRED = sp(
+  3,
+  '<p:cNvPr id="{id}" name="Paired"><a:extLst><a:ext uri="x"/></a:extLst></p:cNvPr>',
+)
 const LINKED = sp(
   4,
   '<p:cNvPr id="{id}" name="Linked">' +
@@ -224,14 +228,20 @@ const RELS_PART = 'ppt/slides/_rels/slide1.xml.rels'
 
 /** Links the way another producer may spell them: the id and the tooltip are the decoded values. */
 const ODD_LINKS = sld(
-  sp(2, '<p:cNvPr id="{id}" name="A"><a:hlinkClick r:id = "R7&#97;" tooltip=\'t &amp;amp; u\'/></p:cNvPr>') +
+  sp(
+    2,
+    '<p:cNvPr id="{id}" name="A"><a:hlinkClick r:id = "R7&#97;" tooltip=\'t &amp;amp; u\'/></p:cNvPr>',
+  ) +
     sp(3, '<p:cNvPr id="{id}" name="B"><a:hlinkClick r:id="a&amp;b"/></p:cNvPr>') +
-    sp(4, '<p:cNvPr id="{id}" name="C"><a:hlinkClick note="x>y" r:id="rId7" action = \'\' tooltip=""/></p:cNvPr>') +
+    sp(
+      4,
+      '<p:cNvPr id="{id}" name="C"><a:hlinkClick note="x>y" r:id="rId7" action = \'\' tooltip=""/></p:cNvPr>',
+    ) +
     sp(5, '<p:cNvPr id="{id}" name="D"><a:hlinkClick r:id="rId&#55;"/></p:cNvPr>') +
     sp(
       6,
       '<p:cNvPr id="{id}" name="E"/>',
-      run('a', hl("r:id = 'R7a' tooltip = \"q&quot;\"")) +
+      run('a', hl('r:id = \'R7a\' tooltip = "q&quot;"')) +
         run('b', hl('r:id="a&amp;b" action="ppaction://hlinksldjump"')) +
         run('c', hl('r:id="" action=\'ppaction://hlinkshowjump?jump=lastslide\'')) +
         run('d', hl('action="ppaction://hlinkshowjump?jump=nextslide"')),
@@ -351,7 +361,15 @@ const MEDIA_CASES: Args[] = [
   { opts: { kind: 'audio', bytes: BYTES, ext: 'MP3', offset: OFFSET, name: 'Clip & <1>' } },
   { opts: { kind: 'video', bytes: BYTES, ext: 'webm', offset: OFFSET, poster: POSTER } },
   { opts: { kind: 'audio', bytes: BYTES, ext: 'm4a', offset: OFFSET, poster: JPG_POSTER } },
-  { opts: { kind: 'video', bytes: BYTES, ext: 'mov', offset: OFFSET, poster: { ...POSTER, ext: 'jpeg' } } },
+  {
+    opts: {
+      kind: 'video',
+      bytes: BYTES,
+      ext: 'mov',
+      offset: OFFSET,
+      poster: { ...POSTER, ext: 'jpeg' },
+    },
+  },
   { opts: { kind: 'video', bytes: BYTES, ext: 'avi', offset: OFFSET, name: '' } },
   { opts: { kind: 'audio', bytes: BYTES, ext: 'wav', offset: OFFSET } },
   { opts: { kind: 'audio', bytes: BYTES, ext: 'ogg', offset: OFFSET } },
@@ -366,7 +384,14 @@ const MEDIA_CASES: Args[] = [
   })),
   { slide: 9, opts: { kind: 'video', bytes: BYTES, ext: 'mp4', offset: OFFSET } },
   // fractional and huge geometry
-  { opts: { kind: 'video', bytes: BYTES, ext: 'mp4', offset: { x: 0.5, y: -1, cx: 1e21, cy: 1e-7 } } },
+  {
+    opts: {
+      kind: 'video',
+      bytes: BYTES,
+      ext: 'mp4',
+      offset: { x: 0.5, y: -1, cx: 1e21, cy: 1e-7 },
+    },
+  },
 ]
 
 const MODEL_CASES: Args[] = [
@@ -468,13 +493,15 @@ export const MEDIA: CallSpec[] = [
       deckOp(text, args, (opened) =>
         withUuidAndPixels(opened, () =>
           added(
-            addMedia(opened, (args.slide as number | undefined) ?? 0, mediaOptions(args.opts as Args)),
+            addMedia(
+              opened,
+              (args.slide as number | undefined) ?? 0,
+              mediaOptions(args.opts as Args),
+            ),
           ),
         ),
       ),
-    built: MEDIA_CASES.flatMap((c) =>
-      [BLANK, GENERATED].map((deck): Input => deckInput(deck, c)),
-    ),
+    built: MEDIA_CASES.flatMap((c) => [BLANK, GENERATED].map((deck): Input => deckInput(deck, c))),
     mutation: 'none',
   },
   {
@@ -491,9 +518,7 @@ export const MEDIA: CallSpec[] = [
           ),
         ),
       ),
-    built: MODEL_CASES.flatMap((c) =>
-      [BLANK, GENERATED].map((deck): Input => deckInput(deck, c)),
-    ),
+    built: MODEL_CASES.flatMap((c) => [BLANK, GENERATED].map((deck): Input => deckInput(deck, c))),
     mutation: 'none',
   },
   {
@@ -518,13 +543,12 @@ export const MEDIA: CallSpec[] = [
       ),
     built: [
       ...[undefined, POSTER, JPG_POSTER].flatMap((poster) =>
-        [BLANK, GENERATED].map(
-          (deck): Input =>
-            deckInput(deck, {
-              model: { bytes: GLB_BOX, ext: 'glb', offset: OFFSET },
-              rot: { ax: 100.5, ay: -7, az: 0 },
-              ...(poster ? { poster } : {}),
-            }),
+        [BLANK, GENERATED].map((deck): Input =>
+          deckInput(deck, {
+            model: { bytes: GLB_BOX, ext: 'glb', offset: OFFSET },
+            rot: { ax: 100.5, ay: -7, az: 0 },
+            ...(poster ? { poster } : {}),
+          }),
         ),
       ),
       // not a model: a text shape, a missing element
@@ -549,8 +573,7 @@ export const MEDIA: CallSpec[] = [
   // ── narration.ts ──
   {
     fn: 'pptxMedia.narration.narrationSpids',
-    call: (text, args) =>
-      deckOp(text, args, (opened) => narrationSpids(slideOf(opened, args))),
+    call: (text, args) => deckOp(text, args, (opened) => narrationSpids(slideOf(opened, args))),
     built: [onSlide(NARRATED, { slide: 0 }), onSlide(SLIDE_TEXTS[1]!, { slide: 0 })],
   },
   {
@@ -623,7 +646,9 @@ export const MEDIA: CallSpec[] = [
       buildChartSpaceXml(chartOptions(args), args.externalDataRId as string | undefined),
     built: [
       ...CHART_OPTS.map(chartInput),
-      ...CHART_OPTS.slice(0, 3).map((opts): Input => ({ args: { ...opts, externalDataRId: 'rId3' } })),
+      ...CHART_OPTS.slice(0, 3).map((opts): Input => ({
+        args: { ...opts, externalDataRId: 'rId3' },
+      })),
       { args: { ...CHART_OPTS[0]!, externalDataRId: '' } },
       { args: { ...CHART_OPTS[0]!, externalDataRId: 'r&Id"<1>' } },
     ],
@@ -635,7 +660,10 @@ export const MEDIA: CallSpec[] = [
     call: (text, args) =>
       deckOp(text, args, (opened) => {
         if (typeof args.chartText === 'string') {
-          opened.archive.entries.set(args.chartPath as string, new TextEncoder().encode(args.chartText))
+          opened.archive.entries.set(
+            args.chartPath as string,
+            new TextEncoder().encode(args.chartText),
+          )
         }
         if (typeof args.chartRels === 'string') {
           opened.archive.entries.set(
@@ -649,13 +677,16 @@ export const MEDIA: CallSpec[] = [
         return writeChartWorkbook(opened, args.chartPath as string, chartOptions(args))
       }),
     built: [
-      ...CHART_OPTS.slice(0, 2).map((opts): Input => deckInput(BLANK, { ...opts, chartPath: 'ppt/charts/chart1.xml' })),
+      ...CHART_OPTS.slice(0, 2).map((opts): Input =>
+        deckInput(BLANK, { ...opts, chartPath: 'ppt/charts/chart1.xml' }),
+      ),
       deckInput(GENERATED, { ...CHART_OPTS[7]!, chartPath: 'ppt/charts/chart2.xml' }),
       // a workbook already linked, in place
       deckInput(GENERATED, {
         ...CHART_OPTS[0]!,
         chartPath: 'ppt/charts/chart1.xml',
-        chartText: '<c:chartSpace><c:externalData r:id="rId1"><c:autoUpdate val="0"/></c:externalData></c:chartSpace>',
+        chartText:
+          '<c:chartSpace><c:externalData r:id="rId1"><c:autoUpdate val="0"/></c:externalData></c:chartSpace>',
         chartRels: `<?xml version="1.0"?><Relationships xmlns="${RELS_NS}"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/Book.xlsx"/></Relationships>`,
         entries: [['ppt/embeddings/Book.xlsx', BYTES]],
       }),

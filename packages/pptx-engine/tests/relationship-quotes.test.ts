@@ -13,6 +13,7 @@ import {
 } from '../src/index'
 import { cNvPrIdsInXml, elementSpid } from '../src/animation'
 import { hasContentTypeOverride, maxRelationshipIdNumber } from '../src/xml-utils'
+import type { SlideElement } from '../src/types'
 import { relsPathFor } from '../src/zip'
 
 const OFF = { x: 914400, y: 914400, cx: 3657600, cy: 2057400 }
@@ -191,7 +192,14 @@ describe('quote-agnostic shape id and presentation scans', () => {
       `<p:sp><p:nvSpPr><p:cNvPr id="8" name='a'/></p:nvSpPr></p:sp>` +
       `<p:sp><p:nvSpPr><p:cNvPr name='b' id='9'/></p:nvSpPr></p:sp></p:grpSp>`
     expect([...cNvPrIdsInXml(xml)]).toEqual([7, 8, 9])
-    expect(elementSpid({ anchor: { originalXml: xml } } as any)).toBe(7)
+    const group: SlideElement = {
+      id: 'g',
+      type: 'passthrough',
+      kind: 'unknown',
+      anchor: { spIndex: 0, originalXml: xml, range: [0, xml.length] },
+      transform: { offset: { x: 0, y: 0, cx: 0, cy: 0 }, rot: 0, flipH: false, flipV: false },
+    }
+    expect(elementSpid(group)).toBe(7)
   })
 
   it('mints a fresh shape id above single-quoted ones', async () => {

@@ -483,6 +483,7 @@ js_object! {
         pub overlap_pct: JsNum,
         pub categories: Vec<String>,
         pub series: Vec<ChartSeries>,
+        pub redact: String,
         pub legend_pos: String,
         pub legend_pt: JsNum,
         pub legend_bold: bool,

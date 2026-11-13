@@ -31,6 +31,8 @@ pub fn parse_slide(input: SlideParseInput<'_>) -> Result<Slide, String> {
         master_path,
         ctx,
     } = input;
+    let canonical = crate::xml_utils::canonical_xml(slide_xml)?;
+    let slide_xml: &str = &canonical;
     let scan = scan_slide(slide_xml).map_err(|error| error.to_string())?;
 
     let budget = super::shape::MAX_GROUP_DESCENDANTS;

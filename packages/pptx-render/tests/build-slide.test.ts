@@ -504,7 +504,8 @@ describe('buildRenderSlide (end-to-end on real fixture)', () => {
   it('rtl table mirrors the grid: logical column 1 renders rightmost, borders swap sides', async () => {
     const { deck } = await openPptx(enginePptx('01_standard_business.pptx'))
     const slide = deck.slides[0]!
-    const stroke = { fill: { type: 'solid', color: '#FF0000' }, widthPt: 1 }
+    // a Stroke as the model types it: the engine reads the element, not a look-alike
+    const stroke = { fill: { type: 'solid', color: '#FF0000' }, width: 12700 }
     const el: any = {
       id: 'tbl_rtl',
       type: 'table',
@@ -691,8 +692,7 @@ describe('buildRenderSlide (end-to-end on real fixture)', () => {
       presetGeometry: 'rect',
       fill: { type: 'none' },
       text: {
-        bodyPr: { wrap: true, anchor: 't', lIns: 0, tIns: 0, rIns: 0, bIns: 0 },
-        paragraphs: [{ runs: [mkRun('word '.repeat(20).trim())], properties: {} }],
+        paragraphs: [{ runs: [mkRun('word '.repeat(20).trim())] }],
       },
     })
     const offset = { x: 0, y: 0, cx: 457200, cy: 457200 }

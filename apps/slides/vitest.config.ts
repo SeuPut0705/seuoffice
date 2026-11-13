@@ -41,6 +41,7 @@ export default defineConfig({
         here,
         '../../packages/pptx-engine/src/chart-workbook.ts',
       ),
+      '@seuoffice/pptx-engine/init': resolve(here, '../../packages/pptx-engine/src/engine-init.ts'),
       '@seuoffice/pptx-engine': resolve(here, '../../packages/pptx-engine/src/index.ts'),
       '@seuoffice/pptx-ops/op-docs': resolve(here, '../../packages/pptx-ops/src/op-docs.ts'),
       '@seuoffice/pptx-ops/font-size': resolve(here, '../../packages/pptx-ops/src/font-size.ts'),

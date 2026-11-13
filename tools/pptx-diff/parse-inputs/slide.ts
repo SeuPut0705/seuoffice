@@ -118,6 +118,25 @@ export const SLIDES: Array<{
       `\u00e9${sp(3, 'B', '\u{10348}')}<!-- \u{1F600} -->${pic(4, 'rId2')}`,
   },
   { name: 'every top-level kind, an unknown element between', spTree: EVERY_KIND },
+  // canonicalXml: a slide is read in one spelling
+  {
+    name: 'canonical spelling: an end tag of a run inside a comment and a CDATA section',
+    spTree:
+      `<p:sp><p:nvSpPr><p:cNvPr id="2" name="A"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/>` +
+      `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>one<!-- </a:t></a:r></a:p> --> two</a:t></a:r>` +
+      `<a:r><a:rPr lang="en-US"/><a:t><![CDATA[</a:t></a:r> & <b>]]></a:t></a:r></a:p></p:txBody></p:sp>`,
+  },
+  {
+    name: 'canonical spelling: end tags with white space before their >',
+    spTree:
+      `<p:sp ><p:nvSpPr><p:cNvPr id="2" name="A"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr ><p:spPr/>` +
+      `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>x</a:t ></a:r\n></a:p\t>` +
+      `<a:p><a:r><a:rPr lang="en-US"/><a:t>y</a:t></a:r></a:p \r\n></p:txBody ></p:sp >${sp(3, 'B', 'b')}`,
+  },
+  {
+    name: 'canonical spelling: a comment around a whole shape, CDATA in a name',
+    spTree: `<!-- ${sp(2, 'gone', 'gone')} -->${sp(3, '<![CDATA[x]]>', 'b')}<![CDATA[ stray ]]>`,
+  },
   { name: 'self-closing shapes', spTree: '<p:sp/><p:pic/><p:cxnSp/><p:grpSp/><p:graphicFrame/>' },
   { name: 'budget: exactly MAX_GROUP_DESCENDANTS shapes, no surplus', spTree: many(10000) },
   { name: 'budget: one shape past it, the surplus passthrough', spTree: many(10001) },
