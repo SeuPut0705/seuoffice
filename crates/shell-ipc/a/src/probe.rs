@@ -6,6 +6,7 @@
 //! `undefined`.
 
 pub mod agent;
+pub mod ai_core;
 pub mod ai_naming;
 pub mod app_ai_image;
 pub mod drive;

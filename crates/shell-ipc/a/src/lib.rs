@@ -6,6 +6,7 @@
 //! a shell built without one refuses to start, naming it.
 
 pub mod agent;
+pub mod ai_core;
 pub mod ai_naming;
 pub mod app_ai_image;
 pub mod drive;
@@ -161,6 +162,7 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     probe::mcp::insert(hosts, case, log.clone());
     probe::slides_ai::insert(hosts, case, log.clone());
     probe::user_skills::insert(hosts, case, log.clone());
+    probe::ai_core::insert(hosts, case, log.clone());
     probe::app_ai_image::insert(hosts, case, log.clone());
     probe::subscription::insert(hosts, case, log.clone());
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(

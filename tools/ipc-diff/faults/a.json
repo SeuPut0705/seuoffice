@@ -1153,5 +1153,61 @@
     "find": "view_of(wc_id).is_some_and(|view| self.common.services.views.sender_of(view).is_some())",
     "replace": "view_of(wc_id).is_some()",
     "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "ai-core: media test text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "test_failure(\"No media provider to test\")",
+    "replace": "test_failure(\"No media provider to test!\")",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: search test text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "test_failure(\"No search provider to test\")",
+    "replace": "test_failure(\"No search provider to test!\")",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: gif mime",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "\"image/gif\"",
+    "replace": "\"image/webp\"",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: codex off text",
+    "file": "shell-ipc/a/src/ai_core.rs",
+    "find": "\"Codex is turned off in this app\"",
+    "replace": "\"Codex is off\"",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: headless write",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "if self.host.is_headless_mode() {",
+    "replace": "if !self.host.is_headless_mode() {",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: unknown fields dropped",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "Some(self.codec()), &merged",
+    "replace": "Some(self.codec()), settings",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: settings-changed only to docs",
+    "file": "shell-ipc/a/src/ai_core/files.rs",
+    "find": "self.events.emit(Target::All, SETTINGS_CHANGED, Vec::new());",
+    "replace": "self.events.emit(Target::Surface(shell_contract::Surface::Docs), SETTINGS_CHANGED, Vec::new());",
+    "groups": ["a/ai-core"]
+  },
+  {
+    "name": "ai-core: stream event name",
+    "file": "shell-ipc/a/src/ai_core/stream.rs",
+    "find": "\"ai:stream-chunk\",",
+    "replace": "\"ai:stream-chunks\",",
+    "groups": ["a/ai-core"]
   }
 ]
