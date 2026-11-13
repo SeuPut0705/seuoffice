@@ -1128,6 +1128,18 @@ const bridgeCases: Case[] = [
         { install: true },
         { ready: 3 },
         { run: 'r', wc: 3, command: 'read_document', payload: {} },
+        { result: 4, payload: { requestId: 'mcp-1', ok: true, result: 'from tab 4' } },
+        { result: 3, payload: { requestId: 'mcp-1', ok: true, result: 'from tab 3' } },
+      ],
+    },
+    'a reply from another tab does not answer the command; the right tab does',
+  ),
+  bridgeCase(
+    {
+      steps: [
+        { install: true },
+        { ready: 3 },
+        { run: 'r', wc: 3, command: 'read_document', payload: {} },
         { result: 3 },
         { result: 3, payload: null },
         { result: 3, payload: 'mcp-1' },

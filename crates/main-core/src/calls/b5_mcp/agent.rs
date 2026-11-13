@@ -1535,7 +1535,18 @@ fn relay_scenario(args: &[Value]) -> Answer {
                 }
                 "askAnswer" => {
                     let n = step.get("n").and_then(Value::as_u64).unwrap_or(0) as usize;
-                    let call = asks.borrow()[n - 1];
+                    let Some(call) = n
+                        .checked_sub(1)
+                        .and_then(|at| asks.borrow().get(at).copied())
+                    else {
+                        out.insert("error".into(), Value::from("no such card"));
+                        let logs = world.take_logs();
+                        if !logs.is_empty() {
+                            out.insert("logs".into(), Value::Array(logs));
+                        }
+                        results.push(Value::Object(out));
+                        continue;
+                    };
                     let answer = if on(&step, "reject") {
                         Err(())
                     } else {
@@ -1559,7 +1570,18 @@ fn relay_scenario(args: &[Value]) -> Answer {
                 }
                 "hubAnswer" => {
                     let n = step.get("n").and_then(Value::as_u64).unwrap_or(0) as usize;
-                    let call_id = calls.borrow()[n - 1].clone();
+                    let Some(call_id) = n
+                        .checked_sub(1)
+                        .and_then(|at| calls.borrow().get(at).cloned())
+                    else {
+                        out.insert("error".into(), Value::from("no such hub call"));
+                        let logs = world.take_logs();
+                        if !logs.is_empty() {
+                            out.insert("logs".into(), Value::Array(logs));
+                        }
+                        results.push(Value::Object(out));
+                        continue;
+                    };
                     let answer = if on(&step, "reject") {
                         Err(())
                     } else {

@@ -342,5 +342,19 @@
       }
     },
     "reason": "readAttachmentPage cuts the parsed text with String.slice at UTF-16 offsets (offset 1, length 4 of an emoji, `a`, an emoji, `b`), so each cut that falls inside a surrogate pair leaves a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the answer goes to the model as JSON text). The input is valid Unicode; only the slice makes it lone. Final."
+  },
+  {
+    "id": "relay-text-cuts-a-surrogate-pair-3",
+    "fn": "agent-mcp-relay.RELAY_TEXT",
+    "case": 3,
+    "typescript": {
+      "answer": "{\"value\":\"notes: the tool \\\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\\ud83d\\\" changed and needs the person’s review in Settings; it cannot be used now.\"}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"notes: the tool \\\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa�\\\" changed and needs the person’s review in Settings; it cannot be used now.\"}",
+      "files": {}
+    },
+    "reason": "RELAY_TEXT quotes a tool name with JSON.stringify(name.slice(0, 80)), so 79 units of a and an emoji leave the first half of the pair at the cut, which JSON.stringify writes as \\ud83d. A Rust String cannot hold a lone surrogate; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once the tool result is sent as UTF-8 to the agent. Cases 11 and 12 cut at the pair boundary and agree. Final."
   }
 ]

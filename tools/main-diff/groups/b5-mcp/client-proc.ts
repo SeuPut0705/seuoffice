@@ -602,6 +602,29 @@ const localCases: Case[] = [
   ),
   lc(
     OK,
+    options({ spawnFailures: ['x', 'x', null, 'x', 'x'] }),
+    [
+      list('l1'),
+      list('l2'),
+      list('l3'),
+      init(),
+      reply(1, tools(['a'])),
+      exit(),
+      closeChild(),
+      step('status'),
+      list('l4'),
+      step('status'),
+    ],
+    'a start that works clears the count of failed starts',
+  ),
+  lc(
+    OK,
+    options({ spawnFailures: ['x', 'x', 'x', 'x'] }),
+    [list('l1'), list('l2'), list('l3'), step('status'), step('retry'), list('l4'), step('status')],
+    'retry clears the count of failed starts: one more failure leaves the server idle',
+  ),
+  lc(
+    OK,
     options({ maxStartFailures: 1, spawnFailures: ['x'] }),
     [list('l1'), step('status'), step('retry'), step('status')],
     'one failed start is enough',
@@ -1131,6 +1154,22 @@ const localCases: Case[] = [
     ],
     'tool lists: a result that is no list, an empty list',
   ),
+  lc(
+    OK,
+    options(),
+    [
+      step('ensure', { label: 'e' }),
+      init(),
+      list('l'),
+      reply(1, tools(['echo'])),
+      callStep('c', 'echo', { text: 'hi' }),
+      reply(2, textResult('hello')),
+      step('stop', { label: 's' }),
+      exit(),
+      closeChild(),
+    ],
+    'each call settles as the method it began as: ensure, list, call, stop',
+  ),
 ]
 
 // ---------------------------------------------------------------------------
@@ -1174,6 +1213,21 @@ const programCases: Case[] = [
   lk(['tool', { env: POSIX_ENV, platform: 'linux', fallbackDirs: [] }], 'the second directory', {
     'b/tool': EXE,
   }),
+  lk(
+    ['tool', { env: POSIX_ENV, platform: 'linux', fallbackDirs: [`${'../'.repeat(40)}$DIR/fb`] }],
+    'a relative fallback directory is never searched, even where it leads to the program',
+    { 'fb/tool': EXE },
+  ),
+  lk(
+    ['a/tool', { env: POSIX_ENV, platform: 'linux', fallbackDirs: [] }],
+    'a name with a slash is not looked up, even where PATH holds that path',
+    { 'a/a/tool': EXE },
+  ),
+  lk(
+    ['a\\tool', { env: POSIX_ENV, platform: 'linux', fallbackDirs: [] }],
+    'a name with a backslash is not looked up',
+    { 'a/a\\tool': EXE },
+  ),
   lk(
     ['tool', { env: POSIX_ENV, platform: 'linux', fallbackDirs: [] }],
     'a file that cannot run is skipped',
@@ -1756,6 +1810,12 @@ const kitCases: Case[] = [
   ),
   kc(kitOptions({ ask: [true], fetch: {} }), [rs('node')], 'the download has no route: offline'),
   kc(
+    kitOptions({ allowed: ['node'], fetch: {} }),
+    [rs('node')],
+    'an older version is removed before a download that then fails',
+    { 'rt/node-0.9.0/bin/node': PLAIN },
+  ),
+  kc(
     kitOptions({
       ask: [true],
       fetch: { [urlOf('node-posix')]: { reject: 'getaddrinfo ENOTFOUND' } },
@@ -1930,6 +1990,26 @@ const kitCases: Case[] = [
     [rs('python')],
     'python through uv: uv names no usable path after the install',
     { 'pc/uv': EXE },
+  ),
+  kc(
+    kitOptions({
+      env: { ...POSIX_BASE, PATH: '$DIR/pc' },
+      ask: [true],
+      uvFind: [{ code: 1, stdout: '$DIR/py3' }],
+    }),
+    [rs('python')],
+    'python through uv: uv fails but names a usable path: it is not taken',
+    { 'pc/uv': EXE, py3: EXE },
+  ),
+  kc(
+    kitOptions({
+      env: { ...POSIX_BASE, PATH: '$DIR/pc' },
+      ask: [true],
+      uvFind: [{ code: 0, stdout: `${'../'.repeat(40)}$DIR/py3` }],
+    }),
+    [rs('python')],
+    'python through uv: a relative path that leads to a file is not taken',
+    { 'pc/uv': EXE, py3: EXE },
   ),
   kc(
     kitOptions({ env: { ...POSIX_BASE, PATH: '$DIR/pc' }, ask: [true], uvThrows: true }),
