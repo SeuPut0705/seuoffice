@@ -1866,7 +1866,7 @@ const textCases = cases(
   ['needsReview', 'notes', 'write'],
   ['needsReview', 'notes', 'w'.repeat(100)],
   ['needsReview', 'notes', 'a"b\\c\n'],
-  // the 80-unit cut halves the pair: divergences.json, relay-text-cuts-a-surrogate-pair-3
+  // the 80-unit cut halves the pair: JSON.stringify writes the half as \ud83d
   ['needsReview', 'notes', 'a'.repeat(79) + '\u{1F600}'],
   ['needsReview', 'notes', 'a'.repeat(80) + 'b'],
   ['unknownTool', 'notes', 'nope'],
@@ -1877,6 +1877,8 @@ const textCases = cases(
   ['stopped', ''],
   ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}'],
   ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}b'],
+  // escapes before the lone half are written as JSON.stringify writes them
+  ['unknownTool', 'notes', '"\\\n'.repeat(26) + 'a\u{1F600}'],
 )
 
 export const group: Group = {
