@@ -39,6 +39,9 @@ use crate::html::atomic_write::atomic_write_file as html_atomic_write_file;
 use crate::html::generate_handoff_ipc::{
     HandoffEvent, HandoffHandler, HandoffIpc, register_html_handoff_ipc,
 };
+use crate::html::marked_html::{
+    MarkedExportChoice, MarksLeft, clear_hidden_marks, holds_hidden_marks, plan_marked_export,
+};
 use crate::html::old_names::{ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES};
 use crate::html::preview_document::{
     ASSET_SCHEME, PREVIEW_SCHEME, asset_base_href, build_preview_document, preview_url_for,
@@ -249,6 +252,15 @@ fn call_named(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
             Ok(Some(Value::from(ASSET_MANIFEST_FILENAME_WRITTEN)))
         }
         "html/generate-handoff-ipc.registerHtmlHandoffIpc" => handoff_ipc_call(args, cx),
+        "marked-html.holdsHiddenMarks" => {
+            str_arg(args, 0).map(|html| Some(Value::Bool(holds_hidden_marks(html))))
+        }
+        "marked-html.clearHiddenMarks" => str_arg(args, 0).and_then(|html| {
+            Ok(Some(Value::from(
+                clear_hidden_marks(html).map_err(CallError::from)?,
+            )))
+        }),
+        "marked-html.planMarkedExport" => plan_marked_export_call(args, cx),
         "preview-document.PREVIEW_SCHEME" => Ok(Some(Value::from(PREVIEW_SCHEME))),
         "preview-document.ASSET_SCHEME" => Ok(Some(Value::from(ASSET_SCHEME))),
         "preview-document.assetBaseHref" => {
@@ -352,6 +364,38 @@ fn opt_str(args: &[Value], i: usize) -> Option<&str> {
 
 fn opt_bool(args: &[Value], i: usize) -> Option<bool> {
     arg(args, i).and_then(Value::as_bool)
+}
+
+impl From<MarksLeft> for CallError {
+    fn from(_: MarksLeft) -> Self {
+        CallError::plain(MarksLeft::MESSAGE)
+    }
+}
+
+/// `planMarkedExport(html, ask)`: `ask` is `null` (nobody to ask), or a fake
+/// that logs `["ask"]` and answers `{"answer": choice}` or rejects with
+/// `{"reject": message}`
+fn plan_marked_export_call(args: &[Value], cx: &mut Context) -> Answer {
+    let html = str_arg(args, 0)?;
+    let ask = match arg(args, 1) {
+        None | Some(Value::Null) => None,
+        Some(Value::Object(fake)) => Some(fake),
+        Some(_) => return Err(bad("ask")),
+    };
+    let logs = &mut cx.logs;
+    let ask = ask.map(|fake| {
+        move || {
+            logs.push(vec![Value::from("ask")]);
+            if let Some(message) = fake.get("reject").and_then(Value::as_str) {
+                return Err(CallError::plain(message));
+            }
+            Ok(match fake.get("answer").and_then(Value::as_str) {
+                Some("clear") => MarkedExportChoice::Clear,
+                _ => MarkedExportChoice::Cancel,
+            })
+        }
+    });
+    plan_marked_export(html, ask).map(|plan| Some(to_value(&plan)))
 }
 
 fn string_list(args: &[Value], i: usize) -> Result<Vec<String>, CallError> {

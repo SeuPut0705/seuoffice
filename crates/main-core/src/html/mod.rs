@@ -5,6 +5,7 @@ pub mod asset_lifecycle;
 pub mod asset_mime;
 pub mod atomic_write;
 pub mod generate_handoff_ipc;
+pub mod marked_html;
 pub mod old_names;
 pub mod preview_document;
 pub mod single_file_html;

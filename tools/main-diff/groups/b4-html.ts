@@ -56,6 +56,12 @@ import {
 import { atomicWriteFile as htmlAtomicWriteFile } from '../../../apps/html/src/main/atomic-write.ts'
 import { registerHtmlHandoffIpc } from '../../../apps/html/src/main/generate-handoff-ipc.ts'
 import {
+  clearHiddenMarks,
+  holdsHiddenMarks,
+  planMarkedExport,
+  type MarkedExportChoice,
+} from '../../../apps/html/src/main/marked-html.ts'
+import {
   ASSET_MANIFEST_FILENAME_WRITTEN,
   OLD_ASSET_MANIFEST_FILENAMES,
 } from '../../../apps/html/src/main/old-names.ts'
@@ -807,6 +813,62 @@ const MANIFEST_FILES: [string, Record<string, FileSpec>, string][] = [
 // ---------------------------------------------------------------------------
 // the group: asset-lifecycle, asset-mime, small html modules
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// marked-html: pages with and without the redactor's marks
+// ---------------------------------------------------------------------------
+
+const MARKED_PAGES: string[] = [
+  '',
+  '<p>plain</p>',
+  '<p data-gx-redact>x</p>',
+  '<p data-gx-redact="label">x</p>',
+  "<p data-gx-redact='l'>x</p>",
+  '<p data-gx-redact=bare>x</p>',
+  '<p data-gx-redact="">x</p>',
+  '<img src="a.png" data-gx-redact-src="photo">',
+  '<a href="x" DATA-GX-REDACT-HREF = "u">y</a>',
+  '<P\tData-Gx-Redact\n=\n"x">y</P>',
+  '<p data-gx-redact-a:b.c-d="1">x</p>',
+  '<p data-gx-redact="a>b">x</p>',
+  '<p data-gx-redact="unterminated>x</p>',
+  '<p data-gx-redacted>x</p>',
+  '<p>data-gx-redact in text</p>',
+  '<p> data-gx-redact in text</p>',
+  '<p\u00a0data-gx-redact>x</p>',
+  '<p\ufeffdata-gx-redact>x</p>',
+  '<p\u2028data-gx-redact>x</p>',
+  '<p\u0085data-gx-redact>x</p>',
+  '<p data-gx-redact-\u212a="x">y</p>',
+  '<script>const k = /*gx:redact:key*/"abc"</script>',
+  '<script>/* GX:REDACT:a */1; /*gx:redact:b*/2</script>',
+  '<script>/*gx:redact:a\n*/1</script>',
+  '<script>/*gx:redact:open no close</script>',
+  '<script>/*gx:redact:\u{1F600}*/"\u{1F600}"</script>',
+  'gx:redact: in text',
+  '<p data-gx-redact="a" data-gx-redact-title="b" title="t">\u{1F600}</p><script>/*gx:redact:c*/1</script>',
+  '<p data-gx-redact data-gx-redact>x</p>',
+  '<p data-gx-redact-="x">y</p>',
+]
+
+const ASKERS: unknown[] = [
+  null,
+  { answer: 'clear' },
+  { answer: 'cancel' },
+  { answer: 'Clear' },
+  { reject: 'the box failed' },
+]
+
+/** `null`: nobody to ask; otherwise a fake that logs `ask` and answers or rejects */
+function askerOf(spec: unknown, log: TsContext['log']): (() => Promise<MarkedExportChoice>) | null {
+  if (spec === null) return null
+  const o = spec as { answer?: string; reject?: string }
+  return async () => {
+    log('ask')
+    if (o.reject !== undefined) throw new Error(o.reject)
+    return o.answer as MarkedExportChoice
+  }
+}
 
 const htmlGroup: Group = {
   'html/asset-lifecycle.ASSET_MANIFEST_FILENAME': {
@@ -1579,6 +1641,18 @@ const htmlGroup: Group = {
     get cases() {
       return handoffIpcCases()
     },
+  },
+  'marked-html.holdsHiddenMarks': {
+    ts: (a) => holdsHiddenMarks(str(a, 0)),
+    cases: cases(...MARKED_PAGES.map((page) => [page])),
+  },
+  'marked-html.clearHiddenMarks': {
+    ts: (a) => clearHiddenMarks(str(a, 0)),
+    cases: cases(...MARKED_PAGES.map((page) => [page])),
+  },
+  'marked-html.planMarkedExport': {
+    ts: (a, cx) => planMarkedExport(str(a, 0), askerOf(a[1], cx.log)),
+    cases: cases(...MARKED_PAGES.flatMap((page) => ASKERS.map((ask) => [page, ask]))),
   },
   'preview-document.PREVIEW_SCHEME': {
     ts: () => PREVIEW_SCHEME,
