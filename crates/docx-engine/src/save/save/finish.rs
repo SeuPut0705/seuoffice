@@ -1,6 +1,8 @@
 //! `saveDocx`, phase by phase (3): settings, relationships, content types,
 //! core properties, and the output package.
 
+use std::borrow::Cow;
+
 use jscompat::js_regex;
 use ooxml_pkg::{Package, Part};
 
@@ -21,6 +23,7 @@ use crate::save::parts::settings::{
     apply_write_protection, insert_settings_child,
 };
 use crate::theme::THEME_PART_PATH;
+use crate::withheld::with_redact_root;
 
 const CORE_PROPS_PATH: &str = "docProps/core.xml";
 const SETTINGS_PATH: &str = "word/settings.xml";
@@ -275,7 +278,7 @@ impl Saver<'_> {
                 text(&new_document_xml)
             } else if let Some((_, xml)) = out_state.hf_parts.iter().find(|(path, _)| path == name)
             {
-                text(xml)
+                text(&with_redact_root(xml))
             } else if let Some((_, xml)) =
                 out_state.hf_rels_out.iter().find(|(path, _)| path == name)
             {
@@ -326,10 +329,17 @@ impl Saver<'_> {
             } else if name == CORE_PROPS_PATH && core_xml_out.is_some() {
                 text(core_xml_out.as_deref().unwrap_or_default())
             } else if let Some(xml) = options.part_xml.as_ref().and_then(|map| map.get(name)) {
-                text(xml)
+                text(&with_redact_root(xml))
             } else if let Some(base64) = options.part_binary.as_ref().and_then(|map| map.get(name))
             {
                 jszip_base64(base64)?
+            } else if js_regex!(r"^word\/[^/]+\.xml$").test(name) {
+                // a story part kept as it was still carries its marks into the
+                // copy: its root says so, as the parts written anew do
+                match with_redact_root(entry.text().map_err(|e| e.to_string())?) {
+                    Cow::Owned(marked) => marked.into_bytes(),
+                    Cow::Borrowed(_) => entry.bytes().map_err(|e| e.to_string())?.to_vec(),
+                }
             } else {
                 entry.bytes().map_err(|e| e.to_string())?.to_vec()
             };
@@ -342,7 +352,7 @@ impl Saver<'_> {
         }
         for (path, xml) in &out_state.hf_parts {
             if self.zip.file(path).is_none() {
-                out.set_file(path.clone(), xml.as_bytes().to_vec());
+                out.set_file(path.clone(), with_redact_root(xml).as_bytes().to_vec());
             }
         }
         for (path, xml) in &out_state.hf_rels_out {
