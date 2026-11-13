@@ -409,8 +409,17 @@ pub enum Cmd {
     /// Stop the operation `id`, or the stream of the fetch `id` (its body and
     /// every clone: sent once no branch reads it any more, or its signal
     /// aborted); nothing answers it, and an answer already on its way is
-    /// dropped.
+    /// dropped. A stream a [`Cmd::Release`] already stopped may still get
+    /// one (its signal aborts later, as in JavaScript): nothing to do then.
     Cancel { id: Id },
+    /// The program dropped its handle to the body `body` (the fetch's or a
+    /// clone's) before the host handed it its end, which JavaScript leaves to
+    /// the garbage collector, or cancelled it while every other branch was
+    /// dropped: free that branch's buffered bytes. `stop`: no branch can read
+    /// the stream of that fetch any more and it has not ended; stop it as for
+    /// [`Cmd::Cancel`]. Nothing answers it, and an answer already on its way
+    /// is dropped.
+    Release { body: Id, stop: Option<Id> },
     /// `setTimeout(..., ms)`: feed [`Event::Timer`] when it is due
     SetTimer { id: Id, ms: f64 },
     /// `clearTimeout`: the timer `id` is not fed
@@ -592,16 +601,30 @@ struct BodyState {
     signal: Option<Id>,
     /// the fetch whose stream this body (or a clone of it) reads
     source: Id,
+    /// the `Cmd::Read`s in flight (a reader takes several `read()` calls at
+    /// once), which a cancel of the body ends
+    reads: Vec<Id>,
+    /// the stream failed: every later `read()` rejects with this
+    failed: Option<JsError>,
+    /// the host handed this branch its end or its failure: it freed it
+    over: bool,
+    /// the program dropped its handle ([`Cmd::Release`])
+    released: bool,
 }
 
 /// The stream of one fetch, which `response.clone()` tees: it is cancelled
 /// when no branch reads it any more, unless it has ended.
 #[derive(Default)]
 struct SourceState {
-    /// branches neither read to their end nor cancelled
+    /// branches neither read to their end nor cancelled; a dropped branch
+    /// still counts, as an unreachable JavaScript one does until it is
+    /// collected, so what the program sees does not depend on drops
     live: usize,
     ended: bool,
     cancelled: bool,
+    /// [`Cmd::Release`] stopped it: what JavaScript would still do to it
+    /// (an abort's `Cancel`) reaches the host, which ignores it
+    stopped: bool,
 }
 
 #[derive(Default)]
@@ -619,11 +642,31 @@ struct State {
     spawned: Vec<LocalFuture>,
 }
 
+/// The reads of `body` still waiting for the host, taken out of its list. A
+/// read the host answered already stays: its task takes its own answer.
+fn take_pending_reads(st: &mut State, body: Id) -> Vec<Id> {
+    let State { bodies, ops, .. } = st;
+    let Some(b) = bodies.get_mut(&body) else {
+        return Vec::new();
+    };
+    let (pending, answered): (Vec<Id>, Vec<Id>) = b
+        .reads
+        .iter()
+        .copied()
+        .partition(|read| matches!(ops.get(read), Some(None)));
+    b.reads = answered;
+    pending
+}
+
 struct Inner {
     host: RefCell<HostInfo>,
     st: RefCell<State>,
     /// something settled since the last pass: the tasks may go further
     dirty: Cell<bool>,
+    /// bodies whose handle went, released at the next [`Runtime::poll`] (or
+    /// [`Rt::take_cmds`]): a handle may go while the state is borrowed (a
+    /// cleared timer's callback, a dropped task), so the drop only notes it
+    dropped: RefCell<Vec<Id>>,
 }
 
 /// The handle a ported function awaits through. Cloning it is cheap.
@@ -708,10 +751,11 @@ impl Rt {
     /// does for them with what the tasks' callbacks did (a log, a trace)
     /// takes them as the callbacks run; [`Runtime::poll`] answers the rest.
     pub fn take_cmds(&self) -> Vec<Cmd> {
-        match self.0.st.try_borrow_mut() {
-            Ok(mut st) => std::mem::take(&mut st.cmds),
-            Err(_) => Vec::new(),
+        if self.0.st.try_borrow_mut().is_err() {
+            return Vec::new();
         }
+        self.release_dropped();
+        std::mem::take(&mut self.0.st.borrow_mut().cmds)
     }
 
     /// `console.<level>(...args)`
@@ -784,6 +828,7 @@ impl Rt {
                                 done: false,
                                 signal: signal.map(|s| s.id),
                                 source: id,
+                                ..BodyState::default()
                             },
                         );
                         st.sources.insert(
@@ -954,6 +999,7 @@ impl Rt {
                 {
                     // the signal errors the stream itself, whatever its branches
                     body.done = true;
+                    body.failed = Some(reason.clone());
                     let source = body.source;
                     if let Some(src) = st.sources.get_mut(&source) {
                         src.live = src.live.saturating_sub(1);
@@ -979,15 +1025,19 @@ impl Rt {
             match st.bodies.get(&body) {
                 None => return Ok(None),
                 Some(b) => {
+                    // how the stream ended stays, whatever its signal does later
+                    if let Some(error) = &b.failed {
+                        return Err(error.clone());
+                    }
+                    if b.done {
+                        return Ok(None);
+                    }
                     if let Some(reason) = b
                         .signal
                         .and_then(|s| st.signals.get(&s))
                         .and_then(|s| s.reason.clone())
                     {
                         return Err(reason);
-                    }
-                    if b.done {
-                        return Ok(None);
                     }
                     b.signal
                 }
@@ -997,7 +1047,52 @@ impl Rt {
             rt: self.clone(),
             id,
         });
-        match self.op(signal.as_ref(), |id| Cmd::Read { id, body }).await {
+        let op = self.op(signal.as_ref(), |id| Cmd::Read { id, body });
+        let id = op.id;
+        if let Some(b) = self.0.st.borrow_mut().bodies.get_mut(&body) {
+            b.reads.push(id);
+        }
+        let outcome = op.await;
+        let others = {
+            let mut st = self.0.st.borrow_mut();
+            let Some(b) = st.bodies.get_mut(&body) else {
+                return Ok(None);
+            };
+            match b.reads.iter().position(|r| *r == id) {
+                Some(at) => {
+                    b.reads.remove(at);
+                }
+                // another settled it: `reader.cancel()` ends it as
+                // `{ done: true }` (the stream is not over for the body's
+                // other branches), the stream's end or failure as the read
+                // that met it
+                None => {
+                    return match &b.failed {
+                        Some(error) => Err(error.clone()),
+                        None => Ok(None),
+                    };
+                }
+            }
+            // the stream closed or failed: it settles every other read still
+            // waiting alike (one the host answered keeps its answer), and a
+            // failure every later one
+            match &outcome {
+                Ok(Answer::Chunk(_)) => Vec::new(),
+                Ok(_) => take_pending_reads(&mut st, body),
+                Err(error) => {
+                    b.failed = Some(error.clone());
+                    take_pending_reads(&mut st, body)
+                }
+            }
+        };
+        for other in others {
+            let alike = match &outcome {
+                Err(error) => Err(error.clone()),
+                Ok(_) => Ok(Answer::End),
+            };
+            self.settle(other, alike);
+        }
+        match outcome {
             Ok(Answer::Chunk(bytes)) => Ok(Some(bytes)),
             Ok(_) => {
                 self.body_over(body);
@@ -1018,6 +1113,7 @@ impl Rt {
             return;
         };
         let was_done = std::mem::replace(&mut b.done, true);
+        b.over = true;
         let source = b.source;
         if let Some(src) = st.sources.get_mut(&source) {
             src.ended = true;
@@ -1037,13 +1133,65 @@ impl Rt {
         }
         b.done = true;
         let source = b.source;
+        let reads = take_pending_reads(&mut st, body);
+        // a branch the program dropped still counts for `live` (JavaScript's
+        // garbage) but reads nothing: with none other left to read, the host
+        // stops the stream through a release, no `Cancel` the program would see
+        let reading = st
+            .bodies
+            .values()
+            .any(|b| b.source == source && !b.released && !b.done);
         if let Some(src) = st.sources.get_mut(&source) {
             src.live = src.live.saturating_sub(1);
             if src.live == 0 && !src.ended && !src.cancelled {
                 src.cancelled = true;
                 st.cmds.push(Cmd::Cancel { id: source });
+            } else if !reading && !src.ended && !src.cancelled && !src.stopped {
+                src.stopped = true;
+                st.cmds.push(Cmd::Release {
+                    body,
+                    stop: Some(source),
+                });
             }
         }
+        drop(st);
+        for read in reads {
+            self.settle(read, Ok(Answer::End));
+        }
+    }
+
+    /// Release the bodies whose handle went since the last call.
+    fn release_dropped(&self) {
+        let dropped = std::mem::take(&mut *self.0.dropped.borrow_mut());
+        for body in dropped {
+            self.release_body(body);
+        }
+    }
+
+    /// The handle to `body` went (JavaScript's garbage collector frees it
+    /// unseen). A branch the host still keeps is released, and the stream
+    /// stops once no branch can read it. The program's view (`live`, an
+    /// abort's `Cancel`) does not change, as JavaScript's does not at a drop.
+    fn release_body(&self, body: Id) {
+        let mut st = self.0.st.borrow_mut();
+        let Some(b) = st.bodies.get_mut(&body) else {
+            return;
+        };
+        b.released = true;
+        let (over, source) = (b.over, b.source);
+        let reading = st
+            .bodies
+            .values()
+            .any(|b| b.source == source && !b.released && !b.done);
+        let Some(src) = st.sources.get_mut(&source) else {
+            return;
+        };
+        if over || src.cancelled || src.stopped {
+            return;
+        }
+        let stop = (!src.ended && !reading).then_some(source);
+        src.stopped = stop.is_some();
+        st.cmds.push(Cmd::Release { body, stop });
     }
 
     fn clone_body(&self, body: Id) -> Id {
@@ -1059,6 +1207,7 @@ impl Rt {
                 done,
                 signal,
                 source,
+                ..BodyState::default()
             },
         );
         if !done && let Some(src) = st.sources.get_mut(&source) {
@@ -1336,6 +1485,14 @@ pub struct Response {
     pub head: ResponseHead,
     body: Option<Id>,
     signal: Option<Signal>,
+}
+
+impl Drop for Response {
+    fn drop(&mut self) {
+        if let Some(body) = self.body {
+            self.rt.0.dropped.borrow_mut().push(body);
+        }
+    }
 }
 
 impl Response {
@@ -1741,6 +1898,7 @@ impl Runtime {
                 host: RefCell::new(host),
                 st: RefCell::new(State::default()),
                 dirty: Cell::new(false),
+                dropped: RefCell::new(Vec::new()),
             })),
             tasks: Vec::new(),
         }
@@ -1792,6 +1950,7 @@ impl Runtime {
                 break;
             }
         }
+        self.rt.release_dropped();
         std::mem::take(&mut self.rt.0.st.borrow_mut().cmds)
     }
 
@@ -1874,5 +2033,587 @@ mod tests {
         drop((rt, parent, timeout, both, call));
         drop(runtime);
         assert!(weak.upgrade().is_none());
+    }
+
+    fn head() -> ResponseHead {
+        ResponseHead {
+            status: 200.0,
+            status_text: String::new(),
+            headers: Vec::new(),
+            url: String::new(),
+            redirected: false,
+            kind: "basic".into(),
+            has_body: true,
+        }
+    }
+
+    /// The id of the only `Cmd::Read` in `cmds`.
+    fn read_of(cmds: &[Cmd]) -> Id {
+        let reads: Vec<Id> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(reads.len(), 1, "{cmds:?}");
+        reads[0]
+    }
+
+    #[test]
+    fn cancelling_a_body_ends_the_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let held: Rc<RefCell<Option<Rc<Response>>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            );
+            *slot.borrow_mut() = Some(response.clone());
+            let first = response.read().await;
+            let second = response.read().await;
+            (first, second)
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        let read = read_of(&runtime.poll());
+        runtime.feed(Event::Done {
+            id: read,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        read_of(&runtime.poll());
+        // the stream stalls; `reader.cancel()` while the second read waits
+        held.borrow().as_ref().unwrap().cancel();
+        let cmds = runtime.poll();
+        assert_eq!(cmds, vec![Cmd::Cancel { id: fetch }]);
+        let (first, second) = call.take().expect("the second read ended");
+        assert_eq!(first.unwrap(), Some(b"one".to_vec()));
+        assert_eq!(second.unwrap(), None);
+    }
+
+    #[test]
+    fn cancelling_a_body_ends_every_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let fetched = runtime.start(async move {
+            Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            )
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        let response = fetched.take().expect("the fetch answered");
+        // three `read()` calls in flight at once, as a reader allows
+        let reads: Vec<_> = (0..3)
+            .map(|_| {
+                let response = response.clone();
+                runtime.start(async move { response.read().await })
+            })
+            .collect();
+        let ids: Vec<Id> = runtime
+            .poll()
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids.len(), 3);
+        // the first is answered; the two others still wait
+        runtime.feed(Event::Done {
+            id: ids[0],
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(reads[0].take().unwrap().unwrap(), Some(b"one".to_vec()));
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        for read in &reads[1..] {
+            assert_eq!(read.take().expect("the read ended").unwrap(), None);
+        }
+    }
+
+    #[test]
+    fn a_branch_cancelled_mid_read_leaves_its_clone_to_cancel_the_stream() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        type Pair = (Rc<Response>, Rc<Response>);
+        let held: Rc<RefCell<Option<Pair>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = rt
+                .fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap();
+            let copy = Rc::new(response.clone_response());
+            let response = Rc::new(response);
+            *slot.borrow_mut() = Some((response.clone(), copy));
+            response.read().await
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        read_of(&runtime.poll());
+        let (response, copy) = held.borrow().clone().unwrap();
+        response.cancel();
+        // the clone still reads the stream: it is not cancelled yet
+        assert!(runtime.poll().is_empty());
+        assert_eq!(call.take().expect("the read ended").unwrap(), None);
+        copy.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+    }
+
+    /// A fetched response, its headers answered; the fetch id.
+    fn fetched(runtime: &mut Runtime) -> (Response, Id) {
+        let rt = runtime.rt().clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                None,
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        (call.take().expect("the fetch answered"), fetch)
+    }
+
+    #[test]
+    fn a_response_dropped_unread_lets_the_host_stop_its_stream() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+    }
+
+    #[test]
+    fn a_clone_dropped_unread_is_freed_while_the_other_branch_reads_on() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let copy = response.clone_response();
+        let cmds = runtime.poll();
+        let Some(Cmd::CloneBody { to, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        drop(copy);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: to,
+                stop: None
+            }]
+        );
+        // the last branch goes too: now the stream stops
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+    }
+
+    #[test]
+    fn a_response_read_to_its_end_or_cancelled_is_not_released_again() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        drop(response);
+        assert!(runtime.poll().is_empty());
+
+        let (response, _) = fetched(&mut runtime);
+        let response = Rc::new(response);
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        let id = read_of(&runtime.poll());
+        runtime.feed(Event::Done {
+            id,
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read.take().unwrap().unwrap(), None);
+        drop(response);
+        assert!(runtime.poll().is_empty());
+    }
+
+    #[test]
+    fn a_drop_does_not_change_what_an_abort_sends_later() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let signal = rt.controller();
+        let given = signal.clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                Some(&given),
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        drop(call.take().expect("the fetch answered"));
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+        // JavaScript's body is still there to error: the abort cancels it, as before
+        signal.abort(None);
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+    }
+
+    #[test]
+    fn a_response_held_by_a_cleared_timer_is_released() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let rt = runtime.rt().clone();
+        // the timer's callback owns the last handle; clearing it drops the callback
+        let timer = rt.set_timeout(1000.0, move || drop(response));
+        let set = runtime.poll();
+        assert_eq!(
+            set,
+            vec![Cmd::SetTimer {
+                id: timer,
+                ms: 1000.0
+            }]
+        );
+        rt.clear_timeout(Some(timer));
+        assert_eq!(
+            runtime.poll(),
+            vec![
+                Cmd::ClearTimer { id: timer },
+                Cmd::Release {
+                    body: fetch,
+                    stop: Some(fetch)
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn cancelling_the_last_held_branch_after_a_drop_stops_the_stream() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let copy = response.clone_response();
+        let cmds = runtime.poll();
+        let Some(Cmd::CloneBody { to, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: None
+            }]
+        );
+        // the clone, still held, is cancelled: no branch can read the stream any more.
+        // JavaScript's dropped branch is only garbage, so no `Cancel`: the host is told
+        // by a release that stops the stream
+        copy.cancel();
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: to,
+                stop: Some(fetch)
+            }]
+        );
+        drop(copy);
+        assert!(runtime.poll().is_empty());
+    }
+
+    /// A `read()` started as a task.
+    type ReadCall = Call<Result<Option<Vec<u8>>, JsError>>;
+
+    /// Two `read()` calls in flight on one fetched response: the response,
+    /// the two calls, the ids of their `Cmd::Read`s.
+    fn two_reads(runtime: &mut Runtime) -> (Rc<Response>, Vec<ReadCall>, Vec<Id>) {
+        let (response, _) = fetched(runtime);
+        let response = Rc::new(response);
+        let reads: Vec<_> = (0..2)
+            .map(|_| {
+                let response = response.clone();
+                runtime.start(async move { response.read().await })
+            })
+            .collect();
+        let ids: Vec<Id> = runtime
+            .poll()
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids.len(), 2);
+        (response, reads, ids)
+    }
+
+    #[test]
+    fn the_end_of_a_stream_ends_every_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let (_response, reads, ids) = two_reads(&mut runtime);
+        // the host answers the first read only: the stream closed
+        runtime.feed(Event::Done {
+            id: ids[0],
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        for read in &reads {
+            assert_eq!(read.take().expect("the read ended").unwrap(), None);
+        }
+    }
+
+    #[test]
+    fn a_failed_stream_fails_every_read_waiting_on_it_and_every_later_one() {
+        let mut runtime = Runtime::new(host());
+        let (response, reads, ids) = two_reads(&mut runtime);
+        runtime.feed(Event::Failed {
+            id: ids[0],
+            error: JsError::type_error("terminated"),
+        });
+        assert!(runtime.poll().is_empty());
+        for read in &reads {
+            let error = read.take().expect("the read ended").unwrap_err();
+            assert_eq!(error.message, "terminated");
+        }
+        // a read after the failure asks the host nothing and fails the same way
+        let later = runtime.start(async move { response.read().await });
+        assert!(runtime.poll().is_empty());
+        let error = later.take().expect("the read ended").unwrap_err();
+        assert_eq!(error.message, "terminated");
+    }
+
+    /// A response fetched with a signal: the response, the fetch id, the
+    /// signal.
+    fn fetched_with_signal(runtime: &mut Runtime) -> (Rc<Response>, Id, Signal) {
+        let rt = runtime.rt().clone();
+        let signal = rt.controller();
+        let given = signal.clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                Some(&given),
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        (
+            Rc::new(call.take().expect("the fetch answered")),
+            fetch,
+            signal,
+        )
+    }
+
+    /// One `read()` of `response`, answered `answer` by the host.
+    fn read_answered(
+        runtime: &mut Runtime,
+        response: &Rc<Response>,
+        answer: Result<Answer, JsError>,
+    ) -> Result<Option<Vec<u8>>, JsError> {
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        let id = read_of(&runtime.poll());
+        runtime.feed(match answer {
+            Ok(answer) => Event::Done { id, answer },
+            Err(error) => Event::Failed { id, error },
+        });
+        assert!(runtime.poll().is_empty());
+        read.take().expect("the read ended")
+    }
+
+    /// A `read()` of `response` the runtime answers without the host.
+    fn read_now(
+        runtime: &mut Runtime,
+        response: &Rc<Response>,
+    ) -> Result<Option<Vec<u8>>, JsError> {
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        assert!(runtime.poll().is_empty());
+        read.take().expect("the read ended")
+    }
+
+    #[test]
+    fn a_later_abort_does_not_change_how_a_stream_ended() {
+        let mut runtime = Runtime::new(host());
+        // failed, then aborted: reads keep the stream's failure
+        let (response, _, signal) = fetched_with_signal(&mut runtime);
+        let failed = read_answered(
+            &mut runtime,
+            &response,
+            Err(JsError::type_error("terminated")),
+        );
+        assert_eq!(failed.unwrap_err().message, "terminated");
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(
+            read_now(&mut runtime, &response).unwrap_err().message,
+            "terminated"
+        );
+
+        // closed, then aborted: reads stay done
+        let (response, _, signal) = fetched_with_signal(&mut runtime);
+        assert_eq!(
+            read_answered(&mut runtime, &response, Ok(Answer::End)).unwrap(),
+            None
+        );
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
+
+        // cancelled, then aborted: reads stay done
+        let (response, fetch, signal) = fetched_with_signal(&mut runtime);
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
+
+        // aborted while open: the abort errors the stream
+        let (response, fetch, signal) = fetched_with_signal(&mut runtime);
+        signal.abort(None);
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        assert_eq!(
+            read_now(&mut runtime, &response).unwrap_err().name,
+            "AbortError"
+        );
+    }
+
+    /// Two reads in flight: task A, started first, reads after a timer, so
+    /// task B sends the first `Cmd::Read`. Answers: the runtime, the
+    /// response, A's and B's calls, A's and B's read ids.
+    fn reads_out_of_task_order() -> (Runtime, Rc<Response>, ReadCall, ReadCall, Id, Id) {
+        let mut runtime = Runtime::new(host());
+        let (response, _) = fetched(&mut runtime);
+        let response = Rc::new(response);
+        let rt = runtime.rt().clone();
+        let reader = response.clone();
+        let a = runtime.start(async move {
+            rt.sleep(1.0).await;
+            reader.read().await
+        });
+        let reader = response.clone();
+        let b = runtime.start(async move { reader.read().await });
+        let cmds = runtime.poll();
+        let timer = cmds
+            .iter()
+            .find_map(|c| match c {
+                Cmd::SetTimer { id, .. } => Some(*id),
+                _ => None,
+            })
+            .expect("A's timer");
+        let read_b = read_of(&cmds);
+        runtime.feed(Event::Timer { id: timer });
+        let read_a = read_of(&runtime.poll());
+        (runtime, response, a, b, read_a, read_b)
+    }
+
+    #[test]
+    fn the_end_met_by_one_read_keeps_a_chunk_another_read_already_got() {
+        let (mut runtime, _response, a, b, read_a, read_b) = reads_out_of_task_order();
+        // the host answers in order before the tasks run: B's chunk, then A's end;
+        // A, polled first, meets the end
+        runtime.feed(Event::Done {
+            id: read_b,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        runtime.feed(Event::Done {
+            id: read_a,
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(a.take().expect("A ended").unwrap(), None);
+        assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
+    }
+
+    #[test]
+    fn a_cancel_keeps_a_chunk_a_read_already_got() {
+        let (mut runtime, response, a, b, _read_a, read_b) = reads_out_of_task_order();
+        runtime.feed(Event::Done {
+            id: read_b,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        response.cancel();
+        runtime.poll();
+        assert_eq!(a.take().expect("A ended").unwrap(), None);
+        assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
     }
 }

@@ -36,20 +36,63 @@ fn lstat_or_null(path: &str) -> Option<Metadata> {
     std::fs::symlink_metadata(namespaced(path)).ok()
 }
 
-/// `info.nlink`: how many names the file has. Windows has no answer in the
-/// standard library (engine-waiting: the file handle's link count), so a file
-/// there counts as having one name.
-pub(super) fn link_count(info: &Metadata) -> u64 {
+/// `info.nlink` of `lstat(path)`: how many names the file at `path` has.
+/// Unix reads it from the metadata. Windows reads it as libuv's `lstat` does
+/// (src/win/fs.c `fs__stat_impl`): the entry itself is opened (a reparse point
+/// is not followed) and its handle answers `nNumberOfLinks`. Where that open
+/// or read fails, Node's `lstat` would have failed and the file been refused,
+/// so the count is `u64::MAX`: more than one name.
+pub(super) fn link_count(path: &str, info: &Metadata) -> u64 {
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
+        let _ = path;
         info.nlink()
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
     {
         let _ = info;
-        1
+        windows_link_count(path).unwrap_or(u64::MAX)
     }
+}
+
+/// `BY_HANDLE_FILE_INFORMATION.nNumberOfLinks` of the entry at `path`
+#[cfg(windows)]
+fn windows_link_count(path: &str) -> Option<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ,
+        FILE_SHARE_WRITE, GetFileInformationByHandle, OPEN_EXISTING,
+    };
+    let wide: Vec<u16> = std::ffi::OsStr::new(&namespaced(path))
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
+    // SAFETY: `wide` is a NUL-terminated UTF-16 string that outlives the call;
+    // the security attributes and template handle are null as in libuv
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return None;
+    }
+    let mut file_info = BY_HANDLE_FILE_INFORMATION::default();
+    // SAFETY: `handle` is the open handle above and `file_info` a valid
+    // out-pointer; the handle is closed once, right after the read
+    let read = unsafe { GetFileInformationByHandle(handle, &mut file_info) };
+    // SAFETY: `handle` is open and not used again
+    unsafe { CloseHandle(handle) };
+    (read != 0).then_some(u64::from(file_info.nNumberOfLinks))
 }
 
 /// `plainFileIn(root, segments)`: the absolute path of `<root>/<segments>`
@@ -67,7 +110,7 @@ pub fn plain_file_in<S: AsRef<str>>(root: &str, segments: &[S]) -> Option<String
         if !last && !info.is_dir() {
             return None;
         }
-        if last && (!info.is_file() || link_count(&info) > 1) {
+        if last && (!info.is_file() || link_count(&path, &info) > 1) {
             return None;
         }
     }

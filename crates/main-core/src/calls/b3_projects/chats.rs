@@ -259,9 +259,15 @@ impl ChatStoreGuide for FakeGuide {
             self.mark_unwritable_flag();
             return DataUpdateOutcome::Unwritable;
         };
+        // the fake's install id never fails; a change that does would fail the
+        // write, as the guide's `tryWrite` reports it
         let next = {
             let mut install_id = || self.install_id();
             change(current.as_deref(), &mut install_id)
+        };
+        let Ok(next) = next else {
+            self.mark_unwritable_flag();
+            return DataUpdateOutcome::Unwritable;
         };
         let fail_writes = self.world.borrow().fail_writes;
         if let Some(text) = &next
@@ -292,9 +298,9 @@ impl ChatStoreGuide for FakeGuide {
         path_of(&self.world.borrow(), id, rel_path, data_dir)
     }
 
-    fn install_id(&mut self) -> String {
+    fn install_id(&mut self) -> Result<String, ChatStoreError> {
         self.note("installId", Vec::new());
-        self.world.borrow().install_id.clone()
+        Ok(self.world.borrow().install_id.clone())
     }
 
     fn trust_state(&mut self, id: &str) -> ProjectTrustState {
@@ -516,7 +522,7 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
 
 /// what a thrown `Error` is in a result
 fn thrown(error: &ChatStoreError) -> Value {
-    json!({ "error": error.0 })
+    json!({ "error": error.message })
 }
 
 /// an id the spec gave; anything else is no id, as the TypeScript finds it

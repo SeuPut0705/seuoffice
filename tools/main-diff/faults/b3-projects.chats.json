@@ -324,21 +324,21 @@
   {
     "name": "chat-store: an info of another project is overwritten",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "                if let Some(parsed) = &parsed\n                    && parsed.project_id() != project_id\n                {\n                    return None;\n                }\n",
+    "find": "            if let Some(parsed) = &parsed\n                && parsed.project_id() != project_id\n            {\n                return Ok(None);\n            }\n",
     "replace": "",
     "fn": ["chat-store.scenario"]
   },
   {
     "name": "chat-store: a new info is made at the clock, not the first message",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "Some(entry) => record_str(&entry.message, \"ts\"),\n                    None => host.now_iso(),",
-    "replace": "Some(_) => host.now_iso(),\n                    None => host.now_iso(),",
+    "find": "Some(entry) => record_str(&entry.message, \"ts\"),\n                None => host.now_iso(),",
+    "replace": "Some(_) => host.now_iso(),\n                None => host.now_iso(),",
     "fn": ["chat-store.scenario"]
   },
   {
     "name": "chat-store: a new info has no origin",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "fresh.set(\"origin\", string_value(install_id()));",
+    "find": "fresh.set(\"origin\", string_value(install_id()?));",
     "replace": "fresh.set(\"origin\", string_value(String::new()));",
     "fn": ["chat-store.scenario"]
   },
@@ -709,8 +709,8 @@
   {
     "name": "chat-store: a chat that is not visible is picked for an outside document",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "Ok(self\n            .visible(project_id, &root, &data_dir, &chat_id)\n            .map(|_| chat_id))",
-    "replace": "{\n            let _ = self.visible(project_id, &root, &data_dir, &chat_id);\n            Ok(Some(chat_id))\n        }",
+    "find": "Ok(self\n            .visible(project_id, &root, &data_dir, &chat_id)?\n            .map(|_| chat_id))",
+    "replace": "{\n            let _ = self.visible(project_id, &root, &data_dir, &chat_id)?;\n            Ok(Some(chat_id))\n        }",
     "fn": ["chat-store.scenario"]
   },
   {
@@ -824,5 +824,33 @@
     "find": "Ok(last[0] != 0x0a)",
     "replace": "Ok(last[0] == 0x0a)",
     "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the guide adapter makes a fresh install id where the settings file refuses one",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "ProjectGuide::install_id(self.guide()).map_err(chat_error)",
+    "replace": "let guide = self.guide();\n                ProjectGuide::install_id(guide).or_else(|_| Ok(guide.new_id()))",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "chat-store: a chat's origin is told from the install id even where it cannot be stored",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let install_id = self.guide.install_id()?;",
+    "replace": "let install_id = self.guide.install_id().unwrap_or_default();",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "chat-store: a message is written without an origin where the install id cannot be stored",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let origin = self.guide.install_id()?;",
+    "replace": "let origin = self.guide.install_id().unwrap_or_default();",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "chat-store: the guide's error reaches the store without its code",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "        code: error.code(),",
+    "replace": "        code: None,",
+    "fn": ["project-guide.scenario"]
   }
 ]

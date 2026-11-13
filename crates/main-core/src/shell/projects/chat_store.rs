@@ -130,28 +130,61 @@ fn messages_rel(chat_id: &str) -> String {
     format!("{}/{}", chats_dir(), messages_name(chat_id))
 }
 
-/// What the TypeScript throws (an `Error` with this message)
+/// What the TypeScript throws: an `Error` with this message, and the `code`
+/// of a Node file error the store passes on (the guide's `installId` that
+/// cannot write the settings file), `None` for the store's own errors
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChatStoreError(pub String);
+pub struct ChatStoreError {
+    pub message: String,
+    pub code: Option<&'static str>,
+}
 
 impl ChatStoreError {
     fn new(message: impl Into<String>) -> Self {
-        ChatStoreError(message.into())
+        ChatStoreError {
+            message: message.into(),
+            code: None,
+        }
+    }
+}
+
+impl From<NodeError> for ChatStoreError {
+    fn from(error: NodeError) -> Self {
+        ChatStoreError {
+            message: error.message,
+            code: error.code,
+        }
+    }
+}
+
+impl From<ChatStoreError> for NodeError {
+    fn from(error: ChatStoreError) -> Self {
+        NodeError {
+            code: error.code,
+            message: error.message,
+        }
     }
 }
 
 impl std::fmt::Display for ChatStoreError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "Error: {}", self.0)
+        write!(formatter, "Error: {}", self.message)
     }
 }
 
 impl std::error::Error for ChatStoreError {}
 
+/// `() => this.guide.installId()` handed to a [`ChatDataChange`]: `Err` is
+/// what `installId` throws
+pub type InstallIdSupplier<'r> = dyn FnMut() -> Result<String, ChatStoreError> + 'r;
+
 /// The `change` of `ChatStoreGuide::update_data`: the current text and the
-/// install id supplier to the text to write (`None`: write nothing)
-pub type ChatDataChange<'r> =
-    &'r mut dyn FnMut(Option<&str>, &mut dyn FnMut() -> String) -> Option<String>;
+/// install id supplier to the text to write (`None`: write nothing). `Err` is
+/// what the change throws: the guide reports the write as unwritable.
+pub type ChatDataChange<'r> = &'r mut dyn FnMut(
+    Option<&str>,
+    &mut InstallIdSupplier<'_>,
+) -> Result<Option<String>, ChatStoreError>;
 
 /// `ChatStoreGuide`: the guide calls the chat store uses. A path is `None`
 /// (`null`) where the guide knows no such project or the path is refused.
@@ -181,8 +214,9 @@ pub trait ChatStoreGuide {
     /// `dataPath(id, relPath, dataDir)`
     fn data_path(&mut self, id: &str, rel_path: &str, data_dir: Option<&str>) -> Option<String>;
 
-    /// `installId()`
-    fn install_id(&mut self) -> String;
+    /// `installId()`; `Err` is what it throws (the settings file refuses the
+    /// new id), which the store's caller gets as it is
+    fn install_id(&mut self) -> Result<String, ChatStoreError>;
 
     /// `trustState(id)`
     fn trust_state(&mut self, id: &str) -> ProjectTrustState;
@@ -1114,17 +1148,22 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         }
     }
 
-    fn is_foreign(&mut self, root: &str, data_dir: &str, info: &ChatInfo) -> bool {
-        let install_id = self.guide.install_id();
+    fn is_foreign(
+        &mut self,
+        root: &str,
+        data_dir: &str,
+        info: &ChatInfo,
+    ) -> Result<bool, ChatStoreError> {
+        let install_id = self.guide.install_id()?;
         if info.origin() != install_id {
-            return true;
+            return Ok(true);
         }
         let Some(path) = plain_file_in(root, &chat_path(data_dir, &messages_name(info.id())))
         else {
-            return false;
+            return Ok(false);
         };
         let Some(stats) = lstat_or_null(&path) else {
-            return false;
+            return Ok(false);
         };
         let size = stats.len();
         let mtime = mtime_ms(&stats);
@@ -1134,7 +1173,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         {
             let foreign = cached.foreign;
             self.foreign_cache.set(path, cached);
-            return foreign;
+            return Ok(foreign);
         }
         let foreign = has_foreign_message(root, info.id(), &install_id, Some(data_dir));
         self.foreign_cache.delete(&path);
@@ -1153,7 +1192,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
             }
             self.foreign_cache.delete(&key);
         }
-        foreign
+        Ok(foreign)
     }
 
     /// `visible(projectId, root, dataDir, chatId)`: the info of a chat the list shows (this project id; not foreign under "without"), else `None`
@@ -1163,25 +1202,27 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         root: &str,
         data_dir: &str,
         chat_id: &str,
-    ) -> Option<ListedChat> {
-        let info = parse_info(
+    ) -> Result<Option<ListedChat>, ChatStoreError> {
+        let Some(info) = parse_info(
             read_folder_text(root, &chat_path(data_dir, &info_name(chat_id))).as_deref(),
             chat_id,
-        )?;
+        ) else {
+            return Ok(None);
+        };
         if info.project_id() != project_id {
-            return None;
+            return Ok(None);
         }
-        let foreign = self.is_foreign(root, data_dir, &info);
+        let foreign = self.is_foreign(root, data_dir, &info)?;
         if foreign && self.guide.trust_state(project_id) != ProjectTrustState::Use {
-            return None;
+            return Ok(None);
         }
-        Some(ListedChat { info, foreign })
+        Ok(Some(ListedChat { info, foreign }))
     }
 
     /// `visibleChats(projectId)`: visible chats, newest `updatedAt` first
-    fn visible_chats(&mut self, project_id: &str) -> Vec<ListedChat> {
+    fn visible_chats(&mut self, project_id: &str) -> Result<Vec<ListedChat>, ChatStoreError> {
         let Some(root) = non_empty(self.guide.project_root(project_id)) else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
         let data_dir = data_dir_name(&root);
         let mut out = Vec::new();
@@ -1192,7 +1233,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
             if !is_valid_project_id(chat_id) {
                 continue;
             }
-            if let Some(chat) = self.visible(project_id, &root, &data_dir, chat_id) {
+            if let Some(chat) = self.visible(project_id, &root, &data_dir, chat_id)? {
                 out.push(chat);
             }
         }
@@ -1204,7 +1245,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
                 locale_compare(a.info.id(), b.info.id())
             }
         });
-        out
+        Ok(out)
     }
 
     /// `writeInfo(projectId, chatId, state)`: writes the info's share of `state`:
@@ -1223,76 +1264,77 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         let host = &mut self.host;
         let project_id = chat.project_id;
         let chat_id = chat.chat_id;
-        let mut change =
-            |current: Option<&str>, install_id: &mut dyn FnMut() -> String| -> Option<String> {
-                let parsed = parse_info(current, chat_id);
-                if let Some(parsed) = &parsed
-                    && parsed.project_id() != project_id
-                {
-                    return None;
-                }
-                let at = match entries.first() {
-                    Some(entry) => record_str(&entry.message, "ts"),
-                    None => host.now_iso(),
-                };
-                let mut info = match parsed {
-                    Some(parsed) => parsed,
-                    None => {
-                        let mut fresh = JsObject::new();
-                        fresh.set(
-                            "version",
-                            JsonValue::Number(f64::from(PROJECT_FORMAT_VERSION)),
-                        );
-                        fresh.set("id", string_value(chat_id.to_owned()));
-                        fresh.set("projectId", string_value(project_id.to_owned()));
-                        fresh.set("title", string_value(String::new()));
-                        fresh.set("createdAt", string_value(at.clone()));
-                        fresh.set("updatedAt", string_value(at));
-                        fresh.set("origin", string_value(install_id()));
-                        fresh.set(
-                            "lastEditor",
-                            string_value(match entries.first() {
-                                Some(entry) => record_str(&entry.message, "editor"),
-                                None => "home".to_owned(),
-                            }),
-                        );
-                        fresh.set("documents", JsonValue::Array(Vec::new()));
-                        ChatInfo(fresh)
-                    }
-                };
-                for entry in entries {
-                    info.0
-                        .set("updatedAt", string_value(record_str(&entry.message, "ts")));
-                    info.0.set(
-                        "lastEditor",
-                        string_value(record_str(&entry.message, "editor")),
+        let mut change = |current: Option<&str>,
+                          install_id: &mut InstallIdSupplier<'_>|
+         -> Result<Option<String>, ChatStoreError> {
+            let parsed = parse_info(current, chat_id);
+            if let Some(parsed) = &parsed
+                && parsed.project_id() != project_id
+            {
+                return Ok(None);
+            }
+            let at = match entries.first() {
+                Some(entry) => record_str(&entry.message, "ts"),
+                None => host.now_iso(),
+            };
+            let mut info = match parsed {
+                Some(parsed) => parsed,
+                None => {
+                    let mut fresh = JsObject::new();
+                    fresh.set(
+                        "version",
+                        JsonValue::Number(f64::from(PROJECT_FORMAT_VERSION)),
                     );
-                    if let Some(doc_rel) = &entry.doc_rel {
-                        let documents = move_to_end(platform, &info.documents(), doc_rel);
-                        info.0.set("documents", string_array(&documents));
-                    }
+                    fresh.set("id", string_value(chat_id.to_owned()));
+                    fresh.set("projectId", string_value(project_id.to_owned()));
+                    fresh.set("title", string_value(String::new()));
+                    fresh.set("createdAt", string_value(at.clone()));
+                    fresh.set("updatedAt", string_value(at));
+                    fresh.set("origin", string_value(install_id()?));
+                    fresh.set(
+                        "lastEditor",
+                        string_value(match entries.first() {
+                            Some(entry) => record_str(&entry.message, "editor"),
+                            None => "home".to_owned(),
+                        }),
+                    );
+                    fresh.set("documents", JsonValue::Array(Vec::new()));
+                    ChatInfo(fresh)
                 }
-                for rel in attached {
-                    let documents = move_to_end(platform, &info.documents(), rel);
+            };
+            for entry in entries {
+                info.0
+                    .set("updatedAt", string_value(record_str(&entry.message, "ts")));
+                info.0.set(
+                    "lastEditor",
+                    string_value(record_str(&entry.message, "editor")),
+                );
+                if let Some(doc_rel) = &entry.doc_rel {
+                    let documents = move_to_end(platform, &info.documents(), doc_rel);
                     info.0.set("documents", string_array(&documents));
                 }
-                if let Some(rename) = &rename {
-                    info.0.set("title", string_value(rename.clone()));
-                } else if info.title().is_empty()
-                    && let Some(first) = entries
-                        .iter()
-                        .find(|entry| record_str(&entry.message, "role") == "user")
-                {
-                    info.0.set(
-                        "title",
-                        string_value(one_line(
-                            &record_str(&first.message, "text"),
-                            CHAT_TITLE_CHARS,
-                        )),
-                    );
-                }
-                Some(info_text(&info))
-            };
+            }
+            for rel in attached {
+                let documents = move_to_end(platform, &info.documents(), rel);
+                info.0.set("documents", string_array(&documents));
+            }
+            if let Some(rename) = &rename {
+                info.0.set("title", string_value(rename.clone()));
+            } else if info.title().is_empty()
+                && let Some(first) = entries
+                    .iter()
+                    .find(|entry| record_str(&entry.message, "role") == "user")
+            {
+                info.0.set(
+                    "title",
+                    string_value(one_line(
+                        &record_str(&first.message, "text"),
+                        CHAT_TITLE_CHARS,
+                    )),
+                );
+            }
+            Ok(Some(info_text(&info)))
+        };
         let outcome = self.guide.update_data(
             project_id,
             &info_rel(chat_id),
@@ -1410,7 +1452,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
     ) -> Result<Vec<ProjectChatListItem>, ChatStoreError> {
         assert_valid_id(project_id, "project id")?;
         Ok(self
-            .visible_chats(project_id)
+            .visible_chats(project_id)?
             .into_iter()
             .map(|ListedChat { info, foreign }| ProjectChatListItem {
                 id: info.id().to_owned(),
@@ -1434,7 +1476,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         };
         let data_dir = data_dir_name(&root);
         Ok(self
-            .visible(&chat_ref.project_id, &root, &data_dir, &chat_ref.chat_id)
+            .visible(&chat_ref.project_id, &root, &data_dir, &chat_ref.chat_id)?
             .map(|chat| chat.info))
     }
 
@@ -1447,7 +1489,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         };
         let limit = normalize_limit(prop(args, "limit").as_deref());
         let data_dir = data_dir_name(&root);
-        let Some(chat) = self.visible(&project_id, &root, &data_dir, &chat_id) else {
+        let Some(chat) = self.visible(&project_id, &root, &data_dir, &chat_id)? else {
             return Ok(OpenChatOutcome::NotFound);
         };
         let path = plain_file_in(&root, &chat_path(&data_dir, &messages_name(&chat_id)));
@@ -1562,7 +1604,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         let seq = state.next_seq;
         state.next_seq += 1.0;
         let ts = self.host.now_iso();
-        let origin = self.guide.install_id();
+        let origin = self.guide.install_id()?;
         let message = build_message(
             args,
             MessageFields {
@@ -1745,7 +1787,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         };
         let rel = self.guide.document_relative_path(project_id, doc_path);
         if let Some(rel) = rel {
-            let chats = self.visible_chats(project_id);
+            let chats = self.visible_chats(project_id)?;
             let platform = self.platform.as_str();
             return Ok(chats
                 .iter()
@@ -1770,7 +1812,7 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         };
         let data_dir = data_dir_name(&root);
         Ok(self
-            .visible(project_id, &root, &data_dir, &chat_id)
+            .visible(project_id, &root, &data_dir, &chat_id)?
             .map(|_| chat_id))
     }
 }
