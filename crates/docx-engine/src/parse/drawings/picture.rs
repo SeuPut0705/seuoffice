@@ -14,7 +14,7 @@ use super::{EMU_PER_PT, EMU_PER_PX, EMU_PER_TWIP};
 use crate::drawing_geometry::anchor::{IDENTITY_CTM, MIN_WRAP_SLIVER_EMU, compose_group_ctm};
 use crate::model::{
     Block, HfImage, HfImagePosH, HfImagePosHRel, HfImagePosV, HfImagePosVRel, HfTextBox,
-    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings,
+    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings, SharedStr,
     TextboxParaDisplay,
 };
 use crate::parse::text::FloatTableAhead;
@@ -182,7 +182,7 @@ pub fn picture_overhangs_column(meta: &Block, xml: &str, sect: Option<&SectionSe
 
 /// `txbxParaVisible`: a paragraph the box shows, text runs or a table row.
 pub fn txbx_para_visible(p: &TextboxParaDisplay) -> bool {
-    !p.runs.is_empty() || p.cells.as_ref().map_or(0, Vec::len) > 0
+    p.runs.as_ref().is_some_and(|runs| !runs.is_empty()) || p.cells.as_ref().map_or(0, Vec::len) > 0
 }
 
 js_object! {
@@ -399,7 +399,7 @@ fn first_node<'a>(root: &'a XNode, name: &str) -> Option<&'a XNode> {
 /// first. `None` (null) for a group with shapes, nesting or turned pictures.
 pub fn group_picture_layers(
     drawing: &XNode,
-    media_by_rid: &JsMap<String>,
+    media_by_rid: &JsMap<SharedStr>,
 ) -> Option<Vec<RunImageLayersItem>> {
     let group = first_node(drawing, "wpg:wgp")?;
     let mut pics = Vec::new();

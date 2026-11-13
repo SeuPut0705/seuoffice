@@ -28,8 +28,8 @@ import {
   type XNode,
 } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
-import { custgeomInheritedGuide } from './listed'
 import { parseInternals } from './parse-internals'
+import { lineRuleOutsideItsType } from './listed'
 
 const internals = await parseInternals()
 
@@ -747,14 +747,11 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.hfShapeDrawingSvg',
     call: (text) => internals.hfShapeDrawingSvg!(text),
-    listed: custgeomInheritedGuide,
     fromParse: {
       fn: 'hfShapeDrawingSvg',
       input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined),
     },
-    built: SVG_FRAGS.map((text): Input =>
-      custgeomInheritedGuide(text, {}) ? { text, seed: false } : { text },
-    ),
+    built: SVG_FRAGS.map((text): Input => ({ text })),
   },
   {
     fn: 'parse.vmlLengthPx',
@@ -1554,6 +1551,9 @@ const TXBX_CONTENTS = [
   ),
   txbxParas(para(INLINE_PIC)),
   txbxParas(para(run('chars'), '<w:ind w:leftChars="100" w:firstLineChars="50"/>')),
+  // w:firstLine in twips with a character-unit left: the TypeScript sets
+  // indentFirstLine before indentLeft, the other order of the two keys
+  txbxParas(para(run('chars'), '<w:ind w:leftChars="100" w:firstLine="50"/>')),
   '<w:txbxContent/>',
   txbxParas(
     para(
@@ -3066,6 +3066,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.paragraphStrayBox',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.paragraphStrayBox!(text, await buildCtx(args)),
     fromParse: {
       fn: 'paragraphStrayBox',
@@ -3079,6 +3080,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.textboxParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const paras = internals.textboxParagraphs!(nodeOf(text), await buildCtx(args)) as Array<{
         box?: { id?: number }
@@ -3098,6 +3100,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.txbxTableParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.txbxTableParas!(nodeOf(text), await buildCtx(args)),
     fromParse: {
       fn: 'txbxTableParas',
@@ -3111,6 +3114,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.collectTxbxParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const out: Array<{ para?: unknown }> = []
       const items: Array<{ para: unknown; ref: unknown; textSizeHalf: number }> = []
@@ -3145,6 +3149,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.txbxContentParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.txbxContentParas!(nodeOf(text), await buildCtx(args), args.docOffset),
     fromParse: {
@@ -3169,6 +3174,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractTextboxes',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.extractTextboxes!(text, await buildCtx(args), args.opts),
     fromParse: {
       fn: 'extractTextboxes',

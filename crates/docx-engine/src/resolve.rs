@@ -11,6 +11,8 @@
 //! per style id). Neither is here: no caller writes through what they hold,
 //! so they change no answer.
 
+use std::rc::Rc;
+
 use jscompat::{
     JsMap, JsNum, JsObject, Radix, js_regex, math_round, number_to_string, parse_int, truthy,
 };
@@ -115,11 +117,14 @@ pub struct TableCtx {
 /// `ResolveCtx`, without the two caches (see the module comment).
 #[derive(Debug, Clone, Default)]
 pub struct ResolveCtx {
-    pub styles: JsMap<StyleInfo>,
+    /// Shared: a table cell scopes a copy of the context to its conditions,
+    /// and that copy must not copy the definitions.
+    pub styles: Rc<JsMap<StyleInfo>>,
     /// `defaultParaStyle`, as its key in `styles`.
     pub default_para_style_key: Option<String>,
     pub doc_defaults: Option<DocDefaults>,
-    pub numbering: JsMap<NumberingDef>,
+    /// Shared, as `styles` is.
+    pub numbering: Rc<JsMap<NumberingDef>>,
     pub theme_fonts: Option<ThemeFonts>,
     pub theme_colors: Option<ThemeColors>,
     pub compat: ResolveCompat,
@@ -191,10 +196,10 @@ impl<'de> Deserialize<'de> for ResolveCtx {
                 .map(|(key, _)| key.to_owned())
         });
         Ok(ResolveCtx {
-            styles: literal.styles,
+            styles: Rc::new(literal.styles),
             default_para_style_key,
             doc_defaults: literal.doc_defaults,
-            numbering: literal.numbering,
+            numbering: Rc::new(literal.numbering),
             theme_fonts: literal.theme_fonts,
             theme_colors: literal.theme_colors,
             compat: literal.compat,
@@ -2122,10 +2127,10 @@ pub fn resolve_ctx_of(doc: ResolveDoc) -> ResolveCtx {
         .find(|(_, s)| s.kind == "paragraph" && s.is_default == Some(true))
         .map(|(key, _)| key.to_owned());
     ResolveCtx {
-        styles: doc.styles,
+        styles: Rc::new(doc.styles),
         default_para_style_key,
         doc_defaults: doc.doc_defaults,
-        numbering: doc.numbering,
+        numbering: Rc::new(doc.numbering),
         theme_fonts: doc.theme_fonts,
         theme_colors: doc.theme_colors,
         compat: ResolveCompat {

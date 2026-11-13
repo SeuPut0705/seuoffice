@@ -9,7 +9,7 @@ use super::host::MediaEnv;
 use crate::chart::parse_chart_part_xml;
 use crate::image_kinds::{is_metafile_mime, is_tiff_mime};
 use crate::lazy_media::{LAZY_MEDIA_PLACEHOLDER_BYTES, lazy_media_hash_of, lazy_media_url};
-use crate::model::{Block, BlockImageAlign, ChartDisplay};
+use crate::model::{Block, BlockImageAlign, ChartDisplay, SharedStr};
 use crate::numbering::NumberingDef;
 use crate::package::{
     RelInfo, Thrown, content_types_of, parse_rels, part_text, resolve_relationship_target_path,
@@ -85,7 +85,7 @@ pub fn read_media_part_data_url(
     zip: &Package,
     part_path: &str,
     media: &MediaEnv<'_>,
-) -> Result<Option<String>, Thrown> {
+) -> Result<Option<SharedStr>, Thrown> {
     let Some(file) = zip.file(part_path) else {
         return Ok(None);
     };
@@ -94,22 +94,26 @@ pub fn read_media_part_data_url(
     };
     if is_metafile_mime(Some(&mime)) {
         let bytes = file.bytes().map_err(|error| error.to_string())?;
-        return Ok(media.host.metafile_to_data_url(bytes, &mime));
+        return Ok(media
+            .host
+            .metafile_to_data_url(bytes, &mime)
+            .map(SharedStr::from));
     }
     if is_tiff_mime(Some(&mime)) {
         let bytes = file.bytes().map_err(|error| error.to_string())?;
-        return Ok(media.host.tiff_to_data_url(bytes));
+        return Ok(media.host.tiff_to_data_url(bytes).map(SharedStr::from));
     }
-    media_part_src(file, part_path, &mime, media).map(Some)
+    media_part_src(file, part_path, &mime, media).map(|src| Some(SharedStr::from(src)))
 }
 
 /// `mediaPartDataUrl`: one string per media part, so a picture anchored on
-/// thousands of paragraphs does not hold thousands of base64 copies.
+/// thousands of paragraphs does not hold thousands of base64 copies. A hit
+/// hands out the string the first read made, not a copy of it.
 pub fn media_part_data_url(
     zip: &Package,
     part_path: &str,
     media: &MediaEnv<'_>,
-) -> Result<Option<String>, Thrown> {
+) -> Result<Option<SharedStr>, Thrown> {
     if let Some(cached) = media.cached_data_url(part_path) {
         return Ok(cached);
     }
@@ -126,7 +130,7 @@ pub fn media_data_url(
     r_id: &str,
     source_path: &str,
     media: &MediaEnv<'_>,
-) -> Result<Option<String>, Thrown> {
+) -> Result<Option<SharedStr>, Thrown> {
     let Some(rel) = rels.get(r_id) else {
         return Ok(None);
     };
@@ -151,7 +155,7 @@ pub fn resolve_pic_bullets(
         return Ok(());
     }
     let rels = parse_rels(zip, "word/_rels/numbering.xml.rels")?;
-    let mut src_by_id: Vec<(JsNum, String)> = Vec::new();
+    let mut src_by_id: Vec<(JsNum, SharedStr)> = Vec::new();
     for (id, r_id) in pic_bullets {
         if let Some(src) = media_data_url(zip, &rels, r_id, "word/numbering.xml", media)?
             && !src.is_empty()
@@ -172,7 +176,7 @@ pub fn resolve_pic_bullets(
                 continue;
             }
             if let Some((_, src)) = src_by_id.iter().find(|(known, _)| known.0 == id.0) {
-                level.pic_bullet_src.set(src.clone());
+                level.pic_bullet_src.set(src.to_string());
             }
         }
     }
@@ -225,7 +229,7 @@ pub fn table_blip_media(
     rels: &JsMap<RelInfo>,
     source_path: &str,
     media: &MediaEnv<'_>,
-) -> Result<JsMap<String>, Thrown> {
+) -> Result<JsMap<SharedStr>, Thrown> {
     let mut out = JsMap::new();
     let mut r_ids: Vec<String> = Vec::new();
     for el in elements {
@@ -257,7 +261,7 @@ pub fn table_blip_media(
             continue;
         };
         if rel.target_mode.as_deref() == Some("External") || is_http_url(&rel.target) {
-            out.set(r_id.as_str(), rel.target.clone());
+            out.set(r_id.as_str(), SharedStr::from(rel.target.as_str()));
             continue;
         }
         if let Some(data_url) = media_data_url(zip, rels, r_id, source_path, media)?
@@ -332,7 +336,9 @@ pub fn resolve_blip_media(xml: &str, ctx: &BuildContext<'_>) -> Result<(), Throw
             continue;
         };
         if rel.target_mode.as_deref() == Some("External") || is_http_url(&rel.target) {
-            media_by_rid.borrow_mut().set(r_id, rel.target.clone());
+            media_by_rid
+                .borrow_mut()
+                .set(r_id, SharedStr::from(rel.target.as_str()));
             continue;
         }
         let data_url = media_data_url(ctx.zip, &ctx.rels, r_id, source_path_of(ctx), ctx.media)?;
@@ -345,7 +351,7 @@ pub fn resolve_blip_media(xml: &str, ctx: &BuildContext<'_>) -> Result<(), Throw
 
 /// `extractImage`: the picture of an a:blip as a data URL, or the target of a
 /// linked one.
-pub fn extract_image(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<String>, Thrown> {
+pub fn extract_image(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<SharedStr>, Thrown> {
     // embedded (r:embed -> word/media/...) or linked (r:link -> external URL)
     let r_id = js_regex!(r#"<a:blip[^>]*r:embed\s*=\s*["']([^"']+)["']"#)
         .exec(xml)
@@ -363,7 +369,7 @@ pub fn extract_image(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<String>
     };
     // linked pictures (Word downloads them on open; the <img> does the same)
     if rel.target_mode.as_deref() == Some("External") || is_http_url(&rel.target) {
-        return Ok(Some(rel.target.clone()));
+        return Ok(Some(rel.target.as_str().into()));
     }
     match resolve_relationship_target_path(source_path_of(ctx), &rel.target) {
         Some(path) => media_part_data_url(ctx.zip, &path, ctx.media),
@@ -506,11 +512,11 @@ pub fn ole_display(xml: &str, ctx: &BuildContext<'_>) -> Result<Block, Thrown> {
                 .metafile_to_data_url(bytes, mime.as_deref().unwrap_or(""))
                 && !converted.is_empty()
             {
-                out.image_data_url.set(converted);
+                out.image_data_url.set(converted.into());
             }
         } else if let Some(mime) = mime.as_deref().filter(|mime| !mime.is_empty()) {
             out.image_data_url
-                .set(media_part_src(file, path, mime, ctx.media)?);
+                .set(media_part_src(file, path, mime, ctx.media)?.into());
         }
     }
     // Word draws the preview at the declared size: the v:shape style (pt),

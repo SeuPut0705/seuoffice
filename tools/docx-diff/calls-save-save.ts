@@ -81,6 +81,7 @@ const NOTES_LISTS: Array<Array<Record<string, unknown>>> = [
   [{ id: '3', text: 'new\nnote' }],
   [{ id: '4', text: '', richParas: [[{ text: 'rich', bold: true, italic: true, underline: true, strike: true, color: 'ff0000', sizeHalfPoints: 30, fontAscii: 'Arial', font: 'MS Gothic' }, { text: 'ins', ins: { author: 'A', date: '2024-01-01T00:00:00Z', id: '7001' } }, { text: 'del', del: { author: 'B' } }], [{ text: 'second' }]] }],
   [{ id: '5', text: 'a & b < c', richParas: [] }, { id: '6', text: '' }],
+  [{ id: '7', text: '', richParas: [[{ text: 'a & b < c' }, { text: 'x < y & z', del: { author: 'B' } }], [{ text: '<w:t>&amp;</w:t>', bold: true }]] }],
 ]
 
 /** Notes parts that hold hidden text, each with the edits a person can make to a note: unchanged, across words, a paragraph more or fewer. */
@@ -422,7 +423,7 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.hasOrphanMoveRanges',
     call: (_text, args) => internals.hasOrphanMoveRanges!(zipOf(args.parts), args.documentPath),
-    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
+    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4), STORY_PARTS.slice(2, 5)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
     mutation: 'none',
   },
   {

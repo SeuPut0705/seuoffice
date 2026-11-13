@@ -26,6 +26,7 @@ import { nameOf, serializeXNode, xmlParser, type XNode } from './reference/xml-u
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { ENTRIES, hiddenRun, marks, NOTE_PARTS, plainRun, STORIES } from './withheld-inputs'
 import { parseInternals } from './parse-internals'
+import { lineRuleOutsideItsType } from './listed'
 
 const internals = await parseInternals()
 
@@ -1115,6 +1116,7 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.extractParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const parsed = await parsedOf(args.parts)
       return internals.extractParaFormat!(
@@ -1172,6 +1174,7 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.resolvedParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const parsed = await parsedOf(args.parts)
       return internals.resolvedParaFormat!(
@@ -1359,6 +1362,7 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.buildTextParagraph',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.buildTextParagraph!(
         { id: args.id, docxIndex: args.docxIndex, originalXml: text },
@@ -1403,6 +1407,7 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.standaloneNoteParagraphReader',
+    listed: lineRuleOutsideItsType,
     call: (text, args) =>
       parseNotesXml(
         text,
@@ -1601,6 +1606,7 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.paraStyleDisplay',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) => internals.paraStyleDisplay!(await buildCtxOf(args), args.styleId),
     fromParse: {
       fn: 'paraStyleDisplay',
@@ -1617,6 +1623,7 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.defaultParaStyle',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) =>
       internals.defaultParaStyle!(
         (args.ctx as string[]).includes('styles') ? (await parsedOf(args.parts)).styles : undefined,
@@ -1910,21 +1917,32 @@ export const PARSE_TEXT: CallSpec[] = [
         }
       },
     },
-    built: EFFS.flatMap((eff, index) =>
-      [FORMATS[index % FORMATS.length], FORMATS[(index * 5 + 3) % FORMATS.length]].map(
-        (format, k) => {
-          const p = EFF_P_PRS[(index + k) % EFF_P_PRS.length]
-          return {
-            text: p ?? '',
-            args: {
-              ...(p === undefined ? {} : { node: 'w:pPr' }),
-              ...(format === undefined ? {} : { format }),
-              eff,
-            },
-          }
-        },
+    built: [
+      ...EFFS.flatMap((eff, index) =>
+        [FORMATS[index % FORMATS.length], FORMATS[(index * 5 + 3) % FORMATS.length]].map(
+          (format, k) => {
+            const p = EFF_P_PRS[(index + k) % EFF_P_PRS.length]
+            return {
+              text: p ?? '',
+              args: {
+                ...(p === undefined ? {} : { node: 'w:pPr' }),
+                ...(format === undefined ? {} : { format }),
+                eff,
+              },
+            }
+          },
+        ),
       ),
-    ),
+      // a resolved bidi paragraph without its own w:bidi flips a physical jc to the logical side:
+      // right to left and left to right, center and an absent jc stay
+      ...[
+        { align: 'right' },
+        { align: 'left' },
+        { align: 'center' },
+        { align: 'right', bidiInherited: false },
+        {},
+      ].map((format) => ({ text: pPr(''), args: { node: 'w:pPr', format, eff: EFFS[1]! } })),
+    ],
     argMutation: true,
   },
   {
@@ -2174,7 +2192,11 @@ export const PARSE_TEXT: CallSpec[] = [
       ...marks().map((mark) => ({ text: 'secret', rawRPr: `<w:rPr>${mark}</w:rPr>` })),
       { text: 'a', rawRPr: '<w:rPr><go:redact/></w:rPr>' },
       { text: 'b', rawRPr: '<w:rPr><go:redact w:label=""/></w:rPr>', bold: true },
-      { text: 'c', rawRPr: '<w:rPr><go:redact w:label="a &amp; b"/></w:rPr>', del: { author: 'Ann' } },
+      {
+        text: 'c',
+        rawRPr: '<w:rPr><go:redact w:label="a &amp; b"/></w:rPr>',
+        del: { author: 'Ann' },
+      },
       { text: 'd', rawRPr: '<w:rPr><w:b/></w:rPr>' },
       { text: 'e', rawRPr: '' },
     ].flatMap((run, index) =>

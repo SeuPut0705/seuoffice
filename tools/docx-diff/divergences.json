@@ -68,20 +68,6 @@
     "reason": "latexToOmml recurses once per group and the TypeScript runs until the JavaScript stack overflows, somewhere past a thousand levels depending on the host. A stack overflow in wasm ends the instance, so Rust counts the depth and refuses past 256 levels of its reader (128 nested groups). No formula a person writes is that deep; the limit is listed because the two sides answer differently between the two limits."
   },
   {
-    "id": "custgeom-inherited-guide",
-    "comparison": "call",
-    "fn": "parse.hfShapeDrawingSvg",
-    "text": "<w:drawing><wp:anchor><wp:extent cx=\"952500\" cy=\"476250\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"100\"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst><a:gd name=\"g1\" fmla=\"val toString\"/><a:gd name=\"__proto__\" fmla=\"val 5\"/></a:gdLst><a:pathLst><a:path w=\"10\" h=\"10\"><a:moveTo><a:pt x=\"g1\" y=\"__proto__\"/></a:moveTo><a:lnTo><a:pt x=\"valueOf\" y=\"hasOwnProperty\"/></a:lnTo><a:arcTo wR=\"__proto__\" hR=\"5\" stAng=\"0\" swAng=\"5400000\"/><a:lnTo><a:pt x=\"toString\" y=\"5\"/></a:lnTo></a:path></a:pathLst></a:custGeom><a:solidFill><a:srgbClr val=\"1f497d\"/></a:solidFill></wps:spPr></wps:wsp></wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing>",
-    "args": {},
-    "typescript": {
-      "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%20NaN%20NaN%20L%20NaN%20NaN%20L%20NaN%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
-    },
-    "rust": {
-      "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200%200.01%20L%200%200%20C%200%200%200%200.01%200%200.01%20L%200%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
-    },
-    "reason": "TypeScript defect, the class of the same id in tools/pptx-diff/divergences.json (reported 2026-11-12, fix pending on main). parseCustGeom of pptx-engine/src/custgeom.ts reads guide values from a plain object by a document name (lines 86 and 283) and assigns them by name (line 150): a name every object inherits (constructor, toString, valueOf, __proto__...) answers with a function or the prototype, NaN in the path, a guide named __proto__ is lost, and an arc whose radius is NaN draws nothing. The Rust (pptx_engine::custgeom::parse_cust_geom) reads own guides only: an unknown name is 0 like any undefined guide, and a __proto__ guide is stored. Class predicate: custgeomInheritedGuide of listed.ts."
-  },
-  {
     "id": "merge-file-name-cuts-a-surrogate-pair",
     "comparison": "call",
     "fn": "save.mergeOutputFileName",

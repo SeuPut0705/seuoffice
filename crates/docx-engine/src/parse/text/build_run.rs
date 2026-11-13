@@ -7,13 +7,13 @@ use ooxml_xml::{XNode, serialize};
 use serde_json::{Map, Value};
 
 use super::build_run_old::old_run_properties;
-use super::convert::{json, model_of, num, run_eff_to_model};
+use super::convert::{PictureUrls, json, model_of, num, put_picture_urls, run_eff_to_model};
 use super::emu_to_px;
 use super::runs::{RunResolve, effective_run_of};
 use super::{break_char_of, wt_text};
 use crate::drawing_geometry::fill::{w14_glow_of, w14_text_fill_hex};
 use crate::drawing_geometry::w14_text_outline_of;
-use crate::model::{Run, RunLink};
+use crate::model::{Run, RunLink, SharedStr};
 use crate::package::Thrown;
 use crate::parse::drawings::image::run_picture_anchor_of;
 use crate::parse::drawings::picture::{group_picture_layers, pic_border_of, pic_transform_of};
@@ -80,7 +80,7 @@ pub fn build_run(
     link: Option<&RunLink>,
     theme: Option<&ThemeColors>,
     theme_fonts: Option<&ThemeFonts>,
-    media_by_rid: Option<&JsMap<String>>,
+    media_by_rid: Option<&JsMap<SharedStr>>,
     res: &mut RunResolve<'_>,
     part_preserve: Option<bool>,
     vml_shape_types: Option<&JsMap<JsObject<String>>>,
@@ -122,6 +122,10 @@ pub fn build_run(
         }
     }
     let mut image: Option<Map<String, Value>> = None;
+    // The picture's data URL and those of its layers stand empty in `image` and
+    // are set on the run: a JSON value would copy each one for every run.
+    let mut image_url: Option<SharedStr> = None;
+    let mut layer_urls: Vec<SharedStr> = Vec::new();
     if let Some(media) = media_by_rid {
         // Word wraps modern drawings in mc:AlternateContent (Choice + VML twin)
         let alternate = find_in(children, "mc:AlternateContent");
@@ -136,9 +140,14 @@ pub fn build_run(
             let data_url = r_id.and_then(|r_id| media.get(r_id));
             if let Some(data_url) = data_url {
                 let mut img = Map::new();
-                img.insert("dataUrl".to_owned(), Value::from(data_url.as_str()));
+                img.insert("dataUrl".to_owned(), Value::from(""));
+                image_url = Some(data_url.clone());
                 img.insert("xml".to_owned(), Value::from(drawing_xml.as_str()));
-                if let Some(layers) = group_picture_layers(drawing, media) {
+                if let Some(mut layers) = group_picture_layers(drawing, media) {
+                    layer_urls = layers
+                        .iter_mut()
+                        .map(|layer| std::mem::take(&mut layer.data_url))
+                        .collect();
                     img.insert("layers".to_owned(), json(&layers));
                 }
                 let extent_tag = js_regex!(r"<wp:extent[^>]*\/?>")
@@ -202,7 +211,8 @@ pub fn build_run(
                 let data_url = r_id.and_then(|r_id| media.get(r_id));
                 if let Some(data_url) = data_url {
                     let mut img = Map::new();
-                    img.insert("dataUrl".to_owned(), Value::from(data_url.as_str()));
+                    img.insert("dataUrl".to_owned(), Value::from(""));
+                    image_url = Some(data_url.clone());
                     img.insert("xml".to_owned(), Value::from(pict_xml.as_str()));
                     let style = js_regex!(r#"<v:shape [^>]*style="([^"]*)""#)
                         .exec(&pict_xml)
@@ -535,5 +545,15 @@ pub fn build_run(
             run.insert("rawRPr".to_owned(), Value::from(stripped));
         }
     }
-    Ok(Some(model_of(Value::Object(run))?))
+    let mut built: Run = model_of(Value::Object(run))?;
+    if let Some(image) = image_url {
+        put_picture_urls(
+            &mut built,
+            PictureUrls {
+                image,
+                layers: layer_urls,
+            },
+        );
+    }
+    Ok(Some(built))
 }

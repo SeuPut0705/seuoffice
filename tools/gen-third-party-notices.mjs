@@ -13,10 +13,13 @@
  * own LICENSE (Apache-2.0) ships beside it as LICENSE.txt; the NOTICE that
  * license requires to travel with the work opens the generated file.
  *
- * The two Rust sections need cargo, and the rhwp one a sparse checkout of the
- * rhwp tag (manifests only, cached under node_modules/.cache). Without them a
- * local build degrades to a pointer; with CI or IEUM_RELEASE set the gap is an
- * error, and electron-builder's beforePack rejects a notice that has it.
+ * The three Rust sections need cargo, the rhwp one a sparse checkout of the
+ * rhwp tag (manifests only, cached under node_modules/.cache), and the
+ * office_wasm.wasm one the path dependencies crates/office-wasm resolves.
+ * Without them a local build degrades to a pointer; with CI or SEUOFFICE_RELEASE
+ * set the gap is an error, and electron-builder's beforePack rejects a notice
+ * that has it. A crate of office_wasm.wasm without a license file is an error
+ * in every build.
  *
  * The draw.io section reads the pinned draw.io release through
  * vendor/drawio/bundle.mjs (downloaded once into vendor/drawio/.cache) for
@@ -28,6 +31,8 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
 import { licenseText } from './license-text.mjs'
+import { officeWasmCrates } from './office-wasm-crates.mjs'
+import { OLD_RELEASE_ENV } from './old-names.mjs'
 import { loadDrawio, loadInventory, VENDOR_DIR as DRAWIO_VENDOR } from '../vendor/drawio/bundle.mjs'
 
 const require = createRequire(import.meta.url)
@@ -38,10 +43,11 @@ const BUILTIN = new Set(builtinModules)
 const envFlag = (name) => !['', '0', 'false'].includes((process.env[name] ?? '').toLowerCase())
 /**
  * A notice with a missing section must not reach an installer: on CI and in a
- * release build (IEUM_RELEASE=1, which electron-builder's beforePack sets when
- * it has to regenerate) every gap throws instead of degrading.
+ * release build (SEUOFFICE_RELEASE=1, which electron-builder's beforePack sets
+ * when it has to regenerate; the old name is read too) every gap throws
+ * instead of degrading.
  */
-const STRICT = envFlag('CI') || envFlag('IEUM_RELEASE')
+const STRICT = envFlag('CI') || envFlag('SEUOFFICE_RELEASE') || envFlag(OLD_RELEASE_ENV)
 
 function gap(message) {
   if (STRICT) throw new Error(`third-party notice incomplete: ${message}`)
@@ -583,18 +589,24 @@ function rhwpCrates() {
     .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version))
 }
 
-/** the crate list and each distinct license text; the count line is what electron-builder checks */
-function crateSection(crates) {
+/**
+ * the crate list and each distinct license text; the count line is what electron-builder checks.
+ * `printed` collects the texts written, and texts already in it are not written again.
+ */
+function crateSection(crates, printed = new Set()) {
   let text = `\n${crates.length} crates, all under permissive terms:\n\n`
   for (const c of crates) text += `  ${c.name} ${c.version}  —  ${c.spdx}\n    ${c.url}\n`
   const texts = new Map()
   for (const c of crates) {
     if (!c.dir || !existsSync(c.dir)) continue
     const license = licenseText(c.name, c.dir)
-    if (license && !texts.has(license)) texts.set(license, c.name)
+    if (license && !texts.has(license) && !printed.has(license)) texts.set(license, c.name)
   }
   text += sub('Crate license texts (deduplicated)')
-  for (const [license, first] of texts) text += `\n[first seen in ${first}]\n${license}\n`
+  for (const [license, first] of texts) {
+    text += `\n[first seen in ${first}]\n${license}\n`
+    printed.add(license)
+  }
   return text
 }
 
@@ -651,6 +663,8 @@ if (crates === null) {
 }
 
 const wasmCrates = rhwpCrates()
+/** the license texts section 3 reproduces, which the office-wasm section does not repeat */
+const rhwpLicenseTexts = new Set()
 out += hr('3. Rust crates (rhwp HWP engine, compiled into rhwp_bg.wasm)')
 out += `
 rhwp ${RHWP.rhwp.tag} (${RHWP_URL}, MIT License, listed above as @rhwp/core)
@@ -662,7 +676,7 @@ if (wasmCrates === null) {
   out += `\ncrate list unavailable at generation time; see Cargo.lock of ${RHWP_URL}`
   out += ` at ${RHWP.rhwp.tag}.\n`
 } else {
-  out += crateSection(wasmCrates)
+  out += crateSection(wasmCrates, rhwpLicenseTexts)
 }
 
 const GOTHIC_KR_COPYRIGHT = [
@@ -822,7 +836,8 @@ function vendoredSources() {
     const dir = join(ROOT, src, 'vendor')
     if (!existsSync(dir)) continue
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) found.push(join(src, 'vendor', entry.name))
+      // a repository path with forward slashes on every OS: the notice prints it
+      if (entry.isDirectory()) found.push(`${src}/vendor/${entry.name}`)
     }
   }
   return found.sort()
@@ -1009,6 +1024,53 @@ for (const dir of vendoredSources()) {
   }
 }
 
+const officeCrates = officeWasmCrates()
+out += hr('9. Rust crates (office engines, compiled into office_wasm.wasm)')
+out += `
+The document engines ship as office_wasm.wasm, built from crates/ of this
+application's source repository, under the license and NOTICE of the work
+above. The crates below are compiled into it. Vendored and ported code
+(crates/vendor, crates/mtx and the like) is listed with its own license files,
+and code ported into the crates of the work under the library it came from.
+`
+if (officeCrates === null) {
+  gap('cargo could not list the crates of office_wasm.wasm (crates/office-wasm)')
+  out += '\ncrate list unavailable at generation time; see crates/Cargo.lock.\n'
+} else {
+  const textless = officeCrates.filter(
+    (c) => !c.dir || !existsSync(c.dir) || !licenseText(c.name, c.dir),
+  )
+  if (textless.length > 0) {
+    throw new Error(
+      `office_wasm.wasm crates without a license file: ${textless.map((c) => `${c.name} ${c.version}`).join(', ')}`,
+    )
+  }
+  out += `\n${officeCrates.length} crates compiled into office_wasm.wasm:\n\n`
+  for (const c of officeCrates) {
+    const where = c.portedInto
+      ? `ported into ${c.portedInto}; ${c.url ?? 'source named there'}`
+      : (c.path ?? c.url)
+    out += `  ${c.name} ${c.version}  —  ${c.spdx}\n    ${where}\n`
+  }
+  const texts = new Map()
+  for (const c of officeCrates) {
+    const license = licenseText(c.name, c.dir)
+    if (!texts.has(license) && !rhwpLicenseTexts.has(license)) texts.set(license, c.name)
+  }
+  out += sub('Crate license texts (deduplicated; those of section 3 are not repeated)')
+  for (const [license, first] of texts) out += `\n[first seen in ${first}]\n${license}\n`
+  // vendored and ported code: what it is and where it came from, as its directory
+  // states it, and the files its license points to or asks to pass on
+  for (const c of officeCrates.filter((c) => c.path !== null)) {
+    const description = ['VENDORED.md', 'README.md'].find((file) => existsSync(join(c.dir, file)))
+    for (const file of [description, 'PATENTS', 'NOTICE']) {
+      if (!file || !existsSync(join(c.dir, file))) continue
+      out += sub(`${c.path}/${file}`)
+      out += `${readFileSync(join(c.dir, file), 'utf8').trim()}\n`
+    }
+  }
+}
+
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {
     throw new Error(`generated third-party notice is missing PDFium term: ${term}`)
@@ -1021,7 +1083,8 @@ writeFileSync(dest, out)
 console.log(
   `written: ${relative(ROOT, dest)} (${(out.length / 1024).toFixed(0)} KB) — ` +
     `${resolved.length} npm packages, ${crates?.length ?? 0} xlsx-sidecar crates, ` +
-    `${wasmCrates?.length ?? 0} rhwp crates, draw.io ${drawio ? drawio.config.version : 'missing'}`,
+    `${wasmCrates?.length ?? 0} rhwp crates, ${officeCrates?.length ?? 0} office_wasm.wasm crates, ` +
+    `draw.io ${drawio ? drawio.config.version : 'missing'}`,
 )
 if (noText.length > 0) console.warn(`no license file published: ${noText.join(', ')}`)
 if (missing.size > 0) console.warn(`not installed, skipped: ${[...missing].join(', ')}`)

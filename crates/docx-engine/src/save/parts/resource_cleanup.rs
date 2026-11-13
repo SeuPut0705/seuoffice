@@ -409,18 +409,21 @@ pub fn cleanup_docx_owned_resources(
     }
     let retained = add_reachable_owned_parts(shared_roots, &outgoing, Some(&candidates));
     let mut removed: HashSet<String> = HashSet::new();
+    let mut doomed: Vec<String> = Vec::new();
     for path in &candidates {
         if retained.contains(path) {
             continue;
         }
         removed.insert(path.clone());
-        zip.remove(path);
+        doomed.push(path.clone());
         let dependency_rels_path = relationship_part_path(path);
         if zip.file(&dependency_rels_path).is_some() {
-            zip.remove(&dependency_rels_path);
+            doomed.push(dependency_rels_path.clone());
             removed.insert(dependency_rels_path);
         }
     }
+    // one index rebuild for all of them
+    zip.remove_all(&doomed);
     if removed.is_empty() {
         return Ok(());
     }

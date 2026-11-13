@@ -12,8 +12,8 @@ use std::rc::Rc;
 
 use docx_engine::inline_opaque as opaque;
 use docx_engine::model::{
-    HfImage, HfPartInfo, InlineWrap, ParaFormat, Run, SectionSettings, TableBorders, TableCell,
-    TableModel,
+    HfImage, HfPartInfo, InlineWrap, ParaFormat, Run, SectionSettings, SharedStr, TableBorders,
+    TableCell, TableModel,
 };
 use docx_engine::numbering::parse_numbering;
 use docx_engine::package::{parse_rels, part_text};
@@ -513,7 +513,7 @@ fn hf_v_span_of(_text: &str, args: &Value) -> Returned {
     )))
 }
 
-fn map_entries(map: Option<JsMap<String>>) -> Returned {
+fn map_entries(map: Option<JsMap<SharedStr>>) -> Returned {
     optional(map.map(|map| {
         map.iter()
             .map(|(k, v)| (k.to_owned(), v.clone()))
@@ -529,8 +529,8 @@ fn hf_table_media_call(text: &str, args: &Value) -> Returned {
 }
 
 /// `args.tableMedia`: `[rId, url]` pairs.
-fn table_media_arg(args: &Value) -> Result<Option<JsMap<String>>, String> {
-    let entries: Option<Vec<(String, String)>> = arg(args, "tableMedia")?;
+fn table_media_arg(args: &Value) -> Result<Option<JsMap<SharedStr>>, String> {
+    let entries: Option<Vec<(String, SharedStr)>> = arg(args, "tableMedia")?;
     Ok(entries.map(|entries| entries.into_iter().collect()))
 }
 
