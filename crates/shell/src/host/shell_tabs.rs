@@ -10,7 +10,7 @@
 use std::rc::Rc;
 
 use main_core::shell::tab_manager::TabKind;
-use shell_contract::ids::ViewId;
+use shell_contract::ids::{ViewId, WindowId};
 use shell_contract::provided::Provided;
 use shell_ipc_w::tabs::TabsState;
 
@@ -46,6 +46,27 @@ pub(crate) trait ShellTabs {
     /// `changeUiScale(APP_SETTINGS_PATH(), direction)`: 1 bigger, -1 smaller,
     /// 0 reset. Saved, stamped on every page, and the tab strip relaid out.
     fn change_ui_scale(&self, direction: i32);
+    // The document links' facts (`document-links-shell.ts`'s deps). Batch W
+    // implements them over TabsState; until then the document-link entries
+    // find no document.
+    /// `linkedDocumentForWebContents(wc)`: the tab describing this view, else
+    /// the focused detached window holding it; its title and file path
+    fn describe_view(&self, _view: ViewId) -> Option<(String, Option<String>)> {
+        None
+    }
+    /// `linkMenuKind()`: the focused detached window's kind, else the active
+    /// tab's (a Present html tab shows the Home menu)
+    fn menu_kind(&self) -> Option<TabKind> {
+        None
+    }
+    /// `tabManager.tabIdForWebContents(id)`: the hand-off store's `tabIdFor`
+    fn tab_id_for(&self, _view: ViewId) -> Option<String> {
+        None
+    }
+    /// `detachedWindowForWebContents(id) ?? shellWindow`: the make window's parent
+    fn parent_window_for(&self, _view: ViewId) -> Option<WindowId> {
+        None
+    }
 }
 
 struct OverTabs(Rc<TabsState>);

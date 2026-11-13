@@ -15,10 +15,17 @@
 mod app;
 mod cef_ops;
 mod context;
+mod doc_links;
 mod dock;
 mod fonts;
 
 pub(crate) use app::{app_menu_activate, app_menu_popup};
+// what batch A and the editors' hosts call for the document links
+#[allow(unused_imports)]
+pub(crate) use doc_links::{
+    OpenMakeWindow, attach_make_window, document_link_file_moved, document_link_paths,
+    document_view_destroyed, make_from_document, note_document_saved,
+};
 // what D2's docs host (`DocsShell`) drives: the Docs View and Insert state
 #[allow(unused_imports)]
 pub(crate) use app::{
@@ -142,6 +149,7 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let _ = APP.set(cx.app.clone());
     context::install(&cx.app, cx.views.clone(), cx.windows.clone());
     app::install(cx);
+    doc_links::install(cx.windows.clone());
     let shell = Arc::new(ShellM {
         app: cx.app.clone(),
         ui: cx.ui.clone(),

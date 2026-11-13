@@ -44,6 +44,7 @@ use main_core::packages::electron_utils::app_menu::{
     view_menu_template, window_menu_template,
 };
 use main_core::packages::i18n::Lang;
+use main_core::shell::document_links_menu::{MenuClick as DocLinkClick, MenuItem as DocLinkItem};
 use main_core::shell::feedback::{
     FEEDBACK_SURVEY_URL, FeedbackEnvironment, feedback_details, feedback_text, platform_label,
 };
@@ -154,6 +155,8 @@ enum Act {
     MinimizeWindow,
     /// `win?.close()` of the focused window
     CloseWindow,
+    /// a document-link entry: make from, or open a listed file, for this view
+    DocLink(DocLinkClick, ViewId),
     /// `role: 'zoom'` of the focused window, from the ☰ popup
     MaximizeWindow,
     /// `role: 'togglefullscreen'` of the focused window, from the ☰ popup
@@ -391,6 +394,8 @@ struct Ctx {
     recent: Vec<String>,
     docs_view: DocsViewState,
     seams: Seams,
+    /// the document-link entries of this kind's File menu, led by a separator
+    doc_links: Vec<Node>,
     labels: AppMenuLabels,
     roles: RoleLabels,
 }
@@ -414,6 +419,7 @@ impl Ctx {
             recent,
             docs_view,
             seams,
+            doc_links: Vec::new(),
             roles: RoleLabels::of(&labels),
             labels,
         }
@@ -797,6 +803,7 @@ fn pdf_menus(ctx: &Ctx) -> Vec<Node> {
                 Node::Separator,
             ],
             shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
             {
                 let mut export = vec![Node::Separator];
                 // PDF > Word / PowerPoint / Excel: D2's local conversions
@@ -833,6 +840,7 @@ fn markdown_menus(ctx: &Ctx) -> Vec<Node> {
                 Node::Separator,
             ],
             shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
             vec![
                 Node::Separator,
                 shell_export(ctx, "menuExportDocx", "docx"),
@@ -891,6 +899,7 @@ fn html_menus(ctx: &Ctx) -> Vec<Node> {
                 Node::Separator,
             ],
             shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
             vec![
                 Node::Separator,
                 shell_export(ctx, "menuExportDocx", "docx"),
@@ -1071,6 +1080,7 @@ fn mindmap_menus(ctx: &Ctx) -> Vec<Node> {
                 Node::Separator,
             ],
             shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
             vec![
                 Node::Separator,
                 shell_export(ctx, "menuExportMapImage", "png"),
@@ -1611,6 +1621,11 @@ fn menu_for(kind: TabKind, ctx: &Ctx) -> Vec<Node> {
         // the Help tab shows the home menu too
         TabKind::Home | TabKind::Help => home_menus(ctx),
     };
+    // the menus of docs, sheets and slides take them after their extra File
+    // items (`installBackToHomeItems`); the shell-built ones place them themselves
+    if matches!(kind, TabKind::Docs | TabKind::Sheets | TabKind::Slides) {
+        after_back_to_home(&mut menus, &ctx.doc_links);
+    }
     with_help_items(ctx, &mut menus);
     with_view_menu(ctx, &mut menus);
     let bound = bind_events(&mut menus, &app_menu_items(kind.as_str(), ctx.lang));
@@ -1619,6 +1634,57 @@ fn menu_for(kind: TabKind, ctx: &Ctx) -> Vec<Node> {
     }
     // an item with no event cannot do anything: it is not shown
     drop_unbound(tidy(menus))
+}
+
+/// The entries of `documentLinkFileMenuItems` as menu nodes. Tauri menus
+/// have no sublabel or tooltip: the path Electron showed under a listed
+/// file's name off macOS is left out.
+fn doc_link_nodes(items: &[DocLinkItem], view: ViewId) -> Vec<Node> {
+    items
+        .iter()
+        .filter_map(|entry| {
+            if entry.item_type == Some("separator") {
+                return Some(Node::Separator);
+            }
+            let label = entry.label.clone()?;
+            if let Some(submenu) = &entry.submenu {
+                return Some(Node::Menu {
+                    label,
+                    role: MenuRole::Plain,
+                    items: doc_link_nodes(submenu, view),
+                });
+            }
+            Some(Node::Item(Item {
+                id: None,
+                name: None,
+                label,
+                accelerator: None,
+                enabled: entry.enabled.unwrap_or(true),
+                checked: None,
+                act: entry.click.clone().map(|click| Act::DocLink(click, view)),
+            }))
+        })
+        .collect()
+}
+
+fn after_back_to_home(nodes: &mut [Node], extra: &[Node]) {
+    for node in nodes {
+        if let Node::Menu { items, .. } = node {
+            let at = items.iter().position(|item| {
+                matches!(
+                    item,
+                    Node::Item(Item {
+                        act: Some(Act::BackToHome),
+                        ..
+                    })
+                )
+            });
+            if let Some(at) = at {
+                items.splice(at + 1..at + 1, extra.iter().cloned());
+                return;
+            }
+        }
+    }
 }
 
 fn drop_unbound(nodes: Vec<Node>) -> Vec<Node> {
@@ -1878,7 +1944,7 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
         } else {
             DocsViewState::default()
         };
-        let ctx = Ctx::new(
+        let mut ctx = Ctx::new(
             Os::current(),
             lang,
             app.package_info().name.clone(),
@@ -1891,6 +1957,9 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
             docs_view,
             seams_of(provided),
         );
+        if let Some((items, view)) = super::doc_links::file_menu(kind) {
+            ctx.doc_links = doc_link_nodes(&items, view);
+        }
         let menus = menu_for(kind, &ctx);
         let check_updates = ctx.labels.check_updates().to_owned();
         let on_ui = app.clone();
@@ -2297,6 +2366,7 @@ fn run(act: Act, kind: TabKind, provided: &Provided, services: &Services) {
                 eprintln!("shell: reload: {error}");
             }
         }),
+        Act::DocLink(click, view) => super::doc_links::run_click(&click, view),
         Act::Frame(edit) => on_webview(provided, services, kind, move |webview| {
             let edited = webview.with_cef_webview(move |cef| {
                 use cef::{ImplBrowser, ImplFrame};
