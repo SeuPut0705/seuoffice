@@ -55,7 +55,8 @@ function Probe([string[]]$arguments) {
   if ($LASTEXITCODE -ne 0) { Fail "probe $($arguments[0]) failed" }
 }
 function InstallDir {
-  $entry = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
+  # the key does not exist on a machine that never installed an app per user
+  $entry = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
     Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'SeuOffice*' } | Select-Object -First 1
   if ($entry) {
     $dir = (Get-ItemProperty "HKCU:\Software\$($entry.PSChildName)" -ErrorAction SilentlyContinue).InstallLocation
@@ -187,6 +188,8 @@ try {
     & node (Join-Path $here 'probe.mjs') update --port $Port --version $NextVersion
     if ($LASTEXITCODE -ne 0) { Fail 'the second update did not reach "downloaded"' }
     for ($i = 0; $i -lt 180 -and (ExeVersion) -ne $NextVersion; $i++) { Start-Sleep 1 }
+    # the installer starts the new app (--force-run): stop that one, not an earlier one
+    for ($i = 0; $i -lt 90 -and -not (AppProcesses); $i++) { Start-Sleep 1 }
     Start-Sleep 10
     StopApp
     StartApp @()

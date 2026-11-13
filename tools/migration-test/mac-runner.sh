@@ -51,6 +51,9 @@ result seeded
 start_app
 probe update --version "$to_version"
 for _ in $(seq 180); do [ "$(version)" = "$to_version" ] && break; sleep 1; done
+# the swap relaunches the app after the new bundle is in place: wait for it,
+# or a later start hands over to it (single instance) and quits
+for _ in $(seq 60); do pgrep -f "$app/Contents/MacOS/SeuOffice" >/dev/null && break; sleep 1; done
 sleep 10
 stop_app
 [ "$(version)" = "$to_version" ] || { result "still $(version) after the update"; exit 1; }
