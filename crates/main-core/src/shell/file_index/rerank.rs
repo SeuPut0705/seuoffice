@@ -314,9 +314,12 @@ impl SearchReranker {
                 .collect(),
             scores: scores_by_path,
         };
-        if self.cache.len() >= CACHE_MAX
-            && let Some(oldest) = self.cache.keys().next().map(str::to_owned)
-        {
+        let oldest = if self.cache.len() >= CACHE_MAX {
+            self.cache.keys().next().map(str::to_owned)
+        } else {
+            None
+        };
+        if let Some(oldest) = oldest {
             self.cache.delete(&oldest);
         }
         self.cache.set(
