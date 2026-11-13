@@ -22,7 +22,7 @@ use crate::fields::{
 use crate::generate::split_xml_children;
 use crate::ink::strip_ink_runs;
 use crate::model::{
-    Block, DiagramDisplay, Run, SectionSettings, SharedStr, TableModel, TextboxDisplay,
+    Block, BlockType, DiagramDisplay, Run, SectionSettings, SharedStr, TableModel, TextboxDisplay,
 };
 use crate::package::{Thrown, parse_part};
 use crate::parse::drawings::diagram::{
@@ -50,6 +50,7 @@ use crate::resolve::{ResolveParaOptions, resolve_paragraph_props_xml};
 use crate::scan::BodyElement;
 use crate::sdt::{parse_sdt_block, sdt_table_xml};
 use crate::vml::shape::VML_PICT_RID_RE;
+use crate::withheld::withheld_block_label;
 use crate::xml_text::{decode_entities, math_tokens, plain_text};
 use omml::{omml_fragments_of, omml_to_latex, omml_to_mathml};
 
@@ -215,8 +216,38 @@ fn rich_drawing(detect: &str) -> bool {
         .test(detect)
 }
 
-/// `buildBlock`
+/// `buildBlock`: a block shown as a whole unit (a picture, a drawing) whose
+/// picture sits in a run marked hidden from AI carries the mark's label: the
+/// unit has no run for the mark to sit on, and its image, preview text and
+/// description are the run's content. A chart whose rich text holds a mark is
+/// hidden whole too.
 pub fn build_block(
+    el: &BodyElement<'_>,
+    index: usize,
+    xml: &str,
+    ctx: &BuildContext<'_>,
+    zotero_field: Option<&ZoteroFieldParagraph>,
+) -> Result<Block, Thrown> {
+    let mut block = build_block_of(el, index, xml, ctx, zotero_field)?;
+    if !matches!(
+        *block.r#type,
+        Some(BlockType::Image | BlockType::Passthrough)
+    ) {
+        return Ok(block);
+    }
+    let redact = withheld_block_label(xml).or_else(|| {
+        (*block.chart_display)
+            .as_ref()
+            .and_then(|chart| (*chart.redact).clone())
+    });
+    if let Some(redact) = redact {
+        block.redact.set(redact);
+    }
+    Ok(block)
+}
+
+/// `buildBlockOf`
+fn build_block_of(
     el: &BodyElement<'_>,
     index: usize,
     xml: &str,

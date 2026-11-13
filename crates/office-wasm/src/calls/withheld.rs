@@ -7,7 +7,7 @@ use docx_engine::save::parts::text_patch::patch_paragraph_texts;
 use docx_engine::settings::edited_comment_model_text;
 use docx_engine::withheld::{
     comment_entries, first_mark_label, has_mark_element, has_withheld_trace, hidden_run_properties,
-    over_withheld, over_withheld_model_text, parse_entry, runs_text, with_redact_namespace,
+    over_withheld, over_withheld_model_text, parse_entry, runs_text, with_redact_root,
     withheld_block_label, withheld_label_of, withheld_node, withheld_part_label, withheld_text,
 };
 use ooxml_xml::XNode;
@@ -67,10 +67,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let label: String = required(args, "label")?;
             value(over_withheld(text, &label))
         }
-        "withRedactNamespace" => {
-            let root_tag: String = required(args, "rootTag")?;
-            value(with_redact_namespace(text, &root_tag).map_err(|error| error.to_string())?)
-        }
+        "withRedactRoot" => value(with_redact_root(text).into_owned()),
         "commentEntries" => value(comment_entries(text).map_err(|limit| limit.to_string())?),
         "editedCommentModelText" => {
             let edited: String = required(args, "text")?;

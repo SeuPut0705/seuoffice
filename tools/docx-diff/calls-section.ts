@@ -138,6 +138,11 @@ const SECT_PRS: string[] = [
   sectPr('<w:pgMar w:top="1440" w:left="1440" w:gutter="720"/>'),
   sectPr('<w:pgMar w:top="-1440" w:left="1440" w:gutter="567.5"/>'),
   sectPr('<w:pgMar w:gutter="-360"/>'),
+  // margins as another producer may spell them: single quotes, white space
+  // around `=`, a spaced `/>`; read, and rewritten in place, not added twice
+  sectPr(`<w:pgMar w:top = '1440' w:right="1800" w:bottom ='720' w:left= "1440" w:header='851'/>`),
+  sectPr(`<w:pgMar w:top='-1440' w:left='1440' w:gutter = '360' />`),
+  sectPr(`<w:pgMar w:top = "1440" w:footer=	'992'/>`),
   // columns, equal and unequal
   sectPr('<w:cols w:space="720" w:num="2"/>'),
   sectPr(

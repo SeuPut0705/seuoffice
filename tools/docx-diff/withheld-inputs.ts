@@ -48,7 +48,7 @@ async function storyOf(name: string, file: string): Promise<Story> {
   }
 }
 
-async function readStories(): Promise<Story[]> {
+async function readStories(pictures: boolean): Promise<Story[]> {
   const dir = mkdtempSync(join(tmpdir(), 'withheld-inputs-'))
   try {
     const out: Story[] = []
@@ -57,18 +57,26 @@ async function readStories(): Promise<Story[]> {
         out.push(
           await storyOf(
             `${nsName}, ${spelling}`,
-            await hiddenStoriesDocx(dir, ns, `${out.length}.docx`, spelling),
+            await hiddenStoriesDocx(dir, ns, `${out.length}.docx`, spelling, { pictures }),
           ),
         )
     for (const mutation of TAG_MUTATION_NAMES)
-      out.push(await storyOf(`mutated: ${mutation}`, await mutatedStoriesDocx(dir, mutation)))
+      out.push(
+        await storyOf(`mutated: ${mutation}`, await mutatedStoriesDocx(dir, mutation, { pictures })),
+      )
     return out
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 }
 
-export const STORIES: Story[] = await readStories()
+export const STORIES: Story[] = await readStories(false)
+
+/** The same documents with a picture, an old-kind picture and an object in marked runs and in plain ones. */
+export const PICTURE_STORIES_DOCS: Story[] = (await readStories(true)).map((story) => ({
+  ...story,
+  name: `pictures, ${story.name}`,
+}))
 
 const NS = 'https://genspark.ai/genoffice/redaction/2026'
 

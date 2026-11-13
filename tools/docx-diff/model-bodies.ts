@@ -418,7 +418,85 @@ const COMMENTS_EXTENDED_XML =
   '<w15:commentEx w15:paraId="1A2B3C4D" w15:done="1"/><w15:commentEx w15:paraId="2B3C4D5E" w15:paraIdParent="1A2B3C4D" w15:done="0"/>' +
   '</w15:commentsEx>'
 
+/** A chart part with a mark of the hidden-from-AI kind somewhere inside it, in the spelling `mark`. */
+const markedChart = (mark: string): string =>
+  CHART_XML.replace('</c:chart>', `<c:extLst>${mark}</c:extLst></c:chart>`)
+
+const GO_NS = 'xmlns:go="https://github.com/SeuPut0705/seuoffice/redaction/2026"'
+
+const CHART_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml'
+
+const FIELD_MARK = '<w:rPr><go:redact w:label="acct"/></w:rPr>'
+const fieldRun = (instr: string, rPr: string, result: string): string =>
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r>' +
+  `<w:r>${rPr}<w:instrText xml:space="preserve">${instr}</w:instrText></w:r>` +
+  `<w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const MARKED_RESULT = r('hidden result', '<w:rPr><go:redact w:label="acct"/></w:rPr>')
+
 export const MODEL_BODIES: ModelBody[] = [
+  {
+    // the mark on a field's instruction hides its result, whatever the field and however many runs it has
+    name: 'fields and text boxes with the hidden-from-AI mark',
+    docRootExtraAttrs: `${VML} ${GO_NS}`,
+    bodyXml:
+      p('', fieldRun(' HYPERLINK "https://x" ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', FIELD_MARK, r('ACCT') + r('-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', '', MARKED_RESULT + r('ACCT-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', '', r('ACCT-1234') + MARKED_RESULT)) +
+      p('', fieldRun(' REF bm \\h ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' FILLIN "who" ', '', MARKED_RESULT)) +
+      p('', fieldRun(' FILLIN "who" ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' PAGEREF bm ', FIELD_MARK, r('7'))) +
+      p('', r('plain ') + fieldRun(' AUTHOR ', FIELD_MARK, r('ACCT-1234')) + r(' tail')) +
+      p(
+        '',
+        fieldRun(' IF ', '', fieldRun(' MERGEFIELD acct ', FIELD_MARK, r('ACCT-1234')) + r('outer')),
+      ) +
+      '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="5000"/></w:tblGrid>' +
+      `<w:tr><w:tc><w:tcPr><w:tcW w:w="5000" w:type="dxa"/></w:tcPr>${p('', fieldRun(' MERGEFIELD acct ', FIELD_MARK, r('ACCT-1234')))}</w:tc></w:tr></w:tbl>` +
+      // a text box, a picture and an object in a marked run: the block holds the mark
+      p(
+        '',
+        '<w:r><w:rPr><go:redact w:label="memo"/></w:rPr><w:pict>' +
+          '<v:shape id="textBox9" type="#_x0000_t202" style="position:absolute;width:100pt;height:40pt">' +
+          `<v:textbox><w:txbxContent>${p('', r('salary 9000'))}</w:txbxContent></v:textbox></v:shape></w:pict></w:r>`,
+      ) +
+      p(
+        '',
+        '<w:r><w:rPr><go:redact w:label="memo"/></w:rPr><w:drawing><wp:inline><wp:extent cx="914400" cy="914400"/><wp:docPr id="31" name="Box" descr="salary 9000"/>' +
+          '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          `<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:txbx><w:txbxContent>${p('', r('salary 9000'))}</w:txbxContent></wps:txbx></wps:wsp>` +
+          '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',
+      ) +
+      p('', '<w:r><w:object/></w:r>'),
+  },
+  {
+    // a chart part carrying the mark hides the chart whole; a chart in a marked run does too
+    name: 'charts with the hidden-from-AI mark',
+    docRootExtraAttrs: `${VML} ${GO_NS}`,
+    bodyXml:
+      chartParagraph('rId51', 21) +
+      chartParagraph('rId52', 22) +
+      chartParagraph('rId53', 23) +
+      chartParagraph('rId54', 24) +
+      chartParagraph('rId55', 25) +
+      chartParagraph('rId56', 26).replace(
+        '<w:r><w:drawing>',
+        '<w:r><w:rPr><go:redact w:label="run chart"/></w:rPr><w:drawing>',
+      ),
+    extraRels: [51, 52, 53, 54, 55, 56]
+      .map((n) => `<Relationship Id="rId${n}" Type="${REL}/chart" Target="charts/chart${n}.xml"/>`)
+      .join(''),
+    extraParts: [
+      markedChart('<go:redact w:label="chart title"/>'),
+      markedChart('<redact label=\'single &amp; quoted\' xmlns="urn:own"/>'),
+      markedChart('<!-- <go:redact w:label="faked"/> -->'),
+      markedChart('<go:redact/>'),
+      CHART_XML,
+    ].map((xml, i) => ({ path: `word/charts/chart${51 + i}.xml`, xml, contentType: CHART_CONTENT_TYPE })).concat([
+      { path: 'word/charts/chart56.xml', xml: CHART_XML, contentType: CHART_CONTENT_TYPE },
+    ]),
+  },
   {
     name: 'vml shapes and text boxes',
     docRootExtraAttrs: VML,

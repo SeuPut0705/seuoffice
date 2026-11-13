@@ -21177,9 +21177,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::with_redact_root",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "with_redact_root",
+        "vis": "pub",
+        "params": ["part_xml: &str"],
+        "ret": "Cow<'_, str>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",

@@ -6,22 +6,29 @@
 //! `>` inside a value, comments, CDATA) has handed a model the words the
 //! parser then showed, or made up an entry out of markup inside CDATA.
 
+use std::borrow::Cow;
+
 use jscompat::{
-    RegexError, RegexLimit, TryJsRegex, js_regex, replace_first_string, trim, try_js_regex,
+    JsMap, RegexLimit, is_js_space, js_regex, replace_first_string, trim, try_js_regex,
 };
 use ooxml_xml::{XElement, XNode, mask_opaque, parse_ordered};
 use serde::Serialize;
 
 use crate::generate::escape_xml_attr;
 use crate::props::XML_PARSER_MAX_NESTED_TAGS;
+use crate::xml_tag::{TagName, find_start_tag, is_name_char};
 use crate::xml_text::decode_entities;
 
 /// `REDACT_PREFIX` of packages/agent-core/src/redact-range.ts.
 pub(crate) const REDACT_PREFIX: &str = "go";
 /// `REDACT_EL`
 pub(crate) const REDACT_EL: &str = "go:redact";
+/// `OWN_REDACT_NS`: the namespace this product owns for the label.
+pub(crate) const OWN_REDACT_NS: &str = "https://github.com/SeuPut0705/seuoffice/redaction/2026";
 /// `REDACT_NS_WRITTEN`: the namespace a label is written under.
 pub(crate) const REDACT_NS_WRITTEN: &str = "https://genspark.ai/genoffice/redaction/2026";
+/// `REDACT_NAMESPACES`: every namespace a saved label may be under.
+pub(crate) const REDACT_NAMESPACES: [&str; 2] = [OWN_REDACT_NS, REDACT_NS_WRITTEN];
 
 /// `WITHHELD_ENTRY_TEXT`: what a model reads for an entry whose marks cannot
 /// all be read, the whole entry withheld (`placeholderSource('private')`).
@@ -383,68 +390,168 @@ pub fn over_withheld(entry_xml: &str, label: &str) -> String {
     })
 }
 
-/// `withRedactNamespace`: a part's root with the mark's namespace declared and
-/// ignorable, so a consumer that does not know it skips the element instead of
-/// rejecting the run that carries it (as the document root gets on save).
-pub fn with_redact_namespace(part_xml: &str, root_tag: &str) -> Result<String, RegexError> {
-    let Some(open) = TryJsRegex::new(&format!(r"<{root_tag}\b[^>]*>"), "")?.try_exec(part_xml)?
-    else {
-        return Ok(part_xml.to_owned());
+/// `MC_NS`: the markup-compatibility namespace.
+const MC_NS: &str = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+
+/// One attribute of a start tag: its value, and where the value sits in the tag.
+struct Attribute<'t> {
+    value: &'t str,
+    start: usize,
+    end: usize,
+}
+
+/// `tagAttributes`: a start tag's attributes in order, each read through its
+/// quotes; a name written twice keeps its first place and its last value.
+fn tag_attributes(tag: &str) -> JsMap<Attribute<'_>> {
+    let mut out = JsMap::new();
+    for found in js_regex!(r#"\s([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#, "g").find_iter(tag) {
+        let value = found.get(2).or(found.get(3)).unwrap_or("");
+        // the closing quote of the value
+        let end = found.end() - 1;
+        out.set(
+            found.get(1).unwrap_or(""),
+            Attribute {
+                value,
+                start: end - value.len(),
+                end,
+            },
+        );
+    }
+    out
+}
+
+/// The root start tag of a part, edited in place the way `withRedactRoot` edits it.
+struct RootTag {
+    text: String,
+    /// the length of the element's name, which follows the `<`
+    name_len: usize,
+}
+
+impl RootTag {
+    fn new(text: &str) -> Self {
+        let name_len = text.as_bytes()[1..]
+            .iter()
+            .take_while(|byte| is_name_char(**byte))
+            .count();
+        Self {
+            text: text.to_owned(),
+            name_len,
+        }
+    }
+
+    /// `add`: an attribute right after the element's name.
+    fn add(&mut self, attr: &str) {
+        self.text.insert_str(1 + self.name_len, &format!(" {attr}"));
+    }
+
+    fn has(&self, name: &str) -> bool {
+        tag_attributes(&self.text).has(name)
+    }
+
+    /// `prefixOf`: the prefix bound to `uri`, a URI compared as the parser reads
+    /// it (character references decoded) and the prefix as it is written.
+    fn prefix_of(&self, uri: &str) -> Option<String> {
+        tag_attributes(&self.text)
+            .iter()
+            .find_map(|(name, attr)| {
+                name.strip_prefix("xmlns:")
+                    .filter(|_| decode_entities(attr.value) == uri)
+            })
+            .map(str::to_owned)
+    }
+
+    /// `ensure`: `token` in the list `mc:list`, once, the producer's own tokens kept.
+    fn ensure(&mut self, mc: &str, list: &str, token: &str) {
+        let name = format!("{mc}:{list}");
+        // `None`: no such list; `Some(None)`: the list holds the token already
+        let extended = tag_attributes(&self.text).get(&name).map(|attr| {
+            let mut tokens: Vec<&str> = attr
+                .value
+                .split(is_js_space)
+                .filter(|listed| !listed.is_empty())
+                .collect();
+            (!tokens.contains(&token)).then(|| {
+                tokens.push(token);
+                (attr.start..attr.end, tokens.join(" "))
+            })
+        });
+        match extended {
+            None => self.add(&format!("{name}=\"{token}\"")),
+            Some(None) => {}
+            Some(Some((value, joined))) => self.text.replace_range(value, &joined),
+        }
+    }
+}
+
+/// `withRedactRoot`: a written story part whose runs carry the mark, with its
+/// root declaring what a consumer needs to keep that mark: the mark's
+/// namespace, that namespace as ignorable (a consumer that does not know it
+/// skips the element instead of rejecting the run) and the mark element as
+/// preserved (a consumer that re-saves keeps it instead of dropping every
+/// ignorable element). Both lists name the mark by the namespace it is really
+/// in: the editor's own `go:` mark leans on the root for its namespace, and a
+/// mark that declares its own (another writer, an older release) gets a root
+/// prefix bound to that namespace. The root is read through its quoted values
+/// whatever its name or quotes, and an existing markup-compatibility prefix
+/// and lists are extended.
+///
+/// Borrowed exactly when the root needs no change, so a caller keeps the
+/// original bytes of a part it did not write.
+pub fn with_redact_root(part_xml: &str) -> Cow<'_, str> {
+    if !has_withheld_trace(part_xml) {
+        return Cow::Borrowed(part_xml);
+    }
+    let masked = mask_opaque(part_xml);
+    let Some(found) = find_start_tag(&masked, TagName::Any, 0) else {
+        return Cow::Borrowed(part_xml);
     };
-    if !part_xml.contains(&format!("<{REDACT_EL}")) {
-        return Ok(part_xml.to_owned());
+    if found.self_closing {
+        return Cow::Borrowed(part_xml);
     }
-    let mut tag = open.as_str().to_owned();
-    let bound = js_regex!(r#"xmlns:go=["']([^"']*)["']"#).exec(&tag);
-    if bound
-        .as_ref()
-        .is_some_and(|bound| bound.get(1) != Some(REDACT_NS_WRITTEN))
-    {
-        return Ok(part_xml.to_owned());
-    }
-    let root_open = format!("<{root_tag}");
-    if bound.is_none() {
-        tag = replace_first_string(
-            &tag,
-            &root_open,
-            &format!("{root_open} xmlns:{REDACT_PREFIX}=\"{REDACT_NS_WRITTEN}\""),
-        );
-    }
-    if !js_regex!(r"xmlns:mc=").test(&tag) {
-        tag = replace_first_string(
-            &tag,
-            &root_open,
-            &format!(
-                "{root_open} xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
-            ),
-        );
-    }
-    let ignorable_regex = js_regex!(r#"mc:Ignorable="([^"]*)""#);
-    let ignorable = ignorable_regex
-        .exec(&tag)
-        .map(|found| found.get(1).unwrap_or("").to_owned());
-    match ignorable {
-        None => {
-            tag = replace_first_string(
-                &tag,
-                &root_open,
-                &format!("{root_open} mc:Ignorable=\"{REDACT_PREFIX}\""),
-            );
+    let (start, end) = (found.start, found.end);
+    let mut root = RootTag::new(&part_xml[start..end]);
+    let own_prefix = root.has(&format!("xmlns:{REDACT_PREFIX}"));
+    // the namespaces the part's marks are in
+    let decoded = decode_entities(part_xml);
+    let mut used: Vec<&str> = REDACT_NAMESPACES
+        .into_iter()
+        .filter(|ns| decoded.contains(ns))
+        .collect();
+    if !own_prefix && part_xml.contains(&format!("<{REDACT_EL}")) {
+        root.add(&format!("xmlns:{REDACT_PREFIX}=\"{REDACT_NS_WRITTEN}\""));
+        if !used.contains(&REDACT_NS_WRITTEN) {
+            used.insert(0, REDACT_NS_WRITTEN);
         }
-        Some(listed) if !js_regex!(r"\bgo\b").test(&listed) => {
-            tag = jscompat::replace_first(
-                ignorable_regex,
-                1,
-                &tag,
-                &format!("mc:Ignorable=\"{} {REDACT_PREFIX}\"", trim(&listed)),
-            );
-        }
-        Some(_) => {}
     }
-    Ok(format!(
-        "{}{tag}{}",
-        &part_xml[..open.start()],
-        &part_xml[open.end()..]
+    if used.is_empty() {
+        return Cow::Borrowed(part_xml);
+    }
+    let mc = root.prefix_of(MC_NS).unwrap_or_else(|| {
+        let mc = if root.has("xmlns:mc") { "mce" } else { "mc" };
+        root.add(&format!("xmlns:{mc}=\"{MC_NS}\""));
+        mc.to_owned()
+    });
+    for uri in used {
+        let prefix = root.prefix_of(uri).unwrap_or_else(|| {
+            let mut n = 1;
+            while root.has(&format!("xmlns:{REDACT_PREFIX}{n}")) {
+                n += 1;
+            }
+            let prefix = format!("{REDACT_PREFIX}{n}");
+            root.add(&format!("xmlns:{prefix}=\"{uri}\""));
+            prefix
+        });
+        root.ensure(&mc, "Ignorable", &prefix);
+        root.ensure(&mc, "PreserveElements", &format!("{prefix}:redact"));
+    }
+    if root.text == part_xml[start..end] {
+        return Cow::Borrowed(part_xml);
+    }
+    Cow::Owned(format!(
+        "{}{}{}",
+        &part_xml[..start],
+        root.text,
+        &part_xml[end..]
     ))
 }
 
