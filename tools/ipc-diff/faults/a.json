@@ -1118,5 +1118,40 @@
     "find": "let answer = outcome.unwrap_or_else(|error| failure(&error));",
     "replace": "let answer = outcome.unwrap_or_else(|error| text(error.message.clone()));",
     "groups": ["a/app-ai-image"]
+  },
+  {
+    "name": "mcp-settings-sender-any",
+    "file": "shell-ipc/a/src/mcp.rs",
+    "find": ".is_some_and(|view| f64::from(view.0) == sender_id)",
+    "replace": ".is_some_and(|_| true)",
+    "groups": ["a/mcp-servers"]
+  },
+  {
+    "name": "mcp-open-settings-no-home-tab",
+    "file": "shell-ipc/a/src/mcp.rs",
+    "find": "env.ui.show_home_tab();",
+    "replace": "let _ = env.ui.clone();",
+    "groups": ["a/mcp-tools"]
+  },
+  {
+    "name": "mcp-docs-command-channel",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "Kind::Docs => \"docs:mcp-command\",",
+    "replace": "Kind::Docs => \"sheets:mcp-command\",",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "mcp-bridge-payload-dropped",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "message.set(\"payload\", payload.clone());",
+    "replace": "let _ = payload;",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "mcp-bridge-alive-always",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "view_of(wc_id).is_some_and(|view| self.common.services.views.sender_of(view).is_some())",
+    "replace": "view_of(wc_id).is_some()",
+    "groups": ["a/mcp-bridges"]
   }
 ]
