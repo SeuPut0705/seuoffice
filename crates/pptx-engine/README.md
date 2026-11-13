@@ -149,6 +149,20 @@ serializes an element) and opens faster; the opening dominates. Two runs of
 20 rounds gave costs from -11% to +4% for the same exports: the per-export
 column is noise near its size, and the 100-round run is the one recorded.
 
+The same benchmark on a GitHub runner (workflow `seuoffice bench pptx`, run
+43374829413 at 8fc9462a2, ubuntu-latest, 100 rounds, medians):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 129.0   | 6.7       | 135.7    | 0.0%          |             |
+| wasm                                          | 65.6    | 24.4      | 90.0     | -33.6%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 65.6    | 20.4      | 85.9     | -36.7%        | 3.0%        |
+| wasm, `elementDurableId` in TypeScript        | 66.9    | 16.7      | 83.6     | -38.4%        | 4.7%        |
+| wasm, `groupChildDurableId` in TypeScript     | 66.2    | 22.5      | 88.7     | -34.6%        | 1.0%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 66.0    | 22.6      | 88.6     | -34.7%        | 1.0%        |
+
+The verdict holds: the largest cost, `elementDurableId`, is 4.7%, under 5%.
+
 ## Unit order
 
 Leaves first, the read side before the save side, as in the Word port.

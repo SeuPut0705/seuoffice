@@ -193,3 +193,20 @@ node tools/pptx-diff/faults.mjs --inventory            # 0 STALE
 npx tsx tools/pptx-diff/bench-render.ts --rounds 100   # render benchmark
 gh workflow run CI --ref feat/rust-pptx-c2             # and seuoffice, "seuoffice rust" (gate and faults)
 ```
+
+### Mac mini (2026-11-13)
+
+- Merged B4 d332386da (main 07a251652); u1 had nothing past 64221b7ec.
+- Main's 81e0daf00 (a chart whose text holds the hidden-from-AI mark is a
+  hidden element) ported to the reference and to Rust, with chart and parse
+  gate inputs; the roundtrip group got its floors (its missing floors failed
+  the gate before); the eight lint errors of C's gate files fixed.
+- The web page lost `setImmediate` with JSZip (slides' session defers its
+  history notice with it): `@seuoffice/web-platform/globals` gives it.
+  `engine-wasm` references the DOM lib for the Node-only packages that
+  type-check it.
+- Runner render benchmark: crates/pptx-engine/README.md, under 5% for every
+  export. Gate 0 differences, 317/317 faults caught (seuoffice rust
+  43360226152, pptx jobs).
+- Left to B4: the docx-diff differences of the `crates` job, the docx-engine
+  and docs test failures of CI (the same counts on B4's own d332386da runs).
