@@ -55,4 +55,6 @@
 - git, Rust(소스의 `rust-toolchain.toml`이 정한 1.93.1과 `wasm32-unknown-unknown`, rustup이 자동으로 받는다), wasm-pack 0.15.0
 - 빌드한 PC의 사용자 폴더 경로가 WASM에 남지 않도록 스크립트가 `--remap-path-prefix`를 건다.
 
+wasm-pack이 없는 PC에서는 `gh workflow run "seuoffice rust" --ref <브랜치> -f rhwp_core=true`로 러너가 같은 스크립트를 돌리고, 산출물 `rhwp-core`의 파일을 이 폴더에 덮어 커밋한다(패치 0045가 이렇게 반영됐다, run 43407654542).
+
 앱을 빌드할 때는 Rust가 필요 없다. 이 폴더의 빌드 결과를 그대로 쓴다. 상위의 다음 배포판이 나오면 `rhwp.tag`·`rhwp.commit`을 바꾸고, 그 판에 상위가 같은 수정을 담았는지 보고 담은 패치를 지운다(결정 0116이 한 방식). 패치가 모두 사라지면 npm 패키지로 되돌린다.

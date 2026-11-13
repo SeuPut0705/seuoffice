@@ -45,6 +45,11 @@ on:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
         default: ''
+      rhwp_core:
+        description: Rebuild vendor/rhwp-core (wasm-pack, tag + patches) and upload it, instead of the gates
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -55,7 +60,7 @@ permissions:
 
 jobs:
   crates:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -223,7 +228,7 @@ jobs:
           if-no-files-found: ignore
 
   fileparse:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -287,7 +292,7 @@ jobs:
 
   fileparse_faults:
     needs: fileparse
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     # every fault rebuilds the wasm: one job ran out of time at about 16 of
@@ -354,7 +359,7 @@ jobs:
           if-no-files-found: error
 
   epub:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -416,7 +421,7 @@ jobs:
   # eight shards keep every one well inside its limit
   epub_faults:
     needs: epub
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -476,7 +481,7 @@ jobs:
           if-no-files-found: error
 
   pptx:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -548,7 +553,7 @@ jobs:
 
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -612,3 +617,38 @@ jobs:
           name: pptx-faults-out-${{ matrix.shard }}
           path: tools/pptx-diff/out/faults
           if-no-files-found: ignore
+
+  # vendor/rhwp-core is the wasm-bindgen build the desktop ships. A patch added
+  # to vendor/rhwp-core/patches changes it only once it is rebuilt: dispatch
+  # with rhwp_core, then commit the files of the artifact over vendor/rhwp-core.
+  rhwp_core:
+    if: ${{ inputs.rhwp_core }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # the tag's rust-toolchain.toml picks the toolchain and wasm32-unknown-unknown
+      - name: wasm-pack 0.15.0
+        run: cargo install --locked wasm-pack --version 0.15.0
+      - name: Build vendor/rhwp-core
+        run: node tools/build-rhwp-core.mjs
+      - name: What was built
+        run: |
+          sha256sum vendor/rhwp-core/rhwp_bg.wasm
+          git diff --stat -- vendor/rhwp-core
+      - name: Keep the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhwp-core
+          path: |
+            vendor/rhwp-core/rhwp.js
+            vendor/rhwp-core/rhwp.d.ts
+            vendor/rhwp-core/rhwp_bg.wasm
+            vendor/rhwp-core/rhwp_bg.wasm.d.ts
+            vendor/rhwp-core/LICENSE
+            vendor/rhwp-core/THIRD_PARTY_LICENSES.md
+            vendor/rhwp-core/package.json
+          if-no-files-found: error
