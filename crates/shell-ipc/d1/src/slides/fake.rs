@@ -23,6 +23,17 @@ use crate::value::{as_num, as_str, field, num, obj, string};
 /// the one master part of a fake deck
 const MASTER_PART: &str = "ppt/slideMasters/slideMaster1.xml";
 
+/// ops that make an element the executor answers with its id
+const CREATING: &[&str] = &[
+    "addTable",
+    "addChart",
+    "addSmartArt",
+    "addModel3d",
+    "addMedia",
+    "groupElements",
+    "pasteElements",
+];
+
 /// the probe's call log
 pub type CallLog = Arc<Mutex<Vec<Value>>>;
 
@@ -244,7 +255,26 @@ impl FakeEngine {
             }
             "addElement" | "setHidden" | "deleteSlide" | "duplicateSlide" | "addComment"
             | "addPicture" => None,
-            other => Some(format!("unsupported op {other}")),
+            // any other op addresses a slide, and an element of it, or none
+            _ => {
+                if slide.is_none() && field(target, "slide") == &IpcValue::Undefined {
+                    return None;
+                }
+                if !slide_ok {
+                    return Some("slide not found".into());
+                }
+                match as_str(field(target, "el")) {
+                    Some(id)
+                        if !d.slides[slide.unwrap() as usize]
+                            .elements
+                            .iter()
+                            .any(|e| e.id == id) =>
+                    {
+                        Some(format!("element {id} not found"))
+                    }
+                    _ => None,
+                }
+            }
         }
     }
 
@@ -254,6 +284,7 @@ impl FakeEngine {
         if as_str(field(target, "part")).is_some() {
             return Self::apply_master(d, op);
         }
+        let slide_given = as_num(field(target, "slide")).is_some();
         let slide = as_num(field(target, "slide")).unwrap_or(0.0) as usize;
         let mut created = None;
         match name {
@@ -309,14 +340,44 @@ impl FakeEngine {
                 });
                 created = Some(vec![id]);
             }
+            _ if CREATING.contains(&name) => {
+                let id = format!("e{}", d.next_id);
+                d.next_id += 1;
+                if let Some(s) = d.slides.get_mut(slide) {
+                    s.elements.push(FakeElement {
+                        id: id.clone(),
+                        text: name.to_owned(),
+                    });
+                }
+                created = Some(vec![id]);
+            }
             _ => {}
         }
         d.dirty = true;
+        let after = match name {
+            "applyTheme" => obj([("patched", num(1.0)), ("remapped", num(0.0))]),
+            "findReplace" => obj([
+                ("count", num(1.0)),
+                ("changedSlides", IpcValue::Array(vec![num(0.0)])),
+            ]),
+            "tableStructure" | "tableMerge" => obj([(
+                "elementId",
+                string(as_str(field(target, "el")).unwrap_or("")),
+            )]),
+            "pasteSlide" | "insertSlidePptx" => obj([("index", num((slide + 1) as f64))]),
+            "addSection" | "renameSection" | "removeSection" | "moveSection" | "setSections" => {
+                obj([("section", string(name))])
+            }
+            "addPicture" | "replacePicture" | "setBackground" => {
+                obj([("mediaPath", string("ppt/media/image1.png"))])
+            }
+            _ => IpcValue::Undefined,
+        };
         TxnRecord {
             op: op.clone(),
-            slide_id: Some(format!("slide-{slide}")),
+            slide_id: slide_given.then(|| format!("slide-{slide}")),
             created,
-            after: IpcValue::Undefined,
+            after,
         }
     }
 
@@ -416,7 +477,7 @@ impl SlidesEngine for FakeEngine {
     fn adopt_embedded_fonts(&self, _deck: DeckId) {}
 
     fn reset_font_metrics(&self) {
-        self.record(json!(["session-state.resetFontMetrics"]));
+        // `resetFontMetrics` of session-state drops caches; nothing is asked of a host
     }
 
     fn render_all(&self, deck: DeckId, _fit_width_px: f64) -> Vec<IpcValue> {
@@ -488,7 +549,14 @@ impl SlidesEngine for FakeEngine {
             .expect("a fake snapshot")
             .clone();
         let meta_dirty = copy.meta_dirty;
-        self.with(deck, |d| *d = copy);
+        self.with(deck, |d| {
+            // the master and the id counter live in the package, which a history step restores
+            // only by its entries: the fake keeps them
+            let (master, next_id) = (std::mem::take(&mut d.master), d.next_id);
+            *d = copy;
+            d.master = master;
+            d.next_id = next_id;
+        });
         meta_dirty
     }
 
@@ -565,8 +633,19 @@ impl SlidesEngine for FakeEngine {
     }
 
     fn template_cover(&self, id: &str, lang: &str, _fit: f64) -> Option<IpcValue> {
-        self.record(json!(["pipelines.templateCover", id, lang]));
-        (id == "plain").then(|| obj([("partPath", string("cover")), ("lang", string(lang))]))
+        if id != "plain" {
+            return None;
+        }
+        // the template's sample cover goes through the page builder and opens in memory
+        let spec = format!("\"{lang}\"");
+        self.record(json!(["pipelines.buildPagePptx", spec.len()]));
+        let mut deck = FakeDeck::blank(1);
+        deck.slides[0].elements.push(FakeElement {
+            id: "e0".into(),
+            text: spec,
+        });
+        self.record(json!(["pptx-engine.openPptx", deck.to_bytes().len()]));
+        Some(Self::render(&deck, 0))
     }
 
     fn install_local_fonts(&self, paths: &[String]) -> Vec<String> {
@@ -580,7 +659,8 @@ impl SlidesEngine for FakeEngine {
 
     fn parse_file_text(&self, path: &str) -> Result<String, String> {
         self.record(json!(["file-parse.parseFileToText", path]));
-        std::fs::read_to_string(path).map_err(|e| e.to_string())
+        std::fs::read_to_string(path)
+            .map_err(|e| main_core::node_fs::node_error(&e, "open", path).message)
     }
 
     fn diagram_picture_ext_of(&self, _path: &str) -> Option<String> {
@@ -588,10 +668,10 @@ impl SlidesEngine for FakeEngine {
     }
 
     fn generate_page(&self, spec_json: &str, _fonts: &IpcValue) -> Result<GeneratedPage, String> {
-        self.record(json!(["pipelines.buildPagePptx", spec_json.len()]));
         if spec_json.is_empty() {
             return Err("empty page spec".into());
         }
+        self.record(json!(["pipelines.buildPagePptx", spec_json.len()]));
         let mut deck = FakeDeck::blank(1);
         deck.slides[0].elements.push(FakeElement {
             id: "e0".into(),
@@ -759,15 +839,20 @@ impl SlidesEngine for FakeEngine {
         &self,
         _deck: DeckId,
         _part: &str,
-        id: &str,
-        offset: [f64; 4],
-        rot: f64,
+        _id: &str,
+        _offset: [f64; 4],
+        _rot: f64,
     ) {
-        self.record(json!(["master.previewTransform", id, offset, rot]));
+        // the preview moves the live master slide only: nothing the engine is asked
     }
 
     fn image_info(&self, bytes: &[u8], ext: &str, _path: Option<&str>) -> super::engine::ImageInfo {
-        self.record(json!(["nativeImage.info", bytes.len(), ext]));
+        // a tiff goes through the TypeScript's own decoder, which refuses the cases' bytes;
+        // everything else asks the desktop for the picture's size
+        if ext == "tif" || ext == "tiff" {
+            return super::engine::ImageInfo::default();
+        }
+        self.record(json!(["nativeImage.info", bytes.len()]));
         super::engine::ImageInfo {
             natural: (!bytes.is_empty()).then_some((640.0, 480.0)),
             dpi: None,
@@ -886,6 +971,11 @@ pub struct FakeShell {
     pub written: Mutex<Vec<(String, Vec<u8>)>>,
     pub opened: Mutex<Vec<(ViewId, String)>>,
     pub markers: Mutex<HashMap<String, Vec<u8>>>,
+    /// the windows in simple fullscreen: the snap is asked only when it changes anything
+    pub snapped: Mutex<std::collections::HashSet<u32>>,
+    /// the hand-off a case left for the tab, taken once
+    pub handoff: Mutex<Option<TakenHandoff>>,
+    pub uuids: std::sync::atomic::AtomicU64,
 }
 
 impl FakeShell {
@@ -935,14 +1025,22 @@ impl SlidesShell for FakeShell {
     fn take_headless_target(&self, _view: ViewId) -> Option<String> {
         None
     }
-    fn headless_export_done(&self, _view: ViewId, ok: bool, error: Option<String>) {
-        self.record(json!(["headlessExportDone", ok, error]));
+    fn headless_export_done(&self, _view: ViewId, _ok: bool, _error: Option<String>) {
+        // only a headless export has a waiter to settle; the cases make none
     }
     fn set_bleed(&self, view: ViewId, on: bool) {
         self.record(json!(["showChrome.setBleed", view.0, on]));
     }
     fn show_fullscreen_window(&self, window: WindowId, on: bool) {
-        self.record(json!(["showFullscreenWindow", window.0, on]));
+        let mut snapped = self.snapped.lock().unwrap();
+        let changed = if on {
+            snapped.insert(window.0)
+        } else {
+            snapped.remove(&window.0)
+        };
+        if changed {
+            self.record(json!(["showFullscreenWindow", window.0, on]));
+        }
     }
     fn read_clipboard_buffer(&self, format: &str) -> Vec<u8> {
         self.markers
@@ -962,8 +1060,8 @@ impl SlidesShell for FakeShell {
     fn normalize_png(&self, bytes: &[u8]) -> Option<Vec<u8>> {
         (!bytes.is_empty()).then(|| bytes.to_vec())
     }
-    fn write_image_and_html(&self, png: &[u8], html: &str) {
-        self.record(json!(["clipboard.write", png.len(), html.len()]));
+    fn write_image_and_html(&self, _png: &[u8], html: &str) {
+        self.record(json!(["clipboard.write", {"html": html, "text": null}]));
     }
     fn native_clipboard(&self, view: ViewId, op: &str) {
         self.record(json!(["webContents.clipboard", view.0, op]));
@@ -974,7 +1072,6 @@ impl SlidesShell for FakeShell {
         path: &str,
         done: Box<dyn FnOnce(PreparedOpen) + Send>,
     ) {
-        self.record(json!(["prepareForOpen", path]));
         let prepared = self
             .prepared
             .lock()
@@ -1022,14 +1119,29 @@ impl SlidesShell for FakeShell {
     fn move_presenter_window(&self, window: WindowId, display: Display) {
         self.record(json!(["movePresenterWindow", window.0, display.id]));
     }
-    fn set_window_title(&self, view: ViewId, title: &str) {
-        self.record(json!(["win.setTitle", view.0, title]));
+    fn set_window_title(&self, _view: ViewId, _title: &str) {
+        // only a detached editor window has a title the shell sets; the cases have none
     }
-    fn take_generate_handoff(&self, _view: ViewId) -> Option<TakenHandoff> {
-        None
+    fn take_generate_handoff(&self, view: ViewId) -> Option<TakenHandoff> {
+        self.record(json!([
+            "generate-handoff.takeGenerateHandoff",
+            "slides",
+            view.0
+        ]));
+        self.handoff.lock().unwrap().take()
     }
-    fn report_generate_run_started(&self, _view: ViewId, _paths: &[String]) -> bool {
-        false
+    fn report_generate_run_started(&self, view: ViewId, paths: &[String]) -> bool {
+        self.record(json!([
+            "generate-handoff.reportGenerateRunStarted",
+            "slides",
+            view.0,
+            paths
+        ]));
+        true
+    }
+    fn random_uuid(&self) -> String {
+        let n = self.uuids.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+        format!("00000000-0000-4000-8000-{n:012}")
     }
     fn assert_file_saved(&self, _path: &str) -> Result<(), String> {
         Ok(())
@@ -1069,6 +1181,27 @@ pub fn insert(hosts: &mut shell_contract::Hosts, case: &Value) {
         written: Mutex::default(),
         opened: Mutex::default(),
         markers: Mutex::default(),
+        snapped: Mutex::default(),
+        handoff: Mutex::new(slides["handoff"].as_object().map(|h| {
+            TakenHandoff {
+                id: h["id"].as_str().unwrap_or("").to_owned(),
+                text: h["text"].as_str().unwrap_or("").to_owned(),
+                materials: h["materials"]
+                    .as_array()
+                    .map(|list| {
+                        list.iter()
+                            .map(|m| {
+                                (
+                                    m["path"].as_str().unwrap_or("").to_owned(),
+                                    m["name"].as_str().unwrap_or("").to_owned(),
+                                )
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }
+        })),
+        uuids: Default::default(),
     });
     hosts.insert::<SlidesShellHost>(shell);
     let _ = num;

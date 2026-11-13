@@ -511,6 +511,9 @@ pub trait SlidesShell: Send + Sync {
     /// `assertFileSaved(path)`: `Err` carries the message of the throw (the
     /// file is open with unsaved changes)
     fn assert_file_saved(&self, path: &str) -> Result<(), String>;
+    /// `randomUUID()` of `node:crypto`: names of the clipboard token, the generated page
+    /// files and the untitled recovery copies (production: `jscompat::random_uuid`)
+    fn random_uuid(&self) -> String;
 }
 
 pub type SlidesShellHost = Arc<dyn SlidesShell>;

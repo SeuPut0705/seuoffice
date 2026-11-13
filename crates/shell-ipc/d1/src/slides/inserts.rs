@@ -728,9 +728,13 @@ pub fn add_media_bytes(app: &App, cx: &CallContext, args: Args, responder: Respo
             None => (decode(field(&op_value, "base64")), None),
         };
         super::post_to(&services, index, move |app| {
+            // a replaced session invalidates this insert (checked before the state is borrowed)
+            if app.state_slot_changed(view, slot) {
+                return responder.reply(null());
+            }
             let reply = app.with_session(view, |app, s| {
-                // an AI run or a replaced session invalidates this insert
-                if s.core.ai_run != ai_run || app.state_slot_changed(view, slot) {
+                // an AI run started meanwhile invalidates it too
+                if s.core.ai_run != ai_run {
                     return null();
                 }
                 let slide = field(&op_value, "slideIndex");
@@ -797,8 +801,16 @@ pub fn pick_model3d(app: &App, _cx: &CallContext, _args: Args, responder: Respon
     let Some(path) = picked else {
         return responder.reply(null());
     };
-    let too_big = std::fs::metadata(&path).is_ok_and(|m| m.len() as usize > MAX_BYTES);
-    if too_big {
+    // `stat` first: a file that is not there is the stat's error, not the read's
+    let size = match std::fs::metadata(&path) {
+        Ok(meta) => meta.len() as usize,
+        Err(e) => {
+            return responder.reply(Err(crate::value::thrown(
+                main_core::node_fs::node_error(&e, "stat", &path).message,
+            )));
+        }
+    };
+    if size > MAX_BYTES {
         app.refuse_oversized_media(MAX_BYTES);
         return responder.reply(null());
     }
@@ -1012,7 +1024,7 @@ pub fn clear_narration(app: &App, cx: &CallContext, args: Args) -> Reply {
 
 /// `planSlideMoves(count, selected, insertAt)`: steps that land `selected`
 /// as a block at gap `insertAt`; empty when the order would not change
-fn plan_slide_moves(count: usize, selected: &[f64], insert_at: f64) -> Vec<(usize, usize)> {
+fn plan_slide_moves(count: usize, selected: &[f64], insert_at: f64) -> Vec<(i64, usize)> {
     let mut block: Vec<f64> = Vec::new();
     for x in selected {
         if !block.contains(x) {
@@ -1024,10 +1036,13 @@ fn plan_slide_moves(count: usize, selected: &[f64], insert_at: f64) -> Vec<(usiz
     let rest: Vec<usize> = (0..count).filter(|i| !is_picked(*i)).collect();
     let before = block.iter().filter(|i| **i < insert_at).count() as f64;
     let at = insert_at - before;
+    // `slice(0, at)` and `slice(at)`: the index is truncated and counts from the end when negative
     let at = if at.is_nan() {
         0
+    } else if at.trunc() < 0.0 {
+        (rest.len() as f64 + at.trunc()).max(0.0) as usize
     } else {
-        at.clamp(0.0, rest.len() as f64) as usize
+        at.trunc().min(rest.len() as f64) as usize
     };
     let mut fin: Vec<f64> = rest[..at].iter().map(|i| *i as f64).collect();
     fin.extend(block.iter().copied());
@@ -1035,15 +1050,19 @@ fn plan_slide_moves(count: usize, selected: &[f64], insert_at: f64) -> Vec<(usiz
     let mut cur: Vec<f64> = (0..count).map(|i| i as f64).collect();
     let mut steps = Vec::new();
     for (t, id) in fin.iter().enumerate() {
-        let Some(from) = cur.iter().position(|c| c == id) else {
-            continue;
-        };
-        if from == t {
+        // `cur.indexOf(id)` is -1 for a slide that is not there
+        let from: i64 = cur.iter().position(|c| c == id).map_or(-1, |p| p as i64);
+        if from == t as i64 {
             continue;
         }
         steps.push((from, t));
-        cur.remove(from);
-        cur.insert(t, *id);
+        // `splice(-1, 1)` drops the last item, `splice(t, 0, id)` appends past the end
+        if from >= 0 {
+            cur.remove(from as usize);
+        } else {
+            cur.pop();
+        }
+        cur.insert(t.min(cur.len()), *id);
     }
     steps
 }

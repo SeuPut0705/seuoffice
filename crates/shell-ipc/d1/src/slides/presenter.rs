@@ -195,6 +195,17 @@ pub fn show_fullscreen(app: &App, cx: &CallContext, args: Args) -> Reply {
         app.shell.show_fullscreen_window(window, true);
         // the snap can leave the window's first responder on the shell chrome view
         app.contents.focus(view);
+        // the snap's responder change lands async: focus once more shortly after
+        let index = app.registry_index;
+        let services = app.services.clone();
+        app.services.workers.spawn(Box::new(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            super::post_to(&services, index, move |app| {
+                if app.services.views.sender_of(view).is_some() {
+                    app.contents.focus(view);
+                }
+            })
+        }));
     } else {
         let index = app.registry_index;
         let services = app.services.clone();

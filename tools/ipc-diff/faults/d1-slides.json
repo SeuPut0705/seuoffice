@@ -1,0 +1,100 @@
+[
+  {
+    "name": "a mailto link is refused as a script link is",
+    "file": "shell-ipc/d1/src/slides/reads.rs",
+    "find": "\"mailto:\".into()]),",
+    "replace": "\"mailto-refused:\".into()]),",
+    "groups": ["d1/slides-reads"]
+  },
+  {
+    "name": "a slide index one past the end reads a slide",
+    "file": "shell-ipc/d1/src/slides/session.rs",
+    "find": "(index.to_string() == key && index < len).then_some(index)",
+    "replace": "(index.to_string() == key && index <= len).then_some(index)",
+    "groups": ["d1/slides-reads", "d1/slides-edits"]
+  },
+  {
+    "name": "a deck with unsaved changes reads as clean",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "            .is_some_and(|s| app.session_dirty(s)),",
+    "replace": "            .is_some_and(|s| !app.session_dirty(s)),",
+    "groups": ["d1/slides-lifecycle", "d1/slides-edits"]
+  },
+  {
+    "name": "the redo button is told what the undo button is",
+    "file": "shell-ipc/d1/src/slides/session.rs",
+    "find": "(\"canUndo\", IpcValue::Bool(changed.can_undo)),",
+    "replace": "(\"canUndo\", IpcValue::Bool(changed.can_redo)),",
+    "groups": ["d1/slides-edits", "d1/slides-reads"]
+  },
+  {
+    "name": "reading a folder as a deck says it failed to open it",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "node_error_fd(&e, \"read\")",
+    "replace": "node_error_fd(&e, \"open\")",
+    "groups": ["d1/slides-lifecycle"]
+  },
+  {
+    "name": "save as with no name throws the wrong error",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "\"TypeError [ERR_INVALID_ARG_TYPE]\".into()",
+    "replace": "\"TypeError\".into()",
+    "groups": ["d1/slides-lifecycle"]
+  },
+  {
+    "name": "a master edit leaves the view when the edit is done",
+    "file": "shell-ipc/d1/src/slides/master.rs",
+    "find": "        s.master_edit = None;",
+    "replace": "        s.master_edit = s.master_edit.take();",
+    "groups": ["d1/slides-master"]
+  },
+  {
+    "name": "a model that is not there is a read error, not a stat error",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "node_error(&e, \"stat\", &path)",
+    "replace": "node_error(&e, \"open\", &path)",
+    "groups": ["d1/slides-inserts"]
+  },
+  {
+    "name": "slides moved to a gap are planned for the first gap",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "number(field(op_value, \"insertAt\"))",
+    "replace": "0.0",
+    "groups": ["d1/slides-inserts"]
+  },
+  {
+    "name": "the show bleeds into the tab strip the wrong way",
+    "file": "shell-ipc/d1/src/slides/presenter.rs",
+    "find": "app.shell.set_bleed(view, true);",
+    "replace": "app.shell.set_bleed(view, false);",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "a swap onto the same display moves the windows",
+    "file": "shell-ipc/d1/src/slides/presenter.rs",
+    "find": "if audience_display.id == host_display.id {",
+    "replace": "if audience_display.id != host_display.id {",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "a generated page is named by another marker",
+    "file": "shell-ipc/d1/src/slides/export.rs",
+    "find": "string(format!(\"{CLOUD_PAGE_PREFIX}{path_text}\"))",
+    "replace": "string(format!(\"page:{path_text}\"))",
+    "groups": ["d1/slides-presenter"]
+  },
+  {
+    "name": "the element clipboard token is not the made one",
+    "file": "shell-ipc/d1/src/slides/clipboard.rs",
+    "find": "            app.shell.random_uuid()",
+    "replace": "            String::from(\"fixed-token\")",
+    "groups": ["d1/slides-clipboard"]
+  },
+  {
+    "name": "the comment author ignores the configured name",
+    "file": "shell-ipc/d1/src/slides/reads.rs",
+    "find": "configured_author_name(&user_data, username.as_deref())",
+    "replace": "configured_author_name(\"\", username.as_deref())",
+    "groups": ["d1/slides-reads"]
+  }
+]

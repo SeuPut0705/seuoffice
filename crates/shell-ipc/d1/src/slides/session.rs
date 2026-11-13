@@ -415,14 +415,19 @@ impl App {
     }
 }
 
-/// `slides[index]` of a number that may not index anything: the index when
-/// it is a whole number below `len`
+/// `slides[index]` of an argument that may not index anything: JavaScript
+/// reads the property named `String(index)`, so a number, a numeric string
+/// and a one-element array of either index the same slide
 pub fn slide_index(value: &IpcValue, len: usize) -> Option<usize> {
-    let x = as_num(value)?;
-    if x.fract() != 0.0 || x < 0.0 || x >= len as f64 {
+    if !matches!(
+        value,
+        IpcValue::Number(_) | IpcValue::String(_) | IpcValue::Array(_)
+    ) {
         return None;
     }
-    Some(x as usize)
+    let key = js_string(value);
+    let index: usize = key.parse().ok()?;
+    (index.to_string() == key && index < len).then_some(index)
 }
 
 /// `String(value)` of a loosely typed argument

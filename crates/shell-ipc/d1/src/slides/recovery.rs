@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use jscompat::{JsonValue, json_parse, random_uuid};
+use jscompat::{JsonValue, json_parse};
 use main_core::node_fs::NodeError;
 use main_core::packages::electron_utils::recovery_prompt::{
     RecoveryOpenResult, ResolveRecoveryOnOpenOptions, resolve_recovery_on_open,
@@ -48,11 +48,12 @@ impl App {
         let shared = self.recovery_state.lock().unwrap();
         let user_data = path_string(self.services.paths.path(PathName::UserData));
         let user_data_dir = move || user_data.clone();
+        let uuid = || self.shell.random_uuid();
         let store = create_recovery_store(
             RecoveryStoreOptions {
                 user_data_dir: &user_data_dir,
                 now_ms: &now_ms,
-                random_uuid: &random_uuid,
+                random_uuid: &uuid,
             },
             &shared,
         );
@@ -310,7 +311,7 @@ impl App {
             .get_or_insert_with(|| {
                 RecoveryIdentity::Untitled(RecoveryUntitledIdentity {
                     kind: "slides".to_owned(),
-                    untitled_id: new_untitled_recovery_id(&random_uuid),
+                    untitled_id: new_untitled_recovery_id(&|| self.shell.random_uuid()),
                     ext: ".pptx".to_owned(),
                 })
             })

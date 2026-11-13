@@ -39,8 +39,13 @@ fn error_text(message: &str) -> String {
 
 /// `readFile(path)` as a rejection a handler lets through
 pub fn read_file(path: &str) -> Result<Vec<u8>, IpcError> {
-    std::fs::read(path)
-        .map_err(|e| thrown(main_core::node_fs::node_error(&e, "open", path).message))
+    // `readFile` opens, then reads: a folder opens and fails to read
+    let mut file = std::fs::File::open(path)
+        .map_err(|e| thrown(main_core::node_fs::node_error(&e, "open", path).message))?;
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut file, &mut bytes)
+        .map_err(|e| thrown(main_core::node_fs::node_error_fd(&e, "read").message))?;
+    Ok(bytes)
 }
 
 /// `sanitizeDraftBaseName(raw)`
@@ -847,16 +852,24 @@ pub fn save_as(app: &App, cx: &CallContext, args: Args) -> Reply {
     }
     // with copy formats on offer the suggestion carries no extension: the
     // file type chosen in the dialog supplies it
+    let source = Some(s.path()).filter(|p| !p.is_empty());
     let Some(default_name) = args.str(0) else {
+        // `join(dirname(source), undefined)` throws, or the suggestion is `undefined`
+        // and the filter helper reads `.replace` of it
         return Err(IpcError {
-            name: Some("TypeError".into()),
-            message: "Cannot read properties of undefined (reading 'replace')".into(),
+            name: Some(if source.is_some() {
+                "TypeError [ERR_INVALID_ARG_TYPE]".into()
+            } else {
+                "TypeError".into()
+            }),
+            message: if source.is_some() {
+                "The \"path\" argument must be of type string. Received undefined".into()
+            } else {
+                "Cannot read properties of undefined (reading 'replace')".into()
+            },
         });
     };
-    let suggestion = slides_save_as_suggestion(&save_as_suggestion(
-        Some(s.path()).filter(|p| !p.is_empty()),
-        default_name,
-    ));
+    let suggestion = slides_save_as_suggestion(&save_as_suggestion(source, default_name));
     let lang = app.lang();
     let filters = slides_save_as_filters(&|key| super::i18n::tm(lang, key, &[]));
     let filters: Vec<JsonValue> = filters

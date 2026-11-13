@@ -358,7 +358,7 @@ pub fn copy_elements(app: &App, cx: &CallContext, args: Args) -> Reply {
         let token = if is_element_clipboard_token(json_string(token).as_ref()) {
             as_str(token).unwrap_or_default().to_owned()
         } else {
-            jscompat::random_uuid()
+            app.shell.random_uuid()
         };
         let source =
             (!truthy(field(op, "cut"))).then(|| page_key(f64::from(view.0), number(slide_index)));

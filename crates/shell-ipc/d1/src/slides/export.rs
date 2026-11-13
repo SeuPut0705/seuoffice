@@ -445,6 +445,7 @@ pub fn local_page_generate(app: &App, _cx: &CallContext, args: Args, responder: 
     };
     let default_fonts = field(op, "defaultFonts").clone();
     let engine = app.engine.clone();
+    let shell = app.shell.clone();
     let temp = app
         .services
         .paths
@@ -458,7 +459,7 @@ pub fn local_page_generate(app: &App, _cx: &CallContext, args: Args, responder: 
             Err(error) => return responder.reply(Ok(failed(error))),
         };
         let dir = temp.join("seuoffice-local-pages");
-        let path = dir.join(format!("{}.pptx", jscompat::random_uuid()));
+        let path = dir.join(format!("{}.pptx", shell.random_uuid()));
         let path_text = path.to_string_lossy().into_owned();
         if let Err(error) =
             std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, &page.bytes))
