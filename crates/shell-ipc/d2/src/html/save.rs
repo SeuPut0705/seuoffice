@@ -30,7 +30,7 @@ use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::packages::electron_utils::fetch_image_bytes::fetch_image_bytes;
 use shell_contract::hosts::OsShellHost;
 use shell_contract::ipc::{RegisterError, Responder};
-use shell_contract::runtime::{PathName, Services};
+use shell_contract::runtime::Services;
 use shell_contract::{IpcValue, ViewId};
 
 use super::odt_export::{
@@ -78,11 +78,9 @@ impl Exporter {
         export_name(suggested, &self.untitled())
     }
 
-    /// a fresh work folder under the temp folder (`mkdtemp(join(tmpdir(), prefix))`)
+    /// a fresh work folder under the OS temp folder (`mkdtemp(join(tmpdir(), prefix))`)
     fn work_dir(&self, prefix: &str) -> Result<String, String> {
-        let temp = self.services.paths.path(PathName::Temp);
-        // the OS temp folder always exists; a shell that roots it elsewhere may not have made it
-        let _ = std::fs::create_dir_all(&temp);
+        let temp = std::env::temp_dir();
         main_core::node_fs::mkdtemp_random(&join(&[&temp.to_string_lossy(), prefix]))
             .map_err(|e| e.message)
     }
@@ -850,12 +848,8 @@ pub(super) fn entries(
         move |_, args, responder| {
             let url = args.str(0).map(str::to_owned);
             let engine = ex.engine.clone();
-            let temp = ex
-                .services
-                .paths
-                .path(PathName::Temp)
-                .to_string_lossy()
-                .into_owned();
+            // `fetchImageBytes` finds the generated-image store under `os.tmpdir()`
+            let temp = std::env::temp_dir().to_string_lossy().into_owned();
             kit::on_worker(
                 &ex.services,
                 move || {

@@ -78,6 +78,8 @@ pub(crate) struct DocHooks {
     pub is_headless: Box<dyn Fn() -> bool>,
     /// `contents.reload()`
     pub reload: Box<dyn Fn(ViewId)>,
+    /// `Date.now()`
+    pub now_ms: Box<dyn Fn() -> f64>,
     /// `isPathOpenElsewhere(path)`: the shell's split-pane probe
     pub open_elsewhere: Box<dyn Fn(&str) -> bool>,
     /// `discardPendingOwnedAssets(documentPath)`: the errors it reports
@@ -190,7 +192,8 @@ impl TextDocs {
                 let me = me.clone();
                 Box::new(move |v| me.upgrade().and_then(|d| f(&d, v)))
             };
-            let (dirty, adopt, restored, lang, headless, reload, title_lang) = (
+            let (dirty, adopt, restored, lang, headless, reload, title_lang, clock) = (
+                me.clone(),
                 me.clone(),
                 me.clone(),
                 me.clone(),
@@ -234,6 +237,7 @@ impl TextDocs {
                         (d.hooks.reload)(v)
                     }
                 }),
+                now_ms: Box::new(move || clock.upgrade().map_or(0.0, |d| d.now_ms())),
             };
             let recovery = TextRecovery::new(services, host, recovery_hosts);
             TextDocs {
@@ -288,9 +292,14 @@ impl TextDocs {
         configured_default_save_dir(
             &AppPathProvider(self.services.paths.as_ref()),
             &mut self.save_dir.borrow_mut(),
-            crate::text_recovery::ui::now_ms(),
+            self.now_ms(),
         )
         .map_err(|e| kit::error(e.0))
+    }
+
+    /// `Date.now()` as the shell gives it
+    pub(crate) fn now_ms(&self) -> f64 {
+        (self.hooks.now_ms)()
     }
 
     /// the dialog memory, for a dialog shown from a worker
@@ -852,10 +861,6 @@ impl TextDocs {
     /// `input`, takes `target` with `consume-headless-export` and reports with
     /// `headless-export-done`; `then` gets the report, or the timeout's error.
     /// The shell destroys the hidden window afterwards.
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "the shell's headless entry calls it")
-    )]
     pub(crate) fn headless_export(
         self: &Rc<Self>,
         view: ViewId,
@@ -898,7 +903,6 @@ impl TextDocs {
 
     /// The view's renderer process died (`render-process-gone`): its copy
     /// outlives it, and a headless export waiting on it fails
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell reports it"))]
     pub(crate) fn renderer_gone(&self, view: ViewId, reason: &str) {
         self.recovery.view_crashed(view);
         self.settle_headless(
@@ -1103,6 +1107,80 @@ macro_rules! text_document_editors {
                 self.docs.save_path(view).map(Into::into)
             }
         }
+
+        impl $editors {
+            /// `grantAndTrack(view, openPath)` of `create<App>View`: the shell
+            /// made a view for this editor, opening `open_path` when it exists
+            pub fn track_view(&self, view: shell_contract::ViewId, open_path: Option<&std::path::Path>) {
+                let path = open_path.map(|p| p.to_string_lossy().into_owned());
+                self.docs.track(view, path.as_deref())
+            }
+
+            /// `<app>DiscardPendingAssets(contents)`: closing without saving
+            pub fn discard_pending_assets(&self, view: shell_contract::ViewId) {
+                self.docs.discard_pending_assets(view)
+            }
+
+            /// `<app>IsDirty(webContentsId)`
+            pub fn is_dirty(&self, view: shell_contract::ViewId) -> bool {
+                self.docs.is_dirty(view)
+            }
+
+            /// The view's renderer died (`render-process-gone`)
+            pub fn renderer_gone(&self, view: shell_contract::ViewId, reason: &str) {
+                self.docs.renderer_gone(view, reason)
+            }
+
+            /// `<app>RecoveryIdentity(webContentsId)`
+            pub fn recovery_identity(
+                &self,
+                view: shell_contract::ViewId,
+            ) -> Option<main_core::packages::electron_utils::recovery_store::RecoveryIdentity> {
+                self.docs.recovery().identity_of(view)
+            }
+
+            /// `set<App>RecoveryTitleSource(source)`
+            pub fn set_recovery_title_source(
+                &self,
+                source: Option<Box<dyn Fn(shell_contract::ViewId) -> Option<String>>>,
+            ) {
+                self.docs.recovery().set_title_source(source)
+            }
+
+            /// The recovery contract's `kind`
+            pub fn recovery_kind(&self) -> &'static str {
+                self.docs.recovery().kind()
+            }
+
+            /// The recovery contract's `writeCopiesNow`: `done` runs when
+            /// every dirty view answered or timed out
+            pub fn write_copies_now(&self, done: Box<dyn FnOnce()>) {
+                self.docs.recovery().write_copies_now(done)
+            }
+
+            /// The recovery contract's `openFileWithDecision`
+            pub fn open_file_with_decision(
+                &self,
+                view: shell_contract::ViewId,
+                request: &main_core::packages::electron_utils::recovery_contract::RecoveryOpenFileRequest,
+            ) {
+                self.docs.recovery().open_file_with_decision(view, request)
+            }
+
+            /// The recovery contract's `openUntitledCopy`
+            pub fn open_untitled_copy(
+                &self,
+                view: shell_contract::ViewId,
+                request: &main_core::packages::electron_utils::recovery_contract::RecoveryOpenUntitledRequest,
+            ) {
+                self.docs.recovery().open_untitled_copy(view, request)
+            }
+
+            /// The recovery contract's `isUnprotectable`
+            pub fn is_unprotectable(&self, view: shell_contract::ViewId) -> bool {
+                self.docs.recovery().is_unprotectable(view)
+            }
+        }
     };
 }
 pub(crate) use text_document_editors;
@@ -1172,4 +1250,70 @@ pub(crate) fn export_name(suggested: &IpcValue, untitled: &str) -> String {
     } else {
         base
     }
+}
+
+/// The outbound calls both text editors answer for tools/ipc-diff's
+/// `trigger` steps (`d2/<app>:<what>`): the calls other areas make into an
+/// editor, run on the probe's core thread, their outcome handed to `then`.
+/// False for a name this state does not know.
+#[cfg(any(test, feature = "probe"))]
+pub(crate) fn probe_trigger(
+    docs: &Rc<TextDocs>,
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    let arg = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
+    let done = |v: IpcValue| -> Result<IpcValue, IpcError> { Ok(v) };
+    match what {
+        "open-view" => {
+            docs.track(view, arg(0));
+            then(done(IpcValue::Undefined))
+        }
+        "request-save" => {
+            let mode = if arg(0) == Some("saveAs") {
+                SaveMode::SaveAs
+            } else {
+                SaveMode::Save
+            };
+            docs.request_save(view, mode, Box::new(|r| then(r.map(IntoIpc::into_ipc))))
+        }
+        "request-close" => {
+            let parent = docs.services.views.sender_of(view).map(|s| s.window);
+            docs.request_close(view, parent, Box::new(|r| then(r.map(IntoIpc::into_ipc))))
+        }
+        "read-text" => docs.read_text(view, Box::new(|r| then(r.map(IntoIpc::into_ipc)))),
+        "save-to-path" => docs.save_to_path(
+            view,
+            PathBuf::from(arg(0).unwrap_or_default()),
+            Box::new(|r| then(r.map(|()| IpcValue::Undefined))),
+        ),
+        "file-renamed" => {
+            docs.file_renamed(
+                view,
+                Path::new(arg(0).unwrap_or_default()),
+                Path::new(arg(1).unwrap_or_default()),
+            );
+            then(done(IpcValue::Undefined))
+        }
+        "export-request" => {
+            docs.export_request(view, arg(0).unwrap_or_default());
+            then(done(IpcValue::Undefined))
+        }
+        "discard-pending-assets" => {
+            docs.discard_pending_assets(view);
+            then(done(IpcValue::Undefined))
+        }
+        "is-dirty" => then(done(docs.is_dirty(view).into_ipc())),
+        "write-copies-now" => docs
+            .recovery
+            .write_copies_now(move || then(done(IpcValue::Undefined))),
+        "renderer-gone" => {
+            docs.renderer_gone(view, arg(0).unwrap_or_default());
+            then(done(IpcValue::Undefined))
+        }
+        _ => return false,
+    }
+    true
 }
