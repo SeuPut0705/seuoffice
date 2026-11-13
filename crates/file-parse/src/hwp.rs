@@ -337,7 +337,7 @@ fn host_offset(unix_seconds: i64) -> Option<i32> {
 /// exactly what it was before memos were read. Memos that cannot be listed are left out
 /// rather than failing the read of a body that could be read.
 fn comment_lines(doc: &HwpDocument) -> Result<Vec<String>, String> {
-    let Ok(listed) = serde_json::from_str::<Value>(&memo_list_json(&doc)) else {
+    let Ok(listed) = serde_json::from_str::<Value>(&memo_list_json(doc)) else {
         return Ok(Vec::new());
     };
     let memos = match listed {
