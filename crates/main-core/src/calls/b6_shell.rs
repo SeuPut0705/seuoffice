@@ -74,8 +74,8 @@ use crate::shell::update_build_channel::BuildUpdateChannel;
 use crate::shell::update_restart::reopened_by_installer;
 use crate::shell::update_resume::install_resume_download;
 use crate::shell::updater::{
-    CheckResult, CheckReturn, DownloadReturn, Timer, UpdateAction, UpdateError, UpdateStatePatch,
-    UpdateUiState, Updater, UpdaterEnv, UpdaterEvent, UpdaterHost, UpdaterSetting,
+    CheckResult, Timer, UpdateAction, UpdateError, UpdateStatePatch, UpdateUiState, Updater,
+    UpdaterEnv, UpdaterEvent, UpdaterHost, UpdaterSetting, UpdaterStep,
 };
 
 type Log = Rc<RefCell<Vec<Vec<Value>>>>;
@@ -2499,6 +2499,125 @@ impl UpHost {
     fn updater_spec(&self) -> Value {
         self.spec.get("updater").cloned().unwrap_or(Value::Null)
     }
+
+    /// `fake.checkForUpdates` as the spec writes it: its log line, what it
+    /// emits, whether it holds before it ends, and how it ends
+    fn next_check(&mut self) -> ScriptedCall<Result<Option<CheckResult>, UpdateError>> {
+        log_line(&self.log, vec![text("autoUpdater.checkForUpdates")]);
+        let checks = self
+            .updater_spec()
+            .get("checks")
+            .cloned()
+            .unwrap_or(Value::Null);
+        let scripts = list(Some(&checks));
+        let script = &scripts[self.check_at.min(scripts.len() - 1)];
+        self.check_at += 1;
+        let outcome = match script.get("result") {
+            Some(Value::String(s)) if s == "none" => Ok(Some(CheckResult {
+                is_update_available: false,
+                update_version: Some("0.0.0".to_owned()),
+            })),
+            Some(Value::String(s)) if s == "null" => Ok(None),
+            Some(result) if result.get("throws").is_some() => {
+                let thrown = result.get("throws").cloned().unwrap_or(Value::Null);
+                Err(UpdateError {
+                    code: field_str(&thrown, "code").map(str::to_owned),
+                    message: field_str(&thrown, "message").unwrap_or_default().to_owned(),
+                })
+            }
+            Some(result) => Ok(Some(CheckResult {
+                is_update_available: field_bool(result, "available"),
+                update_version: field_str(result, "version").map(str::to_owned),
+            })),
+            None => Ok(None),
+        };
+        ScriptedCall {
+            events: list(script.get("events"))
+                .iter()
+                .map(updater_event)
+                .collect(),
+            hold: field_bool(script, "hold"),
+            outcome,
+        }
+    }
+
+    /// `fake.downloadUpdate` as the spec writes it
+    fn next_download(&mut self) -> ScriptedCall<Option<UpdateError>> {
+        log_line(&self.log, vec![text("autoUpdater.downloadUpdate")]);
+        let downloads = self
+            .updater_spec()
+            .get("downloads")
+            .cloned()
+            .unwrap_or(Value::Null);
+        let scripts = list(Some(&downloads));
+        let script = scripts
+            .get(self.download_at.min(scripts.len().saturating_sub(1)))
+            .cloned()
+            .unwrap_or(Value::Null);
+        self.download_at += 1;
+        ScriptedCall {
+            events: list(script.get("events"))
+                .iter()
+                .map(updater_event)
+                .collect(),
+            hold: field_bool(&script, "hold"),
+            outcome: field_str(&script, "rejects")
+                .filter(|m| !m.is_empty())
+                .map(|message| UpdateError {
+                    code: None,
+                    message: message.to_owned(),
+                }),
+        }
+    }
+}
+
+/// a call of the fake updater: what it emits first, then (after a hold, if it
+/// has one) how it ends
+struct ScriptedCall<T> {
+    events: Vec<UpdaterEvent>,
+    hold: bool,
+    outcome: T,
+}
+
+/// the calls of the fake updater that have emitted and wait to end
+#[derive(Default)]
+struct HeldCalls {
+    checks: Vec<(u32, Result<Option<CheckResult>, UpdateError>)>,
+    downloads: Vec<(u64, Option<UpdateError>)>,
+}
+
+/// carries out what the updater asks for on the fake updater
+fn run_updater_step(
+    updater: &mut Updater,
+    host: &mut UpHost,
+    held: &mut HeldCalls,
+    step: UpdaterStep,
+) {
+    match step {
+        UpdaterStep::Idle => {}
+        UpdaterStep::StartCheck { ticket } => {
+            let call = host.next_check();
+            for event in call.events {
+                updater.on_event(host, event);
+            }
+            if call.hold {
+                held.checks.push((ticket, call.outcome));
+            } else {
+                updater.resume_check(host, ticket, call.outcome);
+            }
+        }
+        UpdaterStep::StartDownload { generation } => {
+            let call = host.next_download();
+            for event in call.events {
+                updater.on_event(host, event);
+            }
+            if call.hold {
+                held.downloads.push((generation, call.outcome));
+            } else {
+                updater.resume_download(host, generation, call.outcome);
+            }
+        }
+    }
 }
 
 fn updater_event(spec: &Value) -> UpdaterEvent {
@@ -2663,67 +2782,6 @@ impl UpdaterHost for UpHost {
         let both = field_bool(&self.updater_spec(), "macMethods");
         (both, both)
     }
-    fn check_for_updates(&mut self) -> CheckReturn {
-        log_line(&self.log, vec![text("autoUpdater.checkForUpdates")]);
-        let checks = self
-            .updater_spec()
-            .get("checks")
-            .cloned()
-            .unwrap_or(Value::Null);
-        let scripts = list(Some(&checks));
-        let script = &scripts[self.check_at.min(scripts.len() - 1)];
-        self.check_at += 1;
-        let events = list(script.get("events"))
-            .iter()
-            .map(updater_event)
-            .collect();
-        let result = match script.get("result") {
-            Some(Value::String(s)) if s == "none" => Ok(Some(CheckResult {
-                is_update_available: false,
-                update_version: Some("0.0.0".to_owned()),
-            })),
-            Some(Value::String(s)) if s == "null" => Ok(None),
-            Some(result) if result.get("throws").is_some() => {
-                let thrown = result.get("throws").cloned().unwrap_or(Value::Null);
-                Err(UpdateError {
-                    code: field_str(&thrown, "code").map(str::to_owned),
-                    message: field_str(&thrown, "message").unwrap_or_default().to_owned(),
-                })
-            }
-            Some(result) => Ok(Some(CheckResult {
-                is_update_available: field_bool(result, "available"),
-                update_version: field_str(result, "version").map(str::to_owned),
-            })),
-            None => Ok(None),
-        };
-        CheckReturn { events, result }
-    }
-    fn download_update(&mut self) -> DownloadReturn {
-        log_line(&self.log, vec![text("autoUpdater.downloadUpdate")]);
-        let downloads = self
-            .updater_spec()
-            .get("downloads")
-            .cloned()
-            .unwrap_or(Value::Null);
-        let scripts = list(Some(&downloads));
-        let script = scripts
-            .get(self.download_at.min(scripts.len().saturating_sub(1)))
-            .cloned()
-            .unwrap_or(Value::Null);
-        self.download_at += 1;
-        DownloadReturn {
-            events: list(script.get("events"))
-                .iter()
-                .map(updater_event)
-                .collect(),
-            rejection: field_str(&script, "rejects")
-                .filter(|m| !m.is_empty())
-                .map(|message| UpdateError {
-                    code: None,
-                    message: message.to_owned(),
-                }),
-        }
-    }
     fn install(&mut self, silent: bool, force_run_after: bool) -> Option<bool> {
         let mode = field_str(&self.updater_spec(), "install").map(str::to_owned);
         if mode.as_deref() == Some("none") {
@@ -2799,18 +2857,29 @@ fn updater_call(args: &[Value], cx: &mut Context) -> Answer {
         BuildUpdateChannel::Latest
     };
     let mut updater = Updater::new(env);
+    let mut held = HeldCalls::default();
     for step in list(spec.get("steps")) {
         if step.get("init").is_some() {
             updater.init_auto_updater(&mut host, channel);
         } else if step.get("manual").is_some() {
-            updater.check_for_updates_now(&mut host);
+            let next = updater.check_for_updates_now(&mut host);
+            run_updater_step(&mut updater, &mut host, &mut held, next);
+        } else if let Some(settle) = field_str(step, "settle") {
+            // the oldest held call of that kind ends
+            if settle == "check" && !held.checks.is_empty() {
+                let (ticket, outcome) = held.checks.remove(0);
+                updater.resume_check(&mut host, ticket, outcome);
+            } else if settle == "download" && !held.downloads.is_empty() {
+                let (generation, rejection) = held.downloads.remove(0);
+                updater.resume_download(&mut host, generation, rejection);
+            }
         } else if let Some(event) = step.get("event") {
             updater.on_event(&mut host, updater_event(event));
         } else if let Some(action) = field_str(step, "action") {
             if !host.window_shown {
                 continue;
             }
-            updater.on_action(
+            let next = updater.on_action(
                 &mut host,
                 match action {
                     "download" => UpdateAction::Download,
@@ -2819,6 +2888,7 @@ fn updater_call(args: &[Value], cx: &mut Context) -> Answer {
                     _ => UpdateAction::OpenDownload,
                 },
             );
+            run_updater_step(&mut updater, &mut host, &mut held, next);
         } else if let Some(n) = field_f64(step, "timer") {
             let id = n as usize;
             let slot = host
@@ -2827,7 +2897,10 @@ fn updater_call(args: &[Value], cx: &mut Context) -> Answer {
                 .filter(|slot| !slot.cleared)
                 .map(|slot| slot.timer);
             match slot {
-                Some(Timer::Check) => updater.check(&mut host),
+                Some(Timer::Check) => {
+                    let next = updater.check(&mut host);
+                    run_updater_step(&mut updater, &mut host, &mut held, next);
+                }
                 Some(Timer::ClearCache(tries)) => updater.clear_installed_cache(&mut host, tries),
                 Some(Timer::FakeShow) => updater.fake_show_again(&mut host),
                 Some(Timer::FakeProgress) => updater.fake_progress(&mut host, id as u32),

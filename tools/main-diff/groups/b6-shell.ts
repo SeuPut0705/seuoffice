@@ -3781,6 +3781,8 @@ interface UpdaterEventSpec {
 
 interface CheckScript {
   events?: UpdaterEventSpec[]
+  /** the call stays open after its events until a `settle: 'check'` step */
+  hold?: true
   result:
     | 'none'
     | 'null'
@@ -3790,7 +3792,9 @@ interface CheckScript {
 
 type UpdaterStep =
   | { init: true }
-  | { manual: true }
+  /** `'start'`: the check is not waited for (it is held and a `settle` step ends it) */
+  | { manual: true | 'start' }
+  | { settle: 'check' | 'download' }
   | { event: UpdaterEventSpec }
   | { action: 'download' | 'install' | 'later' | 'openDownload' }
   | { timer: number }
@@ -3811,7 +3815,8 @@ interface UpdaterScenario {
   autoCheck: boolean
   updater: {
     checks: CheckScript[]
-    downloads: { events?: UpdaterEventSpec[]; rejects?: string }[]
+    /** `hold`: the call stays open after its events until a `settle: 'download'` step */
+    downloads: { events?: UpdaterEventSpec[]; rejects?: string; hold?: true }[]
     install: 'true' | 'false' | 'none'
     /** a folder, `none` (no such method), `throws`, or `nodir` (an answer without a cache folder) */
     cacheDir: string
@@ -3832,6 +3837,9 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
   const downloads = [...o.updater.downloads]
   let checkAt = 0
   let downloadAt = 0
+  const heldChecks: (() => void)[] = []
+  const heldDownloads: (() => void)[] = []
+  const manualRuns: Promise<void>[] = []
   const raw = (event: string, ...args: unknown[]): void => {
     for (const listener of listeners[event] ?? []) listener(...args)
   }
@@ -3878,6 +3886,7 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     cx.log('autoUpdater.checkForUpdates')
     const script = checks[Math.min(checkAt++, checks.length - 1)]
     for (const event of script.events ?? []) await emit(event)
+    if (script.hold) await new Promise<void>((resolve) => heldChecks.push(resolve))
     if (script.result === 'none')
       return { isUpdateAvailable: false, updateInfo: { version: '0.0.0' } }
     if (script.result === 'null') return null
@@ -3897,6 +3906,7 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     cx.log('autoUpdater.downloadUpdate')
     const script = downloads[Math.min(downloadAt++, downloads.length - 1)] ?? {}
     for (const event of script.events ?? []) await emit(event)
+    if (script.hold) await new Promise<void>((resolve) => heldDownloads.push(resolve))
     if (script.rejects) throw new Error(script.rejects)
   }
   if (o.updater.install !== 'none') {
@@ -4017,7 +4027,10 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
                   o.channel,
                 )
               } else if ('manual' in step) {
-                await updater.checkForUpdatesNow()
+                if (step.manual === 'start') manualRuns.push(updater.checkForUpdatesNow())
+                else await updater.checkForUpdatesNow()
+              } else if ('settle' in step) {
+                ;(step.settle === 'check' ? heldChecks : heldDownloads).shift()?.()
               } else if ('event' in step) {
                 await emit(step.event)
               } else if ('action' in step) {
@@ -4038,6 +4051,8 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
               }
               await settle()
             }
+            // a check that was started and not waited for ends with its settle step
+            await Promise.all(manualRuns)
           },
         ),
       ),
@@ -4725,6 +4740,90 @@ const updaterScenarios: Case[] = [
     ],
     files: { ...DL, app: { dir: true, mode: 0o555 } },
     note: 'a folder only an administrator can write, on Linux: no admin prompt is announced there',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [progress(1, 10)], hold: true }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { event: progress(2, 20) },
+          { event: progress(5, 50) },
+          { settle: 'download' },
+        ],
+      }),
+    ],
+    note: 'progress arrives while the download is still running: each step is pushed before the download ends',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [
+            {
+              events: [progress(1, 10), { type: 'error', message: 'boom' }],
+              hold: true,
+              rejects: 'net down',
+            },
+          ],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { event: { type: 'error', message: 'late' } },
+          { event: progress(3, 30) },
+          { settle: 'download' },
+          { event: progress(4, 40) },
+        ],
+      }),
+    ],
+    note: 'an error event while a download runs is only logged; the rejection that follows fails the download; later progress counts for nothing',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), { ...found('3.0.0'), hold: true }],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('later'),
+          { manual: 'start' },
+          { settle: 'check' },
+        ],
+      }),
+    ],
+    note: 'a manual check is answered after the window was closed: the newer release it announced meanwhile brings the flow back, the answer adds nothing',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), { result: 'none', hold: true }],
+          downloads: [{ events: [progress(1, 10)], hold: true }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { manual: 'start' },
+          { manual: 'start' },
+          { settle: 'download' },
+          { settle: 'check' },
+        ],
+      }),
+    ],
+    note: 'a second manual check while one is waiting does nothing; the first ends after the download did, and says it is up to date',
   },
 ]
 
