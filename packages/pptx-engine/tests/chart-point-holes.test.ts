@@ -9,7 +9,7 @@ import JSZip from 'jszip'
 import {
   createBlankPptx,
   ensureCreationId,
-  groupElements,
+  duplicateSlide,
   openPptx,
   type ChartElement,
   type GroupElement,
@@ -95,10 +95,11 @@ describe('the hole before a colored chart point', () => {
 
   it('stays undefined in the slide an edit answers', async () => {
     const opened = await openPptx(await deckWithCharts())
-    const top = opened.deck.slides[0]!.elements.find((el) => el.type === 'chart')!
-    const done = groupElements(opened, 0, [top.id])
-    expect(done).not.toBeNull()
-    const grouped = done!.slide.elements.find((el) => el.id === done!.groupId)
-    expect(colorsOf(childOf(grouped))).toEqual([undefined, '#FF0000'])
+    const copy = duplicateSlide(opened, 0)
+    expect(copy).not.toBeNull()
+    const top = copy!.elements.find((el) => el.type === 'chart')
+    const outer = copy!.elements.find((el) => el.type === 'group')
+    expect(colorsOf(top)).toEqual([undefined, '#FF0000'])
+    expect(colorsOf(childOf(childOf(outer)))).toEqual([undefined, '#FF0000'])
   })
 })
