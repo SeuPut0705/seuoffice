@@ -168,6 +168,13 @@ pub struct KeyModelRefresherDeps {
     pub list: Option<ListFn>,
 }
 
+/// One turn of the loop: what a promise hop costs in JavaScript. The task
+/// waits for a task of its own, which settles at the next pass, so every
+/// other task goes one step before it continues.
+async fn next_turn(rt: &Rt) {
+    rt.share(async {}).await;
+}
+
 #[derive(Default)]
 struct RefresherState {
     /// per provider, what its key and base URL were when it was last asked
@@ -215,11 +222,16 @@ impl KeyModelRefresher {
                 let provider = provider.to_owned();
                 Box::pin(async move {
                     let base = KeyedFetchBase::Plain(Fetcher::Node);
-                    Ok(
+                    let listing =
                         list_key_provider_model_listing(&rt, &fx, &provider, &list_config, &base)
-                            .await?
-                            .map(ListAnswer::Listing),
-                    )
+                            .await?;
+                    // The answer climbs through the promises of `guard`,
+                    // `getJson`, the vendor's lister and `listKeyProviderModelListing`
+                    // before the `.then` callback runs: each hop is a microtask turn,
+                    // so the writes of two listings that ended together come after
+                    // both of their watchdogs were cleared.
+                    next_turn(&rt).await;
+                    Ok(listing.map(ListAnswer::Listing))
                 })
             }
         };

@@ -58,7 +58,7 @@ use super::subscription_process::{
     SubscriptionSpawnOptions, kill_process_tree, on_kill_timeout, on_killer_error,
     spawn_subscription_program,
 };
-use super::subscription_status::{SubscriptionLogin, codex_account_info};
+use super::subscription_status::{SubscriptionLogin, codex_account_info, tick};
 use super::subscription_temp_dirs::{
     SubscriptionTempState, TempDirOptions, create_tracked_temp_dir, remove_tracked_temp_dir,
 };
@@ -507,7 +507,8 @@ impl KillHost for RtKillHost {
             windows_hide: options.windows_hide,
             shell: None,
         };
-        self.rt.spawn_local(async move {
+        // `spawn(...)` starts the process at the call
+        spawn_eager(&self.rt, async move {
             match rt.spawn(request).await {
                 Ok(killer) => {
                     let on_error = rt.clone();
@@ -548,6 +549,16 @@ fn real_kill_tree(rt: &Rt, child: &Child) {
         &KillTreeOptions::default(),
         &mut RtKillHost { rt: rt.clone() },
     );
+}
+
+/// `void promise()`: a call of an async function runs to its first `await`
+/// at once, and the rest goes on beside the tasks.
+fn spawn_eager(rt: &Rt, future: impl Future<Output = ()> + 'static) {
+    let mut future: LocalBoxFuture<()> = Box::pin(future);
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    if future.as_mut().poll(&mut cx).is_pending() {
+        rt.spawn_local(future);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1055,7 +1066,7 @@ impl CodexAppServerClient {
         let rt = self.0.rt.clone();
         let temp_dirs = self.0.app.borrow().temp_dirs.clone();
         let path = session.temp_dir.clone();
-        rt.spawn_local({
+        spawn_eager(&rt, {
             let rt = rt.clone();
             async move {
                 remove_tracked_temp_dir(&rt, &temp_dirs, &path, &TempDirOptions::default()).await;
@@ -1408,7 +1419,12 @@ async fn client_for(
     };
     let resolve = app.borrow().runtime.resolve.clone();
     let program = match resolve {
-        Some(resolve) => resolve(rt, "codex", &options).await?,
+        Some(resolve) => {
+            let found = resolve(rt, "codex", &options).await;
+            // `await` of the promise the hook returned takes a turn of the microtask queue
+            tick(rt).await;
+            found?
+        }
         None => {
             let locate = app.borrow().locate.clone();
             resolve_subscription_program(rt, &locate, "codex", &options).await?

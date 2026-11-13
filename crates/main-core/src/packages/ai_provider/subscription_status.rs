@@ -918,17 +918,18 @@ pub async fn detect_subscription_login(
             ));
         })
     };
+    // `inspect(...)` of `Promise.race([...])` runs now, up to its first `await`
     let checking: LocalBoxFuture<SubscriptionDetection> = {
-        let (rt, state, provider, options, signal) = (
+        let (rt_check, state, provider, options, signal) = (
             rt.clone(),
             state.clone(),
             provider.to_owned(),
             options.clone(),
             controller.clone(),
         );
-        Box::pin(
-            async move { inspect(&rt, &state, &provider, &options, &signal, timeout_ms).await },
-        )
+        Box::pin(start_now(rt, async move {
+            inspect(&rt_check, &state, &provider, &options, &signal, timeout_ms).await
+        }))
     };
     let deadline: LocalBoxFuture<SubscriptionDetection> = Box::pin(deadline);
     let (_, detection) = rt.race(vec![checking, deadline]).await;
@@ -968,7 +969,11 @@ pub async fn detect_subscription_logins(
                     if let Some(paths) = &all.configured_paths {
                         options.configured_path = paths.get(provider).cloned().flatten();
                     }
-                    detect(rt.clone(), (*provider).to_owned(), options)
+                    // `detect(provider, ...)` of the `map` runs now, up to its first `await`,
+                    // before the next provider's starts
+                    let started =
+                        start_now(rt, detect(rt.clone(), (*provider).to_owned(), options));
+                    Box::pin(started) as LocalBoxFuture<Result<SubscriptionDetection, JsError>>
                 })
                 .collect(),
         )

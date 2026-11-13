@@ -471,9 +471,9 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             let dir = arg(args, 1).and_then(Value::as_str).unwrap_or("");
             let probe = codex_sandbox_probe_args(&table_of(&jv(args, 0)), dir, network);
             out(object(vec![
-                ("args", string_list(&probe.args)),
                 ("readable", text(&probe.readable)),
                 ("denied", text(&probe.denied)),
+                ("args", string_list(&probe.args)),
             ]))
         }
         "agent-session/codex-sandbox-probe.codexSandboxProbeVerdict" => {

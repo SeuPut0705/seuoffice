@@ -1546,7 +1546,8 @@ const streams: Group = {
           }),
         ),
       ),
-      // another system prompt: the thread is replaced
+      // another system prompt: the thread is replaced. Nothing answers the delete of the old
+      // thread: its answer would race the real file system call that follows it
       c(
         w([
           new Kid()
@@ -1554,7 +1555,7 @@ const streams: Group = {
             .open()
             .turn(done('first'))
             .req(CHATGPT)
-            .req({})
+            .hang()
             .req({ config: { mcp_servers: {} } })
             .req(thread('thread-2'))
             .req({ data: [] })
@@ -1571,7 +1572,7 @@ const streams: Group = {
             .open()
             .turn(done('first'))
             .req(CHATGPT)
-            .req({})
+            .hang()
             .req({ config: { mcp_servers: {} } })
             .req(thread('thread-2'))
             .req({ data: [] })
@@ -1680,21 +1681,18 @@ const started = note('turn/started', { threadId: 'thread-1', turn: { id: 'turn-1
 const moreStreamCases: Case[] = [
   // a byte order mark at the start of stdout is part of the first line
   c(w([ok('bom').spec({ stdout: [{ hex: 'efbbbf' }] })]), steps(stream())),
-  // two runs started together share one process
+  // two runs started together share one process; the second is signed out, so that only
+  // one of them makes a folder (two made together would race on the real file system)
   c(
     w([
       new Kid()
         .start()
         .req(CHATGPT)
-        .req(CHATGPT)
-        .req({ config: { mcp_servers: {} } })
+        .req(SIGNED_OUT)
         .req({ config: { mcp_servers: {} } })
         .req(thread('thread-1'))
-        .req(thread('thread-2'))
-        .req({ data: [] })
         .req({ data: [] })
         .turn(done('one', [], 'turn-1', 'thread-1'), 'turn-1')
-        .turn(done('two', [], 'turn-2', 'thread-2'), 'turn-2')
         .spec(),
     ]),
     steps({ all: [stream({ sessionId: 'a' }), stream({ sessionId: 'b' })] }),

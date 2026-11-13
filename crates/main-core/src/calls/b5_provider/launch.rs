@@ -854,7 +854,10 @@ fn turns(ctx: &Steps, what: &str, name: &str) -> usize {
     // `serviceStep` returns a promise (two turns to adopt) or a plain value; `run`
     // returns what it returns, which adopts again
     let service_step = match what {
-        "check" | "metered" | "off" | "isOff" => Some(2),
+        "check" | "off" | "isOff" => Some(2),
+        // `queued` already holds the turns up to the promise `setMeteredAccepted` returns
+        // as it is; the step returns it from an async function, which adds none of its own
+        "metered" => Some(0),
         "clear" | "settle" => Some(1),
         "signing" | "unfinished" | "statuses" | "settings" | "record" | "listen" | "unlisten" => {
             Some(0)
@@ -865,8 +868,12 @@ fn turns(ctx: &Steps, what: &str, name: &str) -> usize {
         _ if service_step.is_some() => service_step.unwrap_or(0) + if run { 2 } else { 0 },
         "par" => 3,
         "invoke" => {
-            if SubscriptionIpc::channels().contains(&channel_of(name).as_str())
-                && !matches!(name, "statuses" | "codexImage")
+            if name == "statuses" {
+                // the handler starts the first check, whose `await getSettings()` is queued
+                // before the harness's own `await`: the check's continuations run first
+                1
+            } else if SubscriptionIpc::channels().contains(&channel_of(name).as_str())
+                && name != "codexImage"
             {
                 2
             } else {
