@@ -220,34 +220,61 @@ export type Outbound<L> = Record<string, (loaded: L, view: number, args: unknown
 
 /**
  * A `d2/<app>:<what>` trigger step (the shell's or another area's call into
- * the editor); `defer` when it waits for the renderer's answer, taken by a
- * later `awaitStep`
+ * the editor). With `begin`, a call that waits for the renderer is started
+ * (`d2/<app>:begin:<what>`, answered at once); the renderer's answering calls
+ * follow, then `outcomeStep` answers what it settled on.
  */
 export function triggerStep(
   app: 'html' | 'markdown',
   what: string,
   args: unknown[] = [],
-  more: { view?: number; defer?: true } = {},
+  more: { view?: number; begin?: true } = {},
 ): Call {
-  const name = `d2/${app}:${what}`
-  return { channel: name, kind: 'trigger', name, view: 1, args, ...more }
+  const name = `d2/${app}:${more.begin ? 'begin:' : ''}${what}`
+  return { channel: name, kind: 'trigger', name, view: more.view ?? 1, args }
 }
 
-/** the reply of the deferred step at `index` */
-export const awaitStep = (index: number): Call => ({ channel: '', args: [], await: index })
+/** what the `begin:<what>` step of `view` settled on (an error while it still waits) */
+export function outcomeStep(app: 'html' | 'markdown', what: string, view = 1): Call {
+  const name = `d2/${app}:outcome`
+  return { channel: name, kind: 'trigger', name, view, args: [what] }
+}
 
-/** `Group.triggers` for `outbound`, each run on what the current case loaded */
+/** the calls `begin:<what>` started, by `<what>` and view, until `outcome` takes them */
+const begun = new Map<string, { settled: boolean; ok: boolean; value: unknown }>()
+
+/**
+ * `Group.triggers` for `outbound`, each run on what the current case loaded,
+ * with each name's `begin:` form and `outcome` (crates/shell-ipc/d2's
+ * `probe_trigger_begun`)
+ */
 export function groupTriggers<L>(
   app: 'html' | 'markdown',
   outbound: Outbound<L>,
   loaded: () => L,
 ): NonNullable<Group['triggers']> {
-  return Object.fromEntries(
-    Object.entries(outbound).map(([what, run]) => [
-      `d2/${app}:${what}`,
-      (_cx: TriggerContext, view: number, args: unknown[]) => run(loaded(), view, args),
-    ]),
-  )
+  const triggers: NonNullable<Group['triggers']> = {}
+  for (const [what, run] of Object.entries(outbound)) {
+    triggers[`d2/${app}:${what}`] = (_cx, view, args) => run(loaded(), view, args)
+    triggers[`d2/${app}:begin:${what}`] = (_cx, view, args) => {
+      const state = { settled: false, ok: false, value: undefined as unknown }
+      begun.set(`${what} ${view}`, state)
+      Promise.resolve(run(loaded(), view, args)).then(
+        (value) => Object.assign(state, { settled: true, ok: true, value }),
+        (error: unknown) => Object.assign(state, { settled: true, ok: false, value: error }),
+      )
+      return undefined
+    }
+  }
+  triggers[`d2/${app}:outcome`] = (_cx: TriggerContext, view: number, [what]: unknown[]) => {
+    const key = `${String(what)} ${view}`
+    const state = begun.get(key)
+    begun.delete(key)
+    if (!state?.settled) throw new Error('still waiting')
+    if (!state.ok) throw state.value
+    return state.value
+  }
+  return triggers
 }
 
 /**
@@ -273,6 +300,7 @@ export function setUpTextCase(cx: LoadContext, app: 'html' | 'markdown'): TextEd
   )
   globalThis.Date = typeof c.now === 'number' ? fixedDate(c.now) : RealDate
   ;(globalThis as unknown as Record<symbol, number>)[IDS] = 0
+  begun.clear()
   // the image host upload's request (`upload_fetch`): `{status, text}` answers, else it fails
   globalThis.fetch = async (_url: unknown, init?: { method?: string }) => {
     cx.electron.log.push(['fetch', init?.method ?? 'GET'])

@@ -530,6 +530,19 @@ pub(crate) fn probe_trigger(
     let Some(editors) = provided.all::<MarkdownEditors>().into_iter().next() else {
         return false;
     };
+    crate::html::text_doc::probe_trigger_begun(what, view, args, then, |what, then| {
+        run_trigger(&editors, what, view, args, then)
+    })
+}
+
+#[cfg(any(test, feature = "probe"))]
+fn run_trigger(
+    editors: &MarkdownEditors,
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
     let arg = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
     match what {
         // `queueMarkdownSeedFor(contents, text)`

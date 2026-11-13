@@ -1252,6 +1252,59 @@ pub(crate) fn export_name(suggested: &IpcValue, untitled: &str) -> String {
     }
 }
 
+#[cfg(any(test, feature = "probe"))]
+type Outcome = Rc<RefCell<Option<Result<IpcValue, IpcError>>>>;
+
+#[cfg(any(test, feature = "probe"))]
+thread_local! {
+    /// the outcomes of `begin:<what>` triggers by `<what>` and view, until an
+    /// `outcome` trigger takes them
+    static BEGUN: RefCell<std::collections::HashMap<(String, u32), Outcome>> =
+        RefCell::default();
+}
+
+/// A call that waits for the renderer runs in two trigger steps:
+/// `begin:<what>` starts it and answers at once, the renderer's answering
+/// calls follow, then `outcome` (args `[<what>]`) answers what it settled on
+/// (an error while it still waits). Every other name goes to `run`.
+#[cfg(any(test, feature = "probe"))]
+pub(crate) fn probe_trigger_begun(
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    then: shell_contract::editors::Then<IpcValue>,
+    run: impl FnOnce(&str, shell_contract::editors::Then<IpcValue>) -> bool,
+) -> bool {
+    if what == "outcome" {
+        let key = (
+            args.get(0)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            view.0,
+        );
+        let settled = BEGUN.with(|b| b.borrow_mut().remove(&key));
+        then(match settled.and_then(|slot| slot.borrow_mut().take()) {
+            Some(result) => result,
+            None => Err(crate::kit::error("still waiting")),
+        });
+        return true;
+    }
+    let Some(inner) = what.strip_prefix("begin:") else {
+        return run(what, then);
+    };
+    let slot: Outcome = Rc::default();
+    BEGUN.with(|b| {
+        b.borrow_mut()
+            .insert((inner.to_owned(), view.0), Rc::clone(&slot))
+    });
+    let known = run(inner, Box::new(move |r| *slot.borrow_mut() = Some(r)));
+    if known {
+        then(Ok(IpcValue::Undefined));
+    }
+    known
+}
+
 /// The outbound calls both text editors answer for tools/ipc-diff's
 /// `trigger` steps (`d2/<app>:<what>`): the calls other areas make into an
 /// editor, run on the probe's core thread, their outcome handed to `then`.
