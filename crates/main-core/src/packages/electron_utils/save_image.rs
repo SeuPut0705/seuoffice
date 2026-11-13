@@ -148,6 +148,16 @@ pub struct SaveImageOptions<'a> {
     pub fallback_dir: Option<&'a str>,
 }
 
+/// The first half of `saveImageFromUrl`: the URL check and `fetchImageBytes`.
+/// It touches no dialog, so it may run off the core thread; an `Err` is the
+/// `error` of the failed result.
+pub fn fetch_image_for_save(url: &str, fetch: NetFetch<'_>) -> Result<DecodedImage, String> {
+    if !is_savable_image_url(url) {
+        return Err("unsupported image url".into());
+    }
+    fetch_image_bytes(url, fetch)
+}
+
 /// `saveImageFromUrl(parent, url, opts)`
 pub fn save_image_from_url<D: Dialog>(
     memory: &mut DialogMemory,
@@ -157,18 +167,32 @@ pub fn save_image_from_url<D: Dialog>(
     url: &str,
     opts: &SaveImageOptions<'_>,
 ) -> SaveImageResult {
+    match fetch_image_for_save(url, fetch) {
+        Ok(image) => save_fetched_image(memory, dialog, parent, url, image, opts),
+        Err(error) => SaveImageResult {
+            ok: false,
+            path: None,
+            error: Some(error),
+        },
+    }
+}
+
+/// The second half of `saveImageFromUrl`: the save dialog (with its folder
+/// memory) and the write of an image [`fetch_image_for_save`] fetched.
+pub fn save_fetched_image<D: Dialog>(
+    memory: &mut DialogMemory,
+    dialog: &mut D,
+    parent: Option<&D::Window>,
+    url: &str,
+    image: DecodedImage,
+    opts: &SaveImageOptions<'_>,
+) -> SaveImageResult {
     let failed = |error: String| SaveImageResult {
         ok: false,
         path: None,
         error: Some(error),
     };
-    if !is_savable_image_url(url) {
-        return failed("unsupported image url".into());
-    }
-    let DecodedImage { bytes, mime } = match fetch_image_bytes(url, fetch) {
-        Ok(image) => image,
-        Err(error) => return failed(error),
-    };
+    let DecodedImage { bytes, mime } = image;
     let name = suggest_image_file_name(url, mime.as_deref());
     let ext = &name[name.rfind('.').map_or(0, |dot| dot + 1)..];
     let mut filter = JsObject::new();
