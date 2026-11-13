@@ -379,7 +379,11 @@ export async function epubMigrationInfo(
   return { oldDocHash: hashes.oldDocHash, newDocHash: hashes.newDocHash }
 }
 
-export async function epubTranslationUnits(_book: unknown, _options: unknown): Promise<unknown> {
+export async function epubTranslationUnits(
+  _book: unknown,
+  options: { chapters?: number[] },
+): Promise<unknown> {
+  box().log.push(['epubTranslationUnits', options.chapters ?? null])
   const answer = next('translationUnits')
   if (answer === undefined) return { units: [], skipped: [] }
   const message = thrown(answer)
@@ -397,6 +401,14 @@ export async function buildTranslatedEpub(
     mode?: string
   },
 ): Promise<unknown> {
+  box().log.push([
+    'buildTranslatedEpub',
+    options.kind,
+    options.lang,
+    options.chapters ?? null,
+    [...options.results.values()],
+    options.mode === 'easy' ? 'easy' : null,
+  ])
   const answer = next('buildTranslated')
   if (answer !== undefined) {
     const message = thrown(answer)
@@ -432,6 +444,7 @@ export function diagramPictureExtOf(filePath: string): string | null {
 }
 
 export async function parseFileToText(filePath: string): Promise<unknown> {
+  box().log.push(['parseFileToText', filePath])
   const answer = next('parseFileToText')
   if (typeof answer === 'string') return { ok: true, kind: 'text', text: answer }
   if (answer !== undefined) {
@@ -471,11 +484,14 @@ export class ResultStore {
     box().log.push([`ResultStore.${method}`, ...args])
   }
 
-  async listTranslations(): Promise<string[]> {
+  async listTranslations(...args: unknown[]): Promise<string[]> {
+    this.line('listTranslations', ...args)
     return strings(next('listTranslations'))
   }
 
-  async readTranslation(_docHash: string, lang: string): Promise<unknown> {
+  async readTranslation(...args: [docHash: string, lang: string, mode?: string]): Promise<unknown> {
+    this.line('readTranslation', ...args)
+    const lang = args[1]
     const v = next('readTranslation')
     if (v === undefined || v === null) return null
     const blocks = field(v, 'blocks')
@@ -487,7 +503,8 @@ export class ResultStore {
     }
   }
 
-  async unfinishedJobs(): Promise<unknown[]> {
+  async unfinishedJobs(docHash: string): Promise<unknown[]> {
+    this.line('unfinishedJobs', docHash)
     const v = next('unfinishedJobs')
     return Array.isArray(v) ? v : []
   }

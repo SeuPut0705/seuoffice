@@ -718,8 +718,12 @@ mod fake {
         fn translation_units(
             &self,
             _bytes: Bytes,
-            _chapters: Option<&[usize]>,
+            chapters: Option<&[usize]>,
         ) -> Result<Value, String> {
+            self.1
+                .lock()
+                .unwrap()
+                .push(json!(["epubTranslationUnits", chapters]));
             match self.0.next("translationUnits") {
                 Some(answer) => thrown(&answer).map_or(Ok(answer), Err),
                 None => Ok(json!({ "units": [], "skipped": [] })),
@@ -731,6 +735,14 @@ mod fake {
             _bytes: Bytes,
             request: TranslatedRequest,
         ) -> Result<Translated, String> {
+            self.1.lock().unwrap().push(json!([
+                "buildTranslatedEpub",
+                request.kind,
+                request.lang,
+                request.chapters,
+                request.results,
+                request.easy.then_some("easy"),
+            ]));
             if let Some(answer) = self.0.next("buildTranslated") {
                 if let Some(message) = thrown(&answer) {
                     return Err(message);
@@ -757,6 +769,10 @@ mod fake {
         }
 
         fn parse_file_to_text(&self, path: &str) -> Result<String, Option<String>> {
+            self.1
+                .lock()
+                .unwrap()
+                .push(json!(["parseFileToText", path]));
             match self.0.next("parseFileToText") {
                 Some(Value::String(text)) => Ok(text),
                 // `!parsed.damaged && parsed.error`: a damaged file's error is not shown
@@ -781,9 +797,10 @@ mod fake {
         fn store_list_translations(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            mode: Option<TranslationMode>,
         ) -> Result<Vec<String>, StoreError> {
+            self.store_line("listTranslations", vec![json!(doc_hash)], mode);
             Ok(self
                 .0
                 .next("listTranslations")
@@ -797,10 +814,11 @@ mod fake {
         fn store_read_translation(
             &self,
             _dir: &str,
-            _doc_hash: &str,
+            doc_hash: &str,
             lang: &str,
-            _mode: Option<TranslationMode>,
+            mode: Option<TranslationMode>,
         ) -> Result<Option<StoredTranslation>, StoreError> {
+            self.store_line("readTranslation", vec![json!(doc_hash), json!(lang)], mode);
             Ok(self
                 .0
                 .next("readTranslation")
@@ -820,8 +838,9 @@ mod fake {
         fn store_unfinished_jobs(
             &self,
             _dir: &str,
-            _doc_hash: &str,
+            doc_hash: &str,
         ) -> Result<Vec<Value>, StoreError> {
+            self.store_line("unfinishedJobs", vec![json!(doc_hash)], None);
             Ok(self
                 .0
                 .next("unfinishedJobs")
