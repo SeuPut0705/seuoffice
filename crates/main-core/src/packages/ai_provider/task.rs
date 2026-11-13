@@ -983,6 +983,7 @@ impl Rt {
                 {
                     // the signal errors the stream itself, whatever its branches
                     body.done = true;
+                    body.failed = Some(reason.clone());
                     let source = body.source;
                     if let Some(src) = st.sources.get_mut(&source) {
                         src.live = src.live.saturating_sub(1);
@@ -1008,18 +1009,19 @@ impl Rt {
             match st.bodies.get(&body) {
                 None => return Ok(None),
                 Some(b) => {
+                    // how the stream ended stays, whatever its signal does later
+                    if let Some(error) = &b.failed {
+                        return Err(error.clone());
+                    }
+                    if b.done {
+                        return Ok(None);
+                    }
                     if let Some(reason) = b
                         .signal
                         .and_then(|s| st.signals.get(&s))
                         .and_then(|s| s.reason.clone())
                     {
                         return Err(reason);
-                    }
-                    if let Some(error) = &b.failed {
-                        return Err(error.clone());
-                    }
-                    if b.done {
-                        return Ok(None);
                     }
                     b.signal
                 }
