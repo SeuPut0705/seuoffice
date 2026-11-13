@@ -1,0 +1,741 @@
+[
+  {
+    "name": "interrupted job names another error",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "Some(\"interrupted\".to_owned())",
+    "replace": "Some(\"interrupted!\".to_owned())",
+    "fn": [
+      "pdf-structure/store.readJob",
+      "pdf-structure/store.listJobs",
+      "pdf-structure/store.unfinishedJobs"
+    ]
+  },
+  {
+    "name": "running window includes its edge",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "> self.running_window_ms",
+    "replace": ">= self.running_window_ms",
+    "fn": ["pdf-structure/store.readJob"]
+  },
+  {
+    "name": "running window is longer",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "pub const JOB_RUNNING_WINDOW_MS: f64 = 30_000.0;",
+    "replace": "pub const JOB_RUNNING_WINDOW_MS: f64 = 61_000.0;",
+    "fn": [
+      "pdf-structure/store.readJob",
+      "pdf-structure/store.listJobs",
+      "pdf-structure/store.unfinishedJobs"
+    ]
+  },
+  {
+    "name": "stale job stays running",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "status.state = JobState::Stopped;",
+    "replace": "status.state = JobState::Running;",
+    "fn": [
+      "pdf-structure/store.readJob",
+      "pdf-structure/store.listJobs",
+      "pdf-structure/store.unfinishedJobs"
+    ]
+  },
+  {
+    "name": "stale job loses its own error",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if status.last_error.is_none() {",
+    "replace": "if true {",
+    "fn": ["pdf-structure/store.readJob"]
+  },
+  {
+    "name": "occurrence zero is invalid",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "occurrence.is_finite() && occurrence.trunc() == occurrence && occurrence >= 0.0",
+    "replace": "occurrence.is_finite() && occurrence.trunc() == occurrence && occurrence > 0.0",
+    "fn": [
+      "pdf-structure/store.translationBlockPath",
+      "pdf-structure/store.highlightBlockPath",
+      "pdf-structure/store.writeTranslationBlock",
+      "pdf-structure/store.writeHighlightBlock",
+      "pdf-structure/store.readHighlightBlock"
+    ]
+  },
+  {
+    "name": "upstream home check is case-sensitive",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "part.to_lowercase() == UPSTREAM_HOME_DIR",
+    "replace": "part == UPSTREAM_HOME_DIR",
+    "fn": ["pdf-structure/store.ResultStore"]
+  },
+  {
+    "name": "sentence ends measured in bytes",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "text.encode_utf16().count() as f64,",
+    "replace": "text.len() as f64,",
+    "fn": ["pdf-structure/store.writeTranslationBlock"]
+  },
+  {
+    "name": "edit keeps its runs on read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "runs: if edited { None } else { runs.cloned() },",
+    "replace": "runs: runs.cloned(),",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "failed block can be edited",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "        && status == TranslationBlockStatus::Translated;",
+    "replace": "        ;",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "edited block keeps sentence ends",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if status != TranslationBlockStatus::Translated || edited {",
+    "replace": "if status != TranslationBlockStatus::Translated {",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "block of another text hash is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "        || string(k.get(\"textHash\")) != Some(expect.text_hash.as_str())\n",
+    "replace": "",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "translated block without text is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if status == TranslationBlockStatus::Translated && string(r.get(\"text\")).is_none() {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "reason of the wrong type is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if !opt_string(r.get(\"text\")) || !opt_string(r.get(\"reason\")) {",
+    "replace": "if !opt_string(r.get(\"text\")) {",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "runs that are no array are read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if runs.is_some_and(|runs| !matches!(runs, JsonValue::Array(_))) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.readTranslation"]
+  },
+  {
+    "name": "deleting except edits counts two",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "removed += 1.0;",
+    "replace": "removed += 2.0;",
+    "fn": ["pdf-structure/store.deleteTranslationExceptEdited"]
+  },
+  {
+    "name": "deleting except edits removes edits",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "as_block(raw.as_ref(), &key).is_some_and(|b| b.edited)",
+    "replace": "as_block(raw.as_ref(), &key).is_some_and(|b| !b.edited)",
+    "fn": ["pdf-structure/store.deleteTranslationExceptEdited"]
+  },
+  {
+    "name": "edited count counts the rest",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": ".filter(|b| b.edited)",
+    "replace": ".filter(|b| !b.edited)",
+    "fn": ["pdf-structure/store.countEditedTranslationBlocks"]
+  },
+  {
+    "name": "easy translations live in translations/",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if mode == TranslationMode::Easy {\n        \"easy\"",
+    "replace": "if mode == TranslationMode::Easy {\n        \"easier\"",
+    "fn": [
+      "pdf-structure/store.translationDir",
+      "pdf-structure/store.listTranslations",
+      "pdf-structure/store.readTranslation"
+    ]
+  },
+  {
+    "name": "plain translations live in translation/",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "\"translations\"\n",
+    "replace": "\"translation\"\n",
+    "fn": [
+      "pdf-structure/store.translationDir",
+      "pdf-structure/store.translationMetaPath",
+      "pdf-structure/store.listTranslations"
+    ]
+  },
+  {
+    "name": "easy job record suffix",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "\".easy\"",
+    "replace": "\".ez\"",
+    "fn": [
+      "pdf-structure/store.jobPath",
+      "pdf-structure/store.writeJob",
+      "pdf-structure/store.readJob"
+    ]
+  },
+  {
+    "name": "list of translations reads files",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "list_names(&join(&[&doc_dir, mode_folder(mode)]), EntryKind::Dir)",
+    "replace": "list_names(&join(&[&doc_dir, mode_folder(mode)]), EntryKind::File)",
+    "fn": ["pdf-structure/store.listTranslations"]
+  },
+  {
+    "name": "insights listed from another folder",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "list_names(&join(&[&doc_dir, \"insights\"]), EntryKind::File)",
+    "replace": "list_names(&join(&[&doc_dir, \"insight\"]), EntryKind::File)",
+    "fn": ["pdf-structure/store.listInsights"]
+  },
+  {
+    "name": "AI-read pages listed without their suffix",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": ".strip_suffix(\".json\")",
+    "replace": ".strip_suffix(\".jso\")",
+    "fn": ["pdf-structure/store.readAiReadPages"]
+  },
+  {
+    "name": "AI-read page of another fingerprint is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "string(r.get(\"pageFingerprint\")) != Some(page_fp)",
+    "replace": "false",
+    "fn": ["pdf-structure/store.readAiReadPage", "pdf-structure/store.readAiReadPages"]
+  },
+  {
+    "name": "AI-read write puts savedAt before the meta",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "entries.push((\"savedAt\", JsonValue::Number(self.now())));",
+    "replace": "entries.insert(2, (\"savedAt\", JsonValue::Number(self.now())));",
+    "fn": ["pdf-structure/store.writeAiReadPage"]
+  },
+  {
+    "name": "plain record with a mode is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "r.get(\"mode\").is_none()\n",
+    "replace": "true\n",
+    "fn": ["pdf-structure/store.readJob", "pdf-structure/store.listJobs"]
+  },
+  {
+    "name": "easy record without its mode is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "string(r.get(\"mode\")) == Some(\"easy\")",
+    "replace": "true",
+    "fn": ["pdf-structure/store.readJob", "pdf-structure/store.listJobs"]
+  },
+  {
+    "name": "complete job reads as stopped",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "Some(\"complete\") => JobState::Complete,",
+    "replace": "Some(\"complete\") => JobState::Stopped,",
+    "fn": [
+      "pdf-structure/store.readJob",
+      "pdf-structure/store.listJobs",
+      "pdf-structure/store.unfinishedJobs"
+    ]
+  },
+  {
+    "name": "heartbeat of a stopped job",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if stored.state != JobState::Running {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.heartbeatJob"]
+  },
+  {
+    "name": "heartbeat drops the easy mode",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "mode: stored.easy.then_some(TranslationMode::Easy),",
+    "replace": "mode: None,",
+    "fn": ["pdf-structure/store.heartbeatJob"]
+  },
+  {
+    "name": "job record loses resetsAt",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if let Some(resets_at) = job.resets_at {",
+    "replace": "if let Some(resets_at) = job.resets_at.filter(|_| false) {",
+    "fn": ["pdf-structure/store.writeJob"]
+  },
+  {
+    "name": "job record loses progress",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "record.set(\"progress\", progress.to_value());",
+    "replace": "record.set(\"progress\", JsonValue::Null);",
+    "fn": ["pdf-structure/store.writeJob", "pdf-structure/store.heartbeatJob"]
+  },
+  {
+    "name": "easy record says plain",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "record.set(\"mode\", JsonValue::String(\"easy\".to_owned()));",
+    "replace": "record.set(\"mode\", JsonValue::String(\"plain\".to_owned()));",
+    "fn": ["pdf-structure/store.writeJob"]
+  },
+  {
+    "name": "job lists skip ai-read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "ai-read|(translate|translate-page|highlight|summary)",
+    "replace": "ai-reed|(translate|translate-page|highlight|summary)",
+    "fn": ["pdf-structure/store.listJobs", "pdf-structure/store.unfinishedJobs"]
+  },
+  {
+    "name": "block file occurrence is one digit",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "(\\d{1,9})",
+    "replace": "(\\d{1})",
+    "fn": [
+      "pdf-structure/store.readTranslation",
+      "pdf-structure/store.deleteTranslationExceptEdited",
+      "pdf-structure/store.migrateDocument"
+    ]
+  },
+  {
+    "name": "passage card of another id is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "as_passage_card(raw.as_ref()).filter(|card| card.id == id)",
+    "replace": "as_passage_card(raw.as_ref())",
+    "fn": ["pdf-structure/store.readPassage", "pdf-structure/store.readPassages"]
+  },
+  {
+    "name": "passage without format is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if !record(raw.as_ref()).is_some_and(has_format) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.readPassage"]
+  },
+  {
+    "name": "highlight run of another id is read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": ".filter(|run| run.run_id == run_id)",
+    "replace": "",
+    "fn": ["pdf-structure/store.readHighlightRun", "pdf-structure/store.listHighlightRuns"]
+  },
+  {
+    "name": "insights of another language are read",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": ".filter(|entry| entry.lang == lang)",
+    "replace": "",
+    "fn": ["pdf-structure/store.readInsights"]
+  },
+  {
+    "name": "suggestion states follow the label",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "states.get(&s.id)",
+    "replace": "states.get(&s.label_id)",
+    "fn": ["pdf-structure/store.setHighlightSuggestionStates"]
+  },
+  {
+    "name": "deleting a run keeps its job",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "self.remove(&job)",
+    "replace": "Ok(())",
+    "fn": ["pdf-structure/store.deleteHighlightRun"]
+  },
+  {
+    "name": "size of a bad hash is the store",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "Some(_) => 0.0,",
+    "replace": "Some(_) => folder_size(&self.dir),",
+    "fn": ["pdf-structure/store.size"]
+  },
+  {
+    "name": "delete all removes docs only",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "let dir = self.dir.clone();",
+    "replace": "let dir = join(&[&self.dir, \"docs\"]);",
+    "fn": ["pdf-structure/store.deleteAll"]
+  },
+  {
+    "name": "entries are read without checking their format",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "object.get(\"format\") == Some(&JsonValue::Number(1.0))",
+    "replace": "object.get(\"format\").is_some()",
+    "fn": [
+      "pdf-structure/store.readAiReadPage",
+      "pdf-structure/store.readTranslation",
+      "pdf-structure/store.readJob",
+      "pdf-structure/store.readPassage"
+    ]
+  },
+  {
+    "name": "note link newest first is oldest first",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "sort_by_number(&mut same_doc, |a, b| b.1.updated_at - a.1.updated_at);",
+    "replace": "sort_by_number(&mut same_doc, |a, b| a.1.updated_at - b.1.updated_at);",
+    "fn": ["pdf-structure/store.findNoteLink"]
+  },
+  {
+    "name": "note link of another hash matches",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "link.doc_hash == doc_hash)",
+    "replace": "link.doc_hash != doc_hash)",
+    "fn": ["pdf-structure/store.findNoteLink"]
+  },
+  {
+    "name": "note link matched by hash says path",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "matched_by: MatchedBy::DocHash,",
+    "replace": "matched_by: MatchedBy::Path,",
+    "fn": ["pdf-structure/store.findNoteLink"]
+  },
+  {
+    "name": "note path need not be absolute",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if !is_absolute(note_path) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.setNoteLink"]
+  },
+  {
+    "name": "note link update finds nothing",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "let Some(link) = links.get(&pdf_key) else {",
+    "replace": "let Some(link) = links.get(&pdf_key).filter(|_| false) else {",
+    "fn": ["pdf-structure/store.updateNoteLinkDocHash"]
+  },
+  {
+    "name": "note link update loses the note",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "note_path: link.note_path.clone(),",
+    "replace": "note_path: String::new(),",
+    "fn": ["pdf-structure/store.updateNoteLinkDocHash"]
+  },
+  {
+    "name": "migration replaces an equal AI-read page",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "&& current.saved_at >= entry.saved_at",
+    "replace": "&& current.saved_at > entry.saved_at",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration replaces an equal passage",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "&& current.saved_at >= card.saved_at",
+    "replace": "&& current.saved_at > card.saved_at",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration replaces an equal insights entry",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "&& current_saved_at >= saved_at",
+    "replace": "&& current_saved_at > saved_at",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration replaces an equal provider record",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if current.is_none_or(|c| c.saved_at < meta.saved_at) {",
+    "replace": "if current.is_none_or(|c| c.saved_at <= meta.saved_at) {",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration replaces a newer translation block",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if let Some(current) = as_block(raw.as_ref(), &block.key)\n",
+    "replace": "if let Some(current) = as_block(raw.as_ref(), &block.key).filter(|_| false)\n",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration replaces a newer highlight block",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key)\n",
+    "replace": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key).filter(|_| false)\n",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration keeps the unlisted blocks",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "keep.is_some_and(|keep| !keep.contains(&block_key_string(&block.key)))",
+    "replace": "keep.is_some_and(|keep| keep.contains(&block_key_string(&block.key)))",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration takes a new hash that is no key",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "seg(new_doc_hash, \"document hash\")?;\n        if !is_valid_seg(old_doc_hash)",
+    "replace": "if !is_valid_seg(old_doc_hash)",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration moves pages that do not survive",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if !pages.contains(fp) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration moves insights of lost pages",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if !entry.page_fingerprints.iter().all(|fp| pages.contains(fp)) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration moves an edited block as plain",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "edited: block.edited.then_some(true),",
+    "replace": "edited: None,",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration drops sentence ends",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": ".map(|e| numbers_value(&e.sentence_ends)),",
+    "replace": ".map(|_| JsonValue::Null),",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration counts easy blocks as plain",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "if blocks > 0.0 {\n            result.easy_blocks = Some(blocks);",
+    "replace": "if blocks >= 0.0 {\n            result.easy_blocks = Some(blocks);",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "migration result loses its languages",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "(\"languages\", strings(&self.languages)),",
+    "replace": "(\"languages\", strings(&self.languages[..0])),",
+    "fn": ["pdf-structure/store.migrateDocument"]
+  },
+  {
+    "name": "store folder name",
+    "file": "main-core/src/packages/pdf_structure/store.rs",
+    "find": "pub const STORE_DIR_NAME: &str = \"pdf-store\";",
+    "replace": "pub const STORE_DIR_NAME: &str = \"pdf_store\";",
+    "fn": [
+      "pdf-structure/store.ResultStore",
+      "pdf-structure/store.noteLinksPath",
+      "pdf-structure/store.documentDir"
+    ]
+  },
+  {
+    "name": "segment length limit",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "{1,128}$\"",
+    "replace": "{1,127}$\"",
+    "fn": [
+      "pdf-structure/store.documentDir",
+      "pdf-structure/store.aiReadPagePath",
+      "pdf-structure/store.readAiReadPage"
+    ]
+  },
+  {
+    "name": "highlight labels limit",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "raw_labels.len() > HIGHLIGHT_MAX_LABELS",
+    "replace": "raw_labels.len() > HIGHLIGHT_MAX_LABELS + 1",
+    "fn": ["pdf-structure/reading.asHighlightRun", "pdf-structure/store.writeHighlightRun"]
+  },
+  {
+    "name": "highlight label names may repeat",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "name.is_empty() || names.contains(&name)",
+    "replace": "name.is_empty()",
+    "fn": ["pdf-structure/reading.asHighlightRun", "pdf-structure/store.writeHighlightRun"]
+  },
+  {
+    "name": "highlight preset may be any",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": ".filter(|s| HIGHLIGHT_PRESET_IDS.contains(s))?",
+    "replace": ".filter(|_| true)?",
+    "fn": ["pdf-structure/reading.asHighlightRun", "pdf-structure/store.writeHighlightRun"]
+  },
+  {
+    "name": "insights need no three summaries",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": ".filter(|items| items.len() == 3)?",
+    "replace": ".filter(|items| items.len() >= 3)?",
+    "fn": ["pdf-structure/reading.asInsights"]
+  },
+  {
+    "name": "passage translate needs no language",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "        if !is_segment(lang) {",
+    "replace": "        if false {",
+    "fn": ["pdf-structure/reading.asPassageCard", "pdf-structure/store.writePassage"]
+  },
+  {
+    "name": "passage explain may not carry a language",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "} else if lang.is_some() && !is_segment(lang) {",
+    "replace": "} else if lang.is_some() {",
+    "fn": ["pdf-structure/reading.asPassageCard"]
+  },
+  {
+    "name": "highlight suggestion state is any",
+    "file": "main-core/src/packages/pdf_structure/reading.rs",
+    "find": "let state = HighlightSuggestionState::parse(string(s.get(\"state\"))?)?;",
+    "replace": "let state = HighlightSuggestionState::parse(string(s.get(\"state\"))?).unwrap_or(HighlightSuggestionState::Pending);",
+    "fn": ["pdf-structure/reading.asHighlightBlock"]
+  },
+  {
+    "name": "note link with an empty path is read",
+    "file": "main-core/src/packages/pdf_structure/note_links.rs",
+    "find": ".filter(|p| !p.is_empty())",
+    "replace": "",
+    "fn": ["pdf-structure/note-links.asNoteLinks", "pdf-structure/store.readNoteLinks"]
+  },
+  {
+    "name": "note links of another version are read",
+    "file": "main-core/src/packages/pdf_structure/note_links.rs",
+    "find": "if r.get(\"version\") != Some(&JsonValue::Number(1.0)) {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/note-links.asNoteLinks", "pdf-structure/store.readNoteLinks"]
+  },
+  {
+    "name": "sentence ends need no rise",
+    "file": "main-core/src/packages/pdf_structure/sentence_ends.rs",
+    "find": "|| *end <= previous",
+    "replace": "|| *end < previous",
+    "fn": [
+      "pdf-structure/sentence-ends.validSentenceEnds",
+      "pdf-structure/store.writeTranslationBlock"
+    ]
+  },
+  {
+    "name": "one sentence end is a list",
+    "file": "main-core/src/packages/pdf_structure/sentence_ends.rs",
+    "find": "if items.len() < 2 {",
+    "replace": "if items.len() < 1 {",
+    "fn": [
+      "pdf-structure/sentence-ends.validSentenceEnds",
+      "pdf-structure/sentence-ends.sentenceEndsPair"
+    ]
+  },
+  {
+    "name": "sentence ends need no length",
+    "file": "main-core/src/packages/pdf_structure/sentence_ends.rs",
+    "find": "Some(length) if previous != length => None,",
+    "replace": "Some(length) if previous > length => None,",
+    "fn": [
+      "pdf-structure/sentence-ends.validSentenceEnds",
+      "pdf-structure/sentence-ends.sentenceEndsPair"
+    ]
+  },
+  {
+    "name": "sentence ends of different length pair",
+    "file": "main-core/src/packages/pdf_structure/sentence_ends.rs",
+    "find": "if source.len() != ends.len() {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/sentence-ends.sentenceEndsPair"]
+  },
+  {
+    "name": "block occurrence counts per text only",
+    "file": "main-core/src/packages/pdf_structure/keys.rs",
+    "find": "let slot = format!(\"{}\\u{0}{text_hash}\", unit.page_fingerprint);",
+    "replace": "let slot = format!(\"{}\", text_hash);",
+    "fn": ["pdf-structure/keys.translationBlockKeys"]
+  },
+  {
+    "name": "block key string order",
+    "file": "main-core/src/packages/pdf_structure/keys.rs",
+    "find": "key.page_fingerprint,\n        key.text_hash,\n        number_to_string(key.occurrence)",
+    "replace": "key.text_hash,\n        key.page_fingerprint,\n        number_to_string(key.occurrence)",
+    "fn": ["pdf-structure/keys.blockKeyString"]
+  },
+  {
+    "name": "source text keeps its spaces",
+    "file": "main-core/src/packages/pdf_structure/keys.rs",
+    "find": "trim(&collapsed).to_owned()",
+    "replace": "collapsed.to_owned()",
+    "fn": ["pdf-structure/keys.normalizeSourceText", "pdf-structure/keys.translationBlockKeys"]
+  },
+  {
+    "name": "label name keeps its spaces",
+    "file": "main-core/src/packages/pdf_structure/highlight_run_id.rs",
+    "find": "trim(&collapsed).to_owned()",
+    "replace": "collapsed.to_owned()",
+    "fn": ["highlight/run-id.normalizeLabelName", "highlight/run-id.highlightRunId"]
+  },
+  {
+    "name": "label name is not composed",
+    "file": "main-core/src/packages/pdf_structure/highlight_run_id.rs",
+    "find": ".replace_all(&nfc(name), |_| \" \".to_owned())",
+    "replace": ".replace_all(name, |_| \" \".to_owned())",
+    "fn": ["highlight/run-id.normalizeLabelName", "highlight/run-id.highlightRunId"]
+  },
+  {
+    "name": "run text omits math",
+    "file": "main-core/src/packages/pdf_structure/tree_inline.rs",
+    "find": "InlineRun::Math { latex } => text.push_str(latex),",
+    "replace": "InlineRun::Math { latex: _ } => {}",
+    "fn": ["tree/inline.runsText", "pdf-structure/keys.normalizeSourceText"]
+  },
+  {
+    "name": "run text line break is a space",
+    "file": "main-core/src/packages/pdf_structure/tree_inline.rs",
+    "find": "InlineRun::LineBreak => text.push('\\n'),",
+    "replace": "InlineRun::LineBreak => text.push(' '),",
+    "fn": ["tree/inline.runsText"]
+  },
+  {
+    "name": "lock path suffix",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "format!(\".{}.lock\"",
+    "replace": "format!(\".{}.lck\"",
+    "fn": ["pdf-structure/files.lockPathOf"]
+  },
+  {
+    "name": "temp names start with an underscore",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "name.starts_with('.')",
+    "replace": "name.starts_with('_')",
+    "fn": ["pdf-structure/files.isTempName", "pdf-structure/files.listNames"]
+  },
+  {
+    "name": "file existence counts folders",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "is_ok_and(|m| m.is_file())",
+    "replace": "is_ok()",
+    "fn": ["pdf-structure/files.fileExists"]
+  },
+  {
+    "name": "folder size skips nested folders",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "total += folder_size(&path);",
+    "replace": "total += 0.0;",
+    "fn": ["pdf-structure/files.folderSize", "pdf-structure/store.size"]
+  },
+  {
+    "name": "folder listing keeps temp files",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "if !is_temp_name(&name) && wanted {",
+    "replace": "if wanted {",
+    "fn": ["pdf-structure/files.listNames", "pdf-structure/store.readAiReadPages"]
+  },
+  {
+    "name": "folder listing is unsorted reversed",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "    names.sort();\n",
+    "replace": "    names.sort();\n    names.reverse();\n",
+    "fn": ["pdf-structure/files.listNames", "pdf-structure/store.readAiReadPages"]
+  },
+  {
+    "name": "missing folder is a remove failure",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),",
+    "replace": "Err(e) if e.kind() == io::ErrorKind::NotFound => Err(e),",
+    "fn": ["pdf-structure/files.removeFolder", "pdf-structure/store.deleteTranslation"]
+  },
+  {
+    "name": "missing entry is a remove failure",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "    if code_of(&error) == \"ENOENT\" {\n        return Ok(());",
+    "replace": "    if code_of(&error) == \"ZZZ\" {\n        return Ok(());",
+    "fn": ["pdf-structure/files.removeEntry"]
+  },
+  {
+    "name": "stale lock needs no age",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "if env.date_now() - modified_at > LOCK_STALE_MS {",
+    "replace": "if false {",
+    "fn": ["pdf-structure/files.writeJsonAtomic"]
+  },
+  {
+    "name": "lock of a live process is stale",
+    "file": "main-core/src/packages/pdf_structure/files.rs",
+    "find": "Some(JsonValue::Number(pid)) => *pid != env.pid() && !env.process_alive(*pid),",
+    "replace": "Some(JsonValue::Number(pid)) => *pid != env.pid() && env.process_alive(*pid),",
+    "fn": ["pdf-structure/files.writeJsonAtomic"]
+  }
+]

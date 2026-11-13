@@ -1,0 +1,1897 @@
+[
+  {
+    "name": "limits: one more material",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "MAX_MATERIALS: usize = 20;",
+    "replace": "MAX_MATERIALS: usize = 21;",
+    "fn": ["limits.MAX_MATERIALS"]
+  },
+  {
+    "name": "limits: the long-material notice moves",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "LONG_MATERIAL_NOTICE_CHARS: f64 = 8_000.0",
+    "replace": "LONG_MATERIAL_NOTICE_CHARS: f64 = 8_001.0",
+    "fn": ["limits.LONG_MATERIAL_NOTICE_CHARS"]
+  },
+  {
+    "name": "limits: the usage notice moves",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "USAGE_NOTICE_CHARS: f64 = 100_000.0",
+    "replace": "USAGE_NOTICE_CHARS: f64 = 100_001.0",
+    "fn": ["limits.USAGE_NOTICE_CHARS"]
+  },
+  {
+    "name": "limits: the size cap moves",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "MAX_MATERIAL_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "MAX_MATERIAL_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
+    "fn": ["limits.MAX_MATERIAL_BYTES"]
+  },
+  {
+    "name": "limits: the picture cap moves",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "MAX_IMAGE_MATERIAL_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "MAX_IMAGE_MATERIAL_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
+    "fn": ["limits.MAX_IMAGE_MATERIAL_BYTES"]
+  },
+  {
+    "name": "limits: the text cap moves",
+    "file": "main-core/src/shell/generate/limits.rs",
+    "find": "MAX_REQUEST_TEXT_CHARS: usize = 32_000;",
+    "replace": "MAX_REQUEST_TEXT_CHARS: usize = 32_001;",
+    "fn": ["limits.MAX_REQUEST_TEXT_CHARS"]
+  },
+  {
+    "name": "title-bar: the band is a pixel taller",
+    "file": "main-core/src/shell/generate/title_bar.rs",
+    "find": "GENERATE_TITLE_BAR_HEIGHT: f64 = 44.0;",
+    "replace": "GENERATE_TITLE_BAR_HEIGHT: f64 = 45.0;",
+    "fn": ["title-bar.GENERATE_TITLE_BAR_HEIGHT", "title-bar.generateTitleBarOverlay"]
+  },
+  {
+    "name": "title-bar: dark and light swap",
+    "file": "main-core/src/shell/generate/title_bar.rs",
+    "find": "    if dark {\n",
+    "replace": "    if !dark {\n",
+    "fn": ["title-bar.generateTitleBarOverlay"]
+  },
+  {
+    "name": "title-bar: the dark surface color",
+    "file": "main-core/src/shell/generate/title_bar.rs",
+    "find": "color: \"#1e1e1e\",",
+    "replace": "color: \"#1e1e1f\",",
+    "fn": ["title-bar.generateTitleBarOverlay"]
+  },
+  {
+    "name": "title-bar: the light symbols",
+    "file": "main-core/src/shell/generate/title_bar.rs",
+    "find": "symbol_color: \"#242424\",",
+    "replace": "symbol_color: \"#242425\",",
+    "fn": ["title-bar.generateTitleBarOverlay"]
+  },
+  {
+    "name": "generate-api: the kinds change order",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "    GenerateHandoffTarget::Slides,\n    GenerateHandoffTarget::Html,\n    GenerateHandoffTarget::Mindmap,\n];",
+    "replace": "    GenerateHandoffTarget::Html,\n    GenerateHandoffTarget::Slides,\n    GenerateHandoffTarget::Mindmap,\n];",
+    "fn": ["generate-api.AI_TARGET_KINDS"]
+  },
+  {
+    "name": "generate-api: the conversions change order",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "    GenerateConvertKind::MindmapToMarkdown,\n    GenerateConvertKind::MindmapToSlides,\n    GenerateConvertKind::MarkdownToMindmap,\n];",
+    "replace": "    GenerateConvertKind::MindmapToSlides,\n    GenerateConvertKind::MindmapToMarkdown,\n    GenerateConvertKind::MarkdownToMindmap,\n];",
+    "fn": ["generate-api.CONVERT_KINDS", "request.availableConversions"]
+  },
+  {
+    "name": "generate-api: a map to a deck opens in markdown",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "GenerateConvertKind::MindmapToSlides => GenerateConvertTarget::Slides,",
+    "replace": "GenerateConvertKind::MindmapToSlides => GenerateConvertTarget::Markdown,",
+    "fn": ["generate-api.CONVERT_TARGETS", "convert.convertSource"]
+  },
+  {
+    "name": "generate-api: markdown opens as a deck",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "GenerateConvertKind::MarkdownToMindmap => GenerateConvertTarget::Mindmap,",
+    "replace": "GenerateConvertKind::MarkdownToMindmap => GenerateConvertTarget::Slides,",
+    "fn": ["generate-api.CONVERT_TARGETS", "converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "generate-api: the English web page request",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "\"Make a web page (HTML) from the attached material.",
+    "replace": "\"Make a webpage (HTML) from the attached material.",
+    "fn": [
+      "generate-default-prompts.DEFAULT_GENERATE_PROMPTS",
+      "generate-default-prompts.defaultGeneratePrompt"
+    ]
+  },
+  {
+    "name": "generate-api: the English deck request",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "\"Make a presentation from the attached material.",
+    "replace": "\"Make a slide deck from the attached material.",
+    "fn": ["generate-default-prompts.defaultGeneratePrompt"]
+  },
+  {
+    "name": "generate-api: the Korean mind map request",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "\"첨부한 자료로 마인드맵을 만들어 주세요.",
+    "replace": "\"첨부한 자료로 마인드 맵을 만들어 주세요.",
+    "fn": ["generate-default-prompts.defaultGeneratePrompt"]
+  },
+  {
+    "name": "generate-api: the theme channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "GET_THEME: &str = \"generate:get-theme\";",
+    "replace": "GET_THEME: &str = \"generate:get-themes\";",
+    "fn": ["generate-api.GENERATE_CHANNELS", "generate-window.configureGenerateWindow"]
+  },
+  {
+    "name": "generate-api: the group channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "HOME_OPEN_WITH_GROUP: &str = \"generate:open-with-group\";",
+    "replace": "HOME_OPEN_WITH_GROUP: &str = \"generate:open-with-groups\";",
+    "fn": [
+      "generate-home-channels.GENERATE_HOME_CHANNELS",
+      "generate-window.configureGenerateWindow"
+    ]
+  },
+  {
+    "name": "attachable: markdown is not a text format",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "\"txt\", \"md\", \"markdown\", \"csv\"",
+    "replace": "\"txt\", \"md\", \"markdwn\", \"csv\"",
+    "fn": ["file-parse/attachable.ATTACHABLE_EXTS", "materials.SUPPORTED_MATERIAL_EXTS"]
+  },
+  {
+    "name": "attachable: the size cap moves",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "ATTACHABLE_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
+    "fn": ["file-parse/attachable.ATTACHABLE_MAX_BYTES", "file-parse/attachable.attachableMaxBytes"]
+  },
+  {
+    "name": "attachable: the picture cap moves",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "ATTACHABLE_IMAGE_MAX_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
+    "fn": [
+      "file-parse/attachable.ATTACHABLE_IMAGE_MAX_BYTES",
+      "file-parse/attachable.attachableMaxBytes"
+    ]
+  },
+  {
+    "name": "attachable: a picture has no cap",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "    if ATTACHABLE_IMAGE_EXTS.contains(&clean.as_str()) {\n        return ATTACHABLE_IMAGE_MAX_BYTES;\n    }",
+    "replace": "    if false {\n        return ATTACHABLE_IMAGE_MAX_BYTES;\n    }",
+    "fn": ["file-parse/attachable.attachableMaxBytes"]
+  },
+  {
+    "name": "attachable: a PDF has a cap",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "\"xmind\", \"pdf\",",
+    "replace": "\"xmind\", \"pdfx\",",
+    "fn": ["file-parse/attachable.attachableMaxBytes"]
+  },
+  {
+    "name": "attachable: the leading dot stays",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "ext.strip_prefix('.').unwrap_or(ext).to_lowercase()",
+    "replace": "ext.to_lowercase()",
+    "fn": ["file-parse/attachable.attachableMaxBytes", "file-parse/attachable.isAttachableExt"]
+  },
+  {
+    "name": "attachable: the case is not folded",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "ext.strip_prefix('.').unwrap_or(ext).to_lowercase()",
+    "replace": "ext.strip_prefix('.').unwrap_or(ext).to_owned()",
+    "fn": ["file-parse/attachable.isAttachableExt"]
+  },
+  {
+    "name": "attachable: a diagram has another name",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "\"drawio\", \"dio\",",
+    "replace": "\"drawio\", \"dia\",",
+    "fn": ["file-parse/attachable.ATTACHABLE_EXTS"]
+  },
+  {
+    "name": "materials: a picture has no cap",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if IMAGE_MATERIAL_EXTS.contains(&ext) {\n        return MAX_IMAGE_MATERIAL_BYTES;\n    }",
+    "replace": "    if false {\n        return MAX_IMAGE_MATERIAL_BYTES;\n    }",
+    "fn": ["materials.materialMaxBytes", "materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a PDF has the size cap",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if attachable_max_bytes(ext).is_finite() {\n        MAX_MATERIAL_BYTES\n    } else {\n        f64::INFINITY\n    }",
+    "replace": "    MAX_MATERIAL_BYTES",
+    "fn": ["materials.materialMaxBytes", "materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the extension keeps its case",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "ext.get(1..).unwrap_or(\"\").to_lowercase()",
+    "replace": "ext.get(1..).unwrap_or(\"\").to_owned()",
+    "fn": ["materials.extOf"]
+  },
+  {
+    "name": "materials: the key is not resolved",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    let resolved = resolve(&[path]);\n    if cfg!(windows) {",
+    "replace": "    let resolved = path.to_owned();\n    if cfg!(windows) {",
+    "fn": ["materials.materialKey", "request.validateGenerateRequest"]
+  },
+  {
+    "name": "materials: the untitled key",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "format!(\"untitled:{}\", number_to_string(web_contents_id))",
+    "replace": "format!(\"untitled-{}\", number_to_string(web_contents_id))",
+    "fn": ["materials.untitledMaterial"]
+  },
+  {
+    "name": "materials: a document without a path is listed in the path order",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        if self.path.is_none() {\n            out.insert(\"ext\"",
+    "replace": "        if false {\n            out.insert(\"ext\"",
+    "fn": ["materials.untitledMaterial"]
+  },
+  {
+    "name": "materials: a relative path is unreadable",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if !is_absolute(path) {\n        return Ok(with_problem(base, MaterialProblem::Missing));",
+    "replace": "    if !is_absolute(path) {\n        return Ok(with_problem(base, MaterialProblem::Unreadable));",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: an unsupported type is missing",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        return Ok(with_problem(base, MaterialProblem::Unsupported));",
+    "replace": "        return Ok(with_problem(base, MaterialProblem::Missing));",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a folder is a file",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "            if !st.is_file {",
+    "replace": "            if st.is_file {",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a missing file is unreadable",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        Err(_) => return Ok(with_problem(base, MaterialProblem::Missing)),",
+    "replace": "        Err(_) => return Ok(with_problem(base, MaterialProblem::Unreadable)),",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the size cap is inclusive",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if size > material_max_bytes(&ext) {",
+    "replace": "    if size >= material_max_bytes(&ext) {",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a file with unsaved changes is read",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if file_has_unsaved_changes(open_files, path) {",
+    "replace": "    if false && file_has_unsaved_changes(open_files, path) {",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: an injected parser keeps the cache",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        Some(mtime) if !host.injected_parse() => Some(format!(",
+    "replace": "        Some(mtime) => Some(format!(",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the cache key leaves out the size",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "            material_key(path),\n            number_to_string(size),",
+    "replace": "            material_key(path),\n            number_to_string(0.0),",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the cache key leaves out the mtime",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "            number_to_string(mtime)\n        )),",
+    "replace": "            number_to_string(0.0)\n        )),",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a failed read keeps the file",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        Err(_) => return Ok(with_problem(sized, MaterialProblem::Unreadable)),",
+    "replace": "        Err(_) => return Ok(sized),",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a reader that says no is readable",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if !parsed.ok {\n        return Ok(with_problem(sized, MaterialProblem::Unreadable));",
+    "replace": "    if false {\n        return Ok(with_problem(sized, MaterialProblem::Unreadable));",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: a picture is read as text",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "    if parsed.kind.as_deref() == Some(\"image\") {\n        return Ok(sized);",
+    "replace": "    if false {\n        return Ok(sized);",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: any kind is text",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": ".filter(|_| parsed.kind.as_deref() == Some(\"text\"))",
+    "replace": ".filter(|_| true)",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the length counts bytes",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "text.encode_utf16().count() as f64",
+    "replace": "text.len() as f64",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the cache keeps one more",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "const LENGTH_CACHE_MAX: usize = 64;",
+    "replace": "const LENGTH_CACHE_MAX: usize = 65;",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the cache drops the newest",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "            self.entries.remove(0);",
+    "replace": "            self.entries.pop();",
+    "fn": ["materials.inspectMaterial"]
+  },
+  {
+    "name": "materials: the usage notice is inclusive",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "usage: total_text_length > USAGE_NOTICE_CHARS,",
+    "replace": "usage: total_text_length >= USAGE_NOTICE_CHARS,",
+    "fn": ["materials.generateNotices"]
+  },
+  {
+    "name": "materials: a map gets the long-material notice",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "matches!(kind, AiTargetKind::Slides | AiTargetKind::Html)",
+    "replace": "matches!(kind, AiTargetKind::Slides | AiTargetKind::Html | AiTargetKind::Mindmap)",
+    "fn": ["materials.generateNotices"]
+  },
+  {
+    "name": "materials: the long-material notice is inclusive",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "&& total_text_length > LONG_MATERIAL_NOTICE_CHARS,",
+    "replace": "&& total_text_length >= LONG_MATERIAL_NOTICE_CHARS,",
+    "fn": ["materials.generateNotices"]
+  },
+  {
+    "name": "materials: unsaved rows are ready",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "        .filter(|s| s.problem.is_none() && !s.unsaved)",
+    "replace": "        .filter(|s| s.problem.is_none())",
+    "fn": ["materials.summarizeMaterials"]
+  },
+  {
+    "name": "materials: left-out rows count against the cap",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "let too_many = ready.len() + unsaved.len() > MAX_MATERIALS;",
+    "replace": "let too_many = ready.len() + unsaved.len() + excluded.len() > MAX_MATERIALS;",
+    "fn": ["materials.summarizeMaterials"]
+  },
+  {
+    "name": "materials: the cap is inclusive",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "let too_many = ready.len() + unsaved.len() > MAX_MATERIALS;",
+    "replace": "let too_many = ready.len() + unsaved.len() >= MAX_MATERIALS;",
+    "fn": ["materials.summarizeMaterials"]
+  },
+  {
+    "name": "materials: unsaved rows do not block",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "let can_make = !ready.is_empty() && unsaved.is_empty() && !too_many;",
+    "replace": "let can_make = !ready.is_empty() && !too_many;",
+    "fn": ["materials.summarizeMaterials"]
+  },
+  {
+    "name": "materials: a row without a size weighs a byte",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": ".fold(0.0, |sum, s| sum + s.size_bytes.unwrap_or(0.0));",
+    "replace": ".fold(0.0, |sum, s| sum + s.size_bytes.unwrap_or(1.0));",
+    "fn": ["materials.summarizeMaterials"]
+  },
+  {
+    "name": "materials: Python is not material",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "\"log\", \"py\", \"doc\",",
+    "replace": "\"log\", \"yml\", \"doc\",",
+    "fn": ["materials.SUPPORTED_MATERIAL_EXTS"]
+  },
+  {
+    "name": "request: the kinds are matched without case",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": ".any(|kind| ai_target_str(*kind) == text)",
+    "replace": ".any(|kind| ai_target_str(*kind) == text.to_lowercase())",
+    "fn": ["request.isAiTargetKind", "request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: the conversions are matched without case",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": ".any(|kind| convert_kind_str(*kind) == text)",
+    "replace": ".any(|kind| convert_kind_str(*kind) == text.trim())",
+    "fn": ["request.isConvertKind"]
+  },
+  {
+    "name": "request: .markdown is not Markdown",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "ConvertKind::MarkdownToMindmap => &[\"md\", \"markdown\"],",
+    "replace": "ConvertKind::MarkdownToMindmap => &[\"md\"],",
+    "fn": ["request.availableConversions", "request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: two materials still offer a conversion",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "    if material_paths.len() != 1 {",
+    "replace": "    if material_paths.is_empty() {",
+    "fn": ["request.availableConversions"]
+  },
+  {
+    "name": "request: an unknown mode is an AI request",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        _ => return Err(RequestShapeError::BadMode),",
+    "replace": "        _ => GenerateMode::Ai,",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a wrong kind is a wrong mode",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        return Err(RequestShapeError::BadKind);",
+    "replace": "        return Err(RequestShapeError::BadMode);",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: no material is allowed",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": ".filter(|list| !list.is_empty())",
+    "replace": ".filter(|_| true)",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a path of 4096 characters is too long",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "path.encode_utf16().count() > 4096",
+    "replace": "path.encode_utf16().count() >= 4096",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a relative path is fine",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "|| !is_absolute(path) {",
+    "replace": "{",
+    "fn": ["request.validateGenerateRequest", "request.prepareGenerateRequest"]
+  },
+  {
+    "name": "request: copies are kept",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        if seen.contains(&key) {\n            continue;",
+    "replace": "        if false {\n            continue;",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: the cap on materials is inclusive",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "    if materials.len() > MAX_MATERIALS {",
+    "replace": "    if materials.len() >= MAX_MATERIALS {",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a null text is a bad text",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        None | Some(Value::Null) => \"\",",
+    "replace": "        None => \"\",",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: the text cap is inclusive",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "    if text.encode_utf16().count() > MAX_REQUEST_TEXT_CHARS {",
+    "replace": "    if text.encode_utf16().count() >= MAX_REQUEST_TEXT_CHARS {",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a blank text is words",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        if !trim(text).is_empty() {",
+    "replace": "        if !text.is_empty() {",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a conversion takes more than one material",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        if materials.len() != 1 {",
+    "replace": "        if materials.is_empty() {",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: a conversion of another source type goes ahead",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "        if !available_conversions(&materials).contains(&convert) {",
+    "replace": "        if false && !available_conversions(&materials).contains(&convert) {",
+    "fn": ["request.validateGenerateRequest"]
+  },
+  {
+    "name": "request: the last failing read decides",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "                if failure.is_none() {\n                    failure = Some(error);",
+    "replace": "                if true {\n                    failure = Some(error);",
+    "fn": ["request.prepareGenerateRequest"]
+  },
+  {
+    "name": "request: unsaved rows do not stop the request",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "    if !summary.unsaved.is_empty() {",
+    "replace": "    if false {",
+    "fn": ["request.prepareGenerateRequest"]
+  },
+  {
+    "name": "request: no readable material goes ahead",
+    "file": "main-core/src/shell/generate/request.rs",
+    "find": "    if summary.ready.is_empty() {",
+    "replace": "    if false {",
+    "fn": ["request.prepareGenerateRequest"]
+  },
+  {
+    "name": "open-materials: an .odt is written in place",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "DocumentTabKind::Docs => &[\"docx\"],",
+    "replace": "DocumentTabKind::Docs => &[\"docx\", \"odt\"],",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a .csv is written in place",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "DocumentTabKind::Sheets => &[\"xlsx\"],",
+    "replace": "DocumentTabKind::Sheets => &[\"xlsx\", \"csv\"],",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: the extension keeps its case",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "let ext = extname(file).get(1..).unwrap_or_default().to_lowercase();",
+    "replace": "let ext = extname(file).get(1..).unwrap_or_default().to_owned();",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a bridge nobody gave is saved to",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            deps.has_save(tab.kind) && in_place_exts(tab.kind).contains(&ext.as_str())",
+    "replace": "            in_place_exts(tab.kind).contains(&ext.as_str())",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: an editor nobody gave is saved with",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "        DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => {\n            deps.has_save(tab.kind)\n        }",
+    "replace": "        DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => true,",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a clean tab is saved",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "tab_of_path(tabs, path).filter(|tab| tab.dirty) else",
+    "replace": "tab_of_path(tabs, path).filter(|_| true) else",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a torn-down tab is saved",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "        Some(contents) if !contents.is_destroyed() => contents,",
+    "replace": "        Some(contents) => contents,",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a tab that cannot be saved is not brought forward",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "    if !can_save_in_place(deps, &tab) {\n        deps.reveal(&tab.id);\n        return SaveMaterialStep::Done(SaveOutcome::Shown);",
+    "replace": "    if false {\n        deps.reveal(&tab.id);\n        return SaveMaterialStep::Done(SaveOutcome::Shown);",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a save that worked failed",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,",
+    "replace": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Failed,",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a save the editor refused worked",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            SaveAnswer::Editor(Ok(false)) => SaveOutcome::Failed,",
+    "replace": "            SaveAnswer::Editor(Ok(false)) => SaveOutcome::Saved,",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a failed save is not reported",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                deps.warn_save_failed(&error);",
+    "replace": "                let _ = &error;",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a bridge save is not counted",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,",
+    "replace": "            SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,\n            SaveAnswer::ToPath(Ok(())) => SaveOutcome::Failed,",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: a saved document has no path",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            return tab.file_path.clone();",
+    "replace": "            return None;",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "open-materials: showing a document does not reveal it",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "            deps.reveal(&tab.id);\n            return;",
+    "replace": "            return;",
+    "fn": ["open-materials.createOpenMaterials"]
+  },
+  {
+    "name": "convert: the redaction message is matched without its capital",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "const REDACTION_FAILURE: &str = \"Redaction marks in this file could not be processed\";",
+    "replace": "const REDACTION_FAILURE: &str = \"redaction marks in this file could not be processed\";",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: the redaction message may come anywhere",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": ".starts_with(REDACTION_FAILURE)",
+    "replace": ".contains(REDACTION_FAILURE)",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: a thrown read is a failed conversion",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "        Err(_) => return Err(ConvertProblem::Unreadable),\n    };\n    if !parsed.ok {",
+    "replace": "        Err(_) => return Err(ConvertProblem::Failed),\n    };\n    if !parsed.ok {",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: any text is a text",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "(Some(\"text\"), Some(text)) => Ok(text),",
+    "replace": "(_, Some(text)) => Ok(text),",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: the cap on slides is inclusive",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "if slide_count > engines.max_outline_slides() {",
+    "replace": "if slide_count >= engines.max_outline_slides() {",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: too many slides is a failure",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "Err(Stop::TooManySlides) => Err(ConvertProblem::TooManySlides),",
+    "replace": "Err(Stop::TooManySlides) => Err(ConvertProblem::Failed),",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: a map the engine cannot take still opens",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "            engines.create_xmind_document_from_outline(&text, untitled)?;",
+    "replace": "            let _ = untitled;",
+    "fn": ["convert.convertSource"]
+  },
+  {
+    "name": "convert: marks need no blank after them",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": ".any(|mark| text.starts_with(&format!(\"{mark} \")))",
+    "replace": ".any(|mark| text.starts_with(mark.as_str()))",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: the outline reaches the engine with another line break",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "engines.first_sheet_root(&kept.join(\"\\n\"), untitled)",
+    "replace": "engines.first_sheet_root(&kept.join(\"\\r\\n\"), untitled)",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: a title keeps its inner white space",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "js_regex!(r\"\\s+\", \"g\")",
+    "replace": "js_regex!(r\"\\s\", \"g\")",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: a title keeps its outer white space",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "trim(&js_regex!(r\"\\s+\", \"g\").replace_all(title, |_| \" \".to_owned())).to_owned()",
+    "replace": "js_regex!(r\"\\s+\", \"g\").replace_all(title, |_| \" \".to_owned())",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: the central topic is a second-level heading",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "vec![format!(\"# {}\", title_of(&root))]",
+    "replace": "vec![format!(\"## {}\", title_of(&root))]",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: branches run together",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "        lines.push(String::new());\n        lines.push(format!(\"# {}\", title_of(branch)));",
+    "replace": "        lines.push(format!(\"# {}\", title_of(branch)));",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: bullets nest by one space",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "\"  \".repeat(level)",
+    "replace": "\" \".repeat(level)",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: the children are written in reverse",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "            for below in topic.attached.iter().rev() {",
+    "replace": "            for below in topic.attached.iter() {",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: the branches are written in reverse",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "            .map(|topic| (topic, 0))\n            .rev()\n            .collect();",
+    "replace": "            .map(|topic| (topic, 0))\n            .collect();",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: no closing line break",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "Ok(format!(\"{}\\n\", lines.join(\"\\n\")))",
+    "replace": "Ok(lines.join(\"\\n\"))",
+    "fn": ["convert.mapOutlineToSlidesMarkdown", "convert.convertSource"]
+  },
+  {
+    "name": "convert: an op that did not apply goes on",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "        if !result.applied {",
+    "replace": "        if result.applied {",
+    "fn": ["convert.buildDeck", "convert.convertSource"]
+  },
+  {
+    "name": "convert: the engine's message is lost",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "                Some(error) => error,",
+    "replace": "                Some(_) => \"failed\".to_owned(),",
+    "fn": ["convert.buildDeck"]
+  },
+  {
+    "name": "convert: the fallback message names the engine",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "format!(\"{} did not apply\", engines.op_name(op))",
+    "replace": "format!(\"{} not applied\", engines.op_name(op))",
+    "fn": ["convert.buildDeck"]
+  },
+  {
+    "name": "convert: UTF-32 big endian is read as text",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    if at(0) == Some(0) && at(1) == Some(0) && at(2) == Some(0xfe) && at(3) == Some(0xff) {",
+    "replace": "    if false {",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: UTF-32 little endian is read as UTF-16",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "        if at(2) == Some(0) && at(3) == Some(0) {",
+    "replace": "        if false {",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: UTF-16 big endian is not told apart",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    if at(0) == Some(0xfe) && at(1) == Some(0xff) {",
+    "replace": "    if false {",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: the byte order mark stays",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    let payload = if bom { &bytes[3..] } else { bytes };",
+    "replace": "    let payload = bytes;",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: a second byte order mark stays",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    let inner = payload.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(payload);",
+    "replace": "    let inner = payload;",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: text that is not UTF-8 is replaced, not read as windows-1252",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "            WINDOWS_1252\n                .decode_without_bom_handling(payload)",
+    "replace": "            UTF_8\n                .decode_without_bom_handling(payload)",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: the cache is used for a reader that was given",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    if !host.injected_reader() {",
+    "replace": "    if true {",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: a cached answer is parsed again",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "            return *cached;",
+    "replace": "            let _ = cached;",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: the notice is an equal text",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    let notice = text != own;",
+    "replace": "    let notice = text == own;",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: a reader that said no counts",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    let (true, Some(text), Some(own)) = (parsed.ok, parsed.text, own) else {",
+    "replace": "    let (_, Some(text), Some(own)) = (parsed.ok, parsed.text, own) else {",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "convert: the notice cache keeps one more",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "const NOTICE_CACHE_MAX: usize = 32;",
+    "replace": "const NOTICE_CACHE_MAX: usize = 33;",
+    "fn": ["convert.markdownRedactionNotice"]
+  },
+  {
+    "name": "converted-tab: markdown goes to the map queue",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "seeds.queue_markdown_seed_for(contents, markdown);",
+    "replace": "seeds.queue_mindmap_seed_for(contents, markdown);",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the deck is not queued",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "            slides.queue_slides_seed_for(contents, deck.clone(), SlidesSeedOptions::default());",
+    "replace": "            let _ = deck;",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the outline goes to the markdown queue",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "seeds.queue_mindmap_seed_for(contents, outline);",
+    "replace": "seeds.queue_markdown_seed_for(contents, outline);",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the record names another tab",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "        contents.id(),\n        content.target(),",
+    "replace": "        0.0,\n        content.target(),",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the record has no sources",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "        &doc.sources,",
+    "replace": "        &[],",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the record has no conversion id",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "        &doc.id,",
+    "replace": "        \"\",",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "converted-tab: the record has no time",
+    "file": "main-core/src/shell/generate/converted_tab.rs",
+    "find": "        now_ms,\n    )?;",
+    "replace": "        0.0,\n    )?;",
+    "fn": ["converted-tab.queueConvertedContent"]
+  },
+  {
+    "name": "session: the first kind is a web page",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "kind: kind.unwrap_or(GenerateHandoffTarget::Slides),",
+    "replace": "kind: kind.unwrap_or(GenerateHandoffTarget::Html),",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the notice about withheld spans never shows",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "redaction_notice: convert_kind == Some(ConvertKind::MarkdownToMindmap)\n                && self.listed_rows().first().is_some_and(|row| row.marked),",
+    "replace": "redaction_notice: false,",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a conversion has the AI's notices",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            notices: if convert_kind.is_some() {",
+    "replace": "            notices: if false {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a check in flight does not block make",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            can_make: summary.can_make\n                && !checking\n                && !self.making",
+    "replace": "            can_make: summary.can_make\n                && !self.making",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a press in flight does not block make",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                && !checking\n                && !self.making\n",
+    "replace": "                && !checking\n",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a save in flight does not block make",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                && self.saving.is_empty()\n",
+    "replace": "",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a lost conversion does not block make",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                && !lost_conversion,",
+    "replace": "                && true,",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a conversion that is on offer is not told from the AI",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            mode: if convert_kind.is_some() {\n                GenerateMode::Convert",
+    "replace": "            mode: if false {\n                GenerateMode::Convert",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the reason of a failed conversion is always shown",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            convert_problem: if self.failure == Some(Failed::Convert) {",
+    "replace": "            convert_problem: if true {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the picture limit is the file limit",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "max_image_mb: math_round(MAX_IMAGE_MATERIAL_BYTES / 1024.0 / 1024.0),",
+    "replace": "max_image_mb: math_round(MAX_MATERIAL_BYTES / 1024.0 / 1024.0),",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the slide limit is the cap of materials",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "max_convert_slides: host.max_convert_slides(),",
+    "replace": "max_convert_slides: MAX_MATERIALS,",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a too-large row shows its limit in bytes",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "view.limit_mb = Some(math_round(limit / 1024.0 / 1024.0));",
+    "replace": "view.limit_mb = Some(math_round(limit / 1024.0));",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a row without a path to save says nothing",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                view.save_action = Some(SaveAction::Show);",
+    "replace": "                view.save_action = None;",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: an unsaved row never offers to save in place",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "view.save_action = Some(row.save_action.unwrap_or(SaveAction::Show));",
+    "replace": "view.save_action = Some(SaveAction::Show);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a closed session still pushes",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if !self.closed {\n            let state = self.state(&*host);",
+    "replace": "        if true {\n            let state = self.state(&*host);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a row still being read is not listed",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": ".filter(|r| r.status.as_ref().is_none_or(|s| s.problem.is_none()))",
+    "replace": ".filter(|r| r.status.as_ref().is_some_and(|s| s.problem.is_none()))",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: two listed rows still offer a conversion",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if listed.len() != 1 {",
+    "replace": "        if listed.is_empty() {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a conversion that is gone is still chosen",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            Some(kind) if self.mode == GenerateMode::Convert && conversions.contains(&kind) => {",
+    "replace": "            Some(kind) if self.mode == GenerateMode::Convert && true => {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a conversion is chosen in the AI mode too",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            Some(kind) if self.mode == GenerateMode::Convert && conversions.contains(&kind) => {",
+    "replace": "            Some(kind) if conversions.contains(&kind) => {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: an empty path becomes a row",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            if matches!(mref, MaterialRef::Path(path) if path.is_empty()) {",
+    "replace": "            if false {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a path listed twice is two rows",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            if self.rows.iter().any(|r| r.key == key) {\n                continue;",
+    "replace": "            if false {\n                continue;",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: an empty saved path is a path",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                .path_of_untitled(snap, web_contents_id)\n                .filter(|path| !path.is_empty());",
+    "replace": "                .path_of_untitled(snap, web_contents_id);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a saved document that is listed already stays twice",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                    if self.rows.iter().any(|r| r.id != id && r.key == key) {",
+    "replace": "                    if false {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: an unsaved row can always be saved",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "Some(host.save_action_for(snap, &path))",
+    "replace": "Some(SaveAction::Save)",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the withheld-span question is asked without the reader",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        let marked = if host.has_redaction_notice()\n            && status.problem.is_none()",
+    "replace": "        let marked = if true\n            && status.problem.is_none()",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the question is asked of a row that is unsaved",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            && !status.unsaved\n            && available_conversions",
+    "replace": "            && available_conversions",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the question is asked of a row that was left out",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        let marked = if host.has_redaction_notice()\n            && status.problem.is_none()\n",
+    "replace": "        let marked = if host.has_redaction_notice()\n",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the question is asked of any row",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            && available_conversions(std::slice::from_ref(&path))\n                .contains(&ConvertKind::MarkdownToMindmap)\n",
+    "replace": "",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a read that ends never ends",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.in_flight -= 1;",
+    "replace": "        self.in_flight -= 0;",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a kind change keeps the conversion mode",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.mode = GenerateMode::Ai;\n        self.failure = None;\n        self.push(host);\n    }\n\n    /// 8.6: choose",
+    "replace": "        self.failure = None;\n        self.push(host);\n    }\n\n    /// 8.6: choose",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: null is not a way back to the AI kinds",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if matches!(kind, Some(Value::Null)) {",
+    "replace": "        if matches!(kind, None) {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: choosing a conversion keeps the failure",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.failure = None;\n        self.convert_problem = None;\n        self.push(host);",
+    "replace": "        self.convert_problem = None;\n        self.push(host);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: remove takes the other rows",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.rows.retain(|r| r.key != key);",
+    "replace": "        self.rows.retain(|r| r.key == key);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a never-saved document is not shown",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                if let Err(error) = host.show_untitled(snap, web_contents_id) {\n                    return SaveStep::Done(Err(error));\n                }\n",
+    "replace": "",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a save in flight is not listed",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.saving.push(row_key.clone());\n",
+    "replace": "",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a save that was only shown fails",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if result == SaveOutcome::Failed {\n            self.failure = Some(Failed::Save);",
+    "replace": "        if result != SaveOutcome::Saved {\n            self.failure = Some(Failed::Save);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a saved row is looked at again even when clean",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if result == SaveOutcome::Saved && still_unsaved {",
+    "replace": "        if result == SaveOutcome::Saved {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a row that was only shown is looked at again",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        if result == SaveOutcome::Saved && still_unsaved {",
+    "replace": "        if still_unsaved {",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the second look comes a beat later than 600 ms",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "host.recheck_delay_ms().unwrap_or(600.0)",
+    "replace": "host.recheck_delay_ms().unwrap_or(601.0)",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: make keeps the failure of an earlier action",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        self.making = true;\n        self.failure = None;\n        self.push(host);",
+    "replace": "        self.making = true;\n        self.push(host);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: make asks about rows that were left out",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": ".filter(|r| r.status.as_ref().is_some_and(|s| s.problem.is_none()))\n            .filter_map(",
+    "replace": "\n            .filter_map(",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the box is not trimmed",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                trimmed.to_owned()\n            },",
+    "replace": "                text.to_owned()\n            },",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: the default request is not marked",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "            default_text: trimmed.is_empty(),",
+    "replace": "            default_text: false,",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: make does not close the window",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "        host.open_target_tab(&handoff)?;\n        self.closed = true;\n        host.close();",
+    "replace": "        host.open_target_tab(&handoff)?;\n        self.closed = true;",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a conversion does not close the window",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                })?;\n                self.closed = true;\n                host.close();",
+    "replace": "                })?;\n                self.closed = true;",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a failed conversion is a failed make",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                self.failure = Some(Failed::Convert);",
+    "replace": "                self.failure = Some(Failed::Make);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a failed conversion has no reason",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                self.convert_problem = Some(problem);",
+    "replace": "                self.convert_problem = Some(ConvertProblem::Failed);",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a converted document has no sources",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                    sources: vec![source],",
+    "replace": "                    sources: vec![],",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "generate-window: the window is a pixel wider",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        width: 560.0,",
+    "replace": "        width: 561.0,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window is a pixel taller",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        height: 720.0,",
+    "replace": "        height: 721.0,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the minimum width",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        min_width: 460.0,",
+    "replace": "        min_width: 461.0,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the minimum height",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        min_height: 520.0,",
+    "replace": "        min_height: 521.0,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down parent is passed on",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        parent: parent.filter(|_| !parent_destroyed),",
+    "replace": "        parent,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window shows at once",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        show: false,",
+    "replace": "        show: true,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window is not centered",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        center: true,",
+    "replace": "        center: false,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window can be minimized",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        minimizable: false,",
+    "replace": "        minimizable: true,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window can be maximized",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        maximizable: false,",
+    "replace": "        maximizable: true,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window can go full screen",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        fullscreenable: false,",
+    "replace": "        fullscreenable: true,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the menu bar shows",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        auto_hide_menu_bar: true,",
+    "replace": "        auto_hide_menu_bar: false,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the background follows the other theme",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        background_color: generate_title_bar_overlay(dark).color,",
+    "replace": "        background_color: generate_title_bar_overlay(!dark).color,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the title has another separator",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "format!(\"{} - {}\", window_title, product_name(Some(lang.as_str())))",
+    "replace": "format!(\"{} | {}\", window_title, product_name(Some(lang.as_str())))",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: macOS draws its own band",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "title_bar_style: if darwin { None } else { Some(\"hidden\") },",
+    "replace": "title_bar_style: if darwin { Some(\"hidden\") } else { None },",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: macOS gets the overlay",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        title_bar_overlay: if darwin {\n            None\n        } else {\n            Some(generate_title_bar_overlay(dark))\n        },",
+    "replace": "        title_bar_overlay: Some(generate_title_bar_overlay(dark)),",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the page has no context isolation",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            context_isolation: true,",
+    "replace": "            context_isolation: false,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the page has node integration",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            node_integration: false,",
+    "replace": "            node_integration: true,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the page is not sandboxed",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            sandbox: true,",
+    "replace": "            sandbox: false,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a path of 4096 characters is too long",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "p.encode_utf16().count() <= 4096",
+    "replace": "p.encode_utf16().count() < 4096",
+    "fn": ["generate-window.openGenerateWindow", "generate-window.openGenerateWindowWithPaths"]
+  },
+  {
+    "name": "generate-window: a path of 4097 characters is kept",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": ".filter(|p| !p.is_empty() && p.encode_utf16().count() <= 4096)",
+    "replace": ".filter(|p| !p.is_empty() && p.encode_utf16().count() <= 4097)",
+    "fn": ["generate-window.openGenerateWindow", "generate-window.openGenerateWindowWithPaths"]
+  },
+  {
+    "name": "generate-window: the handlers are registered every time",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.ipc_registered {\n            return false;\n        }",
+    "replace": "        if false {\n            return false;\n        }",
+    "fn": ["generate-window.configureGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a window that was torn down answers",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                !host.window_is_destroyed(win) && host.window_web_contents_id(win) == sender_id",
+    "replace": "                host.window_web_contents_id(win) == sender_id",
+    "fn": [
+      "generate-window.openGenerateWindow",
+      "generate-window.closeGenerateWindow",
+      "generate-window.generateWindowContents"
+    ]
+  },
+  {
+    "name": "generate-window: any page answers",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                !host.window_is_destroyed(win) && host.window_web_contents_id(win) == sender_id",
+    "replace": "                !host.window_is_destroyed(win)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down shell window is Home",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                !host.window_is_destroyed(parent)\n                    && host.window_web_contents_id(parent) == sender_id",
+    "replace": "                host.window_web_contents_id(parent) == sender_id",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page is Home",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                !host.window_is_destroyed(parent)\n                    && host.window_web_contents_id(parent) == sender_id",
+    "replace": "                !host.window_is_destroyed(parent)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the state goes to any page",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !self.from_window(&*host, sender_id) {\n            return None;\n        }",
+    "replace": "        if false {\n            return None;\n        }",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the theme goes to any page",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(host, sender_id) && self.configured {\n            host.theme()",
+    "replace": "        if self.configured {\n            host.theme()",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the theme is always system",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            host.theme()\n        } else {",
+    "replace": "            \"system\".to_owned()\n        } else {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page sets the kind",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.set_kind(bridge, kind));",
+    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.set_kind(bridge, kind));",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the kind is not set",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            self.with_session(host, |session, bridge| session.set_kind(bridge, kind));",
+    "replace": "            let _ = kind;",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page sets the conversion",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.set_convert(bridge, kind));",
+    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.set_convert(bridge, kind));",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the conversion is not set",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            self.with_session(host, |session, bridge| session.set_convert(bridge, kind));",
+    "replace": "            let _ = kind;",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page adds materials",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !self.from_window(&*host, sender_id) || !self.has_session() || !self.configured {",
+    "replace": "        if !self.has_session() || !self.configured {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the picker offers one file",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "\"properties\": [\"openFile\", \"multiSelections\"],",
+    "replace": "\"properties\": [\"openFile\"],",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the picker offers no formats",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "\"extensions\": supported_material_exts(),",
+    "replace": "\"extensions\": Vec::<&str>::new(),",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the picker has the filter name as its title",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "\"title\": host.generate_text(lang, GenerateText::DialogAddTitle),",
+    "replace": "\"title\": host.generate_text(lang, GenerateText::FilterSupported),",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a cancelled picker adds its files",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !result.canceled {",
+    "replace": "        if result.canceled {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page removes a material",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.remove(bridge, key));",
+    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.remove(bridge, key));",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page saves a material",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !self.from_window(&*host, sender_id) {\n            return WindowStep::Done(Ok(()));\n        }\n        let Some(id)",
+    "replace": "        let Some(id)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page refreshes",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.refresh(bridge, snap))",
+    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.refresh(bridge, snap))",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page makes",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !self.from_window(&*host, sender_id) {\n            return false;\n        }",
+    "replace": "        if false {\n            return false;\n        }",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: any page cancels",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.close_generate_window(host);",
+    "replace": "        if true {\n            self.close_generate_window(host);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an empty group opens",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": ".and_then(Value::as_str).filter(|g| !g.is_empty())",
+    "replace": ".and_then(Value::as_str)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: it opens without being configured",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if !self.configured {\n            return Err(Failure",
+    "replace": "        if false {\n            return Err(Failure",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a minimized window stays minimized",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            if host.window_is_minimized(win) {\n                host.window_restore(win);\n            }",
+    "replace": "            if host.window_is_minimized(win) && false {\n                host.window_restore(win);\n            }",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the open window is not focused",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            host.window_show(win);\n            host.window_focus(win);",
+    "replace": "            host.window_show(win);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down window is reused",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if let Some(win) = self.win\n            && !host.window_is_destroyed(win)\n",
+    "replace": "        if let Some(win) = self.win\n",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: no parent when none is named",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            None => host.parent_window(),",
+    "replace": "            None => None,",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down parent is not noticed",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "let parent_destroyed = parent.is_some_and(|p| host.window_is_destroyed(p));",
+    "replace": "let parent_destroyed = false;",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the menu stays",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        host.window_remove_menu(next);\n",
+    "replace": "",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the theme is not followed",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        host.watch_theme(next);\n",
+    "replace": "",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an empty dev server page is loaded",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            Some(url) if !url.is_empty() => {",
+    "replace": "            Some(url) => {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the dev server page has another name",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "format!(\"{url}/generate.html\")",
+    "replace": "format!(\"{url}/index.html\")",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the new window is not read",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        // `void current.refresh()`\n        let _ = self.with_session(host, |session, bridge| session.refresh(bridge, snap));\n        Ok(())",
+    "replace": "        Ok(())",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the window never shows",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "    pub fn on_ready_to_show<H: GenerateWindowHost>(&self, host: &mut H, window: WindowId) {\n        host.window_show(window);",
+    "replace": "    pub fn on_ready_to_show<H: GenerateWindowHost>(&self, host: &mut H, window: WindowId) {\n        let _ = (host, window);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an old window's focus reads the new session",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.session_of(window).is_some() && self.session_of(window) == self.session_id {\n            let _ = self",
+    "replace": "        if self.session_of(window).is_some() {\n            let _ = self",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the theme is still followed after the window closed",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        host.unwatch_theme(window);\n        let owned",
+    "replace": "        let owned",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an old window's end takes the new one",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if self.win == Some(window) {\n            self.win = None;\n            self.opener = None;\n        }",
+    "replace": "        if true {\n            self.win = None;\n            self.opener = None;\n        }",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an old window's end takes the new session",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if owned.is_some() && owned == self.session_id {",
+    "replace": "        if owned.is_some() {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: macOS follows the theme too",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if host.window_is_destroyed(window) || host.is_darwin() {",
+    "replace": "        if host.window_is_destroyed(window) {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down window gets the overlay",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if host.window_is_destroyed(window) || host.is_darwin() {",
+    "replace": "        if host.is_darwin() {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the overlay follows the other theme",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "let overlay = generate_title_bar_overlay(host.should_use_dark_colors());",
+    "replace": "let overlay = generate_title_bar_overlay(!host.should_use_dark_colors());",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a link opens as written",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            host.open_external(&target);",
+    "replace": "            host.open_external(url);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a link that is not safe opens",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        if let Some(target) = safe_external_url(Some(url), None) {",
+    "replace": "        if let Some(target) = safe_external_url(Some(url), None).or(Some(url.to_owned())) {",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: Home's window has no opener",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                parent,\n                opener: Some(NewDocumentOpener::Home),",
+    "replace": "                parent,\n                opener: None,",
+    "fn": ["generate-window.openGenerateWindowWithPaths", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: Home's paths are not read as Home",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                parent,\n                opener: Some(NewDocumentOpener::Home),",
+    "replace": "                parent,\n                opener: Some(NewDocumentOpener::Window { web_contents_id: 0.0 }),",
+    "fn": ["generate-window.openGenerateWindowWithPaths", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: an empty file name is a path",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        let mref = match file_path.filter(|p| !p.is_empty()) {",
+    "replace": "        let mref = match file_path {",
+    "fn": ["generate-window.openGenerateWindowForDocument"]
+  },
+  {
+    "name": "generate-window: the editor's window is not the opener",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "                opener: Some(NewDocumentOpener::Window { web_contents_id }),",
+    "replace": "                opener: Some(NewDocumentOpener::Home),",
+    "fn": ["generate-window.openGenerateWindowForDocument"]
+  },
+  {
+    "name": "generate-window: a document that was never saved is lost",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            None => MaterialRef::Untitled {\n                web_contents_id,\n                title: title.to_owned(),\n            },",
+    "replace": "            None => MaterialRef::Path(String::new()),",
+    "fn": ["generate-window.openGenerateWindowForDocument"]
+  },
+  {
+    "name": "generate-window: close keeps the session",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        self.session_id = None;\n        self.prune_sessions();\n        close_window_state(host, &mut self.win, &mut self.opener);",
+    "replace": "        close_window_state(host, &mut self.win, &mut self.opener);",
+    "fn": ["generate-window.closeGenerateWindow", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: close leaves the window recorded",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "    let current = win.take();\n    *opener = None;",
+    "replace": "    let current = *win;\n    *opener = None;",
+    "fn": ["generate-window.closeGenerateWindow", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down window is closed",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "    if let Some(current) = current\n        && !host.window_is_destroyed(current)\n    {",
+    "replace": "    if let Some(current) = current {",
+    "fn": ["generate-window.closeGenerateWindow"]
+  },
+  {
+    "name": "generate-window: a torn-down window has contents",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "            .filter(|win| !host.window_is_destroyed(*win))\n",
+    "replace": "",
+    "fn": ["generate-window.generateWindowContents"]
+  },
+  {
+    "name": "generate-window: conversions are offered without a way to open them",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "    fn can_convert(&self) -> bool {\n        self.host.can_open_converted()",
+    "replace": "    fn can_convert(&self) -> bool {\n        true",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the converted map gets the window's title as its name",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "let untitled = self.host.generate_text(lang, GenerateText::Untitled);",
+    "replace": "let untitled = self.host.generate_text(lang, GenerateText::WindowTitle);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the new tab does not know where the window was opened from",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        self.host.open_target_tab(handoff, self.opener.as_ref())",
+    "replace": "        self.host.open_target_tab(handoff, None)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "generate-window: the converted tab does not know either",
+    "file": "main-core/src/shell/generate/generate_window.rs",
+    "find": "        self.host.open_converted_tab(doc, self.opener.as_ref())",
+    "replace": "        self.host.open_converted_tab(doc, None)",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "materials: the pictures are listed in another order",
+    "file": "main-core/src/shell/generate/materials.rs",
+    "find": "pub const IMAGE_MATERIAL_EXTS: [&str; 5] = [\"png\", \"jpg\", \"jpeg\", \"gif\", \"webp\"];",
+    "replace": "pub const IMAGE_MATERIAL_EXTS: [&str; 5] = [\"jpg\", \"png\", \"jpeg\", \"gif\", \"webp\"];",
+    "fn": ["materials.IMAGE_MATERIAL_EXTS", "materials.materialMaxBytes"]
+  },
+  {
+    "name": "attachable: webp is not a picture",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "pub const ATTACHABLE_IMAGE_EXTS: [&str; 5] = [\"png\", \"jpg\", \"jpeg\", \"gif\", \"webp\"];",
+    "replace": "pub const ATTACHABLE_IMAGE_EXTS: [&str; 5] = [\"png\", \"jpg\", \"jpeg\", \"gif\", \"bmp\"];",
+    "fn": [
+      "file-parse/attachable.ATTACHABLE_IMAGE_EXTS",
+      "file-parse/attachable.attachableMaxBytes"
+    ]
+  },
+  {
+    "name": "convert: the map's outline is parsed from nothing",
+    "file": "main-core/src/shell/generate/convert.rs",
+    "find": "    engines.parse_markdown_outline(&markdown)\n}",
+    "replace": "    let _ = markdown;\n    engines.parse_markdown_outline(\"\")\n}",
+    "fn": ["convert.mapOutlineToSlides", "convert.convertSource"]
+  },
+  {
+    "name": "generate-api: the state channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "pub const STATE: &str = \"generate:state\";",
+    "replace": "pub const STATE: &str = \"generate:states\";",
+    "fn": ["generate-api.GENERATE_CHANNELS"]
+  },
+  {
+    "name": "generate-api: the make channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "pub const MAKE: &str = \"generate:make\";",
+    "replace": "pub const MAKE: &str = \"generate:makes\";",
+    "fn": ["generate-api.GENERATE_CHANNELS", "generate-window.configureGenerateWindow"]
+  },
+  {
+    "name": "generate-api: the cancel channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "pub const CANCEL: &str = \"generate:cancel\";",
+    "replace": "pub const CANCEL: &str = \"generate:cancels\";",
+    "fn": ["generate-api.GENERATE_CHANNELS", "generate-window.configureGenerateWindow"]
+  },
+  {
+    "name": "generate-api: the home paths channel",
+    "file": "main-core/src/shell/generate/generate_api.rs",
+    "find": "HOME_OPEN_WITH_PATHS: &str = \"generate:open-with-paths\";",
+    "replace": "HOME_OPEN_WITH_PATHS: &str = \"generate:open-with-path\";",
+    "fn": [
+      "generate-home-channels.GENERATE_HOME_CHANNELS",
+      "generate-window.configureGenerateWindow"
+    ]
+  },
+  {
+    "name": "open-materials: a bridge save names another webContents",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    web_contents_id: contents.id(),\n                    path: path.to_owned(),",
+    "replace": "                    web_contents_id: 0.0,\n                    path: path.to_owned(),",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: a bridge save has no path",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    path: path.to_owned(),",
+    "replace": "                    path: String::new(),",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: an editor save names another webContents",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    kind: tab.kind,\n                    web_contents_id: contents.id(),\n                },",
+    "replace": "                    kind: tab.kind,\n                    web_contents_id: 0.0,\n                },",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: a sheets tab is not saved by path",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "        DocumentTabKind::Docs | DocumentTabKind::Sheets | DocumentTabKind::Slides => {\n            SaveMaterialStep::Need(",
+    "replace": "        DocumentTabKind::Docs | DocumentTabKind::Slides => {\n            SaveMaterialStep::Need(",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "session: the second look after the wait is skipped",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                if self.has_row(id) {\n                    SaveStep::Done(self.inspect_rows",
+    "replace": "                if false {\n                    SaveStep::Done(self.inspect_rows",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a save without a wait for the editor",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                let result = host.save_material_resume(save, answer);",
+    "replace": "                let result = SaveOutcome::Saved;\n                let _ = (save, answer);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "session: the recheck is asked for 0 ms",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                SessionNeed::Sleep(delay),",
+    "replace": "                SessionNeed::Sleep(0.0),",
+    "fn": ["session.GenerateSession"]
+  }
+]
