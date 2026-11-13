@@ -39,10 +39,17 @@ tauri-runtime-cef = { version = "=3.0.0-alpha.7", features = ["unstable"] }
 cef = "=154.5.0"
 # the shell's one HTTP client, the version tauri already pulls: the updater's
 # feed and download (U, host/update.rs, blocking on workers) and A's network
-# ports (host/net.rs). The system's TLS and trust store and proxy, as
+# ports (host/net/). The system's TLS and trust store and proxy, as
 # Chromium's net in the Electron build used; the four content decoders
 # undici and Chromium both apply.
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls", "system-proxy", "stream", "multipart", "http2", "charset", "gzip", "brotli", "deflate", "zstd"] }
+# A's loopback servers of the sign-ins (host/net/http.rs) and the stream the
+# AI runtime reads a body through: all already pulled by reqwest and tauri
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+tokio = { version = "1", features = ["net", "sync", "macros", "rt", "time"] }
 # the feed's sha512 of a download (host/update.rs)
 sha2 = "0.10"
 # the blockmaps of a differential update are gzipped (U, host/update/feed.rs)
@@ -57,6 +64,8 @@ shell-ipc-w = { path = "../shell-ipc/w" }
 shell-ipc-d1 = { path = "../shell-ipc/d1" }
 shell-ipc-d2 = { path = "../shell-ipc/d2" }
 main-core = { path = "../main-core" }
+# the AI runtime's JS errors (host/net/http.rs)
+jscompat = { path = "../jscompat" }
 
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 base64 = "0.22"
