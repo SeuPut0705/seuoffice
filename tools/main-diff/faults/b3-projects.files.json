@@ -22,8 +22,8 @@
   {
     "name": "project-files: the walk goes one folder deeper than the index",
     "file": "main-core/src/shell/projects/project_files.rs",
-    "find": "if depth > SCAN_MAX_DEPTH {",
-    "replace": "if depth > SCAN_MAX_DEPTH + 1 {",
+    "find": "if f64::from(depth) > SCAN_MAX_DEPTH {",
+    "replace": "if f64::from(depth) > SCAN_MAX_DEPTH + 1.0 {",
     "fn": ["project-files.listVisibleFiles"]
   },
   {
@@ -806,49 +806,49 @@
   },
   {
     "name": "stand-ins: a picture cap is one megabyte more",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
-    "replace": "const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "pub const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "pub const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
     "fn": ["attachable.attachableMaxBytes"]
   },
   {
     "name": "stand-ins: a picture is read up to its attachment cap",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/shell/knowledge_base.rs",
     "find": "cap.max(KB_READ_MAX_BYTES)",
     "replace": "cap",
     "fn": ["knowledge-base.kbReadMaxBytes"]
   },
   {
     "name": "stand-ins: the attachment cap is one megabyte more",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "const ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
-    "replace": "const ATTACHABLE_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "pub const ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "pub const ATTACHABLE_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
     "fn": ["attachable.attachableMaxBytes", "knowledge-base.kbReadMaxBytes"]
   },
   {
     "name": "stand-ins: an extension with a dot keeps the dot",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
     "find": "ext.strip_prefix('.').unwrap_or(ext).to_lowercase()",
     "replace": "ext.to_lowercase()",
     "fn": ["attachable.attachableMaxBytes"]
   },
   {
     "name": "stand-ins: the knowledge cap is one megabyte more",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/shell/knowledge_base.rs",
     "find": "pub const KB_READ_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
     "replace": "pub const KB_READ_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
     "fn": ["knowledge-base.KB_READ_MAX_BYTES", "knowledge-base.kbReadMaxBytes"]
   },
   {
     "name": "stand-ins: a size-free format has the attachment cap",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
     "find": "return f64::INFINITY;",
     "replace": "return ATTACHABLE_MAX_BYTES;",
     "fn": ["attachable.attachableMaxBytes", "knowledge-base.kbReadMaxBytes"]
   },
   {
     "name": "stand-ins: a picture has the attachment cap",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
     "find": "return ATTACHABLE_IMAGE_MAX_BYTES;",
     "replace": "return ATTACHABLE_MAX_BYTES;",
     "fn": ["attachable.attachableMaxBytes"]

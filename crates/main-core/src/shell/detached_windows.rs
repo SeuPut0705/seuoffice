@@ -11,7 +11,11 @@
 //! method. Timers are steps the caller drives: the dock dwell timer
 //! ([`DetachedWindows::dock_timer_fired`]) and the `setImmediate` layouts
 //! ([`DetachedWindows::run_deferred_layout`]). A window event handler that
-//! calls `event.preventDefault()` answers with a flag instead.
+//! calls `event.preventDefault()` answers with a flag instead. Every `await`
+//! on a renderer's reply (`docsQueryDirty`, the family's `requestXClose`) is a
+//! step the caller carries out and answers ([`DetachedWindows::resume_close`],
+//! [`DetachedWindows::resume_detached_open_documents`]), so no host call
+//! blocks the thread the reply arrives on.
 
 use jscompat::node_path::host::basename;
 use jscompat::{JsMap, math_max, math_min, math_round, number_to_string, to_number, truthy};
@@ -19,8 +23,8 @@ use serde_json::{Map, Value};
 
 use super::split_layout::Rect;
 use super::tab_manager::{
-    DetachedTab, EditorCalls, OpenDocumentTab, TabKind, canonical_path, is_settled_rect,
-    tab_strip_height,
+    DetachedTab, DirtyAsk, EditorCalls, OpenDocumentTab, OpenDocumentsStep, TabKind,
+    canonical_path, dirty_ask, is_settled_rect, tab_strip_height,
 };
 
 /// `ID_PREFIX`
@@ -164,6 +168,48 @@ struct DetachedRecord<V, W> {
     close_confirmed: bool,
     /// `promptInFlight`
     prompt_in_flight: bool,
+    /// what the close prompt run waits for
+    close_phase: Option<ClosePhase>,
+    /// the window's `closed` came; the record stays while a close prompt run
+    /// still holds it (a run suspended on an answer goes on with the record it
+    /// began with, as the TypeScript closure does)
+    closed: bool,
+}
+
+/// What a suspended close prompt of a detached window waits for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClosePhase {
+    /// the answer of `docsQueryDirty`
+    Query,
+    /// the answer of `requestXClose`
+    Prompt,
+}
+
+/// What the caller does next for the close prompt of a detached window.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DetachedCloseStep<V, W> {
+    /// nothing is waiting: the run ended (or never began)
+    Idle,
+    /// `await docsQueryDirty(view.webContents)`: answer with
+    /// `resume_close(rec, Ok(dirty))`
+    QueryDocsDirty(V),
+    /// `await requestXClose(view.webContents, window)` of the family of
+    /// `kind`: answer with `resume_close(rec, Ok(confirmed))`
+    RequestClose(TabKind, V, W),
+}
+
+/// What a `close` event of a detached window leaves the caller to do.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DetachedCloseEvent<V, W> {
+    /// `event.preventDefault()` was called
+    pub prevent_default: bool,
+    pub step: DetachedCloseStep<V, W>,
+}
+
+/// `detachedOpenDocuments`' run: the windows still to ask and the list so far.
+pub struct DetachedOpenDocumentsRun {
+    remaining: Vec<RecId>,
+    out: Vec<OpenDocumentTab>,
 }
 
 struct Torn {
@@ -284,8 +330,6 @@ pub trait DetachedHost<V, W>: EditorCalls<V> {
     fn defer_layout(&mut self, rec: RecId);
 
     // ---- close prompts ----
-    /// `requestSheetsClose(wc, win)`, ... (by `kind`); `Err` is what it throws
-    fn request_close_in(&mut self, kind: TabKind, view: &V, win: &W) -> Result<bool, String>;
     /// `resetSheetsShuttingDown()`
     fn reset_sheets_shutting_down(&mut self);
     /// `cancelUpdateRestart()`
@@ -528,42 +572,27 @@ impl<V: Clone + PartialEq, W: Clone + PartialEq> DetachedWindows<V, W> {
         true
     }
 
-    /// `detachedIsDirty`: unsaved-changes state of one detached document
-    fn detached_is_dirty(&self, host: &mut dyn DetachedHost<V, W>, rec: RecId) -> bool {
+    /// `detachedIsDirty`: unsaved-changes state of one detached document, as
+    /// far as it can be known without waiting
+    fn detached_dirty_ask(&self, host: &mut dyn DetachedHost<V, W>, rec: RecId) -> DirtyAsk<V> {
         let Some(r) = self.rec(rec) else {
-            return false;
+            return DirtyAsk::Known(false);
         };
         let (kind, view) = (r.kind, r.view.clone());
-        if host.view_destroyed(&view) {
-            return false;
-        }
-        let wc_id = host.view_id(&view);
-        match kind {
-            TabKind::Sheets => host.sheets_pending_edit_count(wc_id) > 0.0,
-            TabKind::Docs => host.docs_query_dirty(&view),
-            TabKind::Slides
-            | TabKind::Pdf
-            | TabKind::Markdown
-            | TabKind::Html
-            | TabKind::Mindmap
-            | TabKind::Hwp
-            | TabKind::Epub
-            | TabKind::Diagram => host.family_is_dirty(kind, wc_id),
-            TabKind::Home | TabKind::Help => false,
-        }
+        dirty_ask(host, kind, Some(&view))
     }
 
-    /// `confirmDetachedClose`: run the family's save/don't-save/cancel prompt
-    /// when the document is dirty; true when the window may close
-    fn confirm_detached_close(
-        &self,
+    /// `confirmDetachedClose`, from its start: run the family's
+    /// save/don't-save/cancel prompt when the document is dirty
+    fn confirm_begin(
+        &mut self,
         host: &mut dyn DetachedHost<V, W>,
         rec: RecId,
-    ) -> Result<bool, String> {
+    ) -> DetachedCloseStep<V, W> {
         let Some(r) = self.rec(rec) else {
-            return Ok(true);
+            return self.close_outcome(host, rec, Ok(true));
         };
-        let (kind, view, window) = (r.kind, r.view.clone(), r.window.clone());
+        let (kind, view) = (r.kind, r.view.clone());
         // an open memo editor holds text that is not in the document yet, even
         // when the document is clean
         let memo_open = if kind == TabKind::Hwp {
@@ -572,48 +601,190 @@ impl<V: Clone + PartialEq, W: Clone + PartialEq> DetachedWindows<V, W> {
         } else {
             false
         };
-        if !memo_open && !self.detached_is_dirty(host, rec) {
-            return Ok(true);
+        if !memo_open {
+            match self.detached_dirty_ask(host, rec) {
+                DirtyAsk::Known(false) => return self.close_outcome(host, rec, Ok(true)),
+                DirtyAsk::Known(true) => {}
+                DirtyAsk::QueryDocs(view) => {
+                    if let Some(r) = self.rec_mut(rec) {
+                        r.close_phase = Some(ClosePhase::Query);
+                    }
+                    return DetachedCloseStep::QueryDocsDirty(view);
+                }
+            }
         }
+        self.confirm_ask(host, rec)
+    }
+
+    /// the family's `requestXClose` of `confirmDetachedClose`
+    fn confirm_ask(
+        &mut self,
+        host: &mut dyn DetachedHost<V, W>,
+        rec: RecId,
+    ) -> DetachedCloseStep<V, W> {
+        let Some(r) = self.rec(rec) else {
+            return self.close_outcome(host, rec, Ok(true));
+        };
+        let (kind, view, window) = (r.kind, r.view.clone(), r.window.clone());
         match kind {
-            TabKind::Home | TabKind::Help => Ok(true),
-            _ => host.request_close_in(kind, &view, &window),
+            TabKind::Home | TabKind::Help => self.close_outcome(host, rec, Ok(true)),
+            _ => {
+                if let Some(r) = self.rec_mut(rec) {
+                    r.close_phase = Some(ClosePhase::Prompt);
+                }
+                DetachedCloseStep::RequestClose(kind, view, window)
+            }
+        }
+    }
+
+    /// what `on_close` does with the answer of `confirmDetachedClose`, and the
+    /// `finally` after it
+    fn close_outcome(
+        &mut self,
+        host: &mut dyn DetachedHost<V, W>,
+        rec: RecId,
+        result: Result<bool, String>,
+    ) -> DetachedCloseStep<V, W> {
+        let (kind, view) = match self.rec(rec) {
+            Some(r) => (Some(r.kind), Some(r.view.clone())),
+            None => (None, None),
+        };
+        match result {
+            Ok(true) => self.tear_down(host, rec),
+            Ok(false) => {
+                // a denied close vetoes any quit that was in flight
+                host.reset_sheets_shutting_down();
+                // so is a "Restart & Install" waiting on that quit
+                host.cancel_update_restart();
+                // a "Don't Save" answered before the denial no longer holds
+                host.resume_discarded_copies();
+                if let (Some(TabKind::Pdf), Some(view)) = (kind, &view) {
+                    host.pdf_close_cancelled(view);
+                }
+            }
+            Err(error) => {
+                host.console_error("[shell] detached window close prompt failed:", &error);
+                host.reset_sheets_shutting_down();
+                host.cancel_update_restart();
+                host.resume_discarded_copies();
+            }
+        }
+        if let Some(r) = self.rec_mut(rec) {
+            r.prompt_in_flight = false;
+            r.close_phase = None;
+            if r.closed {
+                self.records[rec.0] = None;
+            }
+        }
+        DetachedCloseStep::Idle
+    }
+
+    /// the answer of the step [`DetachedWindows::on_close`] or an earlier
+    /// `resume_close` gave for this window; `Err` is what the awaited call
+    /// rejected with. A window with no open step answers `Idle`.
+    pub fn resume_close(
+        &mut self,
+        host: &mut dyn DetachedHost<V, W>,
+        rec: RecId,
+        answer: Result<bool, String>,
+    ) -> DetachedCloseStep<V, W> {
+        let phase = self.rec_mut(rec).and_then(|r| r.close_phase.take());
+        match (phase, answer) {
+            (None, _) => DetachedCloseStep::Idle,
+            (Some(_), Err(error)) => self.close_outcome(host, rec, Err(error)),
+            (Some(ClosePhase::Query), Ok(true)) => self.confirm_ask(host, rec),
+            (Some(ClosePhase::Query), Ok(false)) => self.close_outcome(host, rec, Ok(true)),
+            (Some(ClosePhase::Prompt), Ok(confirmed)) => {
+                self.close_outcome(host, rec, Ok(confirmed))
+            }
         }
     }
 
     /// `detachedOpenDocuments`: the detached editors in the same shape as
-    /// `TabManager.openDocuments`
+    /// `TabManager.openDocuments`. The windows are asked one after another;
+    /// each docs answer is a step ([`OpenDocumentsStep::QueryDocsDirty`],
+    /// resumed with [`DetachedWindows::resume_detached_open_documents`]).
     pub fn detached_open_documents(
         &self,
         host: &mut dyn DetachedHost<V, W>,
-    ) -> Vec<OpenDocumentTab> {
-        let mut out = Vec::new();
-        for id in self.live_ids() {
+    ) -> OpenDocumentsStep<V, DetachedOpenDocumentsRun> {
+        let run = DetachedOpenDocumentsRun {
+            remaining: self.live_ids(),
+            out: Vec::new(),
+        };
+        self.detached_open_documents_advance(host, run)
+    }
+
+    /// the answer of the `docsQueryDirty` of
+    /// [`DetachedWindows::detached_open_documents`]
+    pub fn resume_detached_open_documents(
+        &self,
+        host: &mut dyn DetachedHost<V, W>,
+        mut run: DetachedOpenDocumentsRun,
+        answer: Result<bool, String>,
+    ) -> OpenDocumentsStep<V, DetachedOpenDocumentsRun> {
+        match answer {
+            Err(message) => OpenDocumentsStep::Rejected(message),
+            Ok(dirty) => {
+                let id = run.remaining.remove(0);
+                self.detached_open_documents_push(host, id, dirty, &mut run.out);
+                self.detached_open_documents_advance(host, run)
+            }
+        }
+    }
+
+    fn detached_open_documents_advance(
+        &self,
+        host: &mut dyn DetachedHost<V, W>,
+        mut run: DetachedOpenDocumentsRun,
+    ) -> OpenDocumentsStep<V, DetachedOpenDocumentsRun> {
+        while let Some(id) = run.remaining.first().copied() {
             let Some(rec) = self.rec(id) else {
+                run.remaining.remove(0);
                 continue;
             };
             let window = rec.window.clone();
             if host.win_destroyed(&window) {
+                run.remaining.remove(0);
                 continue;
             }
-            let dirty = self.detached_is_dirty(host, id);
-            // the dirty query yielded: the window may have closed meanwhile
-            if host.win_destroyed(&window) {
-                continue;
+            match self.detached_dirty_ask(host, id) {
+                DirtyAsk::Known(dirty) => {
+                    run.remaining.remove(0);
+                    self.detached_open_documents_push(host, id, dirty, &mut run.out);
+                }
+                DirtyAsk::QueryDocs(view) => {
+                    return OpenDocumentsStep::QueryDocsDirty { view, next: run };
+                }
             }
-            let Some(rec) = self.rec(id) else {
-                continue;
-            };
-            out.push(OpenDocumentTab {
-                id: format!("{ID_PREFIX}{}", rec.wc_id),
-                kind: rec.kind,
-                title: host.win_title(&window),
-                file_path: rec.file_path.clone().filter(|p| !p.is_empty()),
-                active: host.win_focused(&window),
-                dirty,
-            });
         }
-        out
+        OpenDocumentsStep::Done(run.out)
+    }
+
+    /// the entry of one window once its dirty state is known
+    fn detached_open_documents_push(
+        &self,
+        host: &mut dyn DetachedHost<V, W>,
+        id: RecId,
+        dirty: bool,
+        out: &mut Vec<OpenDocumentTab>,
+    ) {
+        let Some(rec) = self.rec(id) else {
+            return;
+        };
+        let window = rec.window.clone();
+        // the dirty query yielded: the window may have closed meanwhile
+        if host.win_destroyed(&window) {
+            return;
+        }
+        out.push(OpenDocumentTab {
+            id: format!("{ID_PREFIX}{}", rec.wc_id),
+            kind: rec.kind,
+            title: host.win_title(&window),
+            file_path: rec.file_path.clone().filter(|p| !p.is_empty()),
+            active: host.win_focused(&window),
+            dirty,
+        });
     }
 
     /// `detachedSetFileFor`: Save As landed on a new path
@@ -941,61 +1112,68 @@ impl<V: Clone + PartialEq, W: Clone + PartialEq> DetachedWindows<V, W> {
         }
     }
 
-    /// the window's `close`: the unsaved-changes guard. True when the
-    /// handler called `event.preventDefault()`.
-    pub fn on_close(&mut self, host: &mut dyn DetachedHost<V, W>, rec: RecId) -> bool {
+    /// the window's `close`: the unsaved-changes guard. The prompts it runs
+    /// are steps: see [`DetachedCloseStep`].
+    pub fn on_close(
+        &mut self,
+        host: &mut dyn DetachedHost<V, W>,
+        rec: RecId,
+    ) -> DetachedCloseEvent<V, W> {
         let Some(r) = self.rec_mut(rec) else {
-            return false;
+            return DetachedCloseEvent {
+                prevent_default: false,
+                step: DetachedCloseStep::Idle,
+            };
         };
         if r.close_confirmed || r.released {
-            return false;
+            return DetachedCloseEvent {
+                prevent_default: false,
+                step: DetachedCloseStep::Idle,
+            };
         }
         // a second close event while the prompt is open must not re-enter the
         // prompt
         if r.prompt_in_flight {
-            return true;
+            return DetachedCloseEvent {
+                prevent_default: true,
+                step: DetachedCloseStep::Idle,
+            };
         }
         r.prompt_in_flight = true;
-        let (kind, view) = (r.kind, r.view.clone());
-        match self.confirm_detached_close(host, rec) {
-            Ok(true) => self.tear_down(host, rec),
-            Ok(false) => {
-                // a denied close vetoes any quit that was in flight
-                host.reset_sheets_shutting_down();
-                // so is a "Restart & Install" waiting on that quit
-                host.cancel_update_restart();
-                // a "Don't Save" answered before the denial no longer holds
-                host.resume_discarded_copies();
-                if kind == TabKind::Pdf {
-                    host.pdf_close_cancelled(&view);
-                }
-            }
-            Err(error) => {
-                host.console_error("[shell] detached window close prompt failed:", &error);
-                host.reset_sheets_shutting_down();
-                host.cancel_update_restart();
-                host.resume_discarded_copies();
-            }
+        let step = self.confirm_begin(host, rec);
+        DetachedCloseEvent {
+            prevent_default: true,
+            step,
         }
-        if let Some(r) = self.rec_mut(rec) {
-            r.prompt_in_flight = false;
-        }
-        true
     }
 
     /// the window's `closed`
     pub fn on_closed(&mut self, host: &mut dyn DetachedHost<V, W>, rec: RecId) {
-        let Some(wc_id) = self.rec(rec).map(|r| r.wc_id) else {
+        let Some((wc_id, closed)) = self.rec(rec).map(|r| (r.wc_id, r.closed)) else {
             return;
         };
+        if closed {
+            return;
+        }
         self.clear_dock_hover(host, rec);
         if self.torn_is(rec) {
             self.torn = None;
         }
         self.detached.delete(&wc_id.to_string());
         host.on_detached_changed();
-        // nothing reaches the record after its window closed
-        self.records[rec.0] = None;
+        self.close_record(rec);
+    }
+
+    /// the record of a window that closed leaves the arena unless a close
+    /// prompt run is still suspended on it (it leaves when that run ends)
+    fn close_record(&mut self, rec: RecId) {
+        let Some(r) = self.rec_mut(rec) else {
+            return;
+        };
+        r.closed = true;
+        if !r.prompt_in_flight {
+            self.records[rec.0] = None;
+        }
     }
 
     /// `tearDown` (the record's `closeWithoutPrompt`): detach the view before
@@ -1070,6 +1248,8 @@ impl<V: Clone + PartialEq, W: Clone + PartialEq> DetachedWindows<V, W> {
             dock_timer: false,
             close_confirmed: false,
             prompt_in_flight: false,
+            close_phase: None,
+            closed: false,
         }));
         self.detached.set(wc_id.to_string(), rec.0);
         host.on_detached_changed();

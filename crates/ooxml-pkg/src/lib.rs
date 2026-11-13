@@ -8,7 +8,7 @@ use zip::result::ZipError;
 use zip::{CompressionMethod, ZipArchive};
 
 mod gate;
-mod jszip;
+pub mod jszip;
 mod load;
 mod normalize;
 mod package;

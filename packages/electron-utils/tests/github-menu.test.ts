@@ -15,10 +15,10 @@ import {
 
 describe('repository coordinates', () => {
   it("points at the product's own public repository", () => {
-    expect(GITHUB_REPO_OWNER).toBe('SeuPut0705')
+    expect(GITHUB_REPO_OWNER).toBe('seuput-inc')
     expect(GITHUB_REPO_NAME).toBe('seuoffice')
-    expect(GITHUB_REPO_SLUG).toBe('SeuPut0705/seuoffice')
-    expect(GITHUB_REPO_URL).toBe('https://github.com/SeuPut0705/seuoffice')
+    expect(GITHUB_REPO_SLUG).toBe('seuput-inc/seuoffice')
+    expect(GITHUB_REPO_URL).toBe('https://github.com/seuput-inc/seuoffice')
   })
 
   it('takes owner and repo from the one product definition', () => {
@@ -27,12 +27,12 @@ describe('repository coordinates', () => {
   })
 
   it('derives every link from the repository URL', () => {
-    expect(GITHUB_REPO_DISPLAY).toBe('github.com/SeuPut0705/seuoffice')
-    expect(GITHUB_ISSUES_URL).toBe('https://github.com/SeuPut0705/seuoffice/issues')
-    expect(GITHUB_NEW_ISSUE_URL).toBe('https://github.com/SeuPut0705/seuoffice/issues/new')
-    expect(GITHUB_RELEASES_URL).toBe('https://github.com/SeuPut0705/seuoffice/releases')
+    expect(GITHUB_REPO_DISPLAY).toBe('github.com/seuput-inc/seuoffice')
+    expect(GITHUB_ISSUES_URL).toBe('https://github.com/seuput-inc/seuoffice/issues')
+    expect(GITHUB_NEW_ISSUE_URL).toBe('https://github.com/seuput-inc/seuoffice/issues/new')
+    expect(GITHUB_RELEASES_URL).toBe('https://github.com/seuput-inc/seuoffice/releases')
     expect(GITHUB_LATEST_RELEASE_URL).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/latest',
+      'https://github.com/seuput-inc/seuoffice/releases/latest',
     )
     for (const url of [
       GITHUB_ISSUES_URL,
@@ -46,10 +46,10 @@ describe('repository coordinates', () => {
 
   it('builds the page of one released version', () => {
     expect(githubReleaseTagUrl('1.2.3')).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/tag/v1.2.3',
+      'https://github.com/seuput-inc/seuoffice/releases/tag/v1.2.3',
     )
     expect(githubReleaseTagUrl('v1.2.3')).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/tag/v1.2.3',
+      'https://github.com/seuput-inc/seuoffice/releases/tag/v1.2.3',
     )
   })
 })

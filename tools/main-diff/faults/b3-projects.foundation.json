@@ -198,21 +198,21 @@
   },
   {
     "name": "agent-sessions: the upstream app's home folder is not protected",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
     "find": "join(&[home_dir, \".genoffice\"]),",
     "replace": "join(&[home_dir, \".genoffice2\"]),",
     "fn": ["agent-sessions.agentProtectedPaths", "paths.folderRefusal"]
   },
   {
     "name": "folder-tree: Office lock files are shown",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/shell/folder_tree.rs",
     "find": "if name.starts_with('.') || name.starts_with(\"~$\") {",
     "replace": "if name.starts_with('.') {",
     "fn": ["folder-tree.isHiddenEntry", "visibility.isAiVisiblePath"]
   },
   {
     "name": "folder-tree: draw.io pictures as PNG are not tree files",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "file": "main-core/src/shell/folder_tree.rs",
     "find": "    \"drawio.png\",\n",
     "replace": "    \"drawio.jpg\",\n",
     "fn": ["folder-tree.isSupportedTreeFile", "folder-tree.TREE_FILE_EXTENSIONS"]
@@ -247,9 +247,9 @@
   },
   {
     "name": "file-index: the scan depth",
-    "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "pub const SCAN_MAX_DEPTH: u32 = 32;",
-    "replace": "pub const SCAN_MAX_DEPTH: u32 = 31;",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "pub const SCAN_MAX_DEPTH: f64 = 32.0;",
+    "replace": "pub const SCAN_MAX_DEPTH: f64 = 31.0;",
     "fn": ["scan.SCAN_MAX_DEPTH"]
   }
 ]

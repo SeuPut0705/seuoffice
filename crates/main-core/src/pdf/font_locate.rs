@@ -78,7 +78,7 @@ pub fn apple_font_asset_roots(assets_v2: &str) -> Vec<String> {
     roots.into_iter().map(|(path, _)| path).collect()
 }
 
-fn font_dirs(env: &FontEnv) -> Vec<String> {
+pub(crate) fn font_dirs(env: &FontEnv) -> Vec<String> {
     match env.platform {
         Platform::Darwin => {
             let mut dirs = vec![
@@ -109,7 +109,7 @@ const SFNT_FLAVORS: [i64; 3] = [0x0001_0000, 0x7472_7565, OTTO_TAG];
 
 /// What a read of the TypeScript throws (a short read, a `Buffer` read past its end)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Thrown;
+pub(crate) struct Thrown;
 
 impl From<OutOfRange> for Thrown {
     fn from(_: OutOfRange) -> Self {
@@ -118,7 +118,7 @@ impl From<OutOfRange> for Thrown {
 }
 
 /// `readAt(fd, pos, len)`: one `pread`, a short read throws
-fn read_at(file: &fs::File, pos: i64, len: i64) -> Result<Vec<u8>, Thrown> {
+pub(crate) fn read_at(file: &fs::File, pos: i64, len: i64) -> Result<Vec<u8>, Thrown> {
     if pos < 0 || len < 0 {
         return Err(Thrown);
     }
@@ -156,7 +156,7 @@ struct FaceNames {
 }
 
 /// A family-name record that spells the face's family in English (or in the Unicode default)
-fn is_canonical_record(platform: i64, language: i64) -> bool {
+pub(crate) fn is_canonical_record(platform: i64, language: i64) -> bool {
     match platform {
         0 | 3 => language == 0 || language == 0x0409,
         1 => language == 0,
@@ -248,10 +248,10 @@ fn parse_names(buf: &[u8]) -> Result<FaceNames, Thrown> {
     Ok(out)
 }
 
-type Tables = JsMap<(i64, i64)>;
+pub(crate) type Tables = JsMap<(i64, i64)>;
 
 /// Table directory of the face whose offset table starts at `offset`; `None` for non-sfnt faces
-fn read_table_dir(file: &fs::File, offset: i64) -> Result<Option<Tables>, Thrown> {
+pub(crate) fn read_table_dir(file: &fs::File, offset: i64) -> Result<Option<Tables>, Thrown> {
     let head = read_at(file, offset, 12)?;
     if !SFNT_FLAVORS.contains(&u32_at(&head, 0)?) {
         return Ok(None);
@@ -270,7 +270,7 @@ fn read_table_dir(file: &fs::File, offset: i64) -> Result<Option<Tables>, Thrown
 }
 
 /// Bytes of one table, bounded by `max_len`; `None` when absent or implausibly sized
-fn read_table(
+pub(crate) fn read_table(
     file: &fs::File,
     tables: &Tables,
     tag: &str,
@@ -310,15 +310,15 @@ pub struct FaceRef {
 
 /// `FontIndex`: the faces by PostScript name and by family, both in the
 /// order they were first indexed. The maps hold indexes into `faces`.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct FontIndex {
-    faces: Vec<FaceRef>,
-    by_ps: JsMap<usize>,
-    by_family: JsMap<Vec<usize>>,
+    pub(crate) faces: Vec<FaceRef>,
+    pub(crate) by_ps: JsMap<usize>,
+    pub(crate) by_family: JsMap<Vec<usize>>,
 }
 
 /// every font file under `dir`, `depth` levels down
-fn font_files(dir: &str, depth: u32, out: &mut Vec<String>) {
+pub(crate) fn font_files(dir: &str, depth: u32, out: &mut Vec<String>) {
     let Some(names) = read_names(dir) else {
         return;
     };
@@ -346,7 +346,7 @@ fn font_files(dir: &str, depth: u32, out: &mut Vec<String>) {
 }
 
 /// Offsets of every face's offset table within the file (many for .ttc, `[0]` otherwise)
-fn face_offsets(file: &fs::File) -> Result<Vec<i64>, Thrown> {
+pub(crate) fn face_offsets(file: &fs::File) -> Result<Vec<i64>, Thrown> {
     if u32_at(&read_at(file, 0, 4)?, 0)? != TTC_TAG {
         return Ok(vec![0]);
     }
@@ -361,7 +361,7 @@ fn face_offsets(file: &fs::File) -> Result<Vec<i64>, Thrown> {
 }
 
 impl FontIndex {
-    fn index_file(&mut self, path: &str) {
+    pub(crate) fn index_file(&mut self, path: &str) {
         let Ok(file) = fs::File::open(path) else {
             return;
         };
@@ -403,7 +403,7 @@ impl FontIndex {
     }
 
     /// Index every font file under `dir`
-    fn index_font_directory(&mut self, dir: &str) {
+    pub(crate) fn index_font_directory(&mut self, dir: &str) {
         let mut files = Vec::new();
         font_files(dir, 2, &mut files);
         for path in files {

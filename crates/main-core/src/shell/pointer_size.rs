@@ -64,7 +64,7 @@ pub fn apply_pointer_size_to(contents: &dyn StyleTarget, px: u32) {
         return;
     }
     // a renderer torn down mid-call has nothing left to style
-    let _ = contents.execute_javascript(&pointer_size_script(px));
+    contents.execute_javascript(&pointer_size_script(px));
 }
 
 /// `let current: number | null = null`

@@ -15,7 +15,7 @@ use jscompat::{
 };
 use serde_json::{Map, Value, json};
 
-use super::fakes::FakeWindow;
+use super::fakes::{FakeRenderer, FakeWindow, drive_pdf};
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::diagram::diagram_session::{
     DiagramReply, DiagramSession, DiagramSessionPaths, SessionHost, permission_granted,
@@ -33,12 +33,14 @@ use crate::html::preview_protocol::{
     PREVIEW_DOCUMENT_HEADERS, PreviewAnswer, PreviewEntry, preview_answer, privileged_schemes,
 };
 use crate::markdown::print_document::{
-    MarkdownPageRange, MarkdownPrintOptions, MarkdownPrintWindow, print_markdown_document,
+    MarkdownPageRange, MarkdownPrintOptions, MarkdownPrintWindow, begin_print_markdown_document,
 };
-use crate::markdown::print_pdf::print_markdown_pdf;
+use crate::markdown::print_pdf::begin_print_markdown_pdf;
 use crate::packages::electron_utils::message_box::{MessageBox, MessageBoxOptions, ParentWindow};
 use crate::packages::electron_utils::print_html_pdf::PrintWindow;
-use crate::packages::electron_utils::print_window::{JsError, PrintReport};
+use crate::packages::electron_utils::print_window::{
+    JsError, PrintReport, RendererAnswer, RendererCall, WindowStep,
+};
 use crate::packages::i18n::Lang;
 use crate::pdf::image_edit::{
     EditKind, ImageEditInput, ImageObj, ImagePdf, PageObj, apply_image_edits, decode_image,
@@ -580,10 +582,6 @@ impl MdWindow<'_> {
 }
 
 impl MarkdownPrintWindow for MdWindow<'_> {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.load(path)
-    }
-
     fn show(&mut self) -> Result<(), JsError> {
         logl!(self.log; "show");
         if flag(self.script, "showThrows") {
@@ -599,7 +597,9 @@ impl MarkdownPrintWindow for MdWindow<'_> {
         }
         Ok(())
     }
+}
 
+impl MdWindow<'_> {
     fn print(&mut self, options: &Value) -> Result<PrintReport, JsError> {
         logl!(self.log; "print", options.clone());
         if self.mode("print") == Some("throws") {
@@ -619,16 +619,6 @@ impl MarkdownPrintWindow for MdWindow<'_> {
         })
     }
 
-    fn destroy(&mut self) -> Result<(), JsError> {
-        self.destroy_window()
-    }
-}
-
-impl PrintWindow for MdWindow<'_> {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.load(path)
-    }
-
     fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError> {
         logl!(self.log; "printToPDF", options.clone());
         if self.mode("printToPDF") == Some("throws") {
@@ -636,7 +626,24 @@ impl PrintWindow for MdWindow<'_> {
         }
         Ok(unhex(self.mode("pdfHex").unwrap_or("")))
     }
+}
 
+impl FakeRenderer for MdWindow<'_> {
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => RendererAnswer::Loaded(self.load(path)),
+            RendererCall::Print { options } => RendererAnswer::Printed(self.print(options)),
+            RendererCall::PrintToPdf { options } => RendererAnswer::Pdf(self.print_to_pdf(options)),
+            RendererCall::ExecuteJavaScript { .. } => RendererAnswer::Executed(
+                crate::packages::electron_utils::print_window::ExecOutcome::Throws(
+                    "the markdown print window runs no script".to_owned(),
+                ),
+            ),
+        }
+    }
+}
+
+impl PrintWindow for MdWindow<'_> {
     fn destroy(&mut self) -> Result<(), JsError> {
         self.destroy_window()
     }
@@ -669,7 +676,7 @@ fn print_document_call(args: &[Value], cx: &mut Context) -> Answer {
     let script = arg(args, 4).unwrap_or(&NULL);
     let log = new_log();
     let work_dir: RefCell<Option<String>> = RefCell::new(None);
-    let result = print_markdown_document(
+    let mut step = begin_print_markdown_document(
         || {
             logl!(log; "createWindow");
             if script.get("createWindow").and_then(Value::as_str) == Some("throws") {
@@ -687,6 +694,15 @@ fn print_document_call(args: &[Value], cx: &mut Context) -> Answer {
         platform,
         &os_tmpdir(),
     );
+    let result = loop {
+        step = match step {
+            WindowStep::Await { call, mut job } => {
+                let answer = job.window().answer(&call);
+                job.resume(answer)
+            }
+            WindowStep::Done(outcome) => break outcome,
+        }
+    };
     if let Some(dir) = work_dir.borrow().as_deref() {
         let _ = crate::packages::electron_utils::print_window::rm_recursive_force(dir);
     }
@@ -703,7 +719,7 @@ fn print_pdf_call(args: &[Value], cx: &mut Context) -> Answer {
     let script = arg(args, 2).unwrap_or(&NULL);
     let log = new_log();
     let work_dir: RefCell<Option<String>> = RefCell::new(None);
-    let result = print_markdown_pdf(
+    let result = drive_pdf(begin_print_markdown_pdf(
         || {
             logl!(log; "createWindow");
             if script.get("createWindow").and_then(Value::as_str) == Some("throws") {
@@ -718,7 +734,7 @@ fn print_pdf_call(args: &[Value], cx: &mut Context) -> Answer {
         html,
         &options,
         &os_tmpdir(),
-    );
+    ));
     if let Some(dir) = work_dir.borrow().as_deref() {
         let _ = crate::packages::electron_utils::print_window::rm_recursive_force(dir);
     }

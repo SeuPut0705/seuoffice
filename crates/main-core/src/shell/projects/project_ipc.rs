@@ -70,7 +70,7 @@ use super::project_files::{
 };
 use super::project_guide::{GuideStep, NewProjectRequest, ProjectAiVisibility, SelectionTarget};
 use super::project_tools::PROJECT_SCOPE_UNKNOWN;
-use super::stand_ins::process_platform;
+use crate::packages::ai_provider::agent_session_policy::process_platform;
 use crate::packages::electron_utils::default_save_dir::Thrown;
 use crate::packages::project_store::{
     AddFolderResult, AddFolderStage, ApplyMemoryConsolidationResult, CreateProjectResult,

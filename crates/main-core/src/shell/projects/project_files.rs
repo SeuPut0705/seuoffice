@@ -24,11 +24,12 @@ use serde::Serialize;
 use super::cloud_cache::CacheClock;
 use super::ignore::{IgnoreMatcher, IgnoreOptions, compile_ignore};
 use super::project_guide::{ContextFiles, ContextFilesRequest, ProjectAiVisibility};
-use super::stand_ins::{SCAN_MAX_DEPTH, is_supported_tree_file};
 use super::visibility::is_ai_visible_path;
 use crate::node_fs::namespaced;
 use crate::packages::electron_utils::default_save_dir::Thrown;
 use crate::packages::project_store::{ProjectFileEntry, nfc};
+use crate::shell::file_index::scan::SCAN_MAX_DEPTH;
+use crate::shell::folder_tree::is_supported_tree_file;
 use crate::shell::recent_files::StatInfo;
 
 /// What a resolver rejects with (`error.message`)
@@ -276,7 +277,7 @@ fn walk(
     keep_file: RelTest<'_>,
     out: &mut Vec<VisibleFile>,
 ) -> Result<(), RegexLimit> {
-    if depth > SCAN_MAX_DEPTH {
+    if f64::from(depth) > SCAN_MAX_DEPTH {
         return Ok(());
     }
     let Ok(reader) = fs::read_dir(namespaced(dir)) else {

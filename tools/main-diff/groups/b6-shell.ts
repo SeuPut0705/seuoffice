@@ -494,6 +494,10 @@ const cliLinkScenarios: Case[] = [
     files: { 'settings.json': '[1, 2' },
     note: 'a corrupt settings file reads as empty',
   },
+  {
+    args: [cliScenario({ platform: 'win32', env: { SEUOFFICE_AUTH_DIR: '$DIR/auth' } })],
+    note: 'Windows, first run: the PATH edit cannot start here, so the outcome names the launcher folder, and the record keeps it',
+  },
 ]
 
 /** `launcherFilePath(env, homeDir)`: the case's folder is the home */
@@ -1593,6 +1597,7 @@ type CrashEvent =
   | { rejection: ErrSpec }
   | { child: { type: string; reason: string; exitCode: number } }
   | { render: { wc: string; reason: string; exitCode: number } }
+  | { destroy: string }
   | { answer: number | 'reject' }
 
 interface CrashScenario {
@@ -1728,6 +1733,9 @@ async function runCrashWatch(o: CrashScenario, cx: TsContext): Promise<void> {
         else if ('render' in event) {
           const { wc, ...details } = event.render
           appListeners['render-process-gone']({}, wcs[wc], details)
+        } else if ('destroy' in event) {
+          // the webContents is torn down while a box about it is up
+          o.wcs[event.destroy].destroyed = true
         } else pending.shift()?.(event.answer)
         await tick()
       }
@@ -1944,6 +1952,14 @@ const crashScenarios: Case[] = [
     ],
     note: 'a document without a file closes',
   },
+  {
+    args: [
+      scenario({
+        events: [render('a', 'crashed'), { destroy: 'a' }, { answer: 0 }],
+      }),
+    ],
+    note: 'the renderer is torn down while the box is up: "reopen" is chosen and nothing is closed or reopened',
+  },
 ]
 
 const memoryFigureSpec = (name: string): FnSpec => ({
@@ -1976,6 +1992,8 @@ interface DogWc {
   id: number
   pid: number
   destroyed?: boolean
+  /** `isDestroyed` answers false for this many calls and true after them */
+  destroyedAfter?: number
   doc: { kind: string; title: string; filePath?: string } | null
   url: string
   parent?: 'live' | 'destroyed' | 'throws' | null
@@ -2019,24 +2037,33 @@ async function runWatchdog(o: DogScenario, cx: TsContext): Promise<void> {
   const inflight = { n: 0 }
   let metrics: DogMetric[] | 'throws' = []
   let timerFn: Fn | undefined
-  const wcs = Object.entries(o.wcs).map(([name, spec]) => ({
-    name,
-    spec,
-    id: spec.id,
-    isDestroyed: () => spec.destroyed ?? false,
-    getOSProcessId: () => spec.pid,
-    getURL: () => spec.url,
-    debugger: {
-      isAttached: () => spec.attached ?? false,
-      attach: (version: string) => cx.log(name, 'attach', version),
-      sendCommand: async (method: string, params?: unknown) => {
-        cx.log(name, 'send', method, params ?? null)
-        if (spec.failOn === method) throw new Error(`${method} failed`)
-        return method === 'Profiler.stop' ? { profile: { nodes: [{ id: 1 }], name } } : {}
+  const wcs = Object.entries(o.wcs).map(([name, spec]) => {
+    let destroyedCalls = 0
+    return {
+      name,
+      spec,
+      id: spec.id,
+      isDestroyed: () => {
+        destroyedCalls += 1
+        return (
+          (spec.destroyed ?? false) ||
+          (spec.destroyedAfter !== undefined && destroyedCalls > spec.destroyedAfter)
+        )
       },
-      detach: () => cx.log(name, 'detach'),
-    },
-  }))
+      getOSProcessId: () => spec.pid,
+      getURL: () => spec.url,
+      debugger: {
+        isAttached: () => spec.attached ?? false,
+        attach: (version: string) => cx.log(name, 'attach', version),
+        sendCommand: async (method: string, params?: unknown) => {
+          cx.log(name, 'send', method, params ?? null)
+          if (spec.failOn === method) throw new Error(`${method} failed`)
+          return method === 'Profiler.stop' ? { profile: { nodes: [{ id: 1 }], name } } : {}
+        },
+        detach: () => cx.log(name, 'detach'),
+      },
+    }
+  })
   const byName = (name: string) => wcs.find((w) => w.name === name)
   const nameOf = (wc: unknown): string => (wc as { name: string }).name
   useElectron({
@@ -2408,6 +2435,93 @@ const pruneCases: Case[] = [
     note: 'newer stamps than the clock count as newer',
   },
 ]
+
+// appended after the prune cases: the cases above keep their places
+pruneCases.push(
+  {
+    args: [
+      dog({
+        totalMem: 2 * 1024 * MBYTES,
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [sampleAt(T0, [hot(101, undefined, 1200 * 1024)]), { answer: 0 }],
+      }),
+    ],
+    note: '1200 MB is under the 1536 MB floor of a small PC: nothing is reported',
+  },
+  {
+    args: [
+      dog({
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [
+          sampleAt(T0, [hot(101, 0, 100)]),
+          sampleAt(T0 + 10_000, [hot(101, 9.5, 100)]),
+          { answer: 0 },
+        ],
+      }),
+    ],
+    note: 'cpu: 95 percent of a core is over the default limit of 90',
+  },
+  {
+    args: [
+      dog({
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [
+          sampleAt(T0, [hot(101, 0, 100)]),
+          sampleAt(T0 + 10_000, [hot(101, 12, 100)]),
+          { answer: 0 },
+          sampleAt(T0 + 100_000, [hot(101, 120, 100)]),
+          { answer: 0 },
+        ],
+      }),
+    ],
+    note: 'a burning core is held back by the default cooldown: 90 seconds after the last report is too soon',
+  },
+  {
+    args: [
+      dog({
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [
+          sampleAt(T0, [hot(101, 0, 100)]),
+          sampleAt(T0 + 10_000, [hot(101, 12, 100)]),
+          { answer: 2 },
+          sampleAt(T0 + 2_000_000, [hot(101, 2412, 100)]),
+          { answer: 0 },
+        ],
+      }),
+    ],
+    note: "don't remind again also silences a burning core, long after the cooldown",
+  },
+  {
+    args: [
+      dog({
+        wcs: { a: dogWc(1, { destroyedAfter: 1 }) },
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
+      }),
+    ],
+    note: 'the renderer is torn down while its report is written: the diagnostics stay, nobody is asked',
+  },
+  {
+    args: [
+      dog({
+        wcs: { a: dogWc(1, { destroyedAfter: 2 }) },
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 1 }],
+      }),
+    ],
+    note: 'the renderer is gone when "close" is answered: the document is not closed',
+  },
+  {
+    args: [
+      dog({
+        wcs: { a: dogWc(1, { destroyedAfter: 2 }) },
+        options: { hotSamplesBeforeReport: 1, profileMs: 1 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
+      }),
+    ],
+    note: 'the renderer is torn down while it is profiled: nothing to detach, nobody is asked',
+  },
+)
 
 // ---------------------------------------------------------------------------
 // recovery-shell
@@ -3574,6 +3688,26 @@ const launchCases: Case[] = [
   },
 ]
 
+// the launch notes the copy of an untitled tab (`plannedUntitled`); a help or Home
+// tab is never offered one, whatever the notes hold
+crashedCopyCases.push({
+  args: [
+    rec({
+      steps: [
+        { launch: true },
+        { crashedCopy: { tab: { id: 't1', kind: 'docs' }, contents: 'c' } },
+        { crashedCopy: { tab: { id: 't1', kind: 'help' }, contents: 'c' } },
+        { crashedCopy: { tab: { id: 't1', kind: 'home' }, contents: 'c' } },
+      ],
+    }),
+  ],
+  files: {
+    'session-record.json': SESSION([tabNew('u1', 'Draft')], { active: 0 }),
+    ...untitledCopy('u1', { title: 'Draft copy' }),
+  },
+  note: 'a restored untitled tab: its planned copy is answered for a document, not for a help or Home tab',
+})
+
 // ---------------------------------------------------------------------------
 // updater
 // ---------------------------------------------------------------------------
@@ -3647,6 +3781,8 @@ interface UpdaterEventSpec {
 
 interface CheckScript {
   events?: UpdaterEventSpec[]
+  /** the call stays open after its events until a `settle: 'check'` step */
+  hold?: true
   result:
     | 'none'
     | 'null'
@@ -3656,7 +3792,9 @@ interface CheckScript {
 
 type UpdaterStep =
   | { init: true }
-  | { manual: true }
+  /** `'start'`: the check is not waited for (it is held and a `settle` step ends it) */
+  | { manual: true | 'start' }
+  | { settle: 'check' | 'download' }
   | { event: UpdaterEventSpec }
   | { action: 'download' | 'install' | 'later' | 'openDownload' }
   | { timer: number }
@@ -3677,7 +3815,8 @@ interface UpdaterScenario {
   autoCheck: boolean
   updater: {
     checks: CheckScript[]
-    downloads: { events?: UpdaterEventSpec[]; rejects?: string }[]
+    /** `hold`: the call stays open after its events until a `settle: 'download'` step */
+    downloads: { events?: UpdaterEventSpec[]; rejects?: string; hold?: true }[]
     install: 'true' | 'false' | 'none'
     /** a folder, `none` (no such method), `throws`, or `nodir` (an answer without a cache folder) */
     cacheDir: string
@@ -3698,6 +3837,9 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
   const downloads = [...o.updater.downloads]
   let checkAt = 0
   let downloadAt = 0
+  const heldChecks: (() => void)[] = []
+  const heldDownloads: (() => void)[] = []
+  const manualRuns: Promise<void>[] = []
   const raw = (event: string, ...args: unknown[]): void => {
     for (const listener of listeners[event] ?? []) listener(...args)
   }
@@ -3744,6 +3886,7 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     cx.log('autoUpdater.checkForUpdates')
     const script = checks[Math.min(checkAt++, checks.length - 1)]
     for (const event of script.events ?? []) await emit(event)
+    if (script.hold) await new Promise<void>((resolve) => heldChecks.push(resolve))
     if (script.result === 'none')
       return { isUpdateAvailable: false, updateInfo: { version: '0.0.0' } }
     if (script.result === 'null') return null
@@ -3763,6 +3906,7 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     cx.log('autoUpdater.downloadUpdate')
     const script = downloads[Math.min(downloadAt++, downloads.length - 1)] ?? {}
     for (const event of script.events ?? []) await emit(event)
+    if (script.hold) await new Promise<void>((resolve) => heldDownloads.push(resolve))
     if (script.rejects) throw new Error(script.rejects)
   }
   if (o.updater.install !== 'none') {
@@ -3883,7 +4027,10 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
                   o.channel,
                 )
               } else if ('manual' in step) {
-                await updater.checkForUpdatesNow()
+                if (step.manual === 'start') manualRuns.push(updater.checkForUpdatesNow())
+                else await updater.checkForUpdatesNow()
+              } else if ('settle' in step) {
+                ;(step.settle === 'check' ? heldChecks : heldDownloads).shift()?.()
               } else if ('event' in step) {
                 await emit(step.event)
               } else if ('action' in step) {
@@ -3904,6 +4051,8 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
               }
               await settle()
             }
+            // a check that was started and not waited for ends with its settle step
+            await Promise.all(manualRuns)
           },
         ),
       ),
@@ -4518,6 +4667,163 @@ const updaterScenarios: Case[] = [
       'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '',
     },
     note: 'a Mac swap that did not take is not retried: manual',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), act('later'), { event: available('3.0.0') }],
+      }),
+    ],
+    note: 'a newer release announced in the background while a download runs and the window is closed: logged, the window stays closed',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('install'),
+          { immediate: 1 },
+          { event: available('2.0.0') },
+        ],
+      }),
+    ],
+    files: DL,
+    note: 'the window was closed by "Restart & Install" (not by "later"): a repeat of the same version shows it again at its phase',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }, { events: [progress(1, 5)] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), act('download')],
+      }),
+    ],
+    files: DL,
+    note: 'a download that already finished is not started again',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), act('later'), { event: downloaded('2.0.0') }],
+      }),
+    ],
+    files: DL,
+    note: 'the download finishes after the window was minimized: the window comes back without taking the focus',
+  },
+  {
+    args: [
+      upd({
+        platform: 'linux',
+        env: { APPIMAGE: '/x.AppImage' },
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download')],
+      }),
+    ],
+    files: { ...DL, app: { dir: true, mode: 0o555 } },
+    note: 'a folder only an administrator can write, on Linux: no admin prompt is announced there',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [progress(1, 10)], hold: true }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { event: progress(2, 20) },
+          { event: progress(5, 50) },
+          { settle: 'download' },
+        ],
+      }),
+    ],
+    note: 'progress arrives while the download is still running: each step is pushed before the download ends',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [
+            {
+              events: [progress(1, 10), { type: 'error', message: 'boom' }],
+              hold: true,
+              rejects: 'net down',
+            },
+          ],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { event: { type: 'error', message: 'late' } },
+          { event: progress(3, 30) },
+          { settle: 'download' },
+          { event: progress(4, 40) },
+        ],
+      }),
+    ],
+    note: 'an error event while a download runs is only logged; the rejection that follows fails the download; later progress counts for nothing',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), { ...found('3.0.0'), hold: true }],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('later'),
+          { manual: 'start' },
+          { settle: 'check' },
+        ],
+      }),
+    ],
+    note: 'a manual check is answered after the window was closed: the newer release it announced meanwhile brings the flow back, the answer adds nothing',
+  },
+  {
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), { result: 'none', hold: true }],
+          downloads: [{ events: [progress(1, 10)], hold: true }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { manual: 'start' },
+          { manual: 'start' },
+          { settle: 'download' },
+          { settle: 'check' },
+        ],
+      }),
+    ],
+    note: 'a second manual check while one is waiting does nothing; the first ends after the download did, and says it is up to date',
   },
 ]
 
