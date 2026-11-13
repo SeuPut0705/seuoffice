@@ -4629,6 +4629,7 @@ dependencies = [
  "clipboard-rs",
  "dirs 6.0.0",
  "flate2",
+ "jscompat",
  "main-core",
  "objc2",
  "objc2-app-kit",
@@ -5202,8 +5203,6 @@ dependencies = [
 [[package]]
 name = "tauri-runtime-cef"
 version = "3.0.0-alpha.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17121b17ba1bc49b9346ece93a42da70a43abdd0d793493838c4f0d8620ec36"
 dependencies = [
  "base64 0.22.1",
  "cef",
