@@ -19,14 +19,15 @@
     "README.md",
     "LICENSE",
     "LICENSE-APACHE",
-    "NOTICE"
+    "NOTICE",
+    "THIRD-PARTY-NOTICES.txt"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "preview": "vite preview --port 5300 --strictPort",
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
-    "prepack": "node ../../scripts/seuoffice-prepack.mjs --require dist/index.html"
+    "prepack": "node ../../scripts/seuoffice-prepack.mjs --notices --require dist/index.html"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
