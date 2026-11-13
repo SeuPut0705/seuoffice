@@ -9,19 +9,30 @@
 //! each call as the TypeScript fake of the spec logs it. Every path of the
 //! scenario that starts with the case's folder is written below the real path
 //! of that folder, as the TypeScript side does.
+//!
+//! The `chat*` operations run on one [`ProjectChatStore`] built on the first of
+//! them over the same guide (shared, so the install id the store asks for is the
+//! guide's own `install_id`, which fails where the settings file cannot take a
+//! new id): its host reads the scenario's clock, takes its new chat ids from
+//! `chatIds` (`chatN` after the last, each logged as `['chatId', id]`) and
+//! only logs `trash`. The error of a chat store call carries its message only,
+//! so the `code` of one is the errno name a Node error's message starts with.
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::rc::Rc;
 
 use jscompat::node_path::host::extname;
-use jscompat::{js_regex, utc_date_parts};
+use jscompat::{js_regex, json_value_from_serde, to_iso_string, utc_date_parts};
 use serde_json::{Map, Value, json};
 
 use super::super::{Answer, CallError, Context, arg};
 use crate::packages::project_store::{
-    ApplyMemoryConsolidationArgs, ProjectMemoryOp, ProjectTrustAnswer, ProjectTrustDecision,
-    ProjectTrustPrompt, UndoMemoryConsolidationArgs, real_path_native,
+    ApplyMemoryConsolidationArgs, ProjectChatRef, ProjectMemoryOp, ProjectTrustAnswer,
+    ProjectTrustDecision, ProjectTrustPrompt, UndoMemoryConsolidationArgs, real_path_native,
+};
+use crate::shell::projects::chat_store::{
+    ChatSender, ChatStoreError, ChatStoreHost, ChatStoreOptions, ProjectChatStore,
 };
 use crate::shell::projects::memory::LocalDateParts;
 use crate::shell::projects::project_guide::{
@@ -79,10 +90,12 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a result prints")
 }
 
-/// `.replace(/\.[0-9a-f]{12}\.tmp/g, '.<hex>.tmp')`: a temp name's random part
-/// differs on each side
+/// a temp name's random part differs on each side: `.[0-9a-f]{12}.tmp` of a
+/// guard's temp file and `.<pid>.<uuid>.tmp` of the settings file's
 fn mask_tmp(text: &str) -> String {
-    js_regex!(r"\.[0-9a-f]{12}\.tmp").replace_all(text, |_| ".<hex>.tmp".to_owned())
+    let guarded = js_regex!(r"\.[0-9a-f]{12}\.tmp").replace_all(text, |_| ".<hex>.tmp".to_owned());
+    js_regex!(r"\.\d+\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp")
+        .replace_all(&guarded, |_| ".<pid>.<uuid>.tmp".to_owned())
 }
 
 fn map_strings(value: &Value, map: &dyn Fn(&str) -> String) -> Value {
@@ -181,13 +194,29 @@ fn answer_of(value: &Value) -> Result<ProjectTrustAnswer, CallError> {
     }
 }
 
-/// the scenario's own folder and the host the guide runs on
+/// the scenario's own folder and the host the guide and the chat store run on
 struct Case {
     real: String,
     log: Log,
     answers: Rc<RefCell<VecDeque<ProjectTrustAnswer>>>,
     clock: Rc<Cell<f64>>,
+    /// what each read of the clock moves it on
+    tick: f64,
+    platform: String,
+    chat_ids: Rc<RefCell<VecDeque<String>>>,
     settings_path: String,
+}
+
+impl Case {
+    fn chat_host(&self) -> ChatHost {
+        ChatHost {
+            clock: self.clock.clone(),
+            tick: self.tick,
+            ids: self.chat_ids.clone(),
+            extra: 0,
+            log: self.log.clone(),
+        }
+    }
 }
 
 fn build_guide(spec: &Value, case: &Case) -> Result<ProjectGuide, CallError> {
@@ -200,7 +229,7 @@ fn build_guide(spec: &Value, case: &Case) -> Result<ProjectGuide, CallError> {
     let home_dir = path_of("home", "home");
     let user_data = path_of("userData", "userData");
     let default_parent = path_of("defaultParent", "parent");
-    let tick = spec.get("tickMs").and_then(Value::as_f64).unwrap_or(0.0);
+    let tick = case.tick;
     let ids: Rc<RefCell<VecDeque<String>>> = Rc::new(RefCell::new(
         spec.get("ids")
             .and_then(Value::as_array)
@@ -277,12 +306,7 @@ fn build_guide(spec: &Value, case: &Case) -> Result<ProjectGuide, CallError> {
         home_dir,
         user_data,
         default_parent_dir: Box::new(move || default_parent.clone()),
-        platform: Some(
-            spec.get("platform")
-                .and_then(Value::as_str)
-                .unwrap_or("linux")
-                .to_owned(),
-        ),
+        platform: Some(case.platform.clone()),
         env: Some(lookup),
         now: Some(Box::new(move || {
             let at = clock.get();
@@ -364,9 +388,24 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
         clock: Rc::new(Cell::new(
             spec.get("startMs").and_then(Value::as_f64).unwrap_or(0.0),
         )),
+        tick: spec.get("tickMs").and_then(Value::as_f64).unwrap_or(0.0),
+        platform: spec
+            .get("platform")
+            .and_then(Value::as_str)
+            .unwrap_or("linux")
+            .to_owned(),
+        chat_ids: Rc::new(RefCell::new(
+            spec.get("chatIds")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .map(|id| id.as_str().map(str::to_owned).ok_or_else(|| bad("chatIds")))
+                .collect::<Result<_, _>>()?,
+        )),
         settings_path,
     };
-    let guide = build_guide(&spec, &case)?;
+    let guide = Rc::new(build_guide(&spec, &case)?);
+    let mut chats: Option<ChatStore> = None;
     let mut ask = FakeAsk {
         answers: case.answers.clone(),
         log: case.log.clone(),
@@ -379,7 +418,7 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
         .flatten()
     {
         let label = text_of(op, "op")?;
-        let value = match run_op(&guide, op, &mut ask, &case) {
+        let value = match run_op(&guide, op, &mut ask, &case, &mut chats) {
             Ok(value) => value,
             Err(OpFail::Guide(error)) => fail_value(&error),
             Err(OpFail::Spec(error)) => return Err(error),
@@ -388,6 +427,122 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
     }
     cx.logs.append(&mut case.log.borrow_mut());
     Ok(Some(Value::Array(results)))
+}
+
+/// the host of the scenario's chat store: its clock, its new chat ids, and a
+/// `trash` that only logs
+struct ChatHost {
+    clock: Rc<Cell<f64>>,
+    tick: f64,
+    ids: Rc<RefCell<VecDeque<String>>>,
+    extra: u32,
+    log: Log,
+}
+
+impl ChatStoreHost for ChatHost {
+    fn trash(&mut self, abs_path: &str) -> Result<(), String> {
+        note(&self.log, vec![Value::from("trash"), Value::from(abs_path)]);
+        Ok(())
+    }
+
+    fn now_iso(&mut self) -> String {
+        let at = self.clock.get();
+        self.clock.set(at + self.tick);
+        to_iso_string(at).unwrap_or_default()
+    }
+
+    fn new_id(&mut self) -> String {
+        let queued = self.ids.borrow_mut().pop_front();
+        let id = queued.unwrap_or_else(|| {
+            self.extra += 1;
+            format!("chat{}", self.extra)
+        });
+        note(
+            &self.log,
+            vec![Value::from("chatId"), Value::from(id.as_str())],
+        );
+        id
+    }
+
+    /// the TypeScript fake's `String(error)` of a call with the label alone
+    fn warn(&mut self, label: &str, detail: Option<&str>) {
+        note(
+            &self.log,
+            vec![
+                Value::from("warn"),
+                Value::from(label),
+                Value::from(mask_tmp(detail.unwrap_or("undefined"))),
+            ],
+        );
+    }
+}
+
+type ChatStore = ProjectChatStore<Rc<ProjectGuide>, ChatHost>;
+
+/// the errno name (`EACCES`) a Node error's message starts with
+fn errno_of(message: &str) -> Value {
+    match message.split_once(": ") {
+        Some((name, _))
+            if name.len() > 1
+                && name.starts_with('E')
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) =>
+        {
+            Value::from(name)
+        }
+        _ => Value::Null,
+    }
+}
+
+/// a chat store call as the spec reports it: its answer, or `{ error, code,
+/// refused }` where it threw
+fn chat_answer<T: serde::Serialize>(result: Result<T, ChatStoreError>) -> Value {
+    match result {
+        Ok(answer) => to_json(&answer),
+        Err(ChatStoreError(message)) => json!({
+            "error": mask_tmp(&message),
+            "code": errno_of(&message),
+            "refused": null,
+        }),
+    }
+}
+
+fn chat_op(name: &str, op: &Value, store: &mut ChatStore) -> Result<Value, CallError> {
+    let project_id = text_of(op, "projectId")?;
+    Ok(match name {
+        "chatNew" => chat_answer(
+            store
+                .new_chat(project_id)
+                .map(|chat_id| json!({ "chatId": chat_id })),
+        ),
+        "chatList" => chat_answer(store.list_chats(project_id)),
+        _ => {
+            let chat_id = text_of(op, "chatId")?;
+            let mut args = json!({ "projectId": project_id, "chatId": chat_id });
+            match name {
+                "chatAppend" => {
+                    args["role"] = Value::from(text_of(op, "role")?);
+                    args["text"] = Value::from(text_of(op, "text")?);
+                    let sender = ChatSender {
+                        editor: text_of(op, "editor")?.to_owned(),
+                        doc_path: opt_text(op, "docPath").map(str::to_owned),
+                        key: None,
+                    };
+                    chat_answer(store.append(&json_value_from_serde(&args), &sender))
+                }
+                "chatOpen" => chat_answer(store.open_chat(&json_value_from_serde(&args))),
+                "chatRename" => {
+                    args["title"] = Value::from(text_of(op, "title")?);
+                    chat_answer(store.rename_chat(&json_value_from_serde(&args)))
+                }
+                _ => chat_answer(store.chat_info(&ProjectChatRef {
+                    project_id: project_id.to_owned(),
+                    chat_id: chat_id.to_owned(),
+                })),
+            }
+        }
+    })
 }
 
 fn data_dir_of(op: &Value) -> Option<&str> {
@@ -400,10 +555,11 @@ fn target_of(op: &Value) -> Result<SelectionTarget, CallError> {
 }
 
 fn run_op(
-    guide: &ProjectGuide,
+    guide: &Rc<ProjectGuide>,
     op: &Value,
     ask: &mut FakeAsk,
     case: &Case,
+    chats: &mut Option<ChatStore>,
 ) -> Result<Value, OpFail> {
     let id = || text_of(op, "id");
     let rel = || text_of(op, "rel");
@@ -468,6 +624,19 @@ fn run_op(
         "renameProject" => to_json(&guide.rename_project(id()?, text_of(op, "name")?)?),
         "retryUnwritable" => to_json(&guide.retry_unwritable(id()?)?),
         "installId" => Value::from(guide.install_id()?),
+        "chatNew" | "chatAppend" | "chatList" | "chatOpen" | "chatRename" | "chatInfo" => {
+            let store = chats.get_or_insert_with(|| {
+                ProjectChatStore::new(
+                    guide.clone(),
+                    case.chat_host(),
+                    ChatStoreOptions {
+                        platform: Some(case.platform.clone()),
+                        ..ChatStoreOptions::default()
+                    },
+                )
+            });
+            chat_op(text_of(op, "op")?, op, store)?
+        }
         "projectRoot" => opt(guide.project_root(id()?).as_deref()),
         "trustState" => to_json(&guide.trust_state(id()?)),
         "isUnwritable" => Value::from(guide.is_unwritable(id()?)),

@@ -42,7 +42,7 @@ use crate::shell::mcp_client::hub::{
 use crate::shell::mcp_client::hub_app::{
     AppHubHost, AppIpcHost, McpAppHost, McpConnectionFactory, McpWindow,
 };
-use crate::shell::mcp_client::hub_ipc::{IpcReply, McpHubIpc, McpHubIpcHost};
+use crate::shell::mcp_client::hub_ipc::{IpcReply, IpcValue, McpHubIpc, McpHubIpcHost};
 use crate::shell::mcp_client::listing::{
     ListedTool, McpListing, accept_first_listing, approve_launch,
 };
@@ -998,7 +998,6 @@ struct Entry {
     done: bool,
     value: JsonValue,
     reported: bool,
-    null_is_undefined: bool,
 }
 
 struct World {
@@ -1218,46 +1217,41 @@ fn dispatch<H: McpHubIpcHost>(
     channel: &str,
     sender: f64,
     args: &[JsonValue],
-) -> Option<(IpcReply, bool)> {
+) -> Option<IpcReply> {
     let a = |i: usize| args.get(i);
-    // (reply, whether a `null` answer is the handler's `undefined`)
     Some(match channel {
-        "mcp-tools:list" => (IpcReply::Now(Ok(ipc.tools_list())), false),
-        "mcp-tools:call" => (ipc.tools_call(host, sender, a(0)), false),
-        "mcp-tools:cancel" => (IpcReply::Now(Ok(ipc.tools_cancel(sender, a(0)))), true),
-        "mcp-tools:retry" => (IpcReply::Now(Ok(ipc.tools_retry(a(0)))), false),
-        "mcp-tools:open-settings" => (IpcReply::Now(Ok(ipc.tools_open_settings(a(0)))), false),
-        "mcp-servers:list" => (ipc.servers_list(host, sender), false),
-        "mcp-servers:parse-paste" => (ipc.servers_parse_paste(host, sender, a(0)), false),
-        "mcp-servers:add" => (ipc.servers_add(host, sender, a(0)), false),
-        "mcp-servers:edit" => (ipc.servers_edit(host, sender, a(0), a(1)), false),
-        "mcp-servers:remove" => (ipc.servers_remove(host, sender, a(0)), false),
-        "mcp-servers:test" => (ipc.servers_test(host, sender, a(0)), false),
-        "mcp-servers:sign-in" => (ipc.servers_sign_in(host, sender, a(0)), false),
-        "mcp-servers:cancel-sign-in" => (ipc.servers_cancel_sign_in(host, sender, a(0)), true),
-        "mcp-servers:approve-tool" => (ipc.servers_approve_tool(host, sender, a(0), a(1)), false),
-        "mcp-servers:approve-instructions" => {
-            (ipc.servers_approve_instructions(host, sender, a(0)), false)
+        "mcp-tools:list" => IpcReply::Now(Ok(Some(ipc.tools_list()))),
+        "mcp-tools:call" => ipc.tools_call(host, sender, a(0)),
+        "mcp-tools:cancel" => {
+            ipc.tools_cancel(sender, a(0));
+            IpcReply::Now(Ok(None))
         }
-        "mcp-servers:approve-launch" => {
-            (ipc.servers_approve_launch(host, sender, a(0), a(1)), false)
+        "mcp-tools:retry" => IpcReply::Now(Ok(Some(ipc.tools_retry(a(0))))),
+        "mcp-tools:open-settings" => IpcReply::Now(Ok(Some(ipc.tools_open_settings(a(0))))),
+        "mcp-servers:list" => ipc.servers_list(host, sender),
+        "mcp-servers:parse-paste" => ipc.servers_parse_paste(host, sender, a(0)),
+        "mcp-servers:add" => ipc.servers_add(host, sender, a(0)),
+        "mcp-servers:edit" => ipc.servers_edit(host, sender, a(0), a(1)),
+        "mcp-servers:remove" => ipc.servers_remove(host, sender, a(0)),
+        "mcp-servers:test" => ipc.servers_test(host, sender, a(0)),
+        "mcp-servers:sign-in" => ipc.servers_sign_in(host, sender, a(0)),
+        "mcp-servers:cancel-sign-in" => ipc.servers_cancel_sign_in(host, sender, a(0)),
+        "mcp-servers:approve-tool" => ipc.servers_approve_tool(host, sender, a(0), a(1)),
+        "mcp-servers:approve-instructions" => ipc.servers_approve_instructions(host, sender, a(0)),
+        "mcp-servers:approve-launch" => ipc.servers_approve_launch(host, sender, a(0), a(1)),
+        "mcp-servers:set-tool-permission" => {
+            ipc.servers_set_tool_permission(host, sender, a(0), a(1), a(2))
         }
-        "mcp-servers:set-tool-permission" => (
-            ipc.servers_set_tool_permission(host, sender, a(0), a(1), a(2)),
-            false,
-        ),
-        "mcp-servers:set-keep-results-inside" => (
-            ipc.servers_set_keep_results_inside(host, sender, a(0), a(1)),
-            false,
-        ),
-        "mcp-servers:set-enabled" => (ipc.servers_set_enabled(host, sender, a(0), a(1)), false),
-        "mcp-servers:mark-tools-seen" => (ipc.servers_mark_tools_seen(host, sender, a(0)), false),
-        "mcp-servers:planned-launch" => (ipc.servers_planned_launch(host, sender, a(0)), false),
-        "mcp-servers:answer-runtime-download" => (
-            ipc.servers_answer_runtime_download(host, sender, a(0), a(1)),
-            false,
-        ),
-        "mcp-servers:retry" => (ipc.servers_retry(host, sender, a(0)), false),
+        "mcp-servers:set-keep-results-inside" => {
+            ipc.servers_set_keep_results_inside(host, sender, a(0), a(1))
+        }
+        "mcp-servers:set-enabled" => ipc.servers_set_enabled(host, sender, a(0), a(1)),
+        "mcp-servers:mark-tools-seen" => ipc.servers_mark_tools_seen(host, sender, a(0)),
+        "mcp-servers:planned-launch" => ipc.servers_planned_launch(host, sender, a(0)),
+        "mcp-servers:answer-runtime-download" => {
+            ipc.servers_answer_runtime_download(host, sender, a(0), a(1))
+        }
+        "mcp-servers:retry" => ipc.servers_retry(host, sender, a(0)),
         _ => return None,
     })
 }
@@ -1266,21 +1260,26 @@ fn rejected(message: &str) -> JsonValue {
     object(vec![("rejected", text(message))])
 }
 
-fn track(world: &mut World, label: &str, reply: Option<IpcReply>, null_is_undefined: bool) {
+/// what a handler's value prints as: `undefined` is `<undefined>`, `null` stays `null`
+fn printed(result: IpcValue) -> JsonValue {
+    match result {
+        Ok(Some(value)) => value,
+        Ok(None) => text(UNDEFINED),
+        Err(error) => rejected(&error.message),
+    }
+}
+
+fn track(world: &mut World, label: &str, reply: Option<IpcReply>) {
     let mut entry = Entry {
         label: label.to_owned(),
         done: false,
         value: JsonValue::Null,
         reported: false,
-        null_is_undefined,
     };
     match reply {
         Some(IpcReply::Now(result)) => {
             entry.done = true;
-            entry.value = match result {
-                Ok(value) => value,
-                Err(error) => rejected(&error.message),
-            };
+            entry.value = printed(result);
         }
         Some(IpcReply::Later(ticket)) => {
             world.tickets.insert(ticket, label.to_owned());
@@ -1288,14 +1287,6 @@ fn track(world: &mut World, label: &str, reply: Option<IpcReply>, null_is_undefi
         None => {}
     }
     world.entries.push(entry);
-}
-
-fn undefined_value(entry: &Entry) -> JsonValue {
-    if entry.null_is_undefined && entry.value == JsonValue::Null {
-        text(UNDEFINED)
-    } else {
-        entry.value.clone()
-    }
 }
 
 /// what a case's step does; the record's `result` when it has one of its own
@@ -1318,8 +1309,8 @@ fn run_step(
                     Some(object(vec![("noHandler", JsonValue::Bool(true))])),
                     None,
                 ),
-                Some((reply, undefined)) => {
-                    track(world, &label, Some(reply), undefined);
+                Some(reply) => {
+                    track(world, &label, Some(reply));
                     (None, Some(label))
                 }
             }
@@ -1327,26 +1318,14 @@ fn run_step(
         "hub" => {
             match as_str(prop(step, "method")) {
                 Some("stopAll") => match world.ipc.hub.stop_all() {
-                    Reply::Now(()) => track(
-                        world,
-                        &label,
-                        Some(IpcReply::Now(Ok(JsonValue::Null))),
-                        true,
-                    ),
-                    Reply::Later(ticket) => {
-                        track(world, &label, Some(IpcReply::Later(ticket)), true)
-                    }
+                    Reply::Now(()) => track(world, &label, Some(IpcReply::Now(Ok(None)))),
+                    Reply::Later(ticket) => track(world, &label, Some(IpcReply::Later(ticket))),
                 },
                 Some("load") => {
                     world.ipc.hub.load();
-                    track(
-                        world,
-                        &label,
-                        Some(IpcReply::Now(Ok(JsonValue::Null))),
-                        true,
-                    );
+                    track(world, &label, Some(IpcReply::Now(Ok(None))));
                 }
-                _ => track(world, &label, None, true),
+                _ => track(world, &label, None),
             }
             (None, Some(label))
         }
@@ -1542,10 +1521,7 @@ fn scenario(args: &[Value]) -> Answer {
                 && let Some(entry) = world.entries.iter_mut().find(|e| e.label == label)
             {
                 entry.done = true;
-                entry.value = match value {
-                    Ok(v) => v,
-                    Err(error) => rejected(&error.message),
-                };
+                entry.value = printed(value);
             }
         }
         let mut changed = false;
@@ -1572,7 +1548,7 @@ fn scenario(args: &[Value]) -> Answer {
             && let Some(entry) = world.entries.iter_mut().find(|e| &e.label == label)
         {
             if entry.done {
-                let value = undefined_value(entry);
+                let value = entry.value.clone();
                 entry.reported = true;
                 if as_str(prop(step, "op")) == Some("ipc")
                     && let Some(JsonValue::String(token)) = prop(&value, "token")
@@ -1594,7 +1570,7 @@ fn scenario(args: &[Value]) -> Answer {
             let mut map = JsObject::new();
             for entry in settled {
                 entry.reported = true;
-                map.set(entry.label.as_str(), undefined_value(entry));
+                map.set(entry.label.as_str(), entry.value.clone());
             }
             record.set("settled", JsonValue::Object(map));
         }
@@ -1845,20 +1821,8 @@ fn app_scenario(args: &[Value]) -> Answer {
                     None => {
                         record.set("result", object(vec![("noHandler", JsonValue::Bool(true))]))
                     }
-                    Some((IpcReply::Now(Ok(value)), undefined)) => {
-                        record.set(
-                            "result",
-                            if undefined && value == JsonValue::Null {
-                                text(UNDEFINED)
-                            } else {
-                                value
-                            },
-                        );
-                    }
-                    Some((IpcReply::Now(Err(error)), _)) => {
-                        record.set("result", rejected(&error.message));
-                    }
-                    Some((IpcReply::Later(_), _)) => {}
+                    Some(IpcReply::Now(result)) => record.set("result", printed(result)),
+                    Some(IpcReply::Later(_)) => {}
                 }
             }
             "openSettingsByName" => {
