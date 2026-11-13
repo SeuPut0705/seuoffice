@@ -176,13 +176,35 @@ in; same benchmark):
 | wasm, `groupChildDurableId` in TypeScript     | 66.3    | 19.9      | 86.3     | -28.7%        | 2.5%        |
 | wasm, `isBackgroundLikeElement` in TypeScript | 66.6    | 21.1      | 87.7     | -27.6%        | 1.3%        |
 
-`elementDurableId` crosses the 5% line here: 8.5 ms of a 121.1 ms TypeScript
-total, against 6.4 ms of 135.7 ms before. The wasm total barely moved (90.0 to
-89.3 ms); the TypeScript total fell 14.6 ms on these runners, most of the
-change in the percentage. The codec change cannot explain it: the export
-answers a string, so its reply is never revived through a shape. Whether it
-stays TypeScript is main's call (2026-11-14): one more 100-round run, or the
-rule as measured.
+An export's cost is the time the benchmark saves when that export is taken
+from the TypeScript, over the TypeScript total: for `elementDurableId` here
+(89.3 - 80.8) / 121.1 = 7.0%, against (90.0 - 83.6) / 135.7 = 4.7% before.
+The wasm total barely moved (90.0 to 89.3 ms); the TypeScript total fell
+14.6 ms on these runners, most of the change in the percentage. The codec
+change cannot explain it: the export answers a string, so its reply is never
+revived through a shape.
+
+Main asked for one more 100-round run before deciding (run 43498253158 at
+5c14802ee):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 94.3    | 5.0       | 99.3     | 0.0%          |             |
+| wasm                                          | 51.3    | 18.1      | 69.4     | -30.1%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 51.3    | 14.5      | 65.7     | -33.8%        | 3.7%        |
+| wasm, `elementDurableId` in TypeScript        | 51.5    | 12.0      | 63.5     | -36.0%        | 5.9%        |
+| wasm, `groupChildDurableId` in TypeScript     | 51.5    | 15.8      | 67.3     | -32.2%        | 2.1%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 51.1    | 16.8      | 68.0     | -31.6%        | 1.4%        |
+
+`elementDurableId` is over 5% again ((69.4 - 63.5) / 99.3), so it stays
+TypeScript (`PPTX_TS_ONLY` in tools/pptx-diff/binding/overrides.ts), and so do
+the three `xml-utils` functions it reads an element's bytes with
+(`attributeOf`, `elementRange`, `decodeXml`): through the binding each would be
+a wasm call of its own, more than the one call it replaces, and the benchmark
+measured it with them in TypeScript. Their Rust copies stay, as B4's
+per-character predicates did: the engine calls them itself
+(`matches_element_ref`, `group_child_durable_id`, the parsers), and the gate
+still compares them with the reference.
 
 ## Unit order
 

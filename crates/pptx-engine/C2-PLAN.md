@@ -205,8 +205,12 @@ gh workflow run CI --ref feat/rust-pptx-c2             # and seuoffice, "seuoffi
   history notice with it): `@seuoffice/web-platform/globals` gives it.
   `engine-wasm` references the DOM lib for the Node-only packages that
   type-check it.
-- Runner render benchmark: crates/pptx-engine/README.md, under 5% for every
-  export. Gate 0 differences, 317/317 faults caught (seuoffice rust
-  43360226152, pptx jobs).
+- Runner render benchmark: crates/pptx-engine/README.md. `elementDurableId`
+  measured 7.0% and 5.9% on the org runners (2026-11-14), so it and the three
+  `xml-utils` readers it uses stay TypeScript; the other three exports cross.
+  Gate 0 differences, 317/317 faults caught (seuoffice rust 43470998643).
+- The codec shaped a union by its first member: a chart in a group lost the
+  holes of its point arrays to null. Unions now merge, model types are `ref`s
+  (packages/pptx-engine/tests/chart-point-holes.test.ts).
 - Left to B4: the docx-diff differences of the `crates` job, the docx-engine
   and docs test failures of CI (the same counts on B4's own d332386da runs).
