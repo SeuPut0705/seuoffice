@@ -124,6 +124,7 @@ const NOTE = {
 const SPDX_NOTE = {
   dompurify: 'Apache-2.0 (dual MPL-2.0/Apache-2.0, used under Apache-2.0)',
   jszip: 'MIT (dual MIT/GPL-3.0-or-later, used under MIT)',
+  'node-forge': 'BSD-3-Clause (dual BSD-3-Clause/GPL-2.0, used under BSD-3-Clause)',
   'r-efi': 'MIT (tri-licensed MIT/Apache-2.0/LGPL-2.1-or-later, used under MIT)',
 }
 
@@ -686,14 +687,34 @@ const FONTS = [
     'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.',
   ],
   [
-    'Carlito',
+    'SeuOffice Sans GO (Carlito 1.103 derivative)',
     'SIL OFL 1.1',
-    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".',
+    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".\nVietnamese precomposed glyphs rebuilt (tools/patch-carlito-vi.py); renamed per OFL 1.1, the\nReserved Font Name is not used.',
+  ],
+  [
+    'Aptos GO / Aptos Display GO / Aptos Narrow GO (Carlito derivatives)',
+    'SIL OFL 1.1',
+    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".\nLatin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py); renamed\nper OFL 1.1. No Microsoft font outlines are included.',
+  ],
+  [
+    'Century Gothic GO (Liberation Sans derivative)',
+    'SIL OFL 1.1',
+    'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nLatin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py); renamed\nper OFL 1.1. No Monotype font outlines are included.',
+  ],
+  [
+    'David GO (Liberation Serif derivative)',
+    'SIL OFL 1.1',
+    'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nSubset with outlines scaled to other advance widths; renamed per OFL 1.1. No Monotype or Microsoft\nfont outlines are included.',
   ],
   [
     'Caladea',
     'Apache-2.0',
     '© Huerta Tipográfica. Licensed under the Apache License, Version 2.0.',
+  ],
+  [
+    'Bookman Old Style GO (Caladea derivative)',
+    'Apache-2.0',
+    '© Huerta Tipográfica. Licensed under the Apache License, Version 2.0.\nModified: Latin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py)\nand renamed. No Monotype or Microsoft font outlines are included.',
   ],
   [
     'Noto Sans CJK SC / Noto Serif CJK SC (subset)',
@@ -749,6 +770,11 @@ const FONTS = [
     'SeuOffice Bengali (Noto Sans Bengali derivative)',
     'SIL OFL 1.1',
     '© The Noto Project Authors, original Reserved Font Name "Noto". Modified advance widths;\nrenamed per OFL 1.1.',
+  ],
+  [
+    'SeuOffice Cordia / SeuOffice Sarabun (Noto Sans Thai and Liberation Sans derivatives)',
+    'SIL OFL 1.1',
+    '© The Noto Project Authors, original Reserved Font Name "Noto".\nDigitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nThai outlines from Noto Sans Thai and Latin outlines from Liberation Sans, scaled to other advance\nwidths (tools/build-thai-font.py); renamed per OFL 1.1. No Microsoft font outlines are included.',
   ],
   [
     'KaTeX webfonts',
@@ -1011,6 +1037,33 @@ for (const dir of vendoredSources()) {
     out += `${read(extra)}\n`
   }
 }
+
+// the AI mark (apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) adapts the
+// geometry of two Lucide icons; ISC asks for its notice with every copy, and `circle` comes
+// from Feather under MIT
+out += hr('9. Icon geometry adapted from Lucide')
+out += `
+The AI button mark adapts the geometry of the Lucide icons \`circle\` and
+\`message-square\` (https://lucide.dev, https://github.com/lucide-icons/lucide).
+Lucide marks \`circle\` as derived from the Feather project.
+`
+out += sub('Lucide — ISC License')
+out += `Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+`
+out += sub('Feather (the Lucide icons derived from it, among them circle) — MIT License')
+out += `Copyright (c) 2013-present Cole Bemis\n\n${MIT_PERMISSION}\n`
 
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {
