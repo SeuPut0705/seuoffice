@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
+    "lib": ["ES2022", "DOM"],
     "paths": {
       "@seuoffice/docx-engine": ["../docx-engine/src/index.ts"]
     }

@@ -1,0 +1,19 @@
+{
+  "name": "docx-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate: the Rust docx engine (crates/) against the TypeScript engine, over every tracked .docx",
+  "scripts": {
+    "gate": "tsx model-gen.ts --check && node ../../crates/office-wasm/build.mjs && tsx main.ts",
+    "bench": "node ../../crates/office-wasm/build.mjs && tsx main.ts --bench",
+    "calls": "node ../../crates/office-wasm/build.mjs && tsx calls-only.ts",
+    "package": "node ../../crates/office-wasm/build.mjs && tsx package-only.ts",
+    "model": "node ../../crates/office-wasm/build.mjs && tsx model-full.ts",
+    "model-gen": "tsx model-gen.ts",
+    "fixtures": "tsx write-fixtures.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsx model-gen.ts --check"
+  }
+}

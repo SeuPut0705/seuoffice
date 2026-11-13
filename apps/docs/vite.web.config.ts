@@ -18,7 +18,21 @@ const localAlias = {
     __dirname,
     '../../packages/docx-engine/src/zip-splice.ts',
   ),
-  '@seuoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
+  '@seuoffice/docx-engine/init': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/engine-init.ts',
+  ),
+  '@seuoffice/docx-engine/engine-url': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/engine-url.ts',
+  ),
+  // SEUOFFICE_DOCX_ENGINE=ts: the TypeScript engine frozen at the switch
+  // (tools/docx-diff/reference), for the render benchmark of the wasm binding
+  // against it (.github/workflows/seuoffice-bench.yml); never a release build
+  '@seuoffice/docx-engine':
+    process.env.SEUOFFICE_DOCX_ENGINE === 'ts'
+      ? resolve(__dirname, '../../tools/docx-diff/reference/index.ts')
+      : resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
   '@seuoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
 }
 

@@ -1,0 +1,47 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "parse",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 2637,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 30,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 300,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 1500,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "parse.breakCharOf",
+          "checks": 1512,
+          "differences": 0,
+          "distinctResults": 4,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.wtText",
+          "checks": 2955,
+          "differences": 0,
+          "distinctResults": 2889,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

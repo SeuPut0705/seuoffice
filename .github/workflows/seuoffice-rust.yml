@@ -1,7 +1,8 @@
 name: seuoffice rust
 
-# The Rust document engine (crates/) and its parity gate against the TypeScript
-# engine (tools/docx-diff), on a GitHub runner. Decision 0025.
+# The Rust document engines (crates/) and their parity gates against the
+# TypeScript engines (tools/docx-diff, tools/pptx-diff), on a GitHub runner.
+# Decision 0025.
 #
 # crates/ lives on a branch until its first unit is merged, so this file does
 # nothing on main yet: start it on that branch by hand,
@@ -13,8 +14,20 @@ name: seuoffice rust
 on:
   push:
     branches: [main]
-    paths: ['crates/**', 'tools/docx-diff/**', 'packages/docx-engine/src/**']
+    paths:
+      [
+        'crates/**',
+        'tools/docx-diff/**',
+        'tools/pptx-diff/**',
+        'packages/docx-engine/src/**',
+        'packages/pptx-engine/src/**',
+      ]
   workflow_dispatch:
+    inputs:
+      faults:
+        description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
+        required: false
+        default: ''
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -25,10 +38,13 @@ permissions:
 
 jobs:
   crates:
+    if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Is the Rust engine in this tree
         id: has
@@ -57,38 +73,112 @@ jobs:
         if: steps.has.outputs.crates == 'true'
         run: cargo fmt --manifest-path crates/Cargo.toml --all -- --check
 
+      # every check below runs whether or not an earlier one failed, so that one
+      # run says everything: the job is red when any of them is
       - name: Clippy
-        if: steps.has.outputs.crates == 'true'
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: cargo clippy --manifest-path crates/Cargo.toml --workspace --all-targets -- -D warnings
 
       - name: Unit tests
-        if: steps.has.outputs.crates == 'true'
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: cargo test --manifest-path crates/Cargo.toml --workspace
 
+      - name: Licences of the dependencies
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          cargo install cargo-deny --locked
+          cd crates && cargo deny check licenses
+
+      # the vendored regex engine carries patches of its own: its suite runs as published
+      - name: Vendored regress tests
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: cargo test --manifest-path crates/vendor/regress/Cargo.toml --features utf16
+
       - uses: actions/setup-node@v4
-        if: steps.has.outputs.crates == 'true'
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        with:
+          node-version: 22
+          cache: npm
+
+      # a search past the backtrack bound refuses on wasm32 too, where an
+      # unbounded stack traps the module
+      - name: Regex bound on wasm32
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          cargo build --manifest-path crates/Cargo.toml -p jscompat --example limit_wasm --target wasm32-wasip1 --release
+          node --no-warnings crates/jscompat/examples/limit_wasm.mjs crates/target/wasm32-wasip1/release/examples/limit_wasm.wasm 25000000
+
+      - name: Install
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: npm ci
+
+      - name: Gate harness typecheck and tests
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          npm --prefix tools/docx-diff run typecheck
+          npm --prefix tools/docx-diff run test
+
+      # the whole output is kept as an artifact: the first comparison of a newly
+      # ported group is read from there, not from a run on somebody's machine
+      - name: Parity gate
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        shell: bash
+        run: |
+          mkdir -p tools/docx-diff/out
+          npm --prefix tools/docx-diff run gate -- --by-function --show 20 2>&1 | tee tools/docx-diff/out/gate.txt
+
+      - name: Keep the gate output
+        if: ${{ always() && steps.has.outputs.crates == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: docx-diff-out
+          path: tools/docx-diff/out
+          if-no-files-found: ignore
+
+  # Fault injection: each fault of the file through comparison (f), one at a
+  # time. It rebuilds the wasm once per fault, which is why it runs here.
+  faults:
+    if: ${{ inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      # the model group reads the declarations at MODEL_SOURCE's commit
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rust toolchain with the WASI target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-faults-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install
-        if: steps.has.outputs.crates == 'true'
         run: npm ci
 
-      - name: Gate harness typecheck and tests
-        if: steps.has.outputs.crates == 'true'
-        run: |
-          npm --prefix tools/docx-diff run typecheck
-          npm --prefix tools/docx-diff run test
+      - name: Faults
+        env:
+          FAULTS: ${{ inputs.faults }}
+        run: python3 tools/docx-diff/faults.py "$FAULTS"
 
-      - name: Parity gate
-        if: steps.has.outputs.crates == 'true'
-        run: npm --prefix tools/docx-diff run gate
-
-      - name: Keep the gate output
-        if: always() && steps.has.outputs.crates == 'true'
+      - name: Keep the result
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: docx-diff-out
+          name: docx-diff-faults
           path: tools/docx-diff/out
           if-no-files-found: ignore

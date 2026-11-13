@@ -1,0 +1,28 @@
+[package]
+name = "docx-engine"
+description = "The docx engine: bytes and values in, values and bytes out"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+encoding_rs.workspace = true
+flate2.workspace = true
+jscompat.workspace = true
+omml.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+# parseCustGeom of the slides engine, which parse.ts imports
+pptx-engine.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+icu_collator = { version = "2.4", optional = true }
+icu_locale_core = { version = "2.4", optional = true }
+
+[features]
+default = ["icu-collation"]
+# the INDEX field sort with ICU4X; without it, a wasm32 build asks the host's
+# Intl.Collator through the import seu_host.host_collate
+icu-collation = ["dep:icu_collator", "dep:icu_locale_core"]

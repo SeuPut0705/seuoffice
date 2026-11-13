@@ -1,0 +1,11 @@
+[package]
+name = "ooxml-xml"
+description = "Text-level XML for the document engines: tag scanner, ordered lenient tree, UTF-16 offsets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+jscompat.workspace = true
+serde_json.workspace = true

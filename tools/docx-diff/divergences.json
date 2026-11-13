@@ -1,0 +1,263 @@
+[
+  {
+    "id": "doctype-in-a-parsed-fragment",
+    "comparison": "roundTripXml",
+    "fragment": "<!DOCTYPE a [<!ENTITY e \"x\">]><w:t>&e;</w:t>",
+    "typescript": {
+      "xml": "<w:t>x</w:t>"
+    },
+    "rust": {
+      "error": "document type declarations are not supported"
+    },
+    "reason": "fast-xml-parser reads a document type declaration and expands the internal entities it declares; that reader (DocTypeReader.js with xml-naming and is-unsafe, about 400 lines) is not ported. Rust refuses the fragment, and that is the decided end state: the Open Packaging Conventions forbid DTDs in a package part. No tracked document has a DOCTYPE in a part the engine parses."
+  },
+  {
+    "id": "cdata-opener-cuts-a-surrogate-pair",
+    "comparison": "roundTripXml",
+    "fragment": "<![x😀😀😀]]>",
+    "typescript": {
+      "xml": "\ude00"
+    },
+    "rust": {
+      "error": "a surrogate pair would be split"
+    },
+    "reason": "fast-xml-parser takes the nine UTF-16 units after any '<![' as the CDATA opener, so a malformed opener can cut a character outside the BMP in half and leave a lone surrogate in the text. A Rust string cannot hold a lone surrogate. Rust refuses the fragment instead of inventing a replacement character."
+  },
+  {
+    "id": "zip-text-in-hosts-without-buffer",
+    "comparison": "zipTextWithoutBuffer",
+    "entryHex": "80e24142eda080",
+    "typescript": "\u0000⁂\ud800",
+    "rust": "��AB���",
+    "reason": "JSZip has two UTF-8 decoders. Where a global Buffer exists (Node: CLI, tests, main process) it replaces each ill-formed sequence with U+FFFD, which is what Rust does and what the gate compares. Where none exists (a browser, and the sandboxed desktop renderer unless a bundler supplies one) it uses pako's decoder, which never rejects a byte: stray continuation bytes become control characters, a lead byte swallows the bytes after it, encoded surrogates stay lone surrogates, and the result depends on where JSZip's 16 KiB blocks end. The TypeScript engine therefore already reads ill-formed parts differently per host. Rust follows the Node behaviour everywhere. Every .xml and .rels entry of the tracked documents is well-formed UTF-8, so no tracked document is affected."
+  },
+  {
+    "id": "inflate-failure-text-is-the-hosts",
+    "comparison": "loadDocx",
+    "container": "damaged deflate data",
+    "typescript": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: TypeError"
+    },
+    "rust": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: the deflate data is damaged or cut short"
+    },
+    "reason": "The zip gate ends this message with the text of the error DecompressionStream rejects with. That text belongs to the host: Node 22 rejects with a TypeError whose message is empty, so the gate falls back to its name, and a browser words it differently. Rust writes one sentence of its own. The gate compares the message up to \"cannot be inflated:\", which is the part the TypeScript wrote."
+  },
+  {
+    "id": "bytes-after-a-deflate-stream-are-the-hosts-to-refuse",
+    "comparison": "loadDocx",
+    "container": "bytes after the deflate stream",
+    "host": "node",
+    "typescript": "opens",
+    "rust": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: bytes follow the end of the deflate data"
+    },
+    "reason": "The zip gate inflates every entry through the host's DecompressionStream, and hosts differ on bytes that follow the end of a deflate stream inside an entry. Measured on 2026-11-12 with the gate's own read loop: Node 22.22.3 reads past them and the document opens; Node 26.5.0 rejects with TypeError \"Trailing junk found after the end of the compressed stream\"; Chromium 151.0.7922.34 (Playwright, headless) rejects with TypeError \"Junk found after end of compressed data.\", as the Compression Streams standard has it. The product's hosts are Chromium (the Electron renderer, the web); Electron 43 itself was not run, its Chromium is taken to do the same. Rust refuses, by the owner's decision of that day: the result of the product, not of the test host. This entry is the TypeScript loader on Node as it is. Everywhere else the gate gives the engine a DecompressionStream that rejects such bytes (host.ts), so the built and the mutated containers that have them are compared like any other. When the TypeScript gate answers alike on every host, this entry stops reproducing: then it and the stream of host.ts go. Not mirrored: where such an entry also declares less than it inflates to, Rust and host.ts name the declaration, while in Chromium the answer depends on how much output arrived before the error (64 KiB chunks; of 300,000 bytes 131,072 arrived)."
+  },
+  {
+    "id": "latex-nested-deeper-than-rust-reads",
+    "comparison": "call",
+    "fn": "math.latexToOmml",
+    "text": "{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{x}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+    "typescript": {
+      "value": "<m:r><m:t xml:space=\"preserve\">x</m:t></m:r>"
+    },
+    "rust": {
+      "error": "Nested too deeply"
+    },
+    "reason": "latexToOmml recurses once per group and the TypeScript runs until the JavaScript stack overflows, somewhere past a thousand levels depending on the host. A stack overflow in wasm ends the instance, so Rust counts the depth and refuses past 256 levels of its reader (128 nested groups). No formula a person writes is that deep; the limit is listed because the two sides answer differently between the two limits."
+  },
+  {
+    "id": "merge-file-name-cuts-a-surrogate-pair",
+    "comparison": "call",
+    "fn": "save.mergeOutputFileName",
+    "text": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00",
+    "args": {
+      "record": {},
+      "fields": []
+    },
+    "typescript": {
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d"
+    },
+    "rust": {
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ufffd"
+    },
+    "reason": "mergeOutputFileName ends with slice(0, 120), which counts UTF-16 units, so a name whose 120th unit is the first half of a character outside the BMP keeps that half alone in the result. A Rust string cannot hold a lone surrogate, so the Rust cut writes U+FFFD in its place (the class of cdata-opener-cuts-a-surrogate-pair). A file name with a lone surrogate is no name on most file systems, so no caller is helped by matching it. Class predicate: mergeFileNameLongAstral of listed.ts."
+  },
+  {
+    "id": "compare-char-granularity-cuts-a-surrogate-pair",
+    "comparison": "call",
+    "fn": "save.compareBlocks",
+    "text": "",
+    "args": {
+      "original": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude00 text"
+            }
+          ]
+        }
+      ],
+      "revised": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude01 text"
+            }
+          ]
+        }
+      ],
+      "documentXml": "",
+      "options": {
+        "date": "2024-05-06T07:08:09Z",
+        "granularity": "char"
+      }
+    },
+    "typescript": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ud83d"
+                },
+                {
+                  "text": "\ude00",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ude01",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "rust": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ufffd"
+                },
+                {
+                  "text": "\ufffd",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ufffd",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "reason": "With granularity 'char' compareBlocks of the TypeScript diffs UTF-16 units, so two characters outside the BMP that share their first half are split into a common lone high surrogate and two lone low surrogates, and runs of the result hold them. A Rust string cannot hold a lone surrogate, so the Rust writes U+FFFD for each (the class of cdata-opener-cuts-a-surrogate-pair). Word granularity, the default, is not affected. Class predicate: compareCharAstral of listed.ts."
+  },
+  {
+    "id": "line-rule-outside-its-type",
+    "comparison": "call",
+    "fn": "parse.hfParaStyleLayers",
+    "text": "<w:p><w:pPr><w:spacing w:line=\"200\" w:lineRule=\"exact=\"/></w:pPr><w:r><w:t>Exact ten point line</w:t></w:r></w:p>",
+    "args": {
+      "parts": [
+        [
+          "word/styles.xml",
+          "<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii=\"Calibri\" w:eastAsia=\"Malgun Gothic\"/><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after=\"160\" w:line=\"259\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/></w:style><w:style w:type=\"paragraph\" w:styleId=\"Header\"><w:name w:val=\"header\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:tabs><w:tab w:val=\"center\" w:pos=\"4680\"/><w:tab w:val=\"right\" w:pos=\"9360\"/></w:tabs><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Footer\"><w:name w:val=\"footer\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:rPr><w:sz w:val=\"18\"/></w:rPr></w:style><w:style w:type=\"table\" w:styleId=\"Grid\"><w:name w:val=\"Table Grid\"/><w:tblPr><w:tblBorders><w:top w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:left w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/></w:tblBorders><w:tblCellMar><w:left w:w=\"80\" w:type=\"dxa\"/><w:right w:w=\"80\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr></w:style><w:style w:type=\"table\" w:styleId=\"Banded\"><w:name w:val=\"Banded\"/><w:basedOn w:val=\"Grid\"/><w:tblPr><w:tblStyleRowBandSize w:val=\"1\"/></w:tblPr><w:tblStylePr w:type=\"firstRow\"><w:rPr><w:b/><w:color w:val=\"FFFFFF\"/></w:rPr><w:tcPr><w:shd w:val=\"clear\" w:fill=\"4472C4\"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type=\"band1Horz\"><w:tcPr><w:shd w:val=\"clear\" w:fill=\"D9E2F3\"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type=\"lastCol\"><w:rPr><w:b/></w:rPr><w:tcPr><w:tcBorders><w:left w:val=\"double\" w:sz=\"6\" w:color=\"FF0000\"/></w:tcBorders></w:tcPr></w:tblStylePr></w:style></w:styles>"
+        ],
+        [
+          "word/numbering.xml",
+          "<?xml version=\"1.0\"?><w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:abstractNum w:abstractNumId=\"0\"><w:lvl w:ilvl=\"0\"><w:start w:val=\"1\"/><w:numFmt w:val=\"bullet\"/><w:lvlText w:val=\"-\"/></w:lvl></w:abstractNum><w:num w:numId=\"1\"><w:abstractNumId w:val=\"0\"/></w:num></w:numbering>"
+        ],
+        [
+          "word/settings.xml",
+          "<?xml version=\"1.0\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:compat><w:compatSetting w:name=\"compatibilityMode\" w:uri=\"http://schemas.microsoft.com/office/word\" w:val=\"15\"/></w:compat></w:settings>"
+        ],
+        [
+          "word/document.xml",
+          "<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:body><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:header=\"720\" w:footer=\"720\" w:gutter=\"0\"/><w:cols w:num=\"1\"/></w:sectPr></w:body></w:document>"
+        ],
+        [
+          "word/_rels/document.xml.rels",
+          "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header2.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image1.png\"/></Relationships>"
+        ]
+      ],
+      "compat": {
+        "compatibilityMode": 15
+      },
+      "hf": true
+    },
+    "typescript": {
+      "value": {
+        "direct": {
+          "lineRawTwips": 200,
+          "lineRule": "exact="
+        }
+      }
+    },
+    "rust": {
+      "error": "invalid value: string \"exact=\", expected a string of ParaFormat.lineRule"
+    },
+    "reason": "TypeScript defect: the readers of w:spacing copy the text of w:lineRule into ParaFormat.lineRule without checking it against its declared type (auto | atLeast | exact), so a value such as \"exact=\" or \" auto\" travels on as a string. The generated Rust model keeps the type and refuses that string (invalid value, expected a string of ParaFormat.lineRule); widening the model to accept any string would let the type lie. Only a mutated or hand-broken document holds such a value; Word writes the three names. Inputs: extractTableModel, hfParaStyleLayers and hfCellContent over a w:lineRule outside the three. Class predicate: lineRuleOutsideItsType of listed.ts."
+  }
+]

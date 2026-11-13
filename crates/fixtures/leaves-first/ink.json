@@ -1,0 +1,82 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "ink",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 16774,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 133,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 1500,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 1500,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "ink.constants",
+          "checks": 3,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 1
+        },
+        {
+          "fn": "ink.INK_REL_RE",
+          "checks": 698,
+          "differences": 0,
+          "distinctResults": 7,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "ink.INK_MEDIA_PATH_RE",
+          "checks": 1534,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "ink.anchoredInkRunXml",
+          "checks": 1542,
+          "differences": 0,
+          "distinctResults": 749,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "ink.stripInkRuns",
+          "checks": 5372,
+          "differences": 0,
+          "distinctResults": 3194,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "ink.findInkRuns",
+          "checks": 5372,
+          "differences": 0,
+          "distinctResults": 64,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "ink.injectInkRunsIntoParagraph",
+          "checks": 5386,
+          "differences": 0,
+          "distinctResults": 3124,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

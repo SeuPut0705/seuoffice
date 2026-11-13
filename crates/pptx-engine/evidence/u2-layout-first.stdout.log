@@ -1,0 +1,14 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(f) layout on the corpus, checks               compared    678  floor missing  BELOW FLOOR  differences 0
+(f) layout on built inputs, checks             compared   1410  floor missing  BELOW FLOOR  differences 0
+(f+) layout on mutated texts, checks           compared    600  floor missing  BELOW FLOOR  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) layout: 8 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 8
+    pptxLayout.align.alignRects              checks     532  differences      0  key order only      0  distinct results   332  TypeScript threw 0
+    pptxLayout.align.distributeRects         checks      70  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+    pptxLayout.dgm-hier.parseHierConstraints checks     311  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    pptxLayout.dgm-hier.layoutHierTree       checks     504  differences      0  key order only      0  distinct results   266  TypeScript threw 0
+    pptxLayout.smartart-layout.layoutShapes  checks     651  differences      0  key order only      0  distinct results   400  TypeScript threw 0
+    pptxLayout.smartart-layout.SMARTART_PALETTE checks      13  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxLayout.format-brush.extractFormat    checks     142  differences      0  key order only      0  distinct results    29  TypeScript threw 0
+    pptxLayout.format-brush.applyFormat      checks     465  differences      0  key order only      0  distinct results    33  TypeScript threw 0
