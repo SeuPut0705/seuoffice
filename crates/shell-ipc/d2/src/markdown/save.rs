@@ -9,6 +9,7 @@
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use jscompat::node_path::host::{basename, dirname, extname, join, resolve};
 use jscompat::{JsObject, JsonValue};
@@ -206,14 +207,6 @@ struct Md {
     images: Rc<RefCell<ImageExportSessions>>,
     /// `conversionSessionPromise`: made once per run; a failure stays, as the rejected promise did
     conversion: RefCell<Option<Result<String, String>>>,
-}
-
-fn random_suffix() -> String {
-    jscompat::random_uuid()
-        .chars()
-        .filter(char::is_ascii_alphanumeric)
-        .take(6)
-        .collect()
 }
 
 impl Md {
@@ -1163,9 +1156,19 @@ pub(super) fn entries(
                 IpcValue::String(h) if !h.is_empty() => h.clone(),
                 _ => return responder.reply(Ok(failure("Empty document"))),
             };
+            // `mkdtemp`'s six random characters, drawn from the same source
+            let shell = Arc::clone(&m.shell);
+            let random_uuid = move || shell.random_uuid();
+            let mkdtemp_suffix = || {
+                random_uuid()
+                    .chars()
+                    .filter(char::is_ascii_alphanumeric)
+                    .take(6)
+                    .collect()
+            };
             let env = ImageExportEnv {
-                random_uuid: &jscompat::random_uuid,
-                mkdtemp_suffix: &random_suffix,
+                random_uuid: &random_uuid,
+                mkdtemp_suffix: &mkdtemp_suffix,
             };
             // Save As › page images: the typed name, numbered per page beside it
             let started = match m.take_save_as(view, "png", field(request, "saveAsTarget")) {
