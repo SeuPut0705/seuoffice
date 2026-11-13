@@ -113,25 +113,29 @@ const CHANGES: Record<string, unknown[]> = {
 
 const MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
 
-/** a written story part's root declares the mark, lists it as ignorable and as preserved */
-function expectMarkDirective(path: string, xml: string) {
-  const root = /<(?!\?|!)[\w.:-]+(?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>/.exec(
-    xml.replace(/<!--[\s\S]*?-->/g, ''),
-  )![0]
-  const attrs = new Map(
-    [...root.matchAll(/([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map((m) => [
-      m[1]!,
-      m[2] ?? m[3] ?? '',
-    ]),
+/**
+ * A written story part's root lists, by namespace, every mark the part holds
+ * as ignorable and as preserved: the lists' prefixes are read where the root
+ * declares them, and each mark element by the namespace it is really in.
+ */
+async function expectMarkDirective(path: string, xml: string) {
+  const { JSDOM } = await import('jsdom')
+  const doc = new new JSDOM('').window.DOMParser().parseFromString(xml, 'application/xml')
+  expect(doc.getElementsByTagName('parsererror').length, `${path}: well-formed`).toBe(0)
+  const root = doc.documentElement
+  const list = (name: string) => (root.getAttributeNS(MC, name) ?? '').split(/\s+/).filter(Boolean)
+  const ignorable = new Set(list('Ignorable').map((prefix) => root.lookupNamespaceURI(prefix)))
+  const preserved = new Set(
+    list('PreserveElements').map((qname) => {
+      const [prefix, local] = qname.split(':')
+      return `${root.lookupNamespaceURI(prefix!)}|${local}`
+    }),
   )
-  const mc = [...attrs].find(([name, value]) => name.startsWith('xmlns:') && value === MC)
-  expect(mc, `${path}: markup compatibility declared`).toBeDefined()
-  const prefix = mc![0].slice('xmlns:'.length)
-  expect(attrs.get('xmlns:go'), `${path}: the mark's namespace`).toBeDefined()
-  expect(attrs.get(`${prefix}:Ignorable`)?.split(/\s+/), `${path}: ignorable`).toContain('go')
-  expect(attrs.get(`${prefix}:PreserveElements`)?.split(/\s+/), `${path}: preserved`).toContain(
-    'go:redact',
-  )
+  const marks = [...doc.getElementsByTagNameNS('*', 'redact')]
+  for (const mark of marks) {
+    expect(ignorable.has(mark.namespaceURI), `${path}: ${mark.namespaceURI} ignorable`).toBe(true)
+    expect(preserved.has(`${mark.namespaceURI}|redact`), `${path}: preserved`).toBe(true)
+  }
 }
 
 const SAVED = TAG_MUTATION_NAMES.flatMap((mutation) => [
@@ -176,8 +180,8 @@ describe.each(SAVED)(
       for (const path of Object.keys(zip.files)) {
         if (!/^word\/[^/]+\.xml$/.test(path)) continue
         const xml = await zip.file(path)!.async('string')
-        if (xml === original.get(path) || !xml.includes('<go:redact')) continue
-        expectMarkDirective(path, xml)
+        if (xml === original.get(path) || !/<(?:[\w.-]+:)?redact\b/.test(xml)) continue
+        await expectMarkDirective(path, xml)
       }
       // and still withheld from every reader
       const read = await run([
