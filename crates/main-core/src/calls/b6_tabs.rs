@@ -1722,7 +1722,10 @@ fn run_op(
         "winState" => {
             let n = o.get("window").and_then(Value::as_u64).unwrap_or(1) as usize;
             // a window destroyed from outside closes, as Electron's does
-            if bool_of(o, "destroyed") == Some(true) && !w.win_state(&Win(n)).destroyed {
+            if bool_of(o, "destroyed") == Some(true)
+                && !w.win_state(&Win(n)).destroyed
+                && bool_of(o, "silent") != Some(true)
+            {
                 w.closed_queue.push(n);
             }
             let win = w.win_state(&Win(n));

@@ -985,8 +985,10 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         }
         case 'winState': {
           const win = winOf(o.window)
-          // a window destroyed from outside closes, as Electron's does
-          if (o.destroyed === true && !win.state.destroyed) closedQueue.push(win)
+          // a window destroyed from outside closes, as Electron's does (`silent`: its
+          // `closed` has not come yet)
+          if (o.destroyed === true && !win.state.destroyed && o.silent !== true)
+            closedQueue.push(win)
           for (const key of ['destroyed', 'minimized', 'focused', 'title'] as const) {
             if (o[key] !== undefined) (win.state as Record<string, unknown>)[key] = o[key]
           }
@@ -1641,6 +1643,18 @@ const layoutCases: Case[] = [
     ],
     {},
     'a degenerate window gives the spare view no bounds',
+  ),
+  scenario(
+    [
+      open('docs'),
+      open('sheets'),
+      { op: 'beginSplit', a: 't1', b: 't2', orientation: 'side', ratio: 0.5, focus: 'a' },
+      act('t2'),
+      S,
+      L,
+    ],
+    {},
+    'activating a pane of a live split drops the pending spare-view timer',
   ),
 ]
 
@@ -2402,6 +2416,25 @@ const unloadedCases: Case[] = [
     {},
     'a failing opener answers none to a lookup and a detach; closing it just drops it',
   ),
+  scenario(
+    [
+      {
+        op: 'hydrate',
+        session: {
+          tabs: [
+            { kind: 'docs', filePath: '/w/a.docx', opener: plain },
+            { kind: 'sheets', filePath: '/w/b.xlsx', opener: plain },
+          ],
+          active: 0,
+          split: { a: 0, b: 1, orientation: 'side', ratio: 0.5, focus: 'b' },
+        },
+      },
+      S,
+      L,
+    ],
+    {},
+    'the front tab of a restored split wins over the remembered focus when it is the first pane',
+  ),
 ]
 
 // ---- closing ----
@@ -2587,6 +2620,19 @@ const closeCases: Case[] = [
     ],
     {},
     'the shell-close guard lists tabs by family and dirty state',
+  ),
+  scenario(
+    [
+      open('hwp', { path: '/w/a.hwp' }),
+      { op: 'state', wc: 100, memo: true },
+      open('hwp', { path: '/w/b.hwp' }),
+      { op: 'state', wc: 101, dirty: true },
+      open('hwp', { path: '/w/c.hwp' }),
+      { op: 'dirtyMemo' },
+      { op: 'dirty', kind: 'hwp' },
+    ],
+    {},
+    'the shell-close guard asks for a hwp tab with an open memo even when it is clean, or with edits and no memo',
   ),
 ]
 
@@ -3254,6 +3300,36 @@ const dockCases: Case[] = [
     {},
     'closing a window that is hovering the strip clears the indicator',
   ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't2' },
+      { op: 'dockHost', on: true },
+      { op: 'band', rect: { x: 100, y: 42, width: 1200, height: 56 } },
+      { op: 'screen', cursor: { x: 400, y: 70 } },
+      { op: 'win', window: 1, event: 'move' },
+      { op: 'screen', cursor: { x: 400, y: 600 } },
+      { op: 'fireTimer', n: 1 },
+      L,
+      { op: 'detachedFilePaths' },
+    ],
+    {},
+    'the dwell timer of the cursor that left the strip clears the hover instead of docking',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't2', tearOffAt: { x: 500, y: 300 } },
+      { op: 'winState', window: 1, destroyed: true, silent: true },
+      { op: 'takeTear' },
+      { op: 'isTearing' },
+      L,
+    ],
+    {},
+    'a torn-off window destroyed before its closed event gives no tab back',
+  ),
 ]
 
 const detachedCloseCases: Case[] = [
@@ -3386,6 +3462,22 @@ const detachedCloseCases: Case[] = [
     ],
     {},
     "a docked window's close handler lets the close through (its view left)",
+  ),
+  scenario(
+    [
+      open('hwp', { path: '/w/a.hwp' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't1' },
+      { op: 'newWindow', tab: 't2' },
+      { op: 'state', wc: 100, memo: true },
+      { op: 'closeDetached', id: 'detached:100' },
+      { op: 'closeDetached', id: 'detached:101' },
+      { op: 'state', wc: 100, memo: false },
+      { op: 'closeDetached', id: 'detached:100' },
+      { op: 'detachedSessionTabs' },
+    ],
+    {},
+    'a promptless close over an open memo editor is refused, then allowed once the memo is closed',
   ),
 ]
 
