@@ -110,5 +110,19 @@
       "files": {}
     },
     "reason": "excerptForNaming cuts at 4,000 UTF-16 units with String.slice, so 3,999 units of y and an emoji leave the first half of the pair at the end. A Rust String cannot hold a lone surrogate; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the model request). The input is valid Unicode; only the slice makes it lone. Final."
+  },
+  {
+    "id": "labels-of-a-prototype-member-language",
+    "fn": "context-menu.contextMenuLabels",
+    "case": 10,
+    "typescript": {
+      "answer": "{}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":{\"cut\":\"Cut\",\"copy\":\"Copy\",\"paste\":\"Paste\",\"selectAll\":\"Select All\",\"viewImage\":\"View Image\",\"copyImage\":\"Copy Image\",\"saveImageAs\":\"Save Image As…\"}}",
+      "files": {}
+    },
+    "reason": "The label tables are plain objects, so LABELS[\"constructor\"] finds Object.prototype.constructor, a function, and contextMenuLabels answers it (JSON writes nothing). The Rust table holds only its languages and falls back to English. No caller passes such a language: the language comes from normalizeLang, which answers one of LANGS. Final."
   }
 ]

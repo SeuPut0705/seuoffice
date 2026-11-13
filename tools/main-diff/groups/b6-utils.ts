@@ -12,6 +12,12 @@
  *   `{ status, headers, body }` or rejects `{ reject: { name, message } }`,
  *   and logs `fetch` with the URL; the save dialog answers `pick` and logs
  *   `showSaveDialog` with `<window>` when it has a parent, and the options.
+ * - context-menu: `installContextMenu` runs as a scenario over a fake app and
+ *   windows: each event is a right-click on a window, the native menu's
+ *   template is logged, and the listed entries are clicked. The Rust plays
+ *   the adapter: it carries out the commands it decides on the same fakes.
+ * - renderer-protocol: the handler the scheme installs answers each request
+ *   URL, logged as `fetch` with the file URL or `404`.
  */
 import { createHash } from 'node:crypto'
 import { useElectron } from '../electron-fake.ts'
@@ -23,6 +29,8 @@ import type { SaveDiskState as DiskState } from '../../../packages/electron-util
 // would resolve 'electron' before them
 const conflict = await import('../../../packages/electron-utils/src/save-conflict.ts')
 const image = await import('../../../packages/electron-utils/src/save-image.ts')
+const menu = await import('../../../packages/electron-utils/src/context-menu.ts')
+const rendererProtocol = await import('../../../packages/electron-utils/src/renderer-protocol.ts')
 
 const cases = (...lists: unknown[][]): Case[] => lists.map((args): Case => ({ args }))
 const sha = (text: string): string => createHash('sha256').update(text).digest('hex')
@@ -408,14 +416,15 @@ const saveImageCases: Case[] = [
   imageCase({ url: 'https://example.com/%EC%82%AC%EC%A7%84.jpeg' }, 'a decoded name'),
 ]
 
-function imageFakes(o: ImageSpec, cx: TsContext): void {
+/** the `net` and `dialog` of a save-image spec */
+function imageElectron(o: ImageSpec, cx: TsContext): Record<string, unknown> {
   const pick = o.pick
   const record = (name: string, args: unknown[]): void => {
     const [first, second] = args
     if (args.length === 2) cx.log(name, '<window>', second)
     else cx.log(name, first)
   }
-  useElectron({
+  return {
     net: {
       fetch: async (url: string) => {
         cx.log('fetch', url)
@@ -443,7 +452,7 @@ function imageFakes(o: ImageSpec, cx: TsContext): void {
         return pick
       },
     },
-  })
+  }
 }
 
 const saveImage: Group = {
@@ -465,7 +474,7 @@ const saveImage: Group = {
   'save-image.saveImageFromUrl': {
     ts: (a, cx) => {
       const o = a[0] as ImageSpec
-      imageFakes(o, cx)
+      useElectron(imageElectron(o, cx))
       return image.saveImageFromUrl(fakeParent(o.parent) as never, o.url, {
         title: o.title,
         ...(o.fallbackDir === undefined ? {} : { fallbackDir: o.fallbackDir }),
@@ -475,4 +484,338 @@ const saveImage: Group = {
   },
 }
 
-export const group: Group = { ...saveConflict, ...saveImage }
+// ---------------------------------------------------------------------------
+// context-menu
+// ---------------------------------------------------------------------------
+
+const FLAGS_ALL = { canCut: true, canCopy: true, canPaste: true, canSelectAll: true }
+const FLAGS_SOME = { canCut: false, canCopy: true, canPaste: false, canSelectAll: true }
+
+interface Params {
+  isEditable: boolean
+  selectionText: string
+  misspelledWord: string
+  dictionarySuggestions: string[]
+  editFlags: typeof FLAGS_ALL
+  mediaType?: string
+  srcURL?: string
+  x?: number
+  y?: number
+}
+
+const params = (o: Partial<Params>): Params => ({
+  isEditable: false,
+  selectionText: '',
+  misspelledWord: '',
+  dictionarySuggestions: [],
+  editFlags: FLAGS_ALL,
+  ...o,
+})
+
+const PARAMS: Params[] = [
+  params({}),
+  params({ selectionText: 'hello' }),
+  params({ selectionText: ' \t\n' }),
+  params({ selectionText: '\ufeff' }),
+  params({ selectionText: '\u0085' }),
+  params({ selectionText: 'x', editFlags: FLAGS_SOME }),
+  params({ isEditable: true }),
+  params({ isEditable: true, editFlags: FLAGS_SOME }),
+  params({ isEditable: true, misspelledWord: 'teh', dictionarySuggestions: ['the', 'tea'] }),
+  params({ isEditable: true, misspelledWord: 'teh', dictionarySuggestions: [] }),
+  params({ isEditable: true, misspelledWord: '', dictionarySuggestions: ['the'] }),
+  params({ mediaType: 'image', srcURL: 'https://example.com/a.png' }),
+  params({ mediaType: 'image', srcURL: '' }),
+  params({ mediaType: 'image' }),
+  params({ mediaType: 'video', srcURL: 'https://example.com/a.mp4' }),
+  params({ mediaType: 'image', srcURL: 'https://example.com/a.png', selectionText: 'cap' }),
+  params({ mediaType: 'image', srcURL: 'data:image/png;base64,AAAA', isEditable: true }),
+]
+
+const LANGS = ['en', 'ko', 'ko-KR', 'en-US', 'fr', 'fr-CA', '', '-', 'ko-', 'KO', 'constructor']
+
+/** a window's interceptor: claims the right-click ("own"), passes ("native") or throws */
+function interceptorOf(how: string, cx: TsContext) {
+  return async (contents: { id: number }): Promise<boolean> => {
+    cx.log('intercept', contents.id)
+    if (how === 'throws') throw new Error('interceptor failed')
+    return how === 'own'
+  }
+}
+
+interface MenuEvent {
+  contents: number
+  params: Params
+  clicks?: number[]
+}
+
+interface MenuScenario {
+  lang: string
+  interceptors?: Record<string, string>
+  events: MenuEvent[]
+  image?: Partial<ImageSpec>
+}
+
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 20; i++) await new Promise((resolve) => setImmediate(resolve))
+}
+
+async function runMenuScenario(o: MenuScenario, cx: TsContext): Promise<void> {
+  type Listener = (...args: unknown[]) => unknown
+  const appListeners: Record<string, Listener> = {}
+  const app = {
+    on(event: string, listener: Listener) {
+      cx.log('on', event)
+      appListeners[event] = listener
+    },
+  }
+  let template: { click?: () => unknown }[] = []
+  const imageFakes = imageElectron(
+    {
+      parent: 'live',
+      url: '',
+      title: '',
+      fetch: { status: 200, headers: { 'content-type': 'image/png' }, body: PNG },
+      pick: { canceled: false, filePath: '$DIR/out.png' },
+      ...o.image,
+    } as ImageSpec,
+    cx,
+  )
+  useElectron({
+    ...imageFakes,
+    Menu: {
+      buildFromTemplate(given: { click?: () => unknown }[]) {
+        template = given
+        cx.log('buildFromTemplate', JSON.parse(JSON.stringify(given)))
+        return { popup: () => cx.log('popup') }
+      },
+    },
+    BrowserWindow: {
+      fromWebContents(contents: { id: number }) {
+        cx.log('fromWebContents', contents.id)
+        return { isDestroyed: () => false }
+      },
+    },
+  })
+  menu.installContextMenu(app as never, () => menu.contextMenuLabels(o.lang))
+  for (const [id, how] of Object.entries(o.interceptors ?? {})) {
+    menu.setContextMenuInterceptor(
+      app as never,
+      { id: Number(id) } as never,
+      interceptorOf(how, cx) as never,
+    )
+  }
+  for (const event of o.events) {
+    const listeners: Record<string, Listener> = {}
+    const contents = {
+      id: event.contents,
+      on: (name: string, listener: Listener) => {
+        listeners[name] = listener
+      },
+      replaceMisspelling: (word: string) => cx.log('replaceMisspelling', word),
+      send: (channel: string, ...rest: unknown[]) => cx.log('send', channel, ...rest),
+      copyImageAt: (x: number, y: number) => cx.log('copyImageAt', x, y),
+      cut: () => cx.log('cut'),
+      copy: () => cx.log('copy'),
+      paste: () => cx.log('paste'),
+      selectAll: () => cx.log('selectAll'),
+    }
+    template = []
+    appListeners['web-contents-created']?.({}, contents)
+    await listeners['context-menu']?.({}, event.params)
+    await settle()
+    for (const i of event.clicks ?? []) await template[i]?.click?.()
+  }
+}
+
+const IMAGE_PARAMS = params({
+  mediaType: 'image',
+  srcURL: 'https://example.com/photo.png',
+  x: 12,
+  y: 34.5,
+  isEditable: true,
+  misspelledWord: 'teh',
+  dictionarySuggestions: ['the'],
+})
+
+const menuScenarios: Case[] = [
+  {
+    args: [
+      {
+        lang: 'en',
+        events: [{ contents: 1, params: IMAGE_PARAMS, clicks: [0, 1, 2, 3, 5, 6, 7, 9] }],
+      },
+    ],
+    note: 'every entry of an editable image clicked',
+  },
+  {
+    args: [{ lang: 'ko', events: [{ contents: 1, params: IMAGE_PARAMS, clicks: [4, 8] }] }],
+    note: 'separators do nothing',
+  },
+  {
+    args: [{ lang: 'en', events: [{ contents: 2, params: params({}) }] }],
+    note: 'nothing to offer: no menu',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        interceptors: { '1': 'own', '2': 'native', '3': 'throws' },
+        events: [1, 2, 3, 4].map((contents) => ({
+          contents,
+          params: params({ selectionText: 'x' }),
+          clicks: [0],
+        })),
+      },
+    ],
+    note: 'an interceptor that claims, passes, throws, and none',
+  },
+  {
+    args: [
+      {
+        lang: 'fr',
+        events: [
+          {
+            contents: 1,
+            params: params({ mediaType: 'image', srcURL: 'data:image/png;base64,iVBORw0KGgo=' }),
+            clicks: [2],
+          },
+        ],
+      },
+    ],
+    note: 'saving a data URL picture',
+  },
+  {
+    args: [
+      {
+        lang: 'ko',
+        events: [{ contents: 1, params: IMAGE_PARAMS, clicks: [2] }],
+        image: { pick: { canceled: true, filePath: '' } },
+      },
+    ],
+    note: 'saving, canceled',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        events: [{ contents: 1, params: IMAGE_PARAMS, clicks: [2] }],
+        image: { fetch: { reject: { name: 'TypeError', message: 'fetch failed' } } },
+      },
+    ],
+    note: 'saving, the download fails',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        events: [
+          {
+            contents: 7,
+            params: params({ mediaType: 'image', srcURL: 'https://example.com/a.png' }),
+            clicks: [0, 0],
+          },
+        ],
+      },
+    ],
+    note: 'view image twice',
+  },
+]
+
+const contextMenu: Group = {
+  'context-menu.VIEW_IMAGE_CHANNEL': {
+    ts: () => menu.VIEW_IMAGE_CHANNEL,
+    cases: [{ args: [] }],
+    single: 'a constant',
+  },
+  'context-menu.baseLang': {
+    ts: (a) => menu.baseLang(a[0] as string),
+    cases: cases(...LANGS.map((lang) => [lang]), ['a-b-c']),
+  },
+  'context-menu.contextMenuLabels': {
+    ts: (a) => menu.contextMenuLabels(a[0] as string),
+    cases: cases(...LANGS.map((lang) => [lang])),
+  },
+  'context-menu.buildContextMenuItems': {
+    ts: (a) => menu.buildContextMenuItems(a[0] as never, menu.contextMenuLabels(a[1] as string)),
+    cases: [
+      ...PARAMS.map((p): Case => ({ args: [p, 'en'] })),
+      ...PARAMS.map((p): Case => ({ args: [p, 'ko'] })),
+    ],
+  },
+  'context-menu.installContextMenu': {
+    ts: (a, cx) => runMenuScenario(a[0] as MenuScenario, cx),
+    cases: menuScenarios,
+  },
+}
+
+// ---------------------------------------------------------------------------
+// renderer-protocol
+// ---------------------------------------------------------------------------
+
+const rendererProtocolGroup: Group = {
+  'renderer-protocol.registerRendererScheme': {
+    ts: () => {
+      let given: unknown
+      useElectron({ protocol: { registerSchemesAsPrivileged: (list: unknown) => (given = list) } })
+      rendererProtocol.registerRendererScheme()
+      return given
+    },
+    cases: [{ args: [] }],
+    single: 'a constant',
+  },
+  'renderer-protocol.installRendererProtocol': {
+    ts: async (a, cx) => {
+      let handler: ((request: { url: string }) => Promise<Response> | Response) | undefined
+      useElectron({
+        protocol: {
+          handle: (_scheme: string, given: typeof handler) => {
+            handler = given
+          },
+        },
+        net: {
+          fetch: async (url: string) => {
+            cx.log('fetch', url)
+            return new Response('ok')
+          },
+        },
+      })
+      rendererProtocol.installRendererProtocol(a[0] as Record<string, string>)
+      for (const url of a[1] as string[]) {
+        const res = await handler!({ url })
+        if (res.status === 404) cx.log('404')
+      }
+    },
+    cases: [
+      {
+        args: [
+          { docs: '$DIR/docs', sheets: '$DIR/sheets/', '1': '$DIR/one' },
+          [
+            'genoffice-app://docs/index.html',
+            'genoffice-app://sheets/assets/a%20b.js',
+            'genoffice-app://docs/',
+            'genoffice-app://docs/../secret',
+            'genoffice-app://docs/%2e%2e/secret',
+            'genoffice-app://docs/a%5c..%5c..%5cx',
+            'genoffice-app://unknown/index.html',
+            'genoffice-app://1/x.js',
+            'genoffice-app://docs/%E0%A4%A',
+            'genoffice-app://docs/a%00b',
+            'genoffice-app://DOCS/index.html',
+            'not a url',
+            'genoffice-app://docs/\uc0ac\uc9c4.png',
+          ],
+        ],
+      },
+      { args: [{}, ['genoffice-app://docs/index.html']], note: 'no roots' },
+      { args: [{ docs: '' }, ['genoffice-app://docs/index.html']], note: 'an empty root' },
+    ],
+  },
+}
+
+export const group: Group = {
+  ...saveConflict,
+  ...saveImage,
+  ...contextMenu,
+  ...rendererProtocolGroup,
+}

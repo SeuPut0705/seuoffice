@@ -1,7 +1,9 @@
 //! The functions of group `b6-utils` (tools/main-diff/groups/b6-utils.ts):
 //! the modules of `packages/electron-utils` that call Electron (batch B6 of
 //! decision 0030). What they call is a fake the spec describes; each call of
-//! a fake is one `logs` line, and the TypeScript writes the same lines.
+//! a fake is one `logs` line, and the TypeScript writes the same lines. A
+//! scenario plays the part of the Electron adapter: it carries out what the
+//! Rust decides (the menu to pop up, the command of a click) on the fakes.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,15 +13,23 @@ use serde_json::Value;
 
 use super::fakes::{FakeDialog, FakeWindow, fake_parent};
 use super::{Answer, CallError, Context, arg, str_arg};
+use crate::packages::electron_utils::context_menu::{
+    ContextMenuInterceptors, ContextMenuParams, EditFlags, MenuCommand, MenuEntry,
+    VIEW_IMAGE_CHANNEL, after_interceptor, base_lang, build_context_menu_items,
+    context_menu_labels, context_menu_template,
+};
 use crate::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
 use crate::packages::electron_utils::remote_image::MemoryResponse;
+use crate::packages::electron_utils::renderer_protocol::{
+    RendererProtocolAnswer, renderer_protocol_answer, renderer_scheme_privileges,
+};
 use crate::packages::electron_utils::safe_remote_url::Response;
 use crate::packages::electron_utils::save_conflict::{
     ProbeThrew, SaveConflictOptions, SaveDiskState, confirm_overwrite_if_conflicted,
     is_modified_since, is_path_open_elsewhere, record_disk_state, should_defer_auto_save,
 };
 use crate::packages::electron_utils::save_image::{
-    SaveImageOptions, decode_data_url, is_savable_image_url, save_image_from_url,
+    SaveImageOptions, SaveImageResult, decode_data_url, is_savable_image_url, save_image_from_url,
     suggest_image_file_name,
 };
 
@@ -78,6 +88,25 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             }))
         }),
         "save-image.saveImageFromUrl" => save_image_call(args, cx),
+
+        // ---- context-menu ----
+        "context-menu.VIEW_IMAGE_CHANNEL" => Ok(Some(Value::from(VIEW_IMAGE_CHANNEL))),
+        "context-menu.baseLang" => str_arg(args, 0).map(|lang| Some(Value::from(base_lang(lang)))),
+        "context-menu.contextMenuLabels" => {
+            str_arg(args, 0).map(|lang| Some(to_value(&context_menu_labels(lang))))
+        }
+        "context-menu.buildContextMenuItems" => (|| {
+            let params = menu_params(arg(args, 0).unwrap_or(&Value::Null));
+            let labels = context_menu_labels(str_arg(args, 1)?);
+            Ok(Some(to_value(&build_context_menu_items(&params, &labels))))
+        })(),
+        "context-menu.installContextMenu" => context_menu_call(args, cx),
+
+        // ---- renderer-protocol ----
+        "renderer-protocol.registerRendererScheme" => {
+            Ok(Some(to_value(&renderer_scheme_privileges())))
+        }
+        "renderer-protocol.installRendererProtocol" => renderer_protocol_call(args, cx),
         _ => return None,
     })
 }
@@ -215,12 +244,33 @@ impl FileDialog {
 fn save_image_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).ok_or_else(|| CallError::plain("options"))?;
     let log = Rc::new(RefCell::new(Vec::new()));
+    let result = run_save_image(
+        spec,
+        &log,
+        fake_parent(spec).as_ref(),
+        spec.get("url").and_then(Value::as_str).unwrap_or_default(),
+        spec.get("title")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+    );
+    cx.logs.extend(log.take());
+    Ok(Some(to_value(&result)))
+}
+
+/// `saveImageFromUrl` over the fakes `fetch` and `pick` of `spec` describe
+fn run_save_image(
+    spec: &Value,
+    log: &Log,
+    parent: Option<&FakeWindow>,
+    url: &str,
+    title: &str,
+) -> SaveImageResult {
     let mut dialog = FileDialog {
-        log: Rc::clone(&log),
+        log: Rc::clone(log),
         pick: spec.get("pick").cloned().unwrap_or(Value::Null),
     };
     let fetch_spec = spec.get("fetch").cloned().unwrap_or(Value::Null);
-    let fetch_log = Rc::clone(&log);
+    let fetch_log = Rc::clone(log);
     let mut fetch = move |url: &str| -> Result<Box<dyn Response>, String> {
         fetch_log
             .borrow_mut()
@@ -245,22 +295,220 @@ fn save_image_call(args: &[Value], cx: &mut Context) -> Answer {
         let body = unhex(fetch_spec.get("body").and_then(Value::as_str).unwrap_or(""));
         Ok(Box::new(MemoryResponse::new(status, headers, body)))
     };
-    let parent = fake_parent(spec);
     let mut memory = DialogMemory::new();
-    let result = save_image_from_url(
+    save_image_from_url(
         &mut memory,
         &mut dialog,
         &mut fetch,
-        parent.as_ref(),
-        spec.get("url").and_then(Value::as_str).unwrap_or_default(),
+        parent,
+        url,
         &SaveImageOptions {
-            title: spec
-                .get("title")
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
+            title,
             fallback_dir: spec.get("fallbackDir").and_then(Value::as_str),
         },
+    )
+}
+
+type Log = Rc<RefCell<Vec<Vec<Value>>>>;
+
+fn log_line(log: &Log, line: Vec<Value>) {
+    log.borrow_mut().push(line);
+}
+
+// ---- context-menu ----
+
+/// `ContextMenuParams` from the spec's JSON (camelCase, as Electron names them)
+fn menu_params(spec: &Value) -> ContextMenuParams {
+    let text = |key: &str| {
+        spec.get(key)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_owned()
+    };
+    let flag = |key: &str| {
+        spec.get("editFlags")
+            .and_then(|f| f.get(key))
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+    };
+    ContextMenuParams {
+        is_editable: spec
+            .get("isEditable")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        selection_text: text("selectionText"),
+        misspelled_word: text("misspelledWord"),
+        dictionary_suggestions: spec
+            .get("dictionarySuggestions")
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .map(|w| w.as_str().unwrap_or("").to_owned())
+                    .collect()
+            })
+            .unwrap_or_default(),
+        edit_flags: EditFlags {
+            can_cut: flag("canCut"),
+            can_copy: flag("canCopy"),
+            can_paste: flag("canPaste"),
+            can_select_all: flag("canSelectAll"),
+        },
+        media_type: spec
+            .get("mediaType")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        src_url: spec
+            .get("srcURL")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        x: spec.get("x").and_then(Value::as_f64).unwrap_or(0.0),
+        y: spec.get("y").and_then(Value::as_f64).unwrap_or(0.0),
+    }
+}
+
+/// the template as `JSON.stringify` writes it: the clicks are functions
+fn template_json(template: &[MenuEntry]) -> Value {
+    Value::Array(
+        template
+            .iter()
+            .map(|entry| match entry {
+                MenuEntry::Separator => serde_json::json!({ "type": "separator" }),
+                MenuEntry::Item { label, enabled, .. } => {
+                    let mut o = serde_json::Map::new();
+                    o.insert("label".into(), Value::from(label.as_str()));
+                    if let Some(enabled) = enabled {
+                        o.insert("enabled".into(), Value::Bool(*enabled));
+                    }
+                    Value::Object(o)
+                }
+            })
+            .collect(),
+    )
+}
+
+/// `[{ lang, interceptors: { [id]: "own" | "native" | "throws" },
+/// events: [{ contents, params, clicks }], image }]`: the app's
+/// `web-contents-created` and each window's `context-menu`, as a scenario.
+/// The fake app logs `["on", event]`, an interceptor `["intercept", id]`,
+/// `Menu` `["buildFromTemplate", template]` and `["popup"]`, a window each
+/// method it is called with; a "Save Image As" runs over the fakes of `image`
+/// (as for `saveImageFromUrl`), after `["fromWebContents", id]`.
+fn context_menu_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| CallError::plain("options"))?;
+    let log: Log = Rc::new(RefCell::new(Vec::new()));
+    let labels = context_menu_labels(spec.get("lang").and_then(Value::as_str).unwrap_or(""));
+    log_line(
+        &log,
+        vec![Value::from("on"), Value::from("web-contents-created")],
     );
+    let mut interceptors = ContextMenuInterceptors::default();
+    if let Some(table) = spec.get("interceptors").and_then(Value::as_object) {
+        for (id, how) in table {
+            let id: u64 = id.parse().map_err(|_| CallError::plain("interceptor id"))?;
+            interceptors.set(id, how.as_str().map(str::to_owned));
+        }
+    }
+    let image = spec.get("image").cloned().unwrap_or(Value::Null);
+    for event in spec
+        .get("events")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let id = event.get("contents").and_then(Value::as_u64).unwrap_or(0);
+        let params = menu_params(event.get("params").unwrap_or(&Value::Null));
+        let answer = interceptors.get(id).map(|how| {
+            log_line(&log, vec![Value::from("intercept"), Value::from(id)]);
+            match how.as_str() {
+                "own" => Ok(true),
+                "throws" => Err(()),
+                _ => Ok(false),
+            }
+        });
+        if !after_interceptor(answer) {
+            continue;
+        }
+        let template = context_menu_template(&params, &labels);
+        if template.is_empty() {
+            continue;
+        }
+        log_line(
+            &log,
+            vec![Value::from("buildFromTemplate"), template_json(&template)],
+        );
+        log_line(&log, vec![Value::from("popup")]);
+        for click in event
+            .get("clicks")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let Some(MenuEntry::Item { click, .. }) =
+                click.as_u64().and_then(|i| template.get(i as usize))
+            else {
+                continue;
+            };
+            match click {
+                MenuCommand::ReplaceMisspelling(word) => log_line(
+                    &log,
+                    vec![
+                        Value::from("replaceMisspelling"),
+                        Value::from(word.as_str()),
+                    ],
+                ),
+                MenuCommand::ViewImage(src) => log_line(
+                    &log,
+                    vec![
+                        Value::from("send"),
+                        Value::from(VIEW_IMAGE_CHANNEL),
+                        src.as_deref().map_or(Value::Null, Value::from),
+                    ],
+                ),
+                MenuCommand::CopyImageAt { x, y } => {
+                    log_line(&log, vec![Value::from("copyImageAt"), num(*x), num(*y)])
+                }
+                MenuCommand::Edit(action) => log_line(&log, vec![Value::from(action.name())]),
+                MenuCommand::SaveImageAs { src_url, title } => {
+                    log_line(&log, vec![Value::from("fromWebContents"), Value::from(id)]);
+                    let window = FakeWindow { destroyed: false };
+                    run_save_image(
+                        &image,
+                        &log,
+                        Some(&window),
+                        src_url.as_deref().unwrap_or(""),
+                        title,
+                    );
+                }
+            }
+        }
+    }
     cx.logs.extend(log.take());
-    Ok(Some(to_value(&result)))
+    Ok(None)
+}
+
+fn num(x: f64) -> Value {
+    serde_json::Number::from_f64(x).map_or(Value::Null, Value::Number)
+}
+
+// ---- renderer-protocol ----
+
+/// `[roots, [url...]]`: the handler's answer for each request URL, logged as
+/// `["fetch", fileUrl]` or `["404"]`
+fn renderer_protocol_call(args: &[Value], cx: &mut Context) -> Answer {
+    let roots: Vec<(String, String)> = arg(args, 0)
+        .and_then(Value::as_object)
+        .map(|o| {
+            o.iter()
+                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_owned()))
+                .collect()
+        })
+        .unwrap_or_default();
+    for url in arg(args, 1).and_then(Value::as_array).into_iter().flatten() {
+        let url = url.as_str().unwrap_or("");
+        cx.logs.push(match renderer_protocol_answer(&roots, url) {
+            RendererProtocolAnswer::NotFound => vec![Value::from("404")],
+            RendererProtocolAnswer::Fetch(file) => vec![Value::from("fetch"), Value::from(file)],
+        });
+    }
+    Ok(None)
 }
