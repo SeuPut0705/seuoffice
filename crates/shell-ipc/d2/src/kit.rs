@@ -414,9 +414,11 @@ pub(crate) fn on_worker<R: Send + 'static>(
     }));
 }
 
+/// The view-destroyed hooks still alive, by registration
+type DestroyHooks = HashMap<u64, Weak<dyn Fn(ViewId)>>;
+
 thread_local! {
-    /// what each per-view state drops when its view ends, by registration
-    static ON_DESTROYED: RefCell<HashMap<u64, Weak<dyn Fn(ViewId)>>> = RefCell::new(HashMap::new());
+    static ON_DESTROYED: RefCell<DestroyHooks> = RefCell::new(HashMap::new());
 }
 
 fn next_id() -> u64 {

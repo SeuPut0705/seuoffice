@@ -292,9 +292,11 @@ impl MainWindow for Shared {
     }
 }
 
+/// The fake clock: now, and the timers due at each time
+type Clock = (Duration, BTreeMap<(Duration, u64), ()>);
+
 thread_local! {
-    /// the fake clock: now, and the timers due at each time
-    static CLOCK: RefCell<(Duration, BTreeMap<(Duration, u64), ()>)> = RefCell::new(Default::default());
+    static CLOCK: RefCell<Clock> = RefCell::new(Default::default());
 }
 
 pub(crate) fn schedule(delay: Duration, id: u64) {
