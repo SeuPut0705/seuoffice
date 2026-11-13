@@ -126,6 +126,10 @@ export const OVERRIDES: Record<string, Override> = {
     reject:
       'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)',
   },
+  findStartTag: {
+    reject:
+      'takes a RegExp (a host object) and answers UTF-16 offsets; the Rust port matches by name and answers UTF-8 offsets for the engine',
+  },
   xmlSegments: {
     reject:
       'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ',

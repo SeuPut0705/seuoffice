@@ -21561,7 +21561,8 @@
         "ret": "Option<StartTag<'t>>",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "takes a RegExp (a host object) and answers UTF-16 offsets; the Rust port matches by name and answers UTF-8 offsets for the engine"
     },
     {
       "module": "xml-tag",

@@ -264,7 +264,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "fieldDisplayOf" => r_field_display_of(env, args),
         "findChartWorkbookPath" => routes::find_chart_workbook_path(env, &args.resolved()?),
         "findInkRuns" => r_find_ink_runs(env, args),
-        "findStartTag" => r_find_start_tag(env, args),
         "formatNumber" => r_format_number(env, args),
         "generateCaptionXml" => r_generate_caption_xml(env, args),
         "generateIndexFieldXml" => r_generate_index_field_xml(env, args),
@@ -893,14 +892,6 @@ fn r_field_display_of(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_find_ink_runs(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::ink::find_ink_runs(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_find_start_tag(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let p1: docx_engine::xml_tag::TagName = req(args, 1)?;
-    let p2: usize = req(args, 2)?;
-    let r = docx_engine::xml_tag::find_start_tag(p0, p1, p2);
     Ok(Some(to_json(&r)?))
 }
 
