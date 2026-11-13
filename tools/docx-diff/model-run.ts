@@ -11,7 +11,7 @@ import { atFloor, Comparison, failGate, repoRoot, toolDir } from './harness'
 import { ModelCoverage } from './model-observe'
 import { PROPS_TEXTS } from './props-synthetic'
 import { readTestInputs } from './model-test-inputs'
-import { STORIES } from './withheld-inputs'
+import { PICTURE_STORIES_DOCS, STORIES } from './withheld-inputs'
 import { modelJson, type ModelInput } from './model-wire'
 
 const corpus = new Comparison('(h) typed model, corpus documents', 'modelCorpus')
@@ -58,6 +58,14 @@ export async function modelAfterCorpus(): Promise<void> {
   }
   // hidden from AI: the documents of hidden-stories.ts, every spelling of the mark and every tag mutation
   for (const story of STORIES) {
+    const where = `hidden stories ${story.name}`
+    let doc: unknown
+    try { doc = await parseDocx(story.docx) }
+    catch (error) { refusals.push({ where, error: String(error) }); continue }
+    check({ where, population: 'built', type: 'ParsedDocFull', json: modelJson(doc) }, built)
+  }
+  // the pictures in marked runs: the block that holds one carries the mark, as does a chart part with one
+  for (const story of PICTURE_STORIES_DOCS) {
     const where = `hidden stories ${story.name}`
     let doc: unknown
     try { doc = await parseDocx(story.docx) }

@@ -3,11 +3,13 @@
 //! `npx tsx` script calling withheld.ts, comment-slices.ts, text-patch.ts and
 //! notes.ts of tools/docx-diff/reference.
 
+use std::borrow::Cow;
+
 use docx_engine::notes::{NoteKind, note_model_text, parse_notes_xml};
 use docx_engine::save::parts::text_patch::patch_paragraph_texts;
 use docx_engine::withheld::{
     comment_entries, first_mark_label, over_withheld, over_withheld_model_text, parse_entry,
-    placeholder_source, runs_text, with_redact_namespace, withheld_label_of, withheld_node,
+    placeholder_source, runs_text, with_redact_root, withheld_label_of, withheld_node,
     withheld_text,
 };
 use serde_json::json;
@@ -67,22 +69,172 @@ fn an_entry_written_anew_is_hidden_under_the_first_label() {
 }
 
 #[test]
-fn a_part_root_declares_the_mark_and_ignores_it() {
-    let read = |xml: &str| with_redact_namespace(xml, "w:comments").unwrap();
-    assert_eq!(
-        read(r#"<w:comments xmlns:w="w"><go:redact/></w:comments>"#),
-        r#"<w:comments mc:Ignorable="go" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:go="https://genspark.ai/genoffice/redaction/2026" xmlns:w="w"><go:redact/></w:comments>"#
-    );
-    assert_eq!(
-        read(
-            r#"<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14 $&"><go:redact/></w:comments>"#
+fn a_part_root_declares_the_mark_ignores_it_and_preserves_it() {
+    // each output is what withRedactRoot of tools/docx-diff/reference/withheld.ts returned
+    let cases: [(&str, Option<&str>); 28] = [
+        (
+            "<w:comments xmlns:w=\"w\"><w:comment><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr></w:r></w:p></w:comment></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><w:comment><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr></w:r></w:p></w:comment></w:comments>",
+            ),
         ),
-        r#"<w:comments xmlns:go="https://genspark.ai/genoffice/redaction/2026" xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14 mc:Ignorable="w14 $&" go"><go:redact/></w:comments>"#
-    );
-    // another binding of the prefix is left as it is
-    let other = r#"<w:comments xmlns:go="other"><go:redact/></w:comments>"#;
-    assert_eq!(read(other), other);
-    assert!(with_redact_namespace("<w:(", "w:(").is_err());
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"mc\" mc:Ignorable=\"w14\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mce:PreserveElements=\"go:redact\" mce:Ignorable=\"go\" xmlns:mce=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:mc=\"mc\" mc:Ignorable=\"w14\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" mc:Ignorable=\"gox go2 xgo\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" mc:Ignorable=\"gox go2 xgo go\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"x\" xmlns:mce=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mce:PreserveElements=\"go:redact\" mce:Ignorable=\"go\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:mc=\"x\" xmlns:mce=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:m=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments m:PreserveElements=\"go:redact\" m:Ignorable=\"go\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:m=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"http&#58;//schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:mc=\"http&#58;//schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14 go\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" w:label=\"x\"/></w:rPr></w:r></w:p></w:comment></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go1:redact\" mc:Ignorable=\"go1\" xmlns:go1=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" w:label=\"x\"/></w:rPr></w:r></w:p></w:comment></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\"><go:redact/><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            Some(
+                "<w:comments xmlns:go1=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" mc:PreserveElements=\"go:redact go1:redact\" mc:Ignorable=\"go go1\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><go:redact/><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go1:redact go:redact\" mc:Ignorable=\"go1 go\" xmlns:go1=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" mc:Ignorable=\"go\" mc:PreserveElements=\"go:redact\"><go:redact/></w:comments>",
+            None,
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" mc:Ignorable=\"w14\u{a0}go\" mc:PreserveElements=\"\tw:x\n  go:redact \"><go:redact/></w:comments>",
+            None,
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"https&#58;//genspark.ai/genoffice/redaction/2026\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\" xmlns:go=\"https&#58;//genspark.ai/genoffice/redaction/2026\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"https&#x3A;//genspark.ai/genoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"go\" mc:PreserveElements=\"go:redact\"><go:redact/></w:comments>",
+            None,
+        ),
+        (
+            "<w:comments xmlns:w=\"w\"><gx:redact xmlns:gx=\"https&#58;//github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go1:redact\" mc:Ignorable=\"go1\" xmlns:go1=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\"><gx:redact xmlns:gx=\"https&#58;//github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"another\" xmlns:go1=\"other\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go2:redact\" mc:Ignorable=\"go2\" xmlns:go2=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\" xmlns:go=\"another\" xmlns:go1=\"other\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:go=\"another\" xmlns:go1=\"other\" xmlns:go2=\"more\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/><redact xmlns=\"https://genspark.ai/genoffice/redaction/2026\"/></w:comments>",
+            Some(
+                "<w:comments xmlns:go4=\"https://genspark.ai/genoffice/redaction/2026\" mc:PreserveElements=\"go3:redact go4:redact\" mc:Ignorable=\"go3 go4\" xmlns:go3=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w=\"w\" xmlns:go=\"another\" xmlns:go1=\"other\" xmlns:go2=\"more\"><gx:redact xmlns:gx=\"https://github.com/SeuPut0705/seuoffice/redaction/2026\"/><redact xmlns=\"https://genspark.ai/genoffice/redaction/2026\"/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w='w' xmlns:mc='http://schemas.openxmlformats.org/markup-compatibility/2006' xmlns:go='https://genspark.ai/genoffice/redaction/2026' mc:Ignorable='go' mc:PreserveElements='w:x'><go:redact/></w:comments>",
+            Some(
+                "<w:comments xmlns:w='w' xmlns:mc='http://schemas.openxmlformats.org/markup-compatibility/2006' xmlns:go='https://genspark.ai/genoffice/redaction/2026' mc:Ignorable='go' mc:PreserveElements='w:x go:redact'><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w = \"w\" xmlns:mc\n=\n'http://schemas.openxmlformats.org/markup-compatibility/2006' mc:Ignorable\t=  \"w14\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w = \"w\" xmlns:mc\n=\n'http://schemas.openxmlformats.org/markup-compatibility/2006' mc:Ignorable\t=  \"w14 go\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\" mc:Ignorable=\"w15\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\" mc:Ignorable=\"w15 go\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:hdr xmlns:w=\"w\"><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>",
+            Some(
+                "<w:hdr mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>",
+            ),
+        ),
+        (
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\"><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:ftr>",
+            Some(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr mc:PreserveElements=\"go:redact\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14 go\"><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:ftr>",
+            ),
+        ),
+        (
+            "<w:document xmlns:w=\"w\"><w:body><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:body></w:document>",
+            Some(
+                "<w:document mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><w:body><w:p><w:r><w:rPr><go:redact w:label=\"x\"/></w:rPr><w:t>a</w:t></w:r></w:p></w:body></w:document>",
+            ),
+        ),
+        (
+            "<!-- <w:fake xmlns:mc=\"y\"> --><?pi <w:fake2 xmlns:mc=\"y\"> ?><w:comments xmlns:w=\"w\"><go:redact/></w:comments>",
+            Some(
+                "<!-- <w:fake xmlns:mc=\"y\"> --><?pi <w:fake2 xmlns:mc=\"y\"> ?><w:comments mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<!DOCTYPE x [ <!ENTITY a \"b\"> ]><w:comments xmlns:w=\"w\"><go:redact/></w:comments>",
+            Some(
+                "<!DOCTYPE x [ <!ENTITY a \"b\"> ]><w:comments mc:PreserveElements=\"go:redact\" mc:Ignorable=\"go\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" xmlns:w=\"w\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments w:x=\"\u{e9}\u{1f600}>\" xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\"><go:redact/></w:comments>",
+            Some(
+                "<w:comments mc:PreserveElements=\"go:redact\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" w:x=\"\u{e9}\u{1f600}>\" xmlns:w=\"w\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14 go\"><go:redact/></w:comments>",
+            ),
+        ),
+        (
+            "<w:comments xmlns:go=\"another\"><go:redact/></w:comments>",
+            None,
+        ),
+        ("<w:comments xmlns:w=\"w\" w:x=\"<go:redact\"/>", None),
+    ];
+    for (input, expected) in cases {
+        let marked = with_redact_root(input);
+        match expected {
+            Some(expected) => assert_eq!(marked, expected, "{input}"),
+            None => assert!(matches!(marked, Cow::Borrowed(_)), "{input}"),
+        }
+    }
 }
 
 #[test]

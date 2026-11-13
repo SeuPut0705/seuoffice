@@ -549,9 +549,9 @@ Input: the export list itself, read with the TS checker (`tools/docx-diff/bindin
 
 | const | Rust | binding |
 |---|---|---|
-| REDACT_EL | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
-| REDACT_NS | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
-| REDACT_PREFIX | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
+| REDACT_EL | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
+| REDACT_NS | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
+| REDACT_PREFIX | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
 | CONTENT_CONTROL_LOCKS | docx-engine/src/save/features/content_control.rs | TS literal kept; generated parity check |
 | DOCX_ZIP_LIMITS | NONE | TS literal kept; generated parity check |
 | LAZY_MEDIA_SCHEME | docx-engine/src/lazy_media.rs | TS literal kept; generated parity check |

@@ -18,6 +18,7 @@ use crate::package::{
 use crate::parse::text::BuildContext;
 use crate::scan::BodyElement;
 use crate::theme::ThemeColors;
+use crate::withheld::withheld_part_label;
 
 /// `IMAGE_MIME[ext]` of the table's own keys (`ownValue`).
 fn image_mime_of_extension(ext: &str) -> Option<&'static str> {
@@ -438,6 +439,9 @@ pub fn extract_chart_part(
     let part_xml = &*part_xml;
     let mut display = parse_chart_part_xml(part_xml, &path, ctx.theme_colors)?;
     if let Some(display) = display.as_mut() {
+        if let Some(redact) = withheld_part_label(part_xml) {
+            display.redact.set(redact);
+        }
         // chartex (cx:) parts are display-only degrades: the data-edit patcher
         // speaks classic c: syntax, so keeping them out makes edits no-ops
         // instead of corruption

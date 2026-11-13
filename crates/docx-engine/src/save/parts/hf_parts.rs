@@ -25,17 +25,29 @@ use crate::watermark::is_watermark_child;
 use crate::xml_tag::{TagName, find_start_tag};
 
 /// `withWatermarkNs`: the namespaces a VML watermark needs added to the
-/// original part's root tag (the ones it declares are untouched).
+/// original part's root tag (the ones it declares, in any spelling, are
+/// untouched).
 pub fn with_watermark_ns(open_tag: &str) -> String {
     let mut out = open_tag.to_owned();
-    for ns in [
-        "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"",
-        "xmlns:v=\"urn:schemas-microsoft-com:vml\"",
-        "xmlns:o=\"urn:schemas-microsoft-com:office:office\"",
-        "xmlns:w10=\"urn:schemas-microsoft-com:office:word\"",
+    for (declared, ns) in [
+        (
+            js_regex!(r"\sxmlns:r\s*="),
+            "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"",
+        ),
+        (
+            js_regex!(r"\sxmlns:v\s*="),
+            "xmlns:v=\"urn:schemas-microsoft-com:vml\"",
+        ),
+        (
+            js_regex!(r"\sxmlns:o\s*="),
+            "xmlns:o=\"urn:schemas-microsoft-com:office:office\"",
+        ),
+        (
+            js_regex!(r"\sxmlns:w10\s*="),
+            "xmlns:w10=\"urn:schemas-microsoft-com:office:word\"",
+        ),
     ] {
-        let declared = format!("{}=", ns.split('=').next().unwrap_or_default());
-        if !out.contains(&declared) && out.ends_with('>') {
+        if !declared.test(&out) && out.ends_with('>') {
             out.pop();
             out.push_str(&format!(" {ns}>"));
         }

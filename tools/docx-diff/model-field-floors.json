@@ -1685,6 +1685,6 @@
   "ResolveDiff.eff": { "parser": 0, "built": 16 },
   "ResolveDiff.text": { "parser": 0, "built": 16 },
   "RevisionXmlFilter.keepHidden": { "parser": 0, "built": 42 },
-  "ChartDisplay.redact": { "parser": 0, "built": 22 },
-  "Block.redact": { "parser": 0, "built": 16 }
+  "ChartDisplay.redact": { "parser": 3, "built": 22 },
+  "Block.redact": { "parser": 47, "built": 16 }
 }
