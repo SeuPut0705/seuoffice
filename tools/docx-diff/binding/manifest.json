@@ -23,6 +23,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -397,6 +398,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -441,7 +443,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::blank::numbering_level_from_custom",
@@ -541,6 +544,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -712,6 +716,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -750,7 +755,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": {
     "path": "docx_engine::blank::build_blank_docx",
@@ -781,6 +788,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -801,6 +809,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -820,7 +829,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -903,6 +913,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -942,6 +953,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -971,6 +983,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1010,6 +1023,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1049,6 +1063,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -1106,6 +1121,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -1170,6 +1186,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1243,6 +1260,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1382,7 +1400,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::chart::lum_hex",
@@ -1475,6 +1494,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1575,6 +1595,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1607,7 +1628,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -1626,7 +1648,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -1654,6 +1677,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1898,6 +1922,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -1984,7 +2009,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -2003,7 +2029,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -2042,7 +2069,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -2107,7 +2135,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::features::content_control::is_content_control_lock",
@@ -2248,7 +2277,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -2798,6 +2828,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -2990,7 +3021,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -3010,6 +3042,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -3232,7 +3265,7 @@
     }
    ],
    "ret": {
-    "type": "{ styles: Map<string, import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/tools/docx-diff/reference/types\").DocDefaults; }",
+    "type": "{ styles: Map<string, import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").DocDefaults; }",
     "null": false,
     "undef": false,
     "shape": {
@@ -3247,6 +3280,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3535,6 +3569,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3581,6 +3616,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3648,6 +3684,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3704,6 +3741,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3765,6 +3803,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3866,6 +3905,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3912,6 +3952,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -3965,7 +4006,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": {
     "path": "docx_engine::generate::text_patch::patch_table_cell_texts",
@@ -4011,6 +4054,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4103,6 +4147,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4149,6 +4194,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4202,6 +4248,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4242,6 +4289,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4391,6 +4439,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4432,6 +4481,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4470,6 +4520,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4522,6 +4573,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4569,6 +4621,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4615,6 +4668,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4661,6 +4715,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4700,6 +4755,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4745,6 +4801,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4791,6 +4848,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4844,6 +4902,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -4991,6 +5050,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5083,6 +5143,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5135,6 +5196,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5182,6 +5244,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5279,6 +5342,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5319,6 +5383,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5357,6 +5422,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5395,6 +5461,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5433,6 +5500,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -5463,6 +5531,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5523,6 +5592,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5543,7 +5613,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": null,
    "route": "none"
@@ -5563,6 +5635,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5583,6 +5656,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5603,6 +5677,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5623,6 +5698,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5643,6 +5719,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5663,6 +5740,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5722,6 +5800,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5742,6 +5821,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5782,6 +5862,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -5840,6 +5921,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -6050,7 +6132,9 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package",
+    "test"
    ],
    "rust": {
     "path": "docx_engine::hidden_content::docx_holds_hidden_content",
@@ -6087,7 +6171,8 @@
     "bytes": true
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::hidden_content::clear_hidden_marks",
@@ -6695,7 +6780,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::inline_opaque::same_inline_wrap",
@@ -6740,7 +6826,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::inline_opaque::same_inline_wrap_chain",
@@ -6778,7 +6865,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::inline_opaque::inline_wrap_content_locked",
@@ -7196,6 +7284,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -7282,6 +7371,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -7313,7 +7403,9 @@
    },
    "required": [
     "index",
-    "subpath"
+    "package",
+    "subpath",
+    "test"
    ],
    "rust": null,
    "route": "none"
@@ -7432,6 +7524,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7472,6 +7565,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7517,6 +7611,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7563,6 +7658,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7608,7 +7704,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::list_markers::compute_list_values",
@@ -7654,6 +7751,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7721,6 +7819,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7754,7 +7853,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -7773,7 +7873,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -7811,7 +7912,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -7838,7 +7940,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::features::mail_merge::split_instruction",
@@ -7876,6 +7979,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -7913,7 +8017,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::features::mail_merge::placeholder_text",
@@ -7951,6 +8056,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -8003,6 +8109,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -8087,6 +8194,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -8285,7 +8393,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::features::mail_merge::if_branch",
@@ -8469,6 +8578,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -8499,6 +8609,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -8681,6 +8792,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -8720,6 +8832,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -8759,6 +8872,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -8798,6 +8912,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -8844,6 +8959,7 @@
    },
    "required": [
     "index",
+    "package",
     "subpath",
     "test"
    ],
@@ -8883,6 +8999,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -8936,6 +9053,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -8977,7 +9095,8 @@
     "bytes": false
    },
    "required": [
-    "subpath"
+    "subpath",
+    "test"
    ],
    "rust": null,
    "route": "none"
@@ -9066,6 +9185,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -9118,6 +9238,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -9210,6 +9331,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -9731,7 +9853,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::block_passes::keeps_hangul_kana_single",
@@ -9814,7 +9937,9 @@
     },
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "test"
+   ],
    "rust": {
     "path": "docx_engine::block_passes::block_run_groups",
     "file": "crates/docx-engine/src/block_passes.rs",
@@ -10700,7 +10825,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::fields::toc_level_of",
@@ -11271,7 +11397,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::settings::edited_comment_model_text",
@@ -12136,7 +12263,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/tools/docx-diff/reference/types\").TabStop[] | undefined",
+    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TabStop[] | undefined",
     "null": false,
     "undef": true,
     "shape": null,
@@ -12171,7 +12298,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/tools/docx-diff/reference/types\").TabStop[]",
+    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TabStop[]",
     "null": false,
     "undef": false,
     "shape": null,
@@ -13008,7 +13135,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::props::theme_lang_ea_slot_font",
@@ -13242,7 +13370,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/tools/docx-diff/reference/types\").TableLook",
+    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TableLook",
     "null": false,
     "undef": false,
     "shape": null,
@@ -13369,7 +13497,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::props::borders::merge_style_borders",
@@ -13604,7 +13733,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -13940,6 +14070,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -13985,7 +14116,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::styles::para_cs_format",
@@ -15185,7 +15317,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::xml_text::decode_entities",
@@ -15518,7 +15651,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": {
     "path": "docx_engine::parse::parse_docx",
@@ -15800,6 +15935,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -15845,7 +15981,9 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package",
+    "test"
    ],
    "rust": {
     "path": "docx_engine::save::save::helpers::read_docx_part_base64",
@@ -15944,7 +16082,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": {
     "path": "docx_engine::save::save::save_docx",
@@ -16047,6 +16187,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -16067,7 +16208,9 @@
    },
    "required": [
     "index",
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": null,
    "route": "none"
@@ -16087,6 +16230,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -16160,6 +16304,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -16207,6 +16352,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -16285,7 +16431,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::parts::remove_parts::remove_parts_refusal_message",
@@ -16322,7 +16469,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::parts::remove_parts::remove_parts_refusal_message_for",
@@ -16367,6 +16515,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -16481,6 +16630,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -16500,7 +16650,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -16519,7 +16670,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -17184,6 +17336,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -17203,7 +17356,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -17423,6 +17577,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17467,7 +17622,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::features::index_exports::revision_date_before",
@@ -17506,6 +17662,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17558,6 +17715,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17704,6 +17862,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17744,6 +17903,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17811,7 +17971,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -17830,7 +17991,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -17949,6 +18111,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -17980,6 +18143,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -18108,6 +18272,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18230,6 +18395,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18455,6 +18621,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18510,6 +18677,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18595,6 +18763,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18679,6 +18848,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18725,6 +18895,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18771,6 +18942,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18810,6 +18982,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -18840,6 +19013,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -19264,6 +19438,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -19302,6 +19477,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -19395,6 +19571,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -19607,7 +19784,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -19626,7 +19804,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -19666,6 +19845,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": null,
@@ -19685,7 +19865,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -19713,6 +19894,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -19796,7 +19978,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::symbol_fonts::symbol_pua_char",
@@ -19841,6 +20024,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -19932,6 +20116,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -20502,7 +20687,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20519,7 +20706,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20536,7 +20725,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20553,7 +20744,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20604,7 +20797,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20622,7 +20817,9 @@
     "bytes": false
    },
    "required": [
-    "test"
+    "package",
+    "test",
+    "tool"
    ],
    "rust": null,
    "route": "none"
@@ -20640,7 +20837,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20657,7 +20856,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20674,7 +20876,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20691,7 +20895,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20725,7 +20931,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20743,6 +20951,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -20761,7 +20970,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20778,7 +20989,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20795,7 +21009,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20812,7 +21028,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20829,7 +21047,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20846,7 +21066,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20880,7 +21102,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20898,6 +21122,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -20916,7 +21141,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20933,7 +21161,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20950,7 +21181,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20967,7 +21200,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -20984,7 +21220,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21002,6 +21241,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21020,7 +21260,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21054,7 +21297,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21071,7 +21316,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21088,7 +21336,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21105,7 +21356,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21122,7 +21375,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21140,6 +21396,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21158,7 +21415,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21176,6 +21435,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21195,6 +21455,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21214,6 +21475,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21232,7 +21494,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21249,7 +21514,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21266,7 +21534,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21283,7 +21553,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21318,6 +21591,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21336,7 +21610,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21388,6 +21665,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21423,7 +21701,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21440,7 +21720,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21457,7 +21740,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21474,7 +21759,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21491,7 +21778,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21508,7 +21797,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21542,7 +21833,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21559,7 +21853,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21576,7 +21872,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21594,6 +21892,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21613,6 +21912,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21631,7 +21931,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21648,7 +21951,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21666,6 +21971,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21684,7 +21990,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21701,7 +22009,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21718,7 +22028,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21736,6 +22048,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21754,7 +22067,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21771,7 +22087,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21789,6 +22107,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21825,6 +22144,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21843,7 +22163,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21894,7 +22217,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21911,7 +22237,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21928,7 +22257,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21946,6 +22278,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -21964,7 +22297,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21981,7 +22316,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -21998,7 +22335,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -22066,7 +22405,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -22083,7 +22424,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -22101,6 +22445,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "test"
    ],
    "rust": null,
@@ -22119,7 +22464,10 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "package",
+    "test"
+   ],
    "rust": null,
    "route": "none"
   },
@@ -22336,6 +22684,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -22412,6 +22761,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -22624,7 +22974,9 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package",
+    "test"
    ],
    "rust": null,
    "route": "none"
@@ -22643,7 +22995,9 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package",
+    "test"
    ],
    "rust": null,
    "route": "none"
@@ -22662,7 +23016,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -22690,6 +23045,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -22727,7 +23083,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::withheld::has_withheld_trace",
@@ -23105,7 +23462,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::withheld::hidden_run_properties",
@@ -23212,7 +23570,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": null,
    "route": "none"
@@ -23386,7 +23745,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::save::xml_number_usable::usable_number",
@@ -23431,7 +23791,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::save::xml_number_usable::usable_picture_size",
@@ -23476,7 +23837,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::save::save::xml_number_usable::usable_position_offset",
@@ -23684,7 +24046,8 @@
     "bytes": false
    },
    "required": [
-    "index"
+    "index",
+    "package"
    ],
    "rust": {
     "path": "docx_engine::xml_tag::remove_elements",
@@ -24480,6 +24843,7 @@
    },
    "required": [
     "index",
+    "package",
     "test"
    ],
    "rust": {
@@ -24556,6 +24920,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24592,6 +24957,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24639,6 +25005,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24721,6 +25088,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24764,6 +25132,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24810,6 +25179,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24842,6 +25212,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
@@ -24881,6 +25252,7 @@
     "bytes": false
    },
    "required": [
+    "package",
     "subpath",
     "test"
    ],
