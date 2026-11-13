@@ -278,13 +278,14 @@ impl HomeFiles for Unbuilt {
         Vec::new()
     }
     fn document_link_paths(&self) -> Vec<String> {
-        unbuilt("HomeFiles::document_link_paths");
-        Vec::new()
+        crate::host::menu::document_link_paths()
     }
     fn project_file_renamed(&self, _: &str, _: &str) {
         unbuilt("HomeFiles::project_file_renamed");
     }
-    fn file_moved(&self, _: &str, _: &str) {
+    fn file_moved(&self, old_path: &str, new_path: &str) {
+        crate::host::menu::document_link_file_moved(old_path, new_path);
+        // the slides recent list and the open tabs' `*FileRenamed` are still to come
         unbuilt("HomeFiles::file_moved");
     }
     fn recents_changed(&self) {

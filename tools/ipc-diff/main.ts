@@ -36,6 +36,7 @@ import './vite-imports.ts'
 import { Encoder, WireError, decode } from '../../crates/shell/bridge/wire.ts'
 import { CHANNELS, SPECS } from './channels.ts'
 import { caseElectron } from './fakes.ts'
+import { channelAnswers } from './coverage.ts'
 import { cleanUp, setUp, snapshot, substitute, unsubstitute } from './folder.ts'
 import { Probe } from './probe.ts'
 import type { Call, Case, Group, LoadContext } from './types.ts'
@@ -304,19 +305,15 @@ async function runGroup(name: string): Promise<void> {
       differences.push({ case: i, note: `BAD ${c.note ?? ''}`, typescript: ts, rust })
       continue
     }
-    for (const [k, call] of c.calls.entries()) {
-      // a trigger calls no channel, an await step takes a deferred reply: only their events count
-      if (call.kind === 'trigger' || call.await !== undefined) {
-        for (const e of tsRecord.calls[k]?.events ?? []) events.add(e.channel)
-        continue
-      }
-      const r = (report.channels[call.channel] ??= { calls: 0, answers: [], withArgs: false })
+    // a deferred invoke's answer is the one its await step settles (coverage.ts)
+    const stepAnswers = c.calls.map((_, k) => tsRecord.calls?.[k]?.answer)
+    for (const a of channelAnswers(c.calls, stepAnswers)) {
+      const r = (report.channels[a.channel] ??= { calls: 0, answers: [], withArgs: false })
       r.calls++
-      r.withArgs ||= call.args.length > 0
-      const answer = JSON.stringify(tsRecord.calls[k]?.answer)
-      if (!r.answers.includes(answer)) r.answers.push(answer)
-      for (const e of tsRecord.calls[k]?.events ?? []) events.add(e.channel)
+      r.withArgs ||= a.withArgs
+      if (a.answer !== undefined && !r.answers.includes(a.answer)) r.answers.push(a.answer)
     }
+    for (const step of tsRecord.calls) for (const e of step.events ?? []) events.add(e.channel)
     if (ts === rust) {
       equal++
       continue

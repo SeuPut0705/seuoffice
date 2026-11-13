@@ -27,10 +27,9 @@ use main_core::packages::electron_utils::default_save_dir::Thrown;
 use main_core::packages::electron_utils::unsaved_files::{OpenFileState, OpenFilesSourceFailed};
 use main_core::packages::i18n::Lang;
 use main_core::packages::project_store::LegacyDocumentChat;
+use main_core::shell::knowledge_base::KbReadPage;
 use main_core::shell::projects::memory::LocalDateParts;
-use main_core::shell::projects::project_tools::{
-    IndexSearchOptions, IndexSearchResult, KbReadPage,
-};
+use main_core::shell::projects::project_tools::{IndexSearchOptions, IndexSearchResult};
 use serde_json::Value;
 use shell_contract::ids::ViewId;
 
