@@ -7,7 +7,7 @@
 //! serves every export of recovery-store.ts that touches the state. The
 //! scenario's random ids are `uuid-1`, `uuid-2`, ... on both sides.
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
@@ -17,6 +17,7 @@ use jscompat::json_value_from_serde;
 use jscompat::node_path::host::join;
 use serde_json::{Map, Number, Value};
 
+use super::fakes::{FakeDialog, fake_parent};
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::node_fs::{NodeError, node_error};
 use crate::packages::electron_utils::legacy_import_prefs::{
@@ -31,8 +32,7 @@ use crate::packages::electron_utils::recovery_labels::{
     RECOVERY_PROMPT_STRINGS, recovery_prompt_labels, unprotectable_notice_text,
 };
 use crate::packages::electron_utils::recovery_prompt::{
-    RecoveryMessageBox, RecoveryMessageBoxOptions, RecoveryOpenResult, RecoveryParent,
-    RecoveryPromptAnswer, RecoveryPromptOptions, ResolveRecoveryOnOpenOptions,
+    RecoveryOpenResult, RecoveryPromptAnswer, RecoveryPromptOptions, ResolveRecoveryOnOpenOptions,
     prompt_recovery_for_file, resolve_recovery_on_open,
 };
 use crate::packages::electron_utils::recovery_store::{
@@ -300,86 +300,10 @@ fn label_of(every: &[Rc<FakeEditor>], found: &Rc<dyn RecoveryEditorContract<()>>
 
 // ---- recovery-prompt ----
 
-struct FakeWindow {
-    destroyed: bool,
-}
-
-impl RecoveryParent for FakeWindow {
-    fn is_destroyed(&self) -> bool {
-        self.destroyed
-    }
-}
-
-/// a dialog that answers `response` and logs each box: `["over", box]` for
-/// the overload with a parent, `["box", box]` for the other
-struct FakeDialog {
-    response: f64,
-    log: RefCell<Vec<Vec<Value>>>,
-}
-
-fn box_json(options: &RecoveryMessageBoxOptions) -> Value {
-    let mut out = Map::new();
-    out.insert("type".into(), Value::from(options.kind));
-    out.insert("message".into(), Value::from(options.message.as_str()));
-    out.insert("detail".into(), Value::from(options.detail.as_str()));
-    out.insert(
-        "buttons".into(),
-        Value::Array(
-            options
-                .buttons
-                .iter()
-                .map(|b| Value::from(b.as_str()))
-                .collect(),
-        ),
-    );
-    out.insert("defaultId".into(), Value::from(options.default_id));
-    out.insert("cancelId".into(), Value::from(options.cancel_id));
-    out.insert("noLink".into(), Value::Bool(options.no_link));
-    Value::Object(out)
-}
-
-impl RecoveryMessageBox<FakeWindow> for FakeDialog {
-    fn show_message_box_over(
-        &self,
-        _parent: &FakeWindow,
-        options: &RecoveryMessageBoxOptions,
-    ) -> f64 {
-        self.log
-            .borrow_mut()
-            .push(vec![Value::from("over"), box_json(options)]);
-        self.response
-    }
-
-    fn show_message_box(&self, options: &RecoveryMessageBoxOptions) -> f64 {
-        self.log
-            .borrow_mut()
-            .push(vec![Value::from("box"), box_json(options)]);
-        self.response
-    }
-}
-
-/// `parent`: null (none), "live" or "destroyed"
-fn fake_parent(spec: &Value) -> Option<FakeWindow> {
-    match field_str(spec, "parent") {
-        Some("live") => Some(FakeWindow { destroyed: false }),
-        Some("destroyed") => Some(FakeWindow { destroyed: true }),
-        _ => None,
-    }
-}
-
-fn fake_dialog(spec: &Value) -> FakeDialog {
-    FakeDialog {
-        response: field(spec, "response")
-            .and_then(Value::as_f64)
-            .unwrap_or(f64::NAN),
-        log: RefCell::new(Vec::new()),
-    }
-}
-
 /// `[{ lang, documentName, fileChangedAfterCopy, response, parent }]`
 fn prompt_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).ok_or_else(|| bad("options"))?;
-    let dialog = fake_dialog(spec);
+    let dialog = FakeDialog::of(spec);
     let parent = fake_parent(spec);
     let answer = prompt_recovery_for_file(&RecoveryPromptOptions {
         dialog: &dialog,
@@ -402,7 +326,7 @@ fn resolve_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).ok_or_else(|| bad("options"))?;
     let user_data = need_str(spec, "userData")?.to_owned();
     let identity = identity_of(field(spec, "identity").ok_or_else(|| bad("identity"))?)?;
-    let dialog = fake_dialog(spec);
+    let dialog = FakeDialog::of(spec);
     let parent = fake_parent(spec);
     let shared = SharedRecoveryState::new("0123456789abcdef");
     let user_dir = || user_data.clone();

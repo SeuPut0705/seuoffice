@@ -25,6 +25,7 @@ mod b4_pdf;
 mod b4_sheets;
 mod b4_slides;
 mod b5_ai;
+mod fakes;
 mod files;
 mod node_fs;
 mod node_path;

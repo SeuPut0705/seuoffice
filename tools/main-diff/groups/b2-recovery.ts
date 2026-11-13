@@ -80,6 +80,7 @@ import {
   withoutUnsavedFiles,
 } from '../../../packages/electron-utils/src/unsaved-files.ts'
 import type { OpenFilesSource } from '../../../packages/electron-utils/src/unsaved-files.ts'
+import { fakeDialog, fakeParent } from '../fakes.ts'
 import type { Case, FileSpec, Group, TsContext } from '../types.ts'
 
 const NOW = 1_700_000_000_000
@@ -1238,24 +1239,6 @@ const NAMES = [
 ]
 
 // ---- recovery-prompt ----
-
-function fakeParent(parent: unknown): { isDestroyed: () => boolean } | null {
-  return parent === 'live'
-    ? { isDestroyed: () => false }
-    : parent === 'destroyed'
-      ? { isDestroyed: () => true }
-      : null
-}
-
-function fakeDialog(response: unknown, log: (...args: unknown[]) => void) {
-  return {
-    showMessageBox: async (...given: unknown[]) => {
-      if (given.length === 2) log('over', given[1])
-      else log('box', given[0])
-      return { response } as { response: number }
-    },
-  }
-}
 
 const promptCase = (o: Record<string, unknown>, note?: string): Case => ({
   args: [

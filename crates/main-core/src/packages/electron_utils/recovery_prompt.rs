@@ -2,44 +2,17 @@
 //! prompt, asked when a document with an undecided or "later" recovery copy
 //! is opened, before its content is loaded.
 //!
-//! The dialog API is a trait ([`RecoveryMessageBox`], Electron's `dialog` in
-//! the adapter, a fake in tests); the parent window is a [`RecoveryParent`]
-//! (Electron's `BrowserWindow`). Promises are plain calls.
+//! The dialog is a [`MessageBox`] and the parent window a [`ParentWindow`]
+//! (`message_box.rs`). Promises are plain calls.
 
 use jscompat::node_path::host::basename;
 
+use super::message_box::{MessageBox, MessageBoxOptions, ParentWindow, show_over_open_parent};
 use super::recovery_labels::recovery_prompt_labels;
 use super::recovery_store::{
     RecoveryCopyInfo, RecoveryDeleteReason, RecoveryIdentity, RecoveryOpenPlan, RecoveryStore,
 };
 use crate::node_fs::NodeError;
-
-/// the box `showMessageBox` is given
-#[derive(Debug, Clone, PartialEq)]
-pub struct RecoveryMessageBoxOptions {
-    /// always `'question'`
-    pub kind: &'static str,
-    pub message: String,
-    pub detail: String,
-    pub buttons: [String; 2],
-    pub default_id: u32,
-    pub cancel_id: u32,
-    pub no_link: bool,
-}
-
-/// the `isDestroyed` of the window the box sits over
-pub trait RecoveryParent {
-    fn is_destroyed(&self) -> bool;
-}
-
-/// `RecoveryMessageBox` = `Pick<Dialog, 'showMessageBox'>`, both overloads,
-/// each answering the `response` index of the pressed button.
-pub trait RecoveryMessageBox<W> {
-    /// `showMessageBox(parent, box)`
-    fn show_message_box_over(&self, parent: &W, options: &RecoveryMessageBoxOptions) -> f64;
-    /// `showMessageBox(box)`
-    fn show_message_box(&self, options: &RecoveryMessageBoxOptions) -> f64;
-}
 
 pub struct RecoveryPromptOptions<'a, D, W> {
     pub dialog: &'a D,
@@ -66,8 +39,8 @@ pub fn prompt_recovery_for_file<D, W>(
     options: &RecoveryPromptOptions<'_, D, W>,
 ) -> RecoveryPromptAnswer
 where
-    D: RecoveryMessageBox<W>,
-    W: RecoveryParent,
+    D: MessageBox<W>,
+    W: ParentWindow,
 {
     let labels = recovery_prompt_labels(options.lang, options.document_name);
     let detail = if options.file_changed_after_copy {
@@ -75,22 +48,18 @@ where
     } else {
         labels.detail.clone()
     };
-    let message_box = RecoveryMessageBoxOptions {
+    let message_box = MessageBoxOptions {
         kind: "question",
+        title: None,
         message: labels.message,
-        detail,
-        buttons: [labels.restore, labels.discard],
+        detail: Some(detail),
+        buttons: vec![labels.restore, labels.discard],
         default_id: RESTORE,
         // Esc and the window's close button answer cancelId: restore, so nothing is lost
-        cancel_id: RESTORE,
-        no_link: true,
+        cancel_id: Some(RESTORE),
+        no_link: Some(true),
     };
-    let response = match options.parent {
-        Some(parent) if !parent.is_destroyed() => {
-            options.dialog.show_message_box_over(parent, &message_box)
-        }
-        _ => options.dialog.show_message_box(&message_box),
-    };
+    let response = show_over_open_parent(options.dialog, options.parent, &message_box);
     if response == f64::from(DISCARD) {
         RecoveryPromptAnswer::Discard
     } else {
@@ -129,8 +98,8 @@ pub fn resolve_recovery_on_open<D, W>(
     options: &ResolveRecoveryOnOpenOptions<'_, '_, D, W>,
 ) -> Result<RecoveryOpenResult, NodeError>
 where
-    D: RecoveryMessageBox<W>,
-    W: RecoveryParent,
+    D: MessageBox<W>,
+    W: ParentWindow,
 {
     let store = options.store;
     let identity = options.identity;
