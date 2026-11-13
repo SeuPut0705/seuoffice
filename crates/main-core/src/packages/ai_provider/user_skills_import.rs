@@ -371,7 +371,7 @@ pub enum GitHubSkillUpdateCheck {
         commit: String,
         locally_edited: bool,
     },
-    Changed(ChangedCheck),
+    Changed(Box<ChangedCheck>),
 }
 
 /// The `changed` form of [`GitHubSkillUpdateCheck`]
@@ -511,13 +511,20 @@ pub struct SkillInstallSource {
     pub commit: String,
 }
 
+/// A replaced folder that could not be moved away (the OS trash refused it)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiscardFailed;
+
+/// How a replaced folder goes away: `Err` is a folder that could not go
+pub type DiscardReplaced<'a> = &'a mut dyn FnMut(&str) -> Result<(), DiscardFailed>;
+
 /// `CommitSkillInstallOptions`
 pub struct CommitSkillInstallOptions<'a> {
     /// `now()` in milliseconds since the epoch
     pub now_ms: f64,
     /// how a replaced folder goes away (the shell passes the OS trash);
     /// `Err` is a folder that could not go. Removed for good when not given.
-    pub discard_replaced: Option<&'a mut dyn FnMut(&str) -> Result<(), ()>>,
+    pub discard_replaced: Option<DiscardReplaced<'a>>,
     pub limits: Option<SkillFolderLimits>,
     pub random: Option<&'a mut dyn FnMut() -> String>,
 }
@@ -655,7 +662,7 @@ fn discard_or_restore(
     stage: &str,
     replaced: &[Vec<Aside>],
     installed: &[String],
-    discard: &mut dyn FnMut(&str) -> Result<(), ()>,
+    discard: &mut dyn FnMut(&str) -> Result<(), DiscardFailed>,
 ) -> bool {
     let mut gone: Vec<&str> = Vec::new();
     let mut failed = false;

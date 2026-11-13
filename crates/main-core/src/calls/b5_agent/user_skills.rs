@@ -129,11 +129,15 @@ pub(super) fn hex_bytes(value: &Value) -> Option<Vec<u8>> {
         .collect()
 }
 
-/// `JSON.parse(JSON.stringify(value).split(realpath(root)).join(root))`
+/// `JSON.parse(JSON.stringify(value).split(realpath(root)).join(root)
+/// .replace(RANDOM_NAME, '"skill-<random>"'))`
 pub(super) fn unreal(value: Value, root: &str) -> Value {
     let real = real_path(root).unwrap_or_else(|| root.to_owned());
     let text = serde_json::to_string(&value).expect("a value prints");
-    serde_json::from_str(&text.replace(&real, root)).expect("a value reads")
+    let random_name = js_regex!(r#""skill-[a-z0-9]{6}""#);
+    let text = text.replace(&real, root);
+    let text = random_name.replace_all(&text, |_| r#""skill-<random>""#.to_owned());
+    serde_json::from_str(&text).expect("a value reads")
 }
 
 fn warning_of(value: &Value) -> SkillWarning {
@@ -266,7 +270,7 @@ pub(super) fn changed_of(value: &Value) -> ChangedCheck {
 /// a check as a spec scripts it
 pub(super) fn check_of(value: &Value) -> GitHubSkillUpdateCheck {
     if str_of(value.get("status")) == Some("changed") {
-        return GitHubSkillUpdateCheck::Changed(changed_of(value));
+        return GitHubSkillUpdateCheck::Changed(Box::new(changed_of(value)));
     }
     GitHubSkillUpdateCheck::UpToDate {
         record: record_of(value.get("record")),

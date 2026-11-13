@@ -206,6 +206,19 @@ impl GenerateSession {
         refs: &[MaterialRef],
         kind: Option<AiTargetKind>,
     ) -> Result<(), Failure> {
+        let rows = self.reset_begin(host, refs, kind);
+        self.reset_finish(host, snap, &rows)
+    }
+
+    /// `reset` up to its first await (the rows are cleared, refilled and the
+    /// first push went out): what the caller's own statements after
+    /// `void session.reset(...)` see. Answers the rows to read.
+    pub fn reset_begin<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        refs: &[MaterialRef],
+        kind: Option<AiTargetKind>,
+    ) -> Vec<u64> {
         self.rows = Vec::new();
         if let Some(kind) = kind {
             self.kind = kind;
@@ -215,7 +228,18 @@ impl GenerateSession {
         self.mode = GenerateMode::Ai;
         self.convert_kind = None;
         self.append_refs(refs);
-        self.refresh(host, snap)
+        self.inspect_begin(host);
+        self.rows.iter().map(|r| r.id).collect()
+    }
+
+    /// `reset` after that await: the rows read, the last push
+    pub fn reset_finish<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        rows: &[u64],
+    ) -> Result<(), Failure> {
+        self.inspect_finish(host, snap, rows)
     }
 
     pub fn state<H: GenerateSessionHost>(&self, host: &H) -> GenerateWindowState {
@@ -479,8 +503,23 @@ impl GenerateSession {
         snap: &OpenSnapshot<'_>,
         rows: &[u64],
     ) -> Result<(), Failure> {
+        self.inspect_begin(host);
+        self.inspect_finish(host, snap, rows)
+    }
+
+    /// `inspectRows` up to its first await: `inFlight++; this.push()`
+    fn inspect_begin<H: GenerateSessionHost>(&mut self, host: &mut H) {
         self.in_flight += 1;
         self.push(host);
+    }
+
+    /// `inspectRows` after that await: every row read, then `inFlight--; this.push()`
+    fn inspect_finish<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        rows: &[u64],
+    ) -> Result<(), Failure> {
         let mut failure: Option<Failure> = None;
         for id in rows {
             if let Err(error) = self.inspect_row(host, snap, *id)

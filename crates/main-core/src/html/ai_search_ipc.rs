@@ -9,9 +9,9 @@
 //!
 //! Engine-waiting: the search backends ([`SearchBackend`]).
 
-use crate::packages::ai_provider::jsval::{object, string_list, text, value_key};
+use crate::packages::ai_provider::jsval::{object, string_list, text, thrown_to_string, value_key};
 use crate::packages::ai_search::search_tools::{SearchBackend, image_search_tool, web_search_tool};
-use jscompat::JsonValue;
+use jscompat::{JsTypeError, JsonValue};
 
 /// the channel of the web search handler
 pub const AI_WEB_SEARCH_CHANNEL: &str = "ai:web-search";
@@ -56,13 +56,14 @@ impl HtmlAiSearchIpc {
 }
 
 /// the handler of `ai:web-search`: `query` and `max_results` are the
-/// renderer's arguments
+/// renderer's arguments; `Err` is the `TypeError` that `String(err)` throws
+/// inside the `catch`
 pub fn web_search(
     host: &mut dyn HtmlAiSearchHost,
     env: &dyn Fn(&str) -> Option<String>,
     query: Option<&JsonValue>,
     max_results: Option<&JsonValue>,
-) -> JsonValue {
+) -> Result<JsonValue, JsTypeError> {
     let file = host.settings_file();
     match web_search_tool(
         host,
@@ -71,22 +72,23 @@ pub fn web_search(
         Some(max_results_of(max_results, 6.0)),
         env,
     ) {
-        Ok(answer) => answer,
-        Err(err) => object(vec![
+        Ok(answer) => Ok(answer),
+        Err(thrown) => Ok(object(vec![
             ("results", string_list(&[])),
             ("method", text("error")),
-            ("error", text(err)),
-        ]),
+            ("error", text(thrown_to_string(&thrown)?)),
+        ])),
     }
 }
 
-/// the handler of `ai:image-search`
+/// the handler of `ai:image-search`; `Err` is the `TypeError` that
+/// `String(err)` throws inside the `catch`
 pub fn image_search(
     host: &mut dyn HtmlAiSearchHost,
     env: &dyn Fn(&str) -> Option<String>,
     query: Option<&JsonValue>,
     max_results: Option<&JsonValue>,
-) -> JsonValue {
+) -> Result<JsonValue, JsTypeError> {
     let file = host.settings_file();
     match image_search_tool(
         host,
@@ -95,11 +97,11 @@ pub fn image_search(
         Some(max_results_of(max_results, 8.0)),
         env,
     ) {
-        Ok(answer) => answer,
-        Err(err) => object(vec![
+        Ok(answer) => Ok(answer),
+        Err(thrown) => Ok(object(vec![
             ("images", string_list(&[])),
             ("method", text("error")),
-            ("error", text(err)),
-        ]),
+            ("error", text(thrown_to_string(&thrown)?)),
+        ])),
     }
 }

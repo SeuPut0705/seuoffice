@@ -501,12 +501,12 @@ pub fn pick_open_router_free_model(net: &mut dyn FreeConnectNet) -> String {
     let id_of = |entry: &JsonValue| as_str(prop(entry, "id")).unwrap_or_default().to_owned();
     let tested = OPENROUTER_FREE_MODELS
         .iter()
-        .find(|id| usable.iter().any(|m| id_of(*m) == **id));
+        .find(|id| usable.iter().any(|m| id_of(m) == **id));
     if let Some(tested) = tested {
         return (*tested).to_owned();
     }
     sort_by_number(&mut usable, |a, b| context_length(b) - context_length(a));
-    usable.first().map_or(first, |entry| id_of(*entry))
+    usable.first().map_or(first, |entry| id_of(entry))
 }
 
 /// `connectOpenRouter(options)`: the whole OpenRouter browser sign-in: a key

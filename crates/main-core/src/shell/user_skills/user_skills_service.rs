@@ -34,11 +34,11 @@ use crate::packages::ai_provider::user_skills_folder::{
     skill_export_info,
 };
 use crate::packages::ai_provider::user_skills_import::{
-    ChangedCheck, CollisionChoices, CommitSkillInstallOptions, GitHubSkillUpdateCheck,
-    InstallImportedSkillsResult, InstalledSkill, SKILL_STAGING_PREFIX, SkillImport,
-    SkillImportCandidate, SkillImportError, SkillImportOrigin, SkillImportSource, SkillInstallPlan,
-    Thrown, app_skill_folders_by_name, commit_skill_install, copy_file_over, mkdir,
-    mkdir_recursive, random_hex, read_ieum_source_record, read_text, remove_quietly, rename,
+    ChangedCheck, CollisionChoices, CommitSkillInstallOptions, DiscardFailed, DiscardReplaced,
+    GitHubSkillUpdateCheck, InstallImportedSkillsResult, InstalledSkill, SKILL_STAGING_PREFIX,
+    SkillImport, SkillImportCandidate, SkillImportError, SkillImportOrigin, SkillImportSource,
+    SkillInstallPlan, Thrown, app_skill_folders_by_name, commit_skill_install, copy_file_over,
+    mkdir, mkdir_recursive, random_hex, read_ieum_source_record, read_text, remove_quietly, rename,
     write_file, write_file_exclusive,
 };
 use crate::packages::ai_provider::user_skills_states::{
@@ -196,7 +196,7 @@ pub trait UserSkillsHost {
     /// where imports and update checks make their temporary folders
     fn temp_dir(&self) -> String;
     /// moves a folder to the OS trash; `Err` when it cannot go
-    fn trash(&mut self, path: &str) -> Result<(), ()>;
+    fn trash(&mut self, path: &str) -> Result<(), DiscardFailed>;
     /// `new Date()` in milliseconds since the epoch
     fn now_ms(&self) -> f64;
 }
@@ -205,7 +205,7 @@ pub trait UserSkillsHost {
 pub type Aborted<'a> = &'a dyn Fn() -> bool;
 
 /// How a replaced folder goes away: the shell's trash
-pub type Discard<'a> = &'a mut dyn FnMut(&str) -> Result<(), ()>;
+pub type Discard<'a> = DiscardReplaced<'a>;
 
 /// the `prepareSkillImport` environment, less the fetch and the signal
 #[derive(Debug, Clone, PartialEq)]

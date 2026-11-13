@@ -183,7 +183,7 @@ fn fold_name(rel: &str) -> String {
 }
 
 /// the listed file `SKILL.md` names (the other case on Windows too)
-fn skill_md_in<'a>(files: &'a [SkillFolderFile]) -> Option<&'a SkillFolderFile> {
+fn skill_md_in(files: &[SkillFolderFile]) -> Option<&SkillFolderFile> {
     files
         .iter()
         .find(|file| file.rel == "SKILL.md")
@@ -572,6 +572,9 @@ fn skill_folders(dir: &str) -> Vec<String> {
         let Ok(kind) = entry.file_type() else {
             continue;
         };
+        // The two branches mirror the TS `isDirectory()` / `isSymbolicLink() && stat` lines
+        // of `listSkillFolders`; the shape is kept so the port stays line by line.
+        #[allow(clippy::if_same_then_else)]
         if kind.is_dir() {
             names.push(name);
         } else if kind.is_symlink()
