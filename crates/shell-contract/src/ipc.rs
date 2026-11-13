@@ -120,6 +120,8 @@ pub enum RegisterError {
         channel: &'static str,
         kind: ChannelKind,
     },
+    /// the shell was built without a host the batch needs ([`crate::hosts`])
+    MissingHost { batch: Batch, host: &'static str },
 }
 
 /// The channel table the shell fills at start on the core thread, one batch

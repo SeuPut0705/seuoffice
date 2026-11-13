@@ -88,9 +88,9 @@ pub trait AppPaths: Send + Sync {
     fn path(&self, name: PathName) -> PathBuf;
 }
 
-/// What every batch's handlers may use. Batch-specific hosts (menus,
-/// dialogs, the updater) are the `main-core` traits, implemented by the
-/// batch that owns the area.
+/// What every batch's handlers may use. Dialogs, the OS shell, the
+/// clipboard, web contents and each batch's own hosts are in `hosts`
+/// ([`crate::hosts`]).
 #[derive(Clone)]
 pub struct Services {
     pub ui: Arc<dyn Thread>,
@@ -99,4 +99,5 @@ pub struct Services {
     pub events: Arc<dyn EventSink>,
     pub views: Arc<dyn Views>,
     pub paths: Arc<dyn AppPaths>,
+    pub hosts: Arc<crate::hosts::Hosts>,
 }

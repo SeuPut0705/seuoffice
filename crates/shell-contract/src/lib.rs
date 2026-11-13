@@ -10,6 +10,7 @@
 
 pub mod channels;
 pub mod error;
+pub mod hosts;
 pub mod ids;
 pub mod ipc;
 pub mod runtime;
@@ -17,5 +18,6 @@ pub mod value;
 
 pub use channels::{Batch, CHANNELS, ChannelSpec, PRELOADS, PreloadSpec, Surface};
 pub use error::IpcError;
+pub use hosts::{ClipboardHost, ContentsHost, DialogsHost, Hosts, OsShellHost};
 pub use ids::{DocumentHandle, RequestId, ViewId, WindowId};
 pub use value::{BytesKind, IpcValue};
