@@ -845,8 +845,10 @@ impl ChannelFile {
     fn pick(&self) -> Option<ReleaseFile> {
         let fits = |url: &str| {
             if cfg!(target_os = "macos") {
+                // MacUpdater's findFile(files, "zip") after filterFilesForArch;
+                // the stable build's zip ends in -mac-stable.zip
                 let arm = url.contains("arm64");
-                url.ends_with("-mac.zip") && arm == cfg!(target_arch = "aarch64")
+                url.ends_with(".zip") && arm == cfg!(target_arch = "aarch64")
             } else {
                 url.ends_with(".exe")
             }
