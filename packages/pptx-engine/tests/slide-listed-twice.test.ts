@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import JSZip from 'jszip'
 import { addElement, createBlankPptx, openPptx, savePptx, setElementFill } from '../src/index'
+import type { TextElement } from '../src/types'
 
 async function slideListedTwice(): Promise<Uint8Array> {
   const opened = await openPptx(await createBlankPptx())
@@ -34,7 +35,8 @@ describe('a slide part listed twice', () => {
 
     expect(opened.deck.slides[0]).toBe(first)
     expect(opened.deck.slides[1]).toBe(second)
-    expect(first!.elements[0]!.fill).toEqual({ type: 'solid', color: '#FF0000' })
-    expect(second!.elements[0]!.fill).toBeUndefined()
+    // addElement's rect is a text element: its fill is its own
+    expect((first!.elements[0] as TextElement).fill).toEqual({ type: 'solid', color: '#FF0000' })
+    expect((second!.elements[0] as TextElement).fill).toBeUndefined()
   })
 })
