@@ -14,10 +14,13 @@ import type { Input, Spec } from '../fileparse-diff/spec'
 type Wire = string | { $units: number[] }
 const LONE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
 const wire = (text: string): Wire =>
-  LONE.test(text) ? { $units: Array.from({ length: text.length }, (_, i) => text.charCodeAt(i)) } : text
+  LONE.test(text)
+    ? { $units: Array.from({ length: text.length }, (_, i) => text.charCodeAt(i)) }
+    : text
 const fromUnits = (codes: readonly number[]): string => {
   let out = ''
-  for (let i = 0; i < codes.length; i += 4096) out += String.fromCharCode(...codes.slice(i, i + 4096))
+  for (let i = 0; i < codes.length; i += 4096)
+    out += String.fromCharCode(...codes.slice(i, i + 4096))
   return out
 }
 
@@ -31,7 +34,7 @@ interface WireArgs {
 }
 
 function wireAttribute(attr: Strings): Record<string, Wire> {
-  return Object.fromEntries(Object.keys(attr).map(key => [key, wire(attr[key]!)]))
+  return Object.fromEntries(Object.keys(attr).map((key) => [key, wire(attr[key]!)]))
 }
 
 interface AnyTag {
@@ -45,9 +48,12 @@ interface AnyTag {
 }
 function wireTag(tag: AnyTag): Record<string, unknown> {
   const out: Record<string, unknown> = { name: wire(tag.name) }
-  out.attributes = Object.entries(tag.attributes).map(([name, value]) =>
-    [wire(name), typeof value === 'string' ? wire(value) : wireAttribute(value)])
-  if (tag.ns !== undefined) out.ns = Object.entries(tag.ns).map(([key, value]) => [wire(key), wire(value)])
+  out.attributes = Object.entries(tag.attributes).map(([name, value]) => [
+    wire(name),
+    typeof value === 'string' ? wire(value) : wireAttribute(value),
+  ])
+  if (tag.ns !== undefined)
+    out.ns = Object.entries(tag.ns).map(([key, value]) => [wire(key), wire(value)])
   if (tag.prefix !== undefined) out.prefix = wire(tag.prefix)
   if (tag.local !== undefined) out.local = wire(tag.local)
   if (tag.uri !== undefined) out.uri = wire(tag.uri)
@@ -60,7 +66,7 @@ function parserOptions(given: Record<string, unknown> | undefined): SaxesOptions
   const options: SaxesOptions = { ...rest }
   if (resolvePrefix !== undefined) {
     const table = resolvePrefix as Strings
-    options.resolvePrefix = prefix => (Object.hasOwn(table, prefix) ? table[prefix] : undefined)
+    options.resolvePrefix = (prefix) => (Object.hasOwn(table, prefix) ? table[prefix] : undefined)
   }
   return options
 }
@@ -81,21 +87,36 @@ export function recordSaxes(text: string, args: WireArgs): { events: unknown[]; 
   const listens = (name: string) => args.handlers === undefined || args.handlers.includes(name)
   const push = (event: string, data?: unknown): void => {
     events.push({
-      event, ...(data === undefined ? {} : { data }),
-      position: parser.position, line: parser.line, column: parser.column, columnIndex: parser.columnIndex,
+      event,
+      ...(data === undefined ? {} : { data }),
+      position: parser.position,
+      line: parser.line,
+      column: parser.column,
+      columnIndex: parser.columnIndex,
     })
     if (args.throwAt === events.length - 1) throw new Error('stop')
   }
   // `on` is typed per event; the recorder registers every event by name
-  const register = parser.on.bind(parser) as unknown as (name: string, handler: (value: never) => void) => void
+  const register = parser.on.bind(parser) as unknown as (
+    name: string,
+    handler: (value: never) => void,
+  ) => void
   const on = <T>(name: string, data?: (value: T) => unknown): void => {
     if (!listens(name)) return
     register(name, (value: T) => push(name, data === undefined ? undefined : data(value)))
   }
-  on<{ version?: string; encoding?: string; standalone?: string }>('xmldecl', decl => Object.fromEntries(
-    (['version', 'encoding', 'standalone'] as const).filter(key => decl[key] !== undefined).map(key => [key, wire(decl[key]!)])))
+  on<{ version?: string; encoding?: string; standalone?: string }>('xmldecl', (decl) =>
+    Object.fromEntries(
+      (['version', 'encoding', 'standalone'] as const)
+        .filter((key) => decl[key] !== undefined)
+        .map((key) => [key, wire(decl[key]!)]),
+    ),
+  )
   on<string>('text', wire)
-  on<{ target: string; body: string }>('processinginstruction', pi => ({ target: wire(pi.target), body: wire(pi.body) }))
+  on<{ target: string; body: string }>('processinginstruction', (pi) => ({
+    target: wire(pi.target),
+    body: wire(pi.body),
+  }))
   on<string>('doctype', wire)
   on<string>('comment', wire)
   on<AnyTag>('opentagstart', wireTag)
@@ -103,13 +124,15 @@ export function recordSaxes(text: string, args: WireArgs): { events: unknown[]; 
   on<AnyTag>('opentag', wireTag)
   on<AnyTag>('closetag', wireTag)
   on<string>('cdata', wire)
-  on<Error>('error', error => wire(error.message))
+  on<Error>('error', (error) => wire(error.message))
   on('end')
   on('ready')
   let failure: unknown = null
   try {
     if (args.chunkSize === undefined || args.chunkSize <= 0) parser.write(source)
-    else for (let i = 0; i < source.length; i += args.chunkSize) parser.write(source.slice(i, i + args.chunkSize))
+    else
+      for (let i = 0; i < source.length; i += args.chunkSize)
+        parser.write(source.slice(i, i + args.chunkSize))
     parser.close()
   } catch (error) {
     failure = thrown(error)
@@ -252,7 +275,10 @@ const DOCUMENTS: Array<[string, string]> = [
   ['name with U+2028', '<a\u2028b/>'],
   // namespaces
   ['default namespace', '<a xmlns="urn:a"><b/><c xmlns="urn:c"><d/></c><e/></a>'],
-  ['prefixed namespaces', '<p:a xmlns:p="urn:p" xmlns:q="urn:q" q:x="1" p:y="2" z="3"><q:b/></p:a>'],
+  [
+    'prefixed namespaces',
+    '<p:a xmlns:p="urn:p" xmlns:q="urn:q" q:x="1" p:y="2" z="3"><q:b/></p:a>',
+  ],
   ['namespace redeclared', '<a xmlns:p="urn:1"><b xmlns:p="urn:2"><p:c/></b><p:d/></a>'],
   ['unbound tag prefix', '<p:a/>'],
   ['unbound attribute prefix', '<a p:b="1"/>'],
@@ -270,14 +296,20 @@ const DOCUMENTS: Array<[string, string]> = [
   ['xml set to xml namespace', `<a xmlns:xml="${XML_NS}"/>`],
   ['undefine prefix in 1.0', '<a xmlns:p=""><p:b/></a>'],
   ['undefine default namespace', '<a xmlns="urn:a"><b xmlns=""><c/></b></a>'],
-  ['undefine prefix in 1.1', '<?xml version="1.1"?><a xmlns:p="urn:p"><b xmlns:p=""><p:c/></b></a>'],
+  [
+    'undefine prefix in 1.1',
+    '<?xml version="1.1"?><a xmlns:p="urn:p"><b xmlns:p=""><p:c/></b></a>',
+  ],
   ['namespace value with spaces', '<a xmlns:p="  urn:p \n" xmlns="\turn:d\t"><p:b/></a>'],
   ['duplicate by namespace', '<a xmlns:p="urn:x" xmlns:q="urn:x" p:n="1" q:n="2"/>'],
   ['duplicate xmlns', '<a xmlns="urn:a" xmlns="urn:b"/>'],
   ['malformed names', '<a:b:c d:e:f="1" :g="2" h:="3"/>'],
   ['malformed tag name', '<:a/><b:/>'],
   ['colon only tag', '<:/>'],
-  ['prefix named like an object property', '<constructor:a xmlns:constructor="urn:c" __proto__:b="1" xmlns:__proto__="urn:p"/>'],
+  [
+    'prefix named like an object property',
+    '<constructor:a xmlns:constructor="urn:c" __proto__:b="1" xmlns:__proto__="urn:p"/>',
+  ],
   ['integer-like prefixes', '<a xmlns:x1="u1" xmlns:y="u2" xmlns:a1="u3"/>'],
   ['digit prefix after start char', '<a xmlns:b1="u1"><b1:c/></a>'],
   ['namespaced attributes of a prefixed tag', '<p:a xmlns:p="urn:p" p:x="1" x="2" xmlns="urn:d"/>'],
@@ -298,14 +330,23 @@ const DOCUMENTS: Array<[string, string]> = [
   ['xml declaration repeated', '<?xml version="1.0" version="1.0"?><a/>'],
   ['xml declaration extra name', '<?xml version="1.0" foo="bar"?><a/>'],
   ['xml declaration extra name one char', '<?xml version="1.0" standalone="no" x="1"?><a/>'],
-  ['xml declaration extra after standalone', '<?xml version="1.0" standalone="no" encoding="x"?><a/>'],
+  [
+    'xml declaration extra after standalone',
+    '<?xml version="1.0" standalone="no" encoding="x"?><a/>',
+  ],
   ['xml declaration bad version', '<?xml version="2.0"?><a/>'],
   ['xml declaration version 1.', '<?xml version="1."?><a/>'],
   ['xml declaration version 1.00', '<?xml version="1.00"?><a/>'],
   ['xml declaration version 1.5', '<?xml version="1.5"?><a/>'],
   ['xml declaration version 1.1', '<?xml version="1.1"?><a>\u0085\u2028</a>'],
-  ['xml declaration version 1.1 with controls', '<?xml version="1.1"?><a>\u0001\u007F\u0080\u009F</a>'],
-  ['xml declaration version 1.1 with CR NEL', '<?xml version="1.1"?><a>x\r\u0085y\r\ny\rz\u0085w\u2028v</a>'],
+  [
+    'xml declaration version 1.1 with controls',
+    '<?xml version="1.1"?><a>\u0001\u007F\u0080\u009F</a>',
+  ],
+  [
+    'xml declaration version 1.1 with CR NEL',
+    '<?xml version="1.1"?><a>x\r\u0085y\r\ny\rz\u0085w\u2028v</a>',
+  ],
   ['xml declaration bad encoding', '<?xml version="1.0" encoding="1abc"?><a/>'],
   ['xml declaration odd encoding', '<?xml version="1.0" encoding="a.b_c-d9"?><a/>'],
   ['xml declaration empty encoding', '<?xml version="1.0" encoding=""?><a/>'],
@@ -357,13 +398,19 @@ const DOCUMENTS: Array<[string, string]> = [
   ['processing instruction with astral', `<a><?t${ASTRAL} ${ASTRAL}?></a>`],
   // doctype
   ['doctype', '<!DOCTYPE html><html/>'],
-  ['doctype public', '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html/>'],
+  [
+    'doctype public',
+    '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html/>',
+  ],
   ['doctype with internal subset', '<!DOCTYPE a [ <!ELEMENT a (#PCDATA)> <!ENTITY e "v"> ]><a/>'],
   ['doctype with comment in subset', '<!DOCTYPE a [ <!-- a comment --> <!ELEMENT a ANY> ]><a/>'],
   ['doctype with malformed comment in subset', '<!DOCTYPE a [ <!-- a -- b --> ]><a/>'],
   ['doctype with pi in subset', '<!DOCTYPE a [ <?pi data?> <!ELEMENT a ANY> ]><a/>'],
   ['doctype with pi question in subset', '<!DOCTYPE a [ <?pi a?b??> ]><a/>'],
-  ['doctype with quotes in subset', '<!DOCTYPE a [ <!ENTITY e "a > b ] c"> <!ENTITY f \'x ]> y\'> ]><a/>'],
+  [
+    'doctype with quotes in subset',
+    '<!DOCTYPE a [ <!ENTITY e "a > b ] c"> <!ENTITY f \'x ]> y\'> ]><a/>',
+  ],
   ['doctype with unterminated quote in subset', '<!DOCTYPE a [ <!ENTITY e "oops> ]><a/>'],
   ['doctype with > in quotes', '<!DOCTYPE a SYSTEM "x>y"><a/>'],
   ['doctype with [ in quotes', "<!DOCTYPE a SYSTEM 'x[y'><a/>"],
@@ -439,7 +486,10 @@ const DOCUMENTS: Array<[string, string]> = [
   ['entity unterminated at the end of input', '<a>&amp'],
   ['entity with newline', '<a>&am\np;</a>'],
   ['entity with CRLF', '<a>&am\r\np;</a>'],
-  ['entity name from the prototype chain', '<a>&constructor;&__proto__;&toString;&hasOwnProperty;</a>'],
+  [
+    'entity name from the prototype chain',
+    '<a>&constructor;&__proto__;&toString;&hasOwnProperty;</a>',
+  ],
   ['entity case', '<a>&AMP;&Amp;&LT;</a>'],
   ['entity with astral name', `<a>&${ASTRAL};</a>`],
   ['character references', '<a>&#65;&#x41;&#x61;&#X41;&#0065;&#x0041;&#10;&#9;&#13;&#xD;</a>'],
@@ -447,11 +497,20 @@ const DOCUMENTS: Array<[string, string]> = [
   ['character reference bad digits', '<a>&#xZ;&#12a;&#x1G;&# 1;&#-1;&#+1;</a>'],
   ['character reference zero', '<a>&#0;&#x0;</a>'],
   ['character reference controls', '<a>&#1;&#8;&#11;&#12;&#14;&#31;&#127;&#128;&#133;&#159;</a>'],
-  ['character reference controls in 1.1', '<?xml version="1.1"?><a>&#1;&#8;&#11;&#12;&#14;&#31;&#127;&#128;&#133;&#159;&#0;</a>'],
+  [
+    'character reference controls in 1.1',
+    '<?xml version="1.1"?><a>&#1;&#8;&#11;&#12;&#14;&#31;&#127;&#128;&#133;&#159;&#0;</a>',
+  ],
   ['character reference surrogates', '<a>&#xD7FF;&#xD800;&#xDBFF;&#xDC00;&#xDFFF;&#xE000;</a>'],
-  ['character reference noncharacters', '<a>&#xFFFD;&#xFFFE;&#xFFFF;&#x10000;&#x10FFFF;&#x110000;</a>'],
+  [
+    'character reference noncharacters',
+    '<a>&#xFFFD;&#xFFFE;&#xFFFF;&#x10000;&#x10FFFF;&#x110000;</a>',
+  ],
   ['character reference astral', '<a>&#x1F600;&#128512;</a>'],
-  ['character reference huge', `<a>&#${'9'.repeat(30)};&#x${'F'.repeat(30)};&#${'0'.repeat(30)}65;&#x${'0'.repeat(30)}41;</a>`],
+  [
+    'character reference huge',
+    `<a>&#${'9'.repeat(30)};&#x${'F'.repeat(30)};&#${'0'.repeat(30)}65;&#x${'0'.repeat(30)}41;</a>`,
+  ],
   ['character reference in attribute', '<a b="&#65;&#x42;&#0;&bad;&amp;"/>'],
   ['character reference unquoted attribute', '<a b=&#65;x c=&amp;/>'],
   ['entity in unquoted attribute then >', '<a b=x&amp;>t</a>'],
@@ -497,7 +556,9 @@ const DOCUMENTS: Array<[string, string]> = [
   ['XHTML chapter with CRLF', XHTML_CHAPTER.replaceAll('\n', '\r\n')],
   ['XHTML chapter with BOM', `\uFEFF${XHTML_CHAPTER}`],
   ['XHTML chapter truncated', XHTML_CHAPTER.slice(0, 600)],
-  ['EPUB nav', `<?xml version="1.0" encoding="utf-8"?>
+  [
+    'EPUB nav',
+    `<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>Contents</title></head>
 <body>
@@ -506,25 +567,44 @@ const DOCUMENTS: Array<[string, string]> = [
 <li><a href="ch2.xhtml#s1">Chapter 2 &amp; 3</a><ol><li><a href="ch2.xhtml#s2">Sub</a></li></ol></li>
 </ol></nav>
 </body>
-</html>`],
-  ['EPUB package', `<?xml version="1.0"?>
+</html>`,
+  ],
+  [
+    'EPUB package',
+    `<?xml version="1.0"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid">
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:1</dc:identifier><dc:title>T</dc:title><meta property="dcterms:modified">2020-01-01T00:00:00Z</meta></metadata>
 <manifest><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest>
 <spine><itemref idref="a"/></spine>
-</package>`],
-  ['NCX', `<?xml version="1.0" encoding="UTF-8"?>
+</package>`,
+  ],
+  [
+    'NCX',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><navMap><navPoint id="n1" playOrder="1"><navLabel><text>One</text></navLabel><content src="a.xhtml"/></navPoint></navMap></ncx>`],
-  ['SVG', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1 1"><image xlink:href="a.png" width="1" height="1"/><text x="0" y="1">T</text></svg>'],
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><navMap><navPoint id="n1" playOrder="1"><navLabel><text>One</text></navLabel><content src="a.xhtml"/></navPoint></navMap></ncx>`,
+  ],
+  [
+    'SVG',
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1 1"><image xlink:href="a.png" width="1" height="1"/><text x="0" y="1">T</text></svg>',
+  ],
   ['Korean text', '<p lang="ko">안녕하세요 &amp; 세계</p>'],
 ]
 
 /** Documents whose events depend on the chunking: every chunk boundary is a place the carry-over can fail. */
 const CHUNKED: string[] = [
-  XHTML_CHAPTER, '<a>\r\n<b c="d\r\ne"/>\r</a>', `<a>${ASTRAL}${ASTRAL}x${ASTRAL}</a>`, '<?xml version="1.1"?><a>x\r\u0085y\u2028z\r</a>',
-  '\uFEFF<a/>', '<a>&amp;&#65;&lt;</a>', '<!DOCTYPE a [ <!-- c --> <?p x?> ]><a><![CDATA[x]]]]></a>', '<a b=c d="e"></a >',
-  '<a xmlns:p="u"><p:b p:c="1"/></a>', '<a>]]></a>', '<a><!-- x -- y --></a>', '<?xml version="1.0"?><a/>',
+  XHTML_CHAPTER,
+  '<a>\r\n<b c="d\r\ne"/>\r</a>',
+  `<a>${ASTRAL}${ASTRAL}x${ASTRAL}</a>`,
+  '<?xml version="1.1"?><a>x\r\u0085y\u2028z\r</a>',
+  '\uFEFF<a/>',
+  '<a>&amp;&#65;&lt;</a>',
+  '<!DOCTYPE a [ <!-- c --> <?p x?> ]><a><![CDATA[x]]]]></a>',
+  '<a b=c d="e"></a >',
+  '<a xmlns:p="u"><p:b p:c="1"/></a>',
+  '<a>]]></a>',
+  '<a><!-- x -- y --></a>',
+  '<?xml version="1.0"?><a/>',
 ]
 
 function built(): Input[] {
@@ -534,17 +614,37 @@ function built(): Input[] {
   }
   for (const [name, text] of DOCUMENTS) {
     for (const options of OPTION_SETS) {
-      add(`${name} ${JSON.stringify(options ?? {})}`, text, options === undefined ? {} : { options })
+      add(
+        `${name} ${JSON.stringify(options ?? {})}`,
+        text,
+        options === undefined ? {} : { options },
+      )
     }
   }
   // options the documents above meet less often
   const extra: Array<[string, Record<string, unknown>, string]> = [
     ['default 1.1', { defaultXMLVersion: '1.1' }, '<a>x\r\u0085y\u2028\u0001\u007F</a>'],
-    ['forced 1.1', { defaultXMLVersion: '1.1', forceXMLVersion: true }, '<?xml version="1.0"?><a>x\u0085y</a>'],
-    ['forced 1.0 against a 1.1 declaration', { defaultXMLVersion: '1.0', forceXMLVersion: true }, '<?xml version="1.1"?><a>x\u0085y</a>'],
-    ['forced with an undefining declaration', { defaultXMLVersion: '1.1', forceXMLVersion: true, xmlns: true }, '<?xml version="1.0"?><a xmlns:p=""/>'],
+    [
+      'forced 1.1',
+      { defaultXMLVersion: '1.1', forceXMLVersion: true },
+      '<?xml version="1.0"?><a>x\u0085y</a>',
+    ],
+    [
+      'forced 1.0 against a 1.1 declaration',
+      { defaultXMLVersion: '1.0', forceXMLVersion: true },
+      '<?xml version="1.1"?><a>x\u0085y</a>',
+    ],
+    [
+      'forced with an undefining declaration',
+      { defaultXMLVersion: '1.1', forceXMLVersion: true, xmlns: true },
+      '<?xml version="1.0"?><a xmlns:p=""/>',
+    ],
     ['default 2.0', { defaultXMLVersion: '2.0' }, '<a>x\u0085y</a>'],
-    ['default 1.0 not forced against 1.1', { defaultXMLVersion: '1.0' }, '<?xml version="1.1"?><a>x\u0085y</a>'],
+    [
+      'default 1.0 not forced against 1.1',
+      { defaultXMLVersion: '1.0' },
+      '<?xml version="1.1"?><a>x\u0085y</a>',
+    ],
     ['force without default', { forceXMLVersion: true }, '<a/>'],
     ['force false without default', { forceXMLVersion: false }, '<a/>'],
     ['fileName only', { fileName: 'book.opf' }, '<a><b></a>'],
@@ -561,96 +661,383 @@ function built(): Input[] {
     ['fragment with unclosed', { fragment: true }, '<a><b>'],
     ['fragment empty', { fragment: true }, ''],
     ['fragment with namespaces', { fragment: true, xmlns: true }, '<p:a xmlns:p="u"/><p:b/>'],
-    ['additional namespaces', { xmlns: true, additionalNamespaces: { x: 'urn:x', '': 'urn:d' } }, '<x:a><b x:c="1"/></x:a>'],
-    ['additional namespaces override', { xmlns: true, additionalNamespaces: { xml: XML_NS, p: 'urn:p' } }, '<p:a xml:lang="en"/>'],
-    ['additional namespaces ignored without xmlns', { additionalNamespaces: { x: 'urn:x' } }, '<x:a/>'],
-    ['additional namespaces bad xml', { xmlns: true, additionalNamespaces: { xml: 'urn:x' } }, '<a/>'],
-    ['additional namespaces bad xmlns', { xmlns: true, additionalNamespaces: { xmlns: 'urn:x' } }, '<a/>'],
-    ['additional namespaces xmlns uri', { xmlns: true, additionalNamespaces: { p: XMLNS_NS } }, '<a/>'],
-    ['additional namespaces xmlns uri default', { xmlns: true, additionalNamespaces: { '': XMLNS_NS } }, '<a/>'],
-    ['additional namespaces xml uri default', { xmlns: true, additionalNamespaces: { '': XML_NS } }, '<a/>'],
-    ['additional namespaces xml uri other', { xmlns: true, additionalNamespaces: { p: XML_NS } }, '<a/>'],
-    ['additional namespaces bad xml with fileName', { xmlns: true, fileName: 'f.xml', additionalNamespaces: { xml: 'urn:x' } }, '<a/>'],
-    ['additional namespaces bad xml without position', { xmlns: true, position: false, additionalNamespaces: { xml: 'urn:x' } }, '<a/>'],
-    ['additional namespaces bad xml with fileName without position', { xmlns: true, position: false, fileName: 'f.xml', additionalNamespaces: { xml: 'urn:x' } }, '<a/>'],
-    ['additional namespaces second bad', { xmlns: true, additionalNamespaces: { ok: 'urn:ok', xmlns: 'urn:x' } }, '<a/>'],
-    ['additional namespaces integer keys', { xmlns: true, additionalNamespaces: { 2: 'urn:2', b: 'urn:b', 1: 'urn:1' } }, '<a/>'],
-    ['additional namespaces then redeclared', { xmlns: true, additionalNamespaces: { p: 'urn:outer' } }, '<a xmlns:p="urn:inner"><p:b/></a>'],
-    ['resolvePrefix', { xmlns: true, resolvePrefix: { ext: 'urn:ext', empty: '' } }, '<ext:a ext:b="1" empty:c="2"/>'],
+    [
+      'additional namespaces',
+      { xmlns: true, additionalNamespaces: { x: 'urn:x', '': 'urn:d' } },
+      '<x:a><b x:c="1"/></x:a>',
+    ],
+    [
+      'additional namespaces override',
+      { xmlns: true, additionalNamespaces: { xml: XML_NS, p: 'urn:p' } },
+      '<p:a xml:lang="en"/>',
+    ],
+    [
+      'additional namespaces ignored without xmlns',
+      { additionalNamespaces: { x: 'urn:x' } },
+      '<x:a/>',
+    ],
+    [
+      'additional namespaces bad xml',
+      { xmlns: true, additionalNamespaces: { xml: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces bad xmlns',
+      { xmlns: true, additionalNamespaces: { xmlns: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces xmlns uri',
+      { xmlns: true, additionalNamespaces: { p: XMLNS_NS } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces xmlns uri default',
+      { xmlns: true, additionalNamespaces: { '': XMLNS_NS } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces xml uri default',
+      { xmlns: true, additionalNamespaces: { '': XML_NS } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces xml uri other',
+      { xmlns: true, additionalNamespaces: { p: XML_NS } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces bad xml with fileName',
+      { xmlns: true, fileName: 'f.xml', additionalNamespaces: { xml: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces bad xml without position',
+      { xmlns: true, position: false, additionalNamespaces: { xml: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces bad xml with fileName without position',
+      { xmlns: true, position: false, fileName: 'f.xml', additionalNamespaces: { xml: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces second bad',
+      { xmlns: true, additionalNamespaces: { ok: 'urn:ok', xmlns: 'urn:x' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces integer keys',
+      { xmlns: true, additionalNamespaces: { 2: 'urn:2', b: 'urn:b', 1: 'urn:1' } },
+      '<a/>',
+    ],
+    [
+      'additional namespaces then redeclared',
+      { xmlns: true, additionalNamespaces: { p: 'urn:outer' } },
+      '<a xmlns:p="urn:inner"><p:b/></a>',
+    ],
+    [
+      'resolvePrefix',
+      { xmlns: true, resolvePrefix: { ext: 'urn:ext', empty: '' } },
+      '<ext:a ext:b="1" empty:c="2"/>',
+    ],
     ['resolvePrefix without xmlns', { resolvePrefix: { ext: 'urn:ext' } }, '<ext:a/>'],
-    ['resolvePrefix after declaration', { xmlns: true, resolvePrefix: { p: 'urn:r' } }, '<a xmlns:p="urn:d"><p:b/></a><p:c/>'],
-    ['resolvePrefix with proto', { xmlns: true, resolvePrefix: { ['__proto__']: 'u', constructor: 'c' } }, '<a/>'],
+    [
+      'resolvePrefix after declaration',
+      { xmlns: true, resolvePrefix: { p: 'urn:r' } },
+      '<a xmlns:p="urn:d"><p:b/></a><p:c/>',
+    ],
+    [
+      'resolvePrefix with proto',
+      { xmlns: true, resolvePrefix: { ['__proto__']: 'u', constructor: 'c' } },
+      '<a/>',
+    ],
     ['position false with errors', { position: false }, '<a><b></a>'],
     ['position false chunked', { position: false }, '<a b=1></c>'],
   ]
-  for (const [name, options, text] of extra) add(`${name} ${JSON.stringify(options)}`, text, { options })
+  for (const [name, options, text] of extra)
+    add(`${name} ${JSON.stringify(options)}`, text, { options })
   // chunking: a CR or the first half of a pair at the end of a chunk is carried to the next
   for (const text of CHUNKED) {
     for (const chunkSize of [1, 2, 3, 5, 7, 64]) {
       add(`chunks of ${chunkSize}: ${JSON.stringify(text.slice(0, 40))}`, text, { chunkSize })
-      if (chunkSize <= 3) add(`namespaced chunks of ${chunkSize}: ${JSON.stringify(text.slice(0, 40))}`, text, { chunkSize, options: NS_OPTIONS })
+      if (chunkSize <= 3)
+        add(`namespaced chunks of ${chunkSize}: ${JSON.stringify(text.slice(0, 40))}`, text, {
+          chunkSize,
+          options: NS_OPTIONS,
+        })
     }
   }
   // handlers left off: no text handler changes what is kept, no error handler makes fail throw
-  const bodies = ['<a>x&amp;y<![CDATA[z]]></a>', '<a></></a>', '</a>', '<a b="x&amp;y"/>', '<a>t</b>t2</a>', '<?x y?>t', '<a>&foo;<b/>', '<?xml version="1.0"?><a/>', '<a>x]]>y</a>']
-  const all = ['xmldecl', 'text', 'processinginstruction', 'doctype', 'comment', 'opentagstart', 'attribute', 'opentag', 'closetag', 'cdata', 'error', 'end', 'ready']
+  const bodies = [
+    '<a>x&amp;y<![CDATA[z]]></a>',
+    '<a></></a>',
+    '</a>',
+    '<a b="x&amp;y"/>',
+    '<a>t</b>t2</a>',
+    '<?x y?>t',
+    '<a>&foo;<b/>',
+    '<?xml version="1.0"?><a/>',
+    '<a>x]]>y</a>',
+  ]
+  const all = [
+    'xmldecl',
+    'text',
+    'processinginstruction',
+    'doctype',
+    'comment',
+    'opentagstart',
+    'attribute',
+    'opentag',
+    'closetag',
+    'cdata',
+    'error',
+    'end',
+    'ready',
+  ]
   for (const body of bodies) {
-    for (const off of [['text'], ['error'], ['text', 'error'], ['end', 'ready', 'opentagstart', 'attribute'], all]) {
-      add(`without ${off.join('+')}: ${JSON.stringify(body)}`, body, { handlers: all.filter(name => !off.includes(name)) })
+    for (const off of [
+      ['text'],
+      ['error'],
+      ['text', 'error'],
+      ['end', 'ready', 'opentagstart', 'attribute'],
+      all,
+    ]) {
+      add(`without ${off.join('+')}: ${JSON.stringify(body)}`, body, {
+        handlers: all.filter((name) => !off.includes(name)),
+      })
     }
-    add(`text off, chunks of 2: ${JSON.stringify(body)}`, body, { handlers: all.filter(name => name !== 'text'), chunkSize: 2 })
+    add(`text off, chunks of 2: ${JSON.stringify(body)}`, body, {
+      handlers: all.filter((name) => name !== 'text'),
+      chunkSize: 2,
+    })
   }
   // a handler that throws: the parse stops there
   for (const body of ['<a b="1">t<!--c--><?p q?></a>', '<a><b></a>', '<a>&bad;</a>']) {
-    for (const throwAt of [0, 1, 2, 3, 5]) add(`throws at ${throwAt}: ${JSON.stringify(body)}`, body, { throwAt })
+    for (const throwAt of [0, 1, 2, 3, 5])
+      add(`throws at ${throwAt}: ${JSON.stringify(body)}`, body, { throwAt })
   }
   // lone surrogates cross as units
   const unitCases: Array<[string, number[], WireArgs]> = [
-    ['lone high in text', [...'<a>x'].map(c => c.charCodeAt(0)).concat([0xD83D], [...'y</a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone low in text', [...'<a>x'].map(c => c.charCodeAt(0)).concat([0xDE00], [...'y</a>'].map(c => c.charCodeAt(0))), {}],
-    ['high then low swapped', [...'<a>'].map(c => c.charCodeAt(0)).concat([0xDE00, 0xD83D], [...'</a>'].map(c => c.charCodeAt(0))), {}],
-    ['high at the very end', [...'<a>x</a>'].map(c => c.charCodeAt(0)).concat([0xD83D]), {}],
-    ['high at the end of an open element', [...'<a>x'].map(c => c.charCodeAt(0)).concat([0xD83D]), {}],
-    ['high alone', [0xD83D], {}],
-    ['low alone', [0xDE00], {}],
-    ['high then letter', [0xD83D, 0x61, 0x3C, 0x61, 0x2F, 0x3E], {}],
-    ['high then newline', [0x3C, 0x61, 0x3E, 0xD83D, 0x0A, 0x78, 0x3C, 0x2F, 0x61, 0x3E], {}],
-    ['high then CR', [0x3C, 0x61, 0x3E, 0xD83D, 0x0D, 0x0A, 0x78, 0x3C, 0x2F, 0x61, 0x3E], {}],
-    ['high then <', [0x3C, 0x61, 0x3E, 0xD83D, 0x3C, 0x2F, 0x61, 0x3E], {}],
-    ['high then high then low', [0x3C, 0x61, 0x3E, 0xD83D, 0xD83D, 0xDE00, 0x3C, 0x2F, 0x61, 0x3E], {}],
-    ['high then BMP in an attribute', [...'<a b="'].map(c => c.charCodeAt(0)).concat([0xD83D, 0x78], [...'"/>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in a name', [0x3C, 0x61, 0xD83D, 0x62, 0x2F, 0x3E], {}],
-    ['lone low in a name', [0x3C, 0x61, 0xDE00, 0x62, 0x2F, 0x3E], {}],
-    ['lone surrogates in a comment', [...'<a><!--'].map(c => c.charCodeAt(0)).concat([0xD83D, 0xDE00, 0xDE00, 0xD83D], [...'--></a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in a pi', [...'<a><?t'].map(c => c.charCodeAt(0)).concat([0xD83D, 0x20, 0xDE00], [...'?></a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in a pi target start', [0x3C, 0x61, 0x3E, 0x3C, 0x3F, 0xD83D, 0x20, 0x78, 0x3F, 0x3E, 0x3C, 0x2F, 0x61, 0x3E], {}],
-    ['lone surrogate in a doctype', [...'<!DOCTYPE a ['].map(c => c.charCodeAt(0)).concat([0xD83D, 0xDE00, 0xD83D], [...'] ><a/>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in an entity', [...'<a>&a'].map(c => c.charCodeAt(0)).concat([0xD83D], [...'b;</a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in a cdata', [...'<a><![CDATA['].map(c => c.charCodeAt(0)).concat([0xD83D], [...']]></a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in the xml declaration', [...'<?xml version="1.0'].map(c => c.charCodeAt(0)).concat([0xD83D], [...'"?><a/>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in the xml declaration name', [...'<?xml '].map(c => c.charCodeAt(0)).concat([0xD83D, 0x78], [...'="1"?><a/>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in an xml 1.1 document', [...'<?xml version="1.1"?><a>'].map(c => c.charCodeAt(0)).concat([0xDE00, 0xD83D, 0x0D], [...'</a>'].map(c => c.charCodeAt(0))), {}],
-    ['lone surrogate in an unbound prefix', [0x3C, 0xD83D, 0x3A, 0x61, 0x2F, 0x3E], { options: NS_OPTIONS }],
-    ['lone surrogate in a duplicate attribute', [...'<a '].map(c => c.charCodeAt(0)).concat([0x78, 0xD83D, 0x3D, 0x22, 0x31, 0x22, 0x20, 0x78, 0xD83D, 0x3D, 0x22, 0x32, 0x22, 0x2F, 0x3E]), {}],
-    ['lone surrogate in an unclosed tag name', [0x3C, 0x61, 0xD83D, 0x62, 0x3E], {}],
-    ['lone surrogate in a closing tag', [0x3C, 0x61, 0x3E, 0x3C, 0x2F, 0x61, 0xD83D, 0x3E], {}],
-    ['lone surrogate in a namespace prefix', [...'<a xmlns:p'].map(c => c.charCodeAt(0)).concat([0xD83D, 0x78], [...'="u"/>'].map(c => c.charCodeAt(0))), { options: NS_OPTIONS }],
-    ['high at the end, chunked', [...'<a>x'].map(c => c.charCodeAt(0)).concat([0xD83D]), { chunkSize: 2 }],
-    ['pair split by chunks', [...'<a>x'].map(c => c.charCodeAt(0)).concat([0xD83D, 0xDE00], [...'y</a>'].map(c => c.charCodeAt(0))), { chunkSize: 1 }],
-    ['lone surrogates chunked', [0x3C, 0x61, 0x3E, 0xD83D, 0x78, 0xDE00, 0xD83D, 0x3C, 0x2F, 0x61, 0x3E], { chunkSize: 3 }],
-    ['lone surrogate with namespaces and position', [0x3C, 0x61, 0x3E, 0xD83D, 0x3C, 0x2F, 0x61, 0x3E], { options: { xmlns: true, fileName: 'x' } }],
-    ['lone surrogate in text, in a fragment', [0x78, 0xD83D, 0x3C, 0x61, 0x2F, 0x3E], { options: { fragment: true } }],
-    ['high at the end in a fragment', [0x78, 0xD83D], { options: { fragment: true } }],
-    ['high at the end of a fragment, no text handler', [0x78, 0xD83D], { options: { fragment: true }, handlers: ['error', 'end'] }],
-    ['text of units', [...'<a>héllo wörld</a>'].map(c => c.charCodeAt(0)), {}],
+    [
+      'lone high in text',
+      [...'<a>x']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d],
+          [...'y</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone low in text',
+      [...'<a>x']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xde00],
+          [...'y</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'high then low swapped',
+      [...'<a>']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xde00, 0xd83d],
+          [...'</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    ['high at the very end', [...'<a>x</a>'].map((c) => c.charCodeAt(0)).concat([0xd83d]), {}],
+    [
+      'high at the end of an open element',
+      [...'<a>x'].map((c) => c.charCodeAt(0)).concat([0xd83d]),
+      {},
+    ],
+    ['high alone', [0xd83d], {}],
+    ['low alone', [0xde00], {}],
+    ['high then letter', [0xd83d, 0x61, 0x3c, 0x61, 0x2f, 0x3e], {}],
+    ['high then newline', [0x3c, 0x61, 0x3e, 0xd83d, 0x0a, 0x78, 0x3c, 0x2f, 0x61, 0x3e], {}],
+    ['high then CR', [0x3c, 0x61, 0x3e, 0xd83d, 0x0d, 0x0a, 0x78, 0x3c, 0x2f, 0x61, 0x3e], {}],
+    ['high then <', [0x3c, 0x61, 0x3e, 0xd83d, 0x3c, 0x2f, 0x61, 0x3e], {}],
+    [
+      'high then high then low',
+      [0x3c, 0x61, 0x3e, 0xd83d, 0xd83d, 0xde00, 0x3c, 0x2f, 0x61, 0x3e],
+      {},
+    ],
+    [
+      'high then BMP in an attribute',
+      [...'<a b="']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0x78],
+          [...'"/>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    ['lone surrogate in a name', [0x3c, 0x61, 0xd83d, 0x62, 0x2f, 0x3e], {}],
+    ['lone low in a name', [0x3c, 0x61, 0xde00, 0x62, 0x2f, 0x3e], {}],
+    [
+      'lone surrogates in a comment',
+      [...'<a><!--']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0xde00, 0xde00, 0xd83d],
+          [...'--></a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in a pi',
+      [...'<a><?t']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0x20, 0xde00],
+          [...'?></a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in a pi target start',
+      [0x3c, 0x61, 0x3e, 0x3c, 0x3f, 0xd83d, 0x20, 0x78, 0x3f, 0x3e, 0x3c, 0x2f, 0x61, 0x3e],
+      {},
+    ],
+    [
+      'lone surrogate in a doctype',
+      [...'<!DOCTYPE a [']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0xde00, 0xd83d],
+          [...'] ><a/>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in an entity',
+      [...'<a>&a']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d],
+          [...'b;</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in a cdata',
+      [...'<a><![CDATA[']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d],
+          [...']]></a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in the xml declaration',
+      [...'<?xml version="1.0']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d],
+          [...'"?><a/>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in the xml declaration name',
+      [...'<?xml ']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0x78],
+          [...'="1"?><a/>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in an xml 1.1 document',
+      [...'<?xml version="1.1"?><a>']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xde00, 0xd83d, 0x0d],
+          [...'</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      {},
+    ],
+    [
+      'lone surrogate in an unbound prefix',
+      [0x3c, 0xd83d, 0x3a, 0x61, 0x2f, 0x3e],
+      { options: NS_OPTIONS },
+    ],
+    [
+      'lone surrogate in a duplicate attribute',
+      [...'<a ']
+        .map((c) => c.charCodeAt(0))
+        .concat([
+          0x78, 0xd83d, 0x3d, 0x22, 0x31, 0x22, 0x20, 0x78, 0xd83d, 0x3d, 0x22, 0x32, 0x22, 0x2f,
+          0x3e,
+        ]),
+      {},
+    ],
+    ['lone surrogate in an unclosed tag name', [0x3c, 0x61, 0xd83d, 0x62, 0x3e], {}],
+    ['lone surrogate in a closing tag', [0x3c, 0x61, 0x3e, 0x3c, 0x2f, 0x61, 0xd83d, 0x3e], {}],
+    [
+      'lone surrogate in a namespace prefix',
+      [...'<a xmlns:p']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0x78],
+          [...'="u"/>'].map((c) => c.charCodeAt(0)),
+        ),
+      { options: NS_OPTIONS },
+    ],
+    [
+      'high at the end, chunked',
+      [...'<a>x'].map((c) => c.charCodeAt(0)).concat([0xd83d]),
+      { chunkSize: 2 },
+    ],
+    [
+      'pair split by chunks',
+      [...'<a>x']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0xd83d, 0xde00],
+          [...'y</a>'].map((c) => c.charCodeAt(0)),
+        ),
+      { chunkSize: 1 },
+    ],
+    [
+      'lone surrogates chunked',
+      [0x3c, 0x61, 0x3e, 0xd83d, 0x78, 0xde00, 0xd83d, 0x3c, 0x2f, 0x61, 0x3e],
+      { chunkSize: 3 },
+    ],
+    [
+      'lone surrogate with namespaces and position',
+      [0x3c, 0x61, 0x3e, 0xd83d, 0x3c, 0x2f, 0x61, 0x3e],
+      { options: { xmlns: true, fileName: 'x' } },
+    ],
+    [
+      'lone surrogate in text, in a fragment',
+      [0x78, 0xd83d, 0x3c, 0x61, 0x2f, 0x3e],
+      { options: { fragment: true } },
+    ],
+    ['high at the end in a fragment', [0x78, 0xd83d], { options: { fragment: true } }],
+    [
+      'high at the end of a fragment, no text handler',
+      [0x78, 0xd83d],
+      { options: { fragment: true }, handlers: ['error', 'end'] },
+    ],
+    ['text of units', [...'<a>héllo wörld</a>'].map((c) => c.charCodeAt(0)), {}],
   ]
-  for (const [name, codes, args] of unitCases) add(name, '', { ...args, units: codes }, { mutate: false })
+  for (const [name, codes, args] of unitCases)
+    add(name, '', { ...args, units: codes }, { mutate: false })
   return inputs
 }
 
 export const SPECS: Spec[] = [
   {
-    fn: 'saxesEvents', extensions: [], mutation: 'text',
+    fn: 'saxesEvents',
+    extensions: [],
+    mutation: 'text',
     call: ({ text = '', args = {} }) => recordSaxes(text, args as WireArgs),
     built,
   },

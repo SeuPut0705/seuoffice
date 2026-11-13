@@ -16,12 +16,19 @@ export async function typescriptOutcome(spec: Spec, input: Input): Promise<Outco
   try {
     value = await spec.call(input)
   } catch (error) {
-    return { error: error instanceof Error ? { name: error.name, message: error.message } : { name: typeof error, message: String(error) } }
+    return {
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: typeof error, message: String(error) },
+    }
   }
   try {
     return JSON.parse(JSON.stringify({ value }, jsonValue)) as Outcome
   } catch (error) {
-    throw new Error(`${spec.fn} ${input.label}: the TypeScript answer is not JSON`, { cause: error })
+    throw new Error(`${spec.fn} ${input.label}: the TypeScript answer is not JSON`, {
+      cause: error,
+    })
   }
 }
 
@@ -33,7 +40,12 @@ export async function typescriptOutcome(spec: Spec, input: Input): Promise<Outco
  */
 export function withoutHostText(outcome: Outcome): Outcome {
   if (!('error' in outcome)) return outcome
-  return { error: { ...outcome.error, message: outcome.error.message.replace(/(cannot be inflated:).*$/s, '$1') } }
+  return {
+    error: {
+      ...outcome.error,
+      message: outcome.error.message.replace(/(cannot be inflated:).*$/s, '$1'),
+    },
+  }
 }
 
 /** JSON text of a value read by `parseKeepingOrder`, every object's keys in the order they were written. */
@@ -41,5 +53,7 @@ export function stringifyAsWritten(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value)
   if (Array.isArray(value)) return `[${value.map(stringifyAsWritten).join(',')}]`
   const record = value as Record<string, unknown>
-  return `{${keysAsWritten(value).map(key => `${JSON.stringify(key)}:${stringifyAsWritten(record[key])}`).join(',')}}`
+  return `{${keysAsWritten(value)
+    .map((key) => `${JSON.stringify(key)}:${stringifyAsWritten(record[key])}`)
+    .join(',')}}`
 }

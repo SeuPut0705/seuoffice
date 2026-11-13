@@ -1,11 +1,18 @@
 // Host steps of the pure editors of epub-engine (crates/epub-engine blocks, edits): what the position-tracking
 // parser of xml-positions.ts gives them, until that parser is ported.
-import { parseXml, resolveHtmlEntity, type XmlElement, type XmlNode } from '../../packages/epub-engine/src/xml-positions'
+import {
+  parseXml,
+  resolveHtmlEntity,
+  type XmlElement,
+  type XmlNode,
+} from '../../packages/epub-engine/src/xml-positions'
 
-const units = (text: string): number[] => Array.from({ length: text.length }, (_, i) => text.charCodeAt(i))
+const units = (text: string): number[] =>
+  Array.from({ length: text.length }, (_, i) => text.charCodeAt(i))
 const fromUnits = (codes: readonly number[]): string => {
   let text = ''
-  for (let i = 0; i < codes.length; i += 8192) text += String.fromCharCode(...codes.slice(i, i + 8192))
+  for (let i = 0; i < codes.length; i += 8192)
+    text += String.fromCharCode(...codes.slice(i, i + 8192))
   return text
 }
 
@@ -35,18 +42,33 @@ export function parseXmlPositions(input: unknown): unknown {
     }
   }
   const wireChild = (node: XmlNode): WireChild =>
-    node.type === 'element' ? { element: ids.get(node)! }
-      : node.type === 'text' ? { type: 'text', start: node.start, end: node.end, value: units(node.value), cdata: node.cdata }
+    node.type === 'element'
+      ? { element: ids.get(node)! }
+      : node.type === 'text'
+        ? {
+            type: 'text',
+            start: node.start,
+            end: node.end,
+            value: units(node.value),
+            cdata: node.cdata,
+          }
         : { type: node.type, start: node.start, end: node.end }
-  const elements = order.map(el => ({
-    name: el.name, local: el.local, attributes: el.attributes.map(a => ({ name: a.name, value: a.value })),
-    start: el.start, startTagEnd: el.startTagEnd, endTagStart: el.endTagStart, end: el.end, selfClosing: el.selfClosing,
-    parent: el.parent === null ? null : ids.get(el.parent)!, children: el.children.map(wireChild),
+  const elements = order.map((el) => ({
+    name: el.name,
+    local: el.local,
+    attributes: el.attributes.map((a) => ({ name: a.name, value: a.value })),
+    start: el.start,
+    startTagEnd: el.startTagEnd,
+    endTagStart: el.endTagStart,
+    end: el.end,
+    selfClosing: el.selfClosing,
+    parent: el.parent === null ? null : ids.get(el.parent)!,
+    children: el.children.map(wireChild),
   }))
   return { ok: true, hasDoctype: parsed.doc.hasDoctype, root: 0, elements }
 }
 
 export const EPUB_PURE_STEPS: Record<string, (input: unknown) => unknown> = {
   parseXmlPositions,
-  resolveHtmlEntity: input => resolveHtmlEntity((input as { name: string }).name) ?? null,
+  resolveHtmlEntity: (input) => resolveHtmlEntity((input as { name: string }).name) ?? null,
 }

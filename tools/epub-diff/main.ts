@@ -11,6 +11,13 @@ import { SPECS as XML } from './xml-cases'
 const passed = await runSuite({
   directory: dirname(fileURLToPath(import.meta.url)),
   command: 'epubCall',
-  groups: { primitives: PRIMITIVES, ranges: RANGES, package: PACKAGE, saxes: SAXES, pure: PURE, xml: XML },
+  groups: {
+    primitives: PRIMITIVES,
+    ranges: RANGES,
+    package: PACKAGE,
+    saxes: SAXES,
+    pure: PURE,
+    xml: XML,
+  },
 })
 process.exitCode = passed ? 0 : 1

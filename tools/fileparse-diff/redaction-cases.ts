@@ -1,4 +1,8 @@
-import { OWN_REDACT_NS, REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS } from '../../packages/agent-core/src/redact-range'
+import {
+  OWN_REDACT_NS,
+  REDACT_EL,
+  REDACT_NS_WRITTEN as REDACT_NS,
+} from '../../packages/agent-core/src/redact-range'
 import { redactMarkdownSource } from './reference/markdown-redaction'
 import { PPTX_REDACT_EXT_URI, redactPptxPartXml } from './reference/pptx-redaction'
 import { redactExtXml, setRedactExt } from '../../packages/pptx-engine/src/redaction-xml'
@@ -53,7 +57,10 @@ const MARKDOWN: ReadonlyArray<readonly [string, string]> = [
   ['empty-label', '<span data-redaction data-label="">gone</span>'],
   ['blank-label', '<span data-redaction data-label="   ">gone</span>'],
   ['label-stripped-characters', `<span data-redaction data-label="a{b}c 'q' = d">x</span>`],
-  ['label-white-space-runs', '<span data-redaction data-label="  two\t\twords \u00a0 here\u3000">x</span>'],
+  [
+    'label-white-space-runs',
+    '<span data-redaction data-label="  two\t\twords \u00a0 here\u3000">x</span>',
+  ],
   ['label-spaced-equals', '<span data-redaction data-label = "spaced">w</span>'],
   ['label-40-units', span('x'.repeat(40), 'w')],
   ['label-cut-at-40', span('abcdefghij'.repeat(5), 'w')],
@@ -72,7 +79,10 @@ const MARKDOWN: ReadonlyArray<readonly [string, string]> = [
   ['span-in-html-block', `<div>\n${span('d', 'inside div')}\n</div>\n`],
   ['span-right-after-tag', `<b>${bare('x')}</b>`],
   ['after-closed-comment', `<!-- note -->\n${bare('x')}`],
-  ['after-pi-declaration-cdata', `<?xml version="1.0"?>\n<!DOCTYPE html>\n<![CDATA[ a ]]>\n${bare('x')}`],
+  [
+    'after-pi-declaration-cdata',
+    `<?xml version="1.0"?>\n<!DOCTYPE html>\n<![CDATA[ a ]]>\n${bare('x')}`,
+  ],
   ['after-autolink', `<https://example.com/a?b=c> ${bare('x')}`],
   ['after-lone-lt', `a < b and <3 ${bare('x')}`],
   ['escaped-star', `${bare('a \\* b')} c * d`],
@@ -146,7 +156,8 @@ const markedRun = (text: string, label: string) =>
   `<a:r>${setRedactExt('<a:rPr lang="en-US" dirty="0"/>', label)}<a:t>${text}</a:t></a:r>`
 
 /** our extension holding `inner`, for carriers the engine does not write */
-const ours = (inner: string) => `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}">${inner}</a:ext>`
+const ours = (inner: string) =>
+  `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}">${inner}</a:ext>`
 const label = (value: string) => `<${REDACT_EL} label="${value}"/>`
 const runWithExtList = (entries: string) =>
   `<a:r><a:rPr lang="en-US"><a:extLst>${entries}</a:extLst></a:rPr><a:t>secret</a:t></a:r>`
@@ -160,11 +171,19 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
   ['marked-run-escaped-label', slide(para(markedRun('x', 'Tom & "Jerry" <x>')))],
   [
     'marked-run-character-references',
-    slide(para(marked('caf&#233; &#x1F600; &#55357; &#xDE00; &#99999999999999999999; &#x110000; &#0;'))),
+    slide(
+      para(marked('caf&#233; &#x1F600; &#55357; &#xDE00; &#99999999999999999999; &#x110000; &#0;')),
+    ),
   ],
-  ['marked-run-named-references', slide(para(marked('&lt;a&gt; &amp; &quot;b&quot; &apos;c&apos; &nbsp;d &AMP;')))],
+  [
+    'marked-run-named-references',
+    slide(para(marked('&lt;a&gt; &amp; &quot;b&quot; &apos;c&apos; &nbsp;d &AMP;'))),
+  ],
   ['marked-run-blank-label', slide(para(markedRun('x', '"<>"')))],
-  ['marked-run-long-label', slide(para(markedRun('x', 'Quarterly revenue figures for the northern region, unreleased')))],
+  [
+    'marked-run-long-label',
+    slide(para(markedRun('x', 'Quarterly revenue figures for the northern region, unreleased'))),
+  ],
   // the original returns a marker ending in a lone surrogate here
   ['label-cut-splits-pair', slide(para(markedRun('x', 'x'.repeat(39) + '\u{1F600}')))],
   [
@@ -183,13 +202,28 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
       para(run('Chart')),
       '<p:pic><p:nvPicPr><p:cNvPr id="4" name="Picture 3" descr="quarterly chart"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>' +
         '<p:blipFill><a:blip r:embed="rId2"/></p:blipFill>' +
-        setRedactExt('<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="10" cy="10"/></a:xfrm></p:spPr>', 'chart') +
+        setRedactExt(
+          '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="10" cy="10"/></a:xfrm></p:spPr>',
+          'chart',
+        ) +
         '</p:pic>',
     ),
   ],
-  ['marked-paragraph-end', slide(`<a:p>${run('end')}${setRedactExt('<a:endParaRPr lang="en-US"/>', 'closing')}</a:p>`)],
-  ['marked-runs-in-order', slide(para(markedRun('a', 'one'), run(' b ')) + para(markedRun('c', 'two'), markedRun('d', 'three')))],
-  ['two-marks-one-run', slide(para(runWithExtList(redactExtXml('first') + redactExtXml('second'))))],
+  [
+    'marked-paragraph-end',
+    slide(`<a:p>${run('end')}${setRedactExt('<a:endParaRPr lang="en-US"/>', 'closing')}</a:p>`),
+  ],
+  [
+    'marked-runs-in-order',
+    slide(
+      para(markedRun('a', 'one'), run(' b ')) +
+        para(markedRun('c', 'two'), markedRun('d', 'three')),
+    ),
+  ],
+  [
+    'two-marks-one-run',
+    slide(para(runWithExtList(redactExtXml('first') + redactExtXml('second')))),
+  ],
   [
     'foreign-ext-beside-mark',
     slide(
@@ -201,7 +235,10 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
       ),
     ),
   ],
-  ['run-with-more-children', slide(para(`<a:r>${setRedactExt('<a:rPr/>', 'm')}<a:t>one</a:t><a:t>two</a:t></a:r>`))],
+  [
+    'run-with-more-children',
+    slide(para(`<a:r>${setRedactExt('<a:rPr/>', 'm')}<a:t>one</a:t><a:t>two</a:t></a:r>`)),
+  ],
   [
     'notes-part',
     `${HEAD}<p:notes ${PML}><p:cSld><p:spTree>${textShape(para(markedRun('note text', 'speaker note')))}` +
@@ -218,13 +255,22 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     'markup-around-mark',
-    slide(`<!-- a <a:r> in a comment --><?pi data?><![CDATA[ <a:p> ]]>${para(markedRun('x', 'kept apart'))}`).replace(
-      HEAD,
-      `${HEAD}<!DOCTYPE p:sld>`,
+    slide(
+      `<!-- a <a:r> in a comment --><?pi data?><![CDATA[ <a:p> ]]>${para(markedRun('x', 'kept apart'))}`,
+    ).replace(HEAD, `${HEAD}<!DOCTYPE p:sld>`),
+  ],
+  [
+    'repeated-label-attribute',
+    slide(para(runWithExtList(ours(`<go:redact label="first" label="second"/>`)))),
+  ],
+  [
+    'single-quoted-carrier',
+    slide(
+      para(
+        runWithExtList(`<a:ext uri='${PPTX_REDACT_EXT_URI}'><go:redact label='single'/></a:ext>`),
+      ),
     ),
   ],
-  ['repeated-label-attribute', slide(para(runWithExtList(ours(`<go:redact label="first" label="second"/>`))))],
-  ['single-quoted-carrier', slide(para(runWithExtList(`<a:ext uri='${PPTX_REDACT_EXT_URI}'><go:redact label='single'/></a:ext>`)))],
   ['malformed-unclosed', slide(para(markedRun('x', 'a'))).replace('</p:sld>', '')],
   ['malformed-mismatched-end', slide(para(markedRun('x', 'a'), '<a:r><a:t>y</a:r>'))],
   ['malformed-stray-end', slide(para(markedRun('x', 'a')) + '</a:p>')],
@@ -241,42 +287,204 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
   ['label-empty', slide(para(marked('')))],
   ['label-elements-two', slide(para(runWithExtList(ours(label('a') + label('b')))))],
   ['label-with-other-child', slide(para(runWithExtList(ours(label('a') + '<a:other/>'))))],
-  ['label-under-other-prefix', slide(para(runWithExtList(ours(`<x:redact xmlns:x="${REDACT_NS}" label="a"/>`))))],
+  [
+    'label-under-other-prefix',
+    slide(para(runWithExtList(ours(`<x:redact xmlns:x="${REDACT_NS}" label="a"/>`)))),
+  ],
   ['extension-self-closing', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"/>`)))],
-  ['mark-on-shape-properties', slide(para(run('x'))).replace('<p:spPr/>', `<p:spPr><a:extLst>${ours(label('a'))}</a:extLst></p:spPr>`)],
-  ['mark-on-body-properties', slide(para(run('x'))).replace('<a:bodyPr/>', `<a:bodyPr><a:extLst>${ours(label('a'))}</a:extLst></a:bodyPr>`)],
-  ['mark-without-extension-list', slide(para(`<a:r><a:rPr>${redactExtXml('a')}</a:rPr><a:t>secret</a:t></a:r>`))],
+  [
+    'mark-on-shape-properties',
+    slide(para(run('x'))).replace(
+      '<p:spPr/>',
+      `<p:spPr><a:extLst>${ours(label('a'))}</a:extLst></p:spPr>`,
+    ),
+  ],
+  [
+    'mark-on-body-properties',
+    slide(para(run('x'))).replace(
+      '<a:bodyPr/>',
+      `<a:bodyPr><a:extLst>${ours(label('a'))}</a:extLst></a:bodyPr>`,
+    ),
+  ],
+  [
+    'mark-without-extension-list',
+    slide(para(`<a:r><a:rPr>${redactExtXml('a')}</a:rPr><a:t>secret</a:t></a:r>`)),
+  ],
   ['mark-in-extension-list-at-root', `<a:extLst>${redactExtXml('a')}</a:extLst>`],
   ['mark-in-run-properties-at-root', `<a:rPr><a:extLst>${redactExtXml('a')}</a:extLst></a:rPr>`],
-  ['mark-on-paragraph-properties', slide(`<a:p><a:rPr><a:extLst>${redactExtXml('a')}</a:extLst></a:rPr></a:p>`)],
-  ['mark-on-paragraph-end-outside-paragraph', slide(para(`<a:r><a:endParaRPr><a:extLst>${redactExtXml('a')}</a:extLst></a:endParaRPr></a:r>`))],
+  [
+    'mark-on-paragraph-properties',
+    slide(`<a:p><a:rPr><a:extLst>${redactExtXml('a')}</a:extLst></a:rPr></a:p>`),
+  ],
+  [
+    'mark-on-paragraph-end-outside-paragraph',
+    slide(
+      para(`<a:r><a:endParaRPr><a:extLst>${redactExtXml('a')}</a:extLst></a:endParaRPr></a:r>`),
+    ),
+  ],
   ['mark-in-comment', slide(para(run('x')) + `<!-- ${redactExtXml('a')} -->`)],
   ['mark-in-cdata', slide(para(`<a:r><a:t><![CDATA[${redactExtXml('a')}]]></a:t></a:r>`))],
-  ['label-under-foreign-extension', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}">${label('a')}</a:ext>`)))],
-  ['namespace-under-other-prefix', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${REDACT_NS}"/></a:ext>`)))],
+  [
+    'label-under-foreign-extension',
+    slide(
+      para(
+        runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}">${label('a')}</a:ext>`),
+      ),
+    ),
+  ],
+  [
+    'namespace-under-other-prefix',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${REDACT_NS}"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
   // the product's own namespace, which a later version writes: read as the old one
-  ['own-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${OWN_REDACT_NS}"><${REDACT_EL} label="Own"/></a:ext>`)))],
-  ['own-namespace-under-other-prefix', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${OWN_REDACT_NS}"/></a:ext>`)))],
-  ['both-namespaces-on-one-mark', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}" xmlns:o="${OWN_REDACT_NS}"><${REDACT_EL} label="Two"/></a:ext>`)))],
+  [
+    'own-namespace',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${OWN_REDACT_NS}"><${REDACT_EL} label="Own"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'own-namespace-under-other-prefix',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${OWN_REDACT_NS}"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'both-namespaces-on-one-mark',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}" xmlns:o="${OWN_REDACT_NS}"><${REDACT_EL} label="Two"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
   ['own-namespace-text-only', slide(para(`<a:r><a:t>${OWN_REDACT_NS}</a:t></a:r>`))],
   // an unprefixed mark: read when it declares a mark namespace itself
-  ['unprefixed-own-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="Plain"/></a:ext>`)))],
-  ['unprefixed-old-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns='${REDACT_NS}' label="Old"/></a:ext>`)))],
-  ['unprefixed-namespace-on-the-extension', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns="${OWN_REDACT_NS}"><redact label="Up"/></a:ext>`)))],
-  ['unprefixed-without-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact label="None"/></a:ext>`)))],
-  ['unprefixed-other-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="urn:other" label="Other"/></a:ext>`)))],
-  ['unprefixed-empty-label', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label=""/></a:ext>`)))],
-  ['unprefixed-and-prefixed-in-one-extension', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}"><redact xmlns="${OWN_REDACT_NS}" label="A"/><${REDACT_EL} label="B"/></a:ext>`)))],
-  ['unprefixed-in-text-only', slide(para(`<a:r><a:t>&lt;redact</a:t></a:r>`, `<a:r><a:t>x</a:t></a:r>`)) + '<!-- <redact xmlns="x"/> -->'],
-  ['unprefixed-name-longer', slide(para(runWithExtList(ours(label('Long'))), `<a:r><a:t>y</a:t></a:r>`)) + '<redaction/><redact_x/><redact-x/>'],
-  ['unprefixed-two-marks-one-run', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="one"/></a:ext><a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="two"/></a:ext>`)))],
-  ['namespace-declared-twice', slide(para(markedRun('x', 'a'))).replace('<p:sld ', `<p:sld xmlns:go="${REDACT_NS}" `)],
+  [
+    'unprefixed-own-namespace',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="Plain"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-old-namespace',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns='${REDACT_NS}' label="Old"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-namespace-on-the-extension',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns="${OWN_REDACT_NS}"><redact label="Up"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-without-namespace',
+    slide(
+      para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact label="None"/></a:ext>`)),
+    ),
+  ],
+  [
+    'unprefixed-other-namespace',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="urn:other" label="Other"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-empty-label',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label=""/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-and-prefixed-in-one-extension',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}"><redact xmlns="${OWN_REDACT_NS}" label="A"/><${REDACT_EL} label="B"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'unprefixed-in-text-only',
+    slide(para(`<a:r><a:t>&lt;redact</a:t></a:r>`, `<a:r><a:t>x</a:t></a:r>`)) +
+      '<!-- <redact xmlns="x"/> -->',
+  ],
+  [
+    'unprefixed-name-longer',
+    slide(para(runWithExtList(ours(label('Long'))), `<a:r><a:t>y</a:t></a:r>`)) +
+      '<redaction/><redact_x/><redact-x/>',
+  ],
+  [
+    'unprefixed-two-marks-one-run',
+    slide(
+      para(
+        runWithExtList(
+          `<a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="one"/></a:ext><a:ext uri="${PPTX_REDACT_EXT_URI}"><redact xmlns="${OWN_REDACT_NS}" label="two"/></a:ext>`,
+        ),
+      ),
+    ),
+  ],
+  [
+    'namespace-declared-twice',
+    slide(para(markedRun('x', 'a'))).replace('<p:sld ', `<p:sld xmlns:go="${REDACT_NS}" `),
+  ],
   ['extension-id-in-text', slide(para(run(`id ${PPTX_REDACT_EXT_URI}`)))],
-  ['extension-id-as-reference', slide(para(runWithExtList(`<a:ext uri="&#123;${PPTX_REDACT_EXT_URI.slice(1)}">${label('a')}</a:ext>`)))],
-  ['repeated-uri-attribute', slide(para(runWithExtList(`<a:ext uri="{0}" uri="${PPTX_REDACT_EXT_URI}">${label('a')}</a:ext>`)))],
+  [
+    'extension-id-as-reference',
+    slide(
+      para(
+        runWithExtList(`<a:ext uri="&#123;${PPTX_REDACT_EXT_URI.slice(1)}">${label('a')}</a:ext>`),
+      ),
+    ),
+  ],
+  [
+    'repeated-uri-attribute',
+    slide(
+      para(runWithExtList(`<a:ext uri="{0}" uri="${PPTX_REDACT_EXT_URI}">${label('a')}</a:ext>`)),
+    ),
+  ],
   [
     'marked-run-inside-marked-run',
-    slide(para(`<a:r>${setRedactExt('<a:rPr/>', 'outer')}<a:t>a</a:t>${markedRun('b', 'inner')}</a:r>`)),
+    slide(
+      para(`<a:r>${setRedactExt('<a:rPr/>', 'outer')}<a:t>a</a:t>${markedRun('b', 'inner')}</a:r>`),
+    ),
   ],
 ]
 

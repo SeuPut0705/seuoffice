@@ -9,7 +9,10 @@ import type { Input, Spec } from './spec'
 // chapters that are XML and chapters that are not. No .epub file is tracked in this repository, so the corpus is empty.
 
 async function built(): Promise<Input[]> {
-  return [...(await builtBooks()).map(({ label, bytes }) => ({ label, bytes })), ...hostileZipInputs()]
+  return [
+    ...(await builtBooks()).map(({ label, bytes }) => ({ label, bytes })),
+    ...hostileZipInputs(),
+  ]
 }
 
 export const SPECS: Spec[] = [

@@ -29,7 +29,8 @@ const PAGES: Record<string, string> = {
   scriptMarkOutside: '<p>/*gx:redact:Text*/ "kept"</p>',
   scriptNewline: '<script>/*gx:redact:Broken*/ "line\nbreak";</script>',
   nested: '<div data-gx-redact="Outer"><span data-gx-redact="Inner">a</span> b</div>',
-  overlap: '<p data-gx-redact="Row"><img data-gx-redact-src="Pic" src="https://example.com/a.png"></p>',
+  overlap:
+    '<p data-gx-redact="Row"><img data-gx-redact-src="Pic" src="https://example.com/a.png"></p>',
   template: '<template><p data-gx-redact="Tpl">inside a template</p></template>',
   adoption: '<b data-gx-redact="Bold"><p>misnested</b> text</p>',
   implicitEnd: '<ul><li data-gx-redact="Item">one<li>two</ul>',
@@ -46,14 +47,20 @@ const PAGES: Record<string, string> = {
   rawText: '<textarea data-gx-redact="T">a <b>not</b> tag</textarea>',
   styleMark: '<style>/*gx:redact:Css*/ "x"</style>',
   unclosed: '<div data-gx-redact="Open">never closed',
-  doctype: '<!DOCTYPE html><html lang="ko"><head><title data-gx-redact="Title">t</title></head></html>',
+  doctype:
+    '<!DOCTYPE html><html lang="ko"><head><title data-gx-redact="Title">t</title></head></html>',
 }
 
 function built(): Input[] {
-  const source = readFileSync(resolve(repoRoot, 'tools/fileparse-diff/reference/html-redaction.ts'), 'utf8')
+  const source = readFileSync(
+    resolve(repoRoot, 'tools/fileparse-diff/reference/html-redaction.ts'),
+    'utf8',
+  )
   // the host step is a copy of sourceElements: the copy must still be the code
   if (!source.includes(SOURCE_ELEMENTS_TEXT)) {
-    throw new Error('html-redaction.ts no longer holds the sourceElements that host-steps-fileparse.ts copies')
+    throw new Error(
+      'html-redaction.ts no longer holds the sourceElements that host-steps-fileparse.ts copies',
+    )
   }
   return Object.entries(PAGES).map(([label, text]) => ({ label, text }))
 }

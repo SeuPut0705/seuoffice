@@ -65,9 +65,12 @@ export class Engine {
           if (slot !== 0) return 0xffff_ffff_ffff_ffffn
           let answer: unknown
           try {
-            const { name, input } = JSON.parse(decoder.decode(new Uint8Array(exports.memory.buffer, pointer, length))) as { name: string; input: unknown }
+            const { name, input } = JSON.parse(
+              decoder.decode(new Uint8Array(exports.memory.buffer, pointer, length)),
+            ) as { name: string; input: unknown }
             const step = steps[name]
-            if (step === undefined) throw Object.assign(new Error(`no host step ${name}`), { name: 'HostUnavailable' })
+            if (step === undefined)
+              throw Object.assign(new Error(`no host step ${name}`), { name: 'HostUnavailable' })
             answer = { ok: step(input) ?? null }
           } catch (error) {
             const thrown = error instanceof Error ? error : new Error(String(error))

@@ -80,7 +80,10 @@ for (const entry of readdirSync(here, { withFileTypes: true })) {
   const before = readFileSync(file, 'utf8')
   const after = before
     .replace(/(?:\.\.\/)+packages\/file-parse\/src\/(?!host-steps\b)/g, './reference/')
-    .replace(/(?<![./])packages\/file-parse\/src\/(?!host-steps\b)/g, 'tools/fileparse-diff/reference/')
+    .replace(
+      /(?<![./])packages\/file-parse\/src\/(?!host-steps\b)/g,
+      'tools/fileparse-diff/reference/',
+    )
   if (after !== before) {
     writeFileSync(file, after)
     changed += 1

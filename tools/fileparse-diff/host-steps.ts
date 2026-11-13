@@ -3,4 +3,7 @@
 import { EPUB_STEPS } from './host-steps-epub'
 import { FILEPARSE_STEPS } from './host-steps-fileparse'
 
-export const HOST_STEPS: Record<string, (input: unknown) => unknown> = { ...FILEPARSE_STEPS, ...EPUB_STEPS }
+export const HOST_STEPS: Record<string, (input: unknown) => unknown> = {
+  ...FILEPARSE_STEPS,
+  ...EPUB_STEPS,
+}

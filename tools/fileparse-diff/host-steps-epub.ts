@@ -47,7 +47,10 @@ export const SOURCE_PARSE5_ROOTS_LINES = String.raw`    const doc = parse(source
 // the product's steps must still restate those lines
 const product = readFileSync(resolve(repoRoot, 'packages/file-parse/src/host-steps.ts'), 'utf8')
 for (const copy of [SOURCE_FRAGMENT_TEXT, SOURCE_PARSE5_ROOTS_TEXT, SOURCE_PARSE5_ROOTS_LINES]) {
-  if (!product.includes(copy)) throw new Error('packages/file-parse/src/host-steps.ts no longer restates the parse5 lines of epub-engine')
+  if (!product.includes(copy))
+    throw new Error(
+      'packages/file-parse/src/host-steps.ts no longer restates the parse5 lines of epub-engine',
+    )
 }
 
 export const EPUB_STEPS: Record<string, (input: unknown) => unknown> = {

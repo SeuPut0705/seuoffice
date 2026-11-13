@@ -38,8 +38,14 @@ export const SOURCE_ELEMENTS_TEXT = String.raw`function sourceElements(source: s
 `
 
 // the product's step must still be that walk (html-cases.ts checks the reference holds it too)
-if (!readFileSync(resolve(repoRoot, 'packages/file-parse/src/host-steps.ts'), 'utf8').includes(SOURCE_ELEMENTS_TEXT)) {
-  throw new Error('packages/file-parse/src/host-steps.ts no longer holds the sourceElements of html-redaction.ts')
+if (
+  !readFileSync(resolve(repoRoot, 'packages/file-parse/src/host-steps.ts'), 'utf8').includes(
+    SOURCE_ELEMENTS_TEXT,
+  )
+) {
+  throw new Error(
+    'packages/file-parse/src/host-steps.ts no longer holds the sourceElements of html-redaction.ts',
+  )
 }
 
 export const FILEPARSE_STEPS: Record<string, (input: unknown) => unknown> = {

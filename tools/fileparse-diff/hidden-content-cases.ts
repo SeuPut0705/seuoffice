@@ -14,9 +14,11 @@ const OWN_NS = 'https://github.com/SeuPut0705/seuoffice/redaction/2026'
 const OLD_NS = 'https://genspark.ai/genoffice/redaction/2026'
 const DECK_URI = '{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'
 
-const hex = (text: string) => [...text].map((ch) => `&#x${ch.codePointAt(0)!.toString(16)};`).join('')
+const hex = (text: string) =>
+  [...text].map((ch) => `&#x${ch.codePointAt(0)!.toString(16)};`).join('')
 const dec = (text: string) => [...text].map((ch) => `&#${ch.codePointAt(0)};`).join('')
-const upperHex = (text: string) => [...text].map((ch) => `&#x${ch.codePointAt(0)!.toString(16).toUpperCase()};`).join('')
+const upperHex = (text: string) =>
+  [...text].map((ch) => `&#x${ch.codePointAt(0)!.toString(16).toUpperCase()};`).join('')
 
 /** the part text under test, one per spelling of a mark and of what only looks like one */
 const XML: ReadonlyArray<readonly [string, string]> = [
@@ -33,7 +35,10 @@ const XML: ReadonlyArray<readonly [string, string]> = [
   ['own namespace in upper-case hex references', `<a xmlns:go="${upperHex(OWN_NS)}"/>`],
   ['own namespace, one character a reference', OWN_NS.replace('g', '&#103;')],
   ['own namespace, one character a padded reference', OWN_NS.replace('g', '&#x00000000067;')],
-  ['own namespace, one character a zero-padded decimal reference', OWN_NS.replace('g', `&#${'0'.repeat(40)}103;`)],
+  [
+    'own namespace, one character a zero-padded decimal reference',
+    OWN_NS.replace('g', `&#${'0'.repeat(40)}103;`),
+  ],
   ['own namespace, a reference with an upper-case X', OWN_NS.replace('g', '&#X67;')],
   ['own namespace, a reference without its semicolon', OWN_NS.replace('g', '&#103')],
   ['own namespace, a reference with no digits', OWN_NS.replace('g', '&#;g')],
@@ -89,7 +94,10 @@ const XML: ReadonlyArray<readonly [string, string]> = [
 /** Markdown text; each is one the span pattern reads or nearly reads */
 const MARKDOWN: ReadonlyArray<readonly [string, string]> = [
   ['empty', ''],
-  ['span as the editor writes it', '<span class="redact-span" data-redaction="" data-label="x">words</span>'],
+  [
+    'span as the editor writes it',
+    '<span class="redact-span" data-redaction="" data-label="x">words</span>',
+  ],
   ['bare attribute', '<span data-redaction>words</span>'],
   ['upper-case span', '<SPAN DATA-REDACTION>x</SPAN>'],
   ['mixed case', '<Span Data-Redaction=1>x'],
@@ -158,11 +166,15 @@ function utf16(value: string, littleEndian: boolean, bom = true): Uint8Array {
   const view = new DataView(out.buffer)
   let at = 0
   if (bom) view.setUint16((at += 2) - 2, 0xfeff, littleEndian)
-  for (let i = 0; i < value.length; i++) view.setUint16((at += 2) - 2, value.charCodeAt(i), littleEndian)
+  for (let i = 0; i < value.length; i++)
+    view.setUint16((at += 2) - 2, value.charCodeAt(i), littleEndian)
   return out
 }
 
-async function zipOf(parts: Array<[name: string, data: string | Uint8Array]>, compression: 'STORE' | 'DEFLATE' = 'DEFLATE'): Promise<Uint8Array> {
+async function zipOf(
+  parts: Array<[name: string, data: string | Uint8Array]>,
+  compression: 'STORE' | 'DEFLATE' = 'DEFLATE',
+): Promise<Uint8Array> {
   const archive = new JSZip()
   for (const [name, data] of parts) archive.file(name, data)
   for (const file of Object.values(archive.files)) file.date = FIXED
@@ -170,74 +182,170 @@ async function zipOf(parts: Array<[name: string, data: string | Uint8Array]>, co
 }
 
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
-const DOC = (body: string) => `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="${WORD_NS}"><w:body>${body}</w:body></w:document>`
+const DOC = (body: string) =>
+  `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="${WORD_NS}"><w:body>${body}</w:body></w:document>`
 const PLAIN_DOC = DOC('<w:p><w:r><w:t>plain</w:t></w:r></w:p>')
-const MARKED = (ns: string) => `<w:document xmlns:w="${WORD_NS}" xmlns:go="${ns}"><w:body><go:redact/></w:body></w:document>`
-const SLIDE = (inner: string) => `<?xml version="1.0"?><p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">${inner}</p:sld>`
+const MARKED = (ns: string) =>
+  `<w:document xmlns:w="${WORD_NS}" xmlns:go="${ns}"><w:body><go:redact/></w:body></w:document>`
+const SLIDE = (inner: string) =>
+  `<?xml version="1.0"?><p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">${inner}</p:sld>`
 const PLAIN_SLIDE = SLIDE('<p:cSld/>')
 const DECK_EXT = SLIDE(`<p:extLst><p:ext uri="${DECK_URI}"/></p:extLst>`)
 const PADDING = ' '.repeat(400)
 
-const FILLER: Array<[string, string]> = [['[Content_Types].xml', '<Types/>'], ['_rels/.rels', '<Relationships/>']]
+const FILLER: Array<[string, string]> = [
+  ['[Content_Types].xml', '<Types/>'],
+  ['_rels/.rels', '<Relationships/>'],
+]
 
 async function docxInputs(): Promise<Input[]> {
-  const docx = (label: string, parts: Array<[string, string | Uint8Array]>, ext = 'docx', compression?: 'STORE' | 'DEFLATE'): Promise<Input> =>
+  const docx = (
+    label: string,
+    parts: Array<[string, string | Uint8Array]>,
+    ext = 'docx',
+    compression?: 'STORE' | 'DEFLATE',
+  ): Promise<Input> =>
     zipOf([...FILLER, ...parts], compression).then((bytes) => ({ label, bytes, args: { ext } }))
   const out = await Promise.all([
     docx('docx: mark in document.xml', [['word/document.xml', MARKED(OWN_NS)]]),
     docx('docx: mark in document.xml, old namespace', [['word/document.xml', MARKED(OLD_NS)]]),
-    docx('docx: namespace spelled in references', [['word/document.xml', `<w:document xmlns:go="${hex(OWN_NS)}"/>`]]),
-    docx('docx: redact element, no namespace', [['word/document.xml', '<w:document><redact/></w:document>']]),
-    docx('docx: redact element with a prefix', [['word/document.xml', '<w:document><x:redact w:id="1"/></w:document>']]),
-    docx('docx: mark in comments.xml', [['word/document.xml', PLAIN_DOC], ['word/comments.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in footnotes.xml', [['word/document.xml', PLAIN_DOC], ['word/footnotes.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in header and footer', [['word/header1.xml', PLAIN_DOC], ['word/footer1.xml', MARKED(OLD_NS)]]),
+    docx('docx: namespace spelled in references', [
+      ['word/document.xml', `<w:document xmlns:go="${hex(OWN_NS)}"/>`],
+    ]),
+    docx('docx: redact element, no namespace', [
+      ['word/document.xml', '<w:document><redact/></w:document>'],
+    ]),
+    docx('docx: redact element with a prefix', [
+      ['word/document.xml', '<w:document><x:redact w:id="1"/></w:document>'],
+    ]),
+    docx('docx: mark in comments.xml', [
+      ['word/document.xml', PLAIN_DOC],
+      ['word/comments.xml', MARKED(OWN_NS)],
+    ]),
+    docx('docx: mark in footnotes.xml', [
+      ['word/document.xml', PLAIN_DOC],
+      ['word/footnotes.xml', MARKED(OWN_NS)],
+    ]),
+    docx('docx: mark in header and footer', [
+      ['word/header1.xml', PLAIN_DOC],
+      ['word/footer1.xml', MARKED(OLD_NS)],
+    ]),
     docx('docx: mark in a nested path', [['word/glossary/document.xml', MARKED(OWN_NS)]]),
     docx('docx: mark in word/.xml', [['word/.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in word/.rels is not an xml part', [['word/_rels/document.xml.rels', MARKED(OWN_NS)]]),
+    docx('docx: mark in word/.rels is not an xml part', [
+      ['word/_rels/document.xml.rels', MARKED(OWN_NS)],
+    ]),
     docx('docx: mark in word/x.xml.bak', [['word/x.xml.bak', MARKED(OWN_NS)]]),
     docx('docx: mark in WORD/document.xml', [['WORD/document.xml', MARKED(OWN_NS)]]),
     docx('docx: mark in word.xml', [['word.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in a path with a newline', [['word/a\nb.xml', MARKED(OWN_NS)], ['word/c.xml', PLAIN_DOC]]),
+    docx('docx: mark in a path with a newline', [
+      ['word/a\nb.xml', MARKED(OWN_NS)],
+      ['word/c.xml', PLAIN_DOC],
+    ]),
     docx('docx: mark only in a path with a newline', [['word/a\nb.xml', MARKED(OWN_NS)]]),
     docx('docx: mark only in a path with a carriage return', [['word/a\rb.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark only in a path with a line separator', [['word/a\u2028b.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in customXml', [['word/document.xml', PLAIN_DOC], ['customXml/item1.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in docProps', [['word/document.xml', PLAIN_DOC], ['docProps/core.xml', MARKED(OWN_NS)]]),
-    docx('docx: mark in a pptx part', [['word/document.xml', PLAIN_DOC], ['ppt/slides/slide1.xml', DECK_EXT]]),
-    docx('docx: no mark', [['word/document.xml', PLAIN_DOC], ['word/comments.xml', PLAIN_DOC]]),
+    docx('docx: mark only in a path with a line separator', [
+      ['word/a\u2028b.xml', MARKED(OWN_NS)],
+    ]),
+    docx('docx: mark in customXml', [
+      ['word/document.xml', PLAIN_DOC],
+      ['customXml/item1.xml', MARKED(OWN_NS)],
+    ]),
+    docx('docx: mark in docProps', [
+      ['word/document.xml', PLAIN_DOC],
+      ['docProps/core.xml', MARKED(OWN_NS)],
+    ]),
+    docx('docx: mark in a pptx part', [
+      ['word/document.xml', PLAIN_DOC],
+      ['ppt/slides/slide1.xml', DECK_EXT],
+    ]),
+    docx('docx: no mark', [
+      ['word/document.xml', PLAIN_DOC],
+      ['word/comments.xml', PLAIN_DOC],
+    ]),
     docx('docx: no word parts', [['other.xml', PLAIN_DOC]]),
     docx('docx: empty package', []),
     docx('docx: mark in a stored part', [['word/document.xml', MARKED(OWN_NS)]], 'docx', 'STORE'),
     docx('docx: a directory entry named like a part', [['word/', '']]),
-    docx('docx: mark that is not UTF-8', [['word/document.xml', new Uint8Array([0xff, ...enc(MARKED(OWN_NS))])]]),
-    docx('docx: UTF-8 byte order mark before a mark', [['word/document.xml', new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARKED(OWN_NS))])]]),
-    docx('docx: invalid UTF-8 then no mark', [['word/document.xml', new Uint8Array([0xc3, 0x28, 0xe2, 0x82])]]),
-    docx('docx: extension with a dot, upper case', [['word/document.xml', MARKED(OWN_NS)]], '.DOCX'),
+    docx('docx: mark that is not UTF-8', [
+      ['word/document.xml', new Uint8Array([0xff, ...enc(MARKED(OWN_NS))])],
+    ]),
+    docx('docx: UTF-8 byte order mark before a mark', [
+      ['word/document.xml', new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARKED(OWN_NS))])],
+    ]),
+    docx('docx: invalid UTF-8 then no mark', [
+      ['word/document.xml', new Uint8Array([0xc3, 0x28, 0xe2, 0x82])],
+    ]),
+    docx(
+      'docx: extension with a dot, upper case',
+      [['word/document.xml', MARKED(OWN_NS)]],
+      '.DOCX',
+    ),
     docx('docx: extension upper case', [['word/document.xml', MARKED(OWN_NS)]], 'DocX'),
     docx('docx: extension with two dots', [['word/document.xml', MARKED(OWN_NS)]], '..docx'),
     docx('docx: extension with trailing space', [['word/document.xml', MARKED(OWN_NS)]], 'docx '),
     docx('docx: extension empty', [['word/document.xml', MARKED(OWN_NS)]], ''),
     docx('docx: extension of a zip that is a deck', [['ppt/slides/slide1.xml', DECK_EXT]], 'docx'),
-    docx('docx: a thousand parts and the mark in the last', [...Array.from({ length: 1000 }, (_, i): [string, string] => [`word/p${i}.xml`, PLAIN_DOC]), ['word/z.xml', MARKED(OWN_NS)]]),
+    docx('docx: a thousand parts and the mark in the last', [
+      ...Array.from({ length: 1000 }, (_, i): [string, string] => [`word/p${i}.xml`, PLAIN_DOC]),
+      ['word/z.xml', MARKED(OWN_NS)],
+    ]),
     docx('pptx: mark in a slide', [['ppt/slides/slide1.xml', MARKED(OWN_NS)]], 'pptx'),
     docx('pptx: deck extension in a slide', [['ppt/slides/slide1.xml', DECK_EXT]], 'pptx'),
-    docx('pptx: deck extension in a slide, spelled in references', [['ppt/slides/slide1.xml', SLIDE(`<p:ext uri="${dec(DECK_URI)}"/>`)]], 'pptx'),
-    docx('pptx: mark in notes', [['ppt/slides/slide1.xml', PLAIN_SLIDE], ['ppt/notesSlides/notesSlide1.xml', MARKED(OWN_NS)]], 'pptx'),
+    docx(
+      'pptx: deck extension in a slide, spelled in references',
+      [['ppt/slides/slide1.xml', SLIDE(`<p:ext uri="${dec(DECK_URI)}"/>`)]],
+      'pptx',
+    ),
+    docx(
+      'pptx: mark in notes',
+      [
+        ['ppt/slides/slide1.xml', PLAIN_SLIDE],
+        ['ppt/notesSlides/notesSlide1.xml', MARKED(OWN_NS)],
+      ],
+      'pptx',
+    ),
     docx('pptx: mark in a comment part', [['ppt/comments/comment1.xml', MARKED(OLD_NS)]], 'pptx'),
     docx('pptx: mark in a layout', [['ppt/slideLayouts/slideLayout1.xml', MARKED(OWN_NS)]], 'pptx'),
     docx('pptx: mark in presentation.xml', [['ppt/presentation.xml', DECK_EXT]], 'pptx'),
-    docx('pptx: mark in customXml', [['ppt/slides/slide1.xml', PLAIN_SLIDE], ['customXml/item1.xml', MARKED(OWN_NS)]], 'pptx'),
-    docx('pptx: mark in a word part', [['ppt/slides/slide1.xml', PLAIN_SLIDE], ['word/document.xml', MARKED(OWN_NS)]], 'pptx'),
-    docx('pptx: mark in a ppt rels part', [['ppt/_rels/presentation.xml.rels', MARKED(OWN_NS)]], 'pptx'),
+    docx(
+      'pptx: mark in customXml',
+      [
+        ['ppt/slides/slide1.xml', PLAIN_SLIDE],
+        ['customXml/item1.xml', MARKED(OWN_NS)],
+      ],
+      'pptx',
+    ),
+    docx(
+      'pptx: mark in a word part',
+      [
+        ['ppt/slides/slide1.xml', PLAIN_SLIDE],
+        ['word/document.xml', MARKED(OWN_NS)],
+      ],
+      'pptx',
+    ),
+    docx(
+      'pptx: mark in a ppt rels part',
+      [['ppt/_rels/presentation.xml.rels', MARKED(OWN_NS)]],
+      'pptx',
+    ),
     docx('pptx: no mark', [['ppt/slides/slide1.xml', PLAIN_SLIDE]], 'pptx'),
     docx('pptx: empty package', [], 'pptx'),
     docx('pptx: extension upper case with a dot', [['ppt/slides/slide1.xml', DECK_EXT]], '.PPTX'),
-    docx('pptx: redact element in a slide', [['ppt/slides/slide1.xml', SLIDE('<p:redact/>')]], 'pptx'),
+    docx(
+      'pptx: redact element in a slide',
+      [['ppt/slides/slide1.xml', SLIDE('<p:redact/>')]],
+      'pptx',
+    ),
   ])
 
   // a part that does not inflate: the mark before it answers, one after it throws
-  const corrupt = async (label: string, parts: Array<[string, string]>, name: string, ext = 'docx'): Promise<Input> => ({
+  const corrupt = async (
+    label: string,
+    parts: Array<[string, string]>,
+    name: string,
+    ext = 'docx',
+  ): Promise<Input> => ({
     label,
     bytes: breakEntry(await zipOf([...FILLER, ...parts]), name),
     args: { ext },
@@ -245,16 +353,65 @@ async function docxInputs(): Promise<Input[]> {
   const bad = MARKED(OWN_NS) + PADDING
   const fine = PLAIN_DOC + PADDING
   out.push(
-    await corrupt('docx: corrupt first part', [['word/document.xml', fine], ['word/comments.xml', fine]], 'word/document.xml'),
-    await corrupt('docx: corrupt second part, no mark before', [['word/document.xml', fine], ['word/comments.xml', fine]], 'word/comments.xml'),
-    await corrupt('docx: corrupt second part, mark before', [['word/document.xml', bad], ['word/comments.xml', fine]], 'word/comments.xml'),
-    await corrupt('docx: corrupt part of another path', [['word/document.xml', bad], ['customXml/item1.xml', fine]], 'customXml/item1.xml'),
-    await corrupt('docx: corrupt part after no word part', [['customXml/item1.xml', fine]], 'customXml/item1.xml'),
-    await corrupt('pptx: corrupt first slide', [['ppt/slides/slide1.xml', fine]], 'ppt/slides/slide1.xml', 'pptx'),
-    await corrupt('pptx: corrupt notes after a mark', [['ppt/slides/slide1.xml', SLIDE(`<p:ext uri="${DECK_URI}"/>`) + PADDING], ['ppt/notesSlides/n.xml', fine]], 'ppt/notesSlides/n.xml', 'pptx'),
+    await corrupt(
+      'docx: corrupt first part',
+      [
+        ['word/document.xml', fine],
+        ['word/comments.xml', fine],
+      ],
+      'word/document.xml',
+    ),
+    await corrupt(
+      'docx: corrupt second part, no mark before',
+      [
+        ['word/document.xml', fine],
+        ['word/comments.xml', fine],
+      ],
+      'word/comments.xml',
+    ),
+    await corrupt(
+      'docx: corrupt second part, mark before',
+      [
+        ['word/document.xml', bad],
+        ['word/comments.xml', fine],
+      ],
+      'word/comments.xml',
+    ),
+    await corrupt(
+      'docx: corrupt part of another path',
+      [
+        ['word/document.xml', bad],
+        ['customXml/item1.xml', fine],
+      ],
+      'customXml/item1.xml',
+    ),
+    await corrupt(
+      'docx: corrupt part after no word part',
+      [['customXml/item1.xml', fine]],
+      'customXml/item1.xml',
+    ),
+    await corrupt(
+      'pptx: corrupt first slide',
+      [['ppt/slides/slide1.xml', fine]],
+      'ppt/slides/slide1.xml',
+      'pptx',
+    ),
+    await corrupt(
+      'pptx: corrupt notes after a mark',
+      [
+        ['ppt/slides/slide1.xml', SLIDE(`<p:ext uri="${DECK_URI}"/>`) + PADDING],
+        ['ppt/notesSlides/n.xml', fine],
+      ],
+      'ppt/notesSlides/n.xml',
+      'pptx',
+    ),
   )
   const whole = await zipOf([...FILLER, ['word/document.xml', MARKED(OWN_NS)]])
-  const part = (label: string, bytes: Uint8Array, ext = 'docx'): Input => ({ label, bytes, args: { ext } })
+  const part = (label: string, bytes: Uint8Array, ext = 'docx'): Input => ({
+    label,
+    bytes,
+    args: { ext },
+  })
   out.push(
     part('docx: not a zip', enc('this is not a zip')),
     part('docx: empty bytes', new Uint8Array(0)),
@@ -271,7 +428,11 @@ async function docxInputs(): Promise<Input[]> {
 }
 
 function textFileInputs(): Input[] {
-  const file = (label: string, bytes: Uint8Array, ext: string): Input => ({ label, bytes, args: { ext } })
+  const file = (label: string, bytes: Uint8Array, ext: string): Input => ({
+    label,
+    bytes,
+    args: { ext },
+  })
   const out: Input[] = []
   for (const ext of ['md', 'markdown', 'MD', '.md', 'Markdown']) {
     out.push(
@@ -294,14 +455,34 @@ function textFileInputs(): Input[] {
   const high = new Uint8Array(0x20)
   high.forEach((_, i) => (high[i] = 0x80 + i))
   const cp1252 = (ext: string, mark: string, label: string): Input[] => [
-    file(`${ext}: windows-1252 high bytes before a mark (${label})`, new Uint8Array([...high, ...enc(mark), ...high]), ext),
-    file(`${ext}: windows-1252 high bytes, no mark (${label})`, new Uint8Array([...high, ...enc('plain'), ...high]), ext),
-    file(`${ext}: windows-1252 undefined bytes (${label})`, new Uint8Array([0x81, 0x8d, 0x8f, 0x90, 0x9d, ...enc(mark)]), ext),
+    file(
+      `${ext}: windows-1252 high bytes before a mark (${label})`,
+      new Uint8Array([...high, ...enc(mark), ...high]),
+      ext,
+    ),
+    file(
+      `${ext}: windows-1252 high bytes, no mark (${label})`,
+      new Uint8Array([...high, ...enc('plain'), ...high]),
+      ext,
+    ),
+    file(
+      `${ext}: windows-1252 undefined bytes (${label})`,
+      new Uint8Array([0x81, 0x8d, 0x8f, 0x90, 0x9d, ...enc(mark)]),
+      ext,
+    ),
   ]
   out.push(...cp1252('md', MARK_SPAN, 'span'), ...cp1252('html', MARK_PAGE, 'page'))
   out.push(
-    file('md: UTF-8 byte order mark then a span', new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARK_SPAN)]), 'md'),
-    file('html: UTF-8 byte order mark then a mark', new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARK_PAGE)]), 'html'),
+    file(
+      'md: UTF-8 byte order mark then a span',
+      new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARK_SPAN)]),
+      'md',
+    ),
+    file(
+      'html: UTF-8 byte order mark then a mark',
+      new Uint8Array([0xef, 0xbb, 0xbf, ...enc(MARK_PAGE)]),
+      'html',
+    ),
     file('md: UTF-8 span in non-ASCII text', enc(`가나다 ${MARK_SPAN} \u{1F600}`), 'md'),
     file('html: UTF-8 mark in non-ASCII text', enc(`가나다 ${MARK_PAGE} \u{1F600}`), 'html'),
     file('md: empty', new Uint8Array(0), 'md'),
@@ -311,26 +492,76 @@ function textFileInputs(): Input[] {
     file('md: FE FF only', new Uint8Array([0xfe, 0xff]), 'md'),
     file('md: UTF-16LE odd length', new Uint8Array([...utf16(MARK_SPAN, true), 0x41]), 'md'),
     file('html: UTF-16BE odd length', new Uint8Array([...utf16(MARK_PAGE, false), 0x41]), 'html'),
-    file('html: UTF-16LE lone surrogate before a mark', new Uint8Array([0xff, 0xfe, 0x00, 0xd8, ...utf16(MARK_PAGE, true, false)]), 'html'),
-    file('html: UTF-16LE of a mark broken by a lone surrogate', new Uint8Array([0xff, 0xfe, ...utf16('data-gx-', true, false), 0x00, 0xd8, ...utf16('redact', true, false)]), 'html'),
-    file('html: UTF-16 byte order mark that is not one', new Uint8Array([0xfe, 0xfe, ...enc(MARK_PAGE)]), 'html'),
-    file('html: UTF-16LE mark with its byte order swapped', utf16(MARK_PAGE, false).map((b, i) => (i < 2 ? [0xff, 0xfe][i]! : b)), 'html'),
+    file(
+      'html: UTF-16LE lone surrogate before a mark',
+      new Uint8Array([0xff, 0xfe, 0x00, 0xd8, ...utf16(MARK_PAGE, true, false)]),
+      'html',
+    ),
+    file(
+      'html: UTF-16LE of a mark broken by a lone surrogate',
+      new Uint8Array([
+        0xff,
+        0xfe,
+        ...utf16('data-gx-', true, false),
+        0x00,
+        0xd8,
+        ...utf16('redact', true, false),
+      ]),
+      'html',
+    ),
+    file(
+      'html: UTF-16 byte order mark that is not one',
+      new Uint8Array([0xfe, 0xfe, ...enc(MARK_PAGE)]),
+      'html',
+    ),
+    file(
+      'html: UTF-16LE mark with its byte order swapped',
+      utf16(MARK_PAGE, false).map((b, i) => (i < 2 ? [0xff, 0xfe][i]! : b)),
+      'html',
+    ),
     file('md: tangled spans', enc('<span a="x"'.repeat(80) + '> data-redaction'), 'md'),
-    file('md: tangled spans that stay within the budget', enc('<span a="x"'.repeat(8) + '> data-redaction'), 'md'),
+    file(
+      'md: tangled spans that stay within the budget',
+      enc('<span a="x"'.repeat(8) + '> data-redaction'),
+      'md',
+    ),
     file('md: long span-less text', enc('<span '.repeat(200)), 'md'),
   )
   return out
 }
 
 const EXTENSIONS: Input[] = [
-  ...HIDDEN_CONTENT_EXTENSIONS.flatMap((ext) => [ext, ext.toUpperCase(), `.${ext}`, `${ext} `, `${ext}x`, `x${ext}`].map((spelled): Input => ({
-    label: `extension ${JSON.stringify(spelled)} over an empty file`,
-    bytes: new Uint8Array(0),
-    args: { ext: spelled },
-  }))),
-  ...['', '.', 'txt', 'pdf', 'doc', 'ppt', 'xls', 'odt', 'epub', 'csv', 'json', 'hwp', '.docx.', 'docx.xml', 'MARKDOWN ', '\u212Aml', 'htm\u0131', 'ms'].map(
-    (ext): Input => ({ label: `unknown extension ${JSON.stringify(ext)}`, bytes: enc(`${MARK_SPAN}${MARK_PAGE}`), args: { ext } }),
+  ...HIDDEN_CONTENT_EXTENSIONS.flatMap((ext) =>
+    [ext, ext.toUpperCase(), `.${ext}`, `${ext} `, `${ext}x`, `x${ext}`].map((spelled): Input => ({
+      label: `extension ${JSON.stringify(spelled)} over an empty file`,
+      bytes: new Uint8Array(0),
+      args: { ext: spelled },
+    })),
   ),
+  ...[
+    '',
+    '.',
+    'txt',
+    'pdf',
+    'doc',
+    'ppt',
+    'xls',
+    'odt',
+    'epub',
+    'csv',
+    'json',
+    'hwp',
+    '.docx.',
+    'docx.xml',
+    'MARKDOWN ',
+    '\u212Aml',
+    'htm\u0131',
+    'ms',
+  ].map((ext): Input => ({
+    label: `unknown extension ${JSON.stringify(ext)}`,
+    bytes: enc(`${MARK_SPAN}${MARK_PAGE}`),
+    args: { ext },
+  })),
   { label: 'unknown extension over marked text', bytes: enc(MARK_SPAN), args: { ext: 'txt' } },
   { label: 'Kelvin sign spells markdown', bytes: enc(MARK_SPAN), args: { ext: 'mar\u212Adown' } },
   { label: 'extension HTML in capitals', bytes: enc(MARK_PAGE), args: { ext: 'HTML' } },
@@ -339,14 +570,28 @@ const EXTENSIONS: Input[] = [
 
 async function workbookInputs(): Promise<Input[]> {
   const seeds = await xlsxInputs()
-  const wanted = seeds.filter(({ label, args = {} }) =>
-    !('formulaScanMaxBytes' in args) && (/^(withheld|derived): /.test(label) || [
-      'values and shared strings', 'formulas cached, uncomputed and shared', 'workbook missing', 'workbook unclosed tag', 'not a zip', 'empty bytes',
-    ].includes(label)))
+  const wanted = seeds.filter(
+    ({ label, args = {} }) =>
+      !('formulaScanMaxBytes' in args) &&
+      (/^(withheld|derived): /.test(label) ||
+        [
+          'values and shared strings',
+          'formulas cached, uncomputed and shared',
+          'workbook missing',
+          'workbook unclosed tag',
+          'not a zip',
+          'empty bytes',
+        ].includes(label)),
+  )
   const out: Input[] = []
   for (const { label, bytes, mutate } of wanted) {
     if (bytes === undefined) continue
-    out.push({ label: `xlsx: ${label}`, bytes, args: { ext: 'xlsx' }, ...(mutate === false ? { mutate } : {}) })
+    out.push({
+      label: `xlsx: ${label}`,
+      bytes,
+      args: { ext: 'xlsx' },
+      ...(mutate === false ? { mutate } : {}),
+    })
   }
   const first = wanted.find(({ bytes }) => bytes !== undefined && bytes[0] === 0x50)
   if (first?.bytes !== undefined) {
@@ -357,7 +602,11 @@ async function workbookInputs(): Promise<Input[]> {
       { label: 'pptx: a workbook is no deck', bytes: first.bytes, args: { ext: 'pptx' } },
     )
   }
-  const plain = (label: string, bytes: Uint8Array, ext = 'xlsx'): Input => ({ label, bytes, args: { ext } })
+  const plain = (label: string, bytes: Uint8Array, ext = 'xlsx'): Input => ({
+    label,
+    bytes,
+    args: { ext },
+  })
   out.push(
     plain('xlsx: not starting with PK', enc(MARK_SPAN)),
     plain('xlsx: starting with Pk', enc('Pk\u0003\u0004')),
@@ -366,7 +615,10 @@ async function workbookInputs(): Promise<Input[]> {
     plain('xlsx: PK only', enc('PK')),
     plain('xlsx: empty', new Uint8Array(0)),
     plain('xlsm: not starting with PK', enc('not a workbook'), 'xlsm'),
-    plain('xlsx: a docx with a mark is no workbook', await zipOf([...FILLER, ['word/document.xml', MARKED(OWN_NS)]])),
+    plain(
+      'xlsx: a docx with a mark is no workbook',
+      await zipOf([...FILLER, ['word/document.xml', MARKED(OWN_NS)]]),
+    ),
     plain('xlsx: PK and junk', new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0])),
   )
   return out

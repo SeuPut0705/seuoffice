@@ -4,7 +4,8 @@ import type { Input, Spec } from './spec'
 
 /** Text an Excel user writes, by the language whose charset it needs. */
 const SAMPLES: Record<string, string> = {
-  korean: '이름,나이,주소\n홍길동,30,서울특별시 강남구\n김철수,25,부산광역시 해운대구\n이영희,41,대전광역시 유성구\n',
+  korean:
+    '이름,나이,주소\n홍길동,30,서울특별시 강남구\n김철수,25,부산광역시 해운대구\n이영희,41,대전광역시 유성구\n',
   // syllables only code page 949 has: the WHATWG euc-kr reads them, KS X 1001 does not
   koreanUhc: '이름,메모\n똠방각하,쏼라쏼라 햏자\n뷁,괜찮은 값입니다\n',
   // Hangul with hanja: half the characters outside ASCII are Hangul, and read
@@ -22,11 +23,43 @@ const SAMPLES: Record<string, string> = {
   controls: 'a\x1a,b\x1c,c\x7f\n山田,1\n',
 }
 
-const ENCODINGS = ['utf8', 'utf16le', 'utf16be', 'cp949', 'euc-kr', 'gbk', 'gb18030', 'shift_jis', 'cp932', 'big5', 'big5hkscs', 'windows1252'] as const
+const ENCODINGS = [
+  'utf8',
+  'utf16le',
+  'utf16be',
+  'cp949',
+  'euc-kr',
+  'gbk',
+  'gb18030',
+  'shift_jis',
+  'cp932',
+  'big5',
+  'big5hkscs',
+  'windows1252',
+] as const
 
-const PREFERRED: Array<string | undefined> = [undefined, '', 'euc-kr', 'EUC-KR', ' ks_c_5601-1987 ', 'gbk', 'shift_jis', 'big5', 'windows-1252', 'utf-8', 'utf-16le', 'bogus', 'iso-2022-kr', 'x-user-defined']
+const PREFERRED: Array<string | undefined> = [
+  undefined,
+  '',
+  'euc-kr',
+  'EUC-KR',
+  ' ks_c_5601-1987 ',
+  'gbk',
+  'shift_jis',
+  'big5',
+  'windows-1252',
+  'utf-8',
+  'utf-16le',
+  'bogus',
+  'iso-2022-kr',
+  'x-user-defined',
+]
 
-const BOMS: Record<string, number[]> = { utf8: [0xef, 0xbb, 0xbf], utf16le: [0xff, 0xfe], utf16be: [0xfe, 0xff] }
+const BOMS: Record<string, number[]> = {
+  utf8: [0xef, 0xbb, 0xbf],
+  utf16le: [0xff, 0xfe],
+  utf16be: [0xfe, 0xff],
+}
 
 function encoded(text: string, encoding: string): Uint8Array | undefined {
   if (!iconv.encodingExists(encoding)) return undefined
@@ -48,7 +81,13 @@ function seeded(seed: number): () => number {
 }
 
 function withPreferred(input: Input, preferred: string | undefined): Input {
-  return preferred === undefined ? input : { ...input, label: `${input.label} preferred ${JSON.stringify(preferred)}`, args: { preferred } }
+  return preferred === undefined
+    ? input
+    : {
+        ...input,
+        label: `${input.label} preferred ${JSON.stringify(preferred)}`,
+        args: { preferred },
+      }
 }
 
 function built(): Input[] {
@@ -60,18 +99,32 @@ function built(): Input[] {
       const base: Input = { label: `${name} in ${encoding}`, bytes }
       for (const preferred of PREFERRED) inputs.push(withPreferred(base, preferred))
       const bom = BOMS[encoding]
-      if (bom) inputs.push({ label: `${name} in ${encoding} with its BOM`, bytes: Uint8Array.from([...bom, ...bytes]) })
+      if (bom)
+        inputs.push({
+          label: `${name} in ${encoding} with its BOM`,
+          bytes: Uint8Array.from([...bom, ...bytes]),
+        })
     }
   }
   // a BOM followed by another, and BOMs alone
   for (const [encoding, bom] of Object.entries(BOMS)) {
     inputs.push({ label: `${encoding} BOM alone`, bytes: Uint8Array.from(bom) })
-    inputs.push({ label: `${encoding} BOM twice`, bytes: Uint8Array.from([...bom, ...bom, 0x61, 0]) })
+    inputs.push({
+      label: `${encoding} BOM twice`,
+      bytes: Uint8Array.from([...bom, ...bom, 0x61, 0]),
+    })
   }
-  inputs.push({ label: 'empty', bytes: new Uint8Array() }, { label: 'one NUL', bytes: Uint8Array.of(0) })
+  inputs.push(
+    { label: 'empty', bytes: new Uint8Array() },
+    { label: 'one NUL', bytes: Uint8Array.of(0) },
+  )
   // every charset reads these worse than one U+FFFD, which is all a label of
   // the replacement encoding would give: it must not be a candidate
-  inputs.push({ label: 'worse than one replacement character', bytes: Uint8Array.of(0xd8, 0xd8, 0x1b, 0x1b, 0x1b), args: { preferred: 'iso-2022-kr' } })
+  inputs.push({
+    label: 'worse than one replacement character',
+    bytes: Uint8Array.of(0xd8, 0xd8, 0x1b, 0x1b, 0x1b),
+    args: { preferred: 'iso-2022-kr' },
+  })
   // random bytes: high bytes among ASCII, the pairs of the double-byte charsets, NULs now and then
   const random = seeded(0x0c5f)
   for (let n = 0; n < 600; n++) {
@@ -80,7 +133,12 @@ function built(): Input[] {
     const bytes = new Uint8Array(length)
     for (let i = 0; i < length; i++) {
       const roll = random()
-      bytes[i] = roll < 0.02 ? 0 : roll < high ? 0x80 + Math.floor(random() * 0x80) : 0x20 + Math.floor(random() * 0x5f)
+      bytes[i] =
+        roll < 0.02
+          ? 0
+          : roll < high
+            ? 0x80 + Math.floor(random() * 0x80)
+            : 0x20 + Math.floor(random() * 0x5f)
     }
     const preferred = PREFERRED[Math.floor(random() * PREFERRED.length)]
     inputs.push(withPreferred({ label: `random ${n}`, bytes }, n % 3 === 0 ? preferred : undefined))
@@ -93,7 +151,8 @@ export const SPECS: Spec[] = [
     fn: 'decodeCsvBuffer',
     extensions: ['csv', 'tsv'],
     mutation: 'none',
-    call: async ({ bytes = new Uint8Array(), args = {} }) => decodeCsvBuffer(bytes, typeof args.preferred === "string" ? args.preferred : undefined),
+    call: async ({ bytes = new Uint8Array(), args = {} }) =>
+      decodeCsvBuffer(bytes, typeof args.preferred === 'string' ? args.preferred : undefined),
     built,
   },
 ]

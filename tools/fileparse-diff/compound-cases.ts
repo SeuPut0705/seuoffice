@@ -15,7 +15,10 @@ const NOSTREAM = -1
  */
 function compoundStreams(bytes: Uint8Array): Array<{ name: string; bytes: number[] }> {
   const { FileIndex } = CFB.read(Buffer.from(bytes), { type: 'buffer' })
-  return FileIndex.filter(entry => entry.type === 2).map(({ name, content }) => ({ name, bytes: content ? Array.from(content) : [] }))
+  return FileIndex.filter((entry) => entry.type === 2).map(({ name, content }) => ({
+    name,
+    bytes: content ? Array.from(content) : [],
+  }))
 }
 
 function fill(length: number, seed: number): Uint8Array {
@@ -32,7 +35,15 @@ function int32s(values: readonly number[], length: number): Uint8Array {
   return out
 }
 
-interface Entry { name: string; type: number; left?: number; right?: number; child?: number; start: number; size: number }
+interface Entry {
+  name: string
+  type: number
+  left?: number
+  right?: number
+  child?: number
+  start: number
+  size: number
+}
 
 /** One directory sector; slots past `entries` are unused, as cfb writes them. */
 function directory(entries: readonly Entry[], sectorSize = 512): Uint8Array {
@@ -42,7 +53,8 @@ function directory(entries: readonly Entry[], sectorSize = 512): Uint8Array {
     const at = slot * 128
     const entry = entries[slot]
     if (entry) {
-      for (let k = 0; k < entry.name.length; k++) view.setUint16(at + 2 * k, entry.name.charCodeAt(k), true)
+      for (let k = 0; k < entry.name.length; k++)
+        view.setUint16(at + 2 * k, entry.name.charCodeAt(k), true)
       view.setUint16(at + 64, (entry.name.length + 1) * 2, true)
       out[at + 66] = entry.type
       out[at + 67] = 1
@@ -100,7 +112,13 @@ function difatSector(locations: readonly number[], next: number): Uint8Array {
   return int32s([...locations, ...Array<number>(127 - locations.length).fill(FREESECT), next], 512)
 }
 
-const root = (child: number, start: number, size: number): Entry => ({ name: 'Root Entry', type: 5, child, start, size })
+const root = (child: number, start: number, size: number): Entry => ({
+  name: 'Root Entry',
+  type: 5,
+  child,
+  start,
+  size,
+})
 
 /** A file as cfb writes it, with `streams` added by path. */
 function written(streams: ReadonlyArray<readonly [string, Uint8Array]>): Uint8Array {
@@ -115,7 +133,8 @@ function entryAt(bytes: Uint8Array, name: string): number {
   for (let at = 512; at + 128 <= bytes.length; at += 128) {
     if (view.getUint16(at + 64, true) !== (name.length + 1) * 2) continue
     let same = true
-    for (let k = 0; k < name.length && same; k++) same = view.getUint16(at + 2 * k, true) === name.charCodeAt(k)
+    for (let k = 0; k < name.length && same; k++)
+      same = view.getUint16(at + 2 * k, true) === name.charCodeAt(k)
     if (same) return at
   }
   throw new Error(`no directory entry ${name}`)
@@ -144,77 +163,154 @@ function builtCompounds(): Input[] {
     return { label, bytes }
   }
 
-  const dataSectors = (count: number, seed: number) => Array.from({ length: count }, (_, k) => fill(512, seed + k))
+  const dataSectors = (count: number, seed: number) =>
+    Array.from({ length: count }, (_, k) => fill(512, seed + k))
   const fatSectors = Array.from({ length: 109 }, (_, k) => k)
-  const fullHeaderFat = int32s([...Array<number>(109).fill(FATSECT), DIFSECT, FATSECT, ENDOFCHAIN, 113, 114, 115, 116, 117, 118, 119, ENDOFCHAIN], 512)
-  const fatThenGap = int32s([FATSECT, DIFSECT, DIFSECT, ENDOFCHAIN, ...Array.from({ length: 124 }, (_, k) => k + 5)], 512)
+  const fullHeaderFat = int32s(
+    [
+      ...Array<number>(109).fill(FATSECT),
+      DIFSECT,
+      FATSECT,
+      ENDOFCHAIN,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      ENDOFCHAIN,
+    ],
+    512,
+  )
+  const fatThenGap = int32s(
+    [FATSECT, DIFSECT, DIFSECT, ENDOFCHAIN, ...Array.from({ length: 124 }, (_, k) => k + 5)],
+    512,
+  )
 
   return [
     { label: 'cfb: mini, regular, empty, unicode and nested streams', bytes: mixed },
     { label: 'cfb: one small stream', bytes: written([['/a', new TextEncoder().encode('hello')]]) },
-    { label: 'cfb: 24 streams over two MiniFAT sectors and seven directory sectors',
-      bytes: written(Array.from({ length: 24 }, (_, k) => [`/s${String(k).padStart(2, '0')}`, fill(500, k)] as const)) },
+    {
+      label: 'cfb: 24 streams over two MiniFAT sectors and seven directory sectors',
+      bytes: written(
+        Array.from(
+          { length: 24 },
+          (_, k) => [`/s${String(k).padStart(2, '0')}`, fill(500, k)] as const,
+        ),
+      ),
+    },
     { label: 'cfb: one stream over two FAT sectors', bytes: written([['/Big', fill(70_000, 9)]]) },
     { label: 'cfb: last sector cut short', bytes: mixed.slice(0, mixed.length - 301) },
     { label: 'file shorter than a header', bytes: mixed.slice(0, 511) },
-    edit('header signature', view => view.setUint8(0, 0xd1)),
-    edit('major version 5', view => view.setUint16(26, 5, true)),
-    edit('major version 4 with 512-byte sectors', view => view.setUint16(26, 4, true)),
-    edit('sector shift 10', view => view.setUint16(30, 10, true)),
-    edit('mini sector shift 7', view => view.setUint8(32, 7)),
-    edit('reserved header byte set', view => view.setUint8(35, 1)),
-    edit('directory sector count in a version 3 header', view => view.setInt32(40, 1, true)),
-    edit('mini stream cutoff 8192', view => view.setUint32(56, 0x2000, true)),
-    edit('DIFAT count without a DIFAT chain', view => view.setInt32(72, 1, true)),
-    edit('directory start past the file', view => view.setInt32(48, 100_000, true)),
-    edit('directory start before the file', view => view.setInt32(48, -5, true)),
-    edit('negative stream size', view => view.setInt32(table + 120, -256, true)),
-    edit('negative start and size read as an unused entry', view => {
+    edit('header signature', (view) => view.setUint8(0, 0xd1)),
+    edit('major version 5', (view) => view.setUint16(26, 5, true)),
+    edit('major version 4 with 512-byte sectors', (view) => view.setUint16(26, 4, true)),
+    edit('sector shift 10', (view) => view.setUint16(30, 10, true)),
+    edit('mini sector shift 7', (view) => view.setUint8(32, 7)),
+    edit('reserved header byte set', (view) => view.setUint8(35, 1)),
+    edit('directory sector count in a version 3 header', (view) => view.setInt32(40, 1, true)),
+    edit('mini stream cutoff 8192', (view) => view.setUint32(56, 0x2000, true)),
+    edit('DIFAT count without a DIFAT chain', (view) => view.setInt32(72, 1, true)),
+    edit('directory start past the file', (view) => view.setInt32(48, 100_000, true)),
+    edit('directory start before the file', (view) => view.setInt32(48, -5, true)),
+    edit('negative stream size', (view) => view.setInt32(table + 120, -256, true)),
+    edit('negative start and size read as an unused entry', (view) => {
       view.setInt32(table + 116, -7, true)
       view.setInt32(table + 120, -7, true)
     }),
-    edit('MiniFAT location no chain starts at', view => {
+    edit('MiniFAT location no chain starts at', (view) => {
       view.setInt32(60, 100_000, true)
       view.setInt32(64, 0, true)
     }),
-    edit('regular stream starting past the file', view => view.setInt32(word + 116, 100_000, true)),
-    edit('regular stream starting inside its chain', view => view.setInt32(word + 116, wordStart + 2, true)),
-    edit('FAT entry pointing past the file', view => view.setInt32(fatAt + wordStart * 4, 0x0fffffff, true)),
-    { label: 'version 4: 4096-byte sectors, mini and regular streams', bytes: compound({
-      version: 4, dirStart: 1, dirCount: 1, miniFat: [2, 1], headerFat: [0], sectors: [
-        int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN, 5, ENDOFCHAIN], 4096),
-        directory([root(1, 3, 128), { name: 'Small', type: 2, right: 2, start: 0, size: 100 }, { name: 'Large', type: 2, start: 4, size: 5000 }], 4096),
-        int32s([1, ENDOFCHAIN], 4096),
-        fill(4096, 10),
-        fill(4096, 11),
-        fill(4096, 12),
-      ] }) },
-    { label: 'DIFAT chain naming the 110th FAT sector', bytes: compound({
-      dirStart: 111, difat: [109, 1], headerFat: fatSectors, fatCount: 110, sectors: [
-        fullHeaderFat,
-        ...Array.from({ length: 108 }, () => int32s([], 512)),
-        difatSector([110], ENDOFCHAIN),
-        int32s([], 512),
-        directory([root(1, ENDOFCHAIN, 0), { name: 'Big', type: 2, start: 112, size: 4096 }]),
-        ...dataSectors(8, 20),
-      ] }) },
-    { label: 'two DIFAT sectors after a short header list, as cfb reads them', bytes: compound({
-      dirStart: 3, difat: [1, 2], headerFat: [0], fatCount: 2, sectors: [
-        fatThenGap,
-        difatSector([130], 2),
-        difatSector([], ENDOFCHAIN),
-        directory([root(1, ENDOFCHAIN, 0), { name: 'Big', type: 2, start: 4, size: 65_536 }]),
-        ...dataSectors(126, 40),
-        int32s([129, 131, FATSECT, 132, ENDOFCHAIN], 512),
-        ...dataSectors(2, 200),
-      ] }) },
-    { label: 'directory cut inside its third entry', bytes: compound({
-      dirStart: 3, miniFat: [1, 1], headerFat: [0], length: 2404, sectors: [
-        int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN], 512),
-        int32s([ENDOFCHAIN], 512),
-        fill(512, 30),
-        directory([root(1, 2, 64), { name: 'Small', type: 2, right: 2, start: 0, size: 50 }, { name: 'Part', type: 2, start: 0, size: 10 }]),
-      ] }) },
+    edit('regular stream starting past the file', (view) =>
+      view.setInt32(word + 116, 100_000, true),
+    ),
+    edit('regular stream starting inside its chain', (view) =>
+      view.setInt32(word + 116, wordStart + 2, true),
+    ),
+    edit('FAT entry pointing past the file', (view) =>
+      view.setInt32(fatAt + wordStart * 4, 0x0fffffff, true),
+    ),
+    {
+      label: 'version 4: 4096-byte sectors, mini and regular streams',
+      bytes: compound({
+        version: 4,
+        dirStart: 1,
+        dirCount: 1,
+        miniFat: [2, 1],
+        headerFat: [0],
+        sectors: [
+          int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN, 5, ENDOFCHAIN], 4096),
+          directory(
+            [
+              root(1, 3, 128),
+              { name: 'Small', type: 2, right: 2, start: 0, size: 100 },
+              { name: 'Large', type: 2, start: 4, size: 5000 },
+            ],
+            4096,
+          ),
+          int32s([1, ENDOFCHAIN], 4096),
+          fill(4096, 10),
+          fill(4096, 11),
+          fill(4096, 12),
+        ],
+      }),
+    },
+    {
+      label: 'DIFAT chain naming the 110th FAT sector',
+      bytes: compound({
+        dirStart: 111,
+        difat: [109, 1],
+        headerFat: fatSectors,
+        fatCount: 110,
+        sectors: [
+          fullHeaderFat,
+          ...Array.from({ length: 108 }, () => int32s([], 512)),
+          difatSector([110], ENDOFCHAIN),
+          int32s([], 512),
+          directory([root(1, ENDOFCHAIN, 0), { name: 'Big', type: 2, start: 112, size: 4096 }]),
+          ...dataSectors(8, 20),
+        ],
+      }),
+    },
+    {
+      label: 'two DIFAT sectors after a short header list, as cfb reads them',
+      bytes: compound({
+        dirStart: 3,
+        difat: [1, 2],
+        headerFat: [0],
+        fatCount: 2,
+        sectors: [
+          fatThenGap,
+          difatSector([130], 2),
+          difatSector([], ENDOFCHAIN),
+          directory([root(1, ENDOFCHAIN, 0), { name: 'Big', type: 2, start: 4, size: 65_536 }]),
+          ...dataSectors(126, 40),
+          int32s([129, 131, FATSECT, 132, ENDOFCHAIN], 512),
+          ...dataSectors(2, 200),
+        ],
+      }),
+    },
+    {
+      label: 'directory cut inside its third entry',
+      bytes: compound({
+        dirStart: 3,
+        miniFat: [1, 1],
+        headerFat: [0],
+        length: 2404,
+        sectors: [
+          int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN], 512),
+          int32s([ENDOFCHAIN], 512),
+          fill(512, 30),
+          directory([
+            root(1, 2, 64),
+            { name: 'Small', type: 2, right: 2, start: 0, size: 50 },
+            { name: 'Part', type: 2, start: 0, size: 10 },
+          ]),
+        ],
+      }),
+    },
   ]
 }
 
@@ -227,33 +323,64 @@ function builtCompounds(): Input[] {
  * cycle and the sibling cycle it runs until memory runs out.
  */
 function cyclesCfbFinishes(): Input[] {
-  const difatChain = (nexts: readonly number[], count: number) => compound({ dirStart: 1, difat: [2, count], headerFat: [0], sectors: [
-    int32s([FATSECT, ENDOFCHAIN, ...nexts.map(() => DIFSECT)], 512),
-    directory([root(NOSTREAM, ENDOFCHAIN, 0)]),
-    ...nexts.map(next => difatSector([ENDOFCHAIN], next)),
-  ] })
+  const difatChain = (nexts: readonly number[], count: number) =>
+    compound({
+      dirStart: 1,
+      difat: [2, count],
+      headerFat: [0],
+      sectors: [
+        int32s([FATSECT, ENDOFCHAIN, ...nexts.map(() => DIFSECT)], 512),
+        directory([root(NOSTREAM, ENDOFCHAIN, 0)]),
+        ...nexts.map((next) => difatSector([ENDOFCHAIN], next)),
+      ],
+    })
   return [
-    { label: 'MiniFAT cycle', mutate: false, bytes: compound({ dirStart: 1, miniFat: [2, 1], headerFat: [0], sectors: [
-      int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN], 512),
-      directory([root(1, 3, 512), { name: 'Loop', type: 2, start: 0, size: 200 }]),
-      int32s([1, 0], 512),
-      fill(512, 4),
-    ] }) },
-    { label: 'two DIFAT sectors naming each other, three declared', mutate: false, bytes: difatChain([3, 2], 3) },
-    { label: 'three streams sharing one chain past the file size', mutate: false, bytes: compound({ dirStart: 1, headerFat: [0], sectors: [
-      int32s([FATSECT, ENDOFCHAIN, 3, 4, 5, 6, 7, 8, 9, ENDOFCHAIN], 512),
-      directory([
-        root(1, ENDOFCHAIN, 0),
-        { name: 'A', type: 2, right: 2, start: 2, size: 4096 },
-        { name: 'B', type: 2, right: 3, start: 2, size: 4096 },
-        { name: 'C', type: 2, start: 2, size: 4096 },
-      ]),
-      ...Array.from({ length: 8 }, (_, k) => fill(512, 2 + k)),
-    ] }) },
+    {
+      label: 'MiniFAT cycle',
+      mutate: false,
+      bytes: compound({
+        dirStart: 1,
+        miniFat: [2, 1],
+        headerFat: [0],
+        sectors: [
+          int32s([FATSECT, ENDOFCHAIN, ENDOFCHAIN, ENDOFCHAIN], 512),
+          directory([root(1, 3, 512), { name: 'Loop', type: 2, start: 0, size: 200 }]),
+          int32s([1, 0], 512),
+          fill(512, 4),
+        ],
+      }),
+    },
+    {
+      label: 'two DIFAT sectors naming each other, three declared',
+      mutate: false,
+      bytes: difatChain([3, 2], 3),
+    },
+    {
+      label: 'three streams sharing one chain past the file size',
+      mutate: false,
+      bytes: compound({
+        dirStart: 1,
+        headerFat: [0],
+        sectors: [
+          int32s([FATSECT, ENDOFCHAIN, 3, 4, 5, 6, 7, 8, 9, ENDOFCHAIN], 512),
+          directory([
+            root(1, ENDOFCHAIN, 0),
+            { name: 'A', type: 2, right: 2, start: 2, size: 4096 },
+            { name: 'B', type: 2, right: 3, start: 2, size: 4096 },
+            { name: 'C', type: 2, start: 2, size: 4096 },
+          ]),
+          ...Array.from({ length: 8 }, (_, k) => fill(512, 2 + k)),
+        ],
+      }),
+    },
   ]
 }
 
 export const SPECS: Spec[] = [
-  { fn: 'compoundStreams', extensions: ['doc', 'ppt'], built: () => [...builtCompounds(), ...cyclesCfbFinishes()],
-    call: ({ bytes = EMPTY }) => compoundStreams(bytes) },
+  {
+    fn: 'compoundStreams',
+    extensions: ['doc', 'ppt'],
+    built: () => [...builtCompounds(), ...cyclesCfbFinishes()],
+    call: ({ bytes = EMPTY }) => compoundStreams(bytes),
+  },
 ]

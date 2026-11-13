@@ -6,22 +6,111 @@ import { SPECS } from './legacy-cases'
  * Writes crates/file-parse/tests/legacy.rs: a fixture of legacy-cases.ts per entry of `want`, with the answer
  * the TypeScript gives it on Node 22. Run: `npx tsx legacy-tests-gen.ts ../../crates/file-parse/tests/legacy.rs`.
  */
-async function answerOf(fn: string, input: Input): Promise<{ value: string } | { error: { name: string; message: string } }> {
-  const spec = SPECS.find(candidate => candidate.fn === fn)!
+async function answerOf(
+  fn: string,
+  input: Input,
+): Promise<{ value: string } | { error: { name: string; message: string } }> {
+  const spec = SPECS.find((candidate) => candidate.fn === fn)!
   try {
     const value = await spec.call(input)
     return { value: typeof value === 'string' ? value : '' }
   } catch (error) {
-    return error instanceof Error ? { error: { name: error.name, message: error.message } } : { error: { name: typeof error, message: String(error) } }
+    return error instanceof Error
+      ? { error: { name: error.name, message: error.message } }
+      : { error: { name: typeof error, message: String(error) } }
   }
 }
 const want: Record<string, string[]> = {
-  pptToText: ['three slides with notes and master', 'slide list of the document only (no slide containers)', 'two documents, the second without a slide list', 'slide whose drawing has no group shape (TypeError)', 'end document atom with a body (thrown string)', 'Current User holds two atoms (thrown string)', 'no PowerPoint Document stream (TypeError)', 'persist directory atom before any edit (TypeError)', 'name with a dotless i (U+0131) that upper-cases to I', 'text with CR, CRLF and trailing space', 'text bytes with every byte value', 'streams inside a storage', 'container longer than the stream', 'not a compound file'],
-  docToText: ['compressed and unicode pieces', 'control characters of Word', 'fields: simple, nested, unbalanced', 'footnote, header and text box stories', 'deleted runs', 'paragraph marks from a property', 'bytes 0x80 to 0x9f of a compressed piece', 'wrong magic number', 'WordDocument stream of one byte', 'no Table stream', 'a storage named __proto__', 'piece table size 4 (no pieces)', 'PK of an empty archive', 'RTF text', 'paragraphs, tabs and breaks', 'table with cells and rows', 'text boxes in the body', 'footnotes, endnotes, comments, headers and footers', 'content types last in the archive', 'no content types (Error)', 'override without a part name (TypeError message)', 'inherited names as content types', 'part named __proto__', 'unclosed tag', 'root that is not w:document (tab without context)', 'text box inside a footnote', 'stored size mismatch (declared larger)', 'deflate: reserved block type', 'deflate: truncated stream', 'empty deflate payload (unexpected end of file)', 'central directory offset past the file', 'zip64 end records', 'Info-ZIP unicode path with the right crc', 'absolute name', 'local header offset past the file (RangeError)', 'a large part, byte 400 changed', 'unsupported compression method', 'encrypted flag on the document part'],
-  assertCompoundFile: ['a file cfb wrote', 'FAT list with a gap', 'mini stream sector used twice', 'storage nested 65 deep', 'version 4 file', 'unused entry filled with zeros (links to entry 0)'],
-  assertSoundCompoundFile: ['a file cfb wrote', 'the same with a type of other characters', 'wrong signature', 'header only (no sector)'],
+  pptToText: [
+    'three slides with notes and master',
+    'slide list of the document only (no slide containers)',
+    'two documents, the second without a slide list',
+    'slide whose drawing has no group shape (TypeError)',
+    'end document atom with a body (thrown string)',
+    'Current User holds two atoms (thrown string)',
+    'no PowerPoint Document stream (TypeError)',
+    'persist directory atom before any edit (TypeError)',
+    'name with a dotless i (U+0131) that upper-cases to I',
+    'text with CR, CRLF and trailing space',
+    'text bytes with every byte value',
+    'streams inside a storage',
+    'container longer than the stream',
+    'not a compound file',
+  ],
+  docToText: [
+    'compressed and unicode pieces',
+    'control characters of Word',
+    'fields: simple, nested, unbalanced',
+    'footnote, header and text box stories',
+    'deleted runs',
+    'paragraph marks from a property',
+    'bytes 0x80 to 0x9f of a compressed piece',
+    'wrong magic number',
+    'WordDocument stream of one byte',
+    'no Table stream',
+    'a storage named __proto__',
+    'piece table size 4 (no pieces)',
+    'PK of an empty archive',
+    'RTF text',
+    'paragraphs, tabs and breaks',
+    'table with cells and rows',
+    'text boxes in the body',
+    'footnotes, endnotes, comments, headers and footers',
+    'content types last in the archive',
+    'no content types (Error)',
+    'override without a part name (TypeError message)',
+    'inherited names as content types',
+    'part named __proto__',
+    'unclosed tag',
+    'root that is not w:document (tab without context)',
+    'text box inside a footnote',
+    'stored size mismatch (declared larger)',
+    'deflate: reserved block type',
+    'deflate: truncated stream',
+    'empty deflate payload (unexpected end of file)',
+    'central directory offset past the file',
+    'zip64 end records',
+    'Info-ZIP unicode path with the right crc',
+    'absolute name',
+    'local header offset past the file (RangeError)',
+    'a large part, byte 400 changed',
+    'unsupported compression method',
+    'encrypted flag on the document part',
+  ],
+  assertCompoundFile: [
+    'a file cfb wrote',
+    'FAT list with a gap',
+    'mini stream sector used twice',
+    'storage nested 65 deep',
+    'version 4 file',
+    'unused entry filled with zeros (links to entry 0)',
+  ],
+  assertSoundCompoundFile: [
+    'a file cfb wrote',
+    'the same with a type of other characters',
+    'wrong signature',
+    'header only (no sector)',
+  ],
 }
-const esc = (s: string): string => [...s].map(ch => { const c = ch.codePointAt(0)!; return ch === '"' ? '\\"' : ch === '\\' ? '\\\\' : ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : ch === '\t' ? '\\t' : c >= 0x20 && c < 0x7f ? ch : `\\u{${c.toString(16)}}` }).join('')
+const esc = (s: string): string =>
+  [...s]
+    .map((ch) => {
+      const c = ch.codePointAt(0)!
+      return ch === '"'
+        ? '\\"'
+        : ch === '\\'
+          ? '\\\\'
+          : ch === '\n'
+            ? '\\n'
+            : ch === '\r'
+              ? '\\r'
+              : ch === '\t'
+                ? '\\t'
+                : c >= 0x20 && c < 0x7f
+                  ? ch
+                  : `\\u{${c.toString(16)}}`
+    })
+    .join('')
 let out = `//! Expected answers of the TypeScript (Node 22), one fixture each: \`tools/fileparse-diff/legacy-cases.ts\`
 //! builds the input, \`tools/fileparse-diff/reference/{ppt,doc,damaged-file}.ts\` and
 //! \`packages/compound-file/src/validate.ts\` give the answer. Generated by
@@ -53,18 +142,30 @@ fn check(function: &str, label: &str, hex: &str, expect: &Expect, run: impl Fn(&
 }
 
 `
-const names: Record<string, string> = { pptToText: 'PPT', docToText: 'DOC', assertCompoundFile: 'GATE', assertSoundCompoundFile: 'SOUND' }
+const names: Record<string, string> = {
+  pptToText: 'PPT',
+  docToText: 'DOC',
+  assertCompoundFile: 'GATE',
+  assertSoundCompoundFile: 'SOUND',
+}
 for (const spec of SPECS) {
-  const labels = want[spec.fn]; if (!labels) continue
+  const labels = want[spec.fn]
+  if (!labels) continue
   const inputs = await spec.built()
   out += `const ${names[spec.fn]}: &[(&str, &str, Expect)] = &[\n`
   for (const label of labels) {
-    const input = inputs.find(i => i.label === label)
+    const input = inputs.find((i) => i.label === label)
     if (!input) throw new Error(`no input ${label} for ${spec.fn}`)
     const outcome = await answerOf(spec.fn, input)
-    if (input.bytes!.length > 30000) { console.log('too large', label, input.bytes!.length); continue }
+    if (input.bytes!.length > 30000) {
+      console.log('too large', label, input.bytes!.length)
+      continue
+    }
     const hex = Buffer.from(input.bytes!).toString('hex')
-    const e = 'error' in outcome ? `Error("${esc(outcome.error.name)}", "${esc(outcome.error.message)}")` : `Value("${esc(outcome.value)}")`
+    const e =
+      'error' in outcome
+        ? `Error("${esc(outcome.error.name)}", "${esc(outcome.error.message)}")`
+        : `Value("${esc(outcome.value)}")`
     out += `    ("${esc(label)}", "${hex}", ${e}),\n`
   }
   out += `];\n\n`
