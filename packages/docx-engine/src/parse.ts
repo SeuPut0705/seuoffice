@@ -10,7 +10,14 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { parseEntry, runsText, withheldBlockLabel, withheldLabelOf, withheldText } from './withheld'
+import {
+  parseEntry,
+  runsText,
+  withheldBlockLabel,
+  withheldLabelOf,
+  withheldPartLabel,
+  withheldText,
+} from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -1023,7 +1030,8 @@ async function buildBlock(
 ): Promise<Block> {
   const block = await buildBlockOf(el, index, xml, ctx, zoteroField)
   if (block.type !== 'image' && block.type !== 'passthrough') return block
-  const redact = withheldBlockLabel(xml)
+  // a chart whose rich text holds a mark is hidden whole, as a picture in a hidden run is
+  const redact = withheldBlockLabel(xml) ?? block.chartDisplay?.redact ?? null
   return redact === null ? block : { ...block, redact }
 }
 
@@ -9570,6 +9578,8 @@ async function extractChart(xml: string, ctx: BuildContext): Promise<ChartDispla
   const partXml = await partText(file)
   const display = parseChartPartXml(partXml, path, ctx.themeColors)
   if (display) {
+    const redact = withheldPartLabel(partXml)
+    if (redact !== null) display.redact = redact
     // chartex (cx:) parts are display-only degrades: the data-edit patcher
     // speaks classic c: syntax, so keeping them out makes edits no-ops
     // instead of corruption

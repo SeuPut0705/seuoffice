@@ -49,6 +49,20 @@ export function hasWithheldTrace(xml: string): boolean {
   return MARK_RE.test(xml)
 }
 
+/**
+ * The label of the mark in a part that holds a drawing's rich text (a chart part: its title, axis
+ * titles and data labels are DrawingML runs), or null when the part holds none. The drawing is
+ * shown whole, so a mark anywhere in the part hides all of it; the label is read off the first
+ * mark element (`label`, or `w:label` in the document's own spelling), else `private`.
+ */
+export function withheldPartLabel(partXml: string): string | null {
+  if (!hasWithheldTrace(partXml)) return null
+  const label = /<(?:[\w.-]+:)?redact\b[^>]*?\s(?:w:)?label\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(
+    partXml,
+  )
+  return decodeEntities(label?.[1] ?? label?.[2] ?? 'private') || 'private'
+}
+
 /** What a model reads for an entry whose marks cannot all be read: the whole entry is withheld. */
 export const WITHHELD_ENTRY_TEXT = placeholderSource('private')
 

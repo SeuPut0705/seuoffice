@@ -57,6 +57,10 @@ export function ownLinesOf(node: RenderNode): TextLine[] {
  * `nodeText` produced, with withheld runs swapped for their markers.
  */
 export function textForModel(node: RenderNode, forDisplay = false): string {
+  if (node.type === 'chart') {
+    // a chart with text hidden from AI reads as its marker, whole: its words are drawn by the renderer
+    return !forDisplay && node.redact ? placeholderSource(node.redact) : ''
+  }
   if (node.type === 'picture') {
     // a withheld picture reads as its marker so the model can see something is
     // there and write around it. The reader's own view stays empty: a picture
@@ -122,7 +126,7 @@ export function redactLabelsOf(slide: { nodes: RenderNode[] }): string[] {
         visit(n.children)
         continue
       }
-      if (n.type === 'picture' && n.redact) {
+      if ((n.type === 'picture' || n.type === 'chart') && n.redact) {
         seen.add(n.redact)
         continue
       }

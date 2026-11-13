@@ -17,6 +17,7 @@
 import { xmlParser } from './xml-parser'
 import { resolveFontRef, type Theme } from './theme'
 import { applyColorMods, resolveColorNode, scaleLuminance } from './color'
+import { readRedactLabel } from './redaction-xml'
 import type { Fill } from './types'
 
 /**
@@ -218,6 +219,12 @@ export interface ChartModel {
   overlapPct?: number
   categories: string[]
   series: ChartSeries[]
+  /**
+   * The label of a run in the chart's rich text (title, axis titles, data labels) hidden from AI.
+   * Chart text is drawn by the renderer and carried by no reader's text, so the chart as a whole
+   * is the unit that is withheld: the parent element takes this as its own `redact`.
+   */
+  redact?: string
   /** Legend position (undefined when there is no c:legend) */
   legendPos?: 't' | 'b' | 'l' | 'r' | 'tr'
   /** Legend text size (pt) from c:legend/c:txPr default run properties */
@@ -733,6 +740,8 @@ export function parseChartXml(
   }
 
   const model: ChartModel = { kind, categories, series }
+  const redact = hiddenLabelIn(doc)
+  if (redact) model.redact = redact
   if (ofPie) model.ofPie = ofPie
   if (categoryGroups) model.categoryGroups = categoryGroups
 
@@ -1511,6 +1520,28 @@ function parseAxis(ax: any, theme?: Theme): ChartAxisStyle | undefined {
     }
   }
   return Object.keys(out).length ? out : undefined
+}
+
+const MAX_REDACT_WALK_DEPTH = 64
+
+/** The label of the first run property in a parsed chart part that carries our "hidden from AI" mark. */
+function hiddenLabelIn(node: unknown, depth = 0): string | undefined {
+  if (typeof node !== 'object' || node === null || depth > MAX_REDACT_WALK_DEPTH) return undefined
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const hit = hiddenLabelIn(item, depth + 1)
+      if (hit) return hit
+    }
+    return undefined
+  }
+  const own =
+    (node as Record<string, unknown>)['a:extLst'] !== undefined ? readRedactLabel(node) : undefined
+  if (own) return own
+  for (const child of Object.values(node)) {
+    const hit = hiddenLabelIn(child, depth + 1)
+    if (hit) return hit
+  }
+  return undefined
 }
 
 /** Collect all a:t inside a rich text node. */
