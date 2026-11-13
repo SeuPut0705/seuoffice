@@ -357,6 +357,9 @@ pub struct LoadedEntry {
     pub uncompressed_size: Option<f64>,
     /// The content, or what reading it throws.
     pub content: Result<Vec<u8>, String>,
+    /// `entry.unixPermissions`: `(externalFileAttributes >> 16) & 0xFFFF` of
+    /// an entry written on Unix, `None` (JSZip's `null`) otherwise
+    pub unix_permissions: Option<u32>,
 }
 
 /// `JSZip.loadAsync(bytes)`: the entries in central directory order.
@@ -402,6 +405,8 @@ pub fn load(data: &[u8]) -> Result<Vec<LoadedEntry>, String> {
             name,
             is_dir,
             uncompressed_size: (!stored_empty).then_some(file.uncompressed_size as f64),
+            unix_permissions: (file.version_made_by >> 8 == MADE_BY_UNIX)
+                .then_some(((file.external_file_attributes >> 16) & 0xFFFF) as u32),
             content: if stored_empty {
                 Ok(Vec::new())
             } else {

@@ -1,0 +1,800 @@
+[
+  {
+    "name": "server token check inverted",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if timing_safe_equal(header.as_bytes(), expected.as_bytes()) {",
+    "replace": "if !timing_safe_equal(header.as_bytes(), expected.as_bytes()) {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server token prefix case",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "let expected = format!(\"Bearer {token}\");",
+    "replace": "let expected = format!(\"bearer {token}\");",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server token length ignored",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "a.len() == b.len() && a.iter()",
+    "replace": "a.iter()",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server token log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] rejected a request without the session token\"",
+    "replace": "\"[mcp] rejected a request\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server host port ignored",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "            && parsed.port().map(|p| p.to_string()).unwrap_or_default() == port\n        {\n            return true;\n        }\n        self.io.log(format!(\n            \"[mcp] rejected invalid Host header: {}\",",
+    "replace": "        {\n            return true;\n        }\n        self.io.log(format!(\n            \"[mcp] rejected invalid Host header: {}\",",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server host log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] rejected invalid Host header: {}\"",
+    "replace": "\"[mcp] bad Host header: {}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server origin scheme any",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "matches!(parsed.scheme(), \"http\" | \"https\")",
+    "replace": "matches!(parsed.scheme(), \"http\" | \"https\" | \"ftp\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server origin null passes",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "origin.filter(|o| !o.is_empty())",
+    "replace": "origin.filter(|o| !o.is_empty() && *o != \"null\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server origin log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] rejected invalid Origin header: {origin}\"",
+    "replace": "\"[mcp] bad Origin header: {origin}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server origin before host",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if !self.check_host(res, req) || !self.check_origin(res, req) {",
+    "replace": "if !self.check_origin(res, req) || !self.check_host(res, req) {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server health any method",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if path == \"/health\" && req.method == \"GET\" {",
+    "replace": "if path == \"/health\" {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server health port field",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "(\"port\", JsonValue::Number(self.port)),",
+    "replace": "(\"port\", JsonValue::Number(0.0)),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server mcp path prefix",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if path == \"/mcp\" {",
+    "replace": "if path.starts_with(\"/mcp\") {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server sse any method",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if path == \"/sse\" && req.method == \"GET\" {",
+    "replace": "if path == \"/sse\" {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server messages any method",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if path == \"/messages\" && req.method == \"POST\" {",
+    "replace": "if path == \"/messages\" {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server put allowed",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if method != \"POST\" && method != \"GET\" && method != \"DELETE\" {",
+    "replace": "if method != \"POST\" && method != \"GET\" && method != \"DELETE\" && method != \"PUT\" {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server unknown session status",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if given { 404 } else { 400 },",
+    "replace": "if given { 400 } else { 400 },",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server empty session id is given",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "let given = session_id.as_deref().is_some_and(|id| !id.is_empty());",
+    "replace": "let given = session_id.is_some();",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server post before initialize allowed",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if existing.is_none() && !is_initialize_request_by_method(parsed.as_ref()) {",
+    "replace": "if existing.is_none() && false {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server empty session id kept",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "                    Some(id) => id,\n",
+    "replace": "                    Some(id) if !id.is_empty() => id,\n",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server body limit 4 MiB",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "const MAX_BODY_BYTES: f64 = 32.0 * 1024.0 * 1024.0;",
+    "replace": "const MAX_BODY_BYTES: f64 = 4.0 * 1024.0 * 1024.0;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server too large body not destroyed",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "self.io.push(Command::Destroy { res });",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server parse error text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "format!(\"Parse error: {message}\")",
+    "replace": "format!(\"Parse: {message}\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server whitespace body is empty",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if raw.is_empty() {",
+    "replace": "if raw.trim().is_empty() {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server messages session param name",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": ".find(|(key, _)| key == \"sessionId\")",
+    "replace": ".find(|(key, _)| key == \"sessionid\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server heartbeat text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "chunk: \": heartbeat\\n\\n\".to_owned(),",
+    "replace": "chunk: \": keepalive\\n\\n\".to_owned(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server heartbeat interval",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "const HEARTBEAT_MS: f64 = 15000.0;",
+    "replace": "const HEARTBEAT_MS: f64 = 10000.0;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server legacy accel header",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "(\"x-accel-buffering\".into(), \"no\".into()),",
+    "replace": "(\"x-accel-buffering\".into(), \"yes\".into()),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server legacy session kept after close",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "self.retire_legacy(&id);",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server retry on the last attempt",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if attempt < self.max_listen_attempts {",
+    "replace": "if attempt <= self.max_listen_attempts {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server retry delay default",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "const LISTEN_RETRY_DELAY_MS: f64 = 1500.0;",
+    "replace": "const LISTEN_RETRY_DELAY_MS: f64 = 100.0;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server start binds after cancel",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if generation != self.lifecycle_generation {\n            self.io.push(Command::CloseListener { listener });",
+    "replace": "if false {\n            self.io.push(Command::CloseListener { listener });",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server retry after cancel",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if generation != self.lifecycle_generation {\n            self.settle_start(",
+    "replace": "if false {\n            self.settle_start(",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server stop keeps generation",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "        self.lifecycle_generation += 1;\n        let Some(server) = self.http_server.take() else {",
+    "replace": "        let Some(server) = self.http_server.take() else {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server second start while running",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "        if self.running {\n            self.io.push(Command::StartSettled {",
+    "replace": "        if false {\n            self.io.push(Command::StartSettled {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server port from address",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "        // port 0 asks the system for a free port; the Host check needs the real one\n        self.port = port;\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server retry log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] port {} in use, retry {}/{}\"",
+    "replace": "\"[mcp] port {} busy, retry {}/{}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server listening log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] listening on {} (streamable /mcp, legacy /sse)\"",
+    "replace": "\"[mcp] listening on {}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server stopped log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "self.io.log(\"[mcp] stopped\");",
+    "replace": "self.io.log(\"[mcp] closed\");",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server default version",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "unwrap_or_else(|| \"0.1.0\".to_owned())",
+    "replace": "unwrap_or_else(|| \"0.2.0\".to_owned())",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server old name applied when both exist",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "tools.iter().any(|t| t.name == *now) && !tools.iter().any(|t| t.name == *old)",
+    "replace": "tools.iter().any(|t| t.name == *now)",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server tool ok log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] tool {name} ok ({elapsed}ms)\"",
+    "replace": "\"[mcp] tool {name} done ({elapsed}ms)\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server tool error log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] tool {name} error ({elapsed}ms): {message}\"",
+    "replace": "\"[mcp] tool {name} failed ({elapsed}ms): {message}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server string result quoted",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "Some(JsonValue::String(text)) => Some(text.clone()),",
+    "replace": "Some(JsonValue::String(text)) => Some(format!(\"\\\"{text}\\\"\")),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server result indent",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "Some(value) => Some(json_stringify_pretty(value, 2)),",
+    "replace": "Some(value) => Some(json_stringify_pretty(value, 0)),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server session initialized log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "format!(\"[mcp] session initialized: {sid}\")",
+    "replace": "format!(\"[mcp] session started: {sid}\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server unhandled error log text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"[mcp] unhandled request error: {error}\"",
+    "replace": "\"[mcp] request error: {error}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server invalid url text",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "\"TypeError: Invalid URL\"",
+    "replace": "\"Invalid URL\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable post accept needs sse",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "            || !accept.is_some_and(|a| a.contains(\"text/event-stream\"))",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable content type unchecked",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "if !is_json_content_type(req.header(\"content-type\")) {",
+    "replace": "if false {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable media type any",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "media_type_essence(header).as_deref() == Some(\"application/json\")",
+    "replace": "media_type_essence(header).is_some()",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable media type case",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "Ok(type_text.to_lowercase())",
+    "replace": "Ok(type_text)",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable batch limit",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "const MAX_BATCH_SIZE: usize = 100;",
+    "replace": "const MAX_BATCH_SIZE: usize = 1000;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable second initialize allowed",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "if self.initialized && self.session_id.is_some() {",
+    "replace": "if false {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable batch initialize allowed",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "            if messages.len() > 1 {",
+    "replace": "            if false {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable protocol version unchecked",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "&& !SUPPORTED_PROTOCOL_VERSIONS.contains(&version)",
+    "replace": "&& false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable notification status",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "                status: 202,",
+    "replace": "                status: 200,",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable keep alive interval",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "const DEFAULT_SSE_KEEP_ALIVE_MS: f64 = 15000.0;",
+    "replace": "const DEFAULT_SSE_KEEP_ALIVE_MS: f64 = 5000.0;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable keep alive text",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "chunk: \": keepalive\\n\\n\".to_owned(),",
+    "replace": "chunk: \": ping\\n\\n\".to_owned(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable second stream allowed",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "if self.stream_mapping.get(STANDALONE_SSE_STREAM_ID).is_some() {",
+    "replace": "if false {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable session id header",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "            headers.push((\"mcp-session-id\".to_owned(), session_id.clone()));\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable cache control",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "                \"no-cache, no-transform\".to_owned(),",
+    "replace": "                \"no-cache\".to_owned(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable delete keeps stream",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "        self.close();\n        self.io.push(Command::Respond {\n            res,\n            status: 200,",
+    "replace": "        self.io.push(Command::Respond {\n            res,\n            status: 200,",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable ends on first response",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "let all_ready = related.iter().all(|k| self.request_response_map.has(k));",
+    "replace": "let all_ready = related.iter().any(|k| self.request_response_map.has(k));",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable invalid json text",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "\"Parse error: Invalid JSON\"",
+    "replace": "\"Parse error\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable invalid message text",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "\"Parse error: Invalid JSON-RPC message\"",
+    "replace": "\"Parse error: Invalid message\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable initialize by method",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "let is_initialization_request = messages.iter().any(is_initialize_request);",
+    "replace": "let is_initialization_request = messages.iter().any(|m| matches!(m.get(\"method\").as_deref(), Some(JsonValue::String(s)) if s == \"initialize\"));",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk protocol version fallback",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "            _ => LATEST_PROTOCOL_VERSION,",
+    "replace": "            _ => \"2025-03-26\",",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk method not found text",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "\"Method not found\",",
+    "replace": "\"Unknown method\",",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk answered depth",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "const TICKS_ANSWERED: u32 = 5;",
+    "replace": "const TICKS_ANSWERED: u32 = 11;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk no handler depth",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "const TICKS_AT_ONCE: u32 = 0;",
+    "replace": "const TICKS_AT_ONCE: u32 = 5;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk threw depth",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "const TICKS_THREW: u32 = 3;",
+    "replace": "const TICKS_THREW: u32 = 9;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk plain call depth",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "const TICKS_CALL_PLAIN: u32 = 10;",
+    "replace": "const TICKS_CALL_PLAIN: u32 = 12;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk sends in arrival order",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "    outgoing.sort_by_key(|sent| sent.ticks);\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk internal error code",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "_ => error_code::INTERNAL_ERROR,",
+    "replace": "_ => error_code::INVALID_PARAMS,",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk validation message",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "\"Input validation error: Invalid arguments for tool {name}: {}\"",
+    "replace": "\"Invalid arguments for tool {name}: {}\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool not found text",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "&format!(\"Tool {name} not found\"),",
+    "replace": "&format!(\"No tool {name}\"),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk inherited names",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "None if inherited_string(name).is_some() => {",
+    "replace": "None if false => {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk result unchecked",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "    match schema::safe_parse(&schema::call_tool_result(), &result) {",
+    "replace": "    match Ok::<JsonValue, Vec<schema::Issue>>(result.clone()) {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk task capability text",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "\"Server does not support task creation (required for {method})\"",
+    "replace": "\"Tasks are not supported ({method})\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk empty instructions",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "            && !instructions.is_empty()\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk list changed",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "(\"listChanged\", JsonValue::Bool(true))",
+    "replace": "(\"listChanged\", JsonValue::Bool(false))",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk task support listed",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "object(vec![(\"taskSupport\", text(\"forbidden\"))]),",
+    "replace": "object(vec![(\"taskSupport\", text(\"optional\"))]),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool error message hidden",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "Err((message, ticks)) => (create_tool_error(&message), ticks),",
+    "replace": "Err((_, ticks)) => (create_tool_error(\"tool error\"), ticks),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse endpoint event text",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "format!(\"event: endpoint\\ndata: {relative}\\n\\n\")",
+    "replace": "format!(\"event: endpoint\\ndata: {relative}\\n\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse accepted status",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "self.reply(res, 202, \"Accepted\");",
+    "replace": "self.reply(res, 200, \"Accepted\");",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse invalid message text",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "format!(\"Invalid message: {shown}\")",
+    "replace": "format!(\"Invalid: {shown}\")",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse content type check",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "Ok(media_type) if media_type != \"application/json\" => {",
+    "replace": "Ok(media_type) if false && media_type != \"application/json\" => {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse null body is a body",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "Some(body) if !matches!(body, JsonValue::Null) => Ok(body.clone()),",
+    "replace": "Some(body) => Ok(body.clone()),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse string body not parsed",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "JsonValue::String(text) => json_parse(text).map_err(|_| ())?,",
+    "replace": "JsonValue::String(_) => return Err(()),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse unreadable stream text",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "\"InternalServerError: stream is not readable\"",
+    "replace": "\"stream is not readable\"",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse endpoint session param",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": ".append_pair(\"sessionId\", &self.session_id);",
+    "replace": ".append_pair(\"sessionid\", &self.session_id);",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk cancel honours a falsy request id",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "let Some(request_id) = request_id.filter(JsonValue::truthy) else {",
+    "replace": "let Some(request_id) = request_id else {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk aborted request still answers",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "if pending.aborted || !self.connected {",
+    "replace": "if !self.connected {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk close leaves requests running",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "            self.abort(at, AbortCause::Closed);\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk settle result unchecked",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "result.and_then(|result| validated_call_result(pending.task_requested, result))",
+    "replace": "result",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk cancel ignores the id type",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "self.pending.iter().rposition(|p| p.id == request_id)",
+    "replace": "self.pending.iter().rposition(|p| jscompat::value_to_string(Some(&jscompat::json_value_to_serde(&p.id))) == jscompat::value_to_string(Some(&jscompat::json_value_to_serde(&request_id))))",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server stop does not report streamable aborts",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "session.server.on_close();\n                drain_server(&self.io, &key, &mut *session.server);\n            }\n        }\n        for key in self\n            .streamable",
+    "replace": "session.server.on_close();\n            }\n        }\n        for key in self\n            .streamable",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server stop does not report legacy aborts",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "drain_server(&self.io, &key, &mut *session.server);\n                let res = session.res;",
+    "replace": "let res = session.res;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server legacy close does not report aborts",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "session.server.on_close();\n                drain_server(&self.io, &id, &mut *session.server);",
+    "replace": "session.server.on_close();",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server streamable cancel not reported",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "} else {\n            drain_server(&self.io, key, &mut *session.server);\n        }\n    }",
+    "replace": "}\n    }",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server legacy cancel not reported",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "drain_server(&self.io, &session_id, &mut *session.server);\n        outcome.map_err",
+    "replace": "outcome.map_err",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server settle skips legacy sessions",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "} else if let Some(session) = self.legacy.get_mut(session_id) {\n            let outgoing = session.server.settle(",
+    "replace": "} else if let Some(session) = self.legacy.get_mut(\"\") {\n            let outgoing = session.server.settle(",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server drops tools of an ended streamable session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if let Some(session) = self.streamable.delete(key)\n            && session.server.has_pending_tools()",
+    "replace": "if let Some(session) = self.streamable.delete(key)\n            && false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server drops tools of an ended legacy session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if let Some(session) = self.legacy.delete(key)\n            && session.server.has_pending_tools()",
+    "replace": "if let Some(session) = self.legacy.delete(key)\n            && false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server never finds orphans to resume",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "self.orphans.iter().position(|(id, _)| id == session_id)",
+    "replace": "self.orphans.iter().position(|_| false)",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server keeps finished orphans",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if !server.has_pending_tools() {\n                self.orphans.remove(at);",
+    "replace": "if false {\n                self.orphans.remove(at);",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server resume skips legacy sessions",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "} else if let Some(session) = self.legacy.get_mut(session_id) {\n            let outgoing = session.server.resume_tool",
+    "replace": "} else if let Some(session) = self.legacy.get_mut(\"\") {\n            let outgoing = session.server.resume_tool",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server tool call without its session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "session_id: session_id.to_owned(),",
+    "replace": "session_id: String::new(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk abort reported for tools",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "let reports_abort = matches!(outcome.reply, Reply::Later(_));",
+    "replace": "let reports_abort = true;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool response not written",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "CallStep::Done(returned) => self.server.settle(ticket, Ok(returned.result)),",
+    "replace": "CallStep::Done(_) => Vec::new(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool never pending",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "!self.registry.borrow().inflight.is_empty()",
+    "replace": "false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk second await not issued",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "registry.host_calls.push((ticket, call));\n                Vec::new()",
+    "replace": "Vec::new()",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk first await not issued",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "            registry.inflight.push((ticket, then));\n            registry.host_calls.push((ticket, call));\n            return HandlerOutcome {",
+    "replace": "            registry.inflight.push((ticket, then));\n            return HandlerOutcome {",
+    "fn": ["mcp-server.scenario"]
+  }
+]

@@ -6,6 +6,8 @@
 //! objects from them, and the order of their keys shows in what the
 //! comparison writes.
 
+pub mod agent_session_claude;
+pub mod agent_session_policy;
 pub mod ai_settings_guard;
 pub mod custom_endpoints;
 pub mod effort;
@@ -23,5 +25,7 @@ pub mod registry;
 pub mod run_error;
 pub mod search_settings;
 pub mod settings_secrets;
+pub mod subscription_locate;
+pub mod subscription_process;
 pub mod user_skills_states;
 pub mod watchdog;

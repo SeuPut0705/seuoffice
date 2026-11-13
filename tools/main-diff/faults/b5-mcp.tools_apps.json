@@ -1,0 +1,219 @@
+[
+  {
+    "name": "outline limit is 101 slides",
+    "file": "main-core/src/shell/mcp/pptx_outline.rs",
+    "find": "pub const MAX_OUTLINE_SLIDES: usize = 100;",
+    "replace": "pub const MAX_OUTLINE_SLIDES: usize = 101;",
+    "fn": ["pptx-outline.outlineToOps", "pptx-outline.MAX_OUTLINE_SLIDES"]
+  },
+  {
+    "name": "bullet step is smaller",
+    "file": "main-core/src/shell/mcp/pptx_outline.rs",
+    "find": "const BULLET_STEP: f64 = 342_900.0;",
+    "replace": "const BULLET_STEP: f64 = 342_000.0;",
+    "fn": ["pptx-outline.outlineToOps"]
+  },
+  {
+    "name": "markdown indent caps at level 5",
+    "file": "main-core/src/shell/mcp/pptx_outline.rs",
+    "find": "((length16(indent) / 2).min(4)) as f64",
+    "replace": "((length16(indent) / 2).min(5)) as f64",
+    "fn": ["pptx-outline.parsePptxOutline"]
+  },
+  {
+    "name": "markdown indent counts three spaces a level",
+    "file": "main-core/src/shell/mcp/pptx_outline.rs",
+    "find": "((length16(indent) / 2).min(4)) as f64",
+    "replace": "((length16(indent) / 3).min(4)) as f64",
+    "fn": ["pptx-outline.parsePptxOutline"]
+  },
+  {
+    "name": "read_sheet allows 101 addresses",
+    "file": "main-core/src/shell/mcp/tools/sheets_tools.rs",
+    "find": "const MAX_READ_ADDRESSES: usize = 100;",
+    "replace": "const MAX_READ_ADDRESSES: usize = 101;",
+    "fn": ["sheets-tools.call"]
+  },
+  {
+    "name": "a rejected batch without a reason has another text",
+    "file": "main-core/src/shell/mcp/tools/sheets_tools.rs",
+    "find": "Err(\"the batch could not be applied\".to_owned())",
+    "replace": "Err(\"the batch failed\".to_owned())",
+    "fn": ["sheets-tools.call"]
+  },
+  {
+    "name": "a rejected transaction without failures has another text",
+    "file": "main-core/src/shell/mcp/tools/slides_tools.rs",
+    "find": "\"the transaction could not be applied\".to_owned()",
+    "replace": "\"the transaction failed\".to_owned()",
+    "fn": ["slides-tools.call"]
+  },
+  {
+    "name": "slides wait two seconds for the session",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "pub const READY_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "pub const READY_TIMEOUT_MS: f64 = 2_000.0;",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "slide text is clipped at 200",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "const MAX_TEXT_CHARS: usize = 300;",
+    "replace": "const MAX_TEXT_CHARS: usize = 200;",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "a table echoes four rows",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "const MAX_TABLE_ROWS: usize = 3;",
+    "replace": "const MAX_TABLE_ROWS: usize = 4;",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "a slide size in pixels is not rounded up at a half",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "if value - floor >= 0.5 {",
+    "replace": "if value - floor > 0.5 {",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "an author with no name is left blank",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "_ => JsonValue::String(\"Unknown author\".to_owned()),",
+    "replace": "_ => JsonValue::String(\"\".to_owned()),",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "two attached windows still get the push",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "if ids.len() < 2 {",
+    "replace": "if ids.len() < 3 {",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "the render tree stays in the outcome",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": ".filter(|(key, _)| *key != \"slides\")",
+    "replace": ".filter(|(key, _)| *key != \"slidez\")",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "the deadline is reached, not passed",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "if self.host.now_ms() > deadline {",
+    "replace": "if self.host.now_ms() >= deadline {",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "a saved deck path of another type gets the extension",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "return Err(\"path must point to a .pptx file\".to_owned());",
+    "replace": "return Ok(file_path.to_owned())",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "hidden slides are not marked",
+    "file": "main-core/src/shell/mcp/slides_bridge.rs",
+    "find": "if self.host.slide_hidden(slide) {",
+    "replace": "if false && self.host.slide_hidden(slide) {",
+    "fn": ["slides-bridge.scenario"]
+  },
+  {
+    "name": "sheets tabs wait 25s",
+    "file": "main-core/src/shell/mcp/sheets_bridge.rs",
+    "find": "pub const READY_TIMEOUT_MS: f64 = 24_000.0;",
+    "replace": "pub const READY_TIMEOUT_MS: f64 = 25_000.0;",
+    "fn": ["sheets-bridge.scenario"]
+  },
+  {
+    "name": "sheets commands time out after a minute",
+    "file": "main-core/src/shell/mcp/sheets_bridge.rs",
+    "find": "pub const COMMAND_TIMEOUT_MS: f64 = 120_000.0;",
+    "replace": "pub const COMMAND_TIMEOUT_MS: f64 = 60_000.0;",
+    "fn": ["sheets-bridge.scenario"]
+  },
+  {
+    "name": "a save target is looked up case-sensitively",
+    "file": "main-core/src/shell/mcp/sheets_bridge.rs",
+    "find": "js_regex!(r\"\\.xlsx$\", \"i\")",
+    "replace": "js_regex!(r\"\\.xlsx$\", \"\")",
+    "fn": ["sheets-bridge.scenario"]
+  },
+  {
+    "name": "a diagram in the background tab is not shown",
+    "file": "main-core/src/shell/mcp/diagram_bridge.rs",
+    "find": "if !shown.active {",
+    "replace": "if shown.active {",
+    "fn": ["diagram-bridge.scenario"]
+  },
+  {
+    "name": "a target is shown even when it is in front",
+    "file": "main-core/src/shell/mcp/open_documents_bridge.rs",
+    "find": "if focus && !doc.active {",
+    "replace": "if focus {",
+    "fn": ["open-documents-bridge.scenario"]
+  },
+  {
+    "name": "settings of a changed port do not restart",
+    "file": "main-core/src/shell/mcp/app_mcp.rs",
+    "find": "} else if port_changed || background_changed {",
+    "replace": "} else if background_changed {",
+    "fn": ["app-mcp.scenario"]
+  },
+  {
+    "name": "a changed background does not restart",
+    "file": "main-core/src/shell/mcp/app_mcp.rs",
+    "find": "} else if port_changed || background_changed {",
+    "replace": "} else if port_changed {",
+    "fn": ["app-mcp.scenario"]
+  },
+  {
+    "name": "the largest port is 65534",
+    "file": "main-core/src/shell/mcp/app_mcp.rs",
+    "find": "*port > 0.0 && *port < 65536.0 =>",
+    "replace": "*port > 0.0 && *port < 65535.0 =>",
+    "fn": ["app-mcp.scenario"]
+  },
+  {
+    "name": "port 0 is a port",
+    "file": "main-core/src/shell/mcp/app_mcp.rs",
+    "find": "*port > 0.0 && *port < 65536.0 =>",
+    "replace": "*port >= 0.0 && *port < 65536.0 =>",
+    "fn": ["app-mcp.scenario"]
+  },
+  {
+    "name": "a single active diagram is no front when two exist",
+    "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
+    "find": "if active.len() <= 1 {",
+    "replace": "if active.len() <= 0 {",
+    "fn": ["diagram-tools.frontDiagram", "diagram-tools.call"]
+  },
+  {
+    "name": "a property described once reads as described twice",
+    "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
+    "find": "let description = if entry.uses.len() == 1 {",
+    "replace": "let description = if entry.uses.len() == 2 {",
+    "fn": ["diagram-tools.diagramOpItemSchema", "diagram-tools.tools"]
+  },
+  {
+    "name": "a report without a status is accepted",
+    "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
+    "find": "_ => \"rejected\".to_owned(),",
+    "replace": "_ => \"ok\".to_owned(),",
+    "fn": ["diagram-tools.call"]
+  },
+  {
+    "name": "an op with no name reads as an empty name",
+    "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
+    "find": "_ => \"(no op)\".to_owned(),",
+    "replace": "_ => String::new(),",
+    "fn": ["diagram-tools.call"]
+  },
+  {
+    "name": "a failed op lists its code after its message",
+    "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
+    "find": "return Ok(format!(\"{head} FAILED {code}: {message}\"));",
+    "replace": "return Ok(format!(\"{head} FAILED {message}: {code}\"));",
+    "fn": ["diagram-tools.call"]
+  }
+]

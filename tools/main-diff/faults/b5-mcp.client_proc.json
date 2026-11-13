@@ -1,0 +1,546 @@
+[
+  {
+    "name": "local stderr tail keeps one line less",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "pub const MCP_STDERR_TAIL_LINES: usize = 20;",
+    "replace": "pub const MCP_STDERR_TAIL_LINES: usize = 19;",
+    "fn": ["local.MCP_STDERR_TAIL_LINES", "local.scenario"]
+  },
+  {
+    "name": "local idle time is shorter",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "pub const MCP_LOCAL_IDLE_MS: f64 = 10.0 * 60_000.0;",
+    "replace": "pub const MCP_LOCAL_IDLE_MS: f64 = 9.0 * 60_000.0;",
+    "fn": ["local.MCP_LOCAL_IDLE_MS"]
+  },
+  {
+    "name": "local start timeout is shorter",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "pub const MCP_LOCAL_START_TIMEOUT_MS: f64 = 3.0 * 60_000.0;",
+    "replace": "pub const MCP_LOCAL_START_TIMEOUT_MS: f64 = 2.0 * 60_000.0;",
+    "fn": ["local.MCP_LOCAL_START_TIMEOUT_MS", "local.scenario"]
+  },
+  {
+    "name": "local two failed starts are enough",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "pub const MCP_LOCAL_MAX_START_FAILURES: f64 = 3.0;",
+    "replace": "pub const MCP_LOCAL_MAX_START_FAILURES: f64 = 2.0;",
+    "fn": ["local.MCP_LOCAL_MAX_START_FAILURES", "local.scenario"]
+  },
+  {
+    "name": "local the wait for a stopped process is shorter",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "const EXIT_WAIT_MS: f64 = 5_000.0;",
+    "replace": "const EXIT_WAIT_MS: f64 = 4_000.0;",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local one page less of a tool list",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "const MAX_LIST_PAGES: u32 = 100;",
+    "replace": "const MAX_LIST_PAGES: u32 = 99;",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a partial stderr line is kept longer",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.partial = slice_utf16(last, -STDERR_LINE_MAX_CHARS, None);",
+    "replace": "self.partial = slice_utf16(last, -STDERR_LINE_MAX_CHARS * 2.0, None);",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a carriage return stays in a stderr line",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.add(part.strip_suffix('\\r').unwrap_or(part));",
+    "replace": "self.add(part);",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local an empty stderr line is kept",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if line.is_empty() {\n            return;\n        }\n        self.lines",
+    "replace": "if false {\n            return;\n        }\n        self.lines",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a stderr line is cut later",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": ".push(slice_utf16(line, 0.0, Some(STDERR_LINE_MAX_CHARS)));",
+    "replace": ".push(slice_utf16(line, 0.0, Some(STDERR_LINE_MAX_CHARS + 1.0)));",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the server is detached on Windows too",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "detached: self.platform != \"win32\",",
+    "replace": "detached: true,",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the idle timer waits twice as long",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.idle_timer = Some(host.set_idle_timeout(self.idle_ms));",
+    "replace": "self.idle_timer = Some(host.set_idle_timeout(self.idle_ms * 2.0));",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a failed start counts twice",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.failures + 1.0\n            };",
+    "replace": "self.failures + 2.0\n            };",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local failed after the limit only",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if self.failures >= self.max_failures {",
+    "replace": "if self.failures > self.max_failures {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a turned off server may start",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if !self.server.enabled {",
+    "replace": "if false {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a remote server may start",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if self.server.kind != McpServerKind::Local {",
+    "replace": "if false {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a closed connection reads as a refusal",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "\"the server stopped during the call\".to_owned()",
+    "replace": "\"the server stopped\".to_owned()",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a refusal message is cut shorter",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "slice_utf16(&error.message, 0.0, Some(500.0))",
+    "replace": "slice_utf16(&error.message, 0.0, Some(20.0))",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local waiters with a signal resume first",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": ".is_some_and(|c| !c.has_signal)",
+    "replace": ".is_some_and(|c| c.has_signal)",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local an abort after an abort reaches the server again",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if self.aborted_calls.contains(&call) {\n            return;\n        }",
+    "replace": "if false {\n            return;\n        }",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local stop does not abort the start",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.lifetime += 1;",
+    "replace": "self.lifetime += 0;",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a restart waits for nothing",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.restart_when_idle = true;\n        }\n    }",
+    "replace": "self.restart_when_idle = false;\n        }\n    }",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the start timeout is the call timeout",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "timeout: Some(self.start_timeout_ms),",
+    "replace": "timeout: Some(self.call_timeout_ms),",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the call timeout is the start timeout",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "timeout: Some(self.call_timeout_ms),\n            signal: has_signal",
+    "replace": "timeout: Some(self.start_timeout_ms),\n            signal: has_signal",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a timed out start reads as no start",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "\"The server did not answer in time\"",
+    "replace": "\"The server did not start\"",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a changed argument list restarts nothing",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "|| before.args != next.args\n",
+    "replace": "\n",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a changed env restarts nothing",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "|| sorted_env(&before.env) != sorted_env(&next.env);",
+    "replace": ";",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a plan review is not remembered",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.plan_review = true;",
+    "replace": "self.plan_review = false;",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a review ends with any new server",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "(!self.plan_review || before.approved_plan != next.approved_plan)",
+    "replace": "(true || before.approved_plan != next.approved_plan)",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a started server is not recorded",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if self.registry {",
+    "replace": "if !self.registry {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a server request is refused without its method",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "&format!(\"Method not found: {method}\"),",
+    "replace": "\"Method not found\",",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a write to a stopped server has another message",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "\"The server is not running\",",
+    "replace": "\"The server stopped\",",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a timed out page is unreachable",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "let reason = if timed_out {",
+    "replace": "let reason = if !timed_out {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local an aborted page is a failure",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if self.calls[index].aborted {\n                    self.finish_call(host, id, Err(Failure::Aborted));",
+    "replace": "if false {\n                    self.finish_call(host, id, Err(Failure::Aborted));",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local an aborted call is a tool error",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if call.aborted {\n                    Err(CallFailure::Aborted)",
+    "replace": "if false {\n                    Err(CallFailure::Aborted)",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the platform is not passed to the kill",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "platform: Some(io.platform.as_str()),",
+    "replace": "platform: None,",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a child without a pid is not gone at an error",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if host.child_pid(child).is_none() {",
+    "replace": "if false {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the work folder stays after the child is gone",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.tail.end();\n        host.remove_work_dir(&cwd);",
+    "replace": "self.tail.end();\n        let _ = &cwd;",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local the work folder stays after a failed spawn",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if let Err(message) = host.spawn(child, &request) {\n            host.remove_work_dir(&cwd);",
+    "replace": "if let Err(message) = host.spawn(child, &request) {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a gone process is waited for",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": ".is_none_or(|s| s.io.gone);",
+    "replace": ".is_some_and(|s| s.io.gone);",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a starting server is not idle after stop",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "if matches!(self.state, LocalMcpState::Running | LocalMcpState::Starting) {",
+    "replace": "if matches!(self.state, LocalMcpState::Running) {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a success keeps the failure count",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "self.failures = 0.0;\n                self.running = Some(child);",
+    "replace": "self.running = Some(child);",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local retry keeps the failure count",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "pub fn retry(&mut self, host: &mut dyn LocalMcpHost) {\n        self.failures = 0.0;",
+    "replace": "pub fn retry(&mut self, host: &mut dyn LocalMcpHost) {",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "runtimes the default Windows extension is .cmd",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "vec![\".exe\".to_owned()]",
+    "replace": "vec![\".cmd\".to_owned()]",
+    "fn": [
+      "runtimes.findProgramOnPath",
+      "runtimes.findPcNode",
+      "runtimes.findPcUv",
+      "runtimes.findPcPython"
+    ]
+  },
+  {
+    "name": "runtimes the store stub folder is not skipped",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "js_regex!(r\"[\\\\/]microsoft[\\\\/]windowsapps[\\\\/]?$\", \"i\")",
+    "replace": "js_regex!(r\"[\\\\/]microsoft[\\\\/]windowsappz[\\\\/]?$\", \"i\")",
+    "fn": ["runtimes.findPcPython"]
+  },
+  {
+    "name": "runtimes the macOS stub is taken",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if path != \"/usr/bin/python3\" && path != \"/usr/bin/python\" {",
+    "replace": "if true {",
+    "fn": ["runtimes.findPcPython"]
+  },
+  {
+    "name": "runtimes python3 is looked for last",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "&[\"python3\", \"python\"]",
+    "replace": "&[\"python\", \"python3\"]",
+    "fn": ["runtimes.findPcPython"]
+  },
+  {
+    "name": "runtimes npm is not looked for under the prefix",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "host::join(&[&parent, \"lib\", \"node_modules\", \"npm\", \"bin\", script]),",
+    "replace": "host::join(&[&parent, \"lib\", \"node_modules\", \"npm\", \"bin\", \"x\"]),",
+    "fn": ["runtimes.findPcNode"]
+  },
+  {
+    "name": "runtimes Program Files is not searched",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "Some(dir) if !dir.is_empty() => vec![host::join(&[dir, \"nodejs\"])],",
+    "replace": "Some(dir) if !dir.is_empty() => Vec::new(),",
+    "fn": ["runtimes.findPcNode"]
+  },
+  {
+    "name": "runtimes uv installer folders are not searched",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "host::join(&[&home, \".cargo\", \"bin\"]),",
+    "replace": "host::join(&[&home, \".cargo\", \"binx\"]),",
+    "fn": ["runtimes.findPcUv"]
+  },
+  {
+    "name": "runtimes a missing uvx is found anyway",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "let uvx = is_runnable_file(&sibling, &lookup.platform).then_some(sibling);",
+    "replace": "let uvx = is_file(&sibling).then_some(sibling);",
+    "fn": ["runtimes.findPcUv"]
+  },
+  {
+    "name": "runtimes a file that cannot run is taken",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "    executable(path)\n}",
+    "replace": "    true\n}",
+    "fn": ["runtimes.findProgramOnPath"]
+  },
+  {
+    "name": "runtimes a relative fallback is searched",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if is_full_dir(&dir) && !dirs.contains(&dir) {",
+    "replace": "if !dirs.contains(&dir) {",
+    "fn": ["runtimes.findProgramOnPath"]
+  },
+  {
+    "name": "runtimes a name with a slash is looked up",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if name.is_empty() || name.contains(['\\\\', '/']) {",
+    "replace": "if name.is_empty() {",
+    "fn": ["runtimes.findProgramOnPath"]
+  },
+  {
+    "name": "runtimes python3 is not paired with python",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "\"python\" | \"python3\" => Some(McpRuntimeId::Python),",
+    "replace": "\"python\" => Some(McpRuntimeId::Python),",
+    "fn": ["runtimes.runtimeForCommand"]
+  },
+  {
+    "name": "runtimes a Windows script extension is kept",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "WINDOWS_EXTENSIONS.contains(&extension.as_str())",
+    "replace": "false",
+    "fn": ["runtimes.runtimeForCommand"]
+  },
+  {
+    "name": "runtimes the install folder is named without the version",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "host::join(&[runtimes_root, &format!(\"{}-{version}\", id.as_str())])",
+    "replace": "host::join(&[runtimes_root, id.as_str()])",
+    "fn": ["runtimes.runtimeInstallDir"]
+  },
+  {
+    "name": "runtimes the uv cache is in the Python folder",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "uv_cache_dir: host::join(&[&data, \"cache\"]),",
+    "replace": "uv_cache_dir: host::join(&[&data, \"python\"]),",
+    "fn": ["runtimes.uvDataEnv"]
+  },
+  {
+    "name": "runtimes a rename is retried less",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if !RETRYABLE_RENAME.contains(&code) || attempt >= 5 {",
+    "replace": "if !RETRYABLE_RENAME.contains(&code) || attempt >= 4 {",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a busy folder is not retried",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "const RETRYABLE_RENAME: [&str; 3] = [\"EPERM\", \"EACCES\", \"EBUSY\"];",
+    "replace": "const RETRYABLE_RENAME: [&str; 3] = [\"EPERM\", \"EACCES\", \"EBUSX\"];",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes the retry waits a fixed time",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "self.host.sleep(100.0 * f64::from(1u32 << attempt));",
+    "replace": "self.host.sleep(100.0);",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes an old version is kept",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "let old = versioned && !(keep_current && entry == current);",
+    "replace": "let old = versioned && keep_current && entry != current;",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a leftover download is kept",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "let leftover = entry.starts_with(&format!(\".download-{name}-\"))\n                || entry.starts_with(&format!(\".staging-{name}-\"));",
+    "replace": "let leftover = entry.starts_with(&format!(\".staging-{name}-\"));",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a folder named like a version is pruned",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": ".is_some_and(|rest| rest.starts_with(|c: char| c.is_ascii_digit()));",
+    "replace": ".is_some();",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes no download is offered when asked not to",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if !resolve.offer_download {",
+    "replace": "if false {",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a question that fails is a yes",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "let yes = self.host.ask_download(&question).unwrap_or(false);",
+    "replace": "let yes = self.host.ask_download(&question).unwrap_or(true);",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes everything allowed is asked about",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if allowed.contains(&false) {",
+    "replace": "if !allowed.is_empty() {",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a permission is recorded again",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if !allowed[index] {",
+    "replace": "if true {",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a downloaded Node is not pruned when found",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if self.installed(InstallId::Node) {\n            self.prune(InstallId::Node, true);",
+    "replace": "if self.installed(InstallId::Node) {",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes uv without uvx is taken for uvx",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": ".is_some_and(|uv| !want_uvx || uv.uvx.is_some());",
+    "replace": ".is_some();",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a failed uv find is a success",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "(result.code == 0.0 && host::is_absolute(path) && is_file(path))",
+    "replace": "(host::is_absolute(path) && is_file(path))",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a relative Python path is taken",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "(result.code == 0.0 && host::is_absolute(path) && is_file(path))",
+    "replace": "(result.code == 0.0 && is_file(path))",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes the first line of uv output is not cut",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "let first = result.stdout.split('\\n').next().unwrap_or(\"\");",
+    "replace": "let first = result.stdout.as_str();",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes the uv environment lacks the app folders",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if app_uv {\n            base.set(",
+    "replace": "if false {\n            base.set(",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a failed Python install reads as offline",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "RuntimeMissingDetail::PythonInstallFailed,\n                format!(\n                    \"uv could not install",
+    "replace": "RuntimeMissingDetail::Offline,\n                format!(\n                    \"uv could not install",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes a path is searched like a name",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "if host::is_absolute(trimmed)\n                && is_full_dir(&host::dirname(trimmed))\n                && is_file(trimmed)",
+    "replace": "if is_file(trimmed)",
+    "fn": ["runtimes.scenario"]
+  },
+  {
+    "name": "runtimes other commands try only .exe",
+    "file": "main-core/src/shell/mcp_client/runtimes.rs",
+    "find": "extensions: Some(WINDOWS_EXTENSIONS.iter().map(|e| (*e).to_owned()).collect()),",
+    "replace": "extensions: None,",
+    "fn": ["runtimes.scenario"]
+  }
+]

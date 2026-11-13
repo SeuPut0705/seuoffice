@@ -1,0 +1,469 @@
+[
+  {
+    "name": "a surrogate pair is cut in half",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "if (0xd800..=0xdbff).contains(&last) {",
+    "replace": "if false {",
+    "fn": [
+      "agent-core/redact-core.sanitizeLabel",
+      "agent-core/redact-core.placeholderSource",
+      "agent-core/redact-core.readPlaceholderLabel",
+      "agent-core/redact-core.placeholderInstruction"
+    ]
+  },
+  {
+    "name": "comment labels keep asterisk and slash",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "r#\"[{}<>=\"'*/]\"#",
+    "replace": "r#\"[{}<>=\"']\"#",
+    "fn": ["agent-core/redact-core.sanitizeLabel"]
+  },
+  {
+    "name": "white space runs are kept",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "js_regex!(r\"\\s+\", \"g\")",
+    "replace": "js_regex!(r\"\\s\", \"g\")",
+    "fn": [
+      "agent-core/redact-core.sanitizeLabel",
+      "agent-core/redact-core.placeholderSource",
+      "agent-core/redact-core.readPlaceholderLabel"
+    ]
+  },
+  {
+    "name": "an empty marker counts as whole",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "&& length16(t) > length16(OPEN) + length16(CLOSE)",
+    "replace": "&& length16(t) >= length16(OPEN) + length16(CLOSE)",
+    "fn": [
+      "agent-core/redact-core.isWholePlaceholder",
+      "agent-core/redact-core.readPlaceholderLabel"
+    ]
+  },
+  {
+    "name": "an empty label shows another word",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "if clean.is_empty() { \"private\" }",
+    "replace": "if clean.is_empty() { \"hidden\" }",
+    "fn": [
+      "agent-core/redact-core.placeholderSource",
+      "agent-core/redact-core.placeholderInstruction"
+    ]
+  },
+  {
+    "name": "a stray brace is reported as unknown",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "reason: PlaceholderReason::Split,",
+    "replace": "reason: PlaceholderReason::Unknown,",
+    "fn": ["agent-core/redact-core.checkPlaceholders"]
+  },
+  {
+    "name": "a marker kept as often as given is missing",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "if have < *want {",
+    "replace": "if have <= *want {",
+    "fn": ["agent-core/redact-core.checkPlaceholders"]
+  },
+  {
+    "name": "one marker too many is not reported",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "if *have > want_counts.get(marker).copied().unwrap_or(0) {",
+    "replace": "if *have > want_counts.get(marker).copied().unwrap_or(0) + 1 {",
+    "fn": ["agent-core/redact-core.checkPlaceholders"]
+  },
+  {
+    "name": "a masked marker is as long as its bytes",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "\" \".repeat(length16(m.as_str()))",
+    "replace": "\" \".repeat(m.as_str().len())",
+    "fn": ["agent-core/redact-core.checkPlaceholders"]
+  },
+  {
+    "name": "labels are listed with their duplicates",
+    "file": "main-core/src/packages/agent_core/redact_core.rs",
+    "find": "if !distinct.contains(&label) {",
+    "replace": "if true {",
+    "fn": ["agent-core/redact-core.placeholderInstruction"]
+  },
+  {
+    "name": "a name that starts with dots leaves the folder",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "rel.starts_with(&format!(\"..{}\", api.sep()))",
+    "replace": "rel.starts_with(\"..\")",
+    "fn": [
+      "ai-provider/agent-session/policy.isInsidePath",
+      "ai-provider/agent-session/policy.agentPolicyVerdict"
+    ]
+  },
+  {
+    "name": "Windows paths keep their case",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "resolved.to_lowercase()",
+    "replace": "resolved",
+    "fn": [
+      "ai-provider/agent-session/policy.comparablePath",
+      "ai-provider/agent-session/policy.agentPolicyVerdict"
+    ]
+  },
+  {
+    "name": "a command names a three character path",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "length16(&form) > 3 &&",
+    "replace": "length16(&form) >= 3 &&",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "a write to an open document is allowed",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "if paths.iter().any(|path| open_documents.contains(path)) {",
+    "replace": "if false {",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "ask-writes mode allows",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "if ctx.mode == AgentPermissionMode::AskWrites {",
+    "replace": "if ctx.mode == AgentPermissionMode::AskCommands {",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "a relay tool request is allowed",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "AgentActionKind::McpTool | AgentActionKind::Other => AgentPolicyVerdict::Ask,",
+    "replace": "AgentActionKind::McpTool | AgentActionKind::Other => AgentPolicyVerdict::Allow,",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "a web host is compared as given",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "allowances.web_hosts.contains(&host.to_lowercase())",
+    "replace": "allowances.web_hosts.contains(host)",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "https addresses have no host",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "parsed.scheme() != \"http\" && parsed.scheme() != \"https\"",
+    "replace": "parsed.scheme() != \"http\"",
+    "fn": ["ai-provider/agent-session/policy.webHostOf"]
+  },
+  {
+    "name": "the skill copy is out of scope",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": ".is_some_and(|skills| is_inside_path(path, skills, Some(platform)))",
+    "replace": ".is_some_and(|_| false)",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "a command line is never searched for protected paths",
+    "file": "main-core/src/packages/ai_provider/agent_session_policy.rs",
+    "find": "truthy(action.command.as_deref()).is_some()",
+    "replace": "truthy(action.command.as_deref()).is_none()",
+    "fn": ["ai-provider/agent-session/policy.agentPolicyVerdict"]
+  },
+  {
+    "name": "a tool name of the list is wrong",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "\"read_pdf\",",
+    "replace": "\"read_pdf2\",",
+    "fn": ["ai-provider/agent-session/claude.AGENT_APP_MCP_TOOLS"]
+  },
+  {
+    "name": "a relative directory is a full one",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "host::is_absolute(dir)",
+    "replace": "true",
+    "fn": ["ai-provider/subscription/locate.isFullDir", "ai-provider/subscription/locate.pathDirs"]
+  },
+  {
+    "name": "relative PATH entries are kept",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": ".filter(|dir| is_full_dir(dir))",
+    "replace": ".filter(|_| true)",
+    "fn": ["ai-provider/subscription/locate.pathDirs"]
+  },
+  {
+    "name": "Path is not read",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": ".or_else(|| env(\"Path\"))",
+    "replace": ".or_else(|| None)",
+    "fn": ["ai-provider/subscription/locate.pathDirs"]
+  },
+  {
+    "name": "single quotes stay",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "(trimmed.starts_with('\\'') && trimmed.ends_with('\\''))",
+    "replace": "false",
+    "fn": [
+      "ai-provider/subscription/locate.pathDirs",
+      "ai-provider/subscription/locate.commonUnixBinDirs"
+    ]
+  },
+  {
+    "name": "a backslash after the tilde is no home",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "|| value.starts_with(\"~\\\\\")",
+    "replace": "",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "nvm versions come oldest first",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "return y - x;",
+    "replace": "return x - y;",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "equal nvm versions sort the other way",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "    if string_less_than(a, b) {",
+    "replace": "    if string_less_than(b, a) {",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "npm prefixes are listed twice",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "if !dirs.contains(&dir) {",
+    "replace": "if true {",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "win32 adds bin to the prefix",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "let dir = if platform == \"win32\" {",
+    "replace": "let dir = if platform != \"win32\" {",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "macOS pnpm home is the Linux one",
+    "file": "main-core/src/packages/ai_provider/subscription_locate.rs",
+    "find": "host::join(&[home, \"Library\", \"pnpm\"])",
+    "replace": "host::join(&[home, \"Library\", \"pnpm2\"])",
+    "fn": ["ai-provider/subscription/locate.commonUnixBinDirs"]
+  },
+  {
+    "name": "force kills softly",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "if options.force {",
+    "replace": "if !options.force {",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "the grace time doubles",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "options.grace_ms.unwrap_or(KILL_GRACE_MS)",
+    "replace": "options.grace_ms.unwrap_or(KILL_GRACE_MS * 2.0)",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "the group is not signalled",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "if host.kill(-pid, Some(signal)).is_err() {",
+    "replace": "if host.kill(pid, Some(signal)).is_err() {",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "a failed taskkill leaves the root alone",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "if start_killer(pid, options, host).is_err() {",
+    "replace": "if false {",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "taskkill is told to end one process",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "\"/T\".to_owned(),",
+    "replace": "\"/t\".to_owned(),",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "taskkill output is kept",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "stdio: \"ignore\",",
+    "replace": "stdio: \"pipe\",",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "taskkill shows a window",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "windows_hide: true,",
+    "replace": "windows_hide: false,",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "taskkill stays referenced",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "host.unref_killer(killer)",
+    "replace": "Ok(())",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "a taskkill error is ignored",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "pub fn on_killer_error(pid: f64, host: &mut dyn KillHost) {\n    kill_single(host, pid, None);",
+    "replace": "pub fn on_killer_error(pid: f64, host: &mut dyn KillHost) {",
+    "fn": ["ai-provider/subscription/process.killProcessTree"]
+  },
+  {
+    "name": "percent signs are allowed in the Windows directory",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "'|' | '%' | '\\r'",
+    "replace": "'|' | '\\r'",
+    "fn": [
+      "ai-provider/subscription/process.windowsSystemDir",
+      "ai-provider/subscription/process.windowsSystemTool"
+    ]
+  },
+  {
+    "name": "SYSTEMROOT is read first",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "[env(\"SystemRoot\"), env(\"SYSTEMROOT\"), env(\"windir\")]",
+    "replace": "[env(\"SYSTEMROOT\"), env(\"SystemRoot\"), env(\"windir\")]",
+    "fn": ["ai-provider/subscription/process.windowsSystemDir"]
+  },
+  {
+    "name": "the record file has another name",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "\"{SUBSCRIPTION_LEFTOVER_FILE_PREFIX}{}.json\"",
+    "replace": "\"{SUBSCRIPTION_LEFTOVER_FILE_PREFIX}{}.jsn\"",
+    "fn": [
+      "ai-provider/subscription/process.leftoverRecordFile",
+      "ai-provider/subscription/process.registryScenario"
+    ]
+  },
+  {
+    "name": "a user MCP child has another kind",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "pub const USER_MCP_CHILD_KIND: &str = \"user-mcp\";",
+    "replace": "pub const USER_MCP_CHILD_KIND: &str = \"user_mcp\";",
+    "fn": ["ai-provider/subscription/process.USER_MCP_CHILD_KIND"]
+  },
+  {
+    "name": "a pid below one is tracked",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "let pid = valid_pid(pid)?;",
+    "replace": "let pid = pid?;",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "pid zero is valid",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "&& *p > 0.0)",
+    "replace": "&& *p >= 0.0)",
+    "fn": [
+      "ai-provider/subscription/process.killProcessTree",
+      "ai-provider/subscription/process.registryScenario"
+    ]
+  },
+  {
+    "name": "a started child takes no start time",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "None => host.now_ms(),",
+    "replace": "None => 0.0,",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "forget removes a later child with the same pid",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "Some((_, current)) if *current == serial => {}",
+    "replace": "Some(_) => {}",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "shutdown keeps the list",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "self.children.clear();",
+    "replace": "",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "one kill that fails stops the rest",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "let _ = host.kill_tree(pid);",
+    "replace": "if host.kill_tree(pid).is_err() {\n                break;\n            }",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "the record is not swapped in",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "host.rename(&temp, &file)",
+    "replace": "Ok(())",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "shutdown looks for another record file",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "let (owner_pid, _) = host.owner();",
+    "replace": "let (owner_pid, _) = (0.0, 0.0);",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "the record has another version",
+    "file": "main-core/src/packages/ai_provider/subscription_process.rs",
+    "find": "record.set(\"version\", JsonValue::Number(1.0));",
+    "replace": "record.set(\"version\", JsonValue::Number(2.0));",
+    "fn": ["ai-provider/subscription/process.registryScenario"]
+  },
+  {
+    "name": "the sign-in page leaves single quotes",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "r#\"[&<>\"']\"#",
+    "replace": "r#\"[&<>\"]\"#",
+    "fn": ["google-drive/oauth.signInPageHtml"]
+  },
+  {
+    "name": "a character reference is written without the hash",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "\"&#{};\"",
+    "replace": "\"&{};\"",
+    "fn": ["google-drive/oauth.signInPageHtml"]
+  },
+  {
+    "name": "the page title is not escaped",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "title = escape_html(&page.title),",
+    "replace": "title = page.title.clone(),",
+    "fn": ["google-drive/oauth.signInPageHtml"]
+  },
+  {
+    "name": "a default height is wrong",
+    "file": "main-core/src/packages/drawio_model/ops.rs",
+    "find": "OpDefault::Number(60.0)",
+    "replace": "OpDefault::Number(61.0)",
+    "fn": ["drawio-model/ops.DIAGRAM_OPS"]
+  },
+  {
+    "name": "mermaid runs without the app",
+    "file": "main-core/src/packages/drawio_model/ops.rs",
+    "find": "needs_app: Some(true),",
+    "replace": "needs_app: None,",
+    "fn": ["drawio-model/ops.DIAGRAM_OPS"]
+  },
+  {
+    "name": "a shape name is wrong",
+    "file": "main-core/src/packages/drawio_model/ops.rs",
+    "find": "\"cloud\",",
+    "replace": "\"clouds\",",
+    "fn": ["drawio-model/ops.DIAGRAM_OPS"]
+  },
+  {
+    "name": "delete takes no ids",
+    "file": "main-core/src/packages/drawio_model/ops.rs",
+    "find": "min_items: Some(1.0),",
+    "replace": "min_items: Some(2.0),",
+    "fn": ["drawio-model/ops.DIAGRAM_OPS"]
+  },
+  {
+    "name": "Linux without a keyring seals",
+    "file": "main-core/src/shell/drive/drive_vault.rs",
+    "find": "if platform == \"linux\" {",
+    "replace": "if platform != \"linux\" {",
+    "fn": ["drive-vault.driveTokenSeals"]
+  },
+  {
+    "name": "no encryption seals",
+    "file": "main-core/src/shell/drive/drive_vault.rs",
+    "find": "return false;",
+    "replace": "return true;",
+    "fn": ["drive-vault.driveTokenSeals"]
+  }
+]
