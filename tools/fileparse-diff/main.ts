@@ -4,6 +4,7 @@ import { SPECS as ATTACHABLE } from './attachable-cases'
 import { SPECS as COMPOUND } from './compound-cases'
 import { SPECS as CSV } from './csv-cases'
 import { SPECS as EPUB } from './epub-cases'
+import { SPECS as HIDDEN } from './hidden-content-cases'
 import { SPECS as HTML } from './html-cases'
 import { SPECS as HWP } from './hwp-cases'
 import { SPECS as LEGACY } from './legacy-cases'
@@ -29,7 +30,7 @@ const passed = await runSuite({
   groups: {
     opc: OPC, attachable: ATTACHABLE, dates: DATES, redaction: REDACTION,
     docx: DOCX.map(withHostile), pptx: PPTX, xlsx: XLSX, ziptext: ZIP_TEXT, compound: COMPOUND.map(isolated),
-    csv: CSV, html: HTML, parse: PARSE, legacy: LEGACY.map(isolated), hwp: HWP, epub: EPUB,
+    csv: CSV, hidden: HIDDEN, html: HTML, parse: PARSE, legacy: LEGACY.map(isolated), hwp: HWP, epub: EPUB,
   },
 })
 process.exitCode = passed ? 0 : 1
