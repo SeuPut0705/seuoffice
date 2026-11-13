@@ -87,6 +87,11 @@ pub trait MarkdownShell: Send + Sync {
     fn file_saved(&self, view: ViewId, path: &Path);
     /// `docxExportedHook(path)`: a "convert and open in Docs" export landed
     fn docx_exported(&self, path: &Path);
+    /// `randomUUID()` of the page image exports (session ids, folder names)
+    /// and of the Docs conversions (session folder, file names)
+    fn random_uuid(&self) -> String {
+        jscompat::random_uuid()
+    }
 }
 
 pub type MarkdownShellHost = Arc<dyn MarkdownShell>;

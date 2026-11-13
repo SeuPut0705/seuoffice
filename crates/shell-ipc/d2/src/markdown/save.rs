@@ -9,6 +9,7 @@
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use jscompat::node_path::host::{basename, dirname, extname, join, resolve};
 use jscompat::{JsObject, JsonValue};
@@ -206,14 +207,6 @@ struct Md {
     images: Rc<RefCell<ImageExportSessions>>,
     /// `conversionSessionPromise`: made once per run; a failure stays, as the rejected promise did
     conversion: RefCell<Option<Result<String, String>>>,
-}
-
-fn random_suffix() -> String {
-    jscompat::random_uuid()
-        .chars()
-        .filter(char::is_ascii_alphanumeric)
-        .take(6)
-        .collect()
 }
 
 impl Md {
@@ -426,6 +419,7 @@ impl Md {
             IpcValue::String(h) if save_as && !h.is_empty() => Some(h.clone()),
             _ => None,
         };
+        let holds_hidden = matches!(field(request, "holdsHiddenContent"), IpcValue::Bool(true));
         let path_at_request = docs.save_path(view);
         let recovery_at_request = docs.recovery().identity_of(view);
         if !save_as
@@ -475,7 +469,9 @@ impl Md {
         };
         let ext = extname(&target).to_ascii_lowercase();
         if let Some(html) = pdf_html {
-            if ext == ".pdf" {
+            // a document holding content hidden from AI is not printed here: a
+            // PDF cannot keep the mark, so the renderer asks first, as for Word and ODT
+            if ext == ".pdf" && !holds_hidden {
                 // Save As › PDF: a rendered copy of the screen; the document
                 // keeps its path, unsaved edits and assets
                 return self.write_pdf(
@@ -496,14 +492,16 @@ impl Md {
                 );
             }
             let format = match ext.as_str() {
+                ".pdf" => Some("pdf"),
                 ".docx" => Some("docx"),
                 ".odt" => Some("odt"),
                 ".png" => Some("png"),
                 _ => None,
             };
             if let Some(format) = format {
-                // Save As › Word, ODT or page images: the renderer builds the
-                // copy and writes it to this approved path
+                // Save As › Word, ODT, page images or the PDF of a marked
+                // document: the renderer builds the copy and writes it to this
+                // approved path
                 self.save_as.insert(
                     view,
                     Approved {
@@ -644,42 +642,83 @@ impl Md {
                     .to_string_lossy(),
                 "markdown-conversions",
             ]);
+            let shell = Arc::clone(&self.shell);
             create_markdown_conversion_session(
                 &root,
                 &SessionOptions::default(),
                 self.e.docs.now_ms(),
-                &jscompat::random_uuid,
+                &move || shell.random_uuid(),
             )
             .map_err(|e| e.message)
         })
         .clone()
     }
 
-    /// `askMarkedOdt(show)`
-    fn ask_marked_odt(&self, view: ViewId) -> MarkedOdtChoice {
+    /// `askMarkedExport(format, show)`: `format` is `odt`, `pdf` or `png`
+    fn ask_marked_export(&self, view: ViewId, format: &str) -> MarkedOdtChoice {
         let lang = self.lang();
+        let file_detail = || {
+            tr(
+                &lang,
+                "The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Export as Word (.docx) instead, which keeps the marks, or export without them. This document keeps its marks either way.",
+                "내보낸 파일에는 AI에게 숨김 표시가 없습니다. 그 파일을 읽는 모든 것은 AI를 포함해 숨긴 내용을 그대로 봅니다. 대신 숨김 표시가 유지되는 Word(.docx)로 내보내거나, 표시 없이 내보내세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.",
+            )
+        };
+        let (message, detail, clear_marks) = match format {
+            "pdf" => (
+                tr(
+                    &lang,
+                    "This document has content hidden from AI, and a PDF file cannot keep that.",
+                    "이 문서에는 AI에게 숨긴 내용이 있는데, PDF 파일에는 이를 담을 수 없습니다.",
+                ),
+                file_detail(),
+                tr(
+                    &lang,
+                    "Export as PDF without the marks",
+                    "표시 없이 PDF로 내보내기",
+                ),
+            ),
+            "png" => (
+                tr(
+                    &lang,
+                    "This document has content hidden from AI, and page images cannot keep that.",
+                    "이 문서에는 AI에게 숨긴 내용이 있는데, 쪽 이미지에는 이를 담을 수 없습니다.",
+                ),
+                file_detail(),
+                tr(
+                    &lang,
+                    "Export images without the marks",
+                    "표시 없이 이미지로 내보내기",
+                ),
+            ),
+            _ => (
+                tr(
+                    &lang,
+                    "This document has content hidden from AI, and an ODT file cannot keep that.",
+                    "이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.",
+                ),
+                tr(
+                    &lang,
+                    "Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, which keeps the hiding, or clear the marks for the ODT copy. This document keeps its marks either way.",
+                    "ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 숨김이 유지되는 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.",
+                ),
+                tr(
+                    &lang,
+                    "Clear marks and export as ODT",
+                    "표시 지우고 ODT로 내보내기",
+                ),
+            ),
+        };
         let b = marked_odt_box(&MarkedOdtText {
             title: tr(&lang, "Content hidden from AI", "AI에게 숨긴 내용"),
-            message: tr(
-                &lang,
-                "This document has content hidden from AI, and an ODT file cannot keep that.",
-                "이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.",
-            ),
-            detail: tr(
-                &lang,
-                "Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, which keeps the hiding, or clear the marks for the ODT copy. This document keeps its marks either way.",
-                "ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 숨김이 유지되는 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.",
-            ),
+            message,
+            detail,
             save_docx: Some(tr(
                 &lang,
                 "Export as Word (.docx)",
                 "Word(.docx)로 내보내기",
             )),
-            clear_marks: tr(
-                &lang,
-                "Clear marks and export as ODT",
-                "표시 지우고 ODT로 내보내기",
-            ),
+            clear_marks,
             cancel: tr(&lang, "Cancel", "취소"),
         });
         marked_odt_choice(self.e.docs.message(view, &marked_box(&b)) as f64, true)
@@ -982,16 +1021,13 @@ pub(super) fn entries(
                     Err(error) => return responder.reply(Ok(failure(error))),
                 };
                 let me = Rc::clone(&m);
+                let shell = Arc::clone(&m.shell);
                 return kit::on_worker(
                     &m.services,
                     move || {
-                        write_markdown_conversion(
-                            &session,
-                            &safe_name,
-                            &bytes,
-                            None,
-                            &jscompat::random_uuid,
-                        )
+                        write_markdown_conversion(&session, &safe_name, &bytes, None, &move || {
+                            shell.random_uuid()
+                        })
                         .map_err(|e| e.message)
                     },
                     move |written| {
@@ -1097,21 +1133,28 @@ pub(super) fn entries(
         },
     ));
 
-    // a document with content hidden from AI is not written as ODT: one box
-    // with the two ways out; the renderer carries the answer out
+    // a document with content hidden from AI is not written as ODT, PDF or page
+    // images: one box with the two ways out; the renderer carries the answer out
     let m = Rc::clone(&md);
-    out.push(kit::invoke("markdown:confirm-marked-odt", move |cx, _| {
-        // a headless export has no one to ask: nothing is written
-        if m.e.docs.is_headless() {
-            return Ok("cancel".into_ipc());
-        }
-        Ok(match m.ask_marked_odt(cx.sender.view) {
-            MarkedOdtChoice::Docx => "docx",
-            MarkedOdtChoice::Clear => "clear",
-            MarkedOdtChoice::Cancel => "cancel",
-        }
-        .into_ipc())
-    }));
+    out.push(kit::invoke(
+        "markdown:confirm-marked-export",
+        move |cx, args| {
+            // a headless export has no one to ask: nothing is written
+            if m.e.docs.is_headless() {
+                return Ok("cancel".into_ipc());
+            }
+            let format = match kit::as_str(args.get(0)) {
+                Some(f @ ("odt" | "pdf" | "png")) => f,
+                _ => return Ok("cancel".into_ipc()),
+            };
+            Ok(match m.ask_marked_export(cx.sender.view, format) {
+                MarkedOdtChoice::Docx => "docx",
+                MarkedOdtChoice::Clear => "clear",
+                MarkedOdtChoice::Cancel => "cancel",
+            }
+            .into_ipc())
+        },
+    ));
 
     let m = Rc::clone(&md);
     out.push(kit::invoke_later(
@@ -1124,9 +1167,20 @@ pub(super) fn entries(
                 _ => return responder.reply(Ok(failure("markdown: bad export request"))),
             };
             let safe_name = export_name(field(request, "suggestedName"), &m.untitled());
+            // Save As › PDF already chose (and approved) the path: no second dialog
+            let approved = match m.take_save_as(view, "pdf", field(request, "saveAsTarget")) {
+                Take::Refused => {
+                    return responder.reply(Ok(failure("markdown: save target not approved")));
+                }
+                Take::Approved(path) => Some(path),
+                Take::NotRequested => None,
+            };
             // headless export has no dialog to authorize a path; the CLI already chose one
-            let target = match field(request, "outPath") {
-                IpcValue::String(out) if m.e.docs.is_headless() && !out.is_empty() => out.clone(),
+            let target = match (approved, field(request, "outPath")) {
+                (Some(path), _) => path,
+                (None, IpcValue::String(out)) if m.e.docs.is_headless() && !out.is_empty() => {
+                    out.clone()
+                }
                 _ => {
                     let fallback = match m.e.docs.default_save_dir() {
                         Ok(dir) => dir,
@@ -1163,9 +1217,19 @@ pub(super) fn entries(
                 IpcValue::String(h) if !h.is_empty() => h.clone(),
                 _ => return responder.reply(Ok(failure("Empty document"))),
             };
+            // `mkdtemp`'s six random characters, drawn from the same source
+            let shell = Arc::clone(&m.shell);
+            let random_uuid = move || shell.random_uuid();
+            let mkdtemp_suffix = || {
+                random_uuid()
+                    .chars()
+                    .filter(char::is_ascii_alphanumeric)
+                    .take(6)
+                    .collect()
+            };
             let env = ImageExportEnv {
-                random_uuid: &jscompat::random_uuid,
-                mkdtemp_suffix: &random_suffix,
+                random_uuid: &random_uuid,
+                mkdtemp_suffix: &mkdtemp_suffix,
             };
             // Save As › page images: the typed name, numbered per page beside it
             let started = match m.take_save_as(view, "png", field(request, "saveAsTarget")) {

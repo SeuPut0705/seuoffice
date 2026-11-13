@@ -4,6 +4,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use main_core::markdown::image_host::{FetchFailure, FetchInit, FetchResponse, ResponseHeaders};
 use main_core::packages::electron_utils::print_html_pdf::PrintWindow;
@@ -58,14 +59,19 @@ impl PrintWindow for FakeWindow {
 ///   (`["writeNewDocument", view, name]`).
 /// - always called: `["fileSavedHook", view, path]`,
 ///   `["docxExportedHook", path]`, `["webContents.reload", view]`.
+/// - `randomUUID()` of the image exports counts: the n-th id starts with n in
+///   six digits (`000001aa-0000-4000-8000-000000000000`), which `mkdtemp`'s
+///   suffix takes.
 pub(crate) struct FakeMarkdown {
     pub answers: Arc<Answers>,
+    ids: AtomicU32,
 }
 
 impl FakeMarkdown {
     pub(crate) fn new(case: &Value, probe: Option<ProbeLog>) -> Self {
         FakeMarkdown {
             answers: Arc::new(Answers::new(case, probe)),
+            ids: AtomicU32::new(0),
         }
     }
 }
@@ -181,5 +187,9 @@ impl MarkdownShell for FakeMarkdown {
         self.answers.answer("docx_exported", path.display());
         self.answers
             .log(json!(["docxExportedHook", path.to_string_lossy()]));
+    }
+    fn random_uuid(&self) -> String {
+        let n = self.ids.fetch_add(1, Ordering::Relaxed) + 1;
+        format!("{n:06}aa-0000-4000-8000-000000000000")
     }
 }
