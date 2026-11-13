@@ -16,7 +16,7 @@ use main_core::packages::electron_utils::context_menu::{
     ContextMenuParams, EditAction, EditFlags, MenuCommand, MenuEntry, context_menu_labels,
     context_menu_template,
 };
-use main_core::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
+use main_core::packages::electron_utils::dialog_memory::Dialog;
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
 use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
 use serde_json::{Value, json};
@@ -27,6 +27,7 @@ use shell_contract::runtime::{PathName, Services};
 use shell_ipc_m::hosts::MHostRef;
 use shell_ipc_m::intercept_context_menu;
 use shell_ipc_m::state::MStateRef;
+use shell_ipc_w::SharedDialogMemory;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, LogicalPosition, Manager};
 use tauri_runtime_cef::WebviewCefExt;
@@ -47,9 +48,6 @@ struct OpenMenu {
     params: ContextMenuParams,
     commands: HashMap<String, MenuCommand>,
 }
-
-/// The last folder of the Save Image dialog, as `showSaveDialogWithMemory` kept it
-static SAVE_MEMORY: Mutex<Option<DialogMemory>> = Mutex::new(None);
 
 pub(crate) fn install(app: &AppHandle, views: Arc<ViewTable>, windows: Arc<Windows>) {
     let handle = app.clone();
@@ -231,6 +229,10 @@ fn run(
             let Some(dialogs) = services.hosts.get::<DialogsHost>().cloned() else {
                 return;
             };
+            // the last folder every save dialog of the process shares
+            let Some(memory) = services.hosts.get::<SharedDialogMemory>().cloned() else {
+                return;
+            };
             let parent = services.views.sender_of(view).map(|s| s.window);
             let url = src_url
                 .or_else(|| params.src_url.clone())
@@ -238,10 +240,11 @@ fn run(
             services.workers.spawn(Box::new(move || {
                 let mut dialog = SaveDialog(dialogs);
                 let mut fetch = |url: &str| page_fetch(&webview, url);
-                let mut memory = SAVE_MEMORY.lock().unwrap();
-                let memory = memory.get_or_insert_with(DialogMemory::new);
+                let mut memory = memory
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 let result = save_image_from_url(
-                    memory,
+                    &mut memory,
                     &mut dialog,
                     &mut fetch,
                     parent.as_ref(),

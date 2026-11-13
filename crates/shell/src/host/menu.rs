@@ -36,11 +36,11 @@ pub(crate) use app::{
 pub(crate) use cef_ops::{host_of, print_preview};
 
 use std::path::Path;
-use std::sync::{Arc, Mutex, OnceLock, mpsc};
+use std::sync::{Arc, OnceLock, mpsc};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use main_core::packages::electron_utils::default_save_dir::{
-    PathProvider, SaveDirState, Thrown, configured_default_save_dir,
+    PathProvider, Thrown, configured_default_save_dir,
 };
 use main_core::packages::electron_utils::printer_options::CommandOutcome;
 use main_core::packages::electron_utils::template_fonts_dir::{
@@ -55,6 +55,7 @@ use shell_ipc_m::hosts::{
 };
 use shell_ipc_m::state::{MState, MStateRef};
 use shell_ipc_m::{MenuDict, menu_label};
+use shell_ipc_w::SharedSaveDirState;
 use shell_ipc_w::quick_look::QuickLookHost;
 use tauri::{AppHandle, Manager, Theme};
 use tauri_runtime_cef::WebviewCefExt;
@@ -138,7 +139,8 @@ struct ShellM {
     views: Arc<ViewTable>,
     paths: ShellPaths,
     tray: Option<QuickLookHost>,
-    save_dir: Mutex<SaveDirState>,
+    /// the process's one default-save-folder state (`host::install_process_state`)
+    save_dir: SharedSaveDirState,
 }
 
 /// The app the menus are set on, for callers that have no handle (the tab
@@ -157,7 +159,10 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
         views: cx.views.clone(),
         paths: ShellPaths::new(),
         tray: hosts.get::<QuickLookHost>().cloned(),
-        save_dir: Mutex::default(),
+        save_dir: hosts
+            .get::<SharedSaveDirState>()
+            .cloned()
+            .expect("install_process_state runs before the batches' hosts"),
     });
     let fonts = fonts::Fonts::new(
         shell
@@ -410,7 +415,10 @@ impl MHost for ShellM {
     }
 
     fn default_save_dir(&self) -> String {
-        let mut state = self.save_dir.lock().unwrap();
+        let mut state = self
+            .save_dir
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         configured_default_save_dir(&self.paths, &mut state, self.now_ms()).unwrap_or_else(|_| {
             self.paths
                 .path(PathName::Documents)
