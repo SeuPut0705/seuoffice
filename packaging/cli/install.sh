@@ -1,7 +1,7 @@
 #!/bin/sh
 # SeuOffice command line, installed without the desktop app.
 #
-#   curl -fsSL https://raw.githubusercontent.com/SeuPut0705/seuoffice/main/packaging/cli/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/seuput-inc/seuoffice/main/packaging/cli/install.sh | sh
 #
 # Flags (after `sh -s --` when piping):
 #   --version <v>   release to install (default: the version this script shipped with)
@@ -16,7 +16,7 @@
 # shell profile edits, no other program is touched.
 set -eu
 
-REPO=SeuPut0705/seuoffice
+REPO=seuput-inc/seuoffice
 # bumped by the release step together with the published archive
 DEFAULT_VERSION=0.12.12
 NODE_VERSION=22.12.0

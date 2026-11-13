@@ -56,7 +56,7 @@ impl McpSecretCodec for SafeStorageMcpCodec<'_> {
         if !sealed_form(sealed) || !self.storage.is_encryption_available() {
             return Ok(None);
         }
-        let buffer = buffer_from_base64(&sealed[SEALED_PREFIX.len()..]);
+        let buffer = buffer_from_base64(&slice_utf16(sealed, SEALED_PREFIX.len() as f64, None));
         // sealed by another account or PC: null
         Ok(self.storage.decrypt_string(&buffer).ok())
     }

@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="Download for macOS (Apple Silicon)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="Download for macOS (Apple Silicon)"></a>
   &nbsp;
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Download for Windows (x64)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Download for Windows (x64)"></a>
 </p>
 
 <p align="center">
-  <sub>Apple Silicon Mac · Windows x64 · Free · Source-available (FSL-1.1-ALv2) · <a href="https://github.com/SeuPut0705/seuoffice/releases">All versions and preview versions</a></sub>
+  <sub>Apple Silicon Mac · Windows x64 · Free · Source-available (FSL-1.1-ALv2) · <a href="https://github.com/seuput-inc/seuoffice/releases">All versions and preview versions</a></sub>
 </p>
 
 <p align="center">

@@ -9,18 +9,18 @@ pub const GITHUB_REPO_OWNER: &str = PRODUCT_REPO_OWNER;
 pub const GITHUB_REPO_NAME: &str = PRODUCT_REPO_NAME;
 pub const GITHUB_REPO_SLUG: &str = PRODUCT_REPO_SLUG;
 /// `GITHUB_REPO_URL`
-pub const GITHUB_REPO_URL: &str = "https://github.com/SeuPut0705/seuoffice";
+pub const GITHUB_REPO_URL: &str = "https://github.com/seuput-inc/seuoffice";
 /// `GITHUB_REPO_DISPLAY`
-pub const GITHUB_REPO_DISPLAY: &str = "github.com/SeuPut0705/seuoffice";
+pub const GITHUB_REPO_DISPLAY: &str = "github.com/seuput-inc/seuoffice";
 /// `GITHUB_ISSUES_URL`
-pub const GITHUB_ISSUES_URL: &str = "https://github.com/SeuPut0705/seuoffice/issues";
+pub const GITHUB_ISSUES_URL: &str = "https://github.com/seuput-inc/seuoffice/issues";
 /// `GITHUB_NEW_ISSUE_URL`
-pub const GITHUB_NEW_ISSUE_URL: &str = "https://github.com/SeuPut0705/seuoffice/issues/new";
+pub const GITHUB_NEW_ISSUE_URL: &str = "https://github.com/seuput-inc/seuoffice/issues/new";
 /// `GITHUB_RELEASES_URL`
-pub const GITHUB_RELEASES_URL: &str = "https://github.com/SeuPut0705/seuoffice/releases";
+pub const GITHUB_RELEASES_URL: &str = "https://github.com/seuput-inc/seuoffice/releases";
 /// `GITHUB_LATEST_RELEASE_URL`
 pub const GITHUB_LATEST_RELEASE_URL: &str =
-    "https://github.com/SeuPut0705/seuoffice/releases/latest";
+    "https://github.com/seuput-inc/seuoffice/releases/latest";
 
 /// `githubReleaseTagUrl(version)`
 pub fn github_release_tag_url(version: &str) -> String {

@@ -1101,7 +1101,7 @@ describe('manual download fallback', () => {
     expect(openExternal).toHaveBeenCalledTimes(1)
     expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.2.0'))
     expect(githubReleaseTagUrl('0.2.0')).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/tag/v0.2.0',
+      'https://github.com/seuput-inc/seuoffice/releases/tag/v0.2.0',
     )
   })
 

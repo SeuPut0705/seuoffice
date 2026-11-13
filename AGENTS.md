@@ -18,6 +18,7 @@ seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편�
 3. 저장소 공개 전환, `main` force-push·이력 재작성, 저장소 삭제는 스풋 확인 뒤에만 한다.
 4. 비밀값(API 키, 서명 인증서, 토큰)을 커밋하지 않는다.
 5. 라이선스 고지를 지우거나 고쳐 쓰지 않는다: `LICENSE`, `NOTICE`, 제3자 고지, `vendor/`와 내장 스킬 폴더의 라이선스 파일, `docs/seuoffice/upstream-edits.md`(`NOTICE`가 가리키는 변경 고지, 2026-11-12에 닫음). 원본 코드를 Rust로 옮겨 적은 것도 파생물이라 고지는 그대로 둔다(결정 0024). 새 제3자 코드나 자료를 들이면 `NOTICE`에 출처와 라이선스를 더한다.
+6. 저장소는 조직 `seuput-inc/seuoffice`에 있다(2026-11-14 옮김). 옛 주소 `SeuPut0705/seuoffice`에 저장소나 포크를 만들지 않는다. 만들면 옛 주소로 들어오는 업데이트 확인·내려받기·링크의 리다이렉트가 영구히 끊긴다. 문서에 박힌 식별 문자열 `OWN_REDACT_NS`(`https://github.com/SeuPut0705/seuoffice/redaction/2026`)는 기존 문서와 맞추려고 그대로 둔다.
 
 ## 원본과의 관계
 

@@ -69,8 +69,8 @@ describe('registered names derived from the product name', () => {
   })
 
   it('names the public repository once', () => {
-    expect(PRODUCT_REPO_OWNER).toBe('SeuPut0705')
+    expect(PRODUCT_REPO_OWNER).toBe('seuput-inc')
     expect(PRODUCT_REPO_NAME).toBe('seuoffice')
-    expect(PRODUCT_REPO_SLUG).toBe('SeuPut0705/seuoffice')
+    expect(PRODUCT_REPO_SLUG).toBe('seuput-inc/seuoffice')
   })
 })

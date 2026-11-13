@@ -270,9 +270,9 @@ pub fn product_name(lang: Option<&str>) -> &'static str {
 
 pub const USER_DATA_DIR_NAME: &str = "seuoffice";
 pub const DEV_USER_DATA_DIR_NAME: &str = "seuoffice-Dev";
-pub const PRODUCT_REPO_OWNER: &str = "SeuPut0705";
+pub const PRODUCT_REPO_OWNER: &str = "seuput-inc";
 pub const PRODUCT_REPO_NAME: &str = "seuoffice";
-pub const PRODUCT_REPO_SLUG: &str = "SeuPut0705/seuoffice";
+pub const PRODUCT_REPO_SLUG: &str = "seuput-inc/seuoffice";
 
 // ---- old-names.ts ----
 

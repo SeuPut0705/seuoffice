@@ -1,6 +1,6 @@
 # Installing SeuOffice
 
-Every version is published on the [Releases page](https://github.com/SeuPut0705/seuoffice/releases/latest) of the project on GitHub.
+Every version is published on the [Releases page](https://github.com/seuput-inc/seuoffice/releases/latest) of the project on GitHub.
 
 ## Pick the file for your machine
 

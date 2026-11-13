@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SeuPut0705/seuoffice.git"
+    "url": "git+https://github.com/seuput-inc/seuoffice.git"
   },
   "workspaces": [
     "apps/*",
