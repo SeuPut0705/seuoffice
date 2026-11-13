@@ -2989,6 +2989,7 @@ const namingFns: Group = {
       c(['abcdef', 2.7], 'a fractional limit'),
       c(['\n\n\n  padded  \n\n\n', null]),
       c(['', null]),
+      c([`${'y'.repeat(3999)}\u{1F600}z`, null], 'the cut lands inside a pair'),
     ],
   },
 }
