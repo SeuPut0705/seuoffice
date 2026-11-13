@@ -123,6 +123,15 @@ pub struct Dirent {
 
 /// `readdirSync(dir, { withFileTypes: true })`, `None` where it throws.
 pub fn read_dirents(dir: &str) -> Option<Vec<Dirent>> {
+    let mut out = read_dirents_unsorted(dir)?;
+    out.sort_by(|a, b| a.name.as_bytes().cmp(b.name.as_bytes()));
+    Some(out)
+}
+
+/// The entries in the order the file system yields them, as `fs.cpSync`
+/// walks a folder (`opendir` without sorting): a copy that fails half way
+/// leaves the same entries behind.
+fn read_dirents_unsorted(dir: &str) -> Option<Vec<Dirent>> {
     let mut out: Vec<Dirent> = Vec::new();
     for entry in fs::read_dir(namespaced(dir)).ok()? {
         let entry = entry.ok()?;
@@ -139,7 +148,6 @@ pub fn read_dirents(dir: &str) -> Option<Vec<Dirent>> {
             kind,
         });
     }
-    out.sort_by(|a, b| a.name.as_bytes().cmp(b.name.as_bytes()));
     Some(out)
 }
 
@@ -453,7 +461,7 @@ fn cp_item(from: &str, to: &str, nested: bool) -> Result<(), NodeError> {
         if dest.is_none() {
             mkdir(to)?;
         }
-        for entry in read_dirents(from).ok_or_else(|| NodeError {
+        for entry in read_dirents_unsorted(from).ok_or_else(|| NodeError {
             code: None,
             message: format!("cannot read {from}"),
         })? {

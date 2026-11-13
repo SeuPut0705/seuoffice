@@ -247,7 +247,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         })(),
 
         // ---- extract-worker ----
-        "extract-worker.message" => (|| {
+        "extract-worker.message" => {
             let request = arg(args, 0).cloned().unwrap_or(Value::Null);
             let world = arg(args, 1).cloned().unwrap_or(Value::Null);
             let id = request.get("id").and_then(Value::as_f64).unwrap_or(0.0);
@@ -275,7 +275,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 logs: &mut cx.logs,
             };
             Ok(Some(handle_message(&request, &mut parser).to_value()))
-        })(),
+        }
 
         _ => return None,
     })

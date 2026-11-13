@@ -319,7 +319,7 @@ impl<'s, H: TextRecoveryHost> TextRecovery<'s, H> {
     }
 
     fn settle_flush(&self, state: &View<H::Contents>) {
-        let waiters: Vec<u64> = state.borrow_mut().flush_waiters.drain(..).collect();
+        let waiters: Vec<u64> = std::mem::take(&mut state.borrow_mut().flush_waiters);
         self.settled.borrow_mut().extend(waiters);
     }
 

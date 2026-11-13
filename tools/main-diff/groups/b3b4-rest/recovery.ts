@@ -195,6 +195,19 @@ async function storeStep(
       } catch {
         return { done: true, value: null }
       }
+    case 'touch': {
+      // every file under `dir` gets the time `mtimeMs`: a copy's time is read
+      // back (writtenAt), and the clock of the disk is not the scenario's
+      const touch = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const path = join(dir, entry.name)
+          if (entry.isDirectory()) touch(path)
+          else utimesSync(path, step.mtimeMs / 1000, step.mtimeMs / 1000)
+        }
+      }
+      touch(step.dir as string)
+      return { done: true }
+    }
     default:
       return { done: false }
   }
@@ -1495,14 +1508,17 @@ const docsCases: Case[] = [
   dc(
     [
       { op: 'storeWrite', id: DA, text: 'orphan', title: 'a.docx' },
+      { op: 'touch', dir: '$DIR/ud', mtimeMs: 1_700_000_000_000 },
       { op: 'take', tab: 1, copy: DA, title: 'a.docx', ext: '.docx', accept: 'nonEmpty' },
       { op: 'untitledOf', tab: 1 },
       { op: 'storeRead', id: DA },
       { op: 'storeRead', id: DU('uuid-1') },
       { op: 'storeInfo', id: DU('uuid-1') },
       { op: 'storeWrite', id: DB, text: '', title: 'b.docx' },
+      { op: 'touch', dir: '$DIR/ud', mtimeMs: 1_700_000_000_000 },
       { op: 'take', tab: 2, copy: DB, title: 'b.docx', ext: '.odt', accept: 'nonEmpty' },
       { op: 'storeWrite', id: F('docs', doc('c.docx')), text: 'c', title: 'c.docx' },
+      { op: 'touch', dir: '$DIR/ud', mtimeMs: 1_700_000_000_000 },
       {
         op: 'take',
         tab: 3,

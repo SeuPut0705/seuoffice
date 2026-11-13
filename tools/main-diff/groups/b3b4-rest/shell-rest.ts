@@ -1369,7 +1369,8 @@ export const patchBodyPrAutofit = (xml, scale, red) => {
 export const matchesElementRef = (el, ref) => el.id === ref || el.refId === ref
 export const EMU_PER_PX_96 = 9525
 export const layoutText = (options) => {
-  w().log('layoutText', options)
+  // a copy: the module changes the body after the call, and the log must show it as it was asked
+  w().log('layoutText', JSON.parse(JSON.stringify(options)))
   return w().refit
 }
 export const makeViewport = (size, fit) => ({ size, fit })

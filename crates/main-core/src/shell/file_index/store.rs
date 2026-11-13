@@ -288,7 +288,16 @@ pub struct FileIndexStore {
 
 impl FileIndexStore {
     pub fn new(db_path: &str) -> Result<FileIndexStore, StoreError> {
-        let db = Connection::open(db_path).map_err(sql)?;
+        // rusqlite appends ": <path>" to SQLite's message where node:sqlite does not
+        let db = Connection::open(db_path).map_err(|e| {
+            let StoreError(message) = sql(e);
+            let suffix = format!(": {db_path}");
+            StoreError(
+                message
+                    .strip_suffix(suffix.as_str())
+                    .map_or_else(|| message.clone(), str::to_owned),
+            )
+        })?;
         let store = FileIndexStore { db };
         store.exec("PRAGMA journal_mode = WAL")?;
         store.exec(SCHEMA)?;

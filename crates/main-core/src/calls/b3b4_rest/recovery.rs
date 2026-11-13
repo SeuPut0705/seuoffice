@@ -373,6 +373,34 @@ fn seed_step(orig: Option<&str>, step: &Value) -> StepResult {
     Ok(None)
 }
 
+/// `touch {dir, mtimeMs}`: every file under `dir` gets the time `mtimeMs`
+fn touch_step(step: &Value) -> StepResult {
+    fn touch(dir: &str, at: std::time::SystemTime) -> Result<(), NodeError> {
+        for entry in fs::read_dir(dir).map_err(|e| node_error(&e, "scandir", dir))? {
+            let entry = entry.map_err(|e| node_error(&e, "scandir", dir))?;
+            let path = join(&[dir, &entry.file_name().to_string_lossy()]);
+            if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                touch(&path, at)?;
+            } else {
+                fs::OpenOptions::new()
+                    .write(true)
+                    .open(&path)
+                    .and_then(|file| file.set_modified(at))
+                    .map_err(|e| node_error(&e, "utime", &path))?;
+            }
+        }
+        Ok(())
+    }
+    let ms = field(step, "mtimeMs")
+        .and_then(Value::as_f64)
+        .ok_or_else(|| bad("mtimeMs"))?;
+    touch(
+        need_str(step, "dir")?,
+        UNIX_EPOCH + Duration::from_millis(ms as u64),
+    )?;
+    Ok(None)
+}
+
 /// the steps every scenario shares: they arrange and read the store itself
 fn store_step(op: &str, step: &Value, env: &Env<'_>) -> Option<StepResult> {
     let ours = matches!(
@@ -387,6 +415,7 @@ fn store_step(op: &str, step: &Value, env: &Env<'_>) -> Option<StepResult> {
             | "storeIsDiscarded"
             | "shutdown"
             | "ls"
+            | "touch"
     );
     ours.then(|| store_step_of(op, step, env))
 }
@@ -403,6 +432,7 @@ fn store_step_of(op: &str, step: &Value, env: &Env<'_>) -> StepResult {
             None
         }
         "seed" => return seed_step(env.orig, step),
+        "touch" => return touch_step(step),
         "storeWrite" => {
             let options = RecoveryWriteOptions {
                 title: field_str(step, "title").map(str::to_owned),

@@ -8,12 +8,14 @@
 import '../electron-fake.ts'
 import type { Group } from '../types.ts'
 
-// loaded after electron-fake.ts has registered its hooks
-const parts = await Promise.all([
-  import('./b3b4-rest/index-core.ts'),
-  import('./b3b4-rest/index-store.ts'),
-  import('./b3b4-rest/shell-rest.ts'),
-  import('./b3b4-rest/recovery.ts'),
-])
+// loaded after electron-fake.ts has registered its hooks, one part after
+// another: a part's loader hooks must be in place before the next part's
+// imports resolve the modules they fake
+const parts = [
+  await import('./b3b4-rest/index-core.ts'),
+  await import('./b3b4-rest/index-store.ts'),
+  await import('./b3b4-rest/shell-rest.ts'),
+  await import('./b3b4-rest/recovery.ts'),
+]
 
 export const group: Group = Object.assign({}, ...parts.map((part) => part.part))
