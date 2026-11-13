@@ -642,6 +642,22 @@ struct State {
     spawned: Vec<LocalFuture>,
 }
 
+/// The reads of `body` still waiting for the host, taken out of its list. A
+/// read the host answered already stays: its task takes its own answer.
+fn take_pending_reads(st: &mut State, body: Id) -> Vec<Id> {
+    let State { bodies, ops, .. } = st;
+    let Some(b) = bodies.get_mut(&body) else {
+        return Vec::new();
+    };
+    let (pending, answered): (Vec<Id>, Vec<Id>) = b
+        .reads
+        .iter()
+        .copied()
+        .partition(|read| matches!(ops.get(read), Some(None)));
+    b.reads = answered;
+    pending
+}
+
 struct Inner {
     host: RefCell<HostInfo>,
     st: RefCell<State>,
@@ -1057,14 +1073,15 @@ impl Rt {
                     };
                 }
             }
-            // the stream closed or failed: it settles every other pending
-            // read alike, and a failure every later one
+            // the stream closed or failed: it settles every other read still
+            // waiting alike (one the host answered keeps its answer), and a
+            // failure every later one
             match &outcome {
                 Ok(Answer::Chunk(_)) => Vec::new(),
-                Ok(_) => std::mem::take(&mut b.reads),
+                Ok(_) => take_pending_reads(&mut st, body),
                 Err(error) => {
                     b.failed = Some(error.clone());
-                    std::mem::take(&mut b.reads)
+                    take_pending_reads(&mut st, body)
                 }
             }
         };
@@ -1115,8 +1132,8 @@ impl Rt {
             return;
         }
         b.done = true;
-        let reads = std::mem::take(&mut b.reads);
         let source = b.source;
+        let reads = take_pending_reads(&mut st, body);
         // a branch the program dropped still counts for `live` (JavaScript's
         // garbage) but reads nothing: with none other left to read, the host
         // stops the stream through a release, no `Cancel` the program would see
@@ -2372,15 +2389,12 @@ mod tests {
         assert!(runtime.poll().is_empty());
     }
 
+    /// A `read()` started as a task.
+    type ReadCall = Call<Result<Option<Vec<u8>>, JsError>>;
+
     /// Two `read()` calls in flight on one fetched response: the response,
     /// the two calls, the ids of their `Cmd::Read`s.
-    fn two_reads(
-        runtime: &mut Runtime,
-    ) -> (
-        Rc<Response>,
-        Vec<Call<Result<Option<Vec<u8>>, JsError>>>,
-        Vec<Id>,
-    ) {
+    fn two_reads(runtime: &mut Runtime) -> (Rc<Response>, Vec<ReadCall>, Vec<Id>) {
         let (response, _) = fetched(runtime);
         let response = Rc::new(response);
         let reads: Vec<_> = (0..2)
@@ -2545,15 +2559,7 @@ mod tests {
     /// Two reads in flight: task A, started first, reads after a timer, so
     /// task B sends the first `Cmd::Read`. Answers: the runtime, the
     /// response, A's and B's calls, A's and B's read ids.
-    #[allow(clippy::type_complexity)]
-    fn reads_out_of_task_order() -> (
-        Runtime,
-        Rc<Response>,
-        Call<Result<Option<Vec<u8>>, JsError>>,
-        Call<Result<Option<Vec<u8>>, JsError>>,
-        Id,
-        Id,
-    ) {
+    fn reads_out_of_task_order() -> (Runtime, Rc<Response>, ReadCall, ReadCall, Id, Id) {
         let mut runtime = Runtime::new(host());
         let (response, _) = fetched(&mut runtime);
         let response = Rc::new(response);
