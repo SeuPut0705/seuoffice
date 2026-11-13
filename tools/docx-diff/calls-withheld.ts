@@ -62,7 +62,7 @@ const R_PRS: string[] = [
   '<w:rPr><go:redact w:label="a &amp; b &lt;c&gt; &quot;d&quot; &#65; &#x42;"/></w:rPr>',
   '<w:rPr><go:redact/></w:rPr>',
   '<w:rPr><go:redact w:label=""/></w:rPr>',
-  '<w:rPr><go:redact w:label=\'single\'/></w:rPr>',
+  "<w:rPr><go:redact w:label='single'/></w:rPr>",
   '<w:rPr><go:redact w:other="x"/><go:redact w:label="second"/></w:rPr>',
   '<w:rPr><go:redact w:label="first"/></w:rPr><w:rPr><x:redact w:label="second"/></w:rPr>',
   '<w:rPr><redacted w:label="no"/></w:rPr>',
@@ -104,26 +104,53 @@ const OLD_NS = 'https://genspark.ai/genoffice/redaction/2026'
 
 /** The ways a root can be written, for the namespace the mark needs declared. */
 const NAMESPACE_PARTS: Array<[string, string]> = [
-  ['w:comments', '<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>'],
-  ['w:comments', '<?xml version="1.0"?>\n<w:comments xmlns:w="w" xmlns:go="https://genspark.ai/genoffice/redaction/2026"><w:comment><go:redact/></w:comment></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w" xmlns:go=\'https://genspark.ai/genoffice/redaction/2026\'><go:redact/></w:comments>'],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>',
+  ],
+  [
+    'w:comments',
+    '<?xml version="1.0"?>\n<w:comments xmlns:w="w" xmlns:go="https://genspark.ai/genoffice/redaction/2026"><w:comment><go:redact/></w:comment></w:comments>',
+  ],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w" xmlns:go=\'https://genspark.ai/genoffice/redaction/2026\'><go:redact/></w:comments>',
+  ],
   ['w:comments', '<w:comments xmlns:go="another"><go:redact/></w:comments>'],
   ['w:comments', '<w:comments xmlns:go=""><go:redact/></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14"><go:redact/></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14 go"><go:redact/></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="  "><go:redact/></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="$&amp; $1 $$ $`"><go:redact/></w:comments>'],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14"><go:redact/></w:comments>',
+  ],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="w14 go"><go:redact/></w:comments>',
+  ],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="  "><go:redact/></w:comments>',
+  ],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w" xmlns:mc="mc" mc:Ignorable="$&amp; $1 $$ $`"><go:redact/></w:comments>',
+  ],
   ['w:comments', '<w:comments xmlns:w="w" mc:Ignorable="gox go2 xgo"><go:redact/></w:comments>'],
   ['w:comments', '<w:comments xmlns:w="w" mc:Ignorable=""><go:redact/></w:comments>'],
   ['w:comments', '<w:comments xmlns:w="w"><w:comment/></w:comments>'],
-  ['w:comments', '<w:comments xmlns:w="w"><w:comment><!-- <go:redact/> --></w:comment></w:comments>'],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w"><w:comment><!-- <go:redact/> --></w:comment></w:comments>',
+  ],
   ['w:comments', '<w:comments a=">" xmlns:w="w"><go:redact/></w:comments>'],
   ['w:comments', '<w:commentsX><go:redact/></w:commentsX>'],
   ['w:comments', '<w:comments/>'],
   ['w:comments', '<w:comments><go:redact w:label="x"/></w:comments>'],
   ['w:comments', '<?xml version="1.0"?>\n<w:comments\n  xmlns:w="w"\n>\n<go:redact/></w:comments>'],
   ['w:footnotes', '<w:footnotes xmlns:w="w"><go:redact/></w:footnotes>'],
-  ['w:footnotes', '<w:footnotes xmlns:mc="mc" xmlns:go="https://genspark.ai/genoffice/redaction/2026" mc:Ignorable="w14"><go:redact/></w:footnotes>'],
+  [
+    'w:footnotes',
+    '<w:footnotes xmlns:mc="mc" xmlns:go="https://genspark.ai/genoffice/redaction/2026" mc:Ignorable="w14"><go:redact/></w:footnotes>',
+  ],
   ['w:endnotes', '<w:endnotes xmlns:w="w"><go:redact/></w:endnotes>'],
   ['w:endnotes', '<w:footnotes xmlns:w="w"><go:redact/></w:footnotes>'],
   ['w:($', '<w:($ xmlns:w="w"><go:redact/>'],
@@ -132,50 +159,149 @@ const NAMESPACE_PARTS: Array<[string, string]> = [
   ['', '<a><go:redact/></a>'],
   // the markup-compatibility prefix: one bound to the namespace is used, one bound elsewhere gets `mce`
   ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="x"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="x" xmlns:mce="${MC_NS}"><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="x" xmlns:mce="${MC_NS}"><go:redact/></w:comments>`,
+  ],
   ['w:comments', `<w:comments xmlns:w="w" xmlns:m="${MC_NS}"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="http&#58;//schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14"><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="http&#58;//schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14"><go:redact/></w:comments>`,
+  ],
   // a part whose only mark declares its own namespace gets a root prefix for it
-  ['w:comments', `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OLD_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w"><redact xmlns="${OWN_REDACT_NS}" w:label="x"/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w"><go:redact/><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OLD_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w"><redact xmlns="${OWN_REDACT_NS}" w:label="x"/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w"><go:redact/><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`,
+  ],
   ['w:comments', `<w:comments xmlns:w="w" xmlns:gx="${OWN_REDACT_NS}"><gx:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="${OLD_NS}"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go="${OLD_NS}"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`,
+  ],
   // a root that declares the namespace but lists neither the prefix nor the element
   ['w:comments', `<w:comments xmlns:w="w" xmlns:go="${OLD_NS}"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="w:x"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="w14\u00A0go" mc:PreserveElements="\tw:x\n  go:redact "><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:PreserveElements="go:redact"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="w:x"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="w14\u00A0go" mc:PreserveElements="\tw:x\n  go:redact "><go:redact/></w:comments>`,
+  ],
   // a namespace written with character references is the namespace, and written as it was
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="https&#58;//genspark.ai/genoffice/redaction/2026"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="https&#x3A;//genspark.ai/genoffice/redaction/2026" xmlns:mc="${MC_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w"><gx:redact xmlns:gx="https&#58;//github.com/SeuPut0705/seuoffice/redaction/2026"/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go="https&#58;//genspark.ai/genoffice/redaction/2026"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go="https&#x3A;//genspark.ai/genoffice/redaction/2026" xmlns:mc="${MC_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w"><gx:redact xmlns:gx="https&#58;//github.com/SeuPut0705/seuoffice/redaction/2026"/></w:comments>`,
+  ],
   // the root prefix `go1` taken, or `go` and `go1` both
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other" xmlns:go2="more"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/><redact xmlns="${OLD_NS}"/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other" xmlns:go2="more"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/><redact xmlns="${OLD_NS}"/></w:comments>`,
+  ],
   // single quotes, white space around `=`, a name written twice
-  ['w:comments', `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' mc:Ignorable='w14'><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' xmlns:go='${OLD_NS}' mc:Ignorable='go' mc:PreserveElements='w:x'><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w = "w" xmlns:mc\n=\n'${MC_NS}' mc:Ignorable\t=  "w14"><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' mc:Ignorable='w14'><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' xmlns:go='${OLD_NS}' mc:Ignorable='go' mc:PreserveElements='w:x'><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments xmlns:w = "w" xmlns:mc\n=\n'${MC_NS}' mc:Ignorable\t=  "w14"><go:redact/></w:comments>`,
+  ],
   ['w:comments', `<w:comments xmlns:go="another" xmlns:go="${OLD_NS}"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14" mc:Ignorable="w15"><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14" mc:Ignorable="w15"><go:redact/></w:comments>`,
+  ],
   // other roots: a header, a footer, a document, a comments part, a footnotes part
-  ['w:hdr', '<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>'],
-  ['w:ftr', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:ftr>`],
-  ['w:hdr', `<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>`],
-  ['w:document', '<w:document xmlns:w="w"><w:body><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:body></w:document>'],
-  ['w:comments', '<w:comments xmlns:w="w"><w:comment w:id="0"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:comment></w:comments>'],
-  ['w:footnotes', '<w:footnotes xmlns:w="w"><w:footnote w:id="1"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:footnote></w:footnotes>'],
-  ['w:endnotes', `<w:endnotes xmlns:w="w"><w:endnote w:id="1"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr></w:r></w:p></w:endnote></w:endnotes>`],
+  [
+    'w:hdr',
+    '<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>',
+  ],
+  [
+    'w:ftr',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:ftr>`,
+  ],
+  [
+    'w:hdr',
+    `<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>`,
+  ],
+  [
+    'w:document',
+    '<w:document xmlns:w="w"><w:body><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:body></w:document>',
+  ],
+  [
+    'w:comments',
+    '<w:comments xmlns:w="w"><w:comment w:id="0"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:comment></w:comments>',
+  ],
+  [
+    'w:footnotes',
+    '<w:footnotes xmlns:w="w"><w:footnote w:id="1"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:footnote></w:footnotes>',
+  ],
+  [
+    'w:endnotes',
+    `<w:endnotes xmlns:w="w"><w:endnote w:id="1"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr></w:r></w:p></w:endnote></w:endnotes>`,
+  ],
   // a root found past a comment, a processing instruction and a CDATA section, and not found inside them
-  ['w:comments', `<!-- <w:fake xmlns:mc="y"> --><?pi <w:fake2 xmlns:mc="y"> ?><w:comments xmlns:w="w"><go:redact/></w:comments>`],
-  ['w:comments', `<![CDATA[<w:fake xmlns:mc="y">]]><w:comments xmlns:w="w"><go:redact/></w:comments>`],
-  ['w:comments', `<!DOCTYPE x [ <!ENTITY a "b"> ]><w:comments xmlns:w="w"><go:redact/></w:comments>`],
-  ['w:comments', `<w:comments w:x="\u00E9\u{1F600}>" xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><go:redact/></w:comments>`],
+  [
+    'w:comments',
+    `<!-- <w:fake xmlns:mc="y"> --><?pi <w:fake2 xmlns:mc="y"> ?><w:comments xmlns:w="w"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<![CDATA[<w:fake xmlns:mc="y">]]><w:comments xmlns:w="w"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<!DOCTYPE x [ <!ENTITY a "b"> ]><w:comments xmlns:w="w"><go:redact/></w:comments>`,
+  ],
+  [
+    'w:comments',
+    `<w:comments w:x="\u00E9\u{1F600}>" xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><go:redact/></w:comments>`,
+  ],
   ['w:comments', '<w:comments xmlns:w="w" w:x="<go:redact"/>'],
   ['w:comments', '<w:comments xmlns:w="w" w:x="<go:redact">'],
   ['w:comments', '<w:comments xmlns:w="w"'],
@@ -287,7 +413,15 @@ export const WITHHELD: CallSpec[] = [
   {
     fn: 'withheld.runsText',
     call: (text) => overEntry(text, runsText),
-    built: texts(ENTRY_PARTS),
+    built: texts([
+      ...ENTRY_PARTS,
+      // deleted text and field codes are not shown text
+      '<w:comment w:id="1"><w:p><w:del><w:r><w:delText>gone</w:delText></w:r></w:del><w:r><w:t>kept</w:t></w:r></w:p></w:comment>',
+      '<w:comment w:id="1"><w:p><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:delInstrText>REF x</w:delInstrText></w:r><w:r><w:t>1</w:t></w:r></w:p></w:comment>',
+      // a w:t inside a skipped element is not read either: the only input where
+      // the skip shows, since the walk reads text nodes nowhere but in w:t
+      '<w:comment w:id="1"><w:p><w:r><w:delText>a<w:t>in del</w:t></w:delText><w:instrText><w:t>in instr</w:t></w:instrText><w:delInstrText><w:t>in delInstr</w:t></w:delInstrText><w:t>b</w:t></w:r></w:p></w:comment>',
+    ]),
   },
   {
     fn: 'withheld.parseEntry',
@@ -360,25 +494,26 @@ export const WITHHELD: CallSpec[] = [
   },
   {
     fn: 'withheld.patchParagraphTexts',
-    call: (text, args) => patchParagraphTexts(text, args.newText as string, {
-      stripFirstParaLeadingSpace: args.strip === true,
-    }),
+    call: (text, args) =>
+      patchParagraphTexts(text, args.newText as string, {
+        stripFirstParaLeadingSpace: args.strip === true,
+      }),
     fromDocument: (parts) =>
       ['word/comments.xml', 'word/footnotes.xml', 'word/endnotes.xml']
         .flatMap((name) => {
           const xml = parts.get(name)
-          return xml === undefined ? [] : entrySlices(xml, name.includes('comments') ? 'w:comment' : 'w:footnote')
+          return xml === undefined
+            ? []
+            : entrySlices(xml, name.includes('comments') ? 'w:comment' : 'w:footnote')
         })
         .slice(0, 40)
         .flatMap(stripAndPatch),
-    built: [
-      ...ENTRY_PARTS.flatMap(stripAndPatch),
-      ...MASKED_ENTRIES.flatMap(stripAndPatch),
-    ],
+    built: [...ENTRY_PARTS.flatMap(stripAndPatch), ...MASKED_ENTRIES.flatMap(stripAndPatch)],
   },
   {
     fn: 'withheld.hfRootOpen',
-    call: (text, args) => hfRootOpen(args.root as 'w:hdr' | 'w:ftr', args.absent === true ? null : text),
+    call: (text, args) =>
+      hfRootOpen(args.root as 'w:hdr' | 'w:ftr', args.absent === true ? null : text),
     built: [
       ...HF_PARTS.map(({ root, xml }) => ({ text: xml, args: { root } })),
       ...(['w:hdr', 'w:ftr'] as const).flatMap((root) => [
@@ -386,9 +521,15 @@ export const WITHHELD: CallSpec[] = [
         { text: '<a/>', args: { root } },
         { text: `<${root}/>`, args: { root } },
         { text: `<${root} xmlns:w="x" xmlns:r = "y" />`, args: { root } },
-        { text: `<${root} xmlns:w="x"\n  xmlns:v='urn:schemas-microsoft-com:vml'  >`, args: { root } },
+        {
+          text: `<${root} xmlns:w="x"\n  xmlns:v='urn:schemas-microsoft-com:vml'  >`,
+          args: { root },
+        },
         { text: `<${root} a=">" xmlns:w10="z"\t>`, args: { root } },
-        { text: `<${root} xmlns:o="o" xmlns:w="w" xmlns:r="r" xmlns:v="v" xmlns:w10="w10">`, args: { root } },
+        {
+          text: `<${root} xmlns:o="o" xmlns:w="w" xmlns:r="r" xmlns:v="v" xmlns:w10="w10">`,
+          args: { root },
+        },
         { text: `<!-- <${root} xmlns:w="x"> --><${root}>`, args: { root } },
         { text: `<${root} xmlns:wx="x">`, args: { root } },
       ]),

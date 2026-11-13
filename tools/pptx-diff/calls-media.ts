@@ -39,7 +39,6 @@ import {
 import {
   addNarration,
   clearNarration,
-  NARRATION_NAME,
   narrationSpids,
   setShowNarration,
 } from '../../packages/pptx-engine/src/narration'
@@ -504,7 +503,7 @@ export const MEDIA: CallSpec[] = [
       deckOp(text, args, (opened, deckAt) =>
         withUuidAndPixels(opened, () => {
           const slide = (args.slide as number | undefined) ?? 0
-          let id = ''
+          let id: string
           if (args.model !== false) {
             const model = addModel3d(opened, slide, modelOptions(args.model as Args))
             id = model ? model.elementId : ''
