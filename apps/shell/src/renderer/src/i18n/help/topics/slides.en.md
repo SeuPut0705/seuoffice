@@ -20,12 +20,7 @@ The tab strip (macOS starts at Home; Windows adds a File tab):
 - **Draw**: the **pen** (hand-draw on the slide, saved as ink on the page) and the **highlighter** (translucent, thicker strokes), with pen width; click the tool again to cancel.
 - **Design**: themes, color scheme and background; masters and layouts.
 - **Transitions**: pick a transition for the current slide (in effect in PowerPoint's presenter), with apply-to-all; None removes it.
-
-![The Transitions tab](img/slides-transitions.png)
-
 - **Animations**: entrance/emphasis effects for the selected shape, **motion paths** (move along a path); **preview** plays the slide's animations on the canvas; None removes them.
-
-![The Animations tab](img/slides-animations.png)
 
 Try it: select the title text box ▸ Animations tab ▸ pick an entrance effect ▸ **Preview** plays it on the canvas.
 
