@@ -838,7 +838,21 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
       if (nested) {
         flush(index - 1)
         if (doc.mods.protocol.isTrackedDeleted(node)) return
-        const exported = tableWithNestedText(doc.mods.convert.pmTableToModel(node.toJSON()))
+        // the table as the AI readers see it; a nested table keeps its cells in
+        // its attributes, where no mark is projected: one holding a trace of the
+        // mark withholds the whole table
+        const json = node.toJSON()
+        const projected = doc.mods.redactView.redactNode(json as never) as typeof json
+        const left = JSON.stringify(projected)
+        if (hasWithheldTrace(left) || /"redact(?:ion)?"/.test(left)) {
+          const label =
+            doc.mods.redactView.redactLabelsOf(json as never)[0] ??
+            /redact\b[^>]*?\blabel=\\?["']([^"'\\]+)/.exec(left)?.[1] ??
+            'private'
+          parts.push(`<p>${escapeHtml(placeholderSource(label))}</p>`)
+          return
+        }
+        const exported = tableWithNestedText(doc.mods.convert.pmTableToModel(projected))
         parts.push(exported.html)
         nestedTablesAsText += exported.count
         return
