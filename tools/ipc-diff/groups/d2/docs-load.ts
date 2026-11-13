@@ -82,6 +82,8 @@ export async function loadDocs(cx: LoadContext): Promise<DocsMain> {
   // capturePage of a docs view takes the rectangle (the shared fake ignores it)
   for (const v of cx.case.views ?? []) {
     const contents = cx.electron.contents(v.view)
+    // the destroyed hook docs:view-menu-state hangs on its sender
+    contents.once = () => contents
     contents.capturePage = async (rect: unknown) => {
       cx.electron.log.push(['webContents.capturePage', v.view, rect])
       const png = answer('capture_rect')
