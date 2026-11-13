@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
+    "lib": ["ES2022", "DOM"],
     // resolve the sibling source packages by path (worktree-safe: a linked
     // node_modules would otherwise typecheck against another checkout)
     "paths": {
