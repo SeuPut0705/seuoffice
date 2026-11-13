@@ -3329,6 +3329,11 @@ export interface ReplaceOptions {
   /** Restrict to one slide/element (the "Replace" button acts on the currently hit element) */
   slideIndex?: number
   elementId?: string
+  /**
+   * Text a person hid from AI is out of the search: no match inside it or across it, and no count
+   * for one. For an agent, whose answer would otherwise tell it the words are there.
+   */
+  skipWithheld?: boolean
 }
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -3356,7 +3361,8 @@ export function replaceAllInDeck(
 
   // A field run or an <a:br/> soft-break sentinel is a hard barrier: matches may
   // only span the consecutive plain runs between them.
-  const isBarrier = (r: TextRun): boolean => !!r.field || r.text === '\n'
+  const isBarrier = (r: TextRun): boolean =>
+    !!r.field || r.text === '\n' || (opts.skipWithheld === true && !!r.redact)
   const segmentsOf = (p: Paragraph): TextRun[][] => {
     const segments: TextRun[][] = []
     let current: TextRun[] = []

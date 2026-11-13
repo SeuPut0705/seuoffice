@@ -14,7 +14,12 @@ import {
   breakExternalLinks,
 } from '../formats/xlsx'
 import { checkWorkbook, SHEET_CHECKS } from '../formats/xlsx-check'
-import { runWorkbookDsl, SUPPORTED_DSL_OPS, type DslOutcome } from '../formats/xlsx-dsl'
+import {
+  refuseWithheldCellEdits,
+  runWorkbookDsl,
+  SUPPORTED_DSL_OPS,
+  type DslOutcome,
+} from '../formats/xlsx-dsl'
 import { hasGatewayPayloads, type GatewayPayloads } from '../formats/xlsx-gateway-ops'
 import { readInput, readTextFile, resolveInput, resolveOutput, stripBom } from '../fs'
 import type { CommandContext, CommandDef } from '../registry'
@@ -528,7 +533,9 @@ async function applyCells(
       sheetNotFoundHints(unknown.sheetName, [...known]),
     )
   }
-  const r = await writeWorkbook(readFileSync(path), edits, output)
+  const source = readFileSync(path)
+  await refuseWithheldCellEdits(source, edits)
+  const r = await writeWorkbook(source, edits, output)
   return {
     summary: `wrote ${r.cells} cells to ${basename(output)}`,
     outputPath: output,

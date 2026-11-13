@@ -276,7 +276,17 @@ const CHART = struct<ChartDisplay | NewChart>()({
   name: 'text',
   categories: 'text',
   numFmt: 'text',
-  ...tokens('partPath', 'color', 'pointColors', 'palette', 'frameLine', 'line', 'gridLine'),
+  // never set in the editor: the block carries the label (escaped) as its own `redact`
+  ...tokens(
+    'partPath',
+    'color',
+    'pointColors',
+    'palette',
+    'frameLine',
+    'line',
+    'gridLine',
+    'redact',
+  ),
 })
 
 /** a SmartArt's resolved shapes */
@@ -572,6 +582,8 @@ export const NODE_ATTRS: { readonly [type: string]: Fields } = {
       'imageFlipV',
       'imageBorder',
       'imageReplace',
+      // the label of the mark hiding the block from AI; the model reads it, no page shows it
+      'redact',
     ),
     blockRevision: REVISION,
     sectPrChange: REVISION,

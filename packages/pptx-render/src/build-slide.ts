@@ -228,6 +228,8 @@ function buildNode(
   if (node) {
     const durable = parentGroup ? groupChildDurableId(parentGroup, el) : elementDurableId(el)
     if (durable) node.durableId = durable
+    // a chart is withheld as a whole when text in it is hidden from AI (a picture sets its own)
+    if (el.type === 'chart' && el.redact && node.type === 'chart') node.redact = el.redact
   }
   return node
 }

@@ -4,6 +4,7 @@ import {
   serializeMarkdown,
   type MarkdownSourceSnapshot,
 } from './markdown/roundtripSerializer'
+import { clearRedaction, holdsRedaction } from './editor/redact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AiMark,
@@ -1021,7 +1022,16 @@ export default function App() {
           const result = await renderDiagram(language, source, DOCX_MAX_IMAGE_PX)
           return result.ok ? diagramSvgToPng(result.svg, DOCX_MAX_IMAGE_PX) : null
         }
-        const bytes = await exportDocxBytes(current.getJSON(), loadImage, rasterizeDiagram)
+        let json = current.getJSON()
+        // An ODT cannot keep content hidden from AI: Word instead, or the marks
+        // cleared for this copy (the document keeps them), or nothing is written.
+        if (format === 'odt' && holdsRedaction(json)) {
+          const choice = await window.markdownApi.confirmMarkedOdt()
+          if (choice === 'cancel') return false
+          if (choice === 'docx') return runExportRef.current('docx')
+          json = clearRedaction(json)
+        }
+        const bytes = await exportDocxBytes(json, loadImage, rasterizeDiagram)
         if (format === 'odt') {
           // same Word bytes as the docx export; the main process converts them to ODT
           const result = await window.markdownApi.exportOdt({

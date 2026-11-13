@@ -360,7 +360,7 @@
   "HeaderFooter.newPictures{}": ["base64", "mime"],
   "HfPictureEdit": ["posXPx", "posYPx", "widthPx", "heightPx"],
   "RevisionResolution": ["mode", "filter"],
-  "RevisionXmlFilter": ["author", "type", "before", "date", "ids"],
+  "RevisionXmlFilter": ["author", "type", "before", "date", "ids", "keepHidden"],
   "HfPartInfo": ["text", "hasPageNumber", "paras", "images"],
   "NoteRun": [
     "text",

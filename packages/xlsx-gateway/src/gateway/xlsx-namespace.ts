@@ -1,3 +1,5 @@
+import { canonicalXmlSpelling } from './xlsx-xml-scan'
+
 /// OpenXML SDK-family producers bind the spreadsheetml namespace to a prefix
 /// (<x:workbook><x:sheets>...), invisible to the text-based patch pipeline's
 /// unprefixed element patterns. Parts are normalized at read time instead:
@@ -5,6 +7,9 @@
 /// parts the planner rewrites reach the file, so untouched entries keep
 /// their bytes; anything ambiguous returns the input unchanged (the save
 /// then fails exactly as it did before this pass existed).
+
+/// The root of a part of the bookkeeping, with or without a prefix.
+const BOOKKEEPING_ROOT = /<(?![?!])(?:[\w.-]+:)?(?:workbook|Relationships|Types)[\s>]/
 
 const NORMALIZABLE_NAMESPACES = new Set([
   'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
@@ -69,7 +74,12 @@ export function ensureRelationshipNamespace(partXml: string): string {
   return partXml.replace(root, () => bound)
 }
 
-export function normalizeOoxmlPartPrefix(xml: string): string {
+export function normalizeOoxmlPartPrefix(rawXml: string): string {
+  // The package's own bookkeeping (the workbook, its relationships, the
+  // content types) is read by patterns that take one spelling of a tag: they
+  // are read as that spelling. Worksheets and the rest keep every byte until
+  // a save has to rewrite them.
+  const xml = BOOKKEEPING_ROOT.test(rawXml.slice(0, 4096)) ? canonicalXmlSpelling(rawXml) : rawXml
   const root = /<(?![?!])([^\s/>]+)((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/.exec(xml)
   if (!root?.[1]) return xml
   const colon = root[1].indexOf(':')

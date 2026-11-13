@@ -1,4 +1,4 @@
-import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { placeholderSource, sanitizeLabel } from '@seuoffice/agent-core/redact-core'
 import { decodeEntities } from './parse-xml-text'
 import {
   attrsOf,
@@ -47,6 +47,20 @@ export function withheldLabelOf(rPrXml: string | undefined): string | null {
 /** Whether the raw XML holds anything that looks like the mark, comments and CDATA included. */
 export function hasWithheldTrace(xml: string): boolean {
   return MARK_RE.test(xml)
+}
+
+/**
+ * The label of the mark in a part that holds a drawing's rich text (a chart part: its title, axis
+ * titles and data labels are DrawingML runs), or null when the part holds none. The drawing is
+ * shown whole, so a mark anywhere in the part hides all of it; the label is read off the first
+ * mark element (`label`, or `w:label` in the document's own spelling), else `private`.
+ */
+export function withheldPartLabel(partXml: string): string | null {
+  if (!hasWithheldTrace(partXml)) return null
+  const label = /<(?:[\w.-]+:)?redact\b[^>]*?\s(?:w:)?label\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(
+    partXml,
+  )
+  return decodeEntities(label?.[1] ?? label?.[2] ?? 'private') || 'private'
 }
 
 /** What a model reads for an entry whose marks cannot all be read: the whole entry is withheld. */
@@ -132,6 +146,33 @@ export function withheldNode(node: XNode): XNode | null {
   return inner === null ? null : { ...node, [name]: inner }
 }
 
+function firstMarkedRunLabel(node: XNode): string | null {
+  for (const child of childrenOf(node)) {
+    const name = nameOf(child)
+    if (name === undefined) continue
+    const label = name === 'w:r' ? runLabel(child) : null
+    if (label !== null) return label
+    const inner = firstMarkedRunLabel(child)
+    if (inner !== null) return inner
+  }
+  return null
+}
+
+/**
+ * The label of the first run marked hidden from AI anywhere in a block's XML
+ * (a text box's paragraphs and a field's cached result included); null when no
+ * run is. A block shown as a whole unit (a picture, a drawing, a field or
+ * control paragraph) has no run of its own for the mark to sit on, and its
+ * picture, description, preview text and display data are its runs' content: so
+ * the parser asks here, and withholds the whole block under that label. A block
+ * that does not parse and shows a trace of the mark is withheld as `private`.
+ */
+export function withheldBlockLabel(blockXml: string): string | null {
+  const node = parseEntry(blockXml)
+  if (!node) return hasWithheldTrace(blockXml) ? 'private' : null
+  return firstMarkedRunLabel(node)
+}
+
 /** The run text of a subtree as Word shows it: w:t, outside field codes and deletions. */
 export function runsText(node: XNode): string {
   let out = ''
@@ -159,15 +200,16 @@ export function parseEntry(xml: string): XNode | undefined {
 
 /**
  * What a model reads of a parsed entry, given how its reader reads text
- * (`textOf`): undefined when the entry hides nothing, else its text with each
+ * (`textOf`): undefined when the entry carries no mark, else its text with each
  * hidden run as its placeholder, or the whole entry withheld when a mark sits
- * where no run accounts for it.
+ * where no run accounts for it. It is defined whenever a mark is there, also
+ * when it reads the same as the entry's own words (a hidden run whose words are
+ * the placeholder): its presence is how a reader knows the entry hides something.
  */
 export function withheldText(node: XNode, textOf: (node: XNode) => string): string | undefined {
   if (!hasMarkElement(node)) return undefined
   const view = withheldNode(node)
-  const modelText = view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
-  return modelText === textOf(node) ? undefined : modelText
+  return view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
 }
 
 /** the label of the first mark in an entry's XML, `private` when it carries none that is read */
@@ -189,12 +231,32 @@ export function overWithheldModelText(text: string, label: string): string {
 }
 
 /**
- * An entry written anew from its text, with every run that holds words hidden
- * under `label`. For an edit that cannot be patched around an entry's hidden
- * runs (a paragraph added, a change across hidden and plain words): which of
- * the new words are the hidden ones is no longer known, so all of them are,
- * and the person can show them to AI again. `entryXml` is the entry as this
- * engine generates it (one run per text piece, no comments or CDATA).
+ * The run properties of a run a person hid from AI, as the Docs editor writes
+ * them: the character border Word draws and the mark carrying the label (the
+ * namespace is declared on the part's root when the document is saved). For
+ * the writers that export content hidden from AI into a .docx (Markdown, HTML)
+ * to give it the mark the readers withhold by.
+ */
+export function hiddenRunProperties(label: string): string {
+  return (
+    '<w:rPr><w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>' +
+    `<${REDACT_EL} w:label="${escapeXmlAttr(sanitizeLabel(label) || 'private')}"/></w:rPr>`
+  )
+}
+
+/** a run holds content when it has words, a picture, a drawing, an object or a symbol */
+const RUN_CONTENT_RE =
+  /<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>|<w:(?:drawing|pict|object|sym)[\s>/]|<mc:AlternateContent[\s>]/
+
+/**
+ * An entry written anew from its text, with every run that holds content (words,
+ * or a picture, drawing, object or symbol) hidden under `label`. For an edit
+ * that cannot be patched around an entry's hidden runs (a paragraph added, a
+ * change across hidden and plain words): which of the new words are the hidden
+ * ones is no longer known, so all of them are, and the person can show them to
+ * AI again. A picture kept in the entry is hidden with them: it may be what a
+ * hidden run held. `entryXml` is the entry as this engine generates it (one run
+ * per text piece, no comments or CDATA).
  */
 export function overWithheld(entryXml: string, label: string): string {
   const mark =
@@ -203,8 +265,8 @@ export function overWithheld(entryXml: string, label: string): string {
   return entryXml.replace(
     /<w:r(\s[^>]*)?>([\s\S]*?)<\/w:r>/g,
     (run, attrs: string | undefined, inner: string) => {
-      // a run with no words (a reference mark, a spacer) stays as it is
-      if (!/<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>/.test(inner)) return run
+      // a run with no content (a reference mark, a spacer) stays as it is
+      if (!RUN_CONTENT_RE.test(inner)) return run
       const marked = inner.includes('</w:rPr>')
         ? inner.replace('</w:rPr>', `${mark}</w:rPr>`)
         : `<w:rPr>${mark}</w:rPr>${inner}`

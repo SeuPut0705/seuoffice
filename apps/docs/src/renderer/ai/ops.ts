@@ -1,4 +1,5 @@
 import { checkPlaceholders, placeholderSource, REDACT_MARK } from './redact'
+import { protectedPreviewOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
 import { Mark, type Node as PmDocNode, type Schema } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
@@ -433,7 +434,7 @@ function topLevelBlocks(doc: PmDocNode): TopBlock[] {
 
 function blockText(node: PmDocNode): string {
   if (node.type.name === 'docProtected') {
-    return [node.attrs.label, node.attrs.previewText].filter(Boolean).join(' ')
+    return [node.attrs.label, protectedPreviewOf(node.attrs)].filter(Boolean).join(' ')
   }
   // match against current content only, or targets would hit already-deleted revision text
   return liveText(node)
@@ -895,6 +896,15 @@ function redactionRangesOf(node: PmDocNode, base: number): Array<{ from: number;
   return out
 }
 
+/** whether [from, to) reaches into a span hidden from AI */
+function touchesHidden(
+  hidden: Array<{ from: number; to: number }>,
+  from: number,
+  to: number,
+): boolean {
+  return hidden.some((span) => from < span.to && to > span.from)
+}
+
 /** A stretch of a block's text a search reads as one, with the document position of each character */
 interface SearchRun {
   text: string
@@ -951,6 +961,7 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
     const blockDeleted = isTrackedDeleted(b.node)
     for (const p of scanParagraphs(b, scoped)) {
       const paraDeleted = blockDeleted || isTrackedDeleted(p.node)
+      const hidden = redactionRangesOf(p.node, p.pos + 1)
       for (const run of searchRuns(p.node, p.pos + 1)) {
         const struck = paraDeleted || run.marks.some((m) => m.type.name === 'del')
         const hay = matchCase ? run.text : run.text.toLowerCase()
@@ -958,7 +969,10 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
         while (at !== -1) {
           const from = run.posAt[at]
           const to = run.posAt[at + needle.length - 1] + 1
-          if (struck) {
+          if (touchesHidden(hidden, from, to)) {
+            // words hidden from AI are not text the model can search: a match that reaches
+            // into them is no match, as for a phrase that is not there at all
+          } else if (struck) {
             skippedDeleted++
           } else if (insideScope(b, scoped, from, to)) {
             const edits = planReplacement(tr.doc, from, to, replace)
@@ -1110,6 +1124,7 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
     for (const p of scanParagraphs(b, scoped)) {
       const paraDeleted = blockDeleted || isTrackedDeleted(p.node)
       const contentFrom = p.pos + 1
+      const hidden = redactionRangesOf(p.node, contentFrom)
       for (const run of searchRuns(p.node, contentFrom)) {
         if (!runStyleMatches(run.marks, op)) continue
         const struck = paraDeleted || run.marks.some((m) => m.type.name === 'del')
@@ -1135,7 +1150,9 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
               [from, to] = [Math.max(from, scoped.from), Math.min(to, scoped.to)]
             if (from >= to) continue
           }
-          if (struck) {
+          if (needle !== null && touchesHidden(hidden, from, to)) {
+            // a text match that reaches into words hidden from AI is no match
+          } else if (struck) {
             skippedDeleted++
           } else if (insideScope(b, scoped, from, to)) {
             applyFontRange(env, op, boolKeys, markPatch, from, to, p.node, contentFrom)
@@ -1318,6 +1335,12 @@ function runInsertToc(op: Op, env: RunEnv): OpResult {
   const entries: TocEntry[] = []
   for (const b of blocks) {
     if (b.node.type.name === 'docHeading' && b.node.textContent.trim()) {
+      // a table of contents copies each heading's words, as plain words, into a field of its own
+      if (redactionRangesOf(b.node, 0).length > 0) {
+        throw new Error(
+          `insertToc: heading block ${b.index} holds words the person hid from AI, which a table of contents would copy out as plain text; tell the person to insert the table of contents themselves`,
+        )
+      }
       entries.push({ level: Number(b.node.attrs.level) || 1, text: b.node.textContent })
     }
   }

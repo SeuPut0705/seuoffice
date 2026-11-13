@@ -16,6 +16,11 @@ import {
   type DocxToOdtResult,
   type ReportFeature,
 } from '@seuoffice/odt-engine'
+import {
+  markedOdtBox,
+  markedOdtChoice,
+  type MarkedOdtBox,
+} from '@seuoffice/electron-utils/marked-odt'
 import type { MessageBoxOptions } from 'electron'
 
 export type OdtExportOutcome =
@@ -93,6 +98,34 @@ export async function confirmOdtReport(
   return response === 0
 }
 
+/**
+ * The box for a page with content hidden from AI that is about to be exported as
+ * `format` (ODT or Word): neither keeps the hiding, so the person clears the
+ * marks for that copy, or cancels.
+ */
+export async function askMarkedExport(
+  format: 'odt' | 'docx',
+  show: (options: MarkedOdtBox) => Promise<{ response: number }>,
+  lang: Lang = getUiLang(),
+): Promise<'clear' | 'cancel'> {
+  const t = (key: OdtKey) => tOdt(lang, key)
+  const { response } = await show(
+    markedOdtBox({
+      title: t('markedTitle'),
+      message: t(format === 'odt' ? 'markedMessageOdt' : 'markedMessageDocx'),
+      detail: t('markedDetail'),
+      clearMarks: t(format === 'odt' ? 'markedClearOdt' : 'markedClearDocx'),
+      cancel: t('odtCancel'),
+    }),
+  )
+  return markedOdtChoice(response, false) === 'clear' ? 'clear' : 'cancel'
+}
+
+/** Why a headless export of a marked page writes nothing. */
+export function markedExportRefusal(lang: Lang = getUiLang()): string {
+  return tOdt(lang, 'markedRefused')
+}
+
 /** Name of the save-dialog filter for `.odt` */
 export function odtFilterName(lang: Lang = getUiLang()): string {
   return tOdt(lang, 'filterOdt')
@@ -129,6 +162,15 @@ const tOdt = createI18n({
     odtLeftOut: 'What is left out',
     odtSave: 'Save',
     odtCancel: 'Cancel',
+    markedTitle: 'Content hidden from AI',
+    markedMessageOdt: 'This page has content hidden from AI, and an ODT file cannot keep that.',
+    markedMessageDocx: 'This page has content hidden from AI, and a Word export cannot keep that.',
+    markedDetail:
+      'Exported this way, the hidden content would read as plain text to everyone, AI included. You can export a copy with the marks cleared; this page keeps its marks.',
+    markedClearOdt: 'Clear marks and export as ODT',
+    markedClearDocx: 'Clear marks and export as Word',
+    markedRefused:
+      'this page has content hidden from AI, and this export cannot keep that; clear the marks first',
     featToc: 'Table of contents',
     featChart: 'Charts',
     featEquation: 'Equations',
@@ -157,6 +199,17 @@ const tOdt = createI18n({
     odtLeftOut: '빠지는 것',
     odtSave: '저장',
     odtCancel: '취소',
+    markedTitle: 'AI에게 숨긴 내용',
+    markedMessageOdt:
+      '이 페이지에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.',
+    markedMessageDocx:
+      '이 페이지에는 AI에게 숨긴 내용이 있는데, Word로 내보내면 이를 담을 수 없습니다.',
+    markedDetail:
+      '이 형식으로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 표시를 지운 사본을 내보낼 수 있으며, 이 페이지의 표시는 그대로 남습니다.',
+    markedClearOdt: '표시 지우고 ODT로 내보내기',
+    markedClearDocx: '표시 지우고 Word로 내보내기',
+    markedRefused:
+      '이 페이지에는 AI에게 숨긴 내용이 있어 이 형식으로 내보낼 수 없습니다. 표시를 먼저 지우세요',
     featToc: '목차',
     featChart: '차트',
     featEquation: '수식',

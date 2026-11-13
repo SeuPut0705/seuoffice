@@ -3858,6 +3858,8 @@ export const DocProtected = Node.create({
       pageBreakBefore: { default: false },
       label: { default: '' },
       previewText: { default: '' },
+      /** label of the mark hiding the block's picture from AI (a run hidden from AI holds it) */
+      redact: { default: null as string | null },
       imageDataUrl: { default: null as string | null },
       oleProgId: { default: null as string | null },
       /** display size in CSS px (blockType === 'image'), editable via drag handles */

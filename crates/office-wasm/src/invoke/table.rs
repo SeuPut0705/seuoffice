@@ -264,6 +264,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "fieldDisplayOf" => r_field_display_of(env, args),
         "findChartWorkbookPath" => routes::find_chart_workbook_path(env, &args.resolved()?),
         "findInkRuns" => r_find_ink_runs(env, args),
+        "findStartTag" => r_find_start_tag(env, args),
         "formatNumber" => r_format_number(env, args),
         "generateCaptionXml" => r_generate_caption_xml(env, args),
         "generateIndexFieldXml" => r_generate_index_field_xml(env, args),
@@ -274,6 +275,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "hasDuplicateStyleRefs" => r_has_duplicate_style_refs(env, args),
         "hashProtectionPassword" => r_hash_protection_password(env, args),
         "hasUniversalMeasures" => r_has_universal_measures(env, args),
+        "hasWithheldTrace" => r_has_withheld_trace(env, args),
         "hfMovablePictureFrag" => r_hf_movable_picture_frag(env, args),
         "hfReferenceRId" => r_hf_reference_r_id(env, args),
         "hfReferenceTags" => r_hf_reference_tags(env, args),
@@ -431,6 +433,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "stripParaMarkColor" => r_strip_para_mark_color(env, args),
         "stripParaMarkRevision" => r_strip_para_mark_revision(env, args),
         "stripPPrChange" => r_strip_p_pr_change(env, args),
+        "stripTextboxes" => r_strip_textboxes(env, args),
         "styleRunFormat" => routes::style_run_format(env, &args.resolved()?),
         "substituteBullet" => r_substitute_bullet(env, args),
         "swapAnchorWrap" => r_swap_anchor_wrap(env, args),
@@ -893,6 +896,14 @@ fn r_find_ink_runs(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
+fn r_find_start_tag(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let p1: docx_engine::xml_tag::TagName = req(args, 1)?;
+    let p2: usize = req(args, 2)?;
+    let r = docx_engine::xml_tag::find_start_tag(p0, p1, p2);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_format_number(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = num(args, 0)?;
     let p1 = rstr(args, 1)?;
@@ -1016,6 +1027,12 @@ fn r_hash_protection_password(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_has_universal_measures(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = ooxml_pkg::has_universal_measures(p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_has_withheld_trace(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::withheld::has_withheld_trace(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -2064,6 +2081,12 @@ fn r_strip_para_mark_revision(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_strip_p_pr_change(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::generate::props::strip_p_pr_change(p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_strip_textboxes(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::props::strip_textboxes(p0);
     Ok(Some(to_json(&r)?))
 }
 

@@ -8,6 +8,8 @@ import { INumfmtService } from '@univerjs/sheets'
 
 import { ConditionalFormattingService } from '@univerjs/preset-sheets-conditional-formatting'
 
+import type { RedactionIndex } from './ai/redact'
+import { redactGuardForSheetExport } from './ai/redact-guard'
 import { MAX_CSV_EXPORT_CHARS } from '../shared/ipc-channels'
 import { settleFormulas } from './formula-settle'
 import { formulaViewSheets } from './formula-view'
@@ -27,6 +29,8 @@ export interface CsvExportContext {
   /// Routes into the regular Save As flow when the user picks "Save as .xlsx"
   /// in the formula-loss warning.
   requestSaveAs: () => void
+  /// The cells the reader withheld from the AI: a CSV copy cannot keep that.
+  redactions: () => RedactionIndex
 }
 
 /// The slice of the Univer facade the export reads (structural, so the
@@ -230,6 +234,21 @@ export function sheetHasFormulas(sheet: CsvWorksheet): boolean {
   return found
 }
 
+/**
+ * Whether a CSV of this sheet would hand over a cell hidden from the AI: the
+ * file is plain text and records no mark, so what a model later reads from it
+ * is the value. A mark whose record could not be read withholds every cell.
+ * The person's own CSV holds the real values (never placeholders: that would
+ * corrupt their data); they are asked first, and may export without the marks.
+ */
+export function csvWouldExposeWithheld(
+  index: RedactionIndex,
+  sheetId: string,
+  sheetName: string,
+): boolean {
+  return redactGuardForSheetExport('csv', index, sheetId, sheetName) !== null
+}
+
 export async function handleExportCsv(ctx: CsvExportContext, targetPath?: string): Promise<void> {
   const runtime = ctx.univerRef.current
   if (!runtime || !activeCsvSheet(runtime)) return
@@ -244,6 +263,19 @@ export async function handleExportCsv(ctx: CsvExportContext, targetPath?: string
     const active = activeCsvSheet(runtime)
     if (!active || ctx.lazyWorkbookRef.current !== state) return
     const { sheet, sheetCount } = active
+    // Before anything is serialized or asked: a CSV records no mark, so the
+    // person chooses. Only an explicit "without the marks" writes the values.
+    if (csvWouldExposeWithheld(ctx.redactions(), sheet.getSheetId(), sheet.getSheetName())) {
+      const choice = await window.desktopApi.askWithheldCsv()
+      if (choice === 'xlsx') {
+        ctx.requestSaveAs()
+        return
+      }
+      if (choice === 'cancel') {
+        ctx.setMessage(t('appCsvExportCanceled'))
+        return
+      }
+    }
     const content = serializeActiveSheetCsv(
       sheet,
       state,
