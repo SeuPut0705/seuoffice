@@ -286,6 +286,9 @@ pub struct SpawnRequest {
     pub stdio: [Stdio; 3],
     pub detached: bool,
     pub windows_hide: bool,
+    /// `options.shell` as a path: the command line runs through that program
+    /// (`cmd.exe /d /s /c`), as Node does; `None`: no shell
+    pub shell: Option<String>,
 }
 
 /// A file system call of `node:fs/promises` (or a synchronous one, which the
@@ -343,6 +346,12 @@ pub enum FsOp {
         to: String,
     },
     Chmod {
+        path: String,
+        mode: f64,
+    },
+    /// `access(path, mode)`: `mode` is the `constants.X_OK` family (1: execute); answers
+    /// [`FsAnswer::Unit`] or fails as Node does
+    Access {
         path: String,
         mode: f64,
     },
@@ -1523,116 +1532,107 @@ impl<T: Clone> Future for Wait<T> {
     }
 }
 
-/// `Promise.all(futures)` of futures that do not fail.
-pub async fn join_all<T>(futures: Vec<Pin<Box<dyn Future<Output = T>>>>) -> Vec<T> {
-    JoinAll {
-        futures: futures.into_iter().map(Some).collect(),
-        out: Vec::new(),
-    }
-    .await
+/// A future a combinator takes.
+pub type LocalBoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;
+
+/// What `Promise.all` and `Promise.race` hold: each input runs as a task of
+/// its own from the call on, as a JavaScript promise does, so an input the
+/// combinator stops waiting for (the losers of a race, the rest after a
+/// rejection) still runs to its end, cleanup included. The values land here
+/// with the order the inputs settled in.
+struct Settled<T> {
+    values: Vec<Option<T>>,
+    order: Vec<usize>,
 }
 
-/// `Promise.all(futures)`: the first failure, in the order the failures
-/// came, rejects it; the others run on unread.
-pub async fn try_join_all<T, E>(
-    futures: Vec<Pin<Box<dyn Future<Output = Result<T, E>>>>>,
-) -> Result<Vec<T>, E> {
-    TryJoinAll {
-        futures: futures.into_iter().map(Some).collect(),
-        out: Vec::new(),
-    }
-    .await
-}
-
-/// `Promise.race(futures)`: the first to settle, by its index.
-pub async fn race<T>(futures: Vec<Pin<Box<dyn Future<Output = T>>>>) -> (usize, T) {
-    Race { futures }.await
-}
-
-struct JoinAll<T> {
-    futures: Vec<Option<Pin<Box<dyn Future<Output = T>>>>>,
-    out: Vec<Option<T>>,
-}
-
-// the outputs are never pinned
-impl<T> Unpin for JoinAll<T> {}
-
-impl<T> Future for JoinAll<T> {
-    type Output = Vec<T>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Vec<T>> {
-        let this = self.get_mut();
-        if this.out.is_empty() {
-            this.out = this.futures.iter().map(|_| None).collect();
+impl Rt {
+    fn settle_each<T: 'static>(
+        &self,
+        futures: Vec<LocalBoxFuture<T>>,
+    ) -> Rc<RefCell<Settled<T>>> {
+        let shared = Rc::new(RefCell::new(Settled {
+            values: futures.iter().map(|_| None).collect(),
+            order: Vec::new(),
+        }));
+        for (i, future) in futures.into_iter().enumerate() {
+            let into = shared.clone();
+            let rt = self.clone();
+            self.spawn_local(async move {
+                let value = future.await;
+                {
+                    let mut into = into.borrow_mut();
+                    into.values[i] = Some(value);
+                    into.order.push(i);
+                }
+                // the combinator awaiting it may have been polled already
+                rt.mark();
+            });
         }
-        for (i, slot) in this.futures.iter_mut().enumerate() {
-            if let Some(f) = slot
-                && let Poll::Ready(v) = f.as_mut().poll(cx)
-            {
-                this.out[i] = Some(v);
-                *slot = None;
+        shared
+    }
+
+    /// `Promise.all(futures)` of futures that do not fail.
+    pub async fn join_all<T: 'static>(&self, futures: Vec<LocalBoxFuture<T>>) -> Vec<T> {
+        let settled = self.settle_each(futures);
+        std::future::poll_fn(move |_| {
+            let mut s = settled.borrow_mut();
+            if s.order.len() < s.values.len() {
+                return Poll::Pending;
             }
-        }
-        if this.futures.iter().all(Option::is_none) {
-            Poll::Ready(this.out.drain(..).map(|v| v.expect("joined")).collect())
-        } else {
-            Poll::Pending
-        }
+            Poll::Ready(s.values.iter_mut().filter_map(Option::take).collect())
+        })
+        .await
     }
-}
 
-type ResultFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>>>>;
-
-struct TryJoinAll<T, E> {
-    futures: Vec<Option<ResultFuture<T, E>>>,
-    out: Vec<Option<T>>,
-}
-
-// the outputs are never pinned
-impl<T, E> Unpin for TryJoinAll<T, E> {}
-
-impl<T, E> Future for TryJoinAll<T, E> {
-    type Output = Result<Vec<T>, E>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.get_mut();
-        if this.out.is_empty() {
-            this.out = this.futures.iter().map(|_| None).collect();
-        }
-        for (i, slot) in this.futures.iter_mut().enumerate() {
-            if let Some(f) = slot
-                && let Poll::Ready(v) = f.as_mut().poll(cx)
-            {
-                *slot = None;
-                match v {
-                    Ok(v) => this.out[i] = Some(v),
-                    Err(e) => return Poll::Ready(Err(e)),
+    /// `Promise.all(futures)`: the first failure, in the order the inputs
+    /// settled, rejects it; the others run on unread.
+    pub async fn try_join_all<T: 'static, E: 'static>(
+        &self,
+        futures: Vec<LocalBoxFuture<Result<T, E>>>,
+    ) -> Result<Vec<T>, E> {
+        let settled = self.settle_each(futures);
+        let mut seen = 0;
+        std::future::poll_fn(move |_| {
+            let mut s = settled.borrow_mut();
+            while seen < s.order.len() {
+                let i = s.order[seen];
+                seen += 1;
+                if matches!(s.values[i], Some(Err(_)))
+                    && let Some(Err(e)) = s.values[i].take()
+                {
+                    return Poll::Ready(Err(e));
                 }
             }
-        }
-        if this.futures.iter().all(Option::is_none) {
-            Poll::Ready(Ok(this.out.drain(..).map(|v| v.expect("joined")).collect()))
-        } else {
-            Poll::Pending
-        }
-    }
-}
-
-struct Race<T> {
-    futures: Vec<Pin<Box<dyn Future<Output = T>>>>,
-}
-
-impl<T> Future for Race<T> {
-    type Output = (usize, T);
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<(usize, T)> {
-        let this = self.get_mut();
-        for (i, f) in this.futures.iter_mut().enumerate() {
-            if let Poll::Ready(v) = f.as_mut().poll(cx) {
-                return Poll::Ready((i, v));
+            if seen < s.values.len() {
+                return Poll::Pending;
             }
-        }
-        Poll::Pending
+            Poll::Ready(Ok(s
+                .values
+                .iter_mut()
+                .filter_map(|v| match v.take() {
+                    Some(Ok(v)) => Some(v),
+                    _ => None,
+                })
+                .collect()))
+        })
+        .await
+    }
+
+    /// `Promise.race(futures)`: the first to settle, by its index; the
+    /// others run on.
+    pub async fn race<T: 'static>(&self, futures: Vec<LocalBoxFuture<T>>) -> (usize, T) {
+        let settled = self.settle_each(futures);
+        std::future::poll_fn(move |_| {
+            let mut s = settled.borrow_mut();
+            match s.order.first().copied() {
+                Some(i) => match s.values[i].take() {
+                    Some(v) => Poll::Ready((i, v)),
+                    None => Poll::Pending,
+                },
+                None => Poll::Pending,
+            }
+        })
+        .await
     }
 }
 
@@ -1701,16 +1701,19 @@ impl Runtime {
             self.tasks.extend(spawned);
             self.rt.0.dirty.set(false);
             let mut i = 0;
+            let mut finished = false;
             while i < self.tasks.len() {
                 if self.tasks[i].as_mut().poll(&mut cx).is_ready() {
                     drop(self.tasks.remove(i));
+                    // a task that ended may have settled what another awaits
+                    finished = true;
                 } else {
                     i += 1;
                 }
             }
             let delivered = self.rt.deliver_queued();
             let more = !self.rt.0.st.borrow().spawned.is_empty();
-            if !self.rt.0.dirty.get() && !delivered && !more {
+            if !self.rt.0.dirty.get() && !delivered && !more && !finished {
                 break;
             }
         }
