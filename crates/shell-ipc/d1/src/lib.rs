@@ -60,3 +60,27 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     sheets::insert_fakes(hosts, case);
     slides::insert_fakes(hosts, case);
 }
+
+#[cfg(test)]
+mod tests {
+    use shell_contract::ipc::ChannelKind;
+    use shell_contract::{Batch, CHANNELS};
+
+    use crate::testkit::{Kit, registered, temp_dir};
+
+    /// Acceptance 1 of the contract: every invoke, send and sendSync channel
+    /// of D1 has a handler, registered under the shell's start rules
+    #[test]
+    fn every_d1_channel_is_registered() {
+        let kit = Kit::new(&temp_dir("all"), crate::insert_fakes);
+        let registry = registered(&kit);
+        let missing: Vec<&str> = CHANNELS
+            .iter()
+            .filter(|spec| spec.batch == Batch::D1)
+            .filter(|spec| spec.kinds.iter().any(|k| *k != ChannelKind::Event))
+            .filter(|spec| !registry.handlers.contains_key(spec.name))
+            .map(|spec| spec.name)
+            .collect();
+        assert!(missing.is_empty(), "unregistered D1 channels: {missing:?}");
+    }
+}
