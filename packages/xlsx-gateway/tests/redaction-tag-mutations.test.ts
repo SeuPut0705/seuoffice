@@ -11,6 +11,7 @@ import { saveWorkbookViaSidecar, type ArchiveClient } from '../src/gateway/xlsx-
 import {
   REDACTION_MIRROR_PREFIX,
   REDACTION_PART_PATH,
+  parseRedactionPart,
   readRedactionRecord,
   type SheetRedactionState,
 } from '../src/gateway/xlsx-redaction'
@@ -23,7 +24,10 @@ import {
   REDACTION_REL_TYPE,
   SECRET,
   TAG_MUTATION_NAMES,
+  hiddenBook,
   mutatedHiddenBook,
+  mutatePackage,
+  padSheet,
   type RecordKind,
 } from './helpers/hidden-book'
 import { childNamed, childrenNamed, parseXml } from './helpers/xml-oracle'
@@ -411,3 +415,51 @@ describe.each(['none', ...TAG_MUTATION_NAMES] as const)(
     })
   },
 )
+
+/**
+ * A worksheet past the size above which a reader looks for the spellings it
+ * cannot read before it rewrites the part: the cells and the record must still
+ * move together. The rows carry `>` and `/>` inside double-quoted values,
+ * which no other spelling gives away.
+ */
+const LARGE = 2 * 1024 * 1024 + 1
+
+describe.each(ASSEMBLERS)('a sheet past 2 MiB with > and /> inside values (%s)', (_name, save) => {
+  const OPS: [string, readonly SheetStructuralOps[]][] = [
+    ['insert_rows', [{ sheetName: 'Data', ops: [{ kind: 'insert-rows', index: 0, count: 1 }] }]],
+    ['insert_cols', [{ sheetName: 'Data', ops: [{ kind: 'insert-cols', index: 0, count: 1 }] }]],
+    [
+      'delete a row above',
+      [{ sheetName: 'Data', ops: [{ kind: 'remove-rows', index: 0, count: 1 }] }],
+    ],
+    [
+      'delete a column before',
+      [{ sheetName: 'Data', ops: [{ kind: 'remove-cols', index: 0, count: 1 }] }],
+    ],
+  ]
+
+  async function large(record: RecordKind): Promise<Buffer> {
+    const book = await mutatePackage(
+      await padSheet(await hiddenBook({ record, pivotOver: 'Report' }), LARGE),
+      '> and /> inside values',
+    )
+    return Buffer.from(book)
+  }
+
+  it.each(OPS)('%s: the secret stays under its mark', async (_label, ops) => {
+    const source = await large('part')
+    const zip = await JSZip.loadAsync(source)
+    // the part really is large, and its tags really are all double-quoted
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('string')
+    expect(sheet.length).toBeGreaterThan(LARGE)
+    expect(sheet).toContain('data-x="a/>b>c"')
+    expect(sheet).not.toMatch(/<!--|<!\[CDATA\[|<\/[^>\s]+\s+>/)
+
+    const saved = await save(source, { ops, states: null })
+
+    const savedZip = await JSZip.loadAsync(saved)
+    const states = parseRedactionPart(await savedZip.file(REDACTION_PART_PATH)!.async('string'))
+    await expectSecretCovered(saved, states)
+    await expectWellFormed(saved)
+  })
+})

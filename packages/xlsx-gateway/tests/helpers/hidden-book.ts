@@ -362,3 +362,23 @@ export async function mutatedHiddenBook(
 ): Promise<Uint8Array> {
   return mutatePackage(await hiddenBook(options), mutation)
 }
+
+/**
+ * `bytes` with Data's sheet grown past `minChars` by plain rows far below the
+ * cells under test (rows 1000 and on, in column A), so a reader that treats a
+ * large part differently from a small one meets the same cells in a big part.
+ */
+export async function padSheet(bytes: Uint8Array, minChars: number): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(bytes)
+  const path = 'xl/worksheets/sheet1.xml'
+  const xml = await zip.file(path)!.async('string')
+  const rows: string[] = []
+  let size = xml.length
+  for (let row = 1000; size < minChars; row += 1) {
+    const text = `<row r="${row}"><c r="A${row}" t="inlineStr"><is><t>padding padding padding</t></is></c></row>`
+    rows.push(text)
+    size += text.length
+  }
+  zip.file(path, xml.replace(/<\/sheetData\s*>/, `${rows.join('')}</sheetData>`))
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
+}
