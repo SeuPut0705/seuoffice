@@ -261,7 +261,7 @@ async fn kind_of(response: &Response) -> Result<DriveErrorKind, JsError> {
             }
             Some(_) => {
                 return Err(JsError::type_error(
-                    "(intermediate value).map is not a function",
+                    "(body.error?.errors ?? []).map is not a function",
                 ));
             }
         }
@@ -565,9 +565,7 @@ impl DriveApi {
             None | Some(JsonValue::Null) => Vec::new(),
             Some(JsonValue::Array(items)) => items,
             Some(_) => {
-                return Err(
-                    JsError::type_error("(intermediate value).map is not a function").into(),
-                );
+                return Err(JsError::type_error("(body.files ?? []).map is not a function").into());
             }
         };
         let mut files = Vec::new();

@@ -16,6 +16,8 @@ use std::task::{Context, Poll, Waker};
 
 use jscompat::JsonValue;
 
+use crate::packages::ai_provider::jsval::js_string;
+
 use super::drive_api::{DriveAccount, DriveApi, DriveApiOptions};
 use super::oauth::{
     Clock, GoogleClient, GoogleSignInFailure, GoogleSignInOptions, GoogleTokens, PickRequest,
@@ -35,9 +37,11 @@ pub enum DriveConnectionState {
     Disconnected {
         expired: bool,
     },
+    /// `persisted` is what the vault's `save` answered (`undefined` when it
+    /// answered nothing, so the key is left out where the state is written)
     Connected {
         account: Option<DriveAccount>,
-        persisted: bool,
+        persisted: Option<JsonValue>,
     },
 }
 
@@ -71,11 +75,23 @@ impl ConnectFailure {
     }
 }
 
-/// What `onChange` answers: the handle `remove_listener` takes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ListenerId(usize);
+/// A listener of `onChange`: the same `Rc` (the same function) is one
+/// registration, as the `Set` of the TypeScript holds a function once.
+pub type ChangeListener = Rc<dyn Fn(&DriveConnectionState)>;
 
-type Listener = Rc<dyn Fn(&DriveConnectionState)>;
+/// What `onChange` answers: the function that removes the listener. Every
+/// handle of the same listener removes that one registration.
+#[derive(Clone)]
+pub struct ListenerHandle {
+    listener: ChangeListener,
+}
+
+/// `a === b` of two listeners
+fn same_listener(a: &ChangeListener, b: &ChangeListener) -> bool {
+    std::ptr::addr_eq(Rc::as_ptr(a), Rc::as_ptr(b))
+}
+
+type Listener = ChangeListener;
 
 #[derive(Default)]
 struct ConnState {
@@ -83,7 +99,7 @@ struct ConnState {
     access_token: Option<String>,
     expires_at: f64,
     account: Option<DriveAccount>,
-    persisted: bool,
+    persisted: Option<JsonValue>,
     expired: bool,
     loaded: bool,
     /// the refresh the concurrent callers share
@@ -99,17 +115,18 @@ struct Core {
     st: RefCell<ConnState>,
 }
 
-/// `vault.load().catch(() => null)`: the kept token; a value that is no
-/// string is no token.
+/// `vault.load().catch(() => null)`: the kept token. Any truthy value is a
+/// token; what goes to Google is `String(token)`.
 async fn vault_load(rt: &Rt) -> Option<String> {
     match rt.call("vault.load", JsonValue::Array(Vec::new())).await {
-        Ok(JsonValue::String(token)) if !token.is_empty() => Some(token),
+        Ok(value) if value.truthy() => Some(js_string(&value)),
         _ => None,
     }
 }
 
-/// `vault.save(token).catch(() => false)`
-async fn vault_save(rt: &Rt, token: &str) -> bool {
+/// `vault.save(token).catch(() => false)`: what the vault answered; `None`
+/// is `undefined`.
+async fn vault_save(rt: &Rt, token: &str) -> Option<JsonValue> {
     match rt
         .call(
             "vault.save",
@@ -117,8 +134,9 @@ async fn vault_save(rt: &Rt, token: &str) -> bool {
         )
         .await
     {
-        Ok(kept) => kept.truthy(),
-        Err(_) => false,
+        Ok(JsonValue::Null) => None,
+        Ok(kept) => Some(kept),
+        Err(_) => Some(JsonValue::Bool(false)),
     }
 }
 
@@ -156,7 +174,7 @@ impl Core {
         }
         DriveConnectionState::Connected {
             account: st.account.clone(),
-            persisted: st.persisted,
+            persisted: st.persisted.clone(),
         }
     }
 
@@ -188,7 +206,7 @@ impl Core {
             st.access_token = None;
             st.expires_at = 0.0;
             st.account = None;
-            st.persisted = false;
+            st.persisted = Some(JsonValue::Bool(false));
             st.expired = expired;
         }
         self.emit();
@@ -300,18 +318,33 @@ impl DriveConnection {
         }
     }
 
-    /// `onChange(listener)`; `remove_listener` is the function it returns.
-    pub fn on_change(&self, listener: impl Fn(&DriveConnectionState) + 'static) -> ListenerId {
+    /// `onChange(listener)`: the same listener again is the same
+    /// registration; the handle is the function it returns.
+    pub fn on_change(&self, listener: ChangeListener) -> ListenerHandle {
         let mut st = self.core.st.borrow_mut();
-        st.listeners.push(Some(Rc::new(listener)));
-        ListenerId(st.listeners.len() - 1)
+        if !st
+            .listeners
+            .iter()
+            .flatten()
+            .any(|known| same_listener(known, &listener))
+        {
+            st.listeners.push(Some(listener.clone()));
+        }
+        ListenerHandle { listener }
     }
 
-    /// The function `onChange` returns: whether the listener was still there
-    /// (`Set.delete`).
-    pub fn remove_listener(&self, id: ListenerId) -> bool {
-        match self.core.st.borrow_mut().listeners.get_mut(id.0) {
-            Some(slot) => slot.take().is_some(),
+    /// The function `onChange` returns (`Set.delete`): whether the listener
+    /// was still registered.
+    pub fn remove_listener(&self, handle: &ListenerHandle) -> bool {
+        let mut st = self.core.st.borrow_mut();
+        match st.listeners.iter_mut().find(|slot| {
+            slot.as_ref()
+                .is_some_and(|known| same_listener(known, &handle.listener))
+        }) {
+            Some(slot) => {
+                *slot = None;
+                true
+            }
             None => false,
         }
     }
@@ -339,7 +372,7 @@ impl DriveConnection {
             match token {
                 Some(token) if st.refresh_token.is_none() => {
                     st.refresh_token = Some(token);
-                    st.persisted = true;
+                    st.persisted = Some(JsonValue::Bool(true));
                     true
                 }
                 _ => false,
@@ -459,8 +492,9 @@ impl DriveConnection {
             st.expired = false;
         }
         let persisted = vault_save(rt, &tokens.refresh_token).await;
+        let kept = persisted.as_ref().is_some_and(JsonValue::truthy);
         self.core.st.borrow_mut().persisted = persisted;
-        if !persisted {
+        if !kept {
             vault_clear(rt).await;
         }
     }

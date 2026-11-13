@@ -513,6 +513,9 @@ const lists: Group = {
         { listing: { kind: 'recent' } },
       ),
       c(w([json({ files: [null] })]), { listing: { kind: 'recent' } }),
+      ...[{}, 5, 'abc', true, 0, false, { map: 1 }, ''].map((files) =>
+        c(w([json({ files })]), { listing: { kind: 'recent' } }),
+      ),
       c(w([json(null)]), { listing: { kind: 'recent' } }),
       c(w([json('files')]), { listing: { kind: 'recent' } }),
       c(w([ok(['{broken'])]), { listing: { kind: 'recent' } }),
@@ -988,11 +991,46 @@ function connectionOf(run: WorldRun, o: A): Any {
 
 // the tsconfig's lib has no Promise.withResolvers
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+/** the listeners of a scenario: one function per name, the handles `onChange` answered by label */
+interface Listeners {
+  fns: Map<string, (state: unknown) => void>
+  handles: Map<string, () => boolean>
+}
+
+interface ListenerAction {
+  remove?: string
+  add?: string
+  as?: string
+}
+
+/** `onChange` of the listener of that name: made on first use, with its actions */
+function register(
+  run: WorldRun,
+  conn: Any,
+  listeners: Listeners,
+  name: string,
+  handle: string,
+  actions: ListenerAction[],
+): void {
+  let fn = listeners.fns.get(name)
+  if (!fn) {
+    fn = (state: unknown) => {
+      run.log('state', name, state)
+      for (const action of actions) {
+        if (action.remove !== undefined) listeners.handles.get(action.remove)?.()
+        else if (action.add !== undefined)
+          register(run, conn, listeners, action.add, action.as ?? action.add, [])
+      }
+    }
+    listeners.fns.set(name, fn)
+  }
+  listeners.handles.set(handle, conn.onChange(fn))
+}
 
 async function runStep(
   run: WorldRun,
   conn: Any,
-  listeners: Map<string, () => boolean>,
+  listeners: Listeners,
   o: A,
   signal: AbortSignal,
   step: Step,
@@ -1019,13 +1057,17 @@ async function runStep(
       await conn.disconnect()
       return null
     case 'onChange':
-      listeners.set(
+      register(
+        run,
+        conn,
+        listeners,
         step.name as string,
-        conn.onChange((state: unknown) => run.log('state', step.name, state)),
+        (step.as as string | undefined) ?? (step.name as string),
+        (step.actions as ListenerAction[] | undefined) ?? [],
       )
       return null
     case 'offChange':
-      return listeners.get(step.name as string)?.() ?? null
+      return listeners.handles.get((step.handle ?? step.name) as string)?.() ?? null
     case 'sleep':
       await sleep(step.ms as number)
       return null
@@ -1053,7 +1095,7 @@ const scenario = ([world, o]: unknown[], cx: TsContext) =>
   inWorld(world as World, cx, async (run, signal) => {
     const opts = (o ?? {}) as A
     const conn = connectionOf(run, opts)
-    const listeners = new Map<string, () => boolean>()
+    const listeners: Listeners = { fns: new Map(), handles: new Map() }
     const out: unknown[] = []
     for (const step of opts.steps ?? []) {
       out.push((await runStep(run, conn, listeners, opts, signal, step)) ?? null)
@@ -1096,6 +1138,15 @@ const connectionCases = {
     c(LOADED([REVOKED]), steps(load, settle, st('connected'))),
   ],
   load: [
+    ...[5, true, { a: 1 }, [1, [2, 3]], [], ' '].map((token) =>
+      c(w([TOKEN(), ABOUT], { calls: [token] }), steps(load, settle, state)),
+    ),
+    ...[0, false].map((token) => c(w([], { calls: [token] }), steps(load, settle, state))),
+    c(w([TOKEN(), ABOUT, json({})], { calls: [5] }), steps(load, settle, st('disconnect'), state)),
+    c(
+      w([TOKEN(), ABOUT, json({})], { calls: [{ a: 1 }] }),
+      steps(load, settle, st('disconnect'), state),
+    ),
     c(w([]), withSteps({ client: null }, load, load)),
     c(w([], { calls: [null] }), steps(listen('a'), load, load, state)),
     c(w([], { calls: [''] }), steps(load, state)),
@@ -1132,6 +1183,67 @@ const connectionCases = {
     c(LOADED([TOKEN(), ABOUT]), steps(load, settle, st('api.account'))),
   ],
   onChange: [
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(listen('a'), st('onChange', { name: 'a', as: 'a2' }), load, settle),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(
+        listen('a'),
+        st('onChange', { name: 'a', as: 'a2' }),
+        st('offChange', { handle: 'a' }),
+        st('offChange', { handle: 'a2' }),
+        load,
+        settle,
+      ),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(
+        listen('a'),
+        st('onChange', { name: 'a', as: 'a2' }),
+        st('offChange', { handle: 'a2' }),
+        st('offChange', { handle: 'a' }),
+        st('offChange', { handle: 'nobody' }),
+        load,
+        settle,
+      ),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(
+        listen('a'),
+        st('offChange', { handle: 'a' }),
+        st('onChange', { name: 'a', as: 'a3' }),
+        st('offChange', { handle: 'a' }),
+        st('offChange', { handle: 'a3' }),
+        load,
+        settle,
+      ),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(st('onChange', { name: 'a', actions: [{ remove: 'b' }] }), listen('b'), load, settle),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(st('onChange', { name: 'a', actions: [{ add: 'c' }] }), load, settle),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(
+        st('onChange', { name: 'a', actions: [{ remove: 'b' }, { add: 'b' }] }),
+        listen('b'),
+        listen('c'),
+        load,
+        settle,
+      ),
+    ),
+    c(
+      LOADED([TOKEN(), ABOUT]),
+      steps(st('onChange', { name: 'a', actions: [{ remove: 'a' }] }), listen('b'), load, settle),
+    ),
     c(LOADED([TOKEN(), ABOUT]), steps(listen('a'), listen('b'), load, settle)),
     c(
       LOADED([TOKEN(), ABOUT]),
@@ -1157,6 +1269,9 @@ const connectionCases = {
     c(connectWorld(), steps(listen('a'), st('connect'), state)),
   ],
   connect: [
+    ...[1, 'yes', {}, [], 0, ''].map((kept) =>
+      c(connectWorld({ calls: [true, kept] }), steps(st('connect'), state)),
+    ),
     c(connectWorld(), steps(listen('a'), st('connect'), state)),
     c(connectWorld({ calls: [true, false, undefined] }), steps(st('connect'), state)),
     c(

@@ -4,15 +4,16 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
+use jscompat::json_value_to_serde;
 use serde_json::{Map, Value, json};
 
 use super::super::{Answer, CallError, Context, arg};
 use super::world::{Sink, call_error, drive, note};
 use crate::packages::ai_provider::task::{Fetcher, JsError, LocalBoxFuture, Rt, Signal};
 use crate::packages::google_drive::connection::{
-    DriveConnection, DriveConnectionOptions, DriveConnectionState, ListenerId,
+    ChangeListener, DriveConnection, DriveConnectionOptions, DriveConnectionState, ListenerHandle,
 };
 use crate::packages::google_drive::drive_api::{
     AccessTokenSource, DRIVE_API, DRIVE_UPLOAD_API, DriveAccount, DriveApi, DriveApiOptions,
@@ -141,7 +142,9 @@ fn state_json(state: &DriveConnectionState) -> Value {
                 "account".into(),
                 account.as_ref().map_or(Value::Null, account_json),
             );
-            out.insert("persisted".into(), json!(persisted));
+            if let Some(persisted) = persisted {
+                out.insert("persisted".into(), json_value_to_serde(persisted));
+            }
         }
     }
     Value::Object(out)
@@ -338,7 +341,70 @@ struct Ctx {
     sink: Sink,
     signal: Signal,
     pages: SignInPages,
-    listeners: RefCell<BTreeMap<String, ListenerId>>,
+    /// the listener function of each name (one function per name)
+    fns: RefCell<BTreeMap<String, ChangeListener>>,
+    /// the handle `onChange` answered, by label
+    handles: RefCell<BTreeMap<String, ListenerHandle>>,
+}
+
+/// What a listener does when it is called, after it logged the state.
+enum Action {
+    Remove(String),
+    Add { name: String, handle: String },
+}
+
+fn actions_of(step: &Value) -> Vec<Action> {
+    step.get("actions")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(|action| {
+                    if let Some(label) = str_of(action, "remove") {
+                        return Some(Action::Remove(label));
+                    }
+                    let name = str_of(action, "add")?;
+                    let handle = str_of(action, "as").unwrap_or_else(|| name.clone());
+                    Some(Action::Add { name, handle })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn make_listener(ctx: Weak<Ctx>, name: String, actions: Vec<Action>) -> ChangeListener {
+    Rc::new(move |state: &DriveConnectionState| {
+        let Some(ctx) = ctx.upgrade() else {
+            return;
+        };
+        note(&ctx.sink, json!(["state", name, state_json(state)]));
+        for action in &actions {
+            match action {
+                Action::Remove(label) => {
+                    let handle = ctx.handles.borrow().get(label).cloned();
+                    if let Some(handle) = handle {
+                        ctx.conn.remove_listener(&handle);
+                    }
+                }
+                Action::Add { name, handle } => register(&ctx, name, handle, Vec::new()),
+            }
+        }
+    })
+}
+
+/// `register(name, handle, actions)` of the spec: the listener of that name
+/// (made on first use) goes to `onChange`, its handle is kept under `handle`.
+fn register(ctx: &Rc<Ctx>, name: &str, handle: &str, actions: Vec<Action>) {
+    let existing = ctx.fns.borrow().get(name).cloned();
+    let listener = match existing {
+        Some(listener) => listener,
+        None => {
+            let made = make_listener(Rc::downgrade(ctx), name.to_owned(), actions);
+            ctx.fns.borrow_mut().insert(name.to_owned(), made.clone());
+            made
+        }
+    };
+    let kept = ctx.conn.on_change(listener);
+    ctx.handles.borrow_mut().insert(handle.to_owned(), kept);
 }
 
 /// `runStep(...)`
@@ -372,19 +438,17 @@ fn run_step(ctx: Rc<Ctx>, rt: Rt, step: Value) -> LocalBoxFuture<Result<Value, J
             }
             "onChange" => {
                 let label = str_of(&step, "name").unwrap_or_default();
-                let sink = ctx.sink.clone();
-                let shown_as = label.clone();
-                let id = ctx.conn.on_change(move |state| {
-                    note(&sink, json!(["state", shown_as, state_json(state)]));
-                });
-                ctx.listeners.borrow_mut().insert(label, id);
+                let handle = str_of(&step, "as").unwrap_or_else(|| label.clone());
+                register(&ctx, &label, &handle, actions_of(&step));
                 Value::Null
             }
             "offChange" => {
-                let label = str_of(&step, "name").unwrap_or_default();
-                let id = ctx.listeners.borrow().get(&label).copied();
-                match id {
-                    Some(id) => Value::Bool(ctx.conn.remove_listener(id)),
+                let label = str_of(&step, "handle")
+                    .or_else(|| str_of(&step, "name"))
+                    .unwrap_or_default();
+                let handle = ctx.handles.borrow().get(&label).cloned();
+                match handle {
+                    Some(handle) => Value::Bool(ctx.conn.remove_listener(&handle)),
                     None => Value::Null,
                 }
             }
@@ -456,7 +520,8 @@ fn scenario(args: &[Value], cx: &mut Context) -> Answer {
             sink,
             signal,
             pages: pages_of(&o),
-            listeners: RefCell::new(BTreeMap::new()),
+            fns: RefCell::new(BTreeMap::new()),
+            handles: RefCell::new(BTreeMap::new()),
         });
         let mut out = Vec::new();
         for step in o

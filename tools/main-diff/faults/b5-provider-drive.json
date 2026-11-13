@@ -545,15 +545,15 @@
   {
     "name": "connection: the state says it was not kept",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "persisted: st.persisted,",
-    "replace": "persisted: true,",
+    "find": "persisted: st.persisted.clone(),",
+    "replace": "persisted: Some(JsonValue::Bool(true)),",
     "fn": ["connection.DriveConnection.connect", "connection.DriveConnection.state"]
   },
   {
     "name": "connection: a kept token is not persisted",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "st.persisted = true;",
-    "replace": "st.persisted = false;",
+    "find": "st.persisted = Some(JsonValue::Bool(true));",
+    "replace": "st.persisted = Some(JsonValue::Bool(false));",
     "fn": ["connection.DriveConnection.load", "connection.DriveConnection.state"]
   },
   {
@@ -566,15 +566,15 @@
   {
     "name": "connection: an empty kept token is a token",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "Ok(JsonValue::String(token)) if !token.is_empty() => Some(token),",
-    "replace": "Ok(JsonValue::String(token)) => Some(token),",
+    "find": "Ok(value) if value.truthy() => Some(js_string(&value)),",
+    "replace": "Ok(JsonValue::String(token)) if !token.is_empty() => Some(token),",
     "fn": ["connection.DriveConnection.load"]
   },
   {
     "name": "connection: a token that was not kept is persisted",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "Ok(kept) => kept.truthy(),",
-    "replace": "Ok(_) => true,",
+    "find": "Ok(kept) => Some(kept),",
+    "replace": "Ok(_) => Some(JsonValue::Bool(true)),",
     "fn": ["connection.DriveConnection.connect"]
   },
   {
@@ -624,11 +624,32 @@
     "fn": ["connection.DriveConnection.disconnect"]
   },
   {
-    "name": "connection: a listener removed twice says so twice",
+    "name": "connection: a listener registered twice is called twice",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "Some(slot) => slot.take().is_some(),",
-    "replace": "Some(slot) => {\n                slot.take();\n                true\n            }",
+    "find": ".any(|known| same_listener(known, &listener))",
+    "replace": ".any(|_| false)",
     "fn": ["connection.DriveConnection.onChange"]
+  },
+  {
+    "name": "connection: a removed listener is still called",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "*slot = None;",
+    "replace": "",
+    "fn": ["connection.DriveConnection.onChange"]
+  },
+  {
+    "name": "connection: removing a listener says it was not there",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "*slot = None;\n                true",
+    "replace": "*slot = None;\n                false",
+    "fn": ["connection.DriveConnection.onChange"]
+  },
+  {
+    "name": "api: the message of a files list that is no array",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "\"(body.files ?? []).map is not a function\"",
+    "replace": "\"files.map is not a function\"",
+    "fn": ["drive-api.DriveApi.list"]
   },
   {
     "name": "connection: a second sign-in does not replace the first",
@@ -654,7 +675,7 @@
   {
     "name": "connection: a token that was not kept stays in the vault",
     "file": "main-core/src/packages/google_drive/connection.rs",
-    "find": "if !persisted {",
+    "find": "if !kept {",
     "replace": "if false {",
     "fn": ["connection.DriveConnection.connect"]
   },
