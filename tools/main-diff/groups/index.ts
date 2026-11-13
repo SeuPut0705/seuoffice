@@ -42,4 +42,5 @@ export const groups: Record<string, () => Promise<{ group: Group }>> = {
   'b5-mcp': () => import('./b5-mcp.ts'),
   'b5-agent': () => import('./b5-agent.ts'),
   'b5-provider': () => import('./b5-provider.ts'),
+  'b5-kb': () => import('./b5-kb.ts'),
 }

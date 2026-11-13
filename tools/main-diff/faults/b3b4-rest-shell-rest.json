@@ -192,7 +192,7 @@
     "name": "headless-export: md is not a hidden-content format",
     "file": "main-core/src/shell/headless_export.rs",
     "find": "\"xlsm\", \"md\", \"markdown\"",
-    "replace": "\"xlsm\", \"markdown\"",
+    "replace": "\"xlsm\", \"md-off\", \"markdown\"",
     "fn": ["shell/headless-export.runHeadlessExport"]
   },
   {
