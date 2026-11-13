@@ -508,6 +508,19 @@ pub(crate) fn probe_trigger(
     let Some(editors) = provided.all::<HtmlEditors>().into_iter().next() else {
         return false;
     };
+    text_doc::probe_trigger_begun(what, view, args, then, |what, then| {
+        run_trigger(&editors, what, view, args, then)
+    })
+}
+
+#[cfg(any(test, feature = "probe"))]
+fn run_trigger(
+    editors: &HtmlEditors,
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
     let arg = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
     match what {
         // `queueHtmlSeedFor(contents, text)`
