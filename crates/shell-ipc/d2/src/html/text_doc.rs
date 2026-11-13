@@ -15,6 +15,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use jscompat::{JsObject, JsonValue};
@@ -129,8 +130,9 @@ pub(crate) struct TextDocs {
     cleanups: RefCell<Vec<ViewHook>>,
     /// keeps the `destroyed` listener alive as long as this state
     destroyed_hook: RefCell<Option<Guard>>,
-    /// `showOpenDialogWithMemory`/`showSaveDialogWithMemory`'s last folder
-    memory: RefCell<DialogMemory>,
+    /// `showOpenDialogWithMemory`/`showSaveDialogWithMemory`'s last folder;
+    /// a worker that shows a dialog (`saveImageFromUrl`) takes it along
+    memory: Arc<Mutex<DialogMemory>>,
     /// `configuredDefaultSaveDir`'s fallback state
     save_dir: RefCell<SaveDirState>,
 }
@@ -249,7 +251,7 @@ impl TextDocs {
                 headless_waiters: RefCell::default(),
                 cleanups: RefCell::default(),
                 destroyed_hook: RefCell::default(),
-                memory: RefCell::default(),
+                memory: Arc::default(),
                 save_dir: RefCell::default(),
             }
         });
@@ -291,6 +293,15 @@ impl TextDocs {
         .map_err(|e| kit::error(e.0))
     }
 
+    /// the dialog memory, for a dialog shown from a worker
+    pub(crate) fn memory(&self) -> Arc<Mutex<DialogMemory>> {
+        Arc::clone(&self.memory)
+    }
+
+    fn remembered(&self) -> std::sync::MutexGuard<'_, DialogMemory> {
+        self.memory.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     /// `showSaveDialogWithMemory(dialog, win, options, fallbackDir)`: the
     /// chosen path, None when cancelled
     pub(crate) fn save_dialog(
@@ -302,7 +313,7 @@ impl TextDocs {
         let parent = self.window_of(view).map(Parent);
         let fallback = fallback_dir.map(FallbackDir::Dir);
         let result = show_save_dialog_with_memory(
-            &mut self.memory.borrow_mut(),
+            &mut self.remembered(),
             &mut Files(self.dialogs.clone()),
             parent.as_ref(),
             &options,
@@ -330,7 +341,7 @@ impl TextDocs {
     ) -> Option<Vec<String>> {
         let parent = self.window_of(view).map(Parent);
         let result = show_open_dialog_with_memory(
-            &mut self.memory.borrow_mut(),
+            &mut self.remembered(),
             &mut Files(self.dialogs.clone()),
             parent.as_ref(),
             &options,
@@ -363,6 +374,11 @@ impl TextDocs {
         options: &shell_contract::hosts::MessageBox,
     ) -> usize {
         self.dialogs.message(self.window_of(view), options).response
+    }
+
+    /// the dialogs host, for a dialog shown from a worker
+    pub(crate) fn dialogs(&self) -> DialogsHost {
+        self.dialogs.clone()
     }
 
     pub(crate) fn is_destroyed(&self, view: ViewId) -> bool {
@@ -1140,4 +1156,20 @@ pub(crate) fn dialog_options(
         );
     }
     options
+}
+
+/// `exportFileName(suggested)` / the Markdown exports' `safeName`:
+/// `String(suggested || untitled)` as a file name stem, `untitled` when empty
+pub(crate) fn export_name(suggested: &IpcValue, untitled: &str) -> String {
+    let raw = if crate::kit::truthy(suggested) {
+        js_string(suggested)
+    } else {
+        untitled.to_owned()
+    };
+    let base = file_name_base(&raw);
+    if base.is_empty() {
+        untitled.to_owned()
+    } else {
+        base
+    }
 }

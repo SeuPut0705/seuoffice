@@ -10,7 +10,7 @@
 
 mod attach;
 pub(crate) mod odt_export;
-mod save;
+pub(crate) mod save;
 #[cfg(test)]
 mod tests;
 pub(crate) mod text_doc;

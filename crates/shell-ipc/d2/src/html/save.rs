@@ -38,10 +38,11 @@ use super::odt_export::{
     odt_filter_name, odt_report_box,
 };
 use super::text_doc::{
-    canceled, dialog_options, failure, file_name_base, js_string, saved_at, saved_ok, tr,
+    canceled, dialog_options, export_name, failure, file_name_base, js_string, saved_at, saved_ok,
+    tr,
 };
 use super::{HtmlEditors, HtmlEngineHost};
-use crate::kit::{self, Entry, IntoIpc, field, obj, truthy};
+use crate::kit::{self, Entry, IntoIpc, field, obj};
 
 /// A renderer that never yields must not strand the export (`HTML_EXPORT_TIMEOUT_MS`)
 pub(crate) const HTML_EXPORT_TIMEOUT: Duration = Duration::from_millis(180_000);
@@ -74,17 +75,7 @@ impl Exporter {
 
     /// `exportFileName(suggested)`
     fn export_file_name(&self, suggested: &IpcValue) -> String {
-        let raw = if truthy(suggested) {
-            js_string(suggested)
-        } else {
-            self.untitled()
-        };
-        let base = file_name_base(&raw);
-        if base.is_empty() {
-            self.untitled()
-        } else {
-            base
-        }
+        export_name(suggested, &self.untitled())
     }
 
     /// a fresh work folder under the temp folder (`mkdtemp(join(tmpdir(), prefix))`)
