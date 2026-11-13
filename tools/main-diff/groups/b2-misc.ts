@@ -3,7 +3,7 @@
  * (user-skills-channels, mcp-tools-channels, outbound-channels, doc-attach-channels,
  * project-folder-bridge, split-pane-bridge, default-save-dir, dialog-memory,
  * author-name, font-store, github-menu, hwp-default-format, numbered-export-paths,
- * template-font-response, template-fonts-dir, abort-on-destroyed), the
+ * template-font-response, template-fonts-dir, abort-on-destroyed, marked-odt), the
  * `PROJECT_FOLDER_*` constants of project-store/folder-api and `templateFontFileOf`
  * of ui/template-fonts.
  *
@@ -157,6 +157,11 @@ import {
   normalizeHwpDefaultFormat,
   readHwpDefaultFormat,
 } from '../../../packages/electron-utils/src/hwp-default-format.ts'
+import {
+  markedOdtBox,
+  markedOdtChoice,
+  type MarkedOdtText,
+} from '../../../packages/electron-utils/src/marked-odt.ts'
 import { numberedExportPaths } from '../../../packages/electron-utils/src/numbered-export-paths.ts'
 import { templateFontResponse } from '../../../packages/electron-utils/src/template-font-response.ts'
 import {
@@ -2503,6 +2508,64 @@ const abortOnDestroyedSpec: FnSpec = {
   ],
 }
 
+// ---------- marked-odt ----------
+
+const odtText = (saveDocx?: string): MarkedOdtText => ({
+  title: 'Hidden content',
+  message: 'This document holds content hidden from AI.',
+  detail: 'An ODT cannot keep it hidden.',
+  ...(saveDocx === undefined ? {} : { saveDocx }),
+  clearMarks: 'Clear the marks',
+  cancel: 'Cancel',
+})
+
+const markedOdt: Record<string, FnSpec> = {
+  'marked-odt.markedOdtBox': {
+    ts: (a) => markedOdtBox(a[0] as MarkedOdtText),
+    cases: [
+      { args: [odtText('Save as Word')], note: 'Word offered: three buttons' },
+      { args: [odtText()], note: 'no Word: two buttons, cancel is the second' },
+      { args: [odtText('')], note: 'an empty Word label is still offered' },
+      {
+        args: [
+          {
+            title: '',
+            message: '\uc228\uae40',
+            detail: 'a\nb',
+            saveDocx: '\u{1F600}',
+            clearMarks: '',
+            cancel: '',
+          },
+        ],
+        note: 'empty and non-ASCII words',
+      },
+    ],
+  },
+  'marked-odt.markedOdtChoice': {
+    ts: (a) =>
+      a.length > 1 ? markedOdtChoice(num(a[0]), a[1] as boolean) : markedOdtChoice(num(a[0])),
+    cases: each(
+      [0],
+      [1],
+      [2],
+      [-1],
+      [-0],
+      [0.5],
+      [3],
+      ['NaN'],
+      ['Infinity'],
+      [0, true],
+      [1, true],
+      [2, true],
+      [0, false],
+      [1, false],
+      [2, false],
+      [-1, false],
+      ['NaN', false],
+    ),
+  },
+}
+
 export const group: Group = {
   ...i18nGroup,
   ...userSkills,
@@ -2516,6 +2579,7 @@ export const group: Group = {
   ...fontStore,
   ...githubMenu,
   ...hwpDefaultFormat,
+  ...markedOdt,
   ...numberedPaths,
   ...templateFonts,
   ...templateFontsDirGroup,

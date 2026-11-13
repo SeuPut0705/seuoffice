@@ -39,6 +39,9 @@ use crate::packages::electron_utils::github_menu::{
 use crate::packages::electron_utils::hwp_default_format::{
     HWP_DEFAULT_FORMAT_KEY, normalize_hwp_default_format, read_hwp_default_format,
 };
+use crate::packages::electron_utils::marked_odt::{
+    MarkedOdtText, marked_odt_box, marked_odt_choice,
+};
 use crate::packages::electron_utils::mcp_tools_channels::{
     MCP_TOOLS_BRIDGE_KEY, MCP_TOOLS_CHANNELS, mcp_call_id_of, mcp_server_name_of,
     mcp_tool_call_request_of,
@@ -368,6 +371,18 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             Ok(Some(serde_json::to_value(format).expect("a format prints")))
         }
 
+        // ---------- marked-odt ----------
+        "marked-odt.markedOdtBox" => marked_odt_text(args)
+            .map(|text| Some(serde_json::to_value(marked_odt_box(&text)).expect("a box prints"))),
+        "marked-odt.markedOdtChoice" => number_arg(args, 0).map(|response| {
+            // `withDocx = true`: a default stands for a missing argument
+            let with_docx = arg(args, 1).and_then(Value::as_bool).unwrap_or(true);
+            Some(
+                serde_json::to_value(marked_odt_choice(response, with_docx))
+                    .expect("a choice prints"),
+            )
+        }),
+
         // ---------- numbered-export-paths ----------
         "numbered-export-paths.numberedExportPaths" => str_arg(args, 0).and_then(|target| {
             let count = number_arg(args, 1)?;
@@ -438,6 +453,30 @@ fn pairs(items: &[(&str, &str)]) -> Value {
 
 fn thrown(e: Thrown) -> CallError {
     CallError::plain(e.0)
+}
+
+/// `MarkedOdtText` from its JSON; `saveDocx` absent is `undefined`
+fn marked_odt_text(args: &[Value]) -> Result<MarkedOdtText, CallError> {
+    let text = arg(args, 0)
+        .and_then(Value::as_object)
+        .ok_or_else(|| CallError::plain("argument 0 is not an object"))?;
+    let field = |key: &str| {
+        text.get(key)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| CallError::plain(format!("{key} is not a string")))
+    };
+    Ok(MarkedOdtText {
+        title: field("title")?,
+        message: field("message")?,
+        detail: field("detail")?,
+        save_docx: text
+            .contains_key("saveDocx")
+            .then(|| field("saveDocx"))
+            .transpose()?,
+        clear_marks: field("clearMarks")?,
+        cancel: field("cancel")?,
+    })
 }
 
 /// A number argument; the strings "NaN", "Infinity" and "-Infinity" stand for

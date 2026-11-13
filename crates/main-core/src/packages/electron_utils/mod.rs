@@ -20,6 +20,7 @@ pub mod headless_mode;
 pub mod hwp_default_format;
 pub mod legacy_import_prefs;
 pub mod main_proxy;
+pub mod marked_odt;
 pub mod mcp_tools_channels;
 pub mod navigation_guard;
 pub mod numbered_export_paths;
