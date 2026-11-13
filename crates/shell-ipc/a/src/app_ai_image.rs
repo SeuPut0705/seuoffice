@@ -187,7 +187,8 @@ fn path_text(path: std::path::PathBuf) -> String {
 /// `github.io`) are two sites. An IP address has no domain.
 fn registrable_domain(host: &str) -> Option<String> {
     let lower = host.to_ascii_lowercase();
-    if lower.contains(':') || lower.starts_with('[') || lower.parse::<std::net::Ipv4Addr>().is_ok() {
+    if lower.contains(':') || lower.starts_with('[') || lower.parse::<std::net::Ipv4Addr>().is_ok()
+    {
         return None;
     }
     psl::domain_str(&lower).map(str::to_owned)

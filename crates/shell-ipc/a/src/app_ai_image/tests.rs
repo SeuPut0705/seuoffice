@@ -441,8 +441,14 @@ fn a_destroyed_window_starts_its_generation_aborted() {
 fn the_registrable_domain_of_a_host() {
     assert_eq!(registrable_domain("api.bfl.ai").as_deref(), Some("bfl.ai"));
     assert_eq!(registrable_domain("x.y.co.uk").as_deref(), Some("y.co.uk"));
-    assert_eq!(registrable_domain("A.Tenant.appspot.com").as_deref(), Some("tenant.appspot.com"));
-    assert_eq!(registrable_domain("a.b.s3.amazonaws.com").as_deref(), Some("b.s3.amazonaws.com"));
+    assert_eq!(
+        registrable_domain("A.Tenant.appspot.com").as_deref(),
+        Some("tenant.appspot.com")
+    );
+    assert_eq!(
+        registrable_domain("a.b.s3.amazonaws.com").as_deref(),
+        Some("b.s3.amazonaws.com")
+    );
     assert_eq!(registrable_domain("127.0.0.1"), None);
     assert_eq!(registrable_domain("localhost"), None);
 }
@@ -469,9 +475,12 @@ fn a_flux_job_polled_from_another_tenant_of_the_same_host_gets_no_key() {
         }}),
     );
     let answer = r.call("docs", json!({ "prompt": "fox" }));
-    let error = answer["error"].as_str().unwrap_or_else(|| panic!("{answer}"));
+    let error = answer["error"]
+        .as_str()
+        .unwrap_or_else(|| panic!("{answer}"));
     assert!(
-        error.contains("not its own (https://evil.appspot.com)") && error.contains("The API key was not sent"),
+        error.contains("not its own (https://evil.appspot.com)")
+            && error.contains("The API key was not sent"),
         "{error}"
     );
 }
