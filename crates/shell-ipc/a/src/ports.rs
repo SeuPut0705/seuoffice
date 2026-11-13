@@ -183,11 +183,6 @@ ports! {
         invoke "ai:internet-tools" => ai_internet_tools;
     }
 
-    /// The PDF pages the AI read, kept for the PDF editor
-    pub trait PdfStructure("apps/shell/src/main/pdf-structure-ipc.ts") {
-        invoke "pdf:store-ai-read-pages" => pdf_store_ai_read_pages;
-    }
-
     /// App-wide AI panel preferences and slides AI fonts (shell entry)
     pub trait ShellAiPrefs("apps/shell/src/main/index.ts") {
         invoke "ai:open-model-settings" => ai_open_model_settings;

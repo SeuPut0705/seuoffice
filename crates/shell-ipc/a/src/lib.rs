@@ -43,7 +43,6 @@ macro_rules! all_ports {
             McpDocumentBridges,
             McpHub,
             Outbound,
-            PdfStructure,
             ShellAiPrefs,
             SlidesAi,
             SlidesAiProposal,
