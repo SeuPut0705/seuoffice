@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use shell_contract::app_actions::PdfExport;
 use shell_contract::runtime::CancelToken;
 use shell_contract::{IpcValue, ViewId, WindowId};
 
@@ -146,21 +147,12 @@ pub enum ConvertError {
     Other(String),
 }
 
-/// The office formats `pdf:convert-office` converts to
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum OfficeFormat {
-    Docx,
-    Pptx,
-    Xlsx,
-}
-
-impl OfficeFormat {
-    pub fn extension(self) -> &'static str {
-        match self {
-            OfficeFormat::Docx => "docx",
-            OfficeFormat::Pptx => "pptx",
-            OfficeFormat::Xlsx => "xlsx",
-        }
+/// The file extension of an office format `pdf:convert-office` converts to
+pub(crate) fn extension(format: PdfExport) -> &'static str {
+    match format {
+        PdfExport::Docx => "docx",
+        PdfExport::Pptx => "pptx",
+        PdfExport::Xlsx => "xlsx",
     }
 }
 
@@ -214,7 +206,7 @@ pub trait PdfToolsEngine: Send + Sync {
     /// `convertPdfFileTo{Docx,Pptx,Xlsx}Local(pdfPath, onProgress, password)`
     fn convert_to_office(
         &self,
-        format: OfficeFormat,
+        format: PdfExport,
         pdf_path: &str,
         password: Option<&str>,
         progress: &(dyn Fn(f64, f64) + Sync),
@@ -573,16 +565,16 @@ pub(crate) mod fake {
 
         fn convert_to_office(
             &self,
-            format: OfficeFormat,
+            format: PdfExport,
             pdf_path: &str,
             password: Option<&str>,
             progress: &(dyn Fn(f64, f64) + Sync),
         ) -> Result<OfficeConversion, ConvertError> {
-            let args = json!([format.extension(), pdf_path, password]);
+            let args = json!([extension(format), pdf_path, password]);
             self.log(json!(["convertPdfFileToOfficeLocal", args]));
             let answer = self.answer(
                 "convert_to_office",
-                json!({ "format": format.extension(), "path": pdf_path, "password": password }),
+                json!({ "format": extension(format), "path": pdf_path, "password": password }),
             );
             let answer = answer.unwrap_or_else(|| json!({}));
             progress(1.0, 1.0);
