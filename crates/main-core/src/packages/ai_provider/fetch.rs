@@ -307,10 +307,10 @@ pub enum KeyedFetchBase {
     SeeingRedirects(Box<KeyedFetchBase>, Box<KeyedFetchBase>),
 }
 
-type FetchFuture<'a> = Pin<Box<dyn Future<Output = Result<Response, JsError>> + 'a>>;
+pub type FetchFuture<'a> = Pin<Box<dyn Future<Output = Result<Response, JsError>> + 'a>>;
 
 /// A call of a base: `watch` is passed only to a base that takes it.
-fn call_base<'a>(
+pub fn call_base<'a>(
     rt: &'a Rt,
     fx: &'a AiFetch,
     base: &'a KeyedFetchBase,
