@@ -373,9 +373,5 @@ export const group: Group = {
   cases,
   single: {
     'slides:chart-color-schemes': 'takes no argument and answers the deck-independent scheme list',
-    'slides:apply-edit-script':
-      "the fake mapScriptOps maps no op, so the one answer is the handler's empty-script answer",
-    'slides:get-chart-data':
-      'the fake deck holds no chart: the answer is null with or without a deck',
   },
 }

@@ -177,7 +177,5 @@ export const group: Group = {
       'a send that answers nothing; its effect is the preference the autosave reads',
     'slides:close-save-result':
       'a send that answers nothing; it settles a close request no call makes',
-    'slides:consume-pending-open':
-      'no path is queued for a view the shell did not ask to open one: the answer is null',
   },
 }

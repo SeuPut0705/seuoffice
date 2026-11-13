@@ -89,6 +89,8 @@ const cases: Case[] = [
       call('slides:files-add', [
         ['$DIR/note.txt', '$DIR/pic.png', '$DIR/missing.txt', '$DIR/dir.pptx', '$DIR/x.bin'],
       ]),
+      call('slides:files-add', [['$DIR/note.txt']]),
+      call('slides:files-add', [[]]),
       call('slides:files-pick'),
       call('slides:files-pick'),
       call('slides:files-read', ['$DIR/note.txt', 0, 5]),
@@ -181,14 +183,9 @@ export const group: Group = {
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
   single: {
-    'slides:template-bytes': 'one answer per deck state is all there is',
     'slides:audience-nav': 'a send that answers nothing; the forwarded event is compared',
     'slides:presenter-sync': 'a send that answers nothing; the forwarded event is compared',
     'slides:presenter-ink': 'a send that answers nothing; the forwarded event is compared',
-    'slides:files-add': "the answer lists accepted and rejected files of the case's folder",
-    'slides:files-add-pasted-image':
-      'the saved name is made from the clock, so only refusals are compared',
-    'slides:private-font-data': 'the fake font store holds no face: the answer is null',
     'slides:show-fullscreen': 'answers nothing; the snap and the bleed are the logged calls',
   },
 }

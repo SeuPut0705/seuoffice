@@ -549,6 +549,53 @@ impl App {
         own(false);
     }
 
+    /// The File menu's Save As: the renderer is told with `slides:menu` and runs
+    /// its Save As, which calls `slides:save-as`; `done` gets what that came to
+    /// (`true` saved, `false` cancelled or failed), or `false` when the view goes
+    /// or the renderer does not call within two minutes. A newer request of the
+    /// same view replaces the older, which resumes `false`.
+    pub fn request_save_as(&self, view: ViewId, done: Box<dyn FnOnce(bool)>) {
+        let (ticket, older) = {
+            let mut state = self.state.borrow_mut();
+            state.next_ticket += 1;
+            let ticket = state.next_ticket;
+            let older = state.save_as_waiters.insert(view, (ticket, done));
+            (ticket, older)
+        };
+        if let Some((_, older)) = older {
+            older(false);
+        }
+        self.emit(view, "slides:menu", vec![string("save-as")]);
+        self.after(CLOSE_SAVE_TIMEOUT, move |app| {
+            app.save_as_expired(view, ticket)
+        });
+    }
+
+    /// The two minutes of Save As `ticket` are over. One answered, replaced or
+    /// ended with its view has nothing waiting for this timer.
+    pub(crate) fn save_as_expired(&self, view: ViewId, ticket: u64) {
+        let waiter = {
+            let mut state = self.state.borrow_mut();
+            match state.save_as_waiters.get(&view) {
+                Some((current, _)) if *current == ticket => state.save_as_waiters.remove(&view),
+                _ => None,
+            }
+        };
+        if let Some((_, waiter)) = waiter {
+            waiter(false);
+        }
+    }
+
+    /// The renderer's `slides:save-as` answered: resumes the Save As the menu asked for
+    pub(crate) fn save_as_answered(&self, view: ViewId, reply: &Reply) {
+        let waiter = self.state.borrow_mut().save_as_waiters.remove(&view);
+        if let Some((_, waiter)) = waiter {
+            let saved =
+                matches!(reply, Ok(value) if matches!(field(value, "ok"), IpcValue::Bool(true)));
+            waiter(saved);
+        }
+    }
+
     /// `requestSlidesClose(contents, parent)`
     pub fn request_close(&self, view: ViewId, parent: Option<WindowId>, then: Then<bool>) {
         if !self.is_view_dirty(view) || self.services.views.sender_of(view).is_none() {
@@ -842,6 +889,12 @@ pub fn save_into_project(app: &App, cx: &CallContext, _args: Args) -> Reply {
 }
 
 pub fn save_as(app: &App, cx: &CallContext, args: Args) -> Reply {
+    let reply = save_as_inner(app, cx, args);
+    app.save_as_answered(cx.sender.view, &reply);
+    reply
+}
+
+fn save_as_inner(app: &App, cx: &CallContext, args: Args) -> Reply {
     let view = cx.sender.view;
     let mut state = app.state.borrow_mut();
     let Some(slot) = state.slot_of(view) else {

@@ -36,7 +36,19 @@ pub struct RecoveredOpen {
     pub recovered: bool,
 }
 
+/// a clock a probe case fixes (`hosts.d1.slides.clock`, ms since the epoch); 0 is the real one
+#[cfg(any(test, feature = "probe"))]
+pub static FIXED_CLOCK: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// `Date.now()`
 pub fn now_ms() -> f64 {
+    #[cfg(any(test, feature = "probe"))]
+    {
+        let fixed = FIXED_CLOCK.load(std::sync::atomic::Ordering::Relaxed);
+        if fixed != 0 {
+            return fixed as f64;
+        }
+    }
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0.0, |d| d.as_millis() as f64)

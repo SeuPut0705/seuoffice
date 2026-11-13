@@ -125,15 +125,5 @@ export const group: Group = {
   batch: 'D1',
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
-  single: {
-    'slides:get-notes':
-      'the fake deck has no notes: the one answer is the empty text (the missing-slide answer is the same)',
-    'slides:get-animations': 'the fake deck has no animations',
-    'slides:get-header-footer': 'the fake deck has no header or footer: one fixed answer',
-    'slides:get-link': 'the fake deck has no links, and a missing deck answers the same',
-    'slides:get-slide-links': 'the fake deck has no links',
-    'slides:get-run-links': 'the fake deck has no links',
-    'slides:get-transition': 'the fake deck has no transitions: the answer is none',
-    'slides:get-show-timing': 'the fake deck has no timing',
-  },
+  single: {},
 }

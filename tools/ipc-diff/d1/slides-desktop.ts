@@ -116,5 +116,10 @@ export function makeDesktop(e: Electron, external: boolean, standaloneView: () =
     getPrimaryDisplay: () => displays[0],
     getDisplayMatching: (bounds: Rect) => displayAt(bounds),
   }
-  return { BrowserWindow: FakeBrowserWindow, screen }
+  // a tab's view (`createSlidesView`): the case's own view, whose background colour is no one's business
+  class FakeWebContentsView {
+    webContents = e.contents(standaloneView())
+    setBackgroundColor = () => {}
+  }
+  return { BrowserWindow: FakeBrowserWindow, WebContentsView: FakeWebContentsView, screen }
 }

@@ -502,5 +502,33 @@
     "find": "            app.pump();\n            let index = app.registry_index;",
     "replace": "            let index = app.registry_index;\n            app.emit(view, \"slides:opened\", vec![result.clone()]);",
     "groups": ["d1/slides-events"]
+  },
+  {
+    "name": "slides: a media part is handed over as a data URL with another separator",
+    "file": "shell-ipc/d1/src/slides/edit_ops.rs",
+    "find": "string(format!(\"data:{mime};base64,{}\", jscompat::base64(&bytes))),",
+    "replace": "string(format!(\"data:{mime};base64;{}\", jscompat::base64(&bytes))),",
+    "groups": ["d1/slides-fixtures"]
+  },
+  {
+    "name": "slides: removing the lead slides of a deck with sections also removes a section",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "        if !is_nullish(id) {",
+    "replace": "        if !is_nullish(id) || indices.is_empty() {",
+    "groups": ["d1/slides-fixtures"]
+  },
+  {
+    "name": "slides: narration is cleared on a page that has none",
+    "file": "shell-ipc/d1/src/slides/inserts.rs",
+    "find": "slide_index(i, len).is_some_and(|idx| app.engine.has_narration(s.deck(), idx))",
+    "replace": "slide_index(i, len).is_some_and(|idx| app.engine.has_narration(s.deck(), idx) || idx == 1)",
+    "groups": ["d1/slides-fixtures"]
+  },
+  {
+    "name": "slides: the links of a page name their element elementId, not sourceId",
+    "file": "shell-ipc/d1/src/slides/reads.rs",
+    "find": "(\"sourceId\", field(item, \"elementId\").clone()),\n                    (\"target\", field(item, \"target\").clone()),",
+    "replace": "(\"elementId\", field(item, \"elementId\").clone()),\n                    (\"target\", field(item, \"target\").clone()),",
+    "groups": ["d1/slides-fixtures"]
   }
 ]

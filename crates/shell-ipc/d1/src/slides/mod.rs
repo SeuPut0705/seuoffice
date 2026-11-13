@@ -25,6 +25,8 @@ pub mod export;
 #[cfg(any(test, feature = "probe"))]
 pub mod fake;
 pub mod files;
+#[cfg(any(test, feature = "probe"))]
+pub mod fixtures;
 pub mod generate;
 pub mod i18n;
 pub mod inserts;
@@ -141,18 +143,19 @@ impl DocumentEditors for SlidesEditors {
     }
 
     /// `requestRendererSave`: the renderer runs its full save flow and
-    /// reports on `slides:close-save-result`. `saveAs` has no counterpart in
-    /// the TypeScript but the menu's `slides:menu` message, which waits for
-    /// nothing: it answers true once the message is sent.
+    /// reports on `slides:close-save-result`. `saveAs` is the menu's
+    /// `slides:menu` message: the renderer's Save As ends in `slides:save-as`,
+    /// whose answer resumes the request (`true` saved; `false` cancelled, a
+    /// copy format, or failed: the contract's "user cancelled or it failed",
+    /// so a handler error is `false` here, not an `Err`).
     fn request_save(&self, view: ViewId, mode: SaveMode, then: Then<bool>) {
         match mode {
             SaveMode::Save => self
                 .app
                 .request_renderer_save(view, Box::new(move |ok| then(Ok(ok)))),
-            SaveMode::SaveAs => {
-                self.app.emit(view, "slides:menu", vec![string("save-as")]);
-                then(Ok(true))
-            }
+            SaveMode::SaveAs => self
+                .app
+                .request_save_as(view, Box::new(move |ok| then(Ok(ok)))),
         }
         self.app.pump();
     }
@@ -260,6 +263,11 @@ impl App {
             at.map(|at| state.close_waiters.remove(at).2)
         };
         if let Some(waiter) = waiter {
+            waiter(false);
+        }
+        // a Save As the menu asked for ends with its view
+        let save_as = self.state.borrow_mut().save_as_waiters.remove(&view);
+        if let Some((_, waiter)) = save_as {
             waiter(false);
         }
         self.pump();
@@ -557,6 +565,13 @@ pub fn probe_trigger(
                 _ => return false,
             }
             app.pump();
+            then(Ok(shell_contract::IpcValue::Undefined));
+        }
+        // `createSlidesView(openPath)`: the tab opens the path when its renderer mounts
+        "createSlidesView" => {
+            if !text.is_empty() && std::path::Path::new(&text).exists() {
+                app.queue_open(view, &text);
+            }
             then(Ok(shell_contract::IpcValue::Undefined));
         }
         "openFileInWindow" => {

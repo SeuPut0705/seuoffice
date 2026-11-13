@@ -296,11 +296,5 @@ export const group: Group = {
   batch: 'D1',
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
-  single: {
-    'slides:clear-narration': 'the fake deck has no narration: the answer is null',
-    'slides:media-data': 'the fake deck has no media part: the answer is null',
-    'slides:model3d-data': 'the fake deck has no model: the answer is null',
-    'slides:remove-section-slides':
-      'the fake deck has no sections: the lead slides are the whole deck, so the answer is null',
-  },
+  single: {},
 }

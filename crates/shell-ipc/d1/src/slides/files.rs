@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::sync::{Mutex, PoisonError};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use jscompat::node_path::host::{basename, extname, join};
 use jscompat::{JsonValue, js_regex, slice_utf16, to_iso_string, trim};
@@ -277,9 +277,7 @@ pub fn files_add_pasted_image(app: &App, _cx: &CallContext, args: Args) -> Reply
     let temp = path_string(app.services.paths.path(PathName::Temp));
     let dir = join(&[&temp, "seuoffice-pasted"]);
     fs::create_dir_all(&dir).map_err(|e| thrown(node_error(&e, "mkdir", &dir).message))?;
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64);
+    let now = super::recovery::now_ms();
     // `new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')`
     let iso = to_iso_string(now).unwrap_or_default();
     let stamp = js_regex!(r"[-:]", "g")

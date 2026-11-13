@@ -95,6 +95,9 @@ pub struct CopyMark {
 /// A close waiting on the renderer: the view, the ticket its timeout finds it
 /// by, and what to do with the answer
 pub type CloseWaiter = (ViewId, u64, Box<dyn FnOnce(bool)>);
+/// A Save As waiting on the renderer's `slides:save-as`: the ticket its
+/// timeout finds it by, and what to do with what it came to
+pub type SaveAsWaiter = (u64, Box<dyn FnOnce(bool)>);
 /// `Session` of `session-state.ts`
 pub struct SlideSession {
     /// fixed for the life of this session object (`SlidesDocument::id`)
@@ -212,6 +215,10 @@ pub struct AppState {
     /// renderer's `slides:close-save-result`, with the ticket their timeout
     /// finds them by; the last of a view is the one the map would hold
     pub close_waiters: Vec<CloseWaiter>,
+    /// The Save As the menu asked a view for (`requestSlidesSave('saveAs')`):
+    /// the continuation waits for the renderer's `slides:save-as`, with the
+    /// ticket its timeout finds it by; one per view
+    pub save_as_waiters: HashMap<ViewId, SaveAsWaiter>,
     /// `autoSavePrefByWc`
     pub auto_save_pref: HashMap<ViewId, bool>,
     pub save_as_image_targets: SaveAsImageTargets,

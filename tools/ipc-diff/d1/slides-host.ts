@@ -43,6 +43,7 @@ const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
   d1: {},
   log: () => {},
   blankSlides: 1,
+  fixtures: {},
 }) as Box
 
 const asObject = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json) : {})
@@ -80,6 +81,9 @@ const fakes = makeEngine({
   log: (line) => box.log(line),
   get blankSlides() {
     return box.blankSlides
+  },
+  get fixtures() {
+    return box.fixtures
   },
 } as EngineBox)
 box.fakes = fakes
@@ -129,8 +133,8 @@ const STUBS: Record<string, string> = {
     exports.createSystemFontMetrics = () => ({ displayFamily: () => undefined })
     exports.resetFontRegistry = () => {}
     exports.registerEmbeddedFonts = () => false
-    exports.listPrivateFontFaces = () => []
-    exports.getPrivateFontData = () => null
+    exports.listPrivateFontFaces = () => ${SELF}.privateFontFaces()
+    exports.getPrivateFontData = (id) => ${SELF}.privateFontData(id)
     exports.setUserFontDir = () => {}
     exports.setTemplateFontDir = () => {}
     exports.fontFileFamilies = (path) => ${SELF}.fontFileFamilies(path)`,
@@ -200,6 +204,14 @@ box.parseFileToText = async (path: string) => {
     return { ok: false, error: (err as Error).message }
   }
 }
+box.privateFontFaces = () => {
+  const faces = (box.fixtures as Json).fontFaces
+  return Array.isArray(faces) ? structuredClone(faces) : []
+}
+box.privateFontData = (id: unknown) => {
+  const data = asObject((box.fixtures as Json).fontData)
+  return typeof id === 'string' && Object.hasOwn(data, id) ? structuredClone(data[id]) : null
+}
 box.fontFileFamilies = (path: string) => {
   box.log(['fonts.fontFileFamilies', path])
   const name = path.split('/').at(-1) ?? path
@@ -266,6 +278,7 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
   box.d1 = asObject(d1.slides)
   box.log = (line) => e.log.push(line)
   box.blankSlides = typeof box.d1.blankSlides === 'number' ? box.d1.blankSlides : 1
+  box.fixtures = asObject(box.d1.fixtures)
   box.uuids = 0
   const handoff = asObject(box.d1.handoff)
   box.handoff =
@@ -421,5 +434,10 @@ export const slidesTriggers: NonNullable<Group['triggers']> = {
     box.standaloneView = view
     ;(box.main as SlidesMainModule).createSlidesWindow(String(args[0]))
     await cx.contents(view).emit('did-finish-load')
+  },
+  // `createSlidesView(path)`: the tab queues the path its renderer opens when it mounts
+  'd1/slides:createSlidesView': (cx, view, args) => {
+    box.standaloneView = view
+    ;(box.main as SlidesMainModule).createSlidesView(String(args[0]))
   },
 }

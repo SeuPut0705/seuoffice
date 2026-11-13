@@ -339,6 +339,138 @@ fn an_answered_saves_timer_leaves_the_next_save_waiting() {
     assert_eq!(*second.borrow(), Some(Ok(true)));
 }
 
+/// The menu's Save As waits for the renderer's `slides:save-as` and reports
+/// what it came to: cancelled is `false`, a picked file is `true` and exists
+#[test]
+fn a_menu_save_as_resumes_with_what_the_renderers_save_as_came_to() {
+    let (kit, registry, sender, dir) = setup("slides-menu-saveas");
+    invoke(&registry, sender, "slides:new-blank", vec![num(960.0)]);
+    let editor = slides_editor(&registry);
+    let ask = |editor: &Rc<dyn DocumentEditors>| {
+        let answer: Rc<RefCell<Option<Result<bool, _>>>> = Rc::default();
+        let got = answer.clone();
+        editor.request_save(
+            ViewId(1),
+            SaveMode::SaveAs,
+            Box::new(move |r| *got.borrow_mut() = Some(r)),
+        );
+        answer
+    };
+
+    kit.take_events();
+    let cancelled = ask(&editor);
+    assert!(
+        cancelled.borrow().is_none(),
+        "the continuation is stored, not awaited"
+    );
+    assert!(kit.take_events().iter().any(|(target, channel, args)| {
+        *target == Target::View(ViewId(1))
+            && *channel == "slides:menu"
+            && args == &vec![string("save-as")]
+    }));
+    // the dialog is cancelled
+    invoke(
+        &registry,
+        sender,
+        "slides:save-as",
+        vec![string("Deck.pptx")],
+    );
+    assert_eq!(*cancelled.borrow(), Some(Ok(false)));
+
+    // a picked file: the answer reaches the renderer unchanged and the caller hears true
+    let picked = ask(&editor);
+    let target = dir.join("menu.pptx");
+    kit.dialogs
+        .saves
+        .lock()
+        .unwrap()
+        .push_back(Some(target.clone()));
+    let reply = invoke(
+        &registry,
+        sender,
+        "slides:save-as",
+        vec![string("Deck.pptx")],
+    );
+    assert_eq!(field(&reply, "ok"), &IpcValue::Bool(true));
+    assert_eq!(*picked.borrow(), Some(Ok(true)));
+    assert!(target.exists());
+
+    // a copy format writes no deck: not saved
+    let copy = ask(&editor);
+    kit.dialogs
+        .saves
+        .lock()
+        .unwrap()
+        .push_back(Some(dir.join("copy.pdf")));
+    invoke(
+        &registry,
+        sender,
+        "slides:save-as",
+        vec![string("Deck.pptx")],
+    );
+    assert_eq!(*copy.borrow(), Some(Ok(false)));
+
+    // a call nobody asked for resumes nothing
+    invoke(
+        &registry,
+        sender,
+        "slides:save-as",
+        vec![string("Deck.pptx")],
+    );
+}
+
+/// A newer Save As replaces the older (which resumes `false`); an answered
+/// one's timer does nothing; the view going ends a waiting one
+#[test]
+fn a_waiting_menu_save_as_is_replaced_timed_out_or_ended_with_its_view() {
+    let (kit, registry, sender, dir) = setup("slides-menu-saveas-ends");
+    invoke(&registry, sender, "slides:new-blank", vec![num(960.0)]);
+    let editor = slides_editor(&registry);
+    let app = super::APPS.with(|apps| apps.borrow().last().cloned().unwrap());
+    let ask = |editor: &Rc<dyn DocumentEditors>| {
+        let answer: Rc<RefCell<Option<Result<bool, _>>>> = Rc::default();
+        let got = answer.clone();
+        editor.request_save(
+            ViewId(1),
+            SaveMode::SaveAs,
+            Box::new(move |r| *got.borrow_mut() = Some(r)),
+        );
+        answer
+    };
+
+    let older = ask(&editor);
+    let newer = ask(&editor);
+    assert_eq!(*older.borrow(), Some(Ok(false)), "the older resumes false");
+    assert!(newer.borrow().is_none());
+
+    // the answered one's timer is spent: it leaves the next request waiting
+    let spent = app.state.borrow().next_ticket;
+    kit.dialogs
+        .saves
+        .lock()
+        .unwrap()
+        .push_back(Some(dir.join("a.pptx")));
+    invoke(
+        &registry,
+        sender,
+        "slides:save-as",
+        vec![string("Deck.pptx")],
+    );
+    assert_eq!(*newer.borrow(), Some(Ok(true)));
+    let waiting = ask(&editor);
+    app.save_as_expired(ViewId(1), spent);
+    assert!(waiting.borrow().is_none(), "the next request still waits");
+    // its own timer ends it
+    let own = app.state.borrow().next_ticket;
+    app.save_as_expired(ViewId(1), own);
+    assert_eq!(*waiting.borrow(), Some(Ok(false)));
+
+    // the view going ends a waiting one
+    let last = ask(&editor);
+    kit.destroy(ViewId(1));
+    assert_eq!(*last.borrow(), Some(Ok(false)));
+}
+
 #[test]
 fn a_view_that_goes_ends_its_session_and_resumes_a_waiting_close() {
     let (kit, registry, sender, _dir) = setup("slides-gone");

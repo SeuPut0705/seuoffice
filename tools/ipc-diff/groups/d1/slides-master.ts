@@ -103,10 +103,5 @@ export const group: Group = {
   batch: 'D1',
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
-  single: {
-    'slides:master-edit-fill':
-      'the fake executor refuses setFill on a master part: the handler answers null',
-    'slides:master-edit-stroke':
-      'the fake executor refuses setStroke on a master part: the handler answers null',
-  },
+  single: {},
 }

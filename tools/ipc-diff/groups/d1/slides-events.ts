@@ -83,6 +83,26 @@ const cases: Case[] = [
     trigger('slidesMenu', ['export-images']),
     trigger('slidesMenu', ['export-images-jpg']),
   ]),
+  // the TypeScript's click sends `slides:menu` and waits for nothing; the Rust request also waits
+  // for the renderer's Save As to resume (a unit test reads what it resumes with), and the
+  // renderer-visible answers and events of that Save As must stay what they are
+  slidesCase(
+    "the renderer answers the menu's Save As with its own save-as call",
+    { saves: [null, '$DIR/menu.pptx', '$DIR/menu.pdf'] },
+    [
+      OPEN_A,
+      call('slides:set-hidden', [{ slideIndex: 0, hidden: true }]),
+      trigger('slidesMenu', ['save-as']),
+      call('slides:save-as', ['Deck.pptx']),
+      trigger('slidesMenu', ['save-as']),
+      trigger('slidesMenu', ['save-as']),
+      call('slides:save-as', ['Deck.pptx']),
+      call('slides:is-dirty'),
+      trigger('slidesMenu', ['save-as']),
+      call('slides:save-as', ['Deck.pptx']),
+      call('slides:recent'),
+    ],
+  ),
   slidesCase('a window made for a file opens it and tells its page', {}, [
     trigger('openFileInWindow', ['$DIR/a.pptx']),
     call('slides:is-dirty'),

@@ -18,6 +18,7 @@ use super::engine::{
     PictureMedia, PreparedOpen, SlideRef, SlidesEngine, SlidesEngineHost, SlidesShell,
     SlidesShellHost, Snapshot, TakenHandoff, TxnFailure, TxnRecord, TxnRequest, TxnResult,
 };
+use super::fixtures::{Fixtures, ipc_of, normalize_sections, spid_of};
 use crate::value::{as_num, as_str, field, num, obj, string};
 
 /// the one master part of a fake deck
@@ -43,12 +44,19 @@ struct FakeElement {
     text: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 struct FakeSlide {
     path: String,
     elements: Vec<FakeElement>,
     hidden: bool,
     comments: Vec<(String, String)>,
+    // what a probe case's fixtures put into the slide (fixtures.rs)
+    notes: String,
+    transition: Option<String>,
+    advance_ms: Option<f64>,
+    narration: Vec<i64>,
+    animations: Vec<Value>,
+    header_footer: Option<Value>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -60,6 +68,9 @@ struct FakeDeck {
     dirty: bool,
     meta_dirty: bool,
     master: Vec<FakeElement>,
+    /// the fill and stroke master ops set, by element id
+    master_fill: HashMap<String, IpcValue>,
+    master_stroke: HashMap<String, IpcValue>,
 }
 
 impl FakeDeck {
@@ -68,9 +79,7 @@ impl FakeDeck {
             slides: (1..=count)
                 .map(|n| FakeSlide {
                     path: format!("ppt/slides/slide{n}.xml"),
-                    elements: Vec::new(),
-                    hidden: false,
-                    comments: Vec::new(),
+                    ..Default::default()
                 })
                 .collect(),
             cx: 9_144_000.0,
@@ -82,6 +91,8 @@ impl FakeDeck {
                 id: "m0".into(),
                 text: "Title".into(),
             }],
+            master_fill: HashMap::new(),
+            master_stroke: HashMap::new(),
         }
     }
 
@@ -133,7 +144,7 @@ impl FakeDeck {
                 path,
                 elements,
                 hidden,
-                comments: Vec::new(),
+                ..Default::default()
             });
         }
         Some(FakeDeck {
@@ -147,6 +158,8 @@ impl FakeDeck {
                 id: "m0".into(),
                 text: "Title".into(),
             }],
+            master_fill: HashMap::new(),
+            master_stroke: HashMap::new(),
         })
     }
 }
@@ -156,10 +169,20 @@ pub struct FakeEngine {
     decks: Mutex<HashMap<u64, FakeDeck>>,
     next: Mutex<u64>,
     blank_slides: usize,
+    fx: Fixtures,
     log: Option<CallLog>,
 }
 
 impl FakeEngine {
+    /// `el.type` of an element: a fixture's media or 3D model makes it a picture
+    fn kind_of(&self, id: &str) -> &'static str {
+        if self.fx.by("media", id).is_null() && self.fx.by("models", id).is_null() {
+            "text"
+        } else {
+            "picture"
+        }
+    }
+
     fn record(&self, call: Value) {
         if let Some(log) = &self.log {
             log.lock().unwrap().push(call);
@@ -216,7 +239,7 @@ impl FakeEngine {
             }
             return match name {
                 "addElement" => None,
-                "setText" | "deleteElement" => {
+                "setText" | "deleteElement" | "setFill" | "setStroke" => {
                     let id = as_str(field(target, "el")).unwrap_or("");
                     (!d.master.iter().any(|e| e.id == id))
                         .then(|| format!("element {id} not found"))
@@ -330,6 +353,7 @@ impl FakeEngine {
                 let idx = as_num(field(op, "idx")).unwrap_or(0.0) as usize;
                 d.slides[slide].comments.remove(idx);
             }
+            "clearNarration" => d.slides[slide].narration.clear(),
             "addPicture" => {
                 let id = format!("e{}", d.next_id);
                 d.next_id += 1;
@@ -407,6 +431,14 @@ impl FakeEngine {
                 let id = as_str(field(target, "el")).unwrap_or("").to_owned();
                 d.master.retain(|e| e.id != id);
             }
+            "setFill" => {
+                let id = as_str(field(target, "el")).unwrap_or("").to_owned();
+                d.master_fill.insert(id, field(op, "fill").clone());
+            }
+            "setStroke" => {
+                let id = as_str(field(target, "el")).unwrap_or("").to_owned();
+                d.master_stroke.insert(id, field(op, "stroke").clone());
+            }
             _ => {}
         }
         d.dirty = true;
@@ -427,7 +459,20 @@ impl SlidesEngine for FakeEngine {
 
     fn open(&self, bytes: &[u8]) -> Result<DeckId, EngineError> {
         self.record(json!(["pptx-engine.openPptx", bytes.len()]));
-        let deck = FakeDeck::from_bytes(bytes).ok_or_else(|| EngineError("not a pptx".into()))?;
+        let mut deck =
+            FakeDeck::from_bytes(bytes).ok_or_else(|| EngineError("not a pptx".into()))?;
+        for (index, slide) in deck.slides.iter_mut().enumerate() {
+            let at = |key: &str| self.fx.at(key, index);
+            slide.notes = at("notes").as_str().unwrap_or("").to_owned();
+            slide.transition = at("transitions").as_str().map(str::to_owned);
+            slide.advance_ms = at("advanceMs").as_f64();
+            slide.narration = at("narration")
+                .as_array()
+                .map(|spids| spids.iter().filter_map(Value::as_i64).collect())
+                .unwrap_or_default();
+            slide.animations = at("animations").as_array().cloned().unwrap_or_default();
+            slide.header_footer = Some(at("headerFooter").clone()).filter(|v| !v.is_null());
+        }
         let mut next = self.next.lock().unwrap();
         *next += 1;
         self.decks.lock().unwrap().insert(*next, deck);
@@ -553,8 +598,14 @@ impl SlidesEngine for FakeEngine {
             // the master and the id counter live in the package, which a history step restores
             // only by its entries: the fake keeps them
             let (master, next_id) = (std::mem::take(&mut d.master), d.next_id);
+            let (fill, stroke) = (
+                std::mem::take(&mut d.master_fill),
+                std::mem::take(&mut d.master_stroke),
+            );
             *d = copy;
             d.master = master;
+            d.master_fill = fill;
+            d.master_stroke = stroke;
             d.next_id = next_id;
         });
         meta_dirty
@@ -575,8 +626,16 @@ impl SlidesEngine for FakeEngine {
         self.with(deck, |d| d.dirty = false);
     }
 
-    fn has_redaction(&self, _deck: DeckId) -> bool {
-        false
+    fn has_redaction(&self, deck: DeckId) -> bool {
+        // a fixture's `redact` marks elements "withheld from the model"
+        self.with(deck, |d| {
+            d.slides.iter().flat_map(|s| &s.elements).any(|e| {
+                self.fx
+                    .by("redact", &e.id)
+                    .as_str()
+                    .is_some_and(|label| !label.is_empty())
+            })
+        })
     }
 
     fn encrypt_ooxml(&self, bytes: &[u8], password: &str) -> Result<Vec<u8>, EngineError> {
@@ -597,16 +656,38 @@ impl SlidesEngine for FakeEngine {
             .ok_or_else(|| EngineError("wrong password".into()))
     }
 
-    fn picture_media(&self, _deck: DeckId, _slide: usize, _id: &str) -> Option<PictureMedia> {
-        None
+    fn picture_media(&self, deck: DeckId, slide: usize, id: &str) -> Option<PictureMedia> {
+        let present = self.with(deck, |d| {
+            d.slides
+                .get(slide)
+                .is_some_and(|s| s.elements.iter().any(|e| e.id == id))
+        });
+        let media = self.fx.by("media", id);
+        let target = media["target"].as_str().filter(|t| !t.is_empty())?;
+        present.then(|| PictureMedia {
+            kind: media["kind"].as_str().unwrap_or("").to_owned(),
+            target: target.to_owned(),
+            external: media["external"].as_bool().unwrap_or(false),
+        })
     }
 
-    fn model3d_target(&self, _deck: DeckId, _slide: usize, _id: &str) -> Option<String> {
-        None
+    fn model3d_target(&self, deck: DeckId, slide: usize, id: &str) -> Option<String> {
+        let present = self.with(deck, |d| {
+            d.slides
+                .get(slide)
+                .is_some_and(|s| s.elements.iter().any(|e| e.id == id))
+        });
+        let target = self.fx.by("models", id)["target"]
+            .as_str()
+            .filter(|t| !t.is_empty())?;
+        present.then(|| target.to_owned())
     }
 
-    fn read_part(&self, _deck: DeckId, _path: &str) -> Option<Vec<u8>> {
-        None
+    fn read_part(&self, _deck: DeckId, path: &str) -> Option<Vec<u8>> {
+        self.fx
+            .by("parts", path)
+            .as_str()
+            .map(|text| text.as_bytes().to_vec())
     }
 
     fn copy_slide(&self, deck: DeckId, index: usize) -> Option<IpcValue> {
@@ -700,11 +781,11 @@ impl SlidesEngine for FakeEngine {
     }
 
     fn sections(&self, _deck: DeckId) -> IpcValue {
-        IpcValue::Array(Vec::new())
+        IpcValue::Array(self.fx.list("sections").iter().map(ipc_of).collect())
     }
 
-    fn slide_notes(&self, _deck: DeckId, _slide: usize) -> String {
-        String::new()
+    fn slide_notes(&self, deck: DeckId, slide: usize) -> String {
+        self.with(deck, |d| d.slides[slide].notes.clone())
     }
 
     fn slide_comments(&self, deck: DeckId, slide: usize) -> IpcValue {
@@ -726,39 +807,142 @@ impl SlidesEngine for FakeEngine {
         })
     }
 
-    fn element_link(&self, _deck: DeckId, _slide: &IpcValue, _id: &IpcValue) -> IpcValue {
-        IpcValue::Null
+    fn element_link(&self, deck: DeckId, slide: &IpcValue, id: &IpcValue) -> IpcValue {
+        self.with(deck, |d| {
+            let Some(index) = super::session::slide_index(slide, d.slides.len()) else {
+                return IpcValue::Null;
+            };
+            let Some(id) = as_str(id) else {
+                return IpcValue::Null;
+            };
+            if !d.slides[index].elements.iter().any(|e| e.id == id) {
+                return IpcValue::Null;
+            }
+            ipc_of(self.fx.by("links", id))
+        })
     }
 
-    fn slide_links(&self, _deck: DeckId, _slide: &IpcValue) -> IpcValue {
-        IpcValue::Array(Vec::new())
+    fn slide_links(&self, deck: DeckId, slide: &IpcValue) -> IpcValue {
+        self.with(deck, |d| {
+            let Some(index) = super::session::slide_index(slide, d.slides.len()) else {
+                return IpcValue::Array(Vec::new());
+            };
+            IpcValue::Array(
+                d.slides[index]
+                    .elements
+                    .iter()
+                    .filter(|e| !self.fx.by("links", &e.id).is_null())
+                    .map(|e| {
+                        obj([
+                            ("elementId", string(e.id.as_str())),
+                            ("target", ipc_of(self.fx.by("links", &e.id))),
+                        ])
+                    })
+                    .collect(),
+            )
+        })
     }
 
-    fn run_links(&self, _deck: DeckId, _slide: &IpcValue) -> IpcValue {
-        IpcValue::Array(Vec::new())
+    fn run_links(&self, deck: DeckId, slide: &IpcValue) -> IpcValue {
+        self.with(deck, |d| {
+            let Some(index) = super::session::slide_index(slide, d.slides.len()) else {
+                return IpcValue::Array(Vec::new());
+            };
+            let mut items = Vec::new();
+            for e in &d.slides[index].elements {
+                for link in self
+                    .fx
+                    .by("runLinks", &e.id)
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                {
+                    let mut entries = vec![("elementId".to_owned(), string(e.id.as_str()))];
+                    if let IpcValue::Object(rest) = ipc_of(link) {
+                        entries.extend(rest);
+                    }
+                    items.push(IpcValue::Object(entries));
+                }
+            }
+            IpcValue::Array(items)
+        })
     }
 
-    fn header_footer(&self, _deck: DeckId, _slide: usize) -> IpcValue {
-        obj([
-            ("footer", IpcValue::Null),
-            ("slideNum", IpcValue::Bool(false)),
-            ("date", IpcValue::Null),
-        ])
+    fn header_footer(&self, deck: DeckId, slide: usize) -> IpcValue {
+        self.with(deck, |d| match &d.slides[slide].header_footer {
+            Some(settings) => ipc_of(settings),
+            None => obj([
+                ("footer", IpcValue::Null),
+                ("slideNum", IpcValue::Bool(false)),
+                ("date", IpcValue::Null),
+            ]),
+        })
     }
 
-    fn slide_transition(&self, _deck: DeckId, _slide: usize) -> IpcValue {
-        string("none")
+    fn slide_transition(&self, deck: DeckId, slide: usize) -> IpcValue {
+        self.with(deck, |d| {
+            string(d.slides[slide].transition.as_deref().unwrap_or("none"))
+        })
     }
 
-    fn show_timing(&self, _deck: DeckId, _slide: usize) -> IpcValue {
-        obj([
-            ("advanceMs", IpcValue::Null),
-            ("narrationIds", IpcValue::Array(Vec::new())),
-        ])
+    fn show_timing(&self, deck: DeckId, slide: usize) -> IpcValue {
+        self.with(deck, |d| {
+            let s = &d.slides[slide];
+            obj([
+                ("advanceMs", s.advance_ms.map_or(IpcValue::Null, num)),
+                (
+                    "narrationIds",
+                    IpcValue::Array(
+                        s.elements
+                            .iter()
+                            .filter(|e| {
+                                spid_of(&e.id).is_some_and(|spid| s.narration.contains(&spid))
+                            })
+                            .map(|e| string(e.id.as_str()))
+                            .collect(),
+                    ),
+                ),
+            ])
+        })
     }
 
-    fn animations(&self, _deck: DeckId, _slide: usize, _labels: &[(String, String)]) -> IpcValue {
-        IpcValue::Array(Vec::new())
+    fn animations(&self, deck: DeckId, slide: usize, labels: &[(String, String)]) -> IpcValue {
+        let label = |kind: &str| {
+            labels
+                .iter()
+                .find(|(k, _)| k == kind)
+                .or_else(|| labels.iter().find(|(k, _)| k == "object"))
+                .map(|(_, text)| text.clone())
+                .unwrap_or_default()
+        };
+        self.with(deck, |d| {
+            let s = &d.slides[slide];
+            let mut out = Vec::new();
+            for a in &s.animations {
+                // the first element with the animation's spid; a deleted target is not echoed back
+                let Some(spid) = a["spid"].as_i64() else {
+                    continue;
+                };
+                let Some(el) = s.elements.iter().find(|e| spid_of(&e.id) == Some(spid)) else {
+                    continue;
+                };
+                let mut entries = vec![
+                    ("sourceId".to_owned(), string(el.id.as_str())),
+                    ("targetName".to_owned(), string(label(self.kind_of(&el.id)))),
+                    ("effect".to_owned(), ipc_of(&a["effect"])),
+                    ("trigger".to_owned(), ipc_of(&a["trigger"])),
+                    ("durationMs".to_owned(), ipc_of(&a["durationMs"])),
+                    ("delayMs".to_owned(), ipc_of(&a["delayMs"])),
+                ];
+                for key in ["direction", "motionPath", "paragraph"] {
+                    if !a[key].is_null() {
+                        entries.push((key.to_owned(), ipc_of(&a[key])));
+                    }
+                }
+                out.push(IpcValue::Object(entries));
+            }
+            IpcValue::Array(out)
+        })
     }
 
     fn shape_keys(&self, deck: DeckId, slide: usize) -> IpcValue {
@@ -770,7 +954,10 @@ impl SlidesEngine for FakeEngine {
                     .map(|e| {
                         obj([
                             ("sourceId", string(e.id.as_str())),
-                            ("spid", IpcValue::Undefined),
+                            (
+                                "spid",
+                                spid_of(&e.id).map_or(IpcValue::Undefined, |s| num(s as f64)),
+                            ),
                             ("name", string("")),
                         ])
                     })
@@ -779,17 +966,19 @@ impl SlidesEngine for FakeEngine {
         })
     }
 
-    fn has_narration(&self, _deck: DeckId, _slide: usize) -> bool {
-        false
+    fn has_narration(&self, deck: DeckId, slide: usize) -> bool {
+        self.with(deck, |d| !d.slides[slide].narration.is_empty())
     }
 
     fn section_slide_indices(&self, deck: DeckId, id: &IpcValue) -> Option<Vec<usize>> {
-        match id {
-            IpcValue::Undefined | IpcValue::Null => {
-                Some((0..self.with(deck, |d| d.slides.len())).collect())
-            }
-            _ => None,
+        let total = self.with(deck, |d| d.slides.len());
+        let sections = self.fx.list("sections");
+        let (lead, ranges) = normalize_sections(&sections, total);
+        if matches!(id, IpcValue::Undefined | IpcValue::Null) {
+            return Some(lead);
         }
+        let at = sections.iter().position(|s| &ipc_of(&s["id"]) == id)?;
+        Some(ranges[at].clone())
     }
 
     fn master_parts(&self, _deck: DeckId) -> Vec<super::engine::MasterPart> {
@@ -815,10 +1004,17 @@ impl SlidesEngine for FakeEngine {
                             d.master
                                 .iter()
                                 .map(|e| {
-                                    obj([
-                                        ("id", string(e.id.as_str())),
-                                        ("text", string(e.text.as_str())),
-                                    ])
+                                    let mut entries = vec![
+                                        ("id".to_owned(), string(e.id.as_str())),
+                                        ("text".to_owned(), string(e.text.as_str())),
+                                    ];
+                                    if let Some(fill) = d.master_fill.get(&e.id) {
+                                        entries.push(("fill".to_owned(), fill.clone()));
+                                    }
+                                    if let Some(stroke) = d.master_stroke.get(&e.id) {
+                                        entries.push(("stroke".to_owned(), stroke.clone()));
+                                    }
+                                    IpcValue::Object(entries)
                                 })
                                 .collect(),
                         ),
@@ -895,8 +1091,31 @@ impl SlidesEngine for FakeEngine {
         rendered
     }
 
-    fn map_script_ops(&self, _deck: DeckId, _script: &IpcValue) -> Vec<IpcValue> {
-        Vec::new()
+    fn map_script_ops(&self, _deck: DeckId, script: &IpcValue) -> Vec<IpcValue> {
+        // a step names an op, and an element of the slide when it works on one
+        let IpcValue::Array(steps) = field(script, "steps") else {
+            return Vec::new();
+        };
+        steps
+            .iter()
+            .map(|step| {
+                let mut target = vec![("slide".to_owned(), field(script, "slideIndex").clone())];
+                if !matches!(field(step, "el"), IpcValue::Undefined) {
+                    target.push(("el".to_owned(), field(step, "el").clone()));
+                }
+                let mut op = vec![
+                    (
+                        "op".to_owned(),
+                        string(as_str(field(step, "op")).unwrap_or("")),
+                    ),
+                    ("target".to_owned(), IpcValue::Object(target)),
+                ];
+                if !matches!(field(step, "paragraphs"), IpcValue::Undefined) {
+                    op.push(("paragraphs".to_owned(), field(step, "paragraphs").clone()));
+                }
+                IpcValue::Object(op)
+            })
+            .collect()
     }
 
     fn group_child_frame(
@@ -937,8 +1156,8 @@ impl SlidesEngine for FakeEngine {
         None
     }
 
-    fn chart_data(&self, _deck: DeckId, _slide: usize, _id: &str) -> IpcValue {
-        IpcValue::Null
+    fn chart_data(&self, _deck: DeckId, _slide: usize, id: &str) -> IpcValue {
+        ipc_of(self.fx.by("charts", id))
     }
 
     fn layouts(&self, _deck: DeckId) -> IpcValue {
@@ -950,11 +1169,11 @@ impl SlidesEngine for FakeEngine {
     }
 
     fn private_font_faces(&self) -> IpcValue {
-        IpcValue::Array(Vec::new())
+        IpcValue::Array(self.fx.list("fontFaces").iter().map(ipc_of).collect())
     }
 
-    fn private_font_data(&self, _id: &IpcValue) -> IpcValue {
-        IpcValue::Null
+    fn private_font_data(&self, id: &IpcValue) -> IpcValue {
+        as_str(id).map_or(IpcValue::Null, |id| ipc_of(self.fx.by("fontData", id)))
     }
 }
 
@@ -1158,10 +1377,15 @@ impl SlidesShell for FakeShell {
 pub fn insert(hosts: &mut shell_contract::Hosts, case: &Value) {
     let log = hosts.get::<CallLog>().cloned();
     let slides = &case["slides"];
+    super::recovery::FIXED_CLOCK.store(
+        slides["clock"].as_u64().unwrap_or(0),
+        std::sync::atomic::Ordering::Relaxed,
+    );
     let engine: SlidesEngineHost = Arc::new(FakeEngine {
         decks: Mutex::default(),
         next: Mutex::default(),
         blank_slides: slides["blankSlides"].as_u64().unwrap_or(1) as usize,
+        fx: Fixtures(slides["fixtures"].clone()),
         log: log.clone(),
     });
     hosts.insert::<SlidesEngineHost>(engine);

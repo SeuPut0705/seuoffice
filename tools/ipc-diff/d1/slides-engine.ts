@@ -25,9 +25,17 @@ const CREATING = [
 
 export interface FakeElement {
   id: string
-  type: 'text'
+  type: 'text' | 'picture'
   text: { paragraphs: { runs: { text: string }[] }[] }
   dirty?: boolean
+  /** a fixture's media or 3D model makes the element a picture */
+  media?: { kind: string; target: string; external: boolean }
+  model3d?: { target: string }
+  /** what master ops set */
+  fill?: unknown
+  stroke?: unknown
+  /** a fixture's `redact` label: the element is withheld from the model */
+  redact?: string
 }
 
 export interface FakeSlide {
@@ -36,6 +44,13 @@ export interface FakeSlide {
   hidden: boolean
   comments: { author: string; text: string }[]
   structureDirty?: boolean
+  // what a probe case's fixtures put into the slide (crates/shell-ipc/d1/src/slides/fixtures.rs)
+  notes: string
+  transition?: string
+  advanceMs?: number
+  narration: number[]
+  animations: Json[]
+  headerFooter?: unknown
 }
 
 export interface FakeOpened {
@@ -48,8 +63,10 @@ export interface FakeOpened {
 export class FakeArchive {
   entries = new Map<string, Uint8Array>()
   constructor(readonly owner: () => FakeOpened) {}
-  readBytes(): Uint8Array | undefined {
-    return undefined
+  /** an archive entry a fixture's `parts` holds, as its text's bytes */
+  readBytes(path: string): Uint8Array | undefined {
+    const text = fixture('parts', path)
+    return typeof text === 'string' ? new TextEncoder().encode(text) : undefined
   }
   readPresentation(): { slidePaths: string[] } {
     return { slidePaths: this.owner().deck.slides.map((s) => s.path) }
@@ -93,7 +110,15 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : und
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 
 function blankSlide(n: number): FakeSlide {
-  return { path: `ppt/slides/slide${n}.xml`, elements: [], hidden: false, comments: [] }
+  return {
+    path: `ppt/slides/slide${n}.xml`,
+    elements: [],
+    hidden: false,
+    comments: [],
+    notes: '',
+    narration: [],
+    animations: [],
+  }
 }
 
 function makeOpened(slides: FakeSlide[], cx: number, cy: number, nextId: number): FakeOpened {
@@ -144,21 +169,47 @@ function fromBytes(bytes: Uint8Array): FakeOpened | null {
         return eq < 0 ? [] : [textElement(e.slice(0, eq), e.slice(eq + 1))]
       })
     slides.push({
+      ...blankSlide(0),
       path: line.slice(0, first),
       hidden: line.slice(first + 1, second) === '1',
       elements,
-      comments: [],
     })
   }
   return makeOpened(slides, cx, cy, nextId)
 }
 
 const renderElements = (elements: FakeElement[]) =>
-  elements.map((e) => ({ id: e.id, text: elementText(e) }))
+  elements.map((e) => ({
+    id: e.id,
+    text: elementText(e),
+    ...(e.fill !== undefined ? { fill: e.fill } : {}),
+    ...(e.stroke !== undefined ? { stroke: e.stroke } : {}),
+  }))
 
 export interface EngineBox {
   log: (line: unknown[]) => void
   blankSlides: number
+  /** `hosts.d1.slides.fixtures` */
+  fixtures: Json
+}
+
+let current: EngineBox | undefined
+
+/** `fixtures[group][key]` as an own property, copied; undefined when the case left it out */
+function fixture(group: string, key: string): unknown {
+  const entries = current?.fixtures?.[group]
+  return entries && typeof entries === 'object' && Object.hasOwn(entries, key)
+    ? structuredClone((entries as Json)[key])
+    : undefined
+}
+
+const asObject = (v: unknown): Json | undefined =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : undefined
+
+/** the spid of an element: `e12` is 12 */
+const spidOf = (id: string): number | undefined => {
+  const digits = /^e(\d+)$/.exec(id)?.[1]
+  return digits === undefined ? undefined : Number(digits)
 }
 
 /** `check` of fake.rs: the failure of one op against `working`, if it cannot apply */
@@ -168,7 +219,12 @@ function check(working: Working, op: Json): string | undefined {
   if (typeof target.part === 'string') {
     if (target.part !== MASTER_PART) return 'part not found'
     if (name === 'addElement') return undefined
-    if (name === 'setText' || name === 'deleteElement') {
+    if (
+      name === 'setText' ||
+      name === 'deleteElement' ||
+      name === 'setFill' ||
+      name === 'setStroke'
+    ) {
       const id = str(target.el) ?? ''
       return working.master.some((e) => e.id === id) ? undefined : `element ${id} not found`
     }
@@ -237,6 +293,12 @@ function apply(working: Working, op: Json): TxnRecord {
       if (el) el.text = textElement('', paragraphsText(op.paragraphs)).text
     } else if (name === 'deleteElement') {
       working.master = working.master.filter((e) => e.id !== str(target.el))
+    } else if (name === 'setFill') {
+      const el = working.master.find((e) => e.id === str(target.el))
+      if (el) el.fill = op.fill
+    } else if (name === 'setStroke') {
+      const el = working.master.find((e) => e.id === str(target.el))
+      if (el) el.stroke = op.stroke
     }
     return { op, ...(created ? { created } : {}), after: undefined }
   }
@@ -277,6 +339,9 @@ function apply(working: Working, op: Json): TxnRecord {
       break
     case 'deleteComment':
       here.comments.splice(num(op.idx) ?? 0, 1)
+      break
+    case 'clearNarration':
+      here.narration = []
       break
     case 'addPicture': {
       const id = `e${working.nextId++}`
@@ -326,6 +391,7 @@ function apply(working: Working, op: Json): TxnRecord {
 
 /** the fakes of `@seuoffice/pptx-engine`, `pptx-ops` and `pptx-render` */
 export function makeEngine(box: EngineBox) {
+  current = box
   const log = (...line: unknown[]) => box.log(line)
   const engine = {
     async createBlankPptx(): Promise<Uint8Array> {
@@ -338,6 +404,39 @@ export function makeEngine(box: EngineBox) {
       log('pptx-engine.openPptx', bytes.byteLength)
       const opened = fromBytes(bytes)
       if (!opened) throw new Error('not a pptx')
+      opened.deck.slides.forEach((slide, index) => {
+        const at = (group: string) => fixture(group, String(index))
+        const notes = at('notes')
+        const transition = at('transitions')
+        const advanceMs = at('advanceMs')
+        const narration = at('narration')
+        const animations = at('animations')
+        const headerFooter = at('headerFooter')
+        slide.notes = typeof notes === 'string' ? notes : ''
+        slide.transition = typeof transition === 'string' ? transition : undefined
+        slide.advanceMs = typeof advanceMs === 'number' ? advanceMs : undefined
+        slide.narration = Array.isArray(narration)
+          ? narration.filter((spid): spid is number => Number.isInteger(spid))
+          : []
+        slide.animations = Array.isArray(animations) ? (animations as Json[]) : []
+        slide.headerFooter = headerFooter === null ? undefined : headerFooter
+        for (const el of slide.elements) {
+          const redact = fixture('redact', el.id)
+          if (typeof redact === 'string') el.redact = redact
+          const media = asObject(fixture('media', el.id))
+          const model = asObject(fixture('models', el.id))
+          if (media === undefined && model === undefined) continue
+          el.type = 'picture'
+          if (media !== undefined) {
+            el.media = {
+              kind: String(media.kind ?? ''),
+              target: String(media.target ?? ''),
+              external: media.external === true,
+            }
+          }
+          if (model !== undefined) el.model3d = { target: String(model.target ?? '') }
+        }
+      })
       return opened
     },
     setSlideSize(opened: FakeOpened, cx: number, cy: number): void {
@@ -360,7 +459,12 @@ export function makeEngine(box: EngineBox) {
     slideDurableId: (slide: FakeSlide) => `slide-${currentSlides.indexOf(slide)}`,
     parseTheme: () => ({ minorFont: 'Calibri' }),
     listEmbeddedFonts: () => [],
-    getSections: () => [],
+    getSections: () => {
+      const sections = current?.fixtures?.sections
+      return Array.isArray(sections) ? structuredClone(sections) : []
+    },
+    getChartElementData: (_slide: FakeSlide, sourceId: unknown) =>
+      (typeof sourceId === 'string' ? fixture('charts', sourceId) : undefined) ?? null,
     // the fake merge: every slide of the page lands at the end under the Rust fake's path rule
     mergeSlideFromPptx: async (base: FakeOpened & { mergeN?: number }, bytes: Uint8Array) => {
       const page = fromBytes(bytes)
@@ -391,22 +495,48 @@ export function makeEngine(box: EngineBox) {
       id: el.id,
       text: elementText(el),
     }),
-    getSlideNotes: () => '',
+    getSlideNotes: (archive: FakeArchive, path: string) =>
+      archive.slides().find((s) => s.path === path)?.notes ?? '',
     getSlideComments: (archive: FakeArchive, path: string) =>
       (archive.slides().find((s) => s.path === path)?.comments ?? []).map((c, idx) => ({
         author: c.author,
         text: c.text,
         idx,
       })),
-    getElementLink: () => null,
-    getSlideLinks: () => [],
-    getRunLinks: () => [],
-    readHeaderFooter: () => ({ footer: null, slideNum: false, date: null }),
-    getSlideTransition: () => 'none',
-    getSlideAdvanceTime: () => null,
-    narrationSpids: () => [] as string[],
-    getSlideAnimations: () => [],
-    elementSpid: () => undefined,
+    getElementLink: (opened: FakeOpened, slideIndex: never, sourceId: unknown) => {
+      const slide = (opened.deck.slides as unknown as Record<string, FakeSlide | undefined>)[
+        slideIndex
+      ]
+      const el = slide?.elements?.find?.((e) => e.id === sourceId)
+      return el ? (fixture('links', el.id) ?? null) : null
+    },
+    getSlideLinks: (opened: FakeOpened, slideIndex: never) => {
+      const slide = (opened.deck.slides as unknown as Record<string, FakeSlide | undefined>)[
+        slideIndex
+      ]
+      return (slide?.elements ?? []).flatMap((el) => {
+        const target = fixture('links', el.id)
+        return target === undefined || target === null ? [] : [{ elementId: el.id, target }]
+      })
+    },
+    getRunLinks: (opened: FakeOpened, slideIndex: never) => {
+      const slide = (opened.deck.slides as unknown as Record<string, FakeSlide | undefined>)[
+        slideIndex
+      ]
+      return (slide?.elements ?? []).flatMap((el) => {
+        const links = fixture('runLinks', el.id)
+        return Array.isArray(links)
+          ? links.map((link) => ({ elementId: el.id, ...(link as Json) }))
+          : []
+      })
+    },
+    readHeaderFooter: (slide: FakeSlide) =>
+      slide.headerFooter ?? { footer: null, slideNum: false, date: null },
+    getSlideTransition: (slide: FakeSlide) => slide.transition ?? 'none',
+    getSlideAdvanceTime: (slide: FakeSlide) => slide.advanceMs ?? null,
+    narrationSpids: (slide: FakeSlide) => slide.narration,
+    getSlideAnimations: (slide: FakeSlide) => slide.animations,
+    elementSpid: (el: FakeElement) => spidOf(el.id),
     listMasterParts: () => [{ partPath: MASTER_PART, kind: 'master', name: 'Office Theme' }],
     parseMasterPart: (archive: FakeArchive, partPath: string) => {
       if (partPath !== MASTER_PART) return null
@@ -460,7 +590,19 @@ export function makeEngine(box: EngineBox) {
         ...(dryRun ? { plan: [] } : {}),
       }
     },
-    mapScriptOps: () => [] as unknown[],
+    mapScriptOps: (_opened: FakeOpened, script: Json) => {
+      // a step names an op, and an element of the slide when it works on one
+      const steps = script?.steps
+      if (!Array.isArray(steps)) return []
+      return steps.map((step: Json) => ({
+        op: typeof step?.op === 'string' ? step.op : '',
+        target: {
+          slide: script.slideIndex,
+          ...(step?.el !== undefined ? { el: step.el } : {}),
+        },
+        ...(step?.paragraphs !== undefined ? { paragraphs: step.paragraphs } : {}),
+      }))
+    },
   }
 
   const render = {

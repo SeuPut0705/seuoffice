@@ -11,6 +11,13 @@ use jscompat::{JsObject, JsonValue};
 /// `(key, en, ko)`
 const STRINGS: &[(&str, &str, &str)] = &[
     ("dlgInsertImage", "Insert Image", "그림 삽입"),
+    ("labelTextBox", "Text Box", "텍스트 상자"),
+    ("labelShape", "Shape", "도형"),
+    ("labelPicture", "Picture", "그림"),
+    ("labelGroup", "Group", "그룹"),
+    ("labelTable", "Table", "표"),
+    ("labelChart", "Chart", "차트"),
+    ("labelObject", "Object", "개체"),
     ("dlgReplacePicture", "Replace Picture", "그림 바꾸기"),
     ("filterImages", "Images", "그림"),
     ("dlgInsertVideo", "Insert Video", "비디오 삽입"),
