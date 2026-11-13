@@ -1,35 +1,66 @@
 //! Fakes of U's hosts for `crates/ipc-probe`, and the state a case starts
-//! from. The case's `hosts.u`:
+//! from (`tools/ipc-diff/groups/u`). The case's `hosts.u`:
 //!
 //! - `windowId`: the id the fake gives a new update window (default 900);
-//! - `update`: `{ state, inactive }`, shown as the updater shows it before
-//!   the call (`showUpdateWindow`); `state` is an `UpdateUiState` whose
-//!   `releaseNotes` is what electron-updater reports (normalized here, as
-//!   the updater does);
+//! - `update`: a list of `{ state, inactive }`, each shown as the updater
+//!   shows it (`showUpdateWindow`) before the first call; `state` is an
+//!   `UpdateUiState` whose `releaseNotes` is what electron-updater reports
+//!   (normalized here, as the updater does);
 //! - `launchList`: `null` publishes nothing to ask; `{ items, apply }`
 //!   publishes the rows, and the launch flow's apply resolves (`"ok"`) or
 //!   rejects (`"reject"`). Absent: the launch flow has not answered yet.
+//!
+//! Log lines: `["updateWindow.create", {width, height, parent, title}]`,
+//! `["updateWindow.show", window, inactive]`, `["updateWindow.close",
+//! window]`, `["update.action", name]`, `["launchList.apply", result]`.
 
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use main_core::shell::launch_recovery::RecoveryListItem;
+use main_core::shell::launch_recovery::{RecoveryChoice, RecoveryListItem, RecoveryListResult};
 use main_core::shell::update_notes::normalize_release_notes;
-use main_core::shell::updater::{UpdatePhase, UpdateUiState, UpdateUiStrings};
-use serde_json::Value;
+use main_core::shell::updater::{UpdateAction, UpdatePhase, UpdateUiState, UpdateUiStrings};
+use serde_json::{Map, Value, json};
 use shell_contract::{Hosts, IpcError, WindowId};
 
 use crate::update_window::{UpdateWindowSpec, UpdateWindows, UpdateWindowsHost};
 use crate::{launch_list, update_window};
 
-struct FakeWindows(u32);
+/// The case's log (ipc-probe inserts it before any `probe_hosts`)
+type ProbeLog = Arc<Mutex<Vec<Value>>>;
+
+struct FakeWindows {
+    id: u32,
+    log: ProbeLog,
+}
+
+impl FakeWindows {
+    fn push(&self, line: Value) {
+        self.log.lock().unwrap().push(line);
+    }
+}
 
 impl UpdateWindows for FakeWindows {
-    fn create(&self, _: &UpdateWindowSpec, _: bool) -> WindowId {
-        WindowId(self.0)
+    fn create(&self, spec: &UpdateWindowSpec, inactive: bool) -> WindowId {
+        self.push(json!([
+            "updateWindow.create",
+            {
+                "width": spec.width,
+                "height": spec.height,
+                "parent": spec.parent.map(|w| w.0),
+                "title": spec.title,
+            }
+        ]));
+        // shown once ready to show
+        self.push(json!(["updateWindow.show", self.id, inactive]));
+        WindowId(self.id)
     }
-    fn show(&self, _: WindowId, _: bool) {}
-    fn close(&self, _: WindowId) {}
+    fn show(&self, window: WindowId, inactive: bool) {
+        self.push(json!(["updateWindow.show", window.0, inactive]));
+    }
+    fn close(&self, window: WindowId) {
+        self.push(json!(["updateWindow.close", window.0]));
+    }
 }
 
 /// The case's `hosts.u`, kept for [`seed`]
@@ -37,20 +68,57 @@ impl UpdateWindows for FakeWindows {
 struct Seed(Arc<Value>);
 
 pub fn hosts(hosts: &mut Hosts, case: &Value) {
+    let log = hosts.get::<ProbeLog>().cloned().unwrap_or_default();
     let id = case["windowId"].as_u64().unwrap_or(900) as u32;
-    let windows: UpdateWindowsHost = Arc::new(FakeWindows(id));
+    let windows: UpdateWindowsHost = Arc::new(FakeWindows { id, log });
     hosts.insert(windows);
     hosts.insert(Seed(Arc::new(case.clone())));
+}
+
+fn action_name(action: UpdateAction) -> &'static str {
+    match action {
+        UpdateAction::Download => "download",
+        UpdateAction::Install => "install",
+        UpdateAction::Later => "later",
+        UpdateAction::OpenDownload => "openDownload",
+    }
+}
+
+fn result_value(result: &RecoveryListResult) -> Value {
+    match result {
+        RecoveryListResult::Dismissed => json!({ "dismissed": true }),
+        RecoveryListResult::Decisions(decisions) => {
+            let mut out = Map::new();
+            for (id, choice) in decisions.entries() {
+                let choice = match choice {
+                    RecoveryChoice::Restore => "restore",
+                    RecoveryChoice::Discard => "discard",
+                };
+                out.insert(id.to_owned(), json!(choice));
+            }
+            json!({ "decisions": out })
+        }
+    }
 }
 
 pub fn seed(hosts: &Hosts) {
     let Some(Seed(case)) = hosts.get::<Seed>() else {
         return;
     };
-    if let Some(update) = case.get("update") {
-        let window = update_window::current().expect("registered");
-        let inactive = update["inactive"].as_bool().unwrap_or(false);
-        window.show(ui_state(&update["state"]), Rc::new(|_| {}), inactive);
+    let log = hosts.get::<ProbeLog>().cloned().unwrap_or_default();
+    let window = update_window::current().expect("registered");
+    for shown in case["update"].as_array().into_iter().flatten() {
+        let log = log.clone();
+        let inactive = shown["inactive"].as_bool().unwrap_or(false);
+        window.show(
+            ui_state(&shown["state"]),
+            Rc::new(move |action| {
+                log.lock()
+                    .unwrap()
+                    .push(json!(["update.action", action_name(action)]))
+            }),
+            inactive,
+        );
     }
     match case.get("launchList") {
         None => {}
@@ -63,7 +131,10 @@ pub fn seed(hosts: &Hosts) {
             let ok = list["apply"] != "reject";
             launch_list::current().expect("registered").publish(
                 items,
-                Rc::new(move |_, done| {
+                Rc::new(move |result, done| {
+                    log.lock()
+                        .unwrap()
+                        .push(json!(["launchList.apply", result_value(&result)]));
                     done.settle(if ok {
                         Ok(())
                     } else {

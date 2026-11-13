@@ -1,0 +1,86 @@
+[
+  {
+    "name": "get-state answers undefined before any update",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "reply.reply(Ok(state.as_ref().map_or(IpcValue::Null, to_ipc)));",
+    "replace": "reply.reply(Ok(state.as_ref().map_or(IpcValue::Undefined, to_ipc)));",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "the card with notes keeps the short height",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "const HEIGHT_WITH_NOTES: u32 = 620;",
+    "replace": "const HEIGHT_WITH_NOTES: u32 = 430;",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "open-for-update restarts a running download",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "UpdatePhase::Available | UpdatePhase::Error | UpdatePhase::InstallFailed",
+    "replace": "UpdatePhase::Available | UpdatePhase::Error | UpdatePhase::InstallFailed | UpdatePhase::Downloading",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "the dialog answers before it was shown",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "if !self.state.borrow().dialog_ipc {",
+    "replace": "if false {",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "the state goes to every view, not the shell window",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": ".emit(Target::View(view), STATE_CHANGED, vec![state]);",
+    "replace": ".emit(Target::All, STATE_CHANGED, vec![state]);",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "an open window is shown with the focus",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "self.windows.show(window, inactive);",
+    "replace": "self.windows.show(window, false);",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "the window has no parent",
+    "file": "shell-ipc/u/src/update_window.rs",
+    "find": "parent: self.main_window.window(),",
+    "replace": "parent: None,",
+    "groups": ["u/update-window"]
+  },
+  {
+    "name": "any view may read and answer the launch list",
+    "file": "shell-ipc/u/src/launch_list.rs",
+    "find": "self.main_window.view() == Some(cx.sender.view)",
+    "replace": "true",
+    "groups": ["u/launch-list"]
+  },
+  {
+    "name": "a row loses its copy time",
+    "file": "shell-ipc/u/src/launch_list.rs",
+    "find": "(\"lastCopyTime\".into(), IpcValue::Number(item.last_copy_time)),",
+    "replace": "(\"lastCopyTime\".into(), IpcValue::Number(0.0)),",
+    "groups": ["u/launch-list"]
+  },
+  {
+    "name": "a failed apply closes the list",
+    "file": "shell-ipc/u/src/launch_list.rs",
+    "find": "s.gate.apply_finished(outcome.is_ok())",
+    "replace": "s.gate.apply_finished(true)",
+    "groups": ["u/launch-list"]
+  },
+  {
+    "name": "a failed apply answers success",
+    "file": "shell-ipc/u/src/launch_list.rs",
+    "find": "let answer: Reply = outcome.map(|()| IpcValue::Undefined);",
+    "replace": "let answer: Reply = Ok(IpcValue::Undefined);",
+    "groups": ["u/launch-list"]
+  },
+  {
+    "name": "the manual is answered as the shell window",
+    "file": "shell-ipc/u/src/launch_list.rs",
+    "find": "            reply.reply(Ok(IpcValue::Null));\n            return;",
+    "replace": "            reply.reply(Ok(self.rows()));\n            return;",
+    "groups": ["u/launch-list"]
+  }
+]
