@@ -26,6 +26,9 @@
  *   `{ list, split, session, paths }` of the tab manager
  */
 import { registerHooks } from 'node:module'
+import { fileURLToPath } from 'node:url'
+import type { Rectangle } from 'electron'
+import type { DockHost } from '../../../apps/shell/src/main/detached-windows.ts'
 import type { DetachedTab } from '../../../apps/shell/src/main/tab-manager.ts'
 import { useElectron } from '../electron-fake.ts'
 import type { Case, Group, TsContext } from '../types.ts'
@@ -91,38 +94,45 @@ const STUB_NAMES = [
 ]
 
 const BOX = Symbol.for('main-diff.b6-tabs')
-const APPS_URL = 'main-diff:b6-tabs-apps'
-const UTILS_URL = 'main-diff:b6-tabs-utils'
-// the world of a scenario is looked up at call time: the stubs are loaded once,
-// before any scenario sets its world
-const callWorld = (name: string): string =>
-  `(...args) => globalThis[Symbol.for('main-diff.b6-tabs')].call('${name}', args)`
-const appsSource = STUB_NAMES.map((name) => `export const ${name} = ${callWorld(name)}`).join('\n')
-const here = (path: string): string => new URL(path, import.meta.url).href
-const utilsSource = [
-  `export { rendererUrl } from '${here('../../../packages/electron-utils/src/renderer-scheme.ts')}'`,
-  `export { safeExternalUrl } from '${here('../../../packages/electron-utils/src/safe-external-url.ts')}'`,
-  `export const resumeDiscardedCopies = ${callWorld('resumeDiscardedCopies')}`,
-].join('\n')
+const STUB_PREFIX = 'main-diff:b6-tabs-stub?real='
+// Node caches a CommonJS resolve per folder and specifier, so any other module of
+// apps/shell/src/main that asks for the same specifier is handed the stub too. A
+// stub is therefore the real module behind a proxy: the names of STUB_NAMES answer
+// from the scenario's world while a scenario runs and call the real function at
+// any other time; everything else is the real module, loaded on first use.
+const stubSource = (real: string): string =>
+  [
+    `const names = new Set(${JSON.stringify(STUB_NAMES)})`,
+    `let loaded`,
+    `const real = () => (loaded ??= require(${JSON.stringify(fileURLToPath(real))}))`,
+    `const value = (key) => names.has(key)`,
+    `  ? (...args) => { const world = globalThis[Symbol.for('main-diff.b6-tabs')]; return world ? world.call(key, args) : real()[key](...args) }`,
+    `  : real()[key]`,
+    `module.exports = new Proxy({}, {`,
+    `  get: (_, key) => (key === '__esModule' ? true : typeof key === 'symbol' ? undefined : value(key)),`,
+    `  has: (_, key) => names.has(key) || key in real(),`,
+    `  ownKeys: () => [...new Set([...Reflect.ownKeys(real()), ...names])],`,
+    `  getOwnPropertyDescriptor: (_, key) =>`,
+    `    names.has(key) || key in real() ? { configurable: true, enumerable: true, value: value(key) } : undefined,`,
+    `})`,
+  ].join('\n')
 
 const IMPORTERS = /\/apps\/shell\/src\/main\/(tab-manager|detached-windows)\.ts/
-const APP_MODULE =
-  /(^|\/)(docs-main|markdown-main|html-main|seed-main|seed-queue|hwp-main|mindmap-main|epub-main|diagram-main|pdf-main|sheets-main|slides-main|handoff|converted-tab|renderer-disposal|update-restart)(\.[cm]?[jt]s)?$/
+const STUBBED_MODULE =
+  /^(@seuoffice\/electron-utils|(.*\/)?(docs-main|markdown-main|html-main|seed-main|seed-queue|hwp-main|mindmap-main|epub-main|diagram-main|pdf-main|sheets-main|slides-main|handoff|converted-tab|renderer-disposal|update-restart))$/
 
-// the editor modules are replaced for the two modules under test only, so the
-// groups that load the real ones are untouched
 registerHooks({
   resolve(specifier, context, next) {
-    if (context.parentURL && IMPORTERS.test(context.parentURL)) {
-      if (specifier === '@seuoffice/electron-utils') return { url: UTILS_URL, shortCircuit: true }
-      if (APP_MODULE.test(specifier)) return { url: APPS_URL, shortCircuit: true }
+    if (context.parentURL && IMPORTERS.test(context.parentURL) && STUBBED_MODULE.test(specifier)) {
+      const real = next(specifier, context)
+      return { url: STUB_PREFIX + encodeURIComponent(real.url), shortCircuit: true }
     }
     return next(specifier, context)
   },
   load(url, context, next) {
-    if (url === APPS_URL) return { format: 'module', source: appsSource, shortCircuit: true }
-    if (url === UTILS_URL) return { format: 'module', source: utilsSource, shortCircuit: true }
-    return next(url, context)
+    if (!url.startsWith(STUB_PREFIX)) return next(url, context)
+    const real = decodeURIComponent(url.slice(STUB_PREFIX.length))
+    return { format: 'commonjs', source: stubSource(real), shortCircuit: true }
   },
 })
 
@@ -269,7 +279,10 @@ const flush = async (): Promise<void> => {
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
 async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
-  const log = cx.log
+  let muted = false
+  const log = (...line: unknown[]): void => {
+    if (!muted) cx.log(...line)
+  }
   const results: unknown[] = []
   let nextWc = 100
   let nextWin = 1
@@ -297,6 +310,13 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
   const timers = new Map<number, () => void>()
   const immediates: (() => void)[] = []
   const closedQueue: FakeWin[] = []
+  // a window's `closed` fires once, whoever destroyed it
+  const closedFired = new Set<FakeWin>()
+  const emitClosed = (win: FakeWin): void => {
+    if (closedFired.has(win)) return
+    closedFired.add(win)
+    for (const fn of win.listeners.closed ?? []) fn()
+  }
   const failures = new Set<string>()
   const closeAnswers: unknown[] = []
   const held: (DetachedTab | null)[] = []
@@ -503,10 +523,6 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       return answer()
     }
   }
-  ;(globalThis as Record<symbol, unknown>)[BOX] = {
-    call: (name: string, args: never[]) => app[name](...args),
-  }
-
   // the Electron objects the two modules use themselves
   useElectron({
     WebContentsView: class {
@@ -538,6 +554,9 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       getDisplayNearestPoint: () => ({ workArea: { ...workArea } }),
     },
   })
+  ;(globalThis as Record<symbol, unknown>)[BOX] = {
+    call: (name: string, args: never[]) => app[name](...args),
+  }
 
   // the timers, the console and the environment of the call
   const saved = {
@@ -591,9 +610,7 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       spec.closedListener === false ? null : (tab) => log('onTabClosed', tab.kind, tab.filePath),
     )
 
-    const summary = (v: { webContents: { id: number } } | undefined): number | null =>
-      v ? v.webContents.id : null
-    const wcOf = (id: string): number | null => summary(tm.webContentsForTab(id) as never)
+    const wcOf = (id: string): number | null => tm.webContentsForTab(id)?.id ?? null
     const tabLike = (t: { id: string; kind: string; webContents: { id: number } } | undefined) =>
       t ? { id: t.id, kind: t.kind, wc: t.webContents.id } : null
     const pairs = (list: { id: string; webContents: { id: number } }[]) =>
@@ -608,7 +625,12 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
           if (o.fails) throw new Error('opener failed')
           const view = makeView()
           if (o.ready === undefined || o.ready === 'none') return { view }
-          const { promise, resolve, reject } = Promise.withResolvers<void>()
+          let resolve: () => void = () => {}
+          let reject: (error: Error) => void = () => {}
+          const promise = new Promise<void>((res, rej) => {
+            resolve = res
+            reject = rej
+          })
           openerReady.set(n, { resolve, reject })
           if (o.ready === 'resolved') resolve()
           if (o.ready === 'rejected') reject(new Error('document failed'))
@@ -630,17 +652,17 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       opener: makeOpener(s.opener as Json),
     })
 
-    const dockHost = {
-      band: () => band,
+    const dockHost: DockHost = {
+      band: () => band as Rectangle | null,
       preview: (x: number | null) => log('preview', x),
-      dock: (tab: { kind: string; title: string; filePath?: string; view: FakeView }) => {
+      dock: (tab: DetachedTab) => {
         log('dock', {
           kind: tab.kind,
           title: tab.title,
           ...(tab.filePath !== undefined ? { filePath: tab.filePath } : {}),
           view: tab.view.webContents.id,
         })
-        if (dockAttach) tm.attachTab(tab as never, dockIndex)
+        if (dockAttach) tm.attachTab(tab, dockIndex)
       },
     }
 
@@ -947,11 +969,17 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
             }
             return { prevented: e.prevented }
           }
+          if (event === 'closed') {
+            emitClosed(win)
+            return null
+          }
           for (const fn of win.listeners[event] ?? []) fn({ preventDefault() {} })
           return null
         }
         case 'winState': {
           const win = winOf(o.window)
+          // a window destroyed from outside closes, as Electron's does
+          if (o.destroyed === true && !win.state.destroyed) closedQueue.push(win)
           for (const key of ['destroyed', 'minimized', 'focused', 'title'] as const) {
             if (o[key] !== undefined) (win.state as Record<string, unknown>)[key] = o[key]
           }
@@ -1004,7 +1032,7 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         case 'focusedKind':
           return detached.focusedDetachedKind() ?? null
         case 'detachedWc':
-          return summary(detached.detachedWebContentsFor(o.id as string) as never)
+          return detached.detachedWebContentsFor(o.id as string)?.id ?? null
         case 'detachedOpenDocuments':
           return detached.detachedOpenDocuments()
         case 'detachedSessionTabs':
@@ -1110,8 +1138,7 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
       await flush()
       // the closed events of the windows destroyed during the operation
       while (closedQueue.length > 0) {
-        const win = closedQueue.shift() as FakeWin
-        for (const fn of win.listeners.closed ?? []) fn()
+        emitClosed(closedQueue.shift() as FakeWin)
       }
       results.push([o.op, value === undefined ? null : value])
     }
@@ -1121,6 +1148,12 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     ])
     return results
   } finally {
+    // the module-level registry must not carry a window into the next case
+    muted = true
+    for (const win of windows) {
+      win.state.destroyed = true
+      emitClosed(win)
+    }
     globalThis.setTimeout = saved.setTimeout
     globalThis.clearTimeout = saved.clearTimeout
     globalThis.setImmediate = saved.setImmediate
@@ -1131,6 +1164,7 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     restoreEnv('ELECTRON_RENDERER_URL', saved.devUrl)
     detached.setDockHost(null)
     detached.setDetachedChangedListener(() => {})
+    ;(globalThis as Record<symbol, unknown>)[BOX] = undefined
   }
 }
 
