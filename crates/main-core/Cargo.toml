@@ -34,3 +34,7 @@ libc.workspace = true
 # the file identity of fs.statSync on Windows (rename_validation::is_same_file)
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem"] }
+
+# the socket errors of libuv's table, for its cross-check in node_fs.rs
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Networking_WinSock"] }

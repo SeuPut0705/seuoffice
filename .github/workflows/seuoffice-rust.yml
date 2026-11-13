@@ -184,6 +184,12 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup default stable
 
+      # node_fs's Windows error table against libuv's own switch, every case
+      - name: Error table against libuv
+        if: steps.has.outputs.main == 'true'
+        working-directory: crates
+        run: cargo test -p main-core --lib libuv_table
+
       - uses: actions/setup-node@v4
         if: steps.has.outputs.main == 'true'
         with:

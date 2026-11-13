@@ -67,7 +67,9 @@ libuv
 crates/main-core/src/node_fs.rs ports the Windows error table
 `uv_translate_sys_error` (src/win/error.c) and the error texts `uv_strerror`
 (UV_ERRNO_MAP of include/uv.h) of libuv v1.51.0, as bundled by Node.js v22.22.0
-(https://github.com/nodejs/node/tree/v22.22.0/deps/uv), which carries this
+(https://github.com/nodejs/node/tree/v22.22.0/deps/uv). Its test checks the
+table against an unchanged copy of src/win/error.c of libuv v1.51.0
+(crates/main-core/tests/fixtures/libuv-1.51.0-win-error.c). libuv carries this
 notice:
 
   Copyright Joyent, Inc. and other Node contributors. All rights reserved.

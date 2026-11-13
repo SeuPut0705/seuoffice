@@ -496,3 +496,171 @@ pub fn mkdtemp_random(prefix: &str) -> Result<String, NodeError> {
             .collect()
     })
 }
+
+/// `errno_name` against libuv's own `uv_translate_sys_error` (tests/fixtures,
+/// v1.51.0 as Node 22 bundles it): each `case NAME: return UV_X;` of its
+/// switch, with the number of `NAME` taken from windows-sys, not from the table.
+#[cfg(all(test, windows))]
+mod libuv_table {
+    use super::errno_name;
+    use windows_sys::Win32::Foundation::*;
+    use windows_sys::Win32::Networking::WinSock::*;
+
+    const ERROR_C: &str = include_str!("../tests/fixtures/libuv-1.51.0-win-error.c");
+
+    const ERRORS: &[(&str, u32)] = &[
+        ("ERROR_ELEVATION_REQUIRED", ERROR_ELEVATION_REQUIRED),
+        ("ERROR_CANT_ACCESS_FILE", ERROR_CANT_ACCESS_FILE),
+        (
+            "ERROR_ADDRESS_ALREADY_ASSOCIATED",
+            ERROR_ADDRESS_ALREADY_ASSOCIATED,
+        ),
+        ("ERROR_NO_DATA", ERROR_NO_DATA),
+        ("ERROR_INVALID_FLAGS", ERROR_INVALID_FLAGS),
+        ("ERROR_INVALID_HANDLE", ERROR_INVALID_HANDLE),
+        ("ERROR_LOCK_VIOLATION", ERROR_LOCK_VIOLATION),
+        ("ERROR_PIPE_BUSY", ERROR_PIPE_BUSY),
+        ("ERROR_SHARING_VIOLATION", ERROR_SHARING_VIOLATION),
+        ("ERROR_OPERATION_ABORTED", ERROR_OPERATION_ABORTED),
+        ("ERROR_NO_UNICODE_TRANSLATION", ERROR_NO_UNICODE_TRANSLATION),
+        ("ERROR_CONNECTION_ABORTED", ERROR_CONNECTION_ABORTED),
+        ("ERROR_CONNECTION_REFUSED", ERROR_CONNECTION_REFUSED),
+        ("ERROR_NETNAME_DELETED", ERROR_NETNAME_DELETED),
+        ("ERROR_ALREADY_EXISTS", ERROR_ALREADY_EXISTS),
+        ("ERROR_FILE_EXISTS", ERROR_FILE_EXISTS),
+        ("ERROR_NOACCESS", ERROR_NOACCESS),
+        ("ERROR_HOST_UNREACHABLE", ERROR_HOST_UNREACHABLE),
+        ("ERROR_INSUFFICIENT_BUFFER", ERROR_INSUFFICIENT_BUFFER),
+        ("ERROR_INVALID_DATA", ERROR_INVALID_DATA),
+        ("ERROR_INVALID_PARAMETER", ERROR_INVALID_PARAMETER),
+        ("ERROR_SYMLINK_NOT_SUPPORTED", ERROR_SYMLINK_NOT_SUPPORTED),
+        ("ERROR_BEGINNING_OF_MEDIA", ERROR_BEGINNING_OF_MEDIA),
+        ("ERROR_BUS_RESET", ERROR_BUS_RESET),
+        ("ERROR_CRC", ERROR_CRC),
+        ("ERROR_DEVICE_DOOR_OPEN", ERROR_DEVICE_DOOR_OPEN),
+        (
+            "ERROR_DEVICE_REQUIRES_CLEANING",
+            ERROR_DEVICE_REQUIRES_CLEANING,
+        ),
+        ("ERROR_DISK_CORRUPT", ERROR_DISK_CORRUPT),
+        ("ERROR_EOM_OVERFLOW", ERROR_EOM_OVERFLOW),
+        ("ERROR_FILEMARK_DETECTED", ERROR_FILEMARK_DETECTED),
+        ("ERROR_GEN_FAILURE", ERROR_GEN_FAILURE),
+        ("ERROR_INVALID_BLOCK_LENGTH", ERROR_INVALID_BLOCK_LENGTH),
+        ("ERROR_IO_DEVICE", ERROR_IO_DEVICE),
+        ("ERROR_NO_DATA_DETECTED", ERROR_NO_DATA_DETECTED),
+        ("ERROR_NO_SIGNAL_SENT", ERROR_NO_SIGNAL_SENT),
+        ("ERROR_OPEN_FAILED", ERROR_OPEN_FAILED),
+        ("ERROR_SETMARK_DETECTED", ERROR_SETMARK_DETECTED),
+        ("ERROR_SIGNAL_REFUSED", ERROR_SIGNAL_REFUSED),
+        ("ERROR_CANT_RESOLVE_FILENAME", ERROR_CANT_RESOLVE_FILENAME),
+        ("ERROR_TOO_MANY_OPEN_FILES", ERROR_TOO_MANY_OPEN_FILES),
+        ("ERROR_BUFFER_OVERFLOW", ERROR_BUFFER_OVERFLOW),
+        ("ERROR_FILENAME_EXCED_RANGE", ERROR_FILENAME_EXCED_RANGE),
+        ("ERROR_NETWORK_UNREACHABLE", ERROR_NETWORK_UNREACHABLE),
+        ("ERROR_BAD_PATHNAME", ERROR_BAD_PATHNAME),
+        ("ERROR_DIRECTORY", ERROR_DIRECTORY),
+        ("ERROR_ENVVAR_NOT_FOUND", ERROR_ENVVAR_NOT_FOUND),
+        ("ERROR_FILE_NOT_FOUND", ERROR_FILE_NOT_FOUND),
+        ("ERROR_INVALID_NAME", ERROR_INVALID_NAME),
+        ("ERROR_INVALID_DRIVE", ERROR_INVALID_DRIVE),
+        ("ERROR_INVALID_REPARSE_DATA", ERROR_INVALID_REPARSE_DATA),
+        ("ERROR_MOD_NOT_FOUND", ERROR_MOD_NOT_FOUND),
+        ("ERROR_PATH_NOT_FOUND", ERROR_PATH_NOT_FOUND),
+        ("ERROR_NOT_ENOUGH_MEMORY", ERROR_NOT_ENOUGH_MEMORY),
+        ("ERROR_OUTOFMEMORY", ERROR_OUTOFMEMORY),
+        ("ERROR_CANNOT_MAKE", ERROR_CANNOT_MAKE),
+        ("ERROR_DISK_FULL", ERROR_DISK_FULL),
+        ("ERROR_EA_TABLE_FULL", ERROR_EA_TABLE_FULL),
+        ("ERROR_END_OF_MEDIA", ERROR_END_OF_MEDIA),
+        ("ERROR_HANDLE_DISK_FULL", ERROR_HANDLE_DISK_FULL),
+        ("ERROR_NOT_CONNECTED", ERROR_NOT_CONNECTED),
+        ("ERROR_DIR_NOT_EMPTY", ERROR_DIR_NOT_EMPTY),
+        ("ERROR_NOT_SUPPORTED", ERROR_NOT_SUPPORTED),
+        ("ERROR_BROKEN_PIPE", ERROR_BROKEN_PIPE),
+        ("ERROR_ACCESS_DENIED", ERROR_ACCESS_DENIED),
+        ("ERROR_PRIVILEGE_NOT_HELD", ERROR_PRIVILEGE_NOT_HELD),
+        ("ERROR_BAD_PIPE", ERROR_BAD_PIPE),
+        ("ERROR_PIPE_NOT_CONNECTED", ERROR_PIPE_NOT_CONNECTED),
+        ("ERROR_WRITE_PROTECT", ERROR_WRITE_PROTECT),
+        ("ERROR_SEM_TIMEOUT", ERROR_SEM_TIMEOUT),
+        ("ERROR_NOT_SAME_DEVICE", ERROR_NOT_SAME_DEVICE),
+        ("ERROR_INVALID_FUNCTION", ERROR_INVALID_FUNCTION),
+        (
+            "ERROR_META_EXPANSION_TOO_LONG",
+            ERROR_META_EXPANSION_TOO_LONG,
+        ),
+        ("ERROR_BAD_EXE_FORMAT", ERROR_BAD_EXE_FORMAT),
+    ];
+    const SOCKET_ERRORS: &[(&str, i32)] = &[
+        ("WSAEACCES", WSAEACCES),
+        ("WSAEADDRINUSE", WSAEADDRINUSE),
+        ("WSAEADDRNOTAVAIL", WSAEADDRNOTAVAIL),
+        ("WSAEAFNOSUPPORT", WSAEAFNOSUPPORT),
+        ("WSAEWOULDBLOCK", WSAEWOULDBLOCK),
+        ("WSAEALREADY", WSAEALREADY),
+        ("WSAEINTR", WSAEINTR),
+        ("WSAECONNABORTED", WSAECONNABORTED),
+        ("WSAECONNREFUSED", WSAECONNREFUSED),
+        ("WSAECONNRESET", WSAECONNRESET),
+        ("WSAEFAULT", WSAEFAULT),
+        ("WSAEHOSTUNREACH", WSAEHOSTUNREACH),
+        ("WSAEINVAL", WSAEINVAL),
+        ("WSAEPFNOSUPPORT", WSAEPFNOSUPPORT),
+        ("WSAEISCONN", WSAEISCONN),
+        ("WSAEMFILE", WSAEMFILE),
+        ("WSAEMSGSIZE", WSAEMSGSIZE),
+        ("WSAENETUNREACH", WSAENETUNREACH),
+        ("WSAENOBUFS", WSAENOBUFS),
+        ("WSAHOST_NOT_FOUND", WSAHOST_NOT_FOUND),
+        ("WSANO_DATA", WSANO_DATA),
+        ("WSAENOTCONN", WSAENOTCONN),
+        ("WSAENOTSOCK", WSAENOTSOCK),
+        ("WSAESHUTDOWN", WSAESHUTDOWN),
+        ("WSAEPROTONOSUPPORT", WSAEPROTONOSUPPORT),
+        ("WSAETIMEDOUT", WSAETIMEDOUT),
+        ("WSAESOCKTNOSUPPORT", WSAESOCKTNOSUPPORT),
+    ];
+
+    fn number_of(name: &str) -> i32 {
+        if let Some(&(_, n)) = ERRORS.iter().find(|(e, _)| *e == name) {
+            return i32::try_from(n).expect("a Win32 error fits an int");
+        }
+        if let Some(&(_, n)) = SOCKET_ERRORS.iter().find(|(e, _)| *e == name) {
+            return n;
+        }
+        panic!("{name} is a case of libuv's switch this test does not know")
+    }
+
+    #[test]
+    fn every_case_of_the_switch() {
+        let body = ERROR_C
+            .split("int uv_translate_sys_error(int sys_errno) {")
+            .nth(1)
+            .and_then(|rest| rest.split("default:").next())
+            .expect("the switch of uv_translate_sys_error");
+        let mut cases = 0;
+        for line in body.lines().map(str::trim) {
+            let Some(case) = line.strip_prefix("case ") else {
+                continue;
+            };
+            let (name, ret) = case.split_once(':').expect("case NAME:");
+            let uv = ret
+                .trim()
+                .strip_prefix("return UV_")
+                .and_then(|r| r.strip_suffix(';'))
+                .expect("return UV_X;");
+            let raw = number_of(name.trim());
+            assert_eq!(errno_name(raw), Some(uv), "{name} ({raw})");
+            cases += 1;
+        }
+        assert_eq!(cases, ERRORS.len() + SOCKET_ERRORS.len());
+    }
+
+    #[test]
+    fn what_the_switch_leaves_out_is_unknown() {
+        for raw in [0, -4058, 2_000_000, ERROR_SUCCESS as i32] {
+            assert_eq!(errno_name(raw), None, "{raw}");
+        }
+    }
+}
