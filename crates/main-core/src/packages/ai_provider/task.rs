@@ -2298,4 +2298,36 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn cancelling_the_last_held_branch_after_a_drop_stops_the_stream() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let copy = response.clone_response();
+        let cmds = runtime.poll();
+        let Some(Cmd::CloneBody { to, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: None
+            }]
+        );
+        // the clone, still held, is cancelled: no branch can read the stream any more.
+        // JavaScript's dropped branch is only garbage, so no `Cancel`: the host is told
+        // by a release that stops the stream
+        copy.cancel();
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: to,
+                stop: Some(fetch)
+            }]
+        );
+        drop(copy);
+        assert!(runtime.poll().is_empty());
+    }
 }
