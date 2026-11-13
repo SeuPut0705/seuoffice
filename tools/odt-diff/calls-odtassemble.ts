@@ -565,7 +565,16 @@ export const ASSEMBLE: CallSpec[] = [
             rowHeightsTwips: model.rows.map(() => 100000),
             rowHeightRules: model.rows.map(() => 'exact'),
           }
-          return [model, taller, exact].map((m) => ({
+          // every row exactly as high as its floor, with no rule: the floor
+          // equals the height, so the row is left as it is (the key is left
+          // out, not undefined: an undefined key keeps its place in the object
+          // the TypeScript returns but does not cross the wire)
+          const atFloor: Partial<TableModel> = {
+            ...model,
+            rowHeightsTwips: ts.exportRows.withRowFloors(model, parsed).rowHeightsTwips,
+          }
+          delete atFloor.rowHeightRules
+          return [model, taller, exact, atFloor].map((m) => ({
             args: { model: m, parsed: parsedArg(parsed) },
           }))
         }),
