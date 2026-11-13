@@ -74,15 +74,9 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
         views: cx.views.clone(),
     });
     hosts.insert(windows);
-    // Electron's `process.resourcesPath`, where the bundle config puts
-    // app-update.yml: `Contents/Resources`, `<install folder>\resources`
-    let resources = cx.app.path().resource_dir().ok();
+    // where the bundle config puts app-update.yml
     let control: UpdaterControlHost = Arc::new(Control {
-        resources: if cfg!(windows) {
-            resources.map(|dir| dir.join("resources"))
-        } else {
-            resources
-        },
+        resources: crate::paths::resources_path(&cx.app),
     });
     hosts.insert(control);
 }
