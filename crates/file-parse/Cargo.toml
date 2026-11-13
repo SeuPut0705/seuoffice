@@ -14,13 +14,14 @@ pptx = ["redaction"]
 html = ["redaction", "dep:seu-host"]
 xlsx = ["redaction"]
 compound-gate = []
+hidden-content = ["xlsx", "pptx"]
 ppt = ["compound-gate"]
 doc = ["compound-gate", "dep:saxes", "dep:flate2"]
 # the rhwp engine, as the tree `node tools/build-rhwp-core.mjs --source-only` prepares
 hwp = ["compound-gate", "dep:rhwp", "dep:seu-host"]
 epub = ["dep:epub-engine"]
 # parseFileToText: every reader, the host's included
-dispatch = ["docx", "pptx", "xlsx", "html", "ppt", "doc", "hwp", "epub"]
+dispatch = ["docx", "pptx", "xlsx", "html", "ppt", "doc", "hwp", "epub", "hidden-content"]
 
 [dependencies]
 encoding_rs.workspace = true

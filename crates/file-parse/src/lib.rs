@@ -11,6 +11,8 @@ pub mod doc;
 pub mod docx;
 #[cfg(feature = "epub")]
 pub mod epub;
+#[cfg(feature = "hidden-content")]
+pub mod hidden_content;
 #[cfg(feature = "html")]
 pub mod html;
 #[cfg(feature = "hwp")]

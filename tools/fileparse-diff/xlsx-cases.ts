@@ -57,7 +57,7 @@ async function zip(parts: Record<string, string | Uint8Array>, compression: 'STO
 const book = (spec: Book, compression?: 'STORE' | 'DEFLATE') => zip(bookParts(spec), compression)
 
 /** Flips one byte of an entry's data: `at` counts from its start, a negative `at` from its end. */
-function breakEntry(bytes: Uint8Array, name: string, at = 0): Uint8Array {
+export function breakEntry(bytes: Uint8Array, name: string, at = 0): Uint8Array {
   const out = bytes.slice()
   const view = new DataView(out.buffer)
   const wanted = new TextEncoder().encode(name)
@@ -1019,7 +1019,7 @@ async function spellingInputs(): Promise<Input[]> {
   return out
 }
 
-async function inputs(): Promise<Input[]> {
+export async function inputs(): Promise<Input[]> {
   const out: Input[] = []
   const add = (label: string, bytes: Uint8Array, maxChars?: number) =>
     out.push({ label, bytes, args: maxChars === undefined ? {} : { maxChars: String(maxChars) } })

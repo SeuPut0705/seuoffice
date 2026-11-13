@@ -100,5 +100,18 @@
   "epubToText.corpus": 0,
   "epubToText.built": 71,
   "epubToText.mutated": 100,
-  "functions.epub": 1
+  "functions.epub": 1,
+  "xmlHoldsMark.corpus": 0,
+  "xmlHoldsMark.built": 64,
+  "xmlHoldsMark.mutated": 100,
+  "markdownHoldsMark.corpus": 0,
+  "markdownHoldsMark.built": 31,
+  "markdownHoldsMark.mutated": 100,
+  "htmlHoldsMark.corpus": 0,
+  "htmlHoldsMark.built": 20,
+  "htmlHoldsMark.mutated": 100,
+  "fileHoldsHiddenContent.corpus": 0,
+  "fileHoldsHiddenContent.built": 747,
+  "fileHoldsHiddenContent.mutated": 100,
+  "functions.hidden": 4
 }

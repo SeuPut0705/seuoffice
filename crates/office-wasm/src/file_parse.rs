@@ -89,6 +89,15 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
             },
             args.get("hosted"),
         )),
+        "fileHoldsHiddenContent" => {
+            file_parse::hidden_content::file_holds_hidden_content(bytes, string("ext"))
+                .map(Value::Bool)
+        }
+        "xmlHoldsMark" => Ok(Value::Bool(file_parse::hidden_content::xml_holds_mark(text))),
+        "markdownHoldsMark" => {
+            file_parse::hidden_content::markdown_holds_mark(text).map(Value::Bool)
+        }
+        "htmlHoldsMark" => Ok(Value::Bool(file_parse::hidden_content::html_holds_mark(text))),
         "redactHtmlSource" => file_parse::html::redact_html_source(text).map(Value::String),
         "redactPptxPartXml" => {
             file_parse::pptx_redaction::redact_pptx_part_xml(text).map(Value::String)

@@ -456,7 +456,9 @@ What is particular to these gates:
   runs the fault's group: DETECTED when the gate fails with a difference or a
   stale ledger entry, otherwise MISSED, INVALID, CRASHED or TIMEOUT. A source
   line that `cargo fmt` rewraps makes its fault INVALID, so check the file
-  after formatting.
+  after formatting. `--group a,b`, `--id a,b` and `--shard i/n` (every n-th
+  fault from the i-th) pick faults; CI runs eight shards, since each fault
+  rebuilds the wasm.
 - **First runs** are kept in `evidence/`, untouched; those above 200 KB are
   gzip-compressed. `decisions.tsv` is the trail.
 - **CSV decoding** (`file_parse::csv`, `decodeCsvBuffer` of xlsx-gateway)
@@ -483,6 +485,15 @@ its gate, which fails once the original changes. The steps:
   `redactHtmlSource` (`file_parse::html`).
 - `fileparse.diagramFormatOf`, `fileparse.readDiagramText`: the draw.io reader
   (drawio-model), for `parseFileToText`.
+- `fileparse.localOffsetSeconds`: the user's UTC offset at an instant
+  (`-new Date(ms).getTimezoneOffset() * 60`), for HWP memo dates. rhwp writes
+  them as local time with a literal Z through `chrono::Local`, which is the
+  browser's zone in the wasm-bindgen build and UTC in a WASI one; patch 0045
+  of `vendor/rhwp-core` opens `memo_time::set_local_offset`, and
+  `file_parse::hwp` sets it to this step. Without a host it keeps
+  `chrono::Local`. `tests/hwp.rs` pins +09:00, the zone its answers were
+  taken in, and the gate runs under `TZ=America/New_York` with memos on both
+  sides of a DST change.
 - PDF (pdfjs), mind maps (xmind-engine) and OpenDocument text (odt-engine)
   await in the TypeScript, which an import of the wasm cannot. The host runs
   the reader the extension names before `parseFileToText` and passes what it
@@ -500,7 +511,7 @@ A native build has no host: those steps answer `HostUnavailable`.
 All of file-parse and epub-engine is ported (batch D1), with these
 exceptions. pdf, xmind, odt and draw.io go through the host as above. The
 job functions of epub translation hand over to pdf-structure's job engine,
-which is not ported. `hwp` compiles rhwp v0.9.0 with the 32 patches of
+which is not ported. `hwp` compiles rhwp v0.9.0 with the 33 patches of
 `vendor/rhwp-core`, from the tree `node tools/build-rhwp-core.mjs
 --source-only` prepares in `crates/.rhwp-source` (gitignored, outside the
 workspace). Cargo reads that path dependency on every call, so the tree must
@@ -586,6 +597,15 @@ fxp`); the two should share one module.
   (`unparseable-response`) in Rust and a translation in TypeScript
   (`epub-engine/src/translate/call.rs`). A model reply has never been seen
   to carry one.
+- `vendor/rhwp-core/rhwp_bg.wasm` (the desktop's wasm-bindgen build) was
+  built before patch 0045 and not rebuilt: the patch changes nothing there
+  (the hook is never set), and the machine that wrote it has no wasm-pack.
+  The next `node tools/build-rhwp-core.mjs` run brings the file and
+  `rhwp.wasmSha256` level with the patch list.
+- fast-xml-parser reads a DOCTYPE; `ooxml_xml::parse_ordered` refuses `<!D`,
+  so a workbook part with one is refused in Rust and read in TypeScript (two
+  ledger entries, `withheld: spelled mirror, a doctype before the root`). Excel
+  writes none; the port of that reader belongs to `ooxml-xml`.
 - Memory budgets the TypeScript does not have: `ppt` refuses once the text
   it collects passes a budget, `doc` once the pieces it copies pass one.
   TypeScript runs out of memory on those inputs, so neither the gate nor a
