@@ -319,7 +319,8 @@ jobs:
         if: steps.has.outputs.odt == 'true'
         env:
           ONLY: ${{ inputs.odt_faults }}
-        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/26
+        # the positive control proves the harness once per run, on shard 0
+        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/26 ${{ matrix.shard != 0 && '--no-control' || '' }}
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.odt == 'true'
