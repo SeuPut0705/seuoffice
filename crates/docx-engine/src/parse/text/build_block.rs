@@ -1,8 +1,11 @@
 //! `buildBlock` of parse.ts: one body element as a block.
 
+use crate::xml_tag::remove_segments;
 use jscompat::{JsNum, js_regex, trim, try_js_regex};
+use ooxml_pkg::canonical_xml_syntax;
 use serde::Serialize;
 use serde_json::{Map, Value};
+use std::borrow::Cow;
 
 use super::context::BuildContext;
 use super::convert::{into_map, json, model_of, num};
@@ -426,12 +429,11 @@ pub fn build_block(
 
     // Feature-detect on XML with mc:Fallback stripped
     let without_fallback = if xml.contains("<mc:Fallback") {
-        js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-            .replace_all(xml, |_| String::new())
+        remove_segments(xml, "mc:Fallback")
     } else {
-        xml.to_owned()
+        Cow::Borrowed(xml)
     };
-    let detect_owned = strip_ink_runs(&without_fallback);
+    let detect_owned = canonical_xml_syntax(&strip_ink_runs(&without_fallback)).into_owned();
     let detect: &str = &detect_owned;
 
     // Only a content-less section-break paragraph is protected
