@@ -41,5 +41,8 @@
   {"id":"docx-withheld-run-text-kept","group":"docx","file":"crates/file-parse/src/docx.rs","from":"if run_labels.iter().any(Option::is_some) {","to":"if false && run_labels.iter().any(Option::is_some) {"},
   {"id":"docx-adjacent-markers-not-collapsed","group":"docx","file":"crates/file-parse/src/docx.rs","from":"&& p.marker.as_deref() != Some(marker.as_str())","to":"&& p.marker.as_deref() != Some(\"\")"},
   {"id":"pptx-unprefixed-mark-uncounted","group":"redaction","file":"crates/file-parse/src/pptx_redaction.rs","from":"+ unprefixed_marks(xml) != understood","to":"!= understood"},
-  {"id":"xlsx-withheld-sheet-ignores-case","group":"xlsx","file":"crates/file-parse/src/xlsx.rs","from":"position(|name| name == sheet)","to":"position(|name| name.eq_ignore_ascii_case(sheet))"}
+  {"id":"xlsx-withheld-sheet-ignores-case","group":"xlsx","file":"crates/file-parse/src/xlsx.rs","from":"position(|name| name == sheet)","to":"position(|name| name.eq_ignore_ascii_case(sheet))"},
+  {"id":"docx-comment-not-skipped","group":"docx","file":"crates/file-parse/src/docx.rs","from":"if rest.starts_with(\"<!--\") && !self.no_comment_end {","to":"if rest.starts_with(\"<!--x\") && !self.no_comment_end {"},
+  {"id":"docx-single-quoted-label-refused","group":"docx","file":"crates/file-parse/src/docx.rs","from":"if quote != b'\"' && quote != b'\\'' {","to":"if quote != b'\"' {"},
+  {"id":"xlsx-scan-cdata-is-comment","group":"xlsx","file":"crates/file-parse/src/xlsx_xml_scan.rs","from":"cdata: (opener == \"<![CDATA[\").then(|| &body[..close]),","to":"cdata: (opener == \"<!--\").then(|| &body[..close]),"}
 ]
