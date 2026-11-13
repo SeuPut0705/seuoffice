@@ -6,11 +6,12 @@ use jscompat::{
     number_to_string, replace_first_with, to_number,
 };
 
-use super::text_patch::{para_plain_text, xml_segments};
+use super::text_patch::para_plain_text;
 use crate::model::ImageWrap;
 use crate::xml_number::{
     xml_decimal, xml_int, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
 };
+use crate::xml_tag::{replace_segments, xml_segments};
 use serde::{Deserialize, Deserializer};
 
 const EMU_PER_PX: f64 = 9525.0;
@@ -700,10 +701,6 @@ fn fallback_width_re() -> &'static JsRegex {
     js_regex!(r#"(style="[^"]*\bwidth:)\s*[\d.]+(pt|px)"#)
 }
 
-fn fallback_re() -> &'static JsRegex {
-    js_regex!(r"<mc:Fallback>[\s\S]*?<\/mc:Fallback>", "g")
-}
-
 /// `patchTextboxHeights`; `None` is null or undefined.
 pub fn patch_textbox_heights(paragraph_xml: &str, heights_px: &[Option<f64>]) -> String {
     if heights_px.iter().all(Option::is_none) {
@@ -739,8 +736,7 @@ pub fn patch_textbox_heights(paragraph_xml: &str, heights_px: &[Option<f64>]) ->
 
     let mut fallback_index = 0usize;
     let mut fallback_seen = false;
-    fallback_re().replace_all(&out, |m| {
-        let fallback = m.as_str();
+    replace_segments(&out, "mc:Fallback", |fallback| {
         if !fallback.contains("<w:txbxContent") || para_plain_text(fallback).is_empty() {
             return fallback.to_owned();
         }
@@ -759,6 +755,7 @@ pub fn patch_textbox_heights(paragraph_xml: &str, heights_px: &[Option<f64>]) ->
             None => fallback.to_owned(),
         }
     })
+    .into_owned()
 }
 
 fn is_box_drawing(drawing_xml: &str) -> bool {
@@ -831,8 +828,7 @@ pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch
 
     let mut fallback_index = 0usize;
     let mut fallback_seen = false;
-    fallback_re().replace_all(&out, |m| {
-        let fallback = m.as_str();
+    replace_segments(&out, "mc:Fallback", |fallback| {
         if !is_box_drawing(fallback) && !fallback.contains("<w:txbxContent") {
             return fallback.to_owned();
         }
@@ -855,6 +851,7 @@ pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch
         }
         next
     })
+    .into_owned()
 }
 
 /// `ShapeStylePatch`: `None` is undefined (keep), `Some(None)` is null.

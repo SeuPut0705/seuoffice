@@ -30,6 +30,7 @@ import type { ThemeColors } from './reference/types'
 import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
+import { hiddenIn } from './calls-markup'
 
 const CONSTANTS: Record<string, unknown> = {
   LINE_PRSTS_RE: { source: LINE_PRSTS_RE.source, flags: LINE_PRSTS_RE.flags },
@@ -353,6 +354,24 @@ const PARAGRAPHS: string[] = [
   `<w:drawing>${'<w:drawing>'.repeat(5)}${'</w:drawing>'.repeat(4)}`,
 ]
 
+/** Paragraphs whose drawings a literal search for the tags cuts wrongly: see calls-markup.ts. */
+const MARKUP_PARAGRAPHS: string[] = [
+  ...hiddenIn('<w:drawing>').map((hidden) => `<w:p>${hidden}${drawingTag('real')}</w:p>`),
+  ...hiddenIn('</w:drawing>').map(
+    (hidden) => `<w:p>${drawingTag(`a${hidden}b`)}${drawingTag('after')}</w:p>`,
+  ),
+  ...hiddenIn(drawingTag('fake')).map((hidden) => `<w:p>${hidden}</w:p>`),
+  ...hiddenIn(drawingTag('fake')).map((hidden) => `<w:p>${hidden}${drawingTag('own')}</w:p>`),
+  '<w:p><w:r><w:drawing><wp:inline/></w:drawing ></w:r></w:p>',
+  '<w:p><w:r><w:drawing\t><wp:inline/></w:drawing\n></w:r></w:p>',
+  '<w:p><w:r><w:drawing a=">"><wp:inline/></w:drawing></w:r></w:p>',
+  `<w:p><w:r><w:drawing a='>' b="'>"><wp:inline/></w:drawing><w:drawing/></w:r></w:p>`,
+  '<w:p><w:drawing a="x/>y"/><w:drawing>b</w:drawing></w:p>',
+  `<w:p>${drawingTag(`<wp:anchor>${TXBX(drawingTag('inner').replace('</w:drawing>', '</w:drawing >'))}</wp:anchor>`)}${drawingTag('x')}</w:p>`,
+  `<w:p>${drawingTag(`<wp:anchor>${TXBX(drawingTag('inner', ' a="<>"'))}</wp:anchor>`)}</w:p>`,
+  '<w:p><w:drawing a="open></w:drawing></w:p>',
+]
+
 const GRAPHIC =
   '<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp/></a:graphicData></a:graphic>'
 const ANCHOR_ATTRS =
@@ -365,6 +384,31 @@ const off = (dir: 'H' | 'V', rel: string, value: string): string =>
   pos(dir, rel, `<wp:posOffset>${value}</wp:posOffset>`)
 const EXTENT = '<wp:extent cx="1828800" cy="914400"/>'
 const STD = `<wp:simplePos x="0" y="0"/>${off('H', 'column', '12700')}${off('V', 'paragraph', '-25400')}${EXTENT}`
+
+/**
+ * Anchors in spellings a literal search for the tags reads wrongly: markup
+ * hidden in a comment, CDATA or an instruction, single-quoted attributes with
+ * white space around `=`, spaced end tags, a `>` in an attribute value.
+ */
+const MARKUP_FRAGMENTS = (): string[] => [
+  ...hiddenIn('<wp:wrapNone/>').map((hidden) =>
+    anchor(ANCHOR_ATTRS, `${STD}${hidden}<wp:wrapSquare wrapText="bothSides"/>`),
+  ),
+  ...hiddenIn('<wp:extent cx="1" cy="2"/>').map((hidden) => anchor(ANCHOR_ATTRS, `${hidden}${STD}`)),
+  ...hiddenIn('<wp:posOffset>9</wp:posOffset>').map((hidden) =>
+    anchor('', `${pos('H', 'page', `${hidden}<wp:posOffset>7</wp:posOffset>`)}${EXTENT}`),
+  ),
+  ...hiddenIn('<wp:anchor behindDoc="1" distL="9">').map((hidden) => hidden + anchor('', STD)),
+  anchor(" behindDoc = '1' distL = '5' distT='6'", `${STD}<wp:wrapSquare/>`),
+  anchor(
+    '',
+    `<wp:positionH relativeFrom = 'page'><wp:posOffset>7</wp:posOffset></wp:positionH ><wp:positionV relativeFrom='margin'><wp:align>top</wp:align></wp:positionV >${"<wp:extent cx = '5' cy = '6' />"}`,
+  ),
+  anchor('', `<wp:positionH relativeFrom="page" descr="a>b"><wp:posOffset>9</wp:posOffset></wp:positionH>${EXTENT}`),
+  anchor(' layoutInCell = \'false\'', STD),
+  anchor(' descr="a>b" behindDoc="1"', `${STD}<wp:wrapNone/>`),
+  anchor(' descr=\'a>b\' behindDoc=\'1\'', `${STD}<wp:wrapSquare/>`),
+]
 
 const FRAGMENTS: string[] = [
   '',
@@ -905,13 +949,13 @@ export const DRAWING: CallSpec[] = [
     fn: 'drawing.topLevelDrawings',
     call: (text) => topLevelDrawings(text),
     fromDocument: (parts) => drawingParagraphsOf(parts).map((text) => ({ text })),
-    built: PARAGRAPHS.map((text) => ({ text })),
+    built: [...PARAGRAPHS, ...MARKUP_PARAGRAPHS].map((text) => ({ text })),
   },
   {
     fn: 'drawing.drawingAnchorMeta',
     call: (text) => drawingAnchorMeta(text),
     fromDocument: (parts) => drawingFragmentsOf(parts).map((text) => ({ text })),
-    built: FRAGMENTS.map((text) => ({ text })),
+    built: [...FRAGMENTS, ...MARKUP_FRAGMENTS()].map((text) => ({ text })),
   },
   {
     fn: 'drawing.resolveAnchorPagePos',
