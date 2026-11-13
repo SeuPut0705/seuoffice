@@ -370,8 +370,8 @@
   {
     "name": "control handler deadline is inclusive",
     "file": "main-core/src/shell/control_handlers.rs",
-    "find": "if host.now_ms() > deadline {",
-    "replace": "if host.now_ms() >= deadline {",
+    "find": "if host.now_ms() > self.deadline {",
+    "replace": "if host.now_ms() >= self.deadline {",
     "fn": ["control-handlers.controlHandler"]
   },
   {
@@ -1375,5 +1375,19 @@
     "find": "written_at: info.written_at,",
     "replace": "written_at: 0.0,",
     "fn": ["recovery-shell.runLaunchRecovery"]
+  },
+  {
+    "name": "close in order goes on after a cancelled close",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "            self.next = self.ids.len();\n            return CloseInOrderStep::Done;",
+    "replace": "            return self.advance(tabs);",
+    "fn": ["tab-lifecycle.closeTabsInOrder"]
+  },
+  {
+    "name": "close in order skips the next id after a close",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "            self.closing = Some(id.clone());",
+    "replace": "            self.closing = Some(id.clone());\n            self.next += 1;",
+    "fn": ["tab-lifecycle.closeTabsInOrder"]
   }
 ]

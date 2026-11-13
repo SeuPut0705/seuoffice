@@ -1,0 +1,717 @@
+[
+  {
+    "name": "effort: openrouter sends reasoning_effort (control)",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "\"openrouter\" => Some(EffortField::Reasoning),",
+    "replace": "\"openrouter\" => Some(EffortField::ReasoningEffort),",
+    "fn": ["key-effort.keyEffortBody"]
+  },
+  {
+    "name": "effort: an inherited name takes no level",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "provider.is_some_and(|p| effort_field(p).is_some() || inherited_string(p).is_some())",
+    "replace": "provider.is_some_and(|p| effort_field(p).is_some())",
+    "fn": ["key-effort.takesKeyEffort", "key-effort.keyProviderEffort"]
+  },
+  {
+    "name": "effort: custom takes no level",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "\"custom\" => Some(EffortField::ReasoningEffort),",
+    "replace": "\"custom\" => None,",
+    "fn": ["key-effort.keyEffortBody", "key-effort.takesKeyEffort"]
+  },
+  {
+    "name": "effort: a level the model does not list is sent",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": ".filter(|entry| entry.efforts.contains(&effort))",
+    "replace": ".filter(|_| true)",
+    "fn": ["key-effort.keyProviderEffort", "key-effort.keyEffortBody"]
+  },
+  {
+    "name": "effort: the model id is not trimmed",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "Some(JsonValue::String(m)) => trim(m),",
+    "replace": "Some(JsonValue::String(m)) => m,",
+    "fn": ["key-effort.keyModelEffort"]
+  },
+  {
+    "name": "effort: an Anthropic body for any provider",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "(field == Some(EffortField::OutputConfig))",
+    "replace": "(true)",
+    "fn": ["key-effort.keyEffortBody"]
+  },
+  {
+    "name": "effort: a gateway protocol gets the level",
+    "file": "main-core/src/packages/ai_provider/key_effort.rs",
+    "find": "if protocol != \"openai-compatible\" {",
+    "replace": "if false {",
+    "fn": ["key-effort.keyEffortBody"]
+  },
+  {
+    "name": "models: three pages at most",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "const MAX_PAGES: usize = 5;",
+    "replace": "const MAX_PAGES: usize = 3;",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: shorter request timeout",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "const REQUEST_TIMEOUT_MS: f64 = 10_000.0;",
+    "replace": "const REQUEST_TIMEOUT_MS: f64 = 9_000.0;",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: id length bound one more",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "const MAX_MODEL_ID_LENGTH: usize = 256;",
+    "replace": "const MAX_MODEL_ID_LENGTH: usize = 257;",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: model cap one less",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "pub const MAX_KEY_PROVIDER_MODELS: usize = 2000;",
+    "replace": "pub const MAX_KEY_PROVIDER_MODELS: usize = 1999;",
+    "fn": ["key-models.MAX_KEY_PROVIDER_MODELS", "key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: a body of any size is read",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "const MAX_BODY_BYTES: f64 = 8.0 * 1024.0 * 1024.0;",
+    "replace": "const MAX_BODY_BYTES: f64 = 80.0 * 1024.0 * 1024.0;",
+    "fn": ["key-models.listKeyProviderModelListing", "key-models.listKeyProviderModels"]
+  },
+  {
+    "name": "models: an effort block marked unsupported is read",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "&& anthropic.get(\"supported\") != Some(&JsonValue::Bool(false))",
+    "replace": "&& true",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: a millisecond stamp is not brought down",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "Some(if *x > 1e12 {",
+    "replace": "Some(if *x > 1e13 {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: -pro ids of OpenAI are offered",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "r\"^(o\\d+-pro|.*-pro($|-\\d)|.*codex)\"",
+    "replace": "r\"^(o\\d+-pro|.*codex)\"",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: muse ids of OpenCode are offered",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "r\"^(gpt-|grok|muse)\"",
+    "replace": "r\"^(gpt-|grok)\"",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: rerank ids are offered",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "moderation|rerank|robotics",
+    "replace": "moderation|robotics",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: live is a substring",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "|(^|[-_/])live([-_]|$)|",
+    "replace": "|live|",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: a :batch copy is kept",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": ":batch)$",
+    "replace": ":batch2)$",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: a six digit snapshot is kept",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "|\\d{8}|\\d{6}|\\d{4})",
+    "replace": "|\\d{8}|\\d{4})",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: oldest first",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "let by_date = b.1.1.unwrap_or(0.0) - a.1.1.unwrap_or(0.0);",
+    "replace": "let by_date = a.1.1.unwrap_or(0.0) - b.1.1.unwrap_or(0.0);",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: oldest Gemini first",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "let by_version = gemini_version(&b.1.id) - gemini_version(&a.1.id);",
+    "replace": "let by_version = gemini_version(&a.1.id) - gemini_version(&b.1.id);",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: a Gemini model without generateContent is listed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "&& !includes(methods, \"generateContent\")",
+    "replace": "&& includes(methods, \"generateContent\")",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: the models/ prefix stays",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "id: name.strip_prefix(\"models/\").unwrap_or(name).to_owned(),",
+    "replace": "id: name.clone(),",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: a last page marker is followed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if !has_more {",
+    "replace": "if false {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: the page id is not encoded",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "encode_uri_component(&after)",
+    "replace": "after.clone()",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: the page token is not encoded",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "encode_uri_component(&token)",
+    "replace": "token.clone()",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: an empty page token is followed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if next.is_empty() {",
+    "replace": "if false {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: xAI asks no full list",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if provider == \"xai\" && !listed.is_empty() {",
+    "replace": "if false {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: xAI asks the full list always",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if listed.iter().all(|entry| entry.effort.is_some()) {",
+    "replace": "if false {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: the full list overrides a level",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if entry.effort.is_some() || !by_id.has(&entry.id) {",
+    "replace": "if !by_id.has(&entry.id) {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: custom is listed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "&& provider != \"custom\")",
+    "replace": ")",
+    "fn": [
+      "key-models.listsKeyProviderModels",
+      "key-models.listKeyProviderModelListing",
+      "key-models.listKeyProviderModels"
+    ]
+  },
+  {
+    "name": "models: an unknown id lists",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "Err(_) => Ok(false),",
+    "replace": "Err(_) => Ok(true),",
+    "fn": ["key-models.listsKeyProviderModels"]
+  },
+  {
+    "name": "models: an inherited name reads capabilities of nothing differently",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "\"Cannot read properties of undefined (reading 'auth')\",",
+    "replace": "\"Cannot read properties of undefined (reading 'x')\",",
+    "fn": ["key-models.listsKeyProviderModels"]
+  },
+  {
+    "name": "models: a blank key is listed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if api_key.is_empty() || !lists_key_provider_models(provider)? {",
+    "replace": "if !lists_key_provider_models(provider)? {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: the key is not trimmed",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "let api_key = trim(&config.api_key).to_owned();",
+    "replace": "let api_key = config.api_key.clone();",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: an HTTP error is read",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if !response.ok() {",
+    "replace": "if false {",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: a different Accept",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "(\"Accept\".to_owned(), \"application/json\".to_owned())",
+    "replace": "(\"Accept\".to_owned(), \"text/json\".to_owned())",
+    "fn": ["key-models.listKeyProviderModelListing"]
+  },
+  {
+    "name": "models: no cap on the ids",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": ".take(MAX_KEY_PROVIDER_MODELS)",
+    "replace": ".take(usize::MAX)",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: the last level of an id wins",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if models.contains(&id) && efforts.get(&id).is_none() {",
+    "replace": "if models.contains(&id) {",
+    "fn": ["key-models.keyModelListingOf"]
+  },
+  {
+    "name": "models: every provider gets levels",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if takes_key_effort(Some(provider)) {",
+    "replace": "if true {",
+    "fn": ["key-models.keyModelListingOf"]
+  },
+  {
+    "name": "models: a retired id stays",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "let id = current_model_id(provider, raw);",
+    "replace": "let id = raw.to_owned();",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "models: a duplicate id is kept",
+    "file": "main-core/src/packages/ai_provider/key_models.rs",
+    "find": "if seen.has(&id) {",
+    "replace": "if false {",
+    "fn": ["key-models.keyModelIdsOf"]
+  },
+  {
+    "name": "refresh: a stale answer is written",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "if fingerprint_of(now)? != fingerprint {",
+    "replace": "if false {",
+    "fn": ["key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: a provider is asked on every refresh",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "if self.state.borrow().asked_with.get(&id) == Some(&fingerprint) {",
+    "replace": "if false {",
+    "fn": ["key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: a provider that lost its key is remembered",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "self.state.borrow_mut().asked_with.delete(&id);",
+    "replace": "let _ = &id;",
+    "fn": ["key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: a blank key is listed",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "|| blank(api_key)?",
+    "replace": "|| false",
+    "fn": ["key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: an unchanged list is written",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "if join_models(old)? == listed_joined",
+    "replace": "if false && join_models(old)? == listed_joined",
+    "fn": ["key-model-refresh.withKeyProviderModels", "key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: given levels keep the stored table",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "Some(efforts) => ai_model_efforts_of(Some(efforts)),",
+    "replace": "Some(_) => ai_model_efforts_of(old_efforts),",
+    "fn": ["key-model-refresh.withKeyProviderModels", "key-model-refresh.createKeyModelRefresher"]
+  },
+  {
+    "name": "refresh: lists compared with another separator",
+    "file": "main-core/src/packages/ai_provider/key_model_refresh.rs",
+    "find": "listed.as_ref().map(|l| l.join(\"\\n\"))",
+    "replace": "listed.as_ref().map(|l| l.join(\",\"))",
+    "fn": ["key-model-refresh.withKeyProviderModels"]
+  },
+  {
+    "name": "custom: shorter timeout",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "const REQUEST_TIMEOUT_MS: f64 = 5000.0;",
+    "replace": "const REQUEST_TIMEOUT_MS: f64 = 4000.0;",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: model cap one less",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "const MAX_MODELS: usize = 2000;",
+    "replace": "const MAX_MODELS: usize = 1999;",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: the cap is checked late",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "if seen.len() >= MAX_MODELS {",
+    "replace": "if seen.len() > MAX_MODELS {",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: an HTTP error is read",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "if !response.ok() {",
+    "replace": "if false {",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: an empty bearer is sent",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "if !key.is_empty() {",
+    "replace": "if true {",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: an id is not trimmed",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "let trimmed = trim(id);",
+    "replace": "let trimmed = id.as_str();",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: a blank id is kept",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "if !trimmed.is_empty() {",
+    "replace": "if true {",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "custom: the first model is the default",
+    "file": "main-core/src/packages/ai_provider/custom_models.rs",
+    "find": "default_model: String::new(),\n    })",
+    "replace": "default_model: seen.keys().next().unwrap_or_default().to_owned(),\n    })",
+    "fn": ["custom-models.listCustomModels"]
+  },
+  {
+    "name": "local: shorter probe timeout",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "const REQUEST_TIMEOUT_MS: f64 = 5000.0;",
+    "replace": "const REQUEST_TIMEOUT_MS: f64 = 4000.0;",
+    "fn": ["local-models.listLocalModels", "local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: model cap one less",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "const MAX_MODELS: usize = 2000;",
+    "replace": "const MAX_MODELS: usize = 1999;",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: a malformed answer says little",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "AiLocalDiscoveryErrorCode::Shape => 4,",
+    "replace": "AiLocalDiscoveryErrorCode::Shape => 1,",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: the first probe wins a tie",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if informativeness_of(&second) >= informativeness_of(&first) {",
+    "replace": "if informativeness_of(&second) > informativeness_of(&first) {",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: a 404 is as telling as a refusal",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if failure.status != Some(404.0) {",
+    "replace": "if failure.status == Some(404.0) {",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: a timeout says most",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "AiLocalDiscoveryErrorCode::Timeout => 2,",
+    "replace": "AiLocalDiscoveryErrorCode::Timeout => 5,",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: a cancelled caller still sends the second probe",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if signal.is_some_and(Signal::aborted) {",
+    "replace": "if false {",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: any scheme is an address",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if url.scheme() != \"http\" && url.scheme() != \"https\" {",
+    "replace": "if false {",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: the root keeps /v1",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": ".strip_suffix(\"/v1\")",
+    "replace": ".strip_suffix(\"/v2\")",
+    "fn": ["local-models.listLocalModels", "local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a 405 is a failure",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "|| failure.status == Some(405.0))",
+    "replace": ")",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a size of zero is dropped",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "&& *size >= 0.0",
+    "replace": "&& *size > 0.0",
+    "fn": ["local-models.listLocalModels"]
+  },
+  {
+    "name": "local: tools are always listed",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "profile.tools = Some(has(\"tools\"));",
+    "replace": "profile.tools = Some(true);",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a thinking model has no levels",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if !has(\"thinking\") {",
+    "replace": "if has(\"thinking\") {",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a default level outside the list",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "profile.default_effort = default_effort.filter(|d| efforts.contains(d));",
+    "replace": "profile.default_effort = default_effort;",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a later context length counts",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "return positive_number(Some(value));",
+    "replace": "match positive_number(Some(value)) {\n            Some(n) => return Some(n),\n            None => continue,\n        }",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: any loaded model gives its window",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if !names.iter().any(|n| n == model) {",
+    "replace": "if false {",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "local: a blank model asks for the loaded window",
+    "file": "main-core/src/packages/ai_provider/local_models.rs",
+    "find": "if model.is_empty() {\n        return None;",
+    "replace": "if false {\n        return None;",
+    "fn": ["local-models.inspectLocalModel"]
+  },
+  {
+    "name": "test: chat cap one more",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "const CHAT_MAX_TOKENS: f64 = 32.0;",
+    "replace": "const CHAT_MAX_TOKENS: f64 = 33.0;",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: tool cap one more",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "const TOOL_MAX_TOKENS: f64 = 128.0;",
+    "replace": "const TOOL_MAX_TOKENS: f64 = 129.0;",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: another ping",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "const CHAT_USER_PROMPT: &str = \"ping\";",
+    "replace": "const CHAT_USER_PROMPT: &str = \"pong\";",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a missing model passes the model check",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "AiLocalCheck::fail(AiLocalCheckCode::ModelMissing)",
+    "replace": "AiLocalCheck::SKIP",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a typed id is judged by the list",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "} else if resolved.typed {",
+    "replace": "} else if false {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: no tool call passes",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "Ok(()) => AiLocalCheck::fail(AiLocalCheckCode::NoToolCall),",
+    "replace": "Ok(()) => AiLocalCheck::PASS,",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a tool call before the error does not count",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "Err(_) if probe_called.get() => AiLocalCheck::PASS,",
+    "replace": "Err(_) if false => AiLocalCheck::PASS,",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: the deadline is no timeout",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "if error.is(\"AiTimeoutError\") || rt.now() >= deadline {",
+    "replace": "if error.is(\"AiTimeoutError\") {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: an HTTP message of a request is no http",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "if js_regex!(r\"^HTTP \\d{3}\\b\").test(&message) {",
+    "replace": "if false {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a non-JSON chat is no shape",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "if js_regex!(r\"non-JSON response\", \"i\").test(error) {",
+    "replace": "if false {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: an unparseable body is no shape",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "r\"unparseable JSON|non-JSON response\"",
+    "replace": "r\"non-JSON response\"",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a too large body is no shape",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "if error.is(\"ResponseBodyTooLargeError\") {",
+    "replace": "if false {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: the budget is not rounded",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "MAX_LOCAL_TIMEOUT_MS.min(MIN_LOCAL_TIMEOUT_MS.max(math_round(*x)))",
+    "replace": "MAX_LOCAL_TIMEOUT_MS.min(MIN_LOCAL_TIMEOUT_MS.max(*x))",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a model id of 256 is too long",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "length16(&model) > MAX_LOCAL_MODEL_ID_LENGTH",
+    "replace": "length16(&model) >= MAX_LOCAL_MODEL_ID_LENGTH",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: an address of 2048 is too long",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "length16(&trimmed) > MAX_BASE_URL_LENGTH",
+    "replace": "length16(&trimmed) >= MAX_BASE_URL_LENGTH",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: an aborted caller still runs the test",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "if outer.as_ref().is_some_and(Signal::aborted) {",
+    "replace": "if false {",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: no elapsed time",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "result.elapsed_ms = (rt.now() - started_at).max(0.0);",
+    "replace": "result.elapsed_ms = 0.0;",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "test: a blank chat passes",
+    "file": "main-core/src/packages/ai_provider/local_test.rs",
+    "find": "Some(JsonValue::String(content)) if !trim(content).is_empty() => AiLocalCheck::PASS,",
+    "replace": "Some(JsonValue::String(content)) if !content.is_empty() => AiLocalCheck::PASS,",
+    "fn": ["local-test.testLocalModel"]
+  },
+  {
+    "name": "ipc: address bound one less",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "const MAX_BASE_URL_LENGTH: usize = 2048;",
+    "replace": "const MAX_BASE_URL_LENGTH: usize = 2047;",
+    "fn": [
+      "local-ipc.parseLocalDiscoveryInput",
+      "local-ipc.parseLocalInspectionInput",
+      "local-ipc.parseLocalTestInput"
+    ]
+  },
+  {
+    "name": "ipc: key bound one less",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "const MAX_API_KEY_LENGTH: usize = 8192;",
+    "replace": "const MAX_API_KEY_LENGTH: usize = 8191;",
+    "fn": ["local-ipc.parseLocalDiscoveryInput", "local-ipc.parseLocalTestInput"]
+  },
+  {
+    "name": "ipc: test id of 128 is too long",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "{1,128}",
+    "replace": "{1,127}",
+    "fn": ["local-ipc.parseLocalTestInput"]
+  },
+  {
+    "name": "ipc: an unknown server kind is probed",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "if server.is_some() && AiLocalServerKind::of(server).is_none() {",
+    "replace": "if false {",
+    "fn": ["local-ipc.parseLocalInspectionInput"]
+  },
+  {
+    "name": "ipc: a typed that is no boolean is accepted",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "if typed.is_some() && !matches!(typed, Some(JsonValue::Bool(_))) {",
+    "replace": "if false {",
+    "fn": ["local-ipc.parseLocalTestInput"]
+  },
+  {
+    "name": "ipc: the same id keeps the earlier test",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "let earlier = ipc.borrow().running_tests.get(key).cloned();",
+    "replace": "let earlier: Option<Signal> = None;",
+    "fn": ["local-ipc.testLocalModelForIpc"]
+  },
+  {
+    "name": "ipc: a finished test stays cancellable",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "if mine {",
+    "replace": "if false {",
+    "fn": ["local-ipc.cancelLocalTestForIpc"]
+  },
+  {
+    "name": "ipc: another window cancels the test",
+    "file": "main-core/src/packages/ai_provider/local_ipc.rs",
+    "find": "owner.cloned().unwrap_or(JsonValue::Null),",
+    "replace": "JsonValue::Null,",
+    "fn": ["local-ipc.cancelLocalTestForIpc", "local-ipc.testLocalModelForIpc"]
+  }
+]

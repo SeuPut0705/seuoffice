@@ -1067,3 +1067,25 @@ pub fn resolve_ai_settings(
     }
     JsonValue::Object(resolve_custom_endpoints(&next))
 }
+
+/// `opencodeSessionHeaders(baseUrl, sessionId)`: OpenCode's gateways group a
+/// conversation by this header; an empty session id draws a new one.
+pub fn opencode_session_headers(
+    rt: &super::task::Rt,
+    base_url: Option<&str>,
+    session_id: Option<&str>,
+) -> Vec<(String, String)> {
+    if !base_url.is_some_and(|b| b.starts_with("https://opencode.ai/")) {
+        return Vec::new();
+    }
+    let id = match session_id.filter(|s| !s.is_empty()) {
+        Some(id) => id.to_owned(),
+        None => rt.random_uuid(),
+    };
+    vec![("x-opencode-session".to_owned(), id)]
+}
+
+/// `currentModelId(provider, model)`: a retired id read as its replacement.
+pub fn current_model_id(provider: &str, model: &str) -> String {
+    retired_model(provider, model).map_or_else(|| model.to_owned(), str::to_owned)
+}

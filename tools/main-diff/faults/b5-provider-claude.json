@@ -1,0 +1,437 @@
+[
+  {
+    "name": "default exit grace period",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "const EXIT_GRACE_MS: f64 = 5_000.0;",
+    "replace": "const EXIT_GRACE_MS: f64 = 5_001.0;",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "diagnostic keeps 4000 characters",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "const DIAGNOSTIC_LIMIT: f64 = 4_000.0;",
+    "replace": "const DIAGNOSTIC_LIMIT: f64 = 3_999.0;",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "default model list timeout",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "const MODEL_LIST_TIMEOUT_MS: f64 = 15_000.0;",
+    "replace": "const MODEL_LIST_TIMEOUT_MS: f64 = 15_001.0;",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "text opening search limit",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "const TEXT_OPENING_SEARCH_LIMIT: usize = 256;",
+    "replace": "const TEXT_OPENING_SEARCH_LIMIT: usize = 255;",
+    "fn": ["claude-code-cli.TurnTextScanner"]
+  },
+  {
+    "name": "utilization capped at 1",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "utilization.min(1.0)",
+    "replace": "utilization.min(2.0)",
+    "fn": ["claude-code-cli.claudeCodeUsage"]
+  },
+  {
+    "name": "usage reset rounded",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "JsonValue::Number(math_round(resets_at * 1000.0)),",
+    "replace": "JsonValue::Number(resets_at * 1000.0),",
+    "fn": ["claude-code-cli.claudeCodeUsage"]
+  },
+  {
+    "name": "rejected reset rounded",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": ".map(|r| math_round(r * 1000.0))",
+    "replace": ".map(|r| r * 1000.0)",
+    "fn": ["claude-code-cli.reportedFailure"]
+  },
+  {
+    "name": "status 529 is overloaded",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "is_status(529.0)",
+    "replace": "is_status(528.0)",
+    "fn": ["claude-code-cli.reportedFailure"]
+  },
+  {
+    "name": "connection text is network",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "connection error|unable to connect",
+    "replace": "connection errors|unable to connect",
+    "fn": ["claude-code-cli.reportedFailure"]
+  },
+  {
+    "name": "timeout text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "r\"timed out|timeout\"",
+    "replace": "r\"timed out\"",
+    "fn": ["claude-code-cli.reportedFailure"]
+  },
+  {
+    "name": "unknown code reads the text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "(code.is_none() || code == Some(\"unknown\"))",
+    "replace": "(code == Some(\"unknown\"))",
+    "fn": ["claude-code-cli.reportedFailure"]
+  },
+  {
+    "name": "ENOENT is not installed",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "== Some(&text(\"ENOENT\"))",
+    "replace": "== Some(&text(\"ENOEN\"))",
+    "fn": ["claude-code-cli.startFailure", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "exit failure too old text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "Claude Code is too old for this app: it does not know an option it is started with",
+    "replace": "Claude Code is too old for this app",
+    "fn": ["claude-code-cli.exitFailure", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "setup not accepted text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "did not accept the setup request of this app",
+    "replace": "did not accept the setup of this app",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "model name error text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "\"Invalid Claude Code model name: {}\",",
+    "replace": "\"Invalid Claude Code model name:{}\",",
+    "fn": ["claude-code-cli.claudeCodeCliLaunchArgs", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "images past the limit",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": ".max(0.0);",
+    "replace": ".max(1.0);",
+    "fn": ["claude-code-cli.buildClaudeCodeInput", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "tool name cut at 200",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "let name = slice_to(name, 200);",
+    "replace": "let name = slice_to(name, 201);",
+    "fn": ["claude-code-cli.parseClaudeCodeTurn"]
+  },
+  {
+    "name": "a call without a name",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "&& !name.is_empty() => name,",
+    "replace": "=> name,",
+    "fn": ["claude-code-cli.parseClaudeCodeTurn"]
+  },
+  {
+    "name": "prose answer",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if start.is_none() && !trimmed.is_empty()",
+    "replace": "if start.is_none()",
+    "fn": ["claude-code-cli.parseClaudeCodeTurn"]
+  },
+  {
+    "name": "output limit cut",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if stop_reason == \"max_tokens\" && partial.started() {",
+    "replace": "if stop_reason == \"end_turn\" && partial.started() {",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "structured end turn",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "stop_reason = \"end_turn\".to_owned();",
+    "replace": "stop_reason = \"tool_use\".to_owned();",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "unsafe tools kind",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "\"unsafe-tools\",",
+    "replace": "\"unsafe_tools\",",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "not installed kind",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "\"not-installed\",",
+    "replace": "\"not_installed\",",
+    "fn": ["claude-code-cli.startFailure", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "empty stream mark",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "{error} {EMPTY_STREAM_MARK}",
+    "replace": "{error}",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "tool arguments drop mark",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "{TOOL_ARGS_DROP_MARK}: {error}",
+    "replace": "{error}",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "abort kills softly",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "kill_process_tree_rt(&rt, pid, true)",
+    "replace": "kill_process_tree_rt(&rt, pid, false)",
+    "fn": [
+      "claude-code-cli.streamClaudeCodeCli",
+      "claude-code-cli.chatClaudeCodeCli",
+      "claude-code-cli.listClaudeCodeModels"
+    ]
+  },
+  {
+    "name": "tool list verified",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "self.st.borrow_mut().verified = true;",
+    "replace": "self.st.borrow_mut().verified = false;",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "restarted answer skips",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "st.skip = length16(&st.emitted);",
+    "replace": "st.skip = 0;",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "empty thinking is not passed on",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if !thinking.is_empty()",
+    "replace": "if thinking.is_empty()",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "plain text is accumulated",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if self.mode == Mode::Plain {\n                self.st.borrow_mut().raw.push_str(chunk);",
+    "replace": "if self.mode != Mode::Plain {\n                self.st.borrow_mut().raw.push_str(chunk);",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "a second setup answer",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if self.st.borrow().initialized {",
+    "replace": "if false {",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "other requests are answered",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "\"Unsupported request: {}\"",
+    "replace": "\"Unsupported: {}\"",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "exactly the allowed tools",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "listed.len() == self.allowed.len()",
+    "replace": "listed.len() >= self.allowed.len()",
+    "fn": ["claude-code-cli.streamClaudeCodeCli", "claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "tool names ellipsis",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if listed.len() > names.len()",
+    "replace": "if listed.len() >= names.len()",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "five tool names",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": ".take(5)",
+    "replace": ".take(6)",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "direct input one key",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "keys.len() == 1",
+    "replace": "keys.len() >= 1",
+    "fn": ["claude-code-cli.directCallInput", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "string fields stay",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "declared.contains(&\"string\")",
+    "replace": "declared.contains(&\"strin\")",
+    "fn": ["claude-code-cli.directCallInput"]
+  },
+  {
+    "name": "object field fits",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "matches!(parsed, JsonValue::Object(_))",
+    "replace": "matches!(parsed, JsonValue::Array(_))",
+    "fn": ["claude-code-cli.directCallInput", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "direct call ends the CLI",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "self.finish(None, true);",
+    "replace": "self.finish(None, false);",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "direct call beside StructuredOutput",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "&& !answered {",
+    "replace": "{",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "app tool error expected",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "&& prop(block, \"is_error\") == Some(&JsonValue::Bool(true))",
+    "replace": "&& prop(block, \"is_error\") == Some(&JsonValue::Bool(false))",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "result text first",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "let shown = [result_text, failure_text.as_str(), errors.as_str()]",
+    "replace": "let shown = [failure_text.as_str(), result_text, errors.as_str()]",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "limit report",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if !usage.is_empty()",
+    "replace": "if usage.is_empty()",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "input truncated callback",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if input.truncated",
+    "replace": "if !input.truncated",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "activity touches the watchdog",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "touch.touch();",
+    "replace": "let _ = &touch;",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "a line count across chunks",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if parts.is_empty() {",
+    "replace": "if !parts.is_empty() {",
+    "fn": ["claude-code-cli.readLines", "claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "the line cap",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if self.pending_bytes > MAX_SSE_LINE_BYTES",
+    "replace": "if self.pending_bytes >= MAX_SSE_LINE_BYTES",
+    "fn": ["claude-code-cli.readLines"]
+  },
+  {
+    "name": "blank lines",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if !trim(part).is_empty() {",
+    "replace": "if !part.is_empty() {",
+    "fn": ["claude-code-cli.readLines"]
+  },
+  {
+    "name": "last line without newline",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if !trim(&tail).is_empty() {",
+    "replace": "if false {",
+    "fn": ["claude-code-cli.readLines"]
+  },
+  {
+    "name": "overflow text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "bytes without a newline; it was stopped",
+    "replace": "bytes without a newline",
+    "fn": ["claude-code-cli.streamClaudeCodeCli"]
+  },
+  {
+    "name": "chat without content",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "AiChatResponse::failed(\"Claude Code returned no content\")",
+    "replace": "AiChatResponse::failed(\"Claude Code returned nothing\")",
+    "fn": ["claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "chat empty content",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if content.is_empty() {",
+    "replace": "if !content.is_empty() {",
+    "fn": ["claude-code-cli.chatClaudeCodeCli"]
+  },
+  {
+    "name": "default model without resolved",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "if is_default && resolved.is_none() {",
+    "replace": "if false {",
+    "fn": ["claude-code-cli.claudeCodeModels", "claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "models without effort",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "== Some(&JsonValue::Bool(false)) {",
+    "replace": "== Some(&JsonValue::Bool(true)) {",
+    "fn": ["claude-code-cli.claudeCodeModels", "claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "effort levels filtered",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": ".filter(|level| CLAUDE_EFFORTS.contains(level))",
+    "replace": ".filter(|level| !CLAUDE_EFFORTS.contains(level))",
+    "fn": ["claude-code-cli.claudeCodeModels", "claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "a result while listing",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "\"assistant\" | \"user\" | \"result\")",
+    "replace": "\"assistant\" | \"user\")",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "CLI exits before listing",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "Claude Code exited before it listed its models",
+    "replace": "Claude Code exited before listing",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "endless line while listing",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "Claude Code wrote an endless line; it was stopped",
+    "replace": "Claude Code wrote an endless line",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "more than listing text",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "Claude Code did more than list its models",
+    "replace": "Claude Code did more than listing",
+    "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "abort error name",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": ".named(\"AbortError\")",
+    "replace": ".named(\"AbortErr\")",
+    "fn": [
+      "claude-code-cli.streamClaudeCodeCli",
+      "claude-code-cli.chatClaudeCodeCli",
+      "claude-code-cli.listClaudeCodeModels"
+    ]
+  },
+  {
+    "name": "a byte order mark is dropped",
+    "file": "main-core/src/packages/ai_provider/claude_code_cli.rs",
+    "find": "self.pending.push_str(&self.decoder.write(chunk));",
+    "replace": "self.pending.push_str(self.decoder.write(chunk).trim_start_matches('\\u{feff}'));",
+    "fn": ["claude-code-cli.readLines", "claude-code-cli.listClaudeCodeModels"]
+  }
+]

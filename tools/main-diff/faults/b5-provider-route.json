@@ -1,0 +1,177 @@
+[
+  {
+    "name": "route openai base url",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "const OPENAI_BASE_URL: &str = \"https://api.openai.com/v1\";",
+    "replace": "const OPENAI_BASE_URL: &str = \"https://api.openai.com/v2\";",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider", "chat.chatForProvider"]
+  },
+  {
+    "name": "route fixed sampling misses gpt-5",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "kimi-k3([^\\w]|$)|gpt-[5-9]([^\\w]|$)|gemini",
+    "replace": "kimi-k3([^\\w]|$)|gpt-[6-9]([^\\w]|$)|gemini",
+    "fn": ["registry.modelHasFixedSampling", "registry.resolveEndpoint"]
+  },
+  {
+    "name": "route echoes reasoning for hunyuan 5",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "deep-?seek-(v4|flash)|hy-?[34]([^\\w]|$)",
+    "replace": "deep-?seek-(v4|flash)|hy-?[345]([^\\w]|$)",
+    "fn": ["registry.modelEchoesReasoning"]
+  },
+  {
+    "name": "route responses api for gpt-5.3",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "r\"^gpt-(5\\.[4-9]|6(\\.\\d+)?)(-|$)\"",
+    "replace": "r\"^gpt-(5\\.[3-9]|6(\\.\\d+)?)(-|$)\"",
+    "fn": ["registry.modelUsesResponsesApi", "registry.resolveEndpoint"]
+  },
+  {
+    "name": "route inherited name is unknown",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "    if INHERITED_KEYS.contains(&provider) {\n        return Ok(Adapter::Inherited);",
+    "replace": "    if INHERITED_KEYS.contains(&provider) && false {\n        return Ok(Adapter::Inherited);",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider", "chat.chatForProvider"]
+  },
+  {
+    "name": "route deepseek wire id dropped",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "            endpoint.model = wire;",
+    "replace": "            endpoint.model = None;",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route openai keeps max_tokens",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "                    use_max_completion_tokens: true,\n                    ..Extras::default()",
+    "replace": "                    use_max_completion_tokens: false,\n                    ..Extras::default()",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route kimi sends temperature",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "            \"https://api.moonshot.ai/v1\",\n            Extras {\n                omit_temperature: true,",
+    "replace": "            \"https://api.moonshot.ai/v1\",\n            Extras {\n                omit_temperature: false,",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route opencode keeps /v1",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "    let path = js_regex!(r\"\\/v1$\").replace_all(&path, |_| String::new());",
+    "replace": "    let path = path;",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route opencode kimi samples",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "js_regex!(r\"(^|\\/)kimi-\", \"i\").test(&model)",
+    "replace": "js_regex!(r\"(^|\\/)kimo-\", \"i\").test(&model)",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route zen gemini goes to compat",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "            Some(js_regex!(r\"^gemini-\")),",
+    "replace": "            None,",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route go qwen flash prefix",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "js_regex!(r\"^(minimax-|qwen3\\.8-flash$)\")",
+    "replace": "js_regex!(r\"^(minimax-|qwen3\\.8-flash)\")",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider"]
+  },
+  {
+    "name": "route custom without base url",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "                return Err(JsError::error(\"A custom provider requires a Base URL\"));",
+    "replace": "                return Err(JsError::error(\"A custom provider requires a base URL\"));",
+    "fn": ["registry.resolveEndpoint", "stream.streamForProvider", "chat.chatForProvider"]
+  },
+  {
+    "name": "route gateway blank base url",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "                Some(JsonValue::String(u)) => !trim(u).is_empty(),",
+    "replace": "                Some(JsonValue::String(u)) => !u.is_empty(),",
+    "fn": ["registry.resolveEndpoint"]
+  },
+  {
+    "name": "route gateway number base url",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "                        \"config.baseUrl?.trim is not a function\",",
+    "replace": "                        \"config.baseUrl.trim is not a function\",",
+    "fn": ["registry.resolveEndpoint"]
+  },
+  {
+    "name": "route stream ignores wire model",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "        Some(model) => {\n            let mut next = spread(Some(config));",
+    "replace": "        Some(_) if false => {\n            let mut next = spread(Some(config));",
+    "fn": ["stream.streamForProvider"]
+  },
+  {
+    "name": "route effort replaces extras",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "            out.assign(&spread(Some(effort)));",
+    "replace": "            let _ = effort;",
+    "fn": ["stream.streamForProvider", "chat.chatForProvider"]
+  },
+  {
+    "name": "route stream drops timeout",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "                            timeout_ms: options.timeout_ms,\n                            ..OpenAiRequestOptions::default()",
+    "replace": "                            timeout_ms: None,\n                            ..OpenAiRequestOptions::default()",
+    "fn": ["stream.streamForProvider"]
+  },
+  {
+    "name": "route gateway drops timeout",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "                        cb,\n                        options.timeout_ms,",
+    "replace": "                        cb,\n                        None,",
+    "fn": ["stream.streamForProvider"]
+  },
+  {
+    "name": "route gemini temperature",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "                        &GeminiRequestOptions {\n                            omit_temperature: endpoint.omit_temperature,",
+    "replace": "                        &GeminiRequestOptions {\n                            omit_temperature: None,",
+    "fn": ["stream.streamForProvider"]
+  },
+  {
+    "name": "route anthropic effort lost",
+    "file": "main-core/src/packages/ai_provider/stream.rs",
+    "find": "                        Some(base_url),\n                        effort_object(effort_body).as_ref(),",
+    "replace": "                        Some(base_url),\n                        None,",
+    "fn": ["stream.streamForProvider"]
+  },
+  {
+    "name": "route chat connect budget",
+    "file": "main-core/src/packages/ai_provider/chat.rs",
+    "find": "create_stream_watchdog(rt, signal, Some(AI_CHAT_RESPONSE_TIMEOUT_MS), None)",
+    "replace": "create_stream_watchdog(rt, signal, None, None)",
+    "fn": ["chat.chatForProvider"]
+  },
+  {
+    "name": "route chat config error rejects",
+    "file": "main-core/src/packages/ai_provider/chat.rs",
+    "find": "                Err(e) => return Ok(AiChatResponse::failed(e.message_or_string())),",
+    "replace": "                Err(e) => return Err(e),",
+    "fn": ["chat.chatForProvider"]
+  },
+  {
+    "name": "route chat too large rejects",
+    "file": "main-core/src/packages/ai_provider/chat.rs",
+    "find": "        Err(e) if e.is(\"ResponseBodyTooLargeError\") => Ok(AiChatResponse::failed(e.message)),",
+    "replace": "        Err(e) if e.is(\"ResponseBodyTooLarge\") => Ok(AiChatResponse::failed(e.message)),",
+    "fn": ["chat.chatForProvider"]
+  },
+  {
+    "name": "route chat anthropic effort lost",
+    "file": "main-core/src/packages/ai_provider/chat.rs",
+    "find": "                        Some(endpoint.base_url.as_str()),\n                        effort_object(&effort_body).as_ref(),",
+    "replace": "                        Some(endpoint.base_url.as_str()),\n                        None,",
+    "fn": ["chat.chatForProvider"]
+  }
+]

@@ -1,0 +1,331 @@
+[
+  {
+    "name": "cached input is not added to the fresh input",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "Some(fresh) => Some(fresh + cached),",
+    "replace": "Some(fresh) => Some(fresh),",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a cached-only input is dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "None => (cached > 0.0).then_some(cached),",
+    "replace": "None => None,",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a max_tokens stop leaves the last streamed call whole",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "as_str(stop_reason.as_ref()) == Some(\"max_tokens\")",
+    "replace": "as_str(stop_reason.as_ref()) == Some(\"never\")",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a max_tokens JSON body leaves its last call whole",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if as_str(stop_reason) == Some(\"max_tokens\")",
+    "replace": "if as_str(stop_reason) == Some(\"never\")",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "finished calls do not count against the streamed budget",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "(pending_tools.len() + completed_tools.len() + 1) as f64,",
+    "replace": "(pending_tools.len() + 1) as f64,",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "the JSON body budget counts one call short",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "throw_if_tool_count_over_budget((tool_calls.len() + 1) as f64, \"anthropic\")?;",
+    "replace": "throw_if_tool_count_over_budget(tool_calls.len() as f64, \"anthropic\")?;",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a block started does not become the current one",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "current_tool_index = tool_index.clone();",
+    "replace": "current_tool_index = current_tool_index.clone();",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a nameless call is fed to the loop",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if pending.name.truthy() {",
+    "replace": "if true {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a call cut before its block stop is not marked truncated",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "call.set(\"truncated\", JsonValue::Bool(true));",
+    "replace": "call.set(\"truncated\", JsonValue::Bool(false));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a stream closed in the middle of a call is not an error",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if !pending_tools.is_empty() && stop_reason.is_none() {",
+    "replace": "if false {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a stream of finished calls without a stop reason reads as empty",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if !emitted && !any_completed && stop_reason.is_none() {",
+    "replace": "if !emitted && stop_reason.is_none() {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "the cause is read without its message",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "code.or(message).unwrap_or(cause)",
+    "replace": "code.unwrap_or(cause)",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a refused redirect is wrapped as a failed connection",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if e.is(\"AiRedirectRefusedError\") {",
+    "replace": "if false {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "an empty error message is shown empty",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "Some(message) if message.truthy() => js_string(message),",
+    "replace": "Some(message) => js_string(message),",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "the credits notice is not looked for",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "throw_if_credits_notice(&json_body)?;",
+    "replace": "if false {\n            throw_if_credits_notice(&json_body)?;\n        }",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "the request does not ask for a stream",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "body.set(\"stream\", JsonValue::Bool(true));",
+    "replace": "if false {\n            body.set(\"stream\", JsonValue::Bool(true));\n        }",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a string index is the same Map key as the number",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "JsonValue::String(s) => format!(\"s{s}\"),",
+    "replace": "JsonValue::String(s) => format!(\"n{s}\"),",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a message with images is sent as plain text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if !has_images {",
+    "replace": "if true {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a tool result error flag is dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if truthy(read(r, \"isError\")?) {",
+    "replace": "if false {",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a stream event of another shape is not read for an error",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "|| truthy(prop(event, \"error\")) {",
+    "replace": "{",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "chat joins every block, not only the text ones",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if as_str(read(c, \"type\")?) == Some(\"text\") {",
+    "replace": "if true {",
+    "fn": ["anthropic.chatAnthropic"]
+  },
+  {
+    "name": "chat answers an error status as a success path",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "if !response.ok() {",
+    "replace": "if false {",
+    "fn": ["anthropic.chatAnthropic"]
+  },
+  {
+    "name": "the first call of a model turn gets no bypass signature",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "None if i == 0 => Some(text(SKIP_SIGNATURE)),",
+    "replace": "None if i == 9 => Some(text(SKIP_SIGNATURE)),",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a max_tokens finish is not reported",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "finish.stop_reason = Some(\"max_tokens\");",
+    "replace": "finish.stop_reason = Some(\"max\");",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "an abnormal finish is not remembered",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "} else if as_str(reason) != Some(\"STOP\") {",
+    "replace": "} else if false {",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "an empty finished turn is an empty stream",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "if !emitted && !saw_finish {",
+    "replace": "if !emitted {",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "arguments that are not an object raise no input error",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "Some(args) if is_plain_object(Some(args)) => None,",
+    "replace": "Some(_) => None,",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "the signature of a call is dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "call.set(\"signature\", signature.clone());",
+    "replace": "let _ = signature.clone();",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "the snake_case signature is not read",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "prop(part, \"thought_signature\"),",
+    "replace": "None,",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a tool result error flag is dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "if truthy(read(r, \"isError\")?) {",
+    "replace": "if false {",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a model turn is sent as an assistant turn",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "(\"role\", text(\"model\")),",
+    "replace": "(\"role\", text(\"assistant\")),",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "chat reads candidates without throwing on null",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "let candidate = first_of(read(&json, \"candidates\")?);",
+    "replace": "let candidate = first_of(prop(&json, \"candidates\"));",
+    "fn": ["gemini.chatGemini"]
+  },
+  {
+    "name": "the stream is not asked as SSE",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "Some(\"?alt=sse\"),",
+    "replace": "Some(\"?alt=json\"),",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "the output cap is left out of the generation config",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "generation_config.set(\"maxOutputTokens\", number(max_tokens));",
+    "replace": "let _ = (&mut generation_config, number(max_tokens));",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a reference path decodes in the wrong order",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "raw.replace(\"~1\", \"/\").replace(\"~0\", \"~\")",
+    "replace": "raw.replace(\"~0\", \"~\").replace(\"~1\", \"/\")",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "a reference to __proto__ finds nothing",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "None if key == \"__proto__\" => Node::ObjectPrototype,",
+    "replace": "None if false => Node::ObjectPrototype,",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "the depth guard lets one level more through",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "if depth > MAX_DEPTH {",
+    "replace": "if depth > MAX_DEPTH + 1 {",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "a reference that is being resolved is followed again",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "if ref_stack.iter().any(|seen| seen == reference) {",
+    "replace": "if false {",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "a nullable type is not marked",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "out.set(\"nullable\", JsonValue::Bool(true));",
+    "replace": "let _ = JsonValue::Bool(true);",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "an array without items gets the wrong schema",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "out.set(\"items\", object(vec![(\"type\", text(\"object\"))]));",
+    "replace": "out.set(\"items\", object(vec![(\"type\", text(\"string\"))]));",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "oneOf replaces an existing anyOf",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini_schema.rs",
+    "find": "&& !is_array(out.get(\"anyOf\"))",
+    "replace": "&& true",
+    "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "a streamed text delta is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "(cb.on_delta)(delta_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "(cb.on_delta)(text(js_string(delta_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a JSON body text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "(cb.on_delta)(prop(&block, \"text\").cloned().unwrap_or(JsonValue::Null));",
+    "replace": "(cb.on_delta)(text(js_string(prop(&block, \"text\").unwrap_or(&JsonValue::Null))));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a streamed stop reason is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "on_stop_reason(stop_reason.clone());",
+    "replace": "on_stop_reason(text(js_string(&stop_reason)));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a JSON body stop reason is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "on_stop_reason(reason.clone());",
+    "replace": "on_stop_reason(text(js_string(reason)));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a Gemini JSON body text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "                emitted = true;\n                (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "                emitted = true;\n                (cb.on_delta)(text(js_string(part_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a Gemini streamed text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "                    emitted = true;\n                    (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "                    emitted = true;\n                    (cb.on_delta)(text(js_string(part_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["gemini.streamGemini"]
+  }
+]

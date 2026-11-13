@@ -11,6 +11,7 @@ pub mod default_save_dir;
 pub mod dialog_memory;
 pub mod doc_attach_channels;
 pub mod drive_ai_channels;
+pub mod drop_open;
 pub mod fetch_image_bytes;
 pub mod font_store;
 pub mod generate_handoff;

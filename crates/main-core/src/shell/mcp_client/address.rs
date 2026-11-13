@@ -241,8 +241,8 @@ fn unmap_ipv4(ip: &str) -> Option<[u8; 4]> {
 pub fn plain_http_allowed_ip(ip: &str) -> bool {
     let bare = strip_brackets(ip);
     match is_ip(&bare) {
-        4 => parse_v4(&bare).is_some_and(|address| allowed_v4(&address)),
-        6 => {
+        Ok(4) => parse_v4(&bare).is_some_and(|address| allowed_v4(&address)),
+        Ok(6) => {
             if let Some(mapped) = unmap_ipv4(&bare) {
                 return allowed_v4(&mapped);
             }
@@ -286,7 +286,7 @@ pub fn check_server_address(raw: &str) -> AddressCheck {
             must_resolve: false,
         };
     }
-    if is_ip(&host) != 0 {
+    if is_ip(&host) != Ok(0) {
         return if plain_http_allowed_ip(&host) {
             AddressCheck::Allowed {
                 plain: true,
@@ -326,7 +326,7 @@ pub fn check_resolved_server_address(raw: &str, resolver: &dyn HostResolver) -> 
         return first;
     }
     let host = match parse(raw) {
-        Parsed::Url { host, .. } if is_ip(&host) == 0 => host,
+        Parsed::Url { host, .. } if is_ip(&host) == Ok(0) => host,
         _ => {
             return AddressCheck::Allowed {
                 plain: true,
