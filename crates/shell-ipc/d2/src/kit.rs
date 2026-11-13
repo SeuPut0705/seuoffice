@@ -7,6 +7,7 @@
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 use std::rc::{Rc, Weak};
 use std::time::Duration;
@@ -370,6 +371,10 @@ thread_local! {
 /// What TypeScript awaited: `work` runs on a worker with the data it owns,
 /// then `then` runs on the core thread with its result, where it may touch
 /// the handler's state and answer. Call it on the core thread.
+///
+/// When `work` panics, `then` never runs and is dropped on the core thread,
+/// with the responder it holds: the shell answers a dropped responder with
+/// an error, so the renderer's invoke settles as a rejected promise did.
 pub(crate) fn on_worker<R: Send + 'static>(
     services: &Services,
     work: impl FnOnce() -> R + Send + 'static,
@@ -395,11 +400,15 @@ pub(crate) fn on_worker<R: Send + 'static>(
     });
     let core = services.core.clone();
     services.workers.spawn(Box::new(move || {
-        let result: Box<dyn Any + Send> = Box::new(work());
+        // `work` owns its data and is gone after a panic: nothing observes a
+        // broken state
+        let result = catch_unwind(AssertUnwindSafe(|| Box::new(work()) as Box<dyn Any + Send>));
         core.post(Box::new(move || {
             let then = WAITING.with(|waiting| waiting.borrow_mut().remove(&id));
-            if let Some(then) = then {
-                then(result)
+            match (then, result) {
+                (Some(then), Ok(result)) => then(result),
+                // dropped here, outside the borrow of WAITING
+                (then, _) => drop(then),
             }
         }));
     }));
@@ -595,5 +604,41 @@ mod tests {
         assert_eq!(args.str(0), Some("p"));
         assert_eq!(args.get(3), &IpcValue::Undefined);
         assert_eq!(args.num(0), None);
+    }
+
+    /// Set when the value is dropped: a responder that captured it is gone
+    struct Dropped(std::sync::Arc<std::sync::atomic::AtomicBool>);
+
+    impl Drop for Dropped {
+        fn drop(&mut self) {
+            self.0.store(true, std::sync::atomic::Ordering::SeqCst)
+        }
+    }
+
+    /// A worker job that panics must not keep the handler's responder alive
+    /// on the core thread: the shell answers a dropped responder, so the
+    /// renderer's invoke settles instead of waiting forever
+    #[test]
+    fn a_panicking_worker_lets_go_of_the_responder() {
+        let mut rt = crate::testing::Rt::new(|_| {});
+        let gone = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let marker = Dropped(gone.clone());
+        let reply = Responder::new(move |_| drop(marker));
+        let ran = Rc::new(Cell::new(false));
+        let then_ran = ran.clone();
+        on_worker(
+            &rt.services,
+            || -> u32 { panic!("the engine failed") },
+            move |_| {
+                then_ran.set(true);
+                reply.reply(Ok(IpcValue::Undefined))
+            },
+        );
+        rt.drain();
+        assert!(!ran.get(), "the continuation ran without a result");
+        assert!(
+            gone.load(std::sync::atomic::Ordering::SeqCst),
+            "the responder is still held"
+        );
     }
 }
