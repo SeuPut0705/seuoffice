@@ -317,7 +317,7 @@ const alphabet = Array.from({ length: 60_000 }, (_, i) => String.fromCharCode(97
   '',
 )
 
-const defaultDir = { documents: { dir: true } }
+const defaultDir = { documents: { dir: true as const } }
 
 const cases: Case[] = [
   // ---- the corpus listing and the starred store ----
@@ -901,7 +901,7 @@ const cases: Case[] = [
   {
     note: 'a project chosen at home: md goes to its folder through the write guard; the guard picks the path',
     views,
-    files: { proj: { dir: true } },
+    files: { proj: { dir: true as const } },
     hosts: kb({
       placement: { projectId: 'p1', root: PROJ, dir: `${PROJ}/Inbox` },
       defaultSaveDir: '$DIR/documents',
@@ -914,7 +914,7 @@ const cases: Case[] = [
   {
     note: 'a project chosen at home: docx is made in a temporary folder first, then written by the guard; the folder is gone after',
     views,
-    files: { proj: { dir: true }, temp: { dir: true } },
+    files: { proj: { dir: true as const }, temp: { dir: true as const } },
     hosts: kb({
       placement: { projectId: 'p1', root: PROJ, dir: PROJ },
     }),
@@ -923,7 +923,7 @@ const cases: Case[] = [
   {
     note: 'a project document: the CLI fails, and the temporary folder is still removed',
     views,
-    files: { proj: { dir: true }, temp: { dir: true } },
+    files: { proj: { dir: true as const }, temp: { dir: true as const } },
     hosts: kb({
       placement: { projectId: 'p1', root: PROJ, dir: PROJ },
       docxError: 'no CLI',
@@ -933,7 +933,7 @@ const cases: Case[] = [
   {
     note: 'a project document: the write guard refuses, nothing goes elsewhere; so does a placement that throws',
     views,
-    files: { proj: { dir: true }, documents: { dir: true } },
+    files: { proj: { dir: true as const }, documents: { dir: true as const } },
     hosts: kb({
       placement: { projectId: 'p1', root: PROJ, dir: PROJ },
       writeError: 'the folder is read-only',
@@ -1042,7 +1042,10 @@ export const group: Group = {
         },
         async readPath(owner: number, id: string, path: string, offset: number): Promise<unknown> {
           log('projectFolderTools.readPath', owner, id, path, offset)
-          return projects[id]?.read?.[path] ?? { status: 'refused', reason: 'outside' }
+          const found = projects[id]?.read?.find((entry) => entry.path === path)
+          if (!found) return { status: 'refused', reason: 'outside' }
+          const { path: _path, ...read } = found
+          return read
         },
       },
     })

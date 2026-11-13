@@ -41,6 +41,13 @@ const cases: Case[] = [
     calls: [tools(), confirm(ask)],
   },
   {
+    note: 'a stored true keeps them on and asks',
+    views: docs,
+    files: settings({ internetTools: true }),
+    hosts: answers(1),
+    calls: [tools(), confirm(ask)],
+  },
+  {
     note: 'a value that is not false keeps them on',
     views: docs,
     files: settings({ internetTools: 'no' }),
@@ -53,10 +60,10 @@ const cases: Case[] = [
     calls: [tools()],
   },
   {
-    note: 'Allow answers yes, Block and closing answer no',
+    note: 'Allow answers yes; Block, closing and any other answer are no',
     views: docs,
-    hosts: answers(1, 0),
-    calls: [confirm(ask), confirm(ask), confirm(ask)],
+    hosts: answers(1, 0, 2),
+    calls: [confirm(ask), confirm(ask), confirm(ask), confirm(ask)],
   },
   {
     note: 'several addresses, one cut at 300 characters, in English',

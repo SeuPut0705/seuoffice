@@ -240,7 +240,7 @@ const SKILL_PLAIN = '---\nname: seuoffice\nversion: 2.1.0\n---\nno requirement\n
 
 /** the bundled files an unpackaged shell reads (`APPS_ROOT/../skills`, `../packages/cli`) */
 const bundle = (skill = SKILL, packageJson?: string) => ({
-  userData: { dir: true },
+  userData: { dir: true as const },
   'skills/seuoffice/SKILL.md': skill,
   ...(packageJson === undefined ? {} : { 'packages/cli/package.json': packageJson }),
 })
@@ -255,7 +255,7 @@ const entry = (dir: string, version = '1.0.0') => ({
 const stored = (ledger: unknown) => ({
   'userData/app-settings.json': JSON.stringify({ lang: 'ko', agentSkillInstalls: ledger }),
 })
-const folders = { downloads: { dir: true } }
+const folders = { downloads: { dir: true as const } }
 
 const hosts = (integrations: Setup = {}, shared: unknown = {}) => ({
   shared,

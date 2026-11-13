@@ -466,7 +466,8 @@ Date.now = () => box.clock
 // a timer of a second or more (the sync's retry and debounce) must not keep the process alive
 const realSetTimeout = globalThis.setTimeout
 globalThis.setTimeout = ((handler: () => void, ms?: number, ...rest: unknown[]) => {
-  const timer = realSetTimeout(handler, ms, ...rest)
+  // Node's timer, which the DOM typing of setTimeout does not know
+  const timer = realSetTimeout(handler, ms, ...rest) as unknown as NodeJS.Timeout
   if (typeof ms === 'number' && ms >= 1000) timer.unref()
   return timer
 }) as typeof setTimeout
@@ -802,7 +803,7 @@ const cases: Case[] = [
     note: 'an unwritable settings file',
     views,
     hosts: hosts({}),
-    files: { 'userData/app-settings.json': { dir: true } },
+    files: { 'userData/app-settings.json': { dir: true as const } },
     calls: [state(), shell('drive:set-ai-access', false), shell('drive:set-training-ack', true)],
   },
 

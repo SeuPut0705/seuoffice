@@ -50,7 +50,7 @@ const docs = (channel: string, ...args: unknown[]): Call => ({ channel, view: 2,
 const shell = (channel: string, ...args: unknown[]): Call => ({ channel, view: 1, args })
 const undef = { $: 'u' }
 const settings = (value: unknown) => ({ 'userData/app-settings.json': JSON.stringify(value) })
-const folder = { userData: { dir: true } }
+const folder = { userData: { dir: true as const } }
 
 const cases: Case[] = [
   {
