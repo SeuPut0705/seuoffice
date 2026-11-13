@@ -434,10 +434,10 @@ describe('saving an ODT document', () => {
 })
 
 describe('content hidden from AI never lands in an ODT', () => {
-  /** the whole text of the editor marked as hidden from AI */
+  /** the whole text of the editor marked as hidden from AI, as the menu command does */
   function hideFromAi(editor: Editor): void {
-    const mark = editor.state.schema.marks.redaction.create({ label: 'client' })
-    editor.view.dispatch(editor.state.tr.addMark(0, editor.state.doc.content.size, mark))
+    editor.commands.selectAll()
+    expect(editor.commands.setRedaction('client')).toBe(true)
   }
 
   it('saving a marked ODT document writes nothing and says why', async () => {

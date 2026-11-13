@@ -76,7 +76,10 @@ async function withMarkedRun(docx: Uint8Array): Promise<Uint8Array> {
   const run =
     `<w:r><w:rPr><go:redact xmlns:go="${REDACT_NS_WRITTEN}" w:label="client"/></w:rPr>` +
     '<w:t>SECRET-4711</w:t></w:r>'
-  zip.file('word/document.xml', xml.replace(/<w:p\b[^>]*>/, (open) => open + run))
+  zip.file(
+    'word/document.xml',
+    xml.replace(/<w:p\b[^>]*>/, (open) => open + run),
+  )
   return zip.generateAsync({ type: 'uint8array' })
 }
 
