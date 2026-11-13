@@ -167,7 +167,7 @@ pub fn page_borders_xml(props: Option<&SectionSettingsPageBorderProps>) -> Strin
 
 /// `intAttr` of section.ts over the name's own pattern.
 fn int_attr(tag: &str, name: &str, fallback: f64) -> Result<f64, String> {
-    let pattern = format!(r#"{name}=["'](-?\d+(?:\.\d+)?)["']"#);
+    let pattern = format!(r#"{name}\s*=\s*["'](-?\d+(?:\.\d+)?)["']"#);
     let found = dynamic(&pattern, "")?.try_exec(tag).map_err(limit)?;
     let value = found
         .and_then(|found| found.get(1).map(parse_float))
@@ -175,22 +175,21 @@ fn int_attr(tag: &str, name: &str, fallback: f64) -> Result<f64, String> {
     Ok(if value.is_finite() { value } else { fallback })
 }
 
-/// `replaceMarAttr` of `applySectionSettings`.
+/// `replaceMarAttr` of `applySectionSettings`: an attribute as another producer
+/// may spell it (either quote, white space around `=`) takes the new value in
+/// its own quote; a missing one goes before the tag's `/>`.
 fn replace_mar_attr(tag: &str, name: &str, value: f64) -> Result<String, String> {
     let value = number_to_string(value);
-    if tag.contains(&format!("{name}=\"")) {
-        let pattern = format!(r#"{name}="-?[\d.]+""#);
-        return replace_first(
-            &dynamic(&pattern, "")?,
-            0,
-            tag,
-            &format!("{name}=\"{value}\""),
-        );
+    let attr = dynamic(&format!(r#"(\s{name}\s*=\s*)(["'])[^"']*\2"#), "")?;
+    if attr.try_exec(tag).map_err(limit)?.is_some() {
+        return replace_first(&attr, 2, tag, &format!("$1$2{value}$2"));
     }
-    Ok(match tag.strip_suffix("/>") {
-        Some(head) => format!("{head} {name}=\"{value}\"/>"),
-        None => tag.to_owned(),
-    })
+    replace_first(
+        &dynamic(r"\s*\/>$", "")?,
+        0,
+        tag,
+        &format!(" {name}=\"{value}\"/>"),
+    )
 }
 
 /// `applySectionSettings`: rewrite pgSz / pgMar / borders / columns / bidi
