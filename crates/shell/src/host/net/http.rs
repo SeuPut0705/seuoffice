@@ -233,9 +233,15 @@ impl Inner {
             }
             let waiting = std::mem::take(&mut source.waiting);
             let mut answers = Vec::new();
+            let mut over = Vec::new();
             for (read, body, sink) in waiting {
                 match take_next(&mut st, body) {
-                    Some(answer) => answers.push((sink, read, answer)),
+                    Some(answer) => {
+                        if !matches!(answer, Ok(Answer::Chunk(_))) {
+                            over.push(body);
+                        }
+                        answers.push((sink, read, answer));
+                    }
                     None => st
                         .sources
                         .get_mut(&source_id)
@@ -244,14 +250,21 @@ impl Inner {
                         .push((read, body, sink)),
                 }
             }
+            // after the whole batch: every read waiting on a branch is handed
+            // its end or its failure before the branch goes
+            for body in over {
+                reclaim(&mut st, body);
+            }
             trim(&mut st, source_id);
-            drop(st);
+            // posted under the lock: a read taken after these cannot be
+            // answered before them (posting only queues for the core thread)
             for (sink, read, answer) in answers {
                 match answer {
                     Ok(answer) => sink.done(read, answer),
                     Err(error) => sink.failed(read, error),
                 }
             }
+            drop(st);
             inner.pull(source_id);
         }));
     }
@@ -276,6 +289,19 @@ fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
         Some(Ok(())) => Some(Ok(Answer::End)),
         Some(Err(error)) => Some(Err(error.clone())),
         None => None,
+    }
+}
+
+/// A branch handed its end or its failure is over: the runtime reads it no
+/// more and sends no cancel for it, so it goes, and its stream with the last
+/// branch (a clone not yet read keeps the stream and its chunks). Called once
+/// every read waiting on it has its answer.
+fn reclaim(st: &mut State, body: Id) {
+    let Some(branch) = st.bodies.remove(&body) else {
+        return;
+    };
+    if !st.bodies.values().any(|b| b.source == branch.source) {
+        st.sources.remove(&branch.source);
     }
 }
 
@@ -489,15 +515,20 @@ impl Net for HttpNet {
         let mut st = Inner::lock(&self.0.state);
         match take_next(&mut st, body) {
             Some(answer) => {
-                let source = st.bodies.get(&body).map(|b| b.source);
-                if let Some(source) = source {
-                    trim(&mut st, source);
+                if matches!(answer, Ok(Answer::Chunk(_))) {
+                    let source = st.bodies.get(&body).map(|b| b.source);
+                    if let Some(source) = source {
+                        trim(&mut st, source);
+                    }
+                } else {
+                    reclaim(&mut st, body);
                 }
-                drop(st);
+                // under the lock, as `pull` answers: in the order taken
                 match answer {
                     Ok(answer) => sink.done(id, answer),
                     Err(error) => sink.failed(id, error),
                 }
+                drop(st);
             }
             None => {
                 let source = st
@@ -533,11 +564,23 @@ impl Net for HttpNet {
             let _ = stop.send(());
         }
         let source = st.bodies.get(&id).map(|b| b.source).unwrap_or(id);
-        if let Some(mut gone) = st.sources.remove(&source) {
-            if let Some(stop) = gone.stop.take() {
-                let _ = stop.send(());
+        stop_source(&mut st, source);
+    }
+
+    fn release(&self, body: Id, stop: Option<Id>) {
+        let mut st = Inner::lock(&self.0.state);
+        let source = st.bodies.remove(&body).map(|b| b.source);
+        if let Some(source) = stop {
+            stop_source(&mut st, source);
+        } else if let Some(source) = source {
+            if st.bodies.values().any(|b| b.source == source) {
+                // the chunks only this branch had still to read go with it
+                trim(&mut st, source);
+            } else {
+                // the last branch of a stream that ended (the runtime stops
+                // one that has not): nothing reads it any more
+                stop_source(&mut st, source);
             }
-            st.bodies.retain(|_, branch| branch.source != source);
         }
     }
 
@@ -642,6 +685,17 @@ impl Net for HttpNet {
     }
 }
 
+/// The stream of the fetch `source` stops: its response (and connection) is
+/// dropped, a pull in flight ends, and every branch goes with it
+fn stop_source(st: &mut State, source: Id) {
+    if let Some(mut gone) = st.sources.remove(&source) {
+        if let Some(stop) = gone.stop.take() {
+            let _ = stop.send(());
+        }
+        st.bodies.retain(|_, branch| branch.source != source);
+    }
+}
+
 /// Drops the chunks every branch of `source` has handed out
 fn trim(st: &mut State, source: Id) {
     let slowest = st
@@ -659,4 +713,461 @@ fn trim(st: &mut State, source: Id) {
     let gone = slowest.saturating_sub(source.base).min(source.chunks.len());
     source.chunks.drain(..gone);
     source.base += gone;
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    use main_core::packages::ai_provider::task::{Fetcher, Request};
+    use shell_contract::Hosts;
+    use shell_contract::ipc::{EventSink, Target};
+    use shell_contract::runtime::{Services, Thread, Views, Workers, run_on};
+    use shell_contract::value::IpcValue;
+    use shell_core::core_thread::{CoreThread, ThreadWorkers};
+    use shell_ipc_a::runtime::Driver;
+
+    use super::*;
+    use crate::ipc::outlet::TauriOutlet;
+    use crate::paths::ShellPaths;
+    use crate::views::ViewTable;
+
+    struct NoEvents;
+
+    impl EventSink for NoEvents {
+        fn emit(&self, _: Target, _: &'static str, _: Vec<IpcValue>) {}
+    }
+
+    /// A raw HTTP/1.1 server answering every request with a chunked body
+    /// A raw HTTP/1.1 server answering every request with a chunked body
+    fn server() -> String {
+        serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
+            Duration::ZERO,
+        )
+    }
+
+    /// A raw HTTP/1.1 server writing `answer` to every request, then closing
+    /// the connection after `linger`
+    fn serve(answer: &'static [u8], linger: Duration) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let _ = stream.write_all(answer);
+                std::thread::sleep(linger);
+            }
+        });
+        address
+    }
+
+    fn held(net: &HttpNet) -> (usize, usize, usize) {
+        let st = Inner::lock(&net.0.state);
+        (st.sources.len(), st.bodies.len(), st.ops.len())
+    }
+
+    /// The host on a tokio runtime of its own and one AI runtime driver on a
+    /// core thread, as the shell builds them
+    struct World {
+        net: Arc<HttpNet>,
+        core: Arc<dyn Thread>,
+        services: Services,
+        stop: Option<tokio::sync::oneshot::Sender<()>>,
+        runner: Option<std::thread::JoinHandle<()>>,
+    }
+
+    impl World {
+        fn new() -> World {
+            World::build(None)
+        }
+
+        /// The host on a runtime of two threads, its posts to the core
+        /// thread through `gate`
+        fn gated(gate: Arc<Gate>) -> World {
+            World::build(Some(gate))
+        }
+
+        fn build(gate: Option<Arc<Gate>>) -> World {
+            let tokio_rt = if gate.is_some() {
+                tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(2)
+                    .enable_all()
+                    .build()
+                    .unwrap()
+            } else {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+            };
+            let handle = tokio_rt.handle().clone();
+            let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+            let runner = std::thread::spawn(move || {
+                tokio_rt.block_on(async {
+                    let _ = stopped.await;
+                })
+            });
+            let spawn: Spawn = Arc::new(move |future| {
+                handle.spawn(future);
+            });
+            let core_thread: Arc<dyn Thread> = match gate {
+                Some(gate) => Arc::new(Gated {
+                    core: CoreThread::spawn("http-test-core"),
+                    gate,
+                }),
+                None => CoreThread::spawn("http-test-core") as Arc<dyn Thread>,
+            };
+            let views = Arc::new(ViewTable::new(
+                Arc::new(TauriOutlet::default()),
+                core_thread.clone(),
+            ));
+            World {
+                net: Arc::new(HttpNet::new(spawn)),
+                services: Services {
+                    ui: CoreThread::spawn("http-test-ui"),
+                    core: core_thread.clone(),
+                    workers: Arc::new(ThreadWorkers) as Arc<dyn Workers>,
+                    events: Arc::new(NoEvents),
+                    views: views as Arc<dyn Views>,
+                    paths: Arc::new(ShellPaths::new()),
+                    hosts: Arc::new(Hosts::default()),
+                },
+                core: core_thread,
+                stop: Some(stop),
+                runner: Some(runner),
+            }
+        }
+
+        /// Runs `program` on the runtime of a new driver; what it comes to
+        fn run<T: Send + 'static, F: Future<Output = T> + 'static>(
+            &self,
+            program: impl FnOnce(main_core::packages::ai_provider::task::Rt) -> F + Send + 'static,
+        ) -> T {
+            let (tx, rx) = mpsc::channel::<T>();
+            let host: shell_ipc_a::NetHost = self.net.clone();
+            let services = self.services.clone();
+            run_on(self.core.as_ref(), move || {
+                let driver = Driver::new(&services, host);
+                driver.run(program(driver.rt()), move |out| {
+                    let _ = tx.send(out);
+                });
+                // the driver lives on for the rest of the test process
+                std::mem::forget(driver);
+            });
+            rx.recv_timeout(Duration::from_secs(20))
+                .expect("the program ended")
+        }
+
+        /// What the host holds once its answers settled
+        fn held_after_settling(&self, expected: (usize, usize, usize)) -> (usize, usize, usize) {
+            let end = std::time::Instant::now() + Duration::from_secs(5);
+            while held(&self.net) != expected && std::time::Instant::now() < end {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            held(&self.net)
+        }
+    }
+
+    impl Drop for World {
+        fn drop(&mut self) {
+            let _ = self.stop.take().map(|stop| stop.send(()));
+            let _ = self.runner.take().map(std::thread::JoinHandle::join);
+        }
+    }
+
+    /// Bodies read to their end, a clone read after its original, and a
+    /// clone read first: none of it stays with the host afterwards
+    #[test]
+    fn a_body_read_to_its_end_leaves_nothing_behind() {
+        let w = World::new();
+        let url = server();
+        let texts = w.run(move |rt| async move {
+            let mut texts = Vec::new();
+            for _ in 0..3 {
+                let response = rt
+                    .fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap();
+                texts.push(response.text().await.unwrap());
+            }
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            texts.push(response.text().await.unwrap());
+            texts.push(clone.text().await.unwrap());
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            texts.push(clone.text().await.unwrap());
+            texts.push(response.text().await.unwrap());
+            texts
+        });
+        assert_eq!(texts, vec!["hello world"; 7]);
+        assert_eq!(
+            w.held_after_settling((0, 0, 0)),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
+    }
+
+    /// The original read to its end and its clone left unread: the stream
+    /// ended, so the clone's release comes without `stop`, and the host lets
+    /// go of the stream with that last branch
+    #[test]
+    fn the_unread_clone_of_an_ended_stream_is_freed_when_released() {
+        let w = World::new();
+        let url = server();
+        let text = w.run(move |rt| async move {
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            let text = response.text().await.unwrap();
+            drop(clone);
+            // the runtime sends the clone's `Release` at its next poll
+            rt.sleep(1.0).await;
+            text
+        });
+        assert_eq!(text, "hello world");
+        assert_eq!(
+            w.held_after_settling((0, 0, 0)),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
+    }
+
+    /// what a `reader.read()` came to, its failure as its message
+    type ReadOutcome = Result<Option<Vec<u8>>, String>;
+
+    /// A stream cut short while two reads of one body wait: both reject with
+    /// its failure, the second too, though the first already ended the branch
+    #[test]
+    fn every_read_waiting_on_a_failed_stream_rejects() {
+        let w = World::new();
+        let url = serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+            Duration::from_millis(300),
+        );
+        let (first, waits) = w.run(move |rt| async move {
+            let response = std::rc::Rc::new(
+                rt.fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap(),
+            );
+            let first = response.read().await.map_err(|e| e.message);
+            let other: std::rc::Rc<std::cell::RefCell<Option<ReadOutcome>>> =
+                std::rc::Rc::default();
+            let (reader, slot) = (response.clone(), other.clone());
+            rt.spawn_local(async move {
+                let read = reader.read().await.map_err(|e| e.message);
+                *slot.borrow_mut() = Some(read);
+            });
+            let mine = response.read().await.map_err(|e| e.message);
+            while other.borrow().is_none() {
+                rt.sleep(5.0).await;
+            }
+            let theirs = other.take().unwrap();
+            (first, vec![mine, theirs])
+        });
+        assert_eq!(first, Ok(Some(b"hello".to_vec())));
+        for read in waits {
+            assert!(
+                read.is_err(),
+                "a read waiting on the failed stream ended: {read:?}"
+            );
+        }
+        assert_eq!(w.held_after_settling((0, 0, 0)), (0, 0, 0));
+    }
+
+    /// Holds the first post the host makes once armed (from a thread of its
+    /// runtime: not the core thread, not the AI runtime's timers) until it
+    /// is opened: the moment between a read's answer being decided and its
+    /// reaching the core thread
+    #[derive(Default)]
+    struct Gate {
+        armed: std::sync::atomic::AtomicBool,
+        held: std::sync::atomic::AtomicBool,
+        /// answers the host posted while the held one waited
+        overtaking: std::sync::atomic::AtomicUsize,
+        open: (Mutex<bool>, std::sync::Condvar),
+    }
+
+    impl Gate {
+        fn hold_here(&self) {
+            let by_host = std::thread::current()
+                .name()
+                .is_none_or(|name| name != "http-test-core" && name != "ai-runtime-timers");
+            if !by_host || !self.armed.load(Ordering::SeqCst) {
+                return;
+            }
+            if self.held.swap(true, Ordering::SeqCst) {
+                if !*self.open.0.lock().unwrap() {
+                    self.overtaking.fetch_add(1, Ordering::SeqCst);
+                }
+                return;
+            }
+            // the runtime's other tasks (the connection's among them) go on
+            // while this thread waits
+            tokio::task::block_in_place(|| {
+                let (open, opened) = &self.open;
+                let guard = open.lock().unwrap();
+                let _unused = opened
+                    .wait_timeout_while(guard, Duration::from_secs(5), |open| !*open)
+                    .unwrap();
+            });
+        }
+
+        fn open(&self) {
+            *self.open.0.lock().unwrap() = true;
+            self.open.1.notify_all();
+        }
+    }
+
+    struct Gated {
+        core: Arc<CoreThread>,
+        gate: Arc<Gate>,
+    }
+
+    impl Thread for Gated {
+        fn post(&self, job: Box<dyn FnOnce() + Send>) {
+            self.gate.hold_here();
+            self.core.post(job);
+        }
+
+        fn is_current(&self) -> bool {
+            self.core.is_current()
+        }
+    }
+
+    /// A read's chunk held on its way to the core thread while a later read
+    /// of the same body is made: no later answer may be posted before it
+    /// (a runtime that ends a body's pending reads with the first End it is
+    /// handed would end the earlier read without its chunk)
+    #[test]
+    fn a_later_read_is_not_answered_before_an_earlier_one() {
+        let gate = Arc::new(Gate::default());
+        let w = World::gated(gate.clone());
+        let url = serve_slowly();
+        let armed = gate.clone();
+        let opener = gate.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(600));
+            opener.open();
+        });
+        let order = w.run(move |rt| async move {
+            let response = std::rc::Rc::new(
+                rt.fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap(),
+            );
+            armed.armed.store(true, Ordering::SeqCst);
+            let order: std::rc::Rc<std::cell::RefCell<Vec<(u8, ReadOutcome)>>> =
+                std::rc::Rc::default();
+            let read = |n: u8| {
+                let (response, order) = (response.clone(), order.clone());
+                async move {
+                    let got = response.read().await.map_err(|e| e.message);
+                    order.borrow_mut().push((n, got));
+                }
+            };
+            rt.spawn_local(read(1));
+            rt.spawn_local(read(2));
+            // the first chunk is in and held at the gate by now
+            rt.sleep(150.0).await;
+            rt.spawn_local(read(3));
+            while order.borrow().len() < 3 {
+                rt.sleep(10.0).await;
+            }
+            order.take()
+        });
+        assert!(gate.held.load(Ordering::SeqCst), "the gate held no answer");
+        assert_eq!(
+            gate.overtaking.load(Ordering::SeqCst),
+            0,
+            "answers posted while an earlier one was on its way"
+        );
+        assert_eq!(
+            order.first(),
+            Some(&(1, Ok(Some(b"hello".to_vec())))),
+            "the reads ended in this order: {order:?}"
+        );
+    }
+
+    /// A chunked body: one chunk at once, its end 300 ms later
+    fn serve_slowly() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let _ = stream.write_all(
+                    b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+                      transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+                );
+                std::thread::sleep(Duration::from_millis(300));
+                let _ = stream.write_all(b"0\r\n\r\n");
+            }
+        });
+        address
+    }
+
+    /// Responses the program lets go of unread: the fetch's alone, and a
+    /// clone dropped before its original; the host stops each stream (no
+    /// cancel: in JavaScript a dropped body is only garbage) and keeps nothing
+    #[test]
+    fn a_response_dropped_unread_is_stopped_and_freed() {
+        let w = World::new();
+        // a body that never ends: only a stop frees it
+        let url = serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+            Duration::from_secs(30),
+        );
+        let statuses = w.run(move |rt| async move {
+            let mut statuses = Vec::new();
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            statuses.push(response.status());
+            drop(response);
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            statuses.push(clone.status());
+            drop(clone);
+            drop(response);
+            rt.sleep(1.0).await;
+            statuses
+        });
+        assert_eq!(statuses, vec![200.0, 200.0]);
+        assert_eq!(
+            w.held_after_settling((0, 0, 0)),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
+    }
 }

@@ -27,6 +27,7 @@ use shell_contract::runtime::{AppPaths, PathName};
 use shell_contract::slides::{SlidesDocument, SlidesDocuments, SlidesTemplateSelectionHooks};
 
 use crate::ports::SlidesTemplateSelection;
+use crate::runtime::RuntimeClock;
 use crate::value::{arg, from_json};
 
 /// The store's document from the contract's
@@ -70,16 +71,23 @@ fn answer(selection: Option<TemplateSelection>) -> IpcValue {
 pub struct SlidesTemplateSelectionPort {
     paths: Arc<dyn AppPaths>,
     provided: Rc<Provided>,
+    /// `Date.now()` of the store, when the shell pins one (the probe)
+    clock: Option<RuntimeClock>,
     /// `memory`: created on first use, once the shell has settled the
     /// user-data folder
     memory: OnceCell<Rc<RefCell<TemplateSelectionMemory>>>,
 }
 
 impl SlidesTemplateSelectionPort {
-    pub fn new(paths: Arc<dyn AppPaths>, provided: Rc<Provided>) -> Self {
+    pub fn new(
+        paths: Arc<dyn AppPaths>,
+        provided: Rc<Provided>,
+        clock: Option<RuntimeClock>,
+    ) -> Self {
         SlidesTemplateSelectionPort {
             paths,
             provided,
+            clock,
             memory: OnceCell::new(),
         }
     }
@@ -100,7 +108,12 @@ impl SlidesTemplateSelectionPort {
                 let user_data = self.paths.path(PathName::UserData);
                 Rc::new(RefCell::new(TemplateSelectionMemory::new(
                     &user_data.to_string_lossy(),
-                    TemplateSelectionStoreOptions::default(),
+                    TemplateSelectionStoreOptions {
+                        max_documents: None,
+                        now: self.clock.clone().map(|RuntimeClock(clock)| {
+                            Box::new(move || clock()) as Box<dyn Fn() -> f64>
+                        }),
+                    },
                 )))
             })
             .clone()
@@ -161,6 +174,7 @@ pub fn factory() -> crate::Factory<dyn SlidesTemplateSelection> {
         let port = Rc::new(SlidesTemplateSelectionPort::new(
             services.paths.clone(),
             provided.clone(),
+            services.hosts.get::<RuntimeClock>().cloned(),
         ));
         provided.add::<dyn SlidesTemplateSelectionHooks>(port.clone());
         let port: Rc<dyn SlidesTemplateSelection> = port;
@@ -208,7 +222,7 @@ mod tests {
     fn port(dir: &Path, sessions: &Rc<Sessions>) -> SlidesTemplateSelectionPort {
         let provided = Rc::new(Provided::default());
         provided.add::<dyn SlidesDocuments>(sessions.clone());
-        SlidesTemplateSelectionPort::new(Arc::new(Dir(dir.to_path_buf())), provided)
+        SlidesTemplateSelectionPort::new(Arc::new(Dir(dir.to_path_buf())), provided, None)
     }
 
     fn call(view: u32, f: impl FnOnce(&CallContext, Responder)) -> Result<IpcValue, IpcError> {
@@ -378,7 +392,11 @@ mod tests {
     fn the_factory_provides_the_hooks() {
         let provided = Rc::new(Provided::default());
         let paths: Arc<dyn AppPaths> = Arc::new(Dir(user_data("factory")));
-        let port = Rc::new(SlidesTemplateSelectionPort::new(paths, provided.clone()));
+        let port = Rc::new(SlidesTemplateSelectionPort::new(
+            paths,
+            provided.clone(),
+            None,
+        ));
         provided.add::<dyn SlidesTemplateSelectionHooks>(port);
         assert_eq!(provided.all::<dyn SlidesTemplateSelectionHooks>().len(), 1);
     }

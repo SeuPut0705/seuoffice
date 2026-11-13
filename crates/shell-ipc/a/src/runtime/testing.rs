@@ -302,6 +302,15 @@ impl Net for FakeNet {
         }
     }
 
+    /// a dropped body is garbage: the comparison world logs nothing for it
+    fn release(&self, body: Id, stop: Option<Id>) {
+        let mut state = self.state.lock().unwrap();
+        state.bodies.remove(&body);
+        if let Some(source) = stop {
+            state.cancelled.insert(source);
+        }
+    }
+
     fn listen(&self, id: Id, host: String, port: f64, sink: Sink) {
         let spec = &self.table["listen"];
         let scripted = spec["port"].as_f64().unwrap_or(40000.0);
