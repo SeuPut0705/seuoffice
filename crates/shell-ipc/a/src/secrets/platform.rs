@@ -1,9 +1,23 @@
 //! Where each OS keeps the safeStorage key, and Chromium's values from before
 //! the `v10` prefix.
+//!
+//! The OS backends (the login keychain, DPAPI) are compiled only into the
+//! shell itself: a unit test (`cfg(test)`) or the probe of tools/ipc-diff
+//! (`feature = "probe"`) gets the backend that has no key, so no test and no
+//! comparison run can read or make the person's real keychain item. A
+//! storage without a key answers as Electron's does when encryption is not
+//! available.
 
 use super::{Key, KeyPlace};
 
-#[cfg(target_os = "macos")]
+/// Whether this build reads the OS's key store ([`load_or_create_key`] can
+/// reach the keychain or DPAPI); false in every test and probe build
+pub const OS_KEY_STORE: bool = cfg!(all(
+    any(target_os = "macos", windows),
+    not(any(test, feature = "probe"))
+));
+
+#[cfg(all(target_os = "macos", not(any(test, feature = "probe"))))]
 mod imp {
     use security_framework::passwords::{get_generic_password, set_generic_password};
 
@@ -34,7 +48,7 @@ mod imp {
     }
 }
 
-#[cfg(windows)]
+#[cfg(all(windows, not(any(test, feature = "probe"))))]
 mod imp {
     use std::ptr::{null, null_mut};
 
@@ -147,12 +161,13 @@ mod imp {
     }
 }
 
-#[cfg(not(any(target_os = "macos", windows)))]
+#[cfg(any(not(any(target_os = "macos", windows)), test, feature = "probe"))]
 mod imp {
     use super::{Key, KeyPlace};
 
     /// Releases are macOS and Windows only; a Linux shell (the runners)
-    /// keeps values plain, as the Electron build did without a keyring
+    /// keeps values plain, as the Electron build did without a keyring, and
+    /// so do the tests and the probe on every OS
     pub fn load_or_create_key(_: &KeyPlace) -> Option<Key> {
         None
     }
