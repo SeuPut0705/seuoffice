@@ -24,6 +24,8 @@ mod export;
 mod handlers;
 pub mod hosts;
 mod preview;
+#[cfg(any(test, feature = "probe"))]
+mod probe;
 mod recovery;
 #[cfg(test)]
 mod tests;
@@ -41,8 +43,8 @@ use shell_contract::runtime::Services;
 use crate::route::Route;
 
 pub use app::{
-    Answer, COPY_NOW_WAIT, DONT_SAVE_HOLD, MAP_EXTENSION, MenuCommand, MindmapApp, READ_TIMEOUT,
-    RESEND, SAVE_WAIT, Seed, Wait,
+    Answer, COPY_NOW_WAIT, DONT_SAVE_HOLD, MAP_EXTENSION, MindmapApp, READ_TIMEOUT, RESEND,
+    SAVE_WAIT, Seed, Wait,
 };
 pub use hosts::{
     FetchResponse, FetchedImage, FileParse, FileParseHost, LinkNet, LinkNetHost, MindmapShell,
@@ -80,6 +82,10 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     routes.extend(export::routes(&app));
     routes.extend(attach::routes(&app));
     routes.extend(preview::routes(&app));
+    #[cfg(any(test, feature = "probe"))]
+    if let Some(probe) = services.hosts.get::<probe::ProbeOpen>() {
+        probe.apply(&app);
+    }
     Ok(routes)
 }
 
@@ -94,4 +100,11 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
     hosts.insert::<LinkNetHost>(fake.clone());
     hosts.insert::<PageRendererHost>(fake.clone());
     hosts.insert::<MindmapShellHost>(fake);
+    hosts.insert(probe::probe_open(case));
+    let clock = case
+        .get("mindmap")
+        .and_then(|script| script.get("clock"))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    app::FIXED_CLOCK.store(clock, std::sync::atomic::Ordering::Relaxed);
 }

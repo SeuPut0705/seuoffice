@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
-use shell_contract::editors::{DocumentEditors, SaveMode, editor_for};
+use shell_contract::editors::{DocumentEditors, SaveMode};
 use shell_contract::ipc::{Sender, Target};
 use shell_contract::{IpcError, IpcValue, Surface, ViewId};
 
@@ -128,8 +128,12 @@ impl H {
         out
     }
 
+    /// the mind map's own editor: another app's editor may own the same view id in this registry
     fn editor(&self, view: u32) -> Rc<dyn DocumentEditors> {
-        editor_for(&self.reg.provided, ViewId(view)).expect("a mind map view")
+        let editor: Rc<dyn DocumentEditors> =
+            Rc::new(super::editors::MindmapEditors(self.app.clone()));
+        assert!(editor.owns(ViewId(view)), "a mind map view");
+        editor
     }
 }
 

@@ -49,6 +49,14 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts) {
 /// Inserts the fakes of this batch's hosts, answering from the case's
 /// `hosts.d1` value (Null when absent; tools/ipc-diff/README.md)
 #[cfg(feature = "probe")]
-pub fn probe_hosts(hosts: &mut shell_contract::Hosts, _case: &serde_json::Value) {
-    insert_fakes(hosts);
+pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+    use std::sync::Arc;
+    hosts.insert::<host::LocaleHost>(Arc::new(testkit::FixedLocale(
+        main_core::packages::i18n::Lang::En,
+    )));
+    hosts.insert::<Arc<host::Shared>>(Arc::default());
+    diagram::insert_fakes(hosts, case);
+    mindmap::insert_fakes(hosts, case);
+    sheets::insert_fakes(hosts, case);
+    slides::insert_fakes(hosts, case);
 }

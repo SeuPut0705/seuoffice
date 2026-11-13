@@ -62,9 +62,6 @@ pub fn mode_name(mode: SaveMode) -> &'static str {
     }
 }
 
-/// `MindmapMenuCommand`
-pub type MenuCommand = &'static str;
-
 /// `MindmapSeed`: what a new, unsaved map starts with
 #[derive(Clone, Debug, PartialEq)]
 pub enum Seed {
@@ -226,8 +223,19 @@ pub(super) struct Inner {
 #[derive(Clone)]
 pub struct MindmapApp(pub(super) Rc<Inner>);
 
+/// a clock a probe case fixes (`hosts.d1.mindmap.clock`, ms since the epoch); 0 is the real one
+#[cfg(any(test, feature = "probe"))]
+pub(super) static FIXED_CLOCK: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// `Date.now()`
 pub(super) fn now_ms() -> f64 {
+    #[cfg(any(test, feature = "probe"))]
+    {
+        let fixed = FIXED_CLOCK.load(std::sync::atomic::Ordering::Relaxed);
+        if fixed != 0 {
+            return fixed as f64;
+        }
+    }
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0.0, |d| d.as_millis() as f64)
@@ -800,7 +808,7 @@ impl MindmapApp {
     }
 
     /// `sendMindmapMenuCommand`
-    pub fn send_menu_command(&self, view: ViewId, command: MenuCommand) {
+    pub fn send_menu_command(&self, view: ViewId, command: &str) {
         if self.is_alive(view) {
             self.emit(view, "mindmap:menu-command", vec![string(command)]);
         }
