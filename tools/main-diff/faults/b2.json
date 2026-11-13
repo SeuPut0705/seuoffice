@@ -98,32 +98,11 @@
     "fn": ["doc-attach-channels.DOC_ATTACH_CHANNELS"]
   },
   {
-    "name": "first-listener",
-    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
-    "find": "if count == 1 {",
-    "replace": "if count == 2 {",
-    "fn": ["project-folder-bridge.projectFolderBridge"]
-  },
-  {
-    "name": "last-listener",
-    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
-    "find": "if left == 0 {",
-    "replace": "if left == 1 {",
-    "fn": ["project-folder-bridge.projectFolderBridge"]
-  },
-  {
     "name": "channel-key",
     "file": "main-core/src/packages/project_store.rs",
     "find": "(\"setPinned\", \"projectFolder:setPinned\"),",
     "replace": "(\"setPinned\", \"projectFolder:setPin\"),",
     "fn": ["folder-api.PROJECT_FOLDER_CHANNELS", "project-folder-bridge.projectFolderBridge"]
-  },
-  {
-    "name": "role-undefined",
-    "file": "main-core/src/packages/electron_utils/split_pane_bridge.rs",
-    "find": "Ok(None) | Err(IpcRejected) => Value::Null,",
-    "replace": "Ok(None) => Value::Null,\n            Err(IpcRejected) => Value::from(0),",
-    "fn": ["split-pane-bridge.splitPaneBridge"]
   },
   {
     "name": "retry-ms",
@@ -1103,13 +1082,6 @@
     "fn": ["printer-options.isValidOptionValue", "printer-options.parseLpOptions"]
   },
   {
-    "name": "integrator: double unsubscribe goes through",
-    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
-    "find": "        subscription.active = false;\n",
-    "replace": "",
-    "fn": ["project-folder-bridge.projectFolderBridge"]
-  },
-  {
     "name": "integrator: editors listed newest first",
     "file": "main-core/src/packages/electron_utils/recovery_contract.rs",
     "find": "self.table\n            .iter()\n            .map(|(_, contract)| Rc::clone(contract))",
@@ -1178,13 +1150,6 @@
     "find": "cancel: t.t(loc, \"cancel\", None),",
     "replace": "cancel: t.t(loc, \"detail\", None),",
     "fn": ["save-conflict-labels.saveConflictLabels"]
-  },
-  {
-    "name": "integrator: report focus channel",
-    "file": "main-core/src/packages/electron_utils/split_pane_bridge.rs",
-    "find": "(\"reportFocus\", \"app:view-focused\"),",
-    "replace": "(\"reportFocus\", \"app:view-focus\"),",
-    "fn": ["split-pane-bridge.SPLIT_PANE_CHANNELS"]
   },
   {
     "name": "integrator: font content length off by one",

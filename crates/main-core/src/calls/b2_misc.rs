@@ -1,7 +1,7 @@
 //! The functions of group `b2-misc` (tools/main-diff/groups/b2-misc.ts): the
 //! i18n package and the small modules of electron-utils.
 //!
-//! A scenario function (a bridge, a dialog, a sender) takes a list of steps
+//! A scenario function (a dialog, a sender) takes a list of steps
 //! and answers one entry per step; each call of the fake it drives is one
 //! `logs` line. A `Uint8Array` is `{"$bytes": byteLength}` in JSON.
 
@@ -50,12 +50,6 @@ use crate::packages::electron_utils::numbered_export_paths::numbered_export_path
 use crate::packages::electron_utils::outbound_channels::{
     MAX_CONFIRM_ADDRESS_LENGTH, MAX_CONFIRM_ADDRESSES, OUTBOUND_CHANNELS, confirm_request_of,
 };
-use crate::packages::electron_utils::project_folder_bridge::{
-    ProjectFolderBridge, ProjectFolderBridgeIpc, Subscription,
-};
-use crate::packages::electron_utils::split_pane_bridge::{
-    IpcRejected, SPLIT_PANE_BRIDGE_KEY, SPLIT_PANE_CHANNELS, SplitPaneBridge, SplitPaneIpc,
-};
 use crate::packages::electron_utils::template_font_response::template_font_response;
 use crate::packages::electron_utils::template_fonts_dir::{
     TEMPLATE_FONTS_DIR_NAME, TEMPLATE_FONTS_REPO_DIR, TemplateFontsHost, template_fonts_dir,
@@ -72,8 +66,7 @@ use crate::packages::i18n::{
 };
 use crate::packages::project_store::{
     PROJECT_FOLDER_BRIDGE_KEY, PROJECT_FOLDER_CHANNELS, PROJECT_FOLDER_EVENTS,
-    PROJECT_FOLDER_LISTEN_CHANNEL, PROJECT_FOLDER_NAMES, ProjectFolderEventMethod,
-    ProjectFolderListenMessage,
+    PROJECT_FOLDER_LISTEN_CHANNEL, PROJECT_FOLDER_NAMES,
 };
 use crate::packages::ui::{
     TEMPLATE_FONT_FILES, TEMPLATE_FONT_HOST, TEMPLATE_FONT_SCHEME, template_font_file_of,
@@ -262,7 +255,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "doc-attach-channels.DOC_ATTACH_CHANNELS" => Ok(Some(pairs(&DOC_ATTACH_CHANNELS))),
         "doc-attach-channels.DOC_ATTACH_BRIDGE_KEY" => Ok(Some(Value::from(DOC_ATTACH_BRIDGE_KEY))),
 
-        // ---------- folder-api / project-folder-bridge ----------
+        // ---------- folder-api ----------
         "folder-api.PROJECT_FOLDER_NAMES" => Ok(Some(pairs(&PROJECT_FOLDER_NAMES))),
         "folder-api.PROJECT_FOLDER_EVENTS" => {
             let mut object = Map::new();
@@ -275,17 +268,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "folder-api.PROJECT_FOLDER_LISTEN_CHANNEL" => {
             Ok(Some(Value::from(PROJECT_FOLDER_LISTEN_CHANNEL)))
         }
-        "folder-api.PROJECT_FOLDER_BRIDGE_KEY"
-        | "project-folder-bridge.PROJECT_FOLDER_BRIDGE_KEY" => {
-            Ok(Some(Value::from(PROJECT_FOLDER_BRIDGE_KEY)))
-        }
-        "project-folder-bridge.projectFolderBridge" => project_folder_bridge_call(args, cx),
-
-        // ---------- split-pane-bridge ----------
-        "split-pane-bridge.SPLIT_PANE_CHANNELS" => Ok(Some(pairs(&SPLIT_PANE_CHANNELS))),
-        "split-pane-bridge.SPLIT_PANE_BRIDGE_KEY" => Ok(Some(Value::from(SPLIT_PANE_BRIDGE_KEY))),
-        "split-pane-bridge.splitPaneBridge" => split_pane_bridge_call(args, cx),
-
+        "folder-api.PROJECT_FOLDER_BRIDGE_KEY" => Ok(Some(Value::from(PROJECT_FOLDER_BRIDGE_KEY))),
         // ---------- default-save-dir ----------
         "default-save-dir.DEFAULT_SAVE_DIR_KEY" => Ok(Some(Value::from(DEFAULT_SAVE_DIR_KEY))),
         "default-save-dir.readDefaultSaveDirSetting" => str_arg(args, 0).map(|path| {
@@ -592,193 +575,6 @@ fn string_list(args: &[Value], i: usize) -> Result<Vec<String>, CallError> {
                 .ok_or_else(|| CallError::plain("not a string"))
         })
         .collect()
-}
-
-// ---------- the bridges ----------
-
-struct BridgeIpc<'a> {
-    log: &'a Logger,
-}
-
-impl ProjectFolderBridgeIpc for BridgeIpc<'_> {
-    type Reply = Value;
-
-    fn invoke(&mut self, channel: &str, args: Option<&Value>) -> Value {
-        let mut line = vec![Value::from("invoke"), Value::from(channel)];
-        if let Some(args) = args {
-            line.push(args.clone());
-        }
-        self.log.push(line);
-        Value::from(format!("reply:{channel}"))
-    }
-
-    fn on(&mut self, channel: &str, listener: u64) {
-        self.log.push(vec![
-            Value::from("on"),
-            Value::from(channel),
-            Value::from(listener),
-        ]);
-    }
-
-    fn remove_listener(&mut self, channel: &str, listener: u64) {
-        self.log.push(vec![
-            Value::from("removeListener"),
-            Value::from(channel),
-            Value::from(listener),
-        ]);
-    }
-
-    fn send(&mut self, channel: &str, message: &ProjectFolderListenMessage) {
-        self.log.push(vec![
-            Value::from("send"),
-            Value::from(channel),
-            serde_json::to_value(message).expect("a message prints"),
-        ]);
-    }
-}
-
-/// Steps: `["request", name]`, `["request", name, args]`, `["subscribe", method]`,
-/// `["unsubscribe", index]`.
-fn project_folder_bridge_call(args: &[Value], cx: &mut Context) -> Answer {
-    let steps = arg(args, 0)
-        .and_then(Value::as_array)
-        .ok_or_else(|| CallError::plain("argument 0 is not a list"))?;
-    let log = Logger::default();
-    let mut ipc = BridgeIpc { log: &log };
-    let mut bridge = ProjectFolderBridge::new();
-    let mut subscriptions: Vec<Subscription> = Vec::new();
-    let mut results = Vec::new();
-    for step in steps {
-        let step = step
-            .as_array()
-            .ok_or_else(|| CallError::plain("a step is not a list"))?;
-        let op = step.first().and_then(Value::as_str).unwrap_or("");
-        let result = match op {
-            "request" => {
-                let name = step.get(1).and_then(Value::as_str).unwrap_or("");
-                bridge
-                    .request(&mut ipc, name, step.get(2))
-                    .ok_or_else(|| CallError::plain(format!("no request method {name}")))?
-            }
-            "subscribe" => {
-                let method = step.get(1).and_then(Value::as_str).unwrap_or("");
-                let method = ProjectFolderEventMethod::from_name(method)
-                    .ok_or_else(|| CallError::plain(format!("no event method {method}")))?;
-                subscriptions.push(bridge.subscribe(&mut ipc, method));
-                Value::from(subscriptions.len() - 1)
-            }
-            "unsubscribe" => {
-                let index = step.get(1).and_then(Value::as_u64).unwrap_or(0) as usize;
-                let subscription = subscriptions
-                    .get_mut(index)
-                    .ok_or_else(|| CallError::plain("no such subscription"))?;
-                bridge.unsubscribe(&mut ipc, subscription);
-                Value::Null
-            }
-            other => return Err(CallError::plain(format!("unknown step {other}"))),
-        };
-        results.push(result);
-    }
-    cx.logs.extend(log.0.into_inner());
-    Ok(Some(Value::Array(results)))
-}
-
-struct SplitIpc<'a> {
-    log: &'a Logger,
-    /// "value", "undefined" or "reject"
-    mode: String,
-    value: Value,
-}
-
-impl SplitPaneIpc for SplitIpc<'_> {
-    fn invoke(&mut self, channel: &str) -> Result<Option<Value>, IpcRejected> {
-        self.log
-            .push(vec![Value::from("invoke"), Value::from(channel)]);
-        match self.mode.as_str() {
-            "reject" => Err(IpcRejected),
-            "undefined" => Ok(None),
-            _ => Ok(Some(self.value.clone())),
-        }
-    }
-
-    fn on(&mut self, channel: &str, listener: u64) {
-        self.log.push(vec![
-            Value::from("on"),
-            Value::from(channel),
-            Value::from(listener),
-        ]);
-    }
-
-    fn remove_listener(&mut self, channel: &str, listener: u64) {
-        self.log.push(vec![
-            Value::from("removeListener"),
-            Value::from(channel),
-            Value::from(listener),
-        ]);
-    }
-
-    fn send(&mut self, channel: &str) {
-        self.log
-            .push(vec![Value::from("send"), Value::from(channel)]);
-    }
-}
-
-/// Steps: `["getRole"]`, `["onRoleChanged"]`, `["unsubscribe", index]`,
-/// `["requestFocus"]`, `["reportFocus"]`; argument 1 says what `invoke` does:
-/// `{ mode: "value" | "undefined" | "reject", value }`.
-fn split_pane_bridge_call(args: &[Value], cx: &mut Context) -> Answer {
-    let steps = arg(args, 0)
-        .and_then(Value::as_array)
-        .ok_or_else(|| CallError::plain("argument 0 is not a list"))?;
-    let config = arg(args, 1);
-    let log = Logger::default();
-    let mut ipc = SplitIpc {
-        log: &log,
-        mode: config
-            .and_then(|c| c.get("mode"))
-            .and_then(Value::as_str)
-            .unwrap_or("value")
-            .to_owned(),
-        value: config
-            .and_then(|c| c.get("value"))
-            .cloned()
-            .unwrap_or(Value::Null),
-    };
-    let mut bridge = SplitPaneBridge::new();
-    let mut listeners: Vec<u64> = Vec::new();
-    let mut results = Vec::new();
-    for step in steps {
-        let step = step
-            .as_array()
-            .ok_or_else(|| CallError::plain("a step is not a list"))?;
-        let result = match step.first().and_then(Value::as_str).unwrap_or("") {
-            "getRole" => bridge.get_role(&mut ipc),
-            "onRoleChanged" => {
-                listeners.push(bridge.on_role_changed(&mut ipc));
-                Value::from(listeners.len() - 1)
-            }
-            "unsubscribe" => {
-                let index = step.get(1).and_then(Value::as_u64).unwrap_or(0) as usize;
-                let listener = *listeners
-                    .get(index)
-                    .ok_or_else(|| CallError::plain("no such subscription"))?;
-                bridge.remove_role_listener(&mut ipc, listener);
-                Value::Null
-            }
-            "requestFocus" => {
-                bridge.request_focus(&mut ipc);
-                Value::Null
-            }
-            "reportFocus" => {
-                bridge.report_focus(&mut ipc);
-                Value::Null
-            }
-            other => return Err(CallError::plain(format!("unknown step {other}"))),
-        };
-        results.push(result);
-    }
-    cx.logs.extend(log.0.into_inner());
-    Ok(Some(Value::Array(results)))
 }
 
 // ---------- default-save-dir ----------

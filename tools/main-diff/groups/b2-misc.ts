@@ -1,14 +1,14 @@
 /**
  * Group `b2-misc`: packages/i18n and the small modules of packages/electron-utils
  * (user-skills-channels, mcp-tools-channels, outbound-channels, doc-attach-channels,
- * project-folder-bridge, split-pane-bridge, default-save-dir, dialog-memory,
+ * default-save-dir, dialog-memory,
  * author-name, font-store, github-menu, hwp-default-format, numbered-export-paths,
  * template-font-response, template-fonts-dir, abort-on-destroyed, marked-odt), the
  * `PROJECT_FOLDER_*` constants of project-store/folder-api and `templateFontFileOf`
  * of ui/template-fonts.
  *
  * A `Uint8Array` crosses as `{"$bytes": byteLength}` (both ways). A function that
- * drives a fake (a bridge, a dialog, a sender) takes a list of steps and answers
+ * drives a fake (a dialog, a sender) takes a list of steps and answers
  * one entry per step; each call of the fake is one log line. The i18n functions
  * are named `i18n.<export>`; `getUiLang`/`setUiLang` are not ported (the language
  * is an argument), so `documentLocale` sets the requested locale first.
@@ -105,15 +105,6 @@ import {
   PROJECT_FOLDER_LISTEN_CHANNEL,
   PROJECT_FOLDER_BRIDGE_KEY as FOLDER_API_BRIDGE_KEY,
 } from '../../../packages/project-store/src/folder-api.ts'
-import {
-  PROJECT_FOLDER_BRIDGE_KEY,
-  projectFolderBridge,
-} from '../../../packages/electron-utils/src/project-folder-bridge.ts'
-import {
-  SPLIT_PANE_CHANNELS,
-  SPLIT_PANE_BRIDGE_KEY,
-  splitPaneBridge,
-} from '../../../packages/electron-utils/src/split-pane-bridge.ts'
 import {
   DEFAULT_SAVE_DIR_KEY,
   readDefaultSaveDirSetting,
@@ -1110,34 +1101,7 @@ const docAttach: Record<string, FnSpec> = {
   'doc-attach-channels.DOC_ATTACH_BRIDGE_KEY': constant(() => DOC_ATTACH_BRIDGE_KEY),
 }
 
-// ---------- folder-api, project-folder-bridge, split-pane-bridge ----------
-
-type Step = unknown[]
-
-/** An `ipcRenderer` fake: every call is a log line; a listener is the number of its first sight. */
-function fakeIpc(cx: TsContext, reply: (channel: string) => unknown) {
-  const ids = new Map<unknown, number>()
-  const id = (fn: unknown): number => {
-    if (!ids.has(fn)) ids.set(fn, ids.size + 1)
-    return ids.get(fn)!
-  }
-  return {
-    invoke: (channel: string, ...rest: unknown[]) => {
-      cx.log('invoke', channel, ...rest)
-      return reply(channel)
-    },
-    on: (channel: string, fn: unknown) => cx.log('on', channel, id(fn)),
-    removeListener: (channel: string, fn: unknown) => cx.log('removeListener', channel, id(fn)),
-    send: (channel: string, ...rest: unknown[]) => cx.log('send', channel, ...rest),
-  }
-}
-
-const eventMethods = [
-  'onChatMessageAppended',
-  'onOpenChat',
-  'onOpenProjectScreen',
-  'onProjectChanged',
-]
+// ---------- folder-api ----------
 
 const folderBridge: Record<string, FnSpec> = {
   'folder-api.PROJECT_FOLDER_NAMES': constant(() => ({ ...PROJECT_FOLDER_NAMES })),
@@ -1145,153 +1109,6 @@ const folderBridge: Record<string, FnSpec> = {
   'folder-api.PROJECT_FOLDER_CHANNELS': constant(() => ({ ...PROJECT_FOLDER_CHANNELS })),
   'folder-api.PROJECT_FOLDER_LISTEN_CHANNEL': constant(() => PROJECT_FOLDER_LISTEN_CHANNEL),
   'folder-api.PROJECT_FOLDER_BRIDGE_KEY': constant(() => FOLDER_API_BRIDGE_KEY),
-  'project-folder-bridge.PROJECT_FOLDER_BRIDGE_KEY': constant(() => PROJECT_FOLDER_BRIDGE_KEY),
-  'project-folder-bridge.projectFolderBridge': {
-    ts: async (a, cx) => {
-      const ipc = fakeIpc(cx, (channel) => Promise.resolve(`reply:${channel}`))
-      const bridge = projectFolderBridge(ipc as never) as unknown as Record<
-        string,
-        (...x: unknown[]) => unknown
-      >
-      const unsubs: (() => void)[] = []
-      const results: unknown[] = []
-      for (const step of a[0] as Step[]) {
-        const [op, name] = step as [string, string]
-        if (op === 'request') {
-          results.push(await bridge[name]!(...(step.length > 2 ? [step[2]] : [])))
-        } else if (op === 'subscribe') {
-          unsubs.push(bridge[name]!(() => {}) as () => void)
-          results.push(unsubs.length - 1)
-        } else {
-          unsubs[step[1] as number]!()
-          results.push(null)
-        }
-      }
-      return results
-    },
-    cases: each(
-      [[['request', 'listProjects']]],
-      [[['request', 'createProject', { name: 'p', folder: '/x' }]]],
-      [
-        [
-          ['request', 'setPinned', null],
-          ['request', 'setPinned', 0],
-          ['request', 'setPinned', false],
-          ['request', 'setPinned', ''],
-        ],
-      ],
-      [
-        [
-          ['request', 'openProjectScreen'],
-          ['request', 'deleteChat', { id: 'c' }],
-          ['request', 'listIgnoredFiles'],
-        ],
-      ],
-      [
-        [
-          ['subscribe', 'onOpenChat'],
-          ['unsubscribe', 0],
-        ],
-      ],
-      [
-        [
-          ['subscribe', 'onOpenChat'],
-          ['subscribe', 'onOpenChat'],
-          ['unsubscribe', 0],
-          ['unsubscribe', 0],
-          ['unsubscribe', 1],
-          ['unsubscribe', 1],
-          ['subscribe', 'onOpenChat'],
-        ],
-      ],
-      [
-        [
-          ['subscribe', 'onChatMessageAppended'],
-          ['subscribe', 'onProjectChanged'],
-          ['subscribe', 'onOpenProjectScreen'],
-          ['subscribe', 'onOpenChat'],
-          ['unsubscribe', 2],
-          ['unsubscribe', 0],
-          ['request', 'listChats', 'p1'],
-          ['unsubscribe', 3],
-          ['unsubscribe', 1],
-        ],
-      ],
-      [eventMethods.map((m) => ['subscribe', m])],
-      [
-        [
-          ['subscribe', 'onProjectChanged'],
-          ['subscribe', 'onProjectChanged'],
-          ['subscribe', 'onProjectChanged'],
-          ['unsubscribe', 2],
-          ['unsubscribe', 1],
-          ['unsubscribe', 0],
-        ],
-      ],
-    ),
-  },
-  'split-pane-bridge.SPLIT_PANE_CHANNELS': constant(() => ({ ...SPLIT_PANE_CHANNELS })),
-  'split-pane-bridge.SPLIT_PANE_BRIDGE_KEY': constant(() => SPLIT_PANE_BRIDGE_KEY),
-  'split-pane-bridge.splitPaneBridge': {
-    ts: async (a, cx) => {
-      const config = (a[1] ?? {}) as { mode?: string; value?: unknown }
-      const ipc = fakeIpc(cx, () => {
-        if (config.mode === 'reject') return Promise.reject(new Error('refused'))
-        if (config.mode === 'undefined') return Promise.resolve(undefined)
-        return Promise.resolve(config.value ?? null)
-      })
-      const bridge = splitPaneBridge(ipc as never)
-      const unsubs: (() => void)[] = []
-      const results: unknown[] = []
-      for (const step of a[0] as Step[]) {
-        const op = step[0]
-        if (op === 'getRole') results.push(await bridge.getRole())
-        else if (op === 'onRoleChanged') {
-          unsubs.push(bridge.onRoleChanged(() => {}))
-          results.push(unsubs.length - 1)
-        } else if (op === 'unsubscribe') {
-          unsubs[step[1] as number]!()
-          results.push(null)
-        } else if (op === 'requestFocus') {
-          bridge.requestFocus()
-          results.push(null)
-        } else {
-          bridge.reportFocus()
-          results.push(null)
-        }
-      }
-      return results
-    },
-    cases: [
-      { args: [[['getRole']], { mode: 'value', value: 'focus' }] },
-      { args: [[['getRole']], { mode: 'value', value: 'secondary' }] },
-      { args: [[['getRole']], { mode: 'value', value: null }] },
-      { args: [[['getRole']], { mode: 'undefined' }], note: 'the shell answered nothing' },
-      { args: [[['getRole']], { mode: 'reject' }], note: 'the request failed' },
-      {
-        args: [[['getRole']], { mode: 'value', value: { odd: [1, 2] } }],
-        note: 'passes whatever it got',
-      },
-      {
-        args: [
-          [
-            ['onRoleChanged'],
-            ['onRoleChanged'],
-            ['unsubscribe', 1],
-            ['unsubscribe', 1],
-            ['unsubscribe', 0],
-          ],
-          { mode: 'value', value: 'focus' },
-        ],
-      },
-      {
-        args: [
-          [['requestFocus'], ['reportFocus'], ['requestFocus']],
-          { mode: 'value', value: null },
-        ],
-      },
-    ],
-  },
 }
 
 // ---------- default-save-dir ----------

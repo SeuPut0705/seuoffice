@@ -24,7 +24,7 @@ pub const PROJECT_FOLDER_NAMES: [(&str, &str); 10] = [
     ("rootClaudeFile", "CLAUDE.md"),
 ];
 
-/// `ProjectFolderEventMethod`: the bridge's subscribe methods.
+/// `ProjectFolderEventMethod`: the subscribe methods of the renderer's bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum ProjectFolderEventMethod {
     #[serde(rename = "onChatMessageAppended")]
@@ -46,22 +46,6 @@ impl ProjectFolderEventMethod {
             Self::OnOpenProjectScreen => "onOpenProjectScreen",
             Self::OnProjectChanged => "onProjectChanged",
         }
-    }
-
-    /// `ProjectFolderEventMethod` of a name
-    pub fn from_name(name: &str) -> Option<Self> {
-        PROJECT_FOLDER_EVENTS
-            .iter()
-            .find(|(method, _)| method.as_str() == name)
-            .map(|(method, _)| *method)
-    }
-
-    /// `PROJECT_FOLDER_EVENTS[method]`
-    pub fn channel(self) -> &'static str {
-        PROJECT_FOLDER_EVENTS
-            .iter()
-            .find(|(method, _)| *method == self)
-            .map_or("", |(_, channel)| channel)
     }
 }
 
@@ -145,13 +129,6 @@ pub const PROJECT_FOLDER_LISTEN_CHANNEL: &str = "projectFolder:listen";
 
 /// `PROJECT_FOLDER_BRIDGE_KEY`
 pub const PROJECT_FOLDER_BRIDGE_KEY: &str = "projectFolderApi";
-
-/// `ProjectFolderListenMessage`: `{ method, listening }`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct ProjectFolderListenMessage {
-    pub method: ProjectFolderEventMethod,
-    pub listening: bool,
-}
 
 /// `realpathSync.native(path)`, `None` where it throws
 fn real_path_native(path: &str) -> Option<String> {
