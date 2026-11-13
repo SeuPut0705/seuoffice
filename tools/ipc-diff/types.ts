@@ -29,6 +29,14 @@ export interface Call {
   args: unknown[]
   /** the buffers the arguments point at, as hex */
   buffers?: string[]
+  /**
+   * an invoke or a trigger left pending: its answer is `{deferred: true}` and the reply is
+   * taken by a later `{await: <this call's index>}` step, so a renderer round
+   * trip (the handler waits for another call of the renderer) runs its full path
+   */
+  defer?: true
+  /** not a call: the answer of the deferred invoke at this index (`{timeout: true}` after 20 s) */
+  await?: number
 }
 
 export interface Case {

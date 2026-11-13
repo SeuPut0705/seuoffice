@@ -1,0 +1,244 @@
+//! Windows and views (the stage 3 shell contract, section 1): Electron's
+//! `BrowserWindow` is a Tauri window and a `webContents` is a webview. A
+//! window made by [`Windows::open_window`] has its first view as a webview
+//! window; further views (the shell window's tabs were `WebContentsView`s)
+//! are children of it ([`Windows::add_view`]).
+//!
+//! Every view carries a [`Bridge`]: the preload of its surface as the
+//! webview's initialization script, and an entry in the [`ViewTable`] that
+//! attributes its messages. A view with no bridge is for a page that is not
+//! ours; it can message nothing and its navigation is not restricted.
+//!
+//! Callable from any thread; from the core thread a call waits for the UI
+//! thread, from the UI thread it runs at once.
+
+use std::sync::Arc;
+
+use shell_contract::hosts::MainWindow;
+use shell_contract::ids::{ViewId, WindowId};
+use shell_contract::ipc::Sender;
+use shell_contract::{Hosts, MainWindowHost, Surface};
+use tauri::webview::{NewWindowResponse, WebviewBuilder};
+use tauri::{
+    AppHandle, LogicalPosition, LogicalSize, Manager, Webview, WebviewUrl, WebviewWindowBuilder,
+};
+
+use super::HostContext;
+use crate::app_scheme;
+use crate::preload;
+use crate::views::ViewTable;
+
+/// How a view talks to the shell
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Bridge {
+    /// no bridge: a page that is not ours
+    #[allow(dead_code)]
+    // for the first page that is not ours (a sign-in window); batch W's views
+    None,
+    /// the preload of this surface
+    Surface(Surface),
+    /// `--measure-dialog`'s page: the bridge, as the shell surface
+    Measure,
+}
+
+impl Bridge {
+    fn surface(self) -> Option<Surface> {
+        match self {
+            Bridge::None => None,
+            Bridge::Surface(surface) => Some(surface),
+            Bridge::Measure => Some(Surface::Shell),
+        }
+    }
+
+    fn script(self) -> Option<&'static str> {
+        match self {
+            Bridge::None => None,
+            Bridge::Surface(surface) => Some(preload::source(surface)),
+            Bridge::Measure => Some(preload::MEASURE),
+        }
+    }
+}
+
+pub struct ViewSpec {
+    /// A page of a renderer bundle, named as the handlers name it
+    /// (`genoffice-app://docs/index.html?mode=tab`); [`app_scheme::webview_url`] translates
+    pub url: String,
+    pub bridge: Bridge,
+}
+
+pub struct WindowSpec {
+    pub title: String,
+    /// logical pixels
+    pub size: (f64, f64),
+    pub min_size: Option<(f64, f64)>,
+    pub visible: bool,
+    /// this window's first view is the shell window's (what [`MainWindow`] answers)
+    pub main: bool,
+    pub view: ViewSpec,
+}
+
+/// A child view's place in its window, in logical pixels
+#[allow(dead_code)] // the tab strip's views, with `add_view`: the WindowsHost that replaces its stub
+#[derive(Clone, Copy, Debug)]
+pub struct Bounds {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+pub struct Windows {
+    app: AppHandle,
+    views: Arc<ViewTable>,
+}
+
+impl Windows {
+    pub fn new(app: AppHandle, views: Arc<ViewTable>) -> Self {
+        Windows { app, views }
+    }
+
+    fn url_of(url: &str) -> Result<WebviewUrl, String> {
+        app_scheme::webview_url(url)
+            .map(WebviewUrl::External)
+            .ok_or_else(|| format!("'{url}' is not a renderer page"))
+    }
+
+    /// A new window with its first view
+    pub fn open_window(&self, spec: WindowSpec) -> Result<(WindowId, ViewId), String> {
+        let url = Self::url_of(&spec.view.url)?;
+        let window = self.views.new_window_id();
+        let view = self.views.new_view_id();
+        let label = format!("view-{}", view.0);
+        let mut builder = WebviewWindowBuilder::new(&self.app, &label, url)
+            .title(spec.title)
+            .inner_size(spec.size.0, spec.size.1)
+            .visible(spec.visible);
+        if let Some((w, h)) = spec.min_size {
+            builder = builder.min_inner_size(w, h);
+        }
+        if let Some(script) = spec.view.bridge.script() {
+            builder = builder
+                .initialization_script(script)
+                // a page with a bridge stays on the shell's own pages, and opens no window of its own
+                .on_navigation(app_scheme::is_own_page)
+                .on_new_window(|_, _| NewWindowResponse::Deny);
+        }
+        // known before the page can run: its first message must find its sender
+        self.views.add_window(window, label.clone());
+        if let Some(surface) = spec.view.bridge.surface() {
+            self.views.add_view(
+                Sender {
+                    view,
+                    window,
+                    surface,
+                },
+                label.clone(),
+            );
+            if spec.main && surface == Surface::Shell {
+                self.views.mark_main(view);
+            }
+        }
+        match builder.build() {
+            Ok(_) => Ok((window, view)),
+            Err(error) => {
+                self.views.remove_window(window);
+                Err(format!("opening a window: {error}"))
+            }
+        }
+    }
+
+    /// A child view of `window`
+    #[allow(dead_code)] // the tab strip's views: the WindowsHost that replaces its stub
+    pub fn add_view(
+        &self,
+        window: WindowId,
+        spec: ViewSpec,
+        bounds: Bounds,
+    ) -> Result<ViewId, String> {
+        let url = Self::url_of(&spec.url)?;
+        let label = self
+            .views
+            .label_of_window(window)
+            .ok_or_else(|| format!("no window {}", window.0))?;
+        let parent = self
+            .app
+            .get_window(&label)
+            .ok_or_else(|| format!("window {} is gone", window.0))?;
+        let view = self.views.new_view_id();
+        let view_label = format!("view-{}", view.0);
+        let mut builder = WebviewBuilder::new(&view_label, url)
+            .position(LogicalPosition::new(bounds.x, bounds.y))
+            .size(LogicalSize::new(bounds.width, bounds.height));
+        if let Some(script) = spec.bridge.script() {
+            builder = builder
+                .initialization_script(script)
+                .on_navigation(app_scheme::is_own_page)
+                .on_new_window(|_, _| NewWindowResponse::Deny);
+        }
+        if let Some(surface) = spec.bridge.surface() {
+            self.views.add_view(
+                Sender {
+                    view,
+                    window,
+                    surface,
+                },
+                view_label,
+            );
+        }
+        match parent.add_child(builder) {
+            Ok(_) => Ok(view),
+            Err(error) => {
+                self.views.remove_view(view);
+                Err(format!("adding a view: {error}"))
+            }
+        }
+    }
+
+    /// The Tauri webview of a view
+    pub fn webview(&self, view: ViewId) -> Option<Webview> {
+        self.app.get_webview(&self.views.label_of_view(view)?)
+    }
+
+    #[allow(dead_code)] // the tab strip's views: the WindowsHost that replaces its stub
+    pub fn close_view(&self, view: ViewId) -> Result<(), String> {
+        let webview = self
+            .webview(view)
+            .ok_or_else(|| format!("no view {}", view.0))?;
+        self.views.remove_view(view);
+        webview.close().map_err(|e| e.to_string())
+    }
+
+    pub fn close_window(&self, window: WindowId) -> Result<(), String> {
+        let label = self
+            .views
+            .label_of_window(window)
+            .ok_or_else(|| format!("no window {}", window.0))?;
+        let window = self
+            .app
+            .get_window(&label)
+            .ok_or_else(|| format!("window {label} is gone"))?;
+        window.close().map_err(|e| e.to_string())
+    }
+}
+
+/// The shell window, as the `MainWindow` host answers
+struct ShellMain(Arc<ViewTable>);
+
+impl MainWindow for ShellMain {
+    fn view(&self) -> Option<ViewId> {
+        self.0.main().map(|s| s.view)
+    }
+
+    fn window(&self) -> Option<WindowId> {
+        self.0.main().map(|s| s.window)
+    }
+}
+
+pub fn install(hosts: &mut Hosts, cx: &HostContext) {
+    install_main_window(hosts, &cx.views);
+}
+
+pub fn install_main_window(hosts: &mut Hosts, views: &Arc<ViewTable>) {
+    let main: MainWindowHost = Arc::new(ShellMain(views.clone()));
+    hosts.insert(main);
+}

@@ -33,5 +33,131 @@
     "find": "if !spec.surfaces.contains(&sender.surface) {",
     "replace": "if false && !spec.surfaces.contains(&sender.surface) {",
     "groups": ["w/quick-look"]
+  },
+  {
+    "name": "will-show and payload swap",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "inner.emit(view, \"quick-look:will-show\", vec![]);\n            inner.emit(view, \"quick-look:payload\", vec![payload_ipc(&payload)]);",
+    "replace": "inner.emit(view, \"quick-look:payload\", vec![payload_ipc(&payload)]);\n            inner.emit(view, \"quick-look:will-show\", vec![]);",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "the title of a shown file has a hyphen",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "\"{} — {}\", payload.name",
+    "replace": "\"{} - {}\", payload.name",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a new window is not titled with the product",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "\"{} — {} - {}\",",
+    "replace": "\"{} — {} {}\",",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "the window is narrower",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "width: 812,",
+    "replace": "width: 800,",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a folder can be previewed",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": ".is_ok_and(|m| m.is_file())",
+    "replace": ".is_ok()",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a space on the file shown does not close it",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "&& state.current_path.as_deref() == Some(resolved.as_str())",
+    "replace": "&& state.current_path.as_deref() != Some(resolved.as_str())",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "navigation to the file shown is not skipped",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "if state.current_path.as_deref() == Some(resolved.as_str())\n                    ||",
+    "replace": "if state.current_path.as_deref() != Some(resolved.as_str())\n                    ||",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "home-inspect takes a blank path",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "if in_window && !trim(path).is_empty()",
+    "replace": "if in_window && !path.is_empty()",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "turning the preview off keeps the window",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "&& !settings.explorer_space_preview {",
+    "replace": "&& settings.explorer_space_preview {",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "reveal shows the wrong path",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": ".show_item_in_folder(std::path::Path::new(&target));",
+    "replace": ".show_item_in_folder(std::path::Path::new(\"/\"));",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "lang-changed goes out under another name",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "\"quick-look:lang-changed\",",
+    "replace": "\"quick-look:lang-change\",",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "will-hide is sent while the window is hidden",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "if !inner.window.is_visible() {\n            return;\n        }\n        inner.emit(view, \"quick-look:will-hide\", vec![]);",
+    "replace": "inner.emit(view, \"quick-look:will-hide\", vec![]);",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "open in editor does not close the window",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "c.close_window();\n            if let Some(target) = target.filter(",
+    "replace": "if let Some(target) = target.filter(",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "the init holds no payload",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": ".current_payload.as_ref().map(payload_ipc);",
+    "replace": ".current_payload.as_ref().map(|_| IpcValue::Null);",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "the page ready does not show the window",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "if state.view == Some(view) && state.current_path.is_some() {",
+    "replace": "if false && state.view == Some(view) {",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "plain text is cut later",
+    "file": "main-core/src/shell/quick_look/extract.rs",
+    "find": "const MAX_PLAIN_CHARS: usize = 12_000;",
+    "replace": "const MAX_PLAIN_CHARS: usize = 13_500;",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a password is not an encrypted file",
+    "file": "main-core/src/shell/quick_look/extract.rs",
+    "find": "lower.contains(\"password\") || ",
+    "replace": "",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a preview is not kept",
+    "file": "main-core/src/shell/quick_look/extract.rs",
+    "find": "cache.remember(key.clone(), payload.clone());",
+    "replace": "let _ = (cache, key);",
+    "groups": ["w/quick-look"]
   }
 ]
