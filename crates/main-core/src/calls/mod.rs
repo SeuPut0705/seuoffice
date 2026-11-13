@@ -35,6 +35,7 @@ mod node_fs;
 mod node_path;
 mod settings;
 mod update;
+mod w_shell;
 
 use serde_json::{Map, Value};
 
@@ -104,6 +105,7 @@ const GROUPS: &[Group] = &[
     b6_shell::call,
     b6_apps::call,
     b6_tabs::call,
+    w_shell::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.
