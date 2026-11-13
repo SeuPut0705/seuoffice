@@ -111,3 +111,18 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
         case, log,
     )));
 }
+
+/// Runs the named trigger of this batch for an event no channel call
+/// reaches (tools/ipc-diff `trigger` cases); `false` for a name it does not
+/// know. Batch A has none yet: its ported events all follow a channel call.
+#[cfg(feature = "probe")]
+pub fn probe_trigger(
+    _name: &str,
+    _view: shell_contract::ViewId,
+    _args: &serde_json::Value,
+    _services: &Services,
+    _provided: &std::rc::Rc<shell_contract::Provided>,
+    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+) -> bool {
+    false
+}
