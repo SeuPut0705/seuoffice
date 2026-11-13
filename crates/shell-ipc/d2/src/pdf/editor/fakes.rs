@@ -601,10 +601,12 @@ fn answers(case: &Value, key: &str, log: Option<Log>) -> Answers {
     }
 }
 
+#[cfg(test)]
 pub fn engine(case: &Value) -> Arc<FakeEngine> {
     Arc::new(FakeEngine(answers(case, "engine", None)))
 }
 
+#[cfg(test)]
 pub fn shell(case: &Value) -> Arc<FakeShell> {
     Arc::new(FakeShell {
         answers: answers(case, "shell", None),

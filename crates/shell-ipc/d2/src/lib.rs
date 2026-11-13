@@ -8,13 +8,15 @@
 //! trait in the app's module; the shell implements it (crates/shell, D2's
 //! host file), ipc-probe inserts the module's fakes.
 
-mod docs;
-mod epub;
-mod html;
-mod hwp;
+// The app modules are public for the shell (crates/shell): it implements
+// their host traits and calls their editors' shell-facing methods.
+pub mod docs;
+pub mod epub;
+pub mod html;
+pub mod hwp;
 mod kit;
-mod markdown;
-mod pdf;
+pub mod markdown;
+pub mod pdf;
 #[cfg(test)]
 mod testing;
 mod text_recovery;
@@ -67,6 +69,51 @@ fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
     hwp::fakes(hosts, app("hwp"));
     markdown::fakes(hosts, app("markdown"));
     pdf::fakes(hosts, app("pdf"));
+}
+
+/// An outbound call another area makes into a D2 editor, as a case of
+/// tools/ipc-diff names it: `d2/<app>:<what>` (`d2/epub:request-save`).
+/// `then` gets the call's outcome; false when no app knows the name.
+#[cfg(feature = "probe")]
+pub type Trigger = fn(
+    what: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
+) -> bool;
+
+/// The triggers of each app, by the app part of the name
+#[cfg(feature = "probe")]
+const TRIGGERS: &[(&str, Trigger)] = &[
+    ("docs", docs::probe_trigger),
+    ("epub", epub::probe_trigger),
+    ("html", html::probe_trigger),
+    ("hwp", hwp::probe_trigger),
+    ("markdown", markdown::probe_trigger),
+    ("pdf", pdf::editor::probe::probe_trigger),
+    ("pdf-tools", pdf::tools::probe_trigger),
+];
+
+/// Runs a `trigger` case of tools/ipc-diff (README): `name` is
+/// `d2/<app>:<what>`; the app's own `probe_trigger` knows `<what>`
+#[cfg(feature = "probe")]
+pub fn probe_trigger(
+    name: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
+) -> bool {
+    let Some((app, what)) = name.strip_prefix("d2/").and_then(|n| n.split_once(':')) else {
+        return false;
+    };
+    TRIGGERS
+        .iter()
+        .find(|(name, _)| *name == app)
+        .is_some_and(|(_, trigger)| trigger(what, view, args, services, provided, then))
 }
 
 #[cfg(test)]

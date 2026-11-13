@@ -9,8 +9,8 @@
 //! [`PdfEditors`](editors::PdfEditors).
 
 mod dialogs;
-pub(crate) mod editors;
-pub(crate) mod hosts;
+pub mod editors;
+pub mod hosts;
 mod media;
 mod open;
 mod pages;

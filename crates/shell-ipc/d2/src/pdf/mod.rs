@@ -4,8 +4,8 @@
 //! `pdf:convert-office` of `shell/index.ts`, [`tools`]). The tools read which
 //! files a view was given ([`Grants`]); the editor writes it.
 
-pub(crate) mod editor;
-pub(crate) mod tools;
+pub mod editor;
+pub mod tools;
 
 use std::collections::HashSet;
 use std::rc::Rc;

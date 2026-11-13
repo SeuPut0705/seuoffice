@@ -15,7 +15,7 @@
 //! without an open path) or from [`EpubEditors::create_view`] (with one).
 
 mod attachments;
-pub(crate) mod hosts;
+pub mod hosts;
 mod session;
 #[cfg(test)]
 mod tests;
