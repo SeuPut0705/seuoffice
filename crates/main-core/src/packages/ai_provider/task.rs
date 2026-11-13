@@ -816,7 +816,11 @@ impl Rt {
     /// `await fn(...args)`: `None` is `undefined` (the host answers
     /// [`Answer::Unit`]), `Some(JsonValue::Null)` is `null`
     /// ([`Answer::Value`] of null).
-    pub async fn call_exact(&self, name: &str, args: JsonValue) -> Result<Option<JsonValue>, JsError> {
+    pub async fn call_exact(
+        &self,
+        name: &str,
+        args: JsonValue,
+    ) -> Result<Option<JsonValue>, JsError> {
         match self
             .op(None, |id| Cmd::Call {
                 id,
@@ -1558,10 +1562,7 @@ struct Settled<T> {
 }
 
 impl Rt {
-    fn settle_each<T: 'static>(
-        &self,
-        futures: Vec<LocalBoxFuture<T>>,
-    ) -> Rc<RefCell<Settled<T>>> {
+    fn settle_each<T: 'static>(&self, futures: Vec<LocalBoxFuture<T>>) -> Rc<RefCell<Settled<T>>> {
         let shared = Rc::new(RefCell::new(Settled {
             values: futures.iter().map(|_| None).collect(),
             order: Vec::new(),
