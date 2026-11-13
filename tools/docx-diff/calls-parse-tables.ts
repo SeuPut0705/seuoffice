@@ -40,6 +40,7 @@ import {
 } from './reference/inline-opaque'
 import { deepXmlParser, nameOf, serializeXNode, type XNode } from './reference/xml-utils'
 import { lineRuleOutsideItsType } from './listed'
+import { hiddenIn } from './calls-markup'
 
 const internals = await parseInternals()
 /** The module-level WeakMaps bindHfImageAnchors reads, exported by the copy. */
@@ -114,6 +115,33 @@ const hfPart = (tblPr: string, rows: string): string => `<w:hdr>${tbl(rows, tblP
 const GRID =
   '<w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="3000"/><w:gridCol w:w="450"/></w:tblGrid>'
 
+/**
+ * Header and footer text boxes take their `id` from a counter of the process
+ * (`++hfTextBoxSeq`), which the two sides do not advance alike across the calls
+ * of the gate (a call that throws, a mutated text one side refuses): the ids are
+ * renumbered from 1, in order of appearance, in the answers of both sides.
+ */
+function renumberedBoxIds<T>(value: T, seen = new Map<unknown, number>()): T {
+  if (Array.isArray(value)) {
+    for (const item of value) renumberedBoxIds(item, seen)
+  } else if (value !== null && typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    const box = object.box as { id?: unknown } | undefined
+    if (box !== null && typeof box === 'object' && typeof box.id === 'number') {
+      if (!seen.has(box.id)) seen.set(box.id, seen.size + 1)
+      box.id = seen.get(box.id)
+    }
+    for (const child of Object.values(object)) renumberedBoxIds(child, seen)
+  }
+  return value
+}
+
+/** A cell paragraph with a drawn text box and its VML twin: `hidden` before the drawing, `inTwin` inside the twin. */
+const cellBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+  tc(
+    `<w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="476250"/><wp:docPr id="1"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent>${P('box')}</w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent>${P('box')}</w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`,
+  )
+
 const WAVE0: CallSpec[] = [
   {
     fn: 'parse.tableSummary',
@@ -131,6 +159,17 @@ const WAVE0: CallSpec[] = [
       `<w:tbl><w:tr\u3000a="1"><w:tc\u00a0b="2">${P('&amp;x&lt;')}</w:tc></w:tr></w:tbl>`,
       tbl(tr(tc(P('y'.repeat(150))))),
       tbl(tr(tc(P('a')) + tc(P('b'))) + tr(tc(P('c')))),
+      // spaced end tags, markup hidden in a comment, CDATA or an instruction, single quotes
+      tbl(tr(tc(P('a')) + tc(P('b'))) + tr(tc())).replaceAll('</w:tr>', '</w:tr >'),
+      tbl(tr(tc(P('a')) + tc(P('b')))).replaceAll('</w:tc>', '</w:tc\n>'),
+      tbl(tr(tc(P('a')) + tc(P('b')))).replace('<w:tr>', `<w:tr a='>' b = "<>">`),
+      ...hiddenIn('<w:tr><w:tc>x</w:tc><w:tc>y</w:tc><w:tc>z</w:tc></w:tr>').map((hidden) =>
+        tbl(hidden + tr(tc(P('a')) + tc(P('b')))),
+      ),
+      ...hiddenIn('</w:tr>').map((hidden) => tbl(tr(tc(P('a')) + hidden + tc(P('b'))) + tr(tc()))),
+      ...hiddenIn('<w:t>x</w:t>').map((hidden) => tbl(tr(tc(P('a') + hidden)))),
+      tbl(tr(tc(`<w:p><w:r><w:t xml:space = 'preserve'>a &amp; b</w:t ></w:r></w:p>`))),
+      tbl(tr(tc(`<w:p><w:r><w:t><![CDATA[a<b]]></w:t></w:r></w:p>`))),
     ].map((text) => ({ text })),
   },
   {
@@ -1090,6 +1129,19 @@ const UNCLOSED_FLD =
   '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> IF </w:instrText></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>r</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
 const DRAWING = (inner: string, anchor = true): string =>
   `<w:r><w:drawing>${anchor ? '<wp:anchor behindDoc="1" distL="9525" distT="19050"><wp:positionH relativeFrom="page"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>19050</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="476250"/><wp:wrapSquare wrapText="bothSides"/><wp:docPr id="7" name="logo"/>' : '<wp:inline><wp:extent cx="952500" cy="476250"/><wp:docPr id="8" name="in"/>'}<a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId9"/><a:srcRect l="10000" t="5000"/></pic:blipFill></pic:pic></a:graphicData></a:graphic>${anchor ? '</wp:anchor>' : '</wp:inline>'}</w:drawing></w:r>`
+/** A header paragraph with a drawn text box and its VML twin: `hidden` before it, `inTwin` inside the twin. */
+const hfBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+  `<w:p><w:r><w:t>left</w:t></w:r></w:p><w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="190500"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent><w:p><w:r><w:t>choice</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>twin</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`
+const MARKUP_HF_BODIES: string[] = [
+  hfBox(''),
+  ...hiddenIn('<mc:Fallback>').map((hidden) => hfBox(hidden)),
+  ...hiddenIn('</mc:Fallback>').map((hidden) => hfBox('', hidden)),
+  hfBox('', '', '<mc:Fallback a=">">'),
+  hfBox('', '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
+  `<w:p><w:r><w:t xml:space = 'preserve'>a</w:t ></w:r>${PAGE_FLD}</w:p>`,
+  `<w:p><w:r><w:t><![CDATA[x<y]]></w:t></w:r><!-- <w:t>no</w:t> --></w:p>`,
+]
+
 const HF_BODIES: string[] = [
   `<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>left</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>center</w:t></w:r><w:r><w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/></w:r>${PAGE_FLD}</w:p>`,
   `<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:t>Page </w:t></w:r>${PAGE_FLD}<w:r><w:t> / </w:t></w:r>${NUM_FLD}</w:p><w:p>${DATE_FLD}</w:p><w:p>${NESTED_FLD}</w:p>`,
@@ -1116,6 +1168,7 @@ const HF_BODIES: string[] = [
   `<w:tbl><w:tblPr><w:tblpPr w:tblpX="100" w:vertAnchor="page"/></w:tblPr><w:tr><w:tc>${tbl(tr(TC('n1') + TC('n2')))}${P('after')}</w:tc></w:tr></w:tbl><w:p><w:r><w:t>following</w:t></w:r></w:p>`,
   `<w:sdt><w:sdtContent><w:p><w:r><w:t>in sdt</w:t></w:r></w:p></w:sdtContent></w:sdt><w:p><w:r><w:pict><v:shape style="position:absolute;margin-left:10pt;margin-top:5pt;width:100pt;height:50pt;z-index:-1" type="#t"><v:imagedata r:id="rId9" gain="32768f"/></v:shape></w:pict></w:r></w:p>`,
   `<w:p><w:del w:id="1" w:author="x"><w:r><w:drawing><wp:inline><wp:docPr id="1"/></wp:inline></w:drawing></w:r></w:del><w:del w:id="2" w:author="x"><w:r><w:delText>gone</w:delText></w:r></w:del></w:p>`,
+  ...MARKUP_HF_BODIES,
 ]
 const HF_PARTS = (): string[] => HF_BODIES.map((body, i) => hfXml(i % 2 ? 'ftr' : 'hdr', body))
 
@@ -1470,6 +1523,22 @@ const BATCH2: CallSpec[] = [
         { text: '<w:p/>', args: { model: model(1, 1), rawTrPrs: [null] } },
         { text: '<w:tbl>', args: { model: model(1, 1), rawTrPrs: [null] } },
         { text: '', args: { model: model(0, 0), rawTrPrs: [] } },
+        // the table in other valid spellings: spaced end tags, a `>` in an attribute value,
+        // markup hidden in a comment, CDATA or an instruction around and inside it
+        ...[
+          x1.replace('</w:tbl>', '</w:tbl >'),
+          x1.replaceAll('</w:tr>', '</w:tr >').replaceAll('</w:tc>', '</w:tc\n>'),
+          x1.replace('<w:tbl>', '<w:tbl a=">">'),
+          x1.replace('<w:tr>', '<w:tr a=">">').replace('<w:tc>', `<w:tc b='>'>`),
+          x1.replace('</w:trPr>', '</w:trPr >').replace('</w:tcPr>', '</w:tcPr >'),
+          ...hiddenIn('<w:tbl>').map((hidden) => hidden + x1),
+          ...hiddenIn('</w:tbl>').map((hidden) => x1 + hidden),
+          ...hiddenIn('</w:tr>').map((hidden) => x1.replace('<w:tr>', `<w:tr>${hidden}`)),
+          ...hiddenIn('<w:tc>x</w:tc>').map((hidden) => x1.replace('<w:tr>', `<w:tr>${hidden}`)),
+        ].flatMap((text) => [
+          { text, args: { model: model(2, 2), rawTrPrs: [null, null] } },
+          { text, args: { model: model(1, 2), rawTrPrs: [null] } },
+        ]),
       ].map((input) => ({ ...input }))
     })(),
     argMutation: true,
@@ -1559,6 +1628,12 @@ const BATCH2: CallSpec[] = [
       ),
       tc('<w:sdt><w:sdtContent><w:p><w:r><w:t>s</w:t></w:r></w:p></w:sdtContent></w:sdt>'),
       tc(''),
+      // a drawing and its fallback twin in spellings a literal search for the tags reads wrongly
+      cellBox(''),
+      ...hiddenIn('<mc:Fallback>').map((hidden) => cellBox(hidden)),
+      ...hiddenIn('</mc:Fallback>').map((hidden) => cellBox('', hidden)),
+      cellBox('', '', '<mc:Fallback a=">">'),
+      cellBox('', '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
     ].flatMap((text) => [
       {
         text,
@@ -1868,13 +1943,13 @@ const BATCH2: CallSpec[] = [
         doc.themeFonts,
         resolverOf(doc, args),
       ) as object[]
-      return {
+      return renumberedBoxIds({
         paras,
         rowAnchorIds: paras.map((p) => weakMaps.hfRowAnchorIds!.get(p) ?? null),
         runImageIds: [
           ...((weakMaps.hfRunImageIds!.get(paras) as Set<string> | undefined) ?? []),
         ].sort(),
-      }
+      })
     },
     fromParse: {
       fn: 'hfParagraphs',
@@ -1903,15 +1978,17 @@ const BATCH2: CallSpec[] = [
     listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
-      return internals.hfContentFromXml!(
-        text,
-        args.kind,
-        doc.themeColors,
-        doc.styles,
-        entriesOf(args.tableMedia),
-        args.compatibilityMode,
-        doc.themeFonts,
-        resolverOf(doc, args),
+      return renumberedBoxIds(
+        internals.hfContentFromXml!(
+          text,
+          args.kind,
+          doc.themeColors,
+          doc.styles,
+          entriesOf(args.tableMedia),
+          args.compatibilityMode,
+          doc.themeFonts,
+          resolverOf(doc, args),
+        ),
       )
     },
     fromParse: {
@@ -2127,6 +2204,14 @@ const BATCH2: CallSpec[] = [
         xfrm = '<a:off x="0" y="0"/><a:ext cx="2000000" cy="1000000"/><a:chOff x="0" y="0"/><a:chExt cx="1000000" cy="500000"/>',
       ): string =>
         `<w:drawing><wp:anchor behindDoc="1">${anchor}<wp:wrapNone/><wpg:wgp><wpg:grpSpPr><a:xfrm>${xfrm}</a:xfrm></wpg:grpSpPr>${inner}</wpg:wgp></wp:anchor></w:drawing>`
+      const base = grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'))
+      const twin = (
+        drawing: string,
+        hidden = '',
+        fbOpen = '<mc:Fallback>',
+        fbClose = '</mc:Fallback>',
+      ): string =>
+        `${hidden}<mc:AlternateContent><mc:Choice Requires="wpg">${drawing}</mc:Choice>${fbOpen}<w:pict><v:group><wp:positionH relativeFrom="page"><wp:posOffset>1</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>2</wp:posOffset></wp:positionV></v:group></w:pict>${fbClose}</mc:AlternateContent>`
       return [
         grp(
           pic('x="0" y="0"', 'cx="500000" cy="250000"') +
@@ -2144,6 +2229,13 @@ const BATCH2: CallSpec[] = [
         grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'), undefined, '<a:off x="5" y="5"/>'),
         grp('<pic:pic><pic:blipFill><a:blip r:embed="rId404"/></pic:blipFill></pic:pic>'),
         grp(''),
+        // the drawing with its fallback twin (whose own anchor must not be read) in
+        // spellings a literal search for the tags reads wrongly
+        twin(base),
+        ...hiddenIn('<mc:Fallback>').map((hidden) => twin(base, hidden)),
+        ...hiddenIn('</mc:Fallback>').map((hidden) => twin(base, '', `<mc:Fallback>${hidden}`)),
+        twin(base, '', '<mc:Fallback a=">">'),
+        twin(base, '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
       ].map((text) => ({
         text,
         args: {

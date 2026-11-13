@@ -12,7 +12,8 @@ use crate::lazy_media::{LAZY_MEDIA_PLACEHOLDER_BYTES, lazy_media_hash_of, lazy_m
 use crate::model::{Block, BlockImageAlign, ChartDisplay, SharedStr};
 use crate::numbering::NumberingDef;
 use crate::package::{
-    RelInfo, Thrown, content_types_of, parse_rels, part_text, resolve_relationship_target_path,
+    RelInfo, Thrown, canonical_part_text, content_types_of, parse_rels,
+    resolve_relationship_target_path,
 };
 use crate::parse::text::BuildContext;
 use crate::scan::BodyElement;
@@ -208,8 +209,8 @@ pub fn external_txbx_parts(
         let Some(path) = resolve_relationship_target_path(source_path, &rel.target) else {
             continue;
         };
-        if let Some(text) = part_text(zip, &path)? {
-            out.set(r_id, text.to_owned());
+        if let Some(text) = canonical_part_text(zip, &path)? {
+            out.set(r_id, text.into_owned());
         }
     }
     Ok(out)
@@ -431,9 +432,10 @@ pub fn extract_chart_part(
     ) else {
         return Ok(None);
     };
-    let Some(part_xml) = part_text(ctx.zip, &path)? else {
+    let Some(part_xml) = canonical_part_text(ctx.zip, &path)? else {
         return Ok(None);
     };
+    let part_xml = &*part_xml;
     let mut display = parse_chart_part_xml(part_xml, &path, ctx.theme_colors)?;
     if let Some(display) = display.as_mut() {
         // chartex (cx:) parts are display-only degrades: the data-edit patcher

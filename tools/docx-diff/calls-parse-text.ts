@@ -27,6 +27,7 @@ import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { ENTRIES, hiddenRun, marks, NOTE_PARTS, plainRun, STORIES } from './withheld-inputs'
 import { parseInternals } from './parse-internals'
 import { lineRuleOutsideItsType } from './listed'
+import { hiddenIn } from './calls-markup'
 
 const internals = await parseInternals()
 
@@ -798,7 +799,37 @@ function fullCtxArgs(
 const NEEDS_DOCUMENT =
   /r:id=|r:embed|r:link|r:pict|<w:drawing|<w:pict|<w:object|mc:AlternateContent|Reference\b|<w:sdt\b|w:fldChar|<w:tbl\b/
 
+/** A complex field whose result is `result`: the cached runs a person may have hidden from AI. */
+const markedField = (instr: string, result: string): string =>
+  `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve">${instr}</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const SEEN_RUN = '<w:r><w:rPr><w:i/></w:rPr><w:t>seen</w:t></w:r>'
+const HIDDEN_RUN = '<w:r><w:rPr><w:b/><go:redact w:label="secret"/></w:rPr><w:t>hid</w:t></w:r>'
+
+/** Field results with a run marked hidden from AI, among others and alone: the result carries the mark. */
+const MARKED_FIELD_XMLS: string[] = [
+  `<w:p>${markedField(' REF bm \\h ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '')}</w:p>`,
+  `<w:p>${markedField(' REF bm ', SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' PAGE ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' PAGE ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' AUTHOR ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' XE "term" ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '<w:r><w:rPr><redact xmlns="urn:r" w:label="a"/></w:rPr><w:t>x</w:t></w:r>')}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '<w:r><w:rPr><w:b/><go:redact/></w:rPr><w:t>x</w:t></w:r>')}</w:p>`,
+  `<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText> REF bm </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${HIDDEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  `<w:p><w:fldSimple w:instr=" REF bm ">${SEEN_RUN}${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" REF bm ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" PAGE ">${SEEN_RUN}${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" MERGEFIELD name ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" XE &quot;t&quot; ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" PAGE " w:dirty="1">${SEEN_RUN}</w:fldSimple></w:p>`,
+]
+
 const P_XMLS: string[] = [
+  ...MARKED_FIELD_XMLS,
   '<w:p/>',
   '<w:p><w:r><w:t>plain</w:t></w:r></w:p>',
   '<w:p><w:pPr><w:jc w:val="center"/><w:ind w:left="720" w:firstLine="360"/><w:spacing w:before="120" w:after="60" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r></w:p>',
@@ -1800,6 +1831,25 @@ export const PARSE_TEXT: CallSpec[] = [
       '<w:p><mc:Fallback><w:txbxContent><m:oMath/></w:txbxContent></mc:Fallback><w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>',
       '<w:p><mc:Fallback>unclosed<w:txbxContent>also</w:p>',
       '<w:p><mc:FallbackX>x</mc:Fallback><w:txbxContent a="1">kept</w:txbxContent></w:p>',
+      // the fallback and the text boxes in other valid spellings: markup hidden in a comment,
+      // CDATA or an instruction, spaced end tags, a `>` in an attribute value
+      ...hiddenIn('<mc:Fallback>').map(
+        (hidden) =>
+          `<w:p>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><m:oMath/></mc:Choice><mc:Fallback><m:oMath/></mc:Fallback></mc:AlternateContent><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('</mc:Fallback>').map(
+        (hidden) =>
+          `<w:p><mc:Fallback>${hidden}<m:oMath/></mc:Fallback><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('<w:txbxContent>').map(
+        (hidden) => `<w:p>${hidden}<w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('</w:txbxContent>').map(
+        (hidden) => `<w:p><w:txbxContent><w:p>${hidden}<m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+      ),
+      '<w:p><mc:Fallback><m:oMath/></mc:Fallback ><w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent ><m:oMath/></w:p>',
+      '<w:p><mc:Fallback a=">"><m:oMath/></mc:Fallback><w:txbxContent a=">"><m:oMath/></w:txbxContent><m:oMath/></w:p>',
+      "<w:p><mc:Fallback a='>' b=\"'>\"><m:oMath/></mc:Fallback><w:txbxContent a='>'>x</w:txbxContent>\n<m:oMath/></w:p>",
     ].map((text) => ({ text })),
   },
   {

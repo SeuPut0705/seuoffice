@@ -5,6 +5,7 @@
 import type { PictureRenderNode } from '@seuoffice/pptx-render'
 import { FIT_WIDTH } from './app-constants'
 import type { ActionCtx } from './action-context'
+import { confirmExportWithoutMarks } from './export-marks'
 import { renderSelectionToPngBase64 } from './selection-image'
 import { t } from './i18n/locale'
 
@@ -171,6 +172,8 @@ export async function saveSelectionAsPicture(
   sourceIds: readonly string[] = ctx.selectedIds,
 ): Promise<void> {
   if (!ctx.slide || !canSaveAsPicture(ctx, sourceIds)) return
+  const selected = ctx.slide.nodes.filter((node) => sourceIds.includes(node.sourceId))
+  if (!(await confirmExportWithoutMarks(ctx, selected, 'PNG'))) return
   try {
     const pngBase64 = await renderSelectionToPngBase64(ctx.slide, sourceIds, ctx.images)
     const r = await window.slidesApi.savePicture({

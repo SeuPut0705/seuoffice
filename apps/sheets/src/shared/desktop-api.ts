@@ -3273,6 +3273,10 @@ export const workbookExportPdfResultSchema = z.union([
 export type WorkbookExportPdfRequest = z.infer<typeof workbookExportPdfRequestSchema>
 export type WorkbookExportPdfResult = z.infer<typeof workbookExportPdfResultSchema>
 
+/// The copy formats that cannot carry the marks hiding cells from the AI and
+/// ask the person first. ODS asks in the main process, where it converts.
+export type WithheldExportFormat = 'CSV' | 'PDF'
+
 /// Print of the same laid-out HTML through the system print dialog. `ok: false`
 /// without an error is the user closing the dialog.
 export const workbookPrintResultSchema = z.union([
@@ -3611,11 +3615,11 @@ export interface DesktopApi {
   exportOds(request: WorkbookExportOdsRequest): Promise<WorkbookExportOdsResult>
   /// First Save of a CSV session: native "keep this format?" dialog.
   confirmCsvSave(): Promise<'csv' | 'xlsx' | 'cancel'>
-  /// A CSV copy of a workbook that hides cells from the AI cannot keep the
-  /// marks: native dialog offering Save as .xlsx, Export CSV without the marks
+  /// A CSV or PDF copy of a workbook that hides cells from the AI cannot keep
+  /// the marks: native dialog offering Save as .xlsx, Export without the marks
   /// (the real values; the marks are gone from that file) or Cancel.
   /// Nothing is written by the dialog itself.
-  askWithheldCsv(): Promise<'xlsx' | 'export' | 'cancel'>
+  askWithheldExport(format: WithheldExportFormat): Promise<'xlsx' | 'export' | 'cancel'>
   /// AI create_document: write a new standalone file into the default save
   /// folder (no dialog) and open it in a new tab.
   createDocument(request: WorkbookCreateDocumentRequest): Promise<WorkbookCreateDocumentResult>

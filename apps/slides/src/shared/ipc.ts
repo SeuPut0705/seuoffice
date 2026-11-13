@@ -1260,6 +1260,9 @@ export interface ExportImagesResult {
   error?: string
 }
 
+/** The copy formats that cannot carry a mark hiding content from the AI, and so ask the person first. */
+export type WithheldExportFormat = 'PDF' | 'PNG' | 'JPG'
+
 /** Save as Picture: one PNG of the selected elements, written where the save dialog points */
 export interface SavePictureOp {
   /** base64 PNG (without the data: prefix) */
@@ -1817,6 +1820,12 @@ export interface SlidesApi {
   pickExportPdfPath: (defaultName: string) => Promise<string | null>
   /** Save as Picture: save dialog + write of the selection PNG */
   savePicture: (op: SavePictureOp) => Promise<SavePictureResult>
+  /**
+   * A copy of a deck that hides content from the AI cannot keep the marks:
+   * native dialog offering Save as .pptx, Export without the marks (the real
+   * content; the marks are gone from that file) or Cancel. Writes nothing itself.
+   */
+  askWithheldExport: (format: WithheldExportFormat) => Promise<'pptx' | 'export' | 'cancel'>
   /** Main process printToPDF via a hidden window, written to disk */
   exportPdf: (op: ExportPdfOp) => Promise<ExportPdfResult>
   /** Print: with job = silent (macOS named printers spool through lp); without = system dialog */

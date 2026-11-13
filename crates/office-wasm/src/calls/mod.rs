@@ -25,6 +25,7 @@ mod gen_rpr;
 mod gen_runs;
 mod gen_table;
 mod gen_text;
+mod hidden_content;
 mod images;
 mod ink;
 mod markers;
@@ -137,6 +138,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "revision" => Some(revision::dispatch(function, text, args)),
         "save" => Some(save::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "hiddenContent" => Some(hidden_content::dispatch(function, text, args)),
         "withheld" => Some(withheld::dispatch(function, text, args)),
         "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
         "genProps" => Some(gen_props::dispatch(function, text, args)),

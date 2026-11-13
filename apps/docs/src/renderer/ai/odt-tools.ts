@@ -76,6 +76,9 @@ const REFUSAL_TEXT: Record<OdtRefusal, string> = {
   // tool call reports it
   lockedControl:
     'The edit was refused: it would change the content of a content control locked against editing (w:lock contentLocked). Leave that text unchanged, or delete the control whole.',
+  // a docx rule too (editor/redaction.ts)
+  hiddenContent:
+    'The edit was refused: it would remove content the person hid from AI (a {{…}} placeholder, or the mark that hides it). Leave that content as it is; tell the person what to remove and let them do it.',
 }
 
 /** forget a refusal left over from before this tool call */

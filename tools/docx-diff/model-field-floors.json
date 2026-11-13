@@ -700,7 +700,7 @@
   "NoteInfo.spacing.afterTwips": { "parser": 23, "built": 36 },
   "NoteInfo.spacing.lineRule": { "parser": 23, "built": 32 },
   "NoteInfo.spacing.lineRawTwips": { "parser": 23, "built": 36 },
-  "FieldRun.text": { "parser": 11, "built": 42 },
+  "FieldRun.text": { "parser": 10, "built": 42 },
   "FieldRun.bold": { "parser": 0, "built": 26 },
   "FieldRun.italic": { "parser": 0, "built": 26 },
   "FieldRun.underline": { "parser": 0, "built": 26 },
@@ -729,7 +729,7 @@
   "FieldDisplay.hangTwips": { "parser": 2, "built": 26 },
   "FieldDisplay.leader": { "parser": 2, "built": 22 },
   "FieldDisplay.rightTabTwips": { "parser": 2, "built": 26 },
-  "FieldDisplay.runs": { "parser": 10, "built": 22 },
+  "FieldDisplay.runs": { "parser": 9, "built": 22 },
   "FieldDisplay.emptyLine": { "parser": 1, "built": 22 },
   "FieldDisplay.align": { "parser": 0, "built": 22 },
   "FieldDisplay.lineRule": { "parser": 0, "built": 22 },
@@ -1683,5 +1683,8 @@
   "ResolveDiff.key": { "parser": 0, "built": 21 },
   "ResolveDiff.old": { "parser": 0, "built": 16 },
   "ResolveDiff.eff": { "parser": 0, "built": 16 },
-  "ResolveDiff.text": { "parser": 0, "built": 16 }
+  "ResolveDiff.text": { "parser": 0, "built": 16 },
+  "RevisionXmlFilter.keepHidden": { "parser": 0, "built": 42 },
+  "ChartDisplay.redact": { "parser": 0, "built": 22 },
+  "Block.redact": { "parser": 0, "built": 16 }
 }

@@ -1,10 +1,20 @@
 // Groups `charclass` and `xmltag` of comparison (f): char-class.ts, the one
 // character classification of the layout rules, and xml-tag.ts, start tags
-// read through their quoted attribute values.
+// read through their quoted attribute values and elements cut by their
+// markup, with the canonical spelling of ooxml-normalize.ts they are read by.
 // The other predicates of char-class.ts stay TypeScript only (the layout calls
 // them per character, too often for a wasm call each): no Rust to compare.
 import { charClass, isDoubleByteChar, isEastAsianLangTag } from './reference/char-class'
-import { findStartTag, removeElements } from './reference/xml-tag'
+import { canonicalXmlSyntax } from './reference/ooxml-normalize'
+import {
+  elementInner,
+  findStartTag,
+  removeElements,
+  removeSegments,
+  replaceSegments,
+} from './reference/xml-tag'
+import { elementFragments } from './fragments'
+import { CANONICAL_TEXTS, INNER_TEXTS, SEGMENT_CASES } from './calls-markup'
 import type { CallSpec, Input } from './calls-spec'
 
 /** Every boundary of every range charClass names, one either side, and a few inside. */
@@ -103,6 +113,13 @@ const NAMES: unknown[] = [
 /** The one RegExp the engine passes: the settings root of patch.ts, under any prefix. */
 const SETTINGS_ROOT = /^(?:[A-Za-z0-9._-]+:)?settings$/
 
+/** The functions `replaceSegments` is called with: a callback cannot cross the wire, so the argument names one. */
+const REPLACERS: Record<string, (element: string) => string> = {
+  drop: () => '',
+  wrap: (element) => `<<${element}>>`,
+  length: (element) => String(element.length),
+}
+
 const regexOf = (name: unknown): string | RegExp | undefined => {
   if (name && typeof name === 'object' && 'regex' in name && name.regex === 'settingsRoot')
     return SETTINGS_ROOT
@@ -163,5 +180,56 @@ export const XMLTAG: CallSpec[] = [
         { text, args: { name, limit: 1 } },
       ]),
     ),
+  },
+  {
+    fn: 'xmltag.elementInner',
+    call: (text) => elementInner(text),
+    fromDocument: (parts) =>
+      [...parts]
+        .filter(([path]) => /^word\/(?:document|header\d*|footer\d*)\.xml$/.test(path))
+        .flatMap(([, text]) => ['w:tbl', 'w:tr', 'w:tc', 'w:p'].flatMap((tag) => elementFragments(text, tag).slice(0, 4)))
+        .map((text) => ({ text })),
+    built: INNER_TEXTS.map((text) => ({ text })),
+  },
+  {
+    fn: 'xmltag.removeSegments',
+    call: (text, args) => removeSegments(text, String(args.tag)),
+    fromDocument: (parts) =>
+      [...parts]
+        .filter(([path]) => /^word\/(?:document|header\d*|footer\d*)\.xml$/.test(path))
+        .flatMap(([, text]) =>
+          ['w:txbxContent', 'mc:Fallback', 'w:drawing'].map((tag) => ({
+            text: text.slice(0, 60_000),
+            args: { tag },
+          })),
+        ),
+    built: SEGMENT_CASES.map(({ text, tag }) => ({ text, args: { tag } })),
+  },
+  {
+    fn: 'xmltag.replaceSegments',
+    call: (text, args) =>
+      replaceSegments(text, String(args.tag), REPLACERS[String(args.mode)]!),
+    fromDocument: (parts) =>
+      [...parts]
+        .filter(([path]) => /^word\/(?:document|header\d*|footer\d*)\.xml$/.test(path))
+        .flatMap(([, text]) =>
+          ['w:txbxContent', 'mc:Fallback'].flatMap((tag) =>
+            ['wrap', 'length'].map((mode) => ({ text: text.slice(0, 60_000), args: { tag, mode } })),
+          ),
+        ),
+    built: SEGMENT_CASES.flatMap(({ text, tag }) =>
+      Object.keys(REPLACERS).map((mode) => ({ text, args: { tag, mode } })),
+    ),
+  },
+  {
+    fn: 'xmltag.canonicalXmlSyntax',
+    call: (text) => canonicalXmlSyntax(text),
+    fromDocument: (parts) =>
+      [...parts].flatMap(([, text]) => [{ text: text.slice(0, 60_000) }]).slice(0, 40),
+    built: [
+      ...CANONICAL_TEXTS,
+      ...SEGMENT_CASES.map(({ text }) => text),
+      ...INNER_TEXTS,
+    ].map((text) => ({ text })),
   },
 ]

@@ -148,7 +148,7 @@ fn parsed_notes(xml: &str, kind: NoteKind) -> Vec<ParsedNote> {
         let text = note_tree_text(entry);
         // each run hidden from AI as its placeholder, or the whole note withheld
         // when a mark sits where no run accounts for it
-        let model_text = withheld_text(entry, &note_tree_text).filter(|model| *model != text);
+        let model_text = withheld_text(entry, &note_tree_text);
         out.push(ParsedNote {
             id: id.to_owned(),
             text,

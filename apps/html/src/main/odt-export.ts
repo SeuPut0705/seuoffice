@@ -102,23 +102,32 @@ export async function confirmOdtReport(
   return response === 0
 }
 
+const MARKED_KEYS = {
+  odt: { message: 'markedMessageOdt', detail: 'markedDetail', clear: 'markedClearOdt' },
+  docx: { message: 'markedMessageDocx', detail: 'markedDetail', clear: 'markedClearDocx' },
+  pdf: { message: 'markedMessagePdf', detail: 'markedDetailPdf', clear: 'markedClearPdf' },
+} as const satisfies Record<string, { message: OdtKey; detail: OdtKey; clear: OdtKey }>
+
+export type MarkedExportFormat = keyof typeof MARKED_KEYS
+
 /**
  * The box for a page with content hidden from AI that is about to be exported as
- * `format` (ODT or Word): neither keeps the hiding, so the person clears the
- * marks for that copy, or cancels.
+ * `format` (ODT, Word or PDF): none keeps the hiding, so the person exports a
+ * copy without the marks, or cancels. The page itself is the file that keeps them.
  */
 export async function askMarkedExport(
-  format: 'odt' | 'docx',
+  format: MarkedExportFormat,
   show: (options: MarkedOdtBox) => Promise<{ response: number }>,
   lang: Lang = getUiLang(),
 ): Promise<'clear' | 'cancel'> {
   const t = (key: OdtKey) => tOdt(lang, key)
+  const keys = MARKED_KEYS[format]
   const { response } = await show(
     markedOdtBox({
       title: t('markedTitle'),
-      message: t(format === 'odt' ? 'markedMessageOdt' : 'markedMessageDocx'),
-      detail: t('markedDetail'),
-      clearMarks: t(format === 'odt' ? 'markedClearOdt' : 'markedClearDocx'),
+      message: t(keys.message),
+      detail: t(keys.detail),
+      clearMarks: t(keys.clear),
       cancel: t('odtCancel'),
     }),
   )
@@ -126,8 +135,11 @@ export async function askMarkedExport(
 }
 
 /** Why a headless export of a marked page writes nothing. */
-export function markedExportRefusal(lang: Lang = getUiLang()): string {
-  return tOdt(lang, 'markedRefused')
+export function markedExportRefusal(
+  lang: Lang = getUiLang(),
+  format: MarkedExportFormat = 'odt',
+): string {
+  return tOdt(lang, format === 'pdf' ? 'markedRefusedPdf' : 'markedRefused')
 }
 
 /** Name of the save-dialog filter for `.odt` */
@@ -174,8 +186,14 @@ const tOdt = createI18n({
       'Exported this way, the hidden content would read as plain text to everyone, AI included. You can export a copy with the marks cleared; this page keeps its marks.',
     markedClearOdt: 'Clear marks and export as ODT',
     markedClearDocx: 'Clear marks and export as Word',
+    markedMessagePdf: 'This page has content hidden from AI, and a PDF file cannot keep that.',
+    markedDetailPdf:
+      'The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. You can export a copy without the marks; this page keeps its marks.',
+    markedClearPdf: 'Export as PDF without the marks',
     markedRefused:
       'this page has content hidden from AI, and this export cannot keep that; clear the marks first',
+    markedRefusedPdf:
+      'this page has content hidden from AI, and a PDF file cannot keep that; export it from the File menu to choose, or clear the marks first',
     featToc: 'Table of contents',
     featChart: 'Charts',
     featEquation: 'Equations',
@@ -214,8 +232,15 @@ const tOdt = createI18n({
       '이 형식으로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 표시를 지운 사본을 내보낼 수 있으며, 이 페이지의 표시는 그대로 남습니다.',
     markedClearOdt: '표시 지우고 ODT로 내보내기',
     markedClearDocx: '표시 지우고 Word로 내보내기',
+    markedMessagePdf:
+      '이 페이지에는 AI에게 숨긴 내용이 있는데, PDF 파일에는 이를 담을 수 없습니다.',
+    markedDetailPdf:
+      '내보낸 파일에는 AI에게 숨김 표시가 없습니다. 그 파일을 읽는 모든 것은 AI를 포함해 숨긴 내용을 그대로 봅니다. 표시를 지운 사본을 내보낼 수 있으며, 이 페이지의 표시는 그대로 남습니다.',
+    markedClearPdf: '표시 없이 PDF로 내보내기',
     markedRefused:
       '이 페이지에는 AI에게 숨긴 내용이 있어 이 형식으로 내보낼 수 없습니다. 표시를 먼저 지우세요',
+    markedRefusedPdf:
+      '이 페이지에는 AI에게 숨긴 내용이 있어 PDF 파일에 담을 수 없습니다. 파일 메뉴에서 직접 내보내며 고르거나, 표시를 먼저 지우세요',
     featToc: '목차',
     featChart: '차트',
     featEquation: '수식',

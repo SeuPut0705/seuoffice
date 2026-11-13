@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use jscompat::{
     JsNum, JsRegex, Radix, RegexLimit, TryJsRegex, base64, js_regex, math_round, parse_int, truthy,
+    units_pattern,
 };
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
@@ -98,7 +99,7 @@ pub fn edited_comment_model_text(
             &first_mark_label(marked_xml),
         )),
     };
-    Ok(model_text.filter(|model_text| model_text != text))
+    Ok(model_text)
 }
 
 /// The first picture a comment carries. The blip's relationship resolves
@@ -132,8 +133,11 @@ fn comment_image_of(package: &Package, comment: &XNode) -> Result<Option<Comment
         return Ok(None);
     };
     // the id goes into the pattern unescaped, as in the original
-    let rel_pattern = TryJsRegex::new(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#), "")
-        .map_err(|error| error.to_string())?;
+    let rel_pattern = TryJsRegex::new(
+        &units_pattern(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#)),
+        "",
+    )
+    .map_err(|error| error.to_string())?;
     let Some(rel) = rel_pattern
         .try_exec(rels_xml)
         .map_err(|limit| limit.to_string())?
@@ -212,7 +216,7 @@ pub fn parse_comments(package: &Package) -> Result<Vec<CommentInfo>, Thrown> {
             author: node.attr("w:author").unwrap_or("").to_owned(),
             initials: node.attr("w:initials").map(str::to_owned),
             date: node.attr("w:date").map(str::to_owned),
-            model_text: comment_model_text(node).filter(|model_text| *model_text != comment_text),
+            model_text: comment_model_text(node),
             marked_xml: if has_mark_element(node) {
                 slices.get(id).cloned()
             } else {

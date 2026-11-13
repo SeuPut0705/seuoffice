@@ -12,7 +12,7 @@ use super::extract_runs::extract_runs_plain;
 use super::note_run_of;
 use crate::model::{NoteInfo, NoteInfoSpacing};
 use crate::notes::{NoteKind, NoteParagraph, parse_notes_xml_with};
-use crate::package::{Thrown, parse_part, part_text};
+use crate::package::{Thrown, canonical_part_text, parse_part};
 use crate::parse::drawings::host::{MediaEnv, NoHost};
 use crate::resolve::{
     ResolveCompat, ResolveCtx, ResolveParaOptions, effective_spacing_twips,
@@ -77,11 +77,11 @@ pub fn parse_notes_part(
     kind: NoteKind,
     ctx: &BuildContext<'_>,
 ) -> Result<Vec<NoteInfo>, Thrown> {
-    let Some(xml) = part_text(zip, note_part_path(kind))? else {
+    let Some(xml) = canonical_part_text(zip, note_part_path(kind))? else {
         return Ok(Vec::new());
     };
     let mut read = note_paragraph_reader(ctx);
-    parse_notes_xml_with(xml, kind, &mut read)
+    parse_notes_xml_with(&xml, kind, &mut read)
 }
 
 /// The resolver of `standaloneNoteParagraphReader`: no styles, builtin defaults.

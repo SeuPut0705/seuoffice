@@ -1153,7 +1153,8 @@ export function App() {
             failed: deck?.path === '',
           }
         },
-        (target) => fileActions.exportPdf(ctxRef.current, target),
+        // no one is there to ask about hidden content: the export refuses it
+        (target) => fileActions.exportPdf(ctxRef.current, target, { silent: true }),
       )
       window.slidesApi.headlessExportDone(report)
     })()
@@ -3321,6 +3322,7 @@ export function App() {
 
   // Refresh the action-module context every render so extracted actions never see stale state
   ctxRef.current = {
+    requestSaveAs: () => void saveAs(),
     slides,
     setSlides,
     current,

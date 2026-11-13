@@ -69,11 +69,7 @@ function startTagEnd(xml: string, from: number): number {
  * last one in `xml`, which is the element's own). '' for a self-closing element.
  */
 export function elementInner(xml: string): string {
-  const masked = maskOpaque(xml)
-  const open = findStartTag(masked)
-  if (!open || open.selfClosing) return ''
-  const close = masked.lastIndexOf('</')
-  return close < open.end ? '' : xml.slice(open.end, close)
+  return invoke('elementInner', [xml]) as never
 }
 /**
  * Top-level segments of `tag` between [from, to), depth-aware for nesting.
@@ -136,5 +132,5 @@ export function replaceSegments(
 }
 /** `xml` without its top-level `tag` elements */
 export function removeSegments(xml: string, tag: string): string {
-  return replaceSegments(xml, tag, () => '')
+  return invoke('removeSegments', [xml, tag]) as never
 }

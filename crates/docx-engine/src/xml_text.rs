@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 
 use jscompat::{Radix, RegexError, TryJsRegex, js_regex, parse_int, trim, truthy};
+use ooxml_pkg::canonical_xml_syntax;
 use ooxml_xml::XNode;
 
 use crate::theme::{ThemeColors, resolve_theme_color};
@@ -85,12 +86,13 @@ pub fn on_off_tag_in(xml: &str, name: &str) -> Result<Option<bool>, RegexError> 
     Ok(Some(raw.is_none_or(|raw| !is_off(raw))))
 }
 
-pub fn plain_text(xml: &str) -> String {
+pub fn plain_text(source: &str) -> String {
+    let xml = canonical_xml_syntax(source);
     let mut texts = String::new();
     let mut any_text = false;
     // a space at cell boundaries keeps table text from gluing together
     let mut pending_gap = false;
-    for found in js_regex!(r"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<\/w:tc>").find_iter(xml) {
+    for found in js_regex!(r"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<\/w:tc>").find_iter(&xml) {
         if found.as_str() == "</w:tc>" {
             pending_gap = any_text;
             continue;

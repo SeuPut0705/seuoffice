@@ -539,6 +539,8 @@ export const en = {
     'This document has content hidden from AI, which an ODT file cannot keep. Save it as .docx, or clear the marks first.',
   appMarkedOdtAutoSkipped:
     'Not auto-saved: this document has content hidden from AI, which an ODT file cannot keep. Save it as .docx, or clear the marks.',
+  appMarkedExportRefused:
+    'Not exported: this document has content hidden from AI, and the exported file cannot keep that. Save it as .docx, or export it from the File menu and choose to export without the marks.',
   appSaveFormatMismatch: "The file extension must match the document's format (.{ext}).",
   appFormatChangeTitleOdt: 'Save as ODT',
   appFormatChangeTitleDocx: 'Save as Word document (.docx)',

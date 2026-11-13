@@ -237,8 +237,10 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "buildTextboxParagraphXml" => r_build_textbox_paragraph_xml(env, args),
         "buildWordArtParagraphXml" => r_build_word_art_paragraph_xml(env, args),
         "builtInHeadingStyleUpsert" => r_built_in_heading_style_upsert(env, args),
+        "canonicalXmlSyntax" => r_canonical_xml_syntax(env, args),
         "citationText" => r_citation_text(env, args),
         "cleanMoveRangeMarkers" => r_clean_move_range_markers(env, args),
+        "clearHiddenMarks" => r_clear_hidden_marks(env, args),
         "colorNodeHex" => r_color_node_hex(env, args),
         "compareBlocks" => r_compare_blocks(env, args),
         "compareOperands" => r_compare_operands(env, args),
@@ -259,7 +261,9 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "decodeSymbolText" => r_decode_symbol_text(env, args),
         "dedupeStyleRefs" => r_dedupe_style_refs(env, args),
         "deobfuscateOdttf" => routes::deobfuscate_odttf(env, &args.resolved()?),
+        "docxHoldsHiddenContent" => r_docx_holds_hidden_content(env, args),
         "editedCommentModelText" => r_edited_comment_model_text(env, args),
+        "elementInner" => r_element_inner(env, args),
         "eqFieldToOmml" => r_eq_field_to_omml(env, args),
         "fieldDisplayOf" => r_field_display_of(env, args),
         "findChartWorkbookPath" => routes::find_chart_workbook_path(env, &args.resolved()?),
@@ -279,6 +283,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "hfReferenceRId" => r_hf_reference_r_id(env, args),
         "hfReferenceTags" => r_hf_reference_tags(env, args),
         "hfReferenceType" => r_hf_reference_type(env, args),
+        "hiddenRunProperties" => r_hidden_run_properties(env, args),
         "ifBranch" => r_if_branch(env, args),
         "injectInkRunsIntoParagraph" => r_inject_ink_runs_into_paragraph(env, args),
         "injectIntoSectPr" => r_inject_into_sect_pr(env, args),
@@ -397,6 +402,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "removeElements" => r_remove_elements(env, args),
         "removePartsRefusalMessage" => r_remove_parts_refusal_message(env, args),
         "removePartsRefusalMessageFor" => r_remove_parts_refusal_message_for(env, args),
+        "removeSegments" => r_remove_segments(env, args),
         "resizeAnchoredPictureXml" => r_resize_anchored_picture_xml(env, args),
         "resizeInlinePictureXml" => r_resize_inline_picture_xml(env, args),
         "resolveCtxOf" => r_resolve_ctx_of(env, args),
@@ -456,6 +462,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "vmlShapeTypeTable" => r_vml_shape_type_table(env, args),
         "vmlStyleProp" => r_vml_style_prop(env, args),
         "w3cdtfStamp" => routes::w3cdtf_stamp(env, &args.resolved()?),
+        "withheldBlockLabel" => r_withheld_block_label(env, args),
         "withheldLabelOf" => r_withheld_label_of(env, args),
         "withheldNode" => r_withheld_node(env, args),
         "withheldText" => r_withheld_text(env, args),
@@ -726,6 +733,12 @@ fn r_built_in_heading_style_upsert(env: &mut InvokeEnv<'_>, args: Args<'_>) -> O
     Ok(Some(to_json(&r)?))
 }
 
+fn r_canonical_xml_syntax(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = ooxml_pkg::canonical_xml_syntax(p0);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_citation_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0: docx_engine::sources::SourceInfo = req(args, 0)?;
     let r = docx_engine::sources::citation_text(&p0);
@@ -736,6 +749,14 @@ fn r_clean_move_range_markers(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::revision_xml::clean_move_range_markers(p0);
     Ok(Some(to_json(&r)?))
+}
+
+fn r_clear_hidden_marks(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
+    let p1 = num(args, 1)?;
+    let r = docx_engine::hidden_content::clear_hidden_marks(p0, p1)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(env.put_blob(r)))
 }
 
 fn r_color_node_hex(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
@@ -866,11 +887,24 @@ fn r_dedupe_style_refs(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
+fn r_docx_holds_hidden_content(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
+    let r = docx_engine::hidden_content::docx_holds_hidden_content(p0)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_edited_comment_model_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = rstr(args, 1)?;
     let r = docx_engine::settings::edited_comment_model_text(p0, p1)
         .map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_element_inner(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::xml_tag::element_inner(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -1049,6 +1083,12 @@ fn r_hf_reference_tags(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_hf_reference_type(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::section::read::hf_reference_type(p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_hidden_run_properties(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::withheld::hidden_run_properties(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -1836,6 +1876,13 @@ fn r_remove_parts_refusal_message_for(env: &mut InvokeEnv<'_>, args: Args<'_>) -
     Ok(Some(to_json(&r)?))
 }
 
+fn r_remove_segments(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let p1 = rstr(args, 1)?;
+    let r = docx_engine::xml_tag::remove_segments(p0, p1);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_resize_anchored_picture_xml(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = num(args, 1)?;
@@ -2224,6 +2271,12 @@ fn r_vml_style_prop(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = rstr(args, 1)?;
     let r = docx_engine::vml::vml_style_prop(p0, p1).map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_withheld_block_label(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::withheld::withheld_block_label(p0);
     Ok(Some(to_json(&r)?))
 }
 
