@@ -1,0 +1,415 @@
+[
+  {
+    "name": "relay offers only always tools",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "permission == \"always\" || permission == \"ask\"",
+    "replace": "permission == \"always\"",
+    "fn": ["agent-mcp-relay.agentRelayPlans", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay disabled check on the wrong status",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "string_field(server, \"status\") == \"disabled\"",
+    "replace": "string_field(server, \"status\") == \"failed\"",
+    "fn": ["agent-mcp-relay.agentRelayPlans", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay repeated name is planned twice",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "|| seen.contains(&key)",
+    "replace": "|| false",
+    "fn": ["agent-mcp-relay.agentRelayPlans", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay pending tool is planned",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "|| truthy_field(&tool, \"pending\")",
+    "replace": "|| false",
+    "fn": ["agent-mcp-relay.agentRelayPlans", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay unusable tool is planned",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "|| truthy_field(&tool, \"unusable\")",
+    "replace": "|| false",
+    "fn": ["agent-mcp-relay.agentRelayPlans"]
+  },
+  {
+    "name": "relay exposed name equal to the prefix",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "!exposed.starts_with(&prefix) || exposed.len() == prefix.len()",
+    "replace": "!exposed.starts_with(&prefix)",
+    "fn": ["agent-mcp-relay.agentRelayPlans"]
+  },
+  {
+    "name": "relay keeps results inside always",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "keep_results_inside: truthy_field(server, \"keepResultsInside\"),",
+    "replace": "keep_results_inside: true,",
+    "fn": ["agent-mcp-relay.agentRelayPlans", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay needs-review text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "needs the person\\u{2019}s review",
+    "replace": "needs review",
+    "fn": ["agent-mcp-relay.RELAY_TEXT", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay unknown tool text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "this session has no tool named",
+    "replace": "no tool named",
+    "fn": ["agent-mcp-relay.RELAY_TEXT", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay declined text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "The person did not allow this call.",
+    "replace": "Not allowed.",
+    "fn": ["agent-mcp-relay.RELAY_TEXT", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay stopped text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "the call was stopped.",
+    "replace": "stopped.",
+    "fn": ["agent-mcp-relay.RELAY_TEXT", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay instructions framing",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "given as reference material from the server",
+    "replace": "given by the server",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay blank instructions kept",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "if trim(instructions).is_empty() {",
+    "replace": "if instructions.is_empty() {",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay object schema type check",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "kind == \"object\")",
+    "replace": "kind == \"string\")",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay object schema spread",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "spread(&mut out, schema);",
+    "replace": "let _ = schema;",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay answer error text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "McpCallAnswer::Failed { error } => error_result(&error),",
+    "replace": "McpCallAnswer::Failed { .. } => error_result(\"failed\"),",
+    "fn": ["agent-mcp-relay.relayResultOf", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay answer isError dropped",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "call_tool_result(&output, is_error)",
+    "replace": "call_tool_result(&output, false)",
+    "fn": ["agent-mcp-relay.relayResultOf", "agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay listing keeps pending tools",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": ".is_some_and(|now| offered(&now.permission) && !now.pending)",
+    "replace": ".is_some_and(|now| offered(&now.permission))",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay pending tool reaches the hub",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "if now.as_ref().is_some_and(|now| now.pending) {",
+    "replace": "if false {",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay ask tool never asks",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "now.permission == \"ask\")",
+    "replace": "now.permission == \"none\")",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay session allowance ignored",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "&& !ctx.session_allowed.borrow().contains(&allow_key);",
+    "replace": "&& true;",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay card is not told of an abort",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "Some((CallPhase::Asking, _)) => self.ask.abort(id),",
+    "replace": "Some((CallPhase::Asking, _)) => {}",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay hub call is not cancelled on abort",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "self.hub.cancel(&self.caller, &call_id);",
+    "replace": "let _ = &call_id;",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay signal fires twice",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "Some(call) if !call.signal_aborted => {",
+    "replace": "Some(call) => {",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay stop does not cancel again",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "self.ctx.hub.cancel(&self.ctx.caller, &call_id);",
+    "replace": "let _ = &call_id;",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay finished call stays in flight",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "self.ctx.in_flight.borrow_mut().retain(|c| c != call_id);",
+    "replace": "let _ = call_id;",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay session scope not remembered",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "if scope == AgentRelayScope::Session {",
+    "replace": "if scope == AgentRelayScope::Once {",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay aborted call goes on to the hub",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "        if aborted {",
+    "replace": "        if false && aborted {",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay hub rejection text",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": "Err(()) => error_result(&RELAY_TEXT.stopped(&server)),",
+    "replace": "Err(()) => error_result(\"rejected\"),",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "relay hub call server and tool swapped",
+    "file": "main-core/src/shell/agent/agent_mcp_relay.rs",
+    "find": ".call(&self.caller, &server, &tool, &input, &call_id);",
+    "replace": ".call(&self.caller, &tool, &server, &input, &call_id);",
+    "fn": ["agent-mcp-relay.scenario"]
+  },
+  {
+    "name": "agent skill title cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "trimmed(&args, \"title\", 500.0)",
+    "replace": "trimmed(&args, \"title\", 499.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill name cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "trimmed(&args, \"name\", 200.0)",
+    "replace": "trimmed(&args, \"name\", 100.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill description cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "trimmed(&args, \"description\", 5_000.0)",
+    "replace": "trimmed(&args, \"description\", 4_000.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill body cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "200_000.0)",
+    "replace": "100_000.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill target id cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "trimmed(&args, \"targetId\", 512.0)",
+    "replace": "trimmed(&args, \"targetId\", 256.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill template path cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "\"suggestedTemplatePath\", 4_096.0)",
+    "replace": "\"suggestedTemplatePath\", 2_048.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill install address cap",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "trimmed(&args, \"address\", 2_048.0)",
+    "replace": "trimmed(&args, \"address\", 1_024.0)",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill wants template loose",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "Some(JsonValue::Bool(true))",
+    "replace": "Some(JsonValue::Bool(_))",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill empty title text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "\"title must not be empty\"",
+    "replace": "\"title is empty\"",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill blank body accepted",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "if trim(&input.body).is_empty() {",
+    "replace": "if input.body.is_empty() {",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill empty address text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "\"address must not be empty\"",
+    "replace": "\"address is empty\"",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill card text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "press Save on it, so it is not saved yet.",
+    "replace": "press Save on it.",
+    "fn": ["agent-mcp.skillCall", "agent-mcp.build"]
+  },
+  {
+    "name": "agent skill no window text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "\"Skill cards are not available in this session.\"",
+    "replace": "\"No window.\"",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent skill no install window text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "\"Skill install proposals are not available in this session.\"",
+    "replace": "\"No window.\"",
+    "fn": ["agent-mcp.skillCall"]
+  },
+  {
+    "name": "agent slides without a check are edited",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "if !deck_withholds {",
+    "replace": "if !deck_withholds && false {",
+    "fn": ["agent-mcp.withholdingSlides"]
+  },
+  {
+    "name": "agent slides read does not withhold",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "options.set(\"withhold\", JsonValue::Bool(true));",
+    "replace": "options.set(\"withhold\", JsonValue::Bool(false));",
+    "fn": ["agent-mcp.withholdingSlides"]
+  },
+  {
+    "name": "agent withheld deck text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "This presentation withholds some of its content from AI.",
+    "replace": "This deck withholds content.",
+    "fn": ["agent-mcp.withholdingSlides"]
+  },
+  {
+    "name": "agent markdown is not redacted",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "if kind == \"markdown\" {",
+    "replace": "if kind == \"mindmap\" {",
+    "fn": ["agent-mcp.withholdingOpenDocuments", "agent-mcp.build"]
+  },
+  {
+    "name": "agent html redacted as markdown",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "redactor.redact_html_source(&source)",
+    "replace": "redactor.redact_markdown_source(&source)",
+    "fn": ["agent-mcp.withholdingOpenDocuments"]
+  },
+  {
+    "name": "agent deck read text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "Read a presentation with read_deck",
+    "replace": "Use read_deck",
+    "fn": ["agent-mcp.withholdingOpenDocuments", "agent-mcp.build"]
+  },
+  {
+    "name": "agent close text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "Closing documents is not available in an agent session.",
+    "replace": "Closing is not available.",
+    "fn": ["agent-mcp.withholdingOpenDocuments", "agent-mcp.build"]
+  },
+  {
+    "name": "agent save text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "Saving open documents is not available in an agent session.",
+    "replace": "Saving is not available.",
+    "fn": ["agent-mcp.withholdingOpenDocuments"]
+  },
+  {
+    "name": "agent project check inverted",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "|| !is_inside_path(&comparable_path(&path, &root, platform), &root, platform)",
+    "replace": "|| is_inside_path(&comparable_path(&path, &root, platform), &root, platform)",
+    "fn": ["agent-mcp.build", "agent-mcp.scenario"]
+  },
+  {
+    "name": "agent project check text",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "Only files inside the project folder can be read here.",
+    "replace": "Outside the project.",
+    "fn": ["agent-mcp.build", "agent-mcp.scenario"]
+  },
+  {
+    "name": "agent project check skips hwp",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "if tool.name == \"read_hwp\" || tool.name == \"read_pdf\" {",
+    "replace": "if tool.name == \"read_pdf\" {",
+    "fn": ["agent-mcp.build", "agent-mcp.scenario"]
+  },
+  {
+    "name": "agent project check skips pdf",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "|| tool.name == \"read_pdf\" {",
+    "replace": "|| tool.name == \"read_xyz\" {",
+    "fn": ["agent-mcp.build", "agent-mcp.scenario"]
+  },
+  {
+    "name": "agent allowlist ignored",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": ".filter(|tool| AGENT_MCP_TOOL_NAMES.contains(&tool.name.as_str()))",
+    "replace": ".filter(|_| true)",
+    "fn": ["agent-mcp.build", "agent-mcp.scenario"]
+  },
+  {
+    "name": "agent deck is read through the control",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "if kind == \"slides\" {",
+    "replace": "if kind == \"none\" {",
+    "fn": ["agent-mcp.withholdingOpenDocuments", "agent-mcp.build"]
+  },
+  {
+    "name": "agent deck check asks the wrong method",
+    "file": "main-core/src/shell/agent/agent_mcp.rs",
+    "find": "method: \"deckWithholds\",",
+    "replace": "method: \"deckWithhold\",",
+    "fn": ["agent-mcp.withholdingSlides"]
+  }
+]
