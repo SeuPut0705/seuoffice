@@ -28,9 +28,6 @@ flate2.workspace = true
 icu_normalizer = "2"
 # String.prototype.localeCompare of html/asset_lifecycle (root collation; Unicode-3.0, as docx-engine uses it)
 icu_collator = "2.4"
-# the typed model of the MCP messages a peer sends (packages/mcp_sdk), at the
-# protocol 2025-11-25 that @modelcontextprotocol/sdk 1.32.1 speaks; MIT, serde only
-rust-mcp-schema = { version = "2", default-features = false, features = ["2025_11_25", "schema_utils"] }
 
 # errno numbers of the platform, read as Node names them (node_fs)
 [target.'cfg(unix)'.dependencies]

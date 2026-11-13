@@ -5,8 +5,8 @@
 //! JSON it writes is the JSON the TypeScript writes, key for key.
 //!
 //! What a peer sends is read as `JsonValue` and checked as the SDK's zod
-//! schemas check it; `rust_mcp_schema` (protocol 2025-11-25) is the typed
-//! model of those messages where a module wants one.
+//! schemas check it (`types::schema`), so a refusal carries the SDK's own
+//! message.
 
 pub mod auth;
 pub mod client;
