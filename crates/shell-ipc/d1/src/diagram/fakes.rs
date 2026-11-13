@@ -18,7 +18,7 @@
 //! | `writeNewDocument` | `{path}` or `{error}`; absent: the hook is unset | `["diagram.writeNewDocument", view, fileName, byteLength]` |
 //! | `pdf` | hex of the PDF | `["diagram.renderPdf", printHtml]` |
 //!
-//! | `open` | `[{view, path?, decision?}]`: the views the shell made (`createDiagramView(path)`), `decision` is `restore` or `original` | none |
+//! | `open` | `[{view, path?, decision?}]`: the views the shell made (`createDiagramView(path)`), `decision` is `restore` or `original`; absent: no views | none |
 //! | `headlessJob` | `{view, path}`: a headless export of `path` runs in that hidden window | none |
 //!
 //! Save tokens are `00000000000000000000000000000001`, `...02`, and so on.
@@ -69,7 +69,7 @@ pub(super) fn insert(hosts: &mut Hosts, case: &Value) {
             .and_then(Value::as_u64)
             .map(|v| ViewId(v as u32))
     };
-    // `open` absent: a new, untitled diagram in view 1
+    // `open` absent: the shell made no diagram view
     let open = match case_diagram.get("open").and_then(Value::as_array) {
         Some(entries) => entries
             .iter()
@@ -88,12 +88,7 @@ pub(super) fn insert(hosts: &mut Hosts, case: &Value) {
                 })
             })
             .collect(),
-        None => vec![OpenView {
-            view: ViewId(1),
-            path: None,
-            decision: None,
-            seed: None,
-        }],
+        None => Vec::new(),
     };
     let headless = case_diagram.get("headlessJob").and_then(|entry| {
         let path = entry.get("path")?.as_str()?.to_owned();

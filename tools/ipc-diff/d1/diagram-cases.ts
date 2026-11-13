@@ -83,13 +83,16 @@ export function diagramCase(
     }
   }
   if (host.osShell) shared.osShell = host.osShell
+  const views = options.views ?? [view(1)]
+  // every case says which views the shell made: a new, untitled diagram in the first, unless `open` is given
+  const d1 = host.d1 ?? {}
   return {
     note,
-    views: options.views ?? [view(1)],
+    views,
     files: options.files ?? FILES,
     hosts: {
       ...(Object.keys(shared).length > 0 ? { shared } : {}),
-      d1: { diagram: host.d1 ?? {} },
+      d1: { diagram: 'open' in d1 ? d1 : { open: [{ view: views[0].view }], ...d1 } },
     },
     calls,
   }

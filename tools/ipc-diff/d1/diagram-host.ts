@@ -309,10 +309,10 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
     e.log.push(['diagram.provisionalTitle', wc.id, title])
   })
 
-  // the views the shell made (`open` absent: a new, untitled diagram in the first view)
+  // the views the shell made (`open` absent: none)
   const open = Array.isArray(box.d1.open)
     ? (box.d1.open as { view: number; path?: string; decision?: 'restore' | 'original'; seed?: string }[])
-    : [{ view: views[0].view }]
+    : []
   for (const entry of open) {
     box.nextView = entry.view
     main.createDiagramView(entry.path ?? null)
