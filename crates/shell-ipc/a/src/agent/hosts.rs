@@ -196,8 +196,9 @@ pub trait AgentServices: Send + Sync {
     }
     /// core: `process.kill(pid, 0)` did not throw, or threw `EPERM`
     fn process_alive(&self, pid: f64) -> bool;
-    /// core: `execFile(file, args, { cwd, timeout, windowsHide: true, maxBuffer })` to its end:
-    /// what the program wrote to stdout, empty where it failed
+    /// worker: `execFile(file, args, { cwd, timeout, windowsHide: true, maxBuffer })` to its end:
+    /// what the program wrote to stdout, empty where it failed. Only the
+    /// session folders' sweep asks it (the programs' start times), never a handler
     fn exec_file(&self, request: &ExecRequest) -> String;
 }
 
