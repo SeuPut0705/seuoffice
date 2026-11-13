@@ -71,10 +71,6 @@
     1.172,
     1.172
   ],
-  "'SeuOffice Sans GO'": [
-    1.22,
-    1.22
-  ],
   "'DM Sans',sans-serif": [
     1.302,
     1.172
@@ -170,6 +166,10 @@
   "'SeuOffice Hiragino Sans'": [
     1.3,
     1.3
+  ],
+  "'SeuOffice Sans GO'": [
+    1.172,
+    1.172
   ],
   "'SeuOffice Sans KR'": [
     1.172,
@@ -838,10 +838,6 @@
   "Candara": [
     1.2207,
     1.172
-  ],
-  "SeuOffice Sans GO": [
-    1.22,
-    1.22
   ],
   "Cascadia Code": [
     1.172,
@@ -2584,6 +2580,10 @@
     1.172
   ],
   "SeuOffice Poppins": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Sans GO": [
     1.172,
     1.172
   ],

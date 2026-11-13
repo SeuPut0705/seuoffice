@@ -1,7 +1,7 @@
 {
   "source": "packages/docx-engine/tests/fixtures/truths/charspace-latin-full-delta/probe.docx",
   "paragraphs": 4,
-  "hashes": ["d5f5ada7b7fee13d", "fabd930225fc0fdc", "ce08e7d1c05388e9", "41dc6f10e5973a5a"],
+  "hashes": ["3f3c12ffa9906dc9", "ef775fbe1c3d0bc9", "aabaee00df625b0e", "cd26af6fabef6e17"],
   "cellParagraphs": 0,
   "cellHashes": [],
   "boxParagraphs": 0,

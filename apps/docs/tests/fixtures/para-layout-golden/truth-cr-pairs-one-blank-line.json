@@ -1,7 +1,7 @@
 {
   "source": "packages/docx-engine/tests/fixtures/truths/cr-pairs-one-blank-line/probe.docx",
   "paragraphs": 3,
-  "hashes": ["60343857557c7ef6", "8773373a83a4def7", "474ccf7d5e0c7775"],
+  "hashes": ["934a159b63b34372", "1f870e2d2a967729", "474ccf7d5e0c7775"],
   "cellParagraphs": 0,
   "cellHashes": [],
   "boxParagraphs": 0,
