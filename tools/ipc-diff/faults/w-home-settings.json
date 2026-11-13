@@ -1,0 +1,240 @@
+[
+  {
+    "name": "the MCP port defaults to another number (positive control)",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "pub const DEFAULT_MCP_PORT: u32 = 3093;",
+    "replace": "pub const DEFAULT_MCP_PORT: u32 = 3094;",
+    "groups": ["w/home-settings", "w/home-settings-mcp"]
+  },
+  {
+    "name": "onboarding reads any value but false as seen",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "Reads::IsTrue => flag(saved.get(key)) == Some(true),",
+    "replace": "Reads::IsTrue => flag(saved.get(key)) != Some(false),",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the update check reads only true as on",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "Reads::NotFalse => flag(saved.get(key)) != Some(false),",
+    "replace": "Reads::NotFalse => flag(saved.get(key)) == Some(true),",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "a failed onboarding write answers true",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "c.write(\"onboardingSeen\", JsonValue::Bool(true)).is_ok(),",
+    "replace": "c.write(\"onboardingSeen\", JsonValue::Bool(true)).is_ok() || true,",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "auto save keeps the old value in memory when the write fails",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "        *c.auto_save.borrow_mut() = Some(next);\n",
+    "replace": "",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "auto save writes again for the same value",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "if *on == c.auto_save_default().0 {",
+    "replace": "if false {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the auto save event carries nothing",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "vec![auto_save_ipc(next)],",
+    "replace": "vec![IpcValue::Undefined],",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the csv limit accepts any whole number",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "|| !CSV_IMPORT_LIMIT_CHOICES_MB.contains(&mb) {",
+    "replace": "|| false {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the csv limit is saved under another key",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "c.write_all(&[(\"csvImportLimitMb\", Some(JsonValue::Number(mb)))])?;",
+    "replace": "c.write_all(&[(\"csvImportLimit\", Some(JsonValue::Number(mb)))])?;",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the save folder dialog cannot make a folder",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "properties: vec![\"openDirectory\".into(), \"createDirectory\".into()],",
+    "replace": "properties: vec![\"openDirectory\".into()],",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "an unusable picked folder is saved",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "if !is_usable_save_dir(&picked) {",
+    "replace": "if false {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "a failed save of the picked folder is swallowed",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "c.write(DEFAULT_SAVE_DIR_KEY, JsonValue::String(picked.clone()))?;",
+    "replace": "let _ = c.write(DEFAULT_SAVE_DIR_KEY, JsonValue::String(picked.clone()));",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the language ignores the system locale",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "Some(&self.app.locale())",
+    "replace": "None",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "search keys are cut one character short",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "trimmed(raw, 512)",
+    "replace": "trimmed(raw, 511)",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the former jev keys are not read",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "nullish(r.get(\"keys\"), r.get(\"jevKeys\"))",
+    "replace": "r.get(\"keys\")",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "a search patch forgets the saved keys",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "let mut keys = current.keys_json();",
+    "replace": "let mut keys = JsObject::new();",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the connection test takes a custom server as hosted",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "\"kev\" | \"rizzo\" | \"custom\"",
+    "replace": "\"kev\" | \"rizzo\"",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the missing key text changes",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "(\"missing-key\", \"Enter an API key\"),",
+    "replace": "(\"missing-key\", \"Enter the API key\"),",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the http status text changes",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "format!(\"HTTP {digits}\")",
+    "replace": "format!(\"HTTP: {digits}\")",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "a kind joins the order before its neighbour",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": ".map_or(0, |found| found + 1);",
+    "replace": ".map_or(0, |found| found);",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "hidden kinds are always stored",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "if !self.hidden.is_empty() {",
+    "replace": "if true {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the kinds event goes to no view",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": ".emit(Target::All, \"home:home-kinds-changed\", vec![next.clone()]);",
+    "replace": ".emit(Target::Surface(shell_contract::Surface::Docs), \"home:home-kinds-changed\", vec![next.clone()]);",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the Hangul format is always hwp",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "let next = normalize_hwp_default_format(value.as_ref());",
+    "replace": "let next = HwpDefaultFormat::Hwp; let _ = value;",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the legacy prompt is on only for true",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "let prompt = !matches!(args.first(), Some(IpcValue::Bool(false)));",
+    "replace": "let prompt = matches!(args.first(), Some(IpcValue::Bool(true)));",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "a port above the range is accepted",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "n > 0.0 && n < 65536.0",
+    "replace": "n > 0.0 && n < 100000.0",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the MCP error is under another name",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "with_error.push((\"error\".into(), IpcValue::String(message)));",
+    "replace": "with_error.push((\"message\".into(), IpcValue::String(message)));",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the MCP enabled flag is saved under another key",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "(\"mcpEnabled\", Some(JsonValue::Bool(next.enabled))),",
+    "replace": "(\"mcpEnable\", Some(JsonValue::Bool(next.enabled))),",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the log file is not shown in the file manager",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "c.os_shell.show_item_in_folder(&path);",
+    "replace": "let _ = &path;",
+    "groups": ["w/home-settings", "w/home-settings-mcp"]
+  },
+  {
+    "name": "the result store is in another folder",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "Ok(join(&[user_data_dir, \"pdf-store\"]))",
+    "replace": "Ok(join(&[user_data_dir, \"pdf-stores\"]))",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the result store size skips files",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "} else if kind.is_file() {",
+    "replace": "} else if false {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "delete-all cannot remove a folder with files",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "Ok(meta) if meta.is_dir() => fs::remove_dir_all(dir),",
+    "replace": "Ok(meta) if meta.is_dir() => fs::remove_dir(dir),",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the repository link opens the survey",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "c.os_shell.open_external(GITHUB_REPO_URL)",
+    "replace": "c.os_shell.open_external(FEEDBACK_SURVEY_URL)",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the survey opens on cancel",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "if answer.response == 0 {",
+    "replace": "if answer.response != 0 {",
+    "groups": ["w/home-settings"]
+  },
+  {
+    "name": "the survey names the OS the other way round",
+    "file": "shell-ipc/w/src/home_settings.rs",
+    "find": "format!(\"{} {}\", platform_label(node_platform()), c.app.os_release())",
+    "replace": "format!(\"{} {}\", c.app.os_release(), platform_label(node_platform()))",
+    "groups": ["w/home-settings"]
+  }
+]

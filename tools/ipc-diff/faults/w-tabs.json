@@ -1,0 +1,135 @@
+[
+  {
+    "name": "tabs:list answers an empty strip",
+    "file": "shell-ipc/w/src/tabs/mod.rs",
+    "find": "Ok(IpcValue::Array(s.list()))",
+    "replace": "Ok(IpcValue::Array(Vec::new()))",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "tabs:reorder takes a fractional index",
+    "file": "shell-ipc/w/src/tabs/mod.rs",
+    "find": "(Some(id), Some(to)) = (string(args.first()), integer(args.get(1)))",
+    "replace": "(Some(id), Some(to)) = (string(args.first()), number(args.get(1)))",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "tabs:tear-off takes a position that is not finite",
+    "file": "shell-ipc/w/src/tabs/mod.rs",
+    "find": "finite(args.get(1)),",
+    "replace": "number(args.get(1)),",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "the chrome press reaches the sender too",
+    "file": "shell-ipc/w/src/tabs/mod.rs",
+    "find": "if sender.view != cx.sender.view {",
+    "replace": "if true {",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "a divider drag rewrites every pane role",
+    "file": "shell-ipc/w/src/tabs/state.rs",
+    "find": "if !ratio_only {",
+    "replace": "if true {",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "the split memory timer waits 300 ms",
+    "file": "shell-ipc/w/src/tabs/state.rs",
+    "find": "self.bridge.windows.set_timer(TimerKey::SplitMemory, 400.0);",
+    "replace": "self.bridge.windows.set_timer(TimerKey::SplitMemory, 300.0);",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "the split hint ignores the height of the strip",
+    "file": "shell-ipc/w/src/tabs/state.rs",
+    "find": "let strip = tab_strip_height(1.0);",
+    "replace": "let strip = 0.0;",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "a tab leaving the strip keeps its pane role",
+    "file": "shell-ipc/w/src/tabs/state.rs",
+    "find": "if !self.bridge.windows.view_destroyed(view) {",
+    "replace": "if false {",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "a close is never asked of the editor",
+    "file": "shell-ipc/w/src/tabs/state.rs",
+    "find": "Some(editor) => editor.request_close(view, parent, then),",
+    "replace": "Some(_) => then(Ok(true)),",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "docking back ignores the slot the strip reported",
+    "file": "shell-ipc/w/src/tabs/ops.rs",
+    "find": "g.manager_call(|m, b| m.attach_tab(b, tab, index, true));",
+    "replace": "g.manager_call(|m, b| m.attach_tab(b, tab, None, true));",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "a markdown tab has the html icon in the tab list",
+    "file": "shell-ipc/w/src/tabs/menus.rs",
+    "find": "TabKind::Markdown => \"md\",",
+    "replace": "TabKind::Markdown => \"html\",",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "the new-document menu has a separator for its header",
+    "file": "shell-ipc/w/src/tabs/menus.rs",
+    "find": "MenuEntryKind::Header,\n                tm(\"menuSectionNew\"),",
+    "replace": "MenuEntryKind::Separator,\n                tm(\"menuSectionNew\"),",
+    "groups": ["w/tabs"]
+  },
+  {
+    "name": "the split entries of the tab menu come before the window entry",
+    "file": "shell-ipc/w/src/tabs/menus.rs",
+    "find": "let at_index = open_at.map_or(0, |i| i + 1);",
+    "replace": "let at_index = open_at.map_or(0, |i| i);",
+    "groups": ["w/tabs-split"]
+  },
+  {
+    "name": "a dropped path keeps its padding",
+    "file": "shell-ipc/w/src/tabs/open.rs",
+    "find": "let path = trim(entry).to_owned();",
+    "replace": "let path = entry.to_owned();",
+    "groups": ["w/tabs-open"]
+  },
+  {
+    "name": "a drop opens one file only",
+    "file": "shell-ipc/w/src/tabs/open.rs",
+    "find": "const MAX_DROPPED_FILES: usize = 20;",
+    "replace": "const MAX_DROPPED_FILES: usize = 1;",
+    "groups": ["w/tabs-open"]
+  },
+  {
+    "name": "an unsupported extension is listed once per file",
+    "file": "shell-ipc/w/src/tabs/open.rs",
+    "find": "if !unsupported.contains(&ext) {",
+    "replace": "if true {",
+    "groups": ["w/tabs-open"]
+  },
+  {
+    "name": "a folder outside the roots is remembered for a new file",
+    "file": "shell-ipc/w/src/tabs/open.rs",
+    "find": "&& self.inside_any_root(dir) =>",
+    "replace": "=>",
+    "groups": ["w/tabs-open"]
+  },
+  {
+    "name": "the blank pdf is empty",
+    "file": "shell-ipc/w/src/tabs/open.rs",
+    "find": "&hooks.blank_pdf(),",
+    "replace": "&[],",
+    "groups": ["w/tabs-open"]
+  },
+  {
+    "name": "the dock preview is one pixel off",
+    "file": "shell-ipc/w/src/tabs/bridge.rs",
+    "find": "(\"x\".into(), IpcValue::Number(x))",
+    "replace": "(\"x\".into(), IpcValue::Number(x + 1.0))",
+    "groups": ["w/tabs-split"]
+  }
+]
