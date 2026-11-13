@@ -722,7 +722,8 @@ export const sheetsTriggers: Record<string, Trigger> = {
       const watching = (waiters = new Map<number, (saved: boolean) => void>())
       saveAsWaiters.set(invoke, watching)
       const real = invoke.get('workbook:save')
-      invoke.set('workbook:save', async (event: { sender: { id: number } }, input: unknown) => {
+      invoke.set('workbook:save', async (...args: unknown[]) => {
+        const [event, input] = args as [{ sender: { id: number } }, unknown]
         const asked = (input as { mode?: unknown } | null)?.mode === 'save-as'
         let saved = false
         try {
