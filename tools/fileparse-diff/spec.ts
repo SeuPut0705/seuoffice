@@ -33,4 +33,6 @@ export interface Spec {
   isolate?: boolean
   /** The function has one answer whatever it is given: the gate does not ask for two distinct results. */
   constant?: boolean
+  /** A corpus input carries its path's extension as `args.ext`, for a function that takes one. */
+  corpusExtension?: boolean
 }

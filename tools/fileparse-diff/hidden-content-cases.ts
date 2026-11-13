@@ -376,7 +376,7 @@ async function fileInputs(): Promise<Input[]> {
   return [...EXTENSIONS, ...textFileInputs(), ...(await docxInputs()), ...(await workbookInputs())]
 }
 
-const extensionOf = ({ label, args = {} }: Input): string => String(args.ext ?? label.slice(label.lastIndexOf('.') + 1))
+const extensionOf = ({ args = {} }: Input): string => String(args.ext ?? '')
 
 const textOf = (input: Input): string => {
   if (input.text === undefined) throw new Error(`hidden-content-cases: ${input.label} has no text`)
@@ -412,7 +412,7 @@ export const SPECS: Spec[] = [
     extensions: [...HIDDEN_CONTENT_EXTENSIONS],
     built: fileInputs,
     call: (input) => fileHoldsHiddenContent(input.bytes ?? new Uint8Array(0), extensionOf(input)),
-    // a corpus file's extension is the one of its path, which a mutant's label no longer carries
+    corpusExtension: true,
     seedCorpus: false,
   },
 ]
