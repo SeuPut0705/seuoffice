@@ -1733,13 +1733,15 @@ fn build_node(app: &AppHandle, node: &Node) -> tauri::Result<Built> {
             let built = build_nodes(app, items)?;
             let refs: Vec<&dyn IsMenuItem<DynRuntime>> = built.iter().map(Built::as_item).collect();
             let menu = Submenu::with_items(app, label, true, &refs)?;
-            if cfg!(target_os = "macos") {
-                match role {
-                    MenuRole::Window => menu.set_as_windows_menu_for_nsapp()?,
-                    MenuRole::Help => menu.set_as_help_menu_for_nsapp()?,
-                    MenuRole::Plain => {}
-                }
+            // the NSApp roles exist only in the macOS build of muda
+            #[cfg(target_os = "macos")]
+            match role {
+                MenuRole::Window => menu.set_as_windows_menu_for_nsapp()?,
+                MenuRole::Help => menu.set_as_help_menu_for_nsapp()?,
+                MenuRole::Plain => {}
             }
+            #[cfg(not(target_os = "macos"))]
+            let _ = role;
             Built::Submenu(menu)
         }
     })

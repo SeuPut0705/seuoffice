@@ -19,9 +19,7 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
-use main_core::packages::electron_utils::print_cups::{
-    CupsPrintJob, DriverOption, DuplexMode, print_pdf_via_cups,
-};
+use main_core::packages::electron_utils::print_cups::{CupsPrintJob, DriverOption, DuplexMode};
 use main_core::packages::electron_utils::print_window::{ExecOutcome, PrintReport};
 use main_core::packages::electron_utils::printer_options::CommandOutcome;
 use serde_json::{Value, json};
@@ -536,9 +534,11 @@ fn spool(pdf: &[u8], options: &Value) -> Result<(), String> {
     #[cfg(not(windows))]
     {
         let job = cups_job(options);
-        let result = print_pdf_via_cups(pdf, &job, &mut |file, args, stdin| {
-            run_command(file, args, stdin)
-        });
+        let result = main_core::packages::electron_utils::print_cups::print_pdf_via_cups(
+            pdf,
+            &job,
+            &mut |file, args, stdin| run_command(file, args, stdin),
+        );
         if result.ok {
             Ok(())
         } else {
