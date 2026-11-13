@@ -4,11 +4,12 @@
 //!
 //! The timer is the caller's: it calls [`RendererWatchdog::sample`] every
 //! [`RendererWatchdog::sample_ms`]. A sample answers the reports it started
-//! (the TypeScript starts each as a detached promise). A report runs in
-//! three steps because its dialog is a promise a later sample can overtake:
-//! [`RendererWatchdog::diagnose`] writes the files and finds the document,
-//! [`RendererWatchdog::ask`] builds the box, and the caller shows it and
-//! reports the answer to [`RendererWatchdog::answered`].
+//! (the TypeScript starts each as a detached promise). A report is a state
+//! machine the caller drives, because it awaits things whose answers arrive
+//! on the thread that asked: [`RendererWatchdog::start_report`] starts it and
+//! answers the first [`ReportStep`]; the caller carries each step out (a CDP
+//! command, a sleep, the box, the close of the document) and hands the
+//! answer to [`ReportRun::resume`], which answers the next one.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -84,8 +85,6 @@ pub trait WatchdogContents {
     fn debugger_is_attached(&self) -> bool;
     /// `wc.debugger.attach(protocol)`
     fn debugger_attach(&self, protocol: &str) -> Result<(), Failure>;
-    /// `wc.debugger.sendCommand(method, params)`
-    fn debugger_send_command(&self, method: &str, params: Option<Value>) -> Result<Value, Failure>;
     /// `wc.debugger.detach()`
     fn debugger_detach(&self) -> Result<(), Failure>;
 }
@@ -120,12 +119,8 @@ pub trait WatchdogHost {
     fn describe(&self, wc: &Self::Contents) -> Result<Option<WatchdogDocumentInfo>, Failure>;
     /// `options.parentWindow(wc)`
     fn parent_window(&self, wc: &Self::Contents) -> Result<Option<Self::Window>, Failure>;
-    /// `options.closeDocument(wc)`
-    fn close_document(&self, wc: &Self::Contents) -> Result<(), Failure>;
     /// `options.t(key, params)`
     fn t(&self, key: WatchdogStringKey, params: Option<&BodyParams>) -> String;
-    /// `sleep(ms)`
-    fn sleep(&self, ms: f64);
 }
 
 /// what the options leave out, the `DEFAULTS` fill
@@ -215,44 +210,6 @@ pub fn prune_old_reports(dir: &str) -> Result<(), NodeError> {
     first_error.map_or(Ok(()), Err)
 }
 
-/// `captureCpuProfile`: a short CDP CPU profile of a live renderer; `Ok(false)`
-/// when another debugger holds it
-fn capture_cpu_profile<H: WatchdogHost>(
-    host: &H,
-    wc: &H::Contents,
-    out_path: &str,
-    ms: f64,
-) -> Result<bool, Failure> {
-    if wc.is_destroyed() || wc.debugger_is_attached() {
-        return Ok(false);
-    }
-    wc.debugger_attach("1.3")?;
-    let run = || -> Result<bool, Failure> {
-        wc.debugger_send_command("Profiler.enable", None)?;
-        let mut interval = serde_json::Map::new();
-        interval.insert("interval".to_owned(), Value::from(1000));
-        wc.debugger_send_command(
-            "Profiler.setSamplingInterval",
-            Some(Value::Object(interval)),
-        )?;
-        wc.debugger_send_command("Profiler.start", None)?;
-        host.sleep(ms);
-        let stopped = wc.debugger_send_command("Profiler.stop", None)?;
-        let profile = stopped
-            .get("profile")
-            .ok_or_else(|| Failure("profile is undefined".to_owned()))?;
-        let text = json_stringify(&json_value_from_serde(profile));
-        fs::write(out_path, text).map_err(|e| Failure(node_error(&e, "open", out_path).message))?;
-        Ok(true)
-    };
-    let result = run();
-    // already gone: nothing to detach
-    if !wc.is_destroyed() {
-        let _ = wc.debugger_detach();
-    }
-    result
-}
-
 /// `RendererState`
 #[derive(Debug, Clone, Default)]
 struct RendererState {
@@ -297,6 +254,9 @@ pub struct RendererWatchdog {
     profile_ms: f64,
     states: HashMap<i64, Rc<RefCell<RendererState>>>,
 }
+
+/// What [`RendererWatchdog::start_report`] answers: the run and its first step.
+pub type ReportStart<C> = (ReportRun<C>, ReportStep<C>);
 
 impl RendererWatchdog {
     /// `{ ...DEFAULTS, memoryLimitMB: memoryLimitFor(totalmem()), ...options }`
@@ -403,34 +363,45 @@ impl RendererWatchdog {
         reports
     }
 
-    /// the first half of `report`: the diagnostics under userData, and the
-    /// document the renderer shows. `Err` is `describe` throwing, which
-    /// rejects the report (the process reports it as an unhandled rejection).
-    pub fn diagnose<H: WatchdogHost>(
+    /// `report` up to its first `await`: the document the renderer shows, the
+    /// report file under userData, and the rest as steps. `Err` is `describe`
+    /// throwing, which rejects the report (the process reports it as an
+    /// unhandled rejection).
+    pub fn start_report<H: WatchdogHost>(
         &self,
         host: &H,
-        report: &Report<H::Contents>,
-    ) -> Result<Option<WatchdogDocumentInfo>, Failure> {
-        let wc = &report.wc;
-        let info = host.describe(wc)?;
+        report: Report<H::Contents>,
+    ) -> Result<ReportStart<H::Contents>, Failure> {
+        let info = host.describe(&report.wc)?;
         let stamp = host.now_ms();
         let dir = host.user_data_dir();
         let base = join(&[
             &dir,
             &format!("renderer-watchdog-{}", jscompat::number_to_string(stamp)),
         ]);
+        let mut run = ReportRun {
+            wc: report.wc.clone(),
+            info,
+            dir,
+            base,
+            memory_mb: report.memory_mb,
+            cpu: report.cpu,
+            phase: Phase::Finished,
+        };
         // diagnostics are best effort and must never make the situation worse
-        let _ = self.write_diagnostics(host, report, info.as_ref(), stamp, &dir, &base);
-        Ok(info)
+        let step = match self.write_report_file(&report, run.info.as_ref(), stamp, &run.base) {
+            Ok(()) => self.after_report_file(host, &mut run),
+            Err(_) => self.prompt_step(host, &mut run),
+        };
+        Ok((run, step))
     }
 
-    fn write_diagnostics<H: WatchdogHost>(
+    /// the `writeFile` of the report's JSON
+    fn write_report_file<C: WatchdogContents>(
         &self,
-        host: &H,
-        report: &Report<H::Contents>,
+        report: &Report<C>,
         info: Option<&WatchdogDocumentInfo>,
         stamp: f64,
-        dir: &str,
         base: &str,
     ) -> Result<(), String> {
         let wc = &report.wc;
@@ -459,25 +430,96 @@ impl RendererWatchdog {
         );
         let text = json_stringify_pretty(&JsonValue::Object(object), 2);
         let json_path = format!("{base}.json");
-        fs::write(&json_path, text).map_err(|e| node_error(&e, "open", &json_path).message)?;
+        fs::write(&json_path, text).map_err(|e| node_error(&e, "open", &json_path).message)
+    }
+
+    /// after the JSON: the CPU profile, then the prune
+    fn after_report_file<H: WatchdogHost>(
+        &self,
+        host: &H,
+        run: &mut ReportRun<H::Contents>,
+    ) -> ReportStep<H::Contents> {
         if self.profile_ms > 0.0 {
-            capture_cpu_profile(host, wc, &format!("{base}.cpuprofile"), self.profile_ms)
-                .map_err(|e| e.0)?;
+            match self.begin_profile(&run.wc) {
+                Ok(Some(step)) => {
+                    run.phase = Phase::Profile(ProfileAt::Enable);
+                    return step;
+                }
+                // another debugger holds the renderer: no profile
+                Ok(None) => {}
+                // a failure skips the prune
+                Err(_) => return self.prompt_step(host, run),
+            }
         }
-        prune_old_reports(dir).map_err(|e| e.message)
+        self.prune_step(host, run)
+    }
+
+    /// `pruneOldReports`, then the prompt
+    fn prune_step<H: WatchdogHost>(
+        &self,
+        host: &H,
+        run: &mut ReportRun<H::Contents>,
+    ) -> ReportStep<H::Contents> {
+        // a failed prune only means diagnostics stay as they are
+        let _ = prune_old_reports(&run.dir);
+        self.prompt_step(host, run)
+    }
+
+    /// `captureCpuProfile` up to its first `await`: `Ok(None)` is its `false`
+    fn begin_profile<C: WatchdogContents + Clone>(
+        &self,
+        wc: &C,
+    ) -> Result<Option<ReportStep<C>>, Failure> {
+        if wc.is_destroyed() || wc.debugger_is_attached() {
+            return Ok(None);
+        }
+        wc.debugger_attach("1.3")?;
+        Ok(Some(ReportStep::Command {
+            wc: wc.clone(),
+            method: "Profiler.enable",
+            params: None,
+        }))
+    }
+
+    /// the `finally` of `captureCpuProfile`
+    fn end_profile<C: WatchdogContents>(wc: &C) {
+        // already gone: nothing to detach
+        if !wc.is_destroyed() {
+            let _ = wc.debugger_detach();
+        }
+    }
+
+    /// what the report does once its diagnostics are over: the box, or the end
+    fn prompt_step<H: WatchdogHost>(
+        &self,
+        host: &H,
+        run: &mut ReportRun<H::Contents>,
+    ) -> ReportStep<H::Contents> {
+        match self.ask(host, run) {
+            Some(prompt) => {
+                run.phase = Phase::Prompting(prompt.state);
+                ReportStep::Prompt {
+                    options: prompt.options,
+                    over_parent: prompt.over_parent,
+                }
+            }
+            None => {
+                run.phase = Phase::Finished;
+                ReportStep::Done
+            }
+        }
     }
 
     /// the prompt half of `report` up to `showMessageBox`: `None` where the
     /// report ends with its diagnostics
-    pub fn ask<H: WatchdogHost>(
+    fn ask<H: WatchdogHost>(
         &self,
         host: &H,
-        report: &Report<H::Contents>,
-        info: Option<&WatchdogDocumentInfo>,
+        run: &ReportRun<H::Contents>,
     ) -> Option<WatchdogPrompt> {
-        let wc = &report.wc;
+        let wc = &run.wc;
         // chrome renderers (Home) have no document to close: logging is all that applies
-        let info = info?;
+        let info = run.info.as_ref()?;
         if wc.is_destroyed() {
             return None;
         }
@@ -493,8 +535,8 @@ impl RendererWatchdog {
                 WatchdogStringKey::WatchdogBody,
                 Some(&BodyParams {
                     title: info.title.clone(),
-                    memory: math_round(report.memory_mb),
-                    cpu: math_round(report.cpu),
+                    memory: math_round(run.memory_mb),
+                    cpu: math_round(run.cpu),
                 }),
             );
             let buttons = vec![
@@ -528,28 +570,178 @@ impl RendererWatchdog {
             }
         }
     }
+}
 
-    /// the rest of `report`, once the box was answered: `response` is the
-    /// pressed button, `Err` is the dialog's rejection
-    pub fn answered<H: WatchdogHost>(
-        &self,
+/// where a report is waiting
+enum Phase {
+    /// inside `captureCpuProfile`, waiting for a command or the sleep
+    Profile(ProfileAt),
+    /// the box is up: `state` is the renderer's, which a sample may drop from
+    /// `states` meanwhile
+    Prompting(Rc<RefCell<RendererState>>),
+    /// `await opts.closeDocument(wc)`
+    Closing(Rc<RefCell<RendererState>>),
+    Finished,
+}
+
+/// which `await` of `captureCpuProfile` is pending
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProfileAt {
+    Enable,
+    Interval,
+    Start,
+    Sleep,
+    Stop,
+}
+
+/// What the caller does next for a report.
+pub enum ReportStep<C> {
+    /// `await wc.debugger.sendCommand(method, params)`: answer with
+    /// [`ReportAnswer::Command`]
+    Command {
+        wc: C,
+        method: &'static str,
+        params: Option<Value>,
+    },
+    /// `await sleep(ms)`: answer with [`ReportAnswer::Slept`] when it is over
+    Sleep(f64),
+    /// the box: `showMessageBox(parent, options)` when `over_parent`, else
+    /// `showMessageBox(options)`; answer with [`ReportAnswer::Dialog`]
+    Prompt {
+        options: MessageBoxOptions,
+        over_parent: bool,
+    },
+    /// `await opts.closeDocument(wc)`: answer with [`ReportAnswer::Closed`]
+    CloseDocument(C),
+    /// the report ended
+    Done,
+}
+
+/// The answer of the `await` the last step asked for. `Err` is a rejection.
+pub enum ReportAnswer {
+    Command(Result<Value, Failure>),
+    Slept,
+    /// the pressed button
+    Dialog(Result<f64, Failure>),
+    Closed(Result<(), Failure>),
+}
+
+/// One `report` of the TypeScript, between its `await`s.
+pub struct ReportRun<C> {
+    wc: C,
+    info: Option<WatchdogDocumentInfo>,
+    dir: String,
+    base: String,
+    memory_mb: f64,
+    cpu: f64,
+    phase: Phase,
+}
+
+impl<C: WatchdogContents + Clone> ReportRun<C> {
+    /// the answer of the `await` the last step asked for
+    pub fn resume<H: WatchdogHost<Contents = C>>(
+        &mut self,
+        dog: &RendererWatchdog,
         host: &H,
-        report: &Report<H::Contents>,
-        prompt: WatchdogPrompt,
-        response: Result<f64, Failure>,
-    ) {
-        let wc = &report.wc;
-        let outcome = (|| -> Result<bool, Failure> {
-            let response = response?;
-            if response == 1.0 && !wc.is_destroyed() {
-                host.close_document(wc)?;
+        answer: ReportAnswer,
+    ) -> ReportStep<C> {
+        let phase = std::mem::replace(&mut self.phase, Phase::Finished);
+        match (phase, answer) {
+            (Phase::Profile(at), answer) => self.resume_profile(dog, host, at, answer),
+            (Phase::Prompting(state), ReportAnswer::Dialog(response)) => {
+                let wc = &self.wc;
+                if let Ok(response) = &response {
+                    let response = *response;
+                    if response == 1.0 && !wc.is_destroyed() {
+                        self.phase = Phase::Closing(state);
+                        return ReportStep::CloseDocument(wc.clone());
+                    }
+                }
+                let outcome = (|| -> Result<bool, Failure> {
+                    let response = response?;
+                    Ok(response == 2.0)
+                })();
+                Self::end_prompt(&state, outcome);
+                ReportStep::Done
             }
-            Ok(response == 2.0)
-        })();
-        let mut state = prompt.state.borrow_mut();
+            (Phase::Closing(state), ReportAnswer::Closed(result)) => {
+                Self::end_prompt(&state, result.map(|()| false));
+                ReportStep::Done
+            }
+            // an answer to nothing that was asked
+            _ => ReportStep::Done,
+        }
+    }
+
+    /// the `finally` of the prompt: an ignore is remembered, the box is free again
+    fn end_prompt(state: &Rc<RefCell<RendererState>>, outcome: Result<bool, Failure>) {
+        let mut state = state.borrow_mut();
         if matches!(outcome, Ok(true)) {
             state.ignored = true;
         }
         state.prompting = false;
+    }
+
+    fn resume_profile<H: WatchdogHost<Contents = C>>(
+        &mut self,
+        dog: &RendererWatchdog,
+        host: &H,
+        at: ProfileAt,
+        answer: ReportAnswer,
+    ) -> ReportStep<C> {
+        let wc = self.wc.clone();
+        let command = |method: &'static str, params: Option<Value>| ReportStep::Command {
+            wc: wc.clone(),
+            method,
+            params,
+        };
+        // a throw leaves captureCpuProfile through its `finally`, and the
+        // report through its `catch`: no prune
+        let failed = |run: &mut Self| {
+            RendererWatchdog::end_profile(&wc);
+            dog.prompt_step(host, run)
+        };
+        match (at, answer) {
+            (ProfileAt::Enable, ReportAnswer::Command(Ok(_))) => {
+                self.phase = Phase::Profile(ProfileAt::Interval);
+                let mut interval = serde_json::Map::new();
+                interval.insert("interval".to_owned(), Value::from(1000));
+                command(
+                    "Profiler.setSamplingInterval",
+                    Some(Value::Object(interval)),
+                )
+            }
+            (ProfileAt::Interval, ReportAnswer::Command(Ok(_))) => {
+                self.phase = Phase::Profile(ProfileAt::Start);
+                command("Profiler.start", None)
+            }
+            (ProfileAt::Start, ReportAnswer::Command(Ok(_))) => {
+                self.phase = Phase::Profile(ProfileAt::Sleep);
+                ReportStep::Sleep(dog.profile_ms)
+            }
+            (ProfileAt::Sleep, ReportAnswer::Slept) => {
+                self.phase = Phase::Profile(ProfileAt::Stop);
+                command("Profiler.stop", None)
+            }
+            (ProfileAt::Stop, ReportAnswer::Command(Ok(stopped))) => {
+                let out_path = format!("{}.cpuprofile", self.base);
+                let written = stopped
+                    .get("profile")
+                    .ok_or_else(|| Failure("profile is undefined".to_owned()))
+                    .and_then(|profile| {
+                        let text = json_stringify(&json_value_from_serde(profile));
+                        fs::write(&out_path, text)
+                            .map_err(|e| Failure(node_error(&e, "open", &out_path).message))
+                    });
+                RendererWatchdog::end_profile(&wc);
+                match written {
+                    Ok(()) => dog.prune_step(host, self),
+                    Err(_) => dog.prompt_step(host, self),
+                }
+            }
+            // a command that rejected
+            (_, ReportAnswer::Command(Err(_))) => failed(self),
+            _ => ReportStep::Done,
+        }
     }
 }

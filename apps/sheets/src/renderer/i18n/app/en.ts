@@ -551,6 +551,8 @@ export const en = {
   appPdfCanceled: 'PDF export canceled.',
   appPdfExported: 'Exported {path}.',
   appPdfExportFailed: 'Unable to export the PDF.',
+  appPdfRefusedHidden:
+    'No PDF was written: this workbook has cells hidden from the AI, and a PDF would hold them with no hidden-from-AI mark. Export it from the File menu, where you can choose.',
   appPrintPreparing: 'Preparing to print…',
   appPrintSent: 'Sent to the printer.',
   appPrintCanceled: 'Printing canceled.',

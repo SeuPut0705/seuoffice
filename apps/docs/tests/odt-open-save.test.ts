@@ -102,7 +102,7 @@ function installDesktop(): void {
     }),
     captureRect: vi.fn(async () => null),
     materializeDocx: vi.fn(async () => null),
-    confirmMarkedOdt: vi.fn(async () => 'cancel'),
+    confirmMarkedExport: vi.fn(async () => 'cancel'),
   }
   ;(window as unknown as { desktop: unknown }).desktop = desktop
 }
@@ -820,7 +820,7 @@ function hideParagraph(editor: Editor, text: string): void {
 
 const odtText = async (odt: Uint8Array) => part(odt, 'content.xml')
 const answer = (choice: 'docx' | 'clear' | 'cancel') =>
-  desktop.confirmMarkedOdt.mockResolvedValue(choice)
+  desktop.confirmMarkedExport.mockResolvedValue(choice)
 
 describe('Save As .odt of a Word document with content hidden from AI', () => {
   async function markedDocxTab() {
@@ -836,7 +836,7 @@ describe('Save As .odt of a Word document with content hidden from AI', () => {
     answer('cancel')
     pickedPath = '/docs/a.odt'
     expect(await save(ctx, true)).toBe(false)
-    expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+    expect(desktop.confirmMarkedExport).toHaveBeenCalledTimes(1)
     expect(written).toHaveLength(0)
     expect(docOf(ctx).format).toBe('docx')
   })
@@ -882,7 +882,7 @@ describe('Save As .odt of a Word document with content hidden from AI', () => {
     setFormatChangeHost((_request, confirm) => confirm(true))
     pickedPath = '/docs/a.odt'
     expect(await save(ctx, true)).toBe(true)
-    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+    expect(desktop.confirmMarkedExport).not.toHaveBeenCalled()
   })
 })
 
@@ -899,14 +899,14 @@ describe('an ODT tab holding content hidden from AI', () => {
     const ctx = await markedOdtTab()
     answer('cancel')
     expect(await save(ctx, false)).toBe(false)
-    expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+    expect(desktop.confirmMarkedExport).toHaveBeenCalledTimes(1)
     expect(written).toHaveLength(0)
   })
 
   it('an automatic save writes nothing and does not ask', async () => {
     const ctx = await markedOdtTab()
     expect(await save(ctx, false, true)).toBe(false)
-    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+    expect(desktop.confirmMarkedExport).not.toHaveBeenCalled()
     expect(written).toHaveLength(0)
   })
 
@@ -932,7 +932,7 @@ describe('an ODT tab holding content hidden from AI', () => {
     ).toBe(false)
     expect(written).toHaveLength(0)
     expect(errors).toHaveLength(1)
-    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+    expect(desktop.confirmMarkedExport).not.toHaveBeenCalled()
   })
 
   describe('crash recovery', () => {
@@ -993,7 +993,7 @@ describe('an ODT tab holding content hidden from AI', () => {
       desktop.pickSaveAsPath.mockImplementation(async () => ({ path: '/docs/form.odt' }))
       answer('cancel')
       expect(await save(restored, false)).toBe(false)
-      expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+      expect(desktop.confirmMarkedExport).toHaveBeenCalledTimes(1)
       expect(written).toHaveLength(0)
     })
 

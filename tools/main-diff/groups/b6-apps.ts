@@ -1984,6 +1984,80 @@ const lazyMedia: Group = {
         ],
         note: 'nothing opened: a lazy URL is 404',
       },
+      {
+        args: [
+          {
+            lib: baseLib({
+              zips: [
+                {
+                  path: '$DIR/doc.docx',
+                  size: DOC.length,
+                  entries: [
+                    {
+                      name: 'word/media/image1.png',
+                      method: 0,
+                      csize: 8,
+                      usize: 1000,
+                      dataOffset: 4,
+                    },
+                    {
+                      name: 'word/media/image3.emf',
+                      method: 0,
+                      csize: 8,
+                      usize: 5_000_000,
+                      dataOffset: 4,
+                    },
+                  ],
+                },
+              ],
+            }),
+            steps: [open()],
+          },
+        ],
+        files: docFile('doc.docx'),
+        note: 'only pictures the browser decodes count: a big metafile does not open the document lazily',
+      },
+      {
+        args: [
+          {
+            lib: baseLib({
+              zips: [
+                { path: '$DIR/doc.docx', size: DOC.length, entries: DOC_ENTRIES },
+                { path: '$DIR/copy.docx', size: DOC.length, entries: DOC_ENTRIES },
+              ],
+              hashes: { [PLACEHOLDER_DOC]: [DOC_HASH] },
+            }),
+            steps: [
+              open(),
+              read('word/media/image1.png'),
+              { adopt: { bytes: PLACEHOLDER_DOC, path: '$DIR/copy.docx', wc: 2 } },
+              read('word/media/image2.jpeg'),
+            ],
+          },
+        ],
+        files: {
+          'doc.docx': { hex: DOC.toString('hex'), mtimeMs: 1_700_000_000_000 },
+          'copy.docx': { hex: DOC.toString('hex'), mtimeMs: 1_700_000_000_000 },
+        },
+        note: 'a new path with the same size and mtime: the entry table is still read again',
+      },
+      {
+        args: [
+          {
+            lib: baseLib(),
+            steps: [
+              open('$DIR/doc.docx', 1),
+              open('$DIR/doc.docx', 2),
+              { forget: 3 },
+              read('word/media/image1.png'),
+              { forget: 1 },
+              read('word/media/image1.png'),
+            ],
+          },
+        ],
+        files: docFile('doc.docx'),
+        note: 'a window that never owned the source leaves the owners alone',
+      },
     ],
   },
 }
@@ -2317,6 +2391,10 @@ const imageEdit: Group = {
         note: 'a partial pixel',
       },
       { args: [{ b64: 'AAAA', width: 0, height: 0, bitmap: '' }], note: 'no pixels' },
+      {
+        args: [{ b64: 'AAAA', width: 1, height: 1, bitmap: '4080c0fe' }],
+        note: 'alpha 254 is still scaled back',
+      },
     ],
   },
   'image-edit.applyImageEdits': {
@@ -2759,6 +2837,9 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
       switch (step.op) {
         case 'push':
           ss.pushHistory(session)
+          break
+        case 'pushRedo':
+          session.redoStack.push(ss.takeSnapshot(session))
           break
         case 'begin':
           ss.beginHistoryBatch(session)
@@ -3406,6 +3487,61 @@ const sessionState: Group = {
           ]),
         ],
         note: 'history, the open batch and rollback points hold bytes against the flush prune',
+      },
+      {
+        args: [state0({ steps: [{ op: 'pushRedo' }, { op: 'pushRedo' }, push()] })],
+        note: 'an edit clears the redo stack',
+      },
+      {
+        args: [state0({ steps: [push(), { op: 'meta' }, { op: 'restore' }] })],
+        note: 'a restore brings back the meta flag of the snapshot',
+      },
+      {
+        args: [
+          state0({
+            steps: [
+              { op: 'attach', wc: 1 },
+              { op: 'attach', wc: 2 },
+              { op: 'broadcast' },
+              { op: 'broadcast' },
+              { op: 'slideUpdate', before: [S1, S2, S3], changed: [0] },
+              flush(),
+            ],
+          }),
+        ],
+        note: 'one resync among the queued edits resyncs everything, though the last one was partial',
+      },
+      {
+        args: [
+          state0({
+            steps: [
+              { op: 'attach', wc: 1 },
+              { op: 'attach', wc: 2 },
+              { op: 'broadcast' },
+              { op: 'slideUpdate', before: [S1, S2, S3], changed: [0] },
+              { op: 'broadcast' },
+              { op: 'edit', slides: slides(S2, S1) },
+              { op: 'slideUpdate', before: [S1, S2, S3], changed: [1] },
+              flush(),
+            ],
+          }),
+        ],
+        note: 'a slide rebuilt twice in one task goes out once, as the later one',
+      },
+      {
+        args: [
+          mediaWorld([
+            resolve('ppt/media/image5.svg', S1),
+            {
+              op: 'edit',
+              set: { 'ppt/theme/theme1.xml': hexOf('accent1=#00FF00,tx1=#0000FF') },
+            },
+            resolve('ppt/media/image5.svg', S1),
+            { op: 'read', url: 'seuoffice-slide-media://archive/uuid-1?mime=image%2Fsvg%2Bxml' },
+            { op: 'read', url: 'seuoffice-slide-media://archive/uuid-2?mime=image%2Fsvg%2Bxml' },
+          ]),
+        ],
+        note: 'a themed SVG gets a new URL when the theme bytes change',
       },
     ],
   },

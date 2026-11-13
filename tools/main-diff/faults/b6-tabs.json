@@ -192,8 +192,8 @@
   {
     "name": "a clean docs tab is asked about",
     "file": "main-core/src/shell/tab_manager.rs",
-    "find": "let dirty = host.docs_query_dirty(view);",
-    "replace": "let dirty = true;",
+    "find": "                Ok(false) => {\n                    self.remove_tab(host, id);\n                    TabCloseStep::Done\n                }",
+    "replace": "                Ok(false) => self.begin_close_prompt(host, id, TabKind::Docs, view),",
     "fn": ["tab-manager.close"]
   },
   {
@@ -220,8 +220,8 @@
   {
     "name": "a present tab can be detached",
     "file": "main-core/src/shell/tab_manager.rs",
-    "find": "if tab.present || self.closing_ids.iter().any(|c| c == id) {",
-    "replace": "if self.closing_ids.iter().any(|c| c == id) {",
+    "find": "            if tab.present || self.is_closing(id) {",
+    "replace": "            if self.is_closing(id) {",
     "fn": ["tab-manager.detach"]
   },
   {
@@ -304,8 +304,8 @@
   {
     "name": "open documents list a present tab",
     "file": "main-core/src/shell/tab_manager.rs",
-    "find": "            if tab.kind == TabKind::Home\n                || tab.present\n                || !(tab.view.is_some() || tab.opener.is_some())\n            {",
-    "replace": "            if tab.kind == TabKind::Home || !(tab.view.is_some() || tab.opener.is_some()) {",
+    "find": "                !(tab.kind == TabKind::Home\n                    || tab.present\n                    || !(tab.view.is_some() || tab.opener.is_some()))",
+    "replace": "                !(tab.kind == TabKind::Home || !(tab.view.is_some() || tab.opener.is_some()))",
     "fn": ["tab-manager.open"]
   },
   {
@@ -318,8 +318,8 @@
   {
     "name": "a destroyed view is asked for its dirty state",
     "file": "main-core/src/shell/tab_manager.rs",
-    "find": "        if host.view_destroyed(view) {\n            return false;\n        }\n        let wc_id = host.view_id(view);\n        match tab.kind {",
-    "replace": "        let wc_id = host.view_id(view);\n        match tab.kind {",
+    "find": "    if host.view_destroyed(view) {\n        return DirtyAsk::Known(false);\n    }\n    let wc_id = host.view_id(view);\n    match kind {",
+    "replace": "    let wc_id = host.view_id(view);\n    match kind {",
     "fn": ["tab-manager.activate"]
   },
   {
@@ -458,15 +458,15 @@
   {
     "name": "a denied pdf close tells nobody",
     "file": "main-core/src/shell/detached_windows.rs",
-    "find": "if kind == TabKind::Pdf {",
-    "replace": "if kind == TabKind::Sheets {",
+    "find": "if let (Some(TabKind::Pdf), Some(view)) = (kind, &view) {",
+    "replace": "if let (Some(TabKind::Sheets), Some(view)) = (kind, &view) {",
     "fn": ["detached-windows.close"]
   },
   {
     "name": "an open memo asks nothing of a clean document",
     "file": "main-core/src/shell/detached_windows.rs",
-    "find": "if !memo_open && !self.detached_is_dirty(host, rec) {",
-    "replace": "if !self.detached_is_dirty(host, rec) {",
+    "find": "        if !memo_open {",
+    "replace": "        if true {",
     "fn": ["detached-windows.close"]
   },
   {
@@ -503,5 +503,26 @@
     "find": "host.console_error(\"[shell] detached window close prompt failed:\", &error);\n                host.reset_sheets_shutting_down();\n                host.cancel_update_restart();",
     "replace": "host.console_error(\"[shell] detached window close prompt failed:\", &error);\n                host.reset_sheets_shutting_down();",
     "fn": ["detached-windows.close"]
+  },
+  {
+    "name": "a close of a tab that waits on the renderer starts again",
+    "file": "main-core/src/shell/tab_manager.rs",
+    "find": "        if self.is_closing(id) {\n            return TabCloseStep::Done;\n        }",
+    "replace": "        if false {\n            return TabCloseStep::Done;\n        }",
+    "fn": ["tab-manager.close"]
+  },
+  {
+    "name": "a failed detached close prompt leaves the window locked",
+    "file": "main-core/src/shell/detached_windows.rs",
+    "find": "            r.prompt_in_flight = false;\n            r.close_phase = None;",
+    "replace": "            r.close_phase = None;",
+    "fn": ["detached-windows.close"]
+  },
+  {
+    "name": "open documents never mark the active tab",
+    "file": "main-core/src/shell/tab_manager.rs",
+    "find": "                        active: tab.id == self.active_id,\n                        dirty: false,",
+    "replace": "                        active: false,\n                        dirty: false,",
+    "fn": ["tab-manager.lookup"]
   }
 ]

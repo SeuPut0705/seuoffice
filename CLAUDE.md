@@ -1,6 +1,6 @@
 # seuoffice 작업 규칙
 
-seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)에서 갈라져 나왔고, 2026-11-12부터 상위를 따라가지 않는 독립 프로젝트다(결정 0024). 엔진을 Rust로 옮기는 중이다(결정 0025, 0026). 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 Apache-2.0으로 공개한다(결정 0007).
+seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)에서 갈라져 나왔고, 2026-11-12부터 상위를 따라가지 않는 독립 프로젝트다(결정 0024). 엔진을 Rust로 옮기는 중이다(결정 0025, 0026). 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 공개한다(결정 0007). v0.12.41의 소스부터 라이선스는 FSL-1.1-ALv2(`LICENSE`)이고, 그 전에 Apache-2.0으로 받은 사본과 GenOffice·이음오피스에서 온 부분은 Apache-2.0(`LICENSE-APACHE`)이다(결정 0031).
 
 ## 먼저 읽을 것
 
@@ -37,10 +37,14 @@ seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편�
 
 ## 시험
 
-- 상위 모듈 시험은 작업 공간별로 돌린다: `npm run test -w @seuoffice/<이름>`. 전부는 `npm run test:parallel`.
-- 웹 층: `npm run build -w @seuoffice/web` 뒤 `npm run test -w @seuoffice/web`(Playwright, 다섯 형식을 웹에서 열어 화면을 확인). 웹 층이나 웹 층이 import하는 상위 코드를 고치면 반드시 돌린다.
-- xlsx 엔진(`apps/sheets/native/*`)을 고치면 `npm run native:test -w @seuoffice/sheets`와 웹 시험을 둘 다 돌린다.
-- 합치기 전 검사: `npm run check:english-comments`, `npm run format:check`, `npm run lint`, `npm run typecheck`, 고친 작업 공간 시험, 웹 층을 건드렸으면 웹 시험.
+무거운 검사는 GitHub 러너에서 돌리고, 이 기계에서는 몇 초에서 몇 분짜리 확인만 돌린다. 공개 저장소라 러너 시간은 무료다. 기기를 막은 것은 로컬에서 돈 무거운 일이었다(부하, 스왑, 디스크 가득).
+
+- 로컬에서 돌리는 것: 바꾼 파일의 typecheck·lint·format, 바꾼 동작을 덮는 단위 시험 파일 몇 개(`npx vitest run <파일>`), 재현 시험 한 개.
+- 러너에서 돌리는 것: 작업 공간 전체 시험, `npm run test:parallel`, 웹 시험(Playwright), e2e, xlsx `native:test`, Rust 빌드·비교·결함 심기, 정형 검증(TLC), 여러 OS 빌드. 가지에 푸시한 뒤 `gh workflow run <워크플로> --ref <가지>`로 돌린다(`CI`, `seuoffice`, `seuoffice rust`, `seuoffice formal` 모두 `workflow_dispatch`가 있다). 가지에서 못 도는 워크플로를 만나면 그 워크플로를 고친다.
+- 기다리기: 실행 하나를 `gh run watch <id> --interval 300` 한 번으로 본다. 여러 세션이 같은 실행을 따로 폴링하지 않는다(API 시간당 5,000회를 나눠 쓴다).
+- 로컬에만 남는 것: 실제 기기 확인(Windows 창 끌기·크기, 페어링 기기, 설치·자동 업데이트), 사람이 화면을 보고 판단하는 시각 확인.
+- 끝난 작업 폴더의 `target/`(Rust)과 `node_modules/`는 그 자리에서 지운다.
+- 무엇을 확인하는가: 웹 층이나 웹 층이 import하는 코드를 고치면 웹 시험(`npm run build -w @seuoffice/web` 뒤 `npm run test -w @seuoffice/web`), xlsx 엔진(`apps/sheets/native/*`)을 고치면 `native:test -w @seuoffice/sheets`와 웹 시험. 합치기 전에는 `check:english-comments`, `format:check`, `lint`, `typecheck`, 고친 작업 공간 시험이 러너에서 녹색이어야 한다.
 - `docs/seuoffice/baseline.md`에 없는 실패는 고친 사람이 해결한다. 원래 실패인지는 손대지 않은 상위 커밋에서 같은 시험을 돌려 확인한다.
 - 시험은 동작(경계, 오류, 형식 왕복, 상태 전이)을 확인한다. 문구·배선·구현을 베끼는 시험은 쓰지 않는다.
 

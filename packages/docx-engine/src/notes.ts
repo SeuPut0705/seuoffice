@@ -19,7 +19,7 @@ import {
   parseEntry,
   runsText,
   withheldText,
-  withRedactNamespace,
+  withRedactRoot,
 } from './withheld'
 
 /**
@@ -421,10 +421,9 @@ export function buildNotesXml(
       return hasWithheldTrace(orig.xml) ? overWithheld(entry, firstMarkLabel(orig.xml)) : entry
     })
     .join('')
-  return withRedactNamespace(
+  return withRedactRoot(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`,
-    ROOT[kind],
   )
 }
 

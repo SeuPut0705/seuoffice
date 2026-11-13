@@ -1391,6 +1391,8 @@ export function App({
           shapeEditRef,
         )
       },
+      redactions: currentRedactions,
+      requestSaveAs: () => void handleSaveRef.current('save-as'),
       runOps: runUiOps,
     }
   }
@@ -1411,6 +1413,13 @@ export function App({
           await pollUntilReady(() => lazyWorkbookRef.current !== null, 'no workbook opened', {
             timeoutMs: 300_000,
           })
+          // A PDF carries no mark, and until the marks are read every cell counts as
+          // hidden: an export asked to run with no one to ask would be refused.
+          await pollUntilReady(
+            () => redactionLoadRef.current.status !== 'not-loaded',
+            'the cells hidden from the AI never finished loading',
+            { timeoutMs: 60_000, pollMs: 100 },
+          )
           // The PDF layout needs every cell in the grid. Workbooks small enough
           // for formula mode preload themselves; a larger one waits for the
           // user's "Full Load" click, which headless has to make itself.

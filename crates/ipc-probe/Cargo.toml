@@ -1,0 +1,21 @@
+[package]
+name = "ipc-probe"
+description = "The Rust side of tools/ipc-diff: every batch's handlers on the real dispatch, with fake hosts, answering cases read from stdin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+shell-contract = { path = "../shell-contract" }
+shell-core = { path = "../shell-core" }
+serde_json.workspace = true
+# the one process-wide recovery state every batch shares (Hosts)
+main-core.workspace = true
+# each batch with its `probe` feature: the fakes of its own hosts
+shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
+shell-ipc-a = { path = "../shell-ipc/a", features = ["probe"] }
+shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
+shell-ipc-w = { path = "../shell-ipc/w", features = ["probe"] }
+shell-ipc-d1 = { path = "../shell-ipc/d1", features = ["probe"] }
+shell-ipc-d2 = { path = "../shell-ipc/d2", features = ["probe"] }

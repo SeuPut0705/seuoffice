@@ -7,8 +7,12 @@
 //! the caller's handle `V` (`WebContentsView`); everything the TypeScript
 //! calls on the window, on a view, on its `webContents` or in an editor's main
 //! module is one method of [`TabHost`], called in the order the TypeScript
-//! calls it. Promises are plain calls (`closeTab` returns when the tab is
-//! closed or the close was cancelled). The three timers of the TypeScript are
+//! calls it. Promises are plain calls, except an `await` on a renderer's reply
+//! (`docsQueryDirty`, a family's `requestXClose`, an opener's `needsUser`, a
+//! document's `ready`): the reply arrives on the thread that would block, so
+//! such a flow returns a step the caller carries out and answers with a
+//! `resume_*` method ([`TabCloseStep`], [`OpenDocumentsStep`], [`EnsureStep`]).
+//! The three timers of the TypeScript are
 //! steps the caller drives: the spare Sheets view timer
 //! ([`TabManager::fire_spare_sheets_timer`]) and the two `setImmediate`
 //! layouts ([`TabManager::run_deferred`]). The window and view events are
@@ -446,8 +450,6 @@ pub trait EditorCalls<V> {
     /// `slidesIsDirty`, `mindmapIsDirty`, `epubIsDirty` or `diagramIsDirty`
     /// (by `kind`) of the view with this webContents id
     fn family_is_dirty(&mut self, kind: TabKind, wc_id: i64) -> bool;
-    /// `docsQueryDirty(webContents)`
-    fn docs_query_dirty(&mut self, view: &V) -> bool;
     /// `hwpMemoModalOpen(wcId)`
     fn hwp_memo_modal_open(&mut self, wc_id: i64) -> bool;
     /// `setActiveDocsResolver(() => view.webContents)`; `None` is `() => null`.
@@ -570,11 +572,6 @@ pub trait TabHost<V>: EditorCalls<V> {
     /// `diagramTabIdentity(wcId)`
     fn diagram_tab_identity(&mut self, wc_id: i64) -> Option<DiagramIdentity>;
 
-    // ---- close prompts ----
-    /// `requestSheetsClose`, `requestPdfClose`, ... (by `kind`) with the
-    /// view's `webContents` and the shell window: true when the tab may close
-    fn request_close(&mut self, kind: TabKind, view: &V) -> bool;
-
     // ---- openers of unloaded tabs ----
     /// `opener.open(context)`; `Err` is what it throws
     fn opener_open(
@@ -582,10 +579,6 @@ pub trait TabHost<V>: EditorCalls<V> {
         opener: &Opener,
         context: &UnloadedTabOpenContext,
     ) -> Result<LoadedTabView<V>, String>;
-    /// `await opener.needsUser(context)`
-    fn opener_needs_user(&mut self, opener: &Opener, context: &UnloadedTabOpenContext) -> bool;
-    /// `await ready`; `Err` carries the message the promise rejects with
-    fn await_ready(&mut self, ready: &Ready) -> Result<(), String>;
     /// `console.warn(message, error)`
     fn warn(&mut self, message: &str, error: &str);
 }
@@ -610,6 +603,136 @@ struct LazyLoadState {
     needs_user: Option<Opener>,
 }
 
+/// What a suspended `closeTab` waits for.
+enum ClosePhase<V> {
+    /// the answer of `docsQueryDirty`
+    Query { view: V },
+    /// the answer of `requestXClose`
+    Prompt,
+}
+
+/// What the caller does next for a `closeTab` run. The TypeScript awaits a
+/// renderer's reply twice (`docsQueryDirty`, then the family's `requestXClose`);
+/// here each await is a step the caller carries out and answers with
+/// [`TabManager::resume_close`]. While a step is open, the tab is in
+/// `closingIds`: a second close, a detach or a promptless close of it is
+/// refused, as in the TypeScript.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TabCloseStep<V> {
+    /// the run ended: the tab is closed, the close was cancelled, or there was
+    /// nothing to do
+    Done,
+    /// `await docsQueryDirty(view.webContents)`: answer with
+    /// `resume_close(id, Ok(dirty))`
+    QueryDocsDirty { id: String, view: V },
+    /// `await requestXClose(view.webContents, shellWindow)` of the family of
+    /// `kind`: answer with `resume_close(id, Ok(confirmed))`
+    RequestClose { id: String, kind: TabKind, view: V },
+    /// the `closeTab` promise rejected with this message (after its `finally`)
+    Rejected(String),
+}
+
+/// `openDocuments`' run: the tabs of the list with their dirty state so far.
+pub struct OpenDocumentsRun<V> {
+    entries: Vec<(OpenDocumentTab, TabKind, Option<V>)>,
+    at: usize,
+}
+
+/// What the caller does next for a run that reads the dirty state of several
+/// documents (`openDocuments`, `detachedOpenDocuments`). The documents are
+/// asked one after another; `docsQueryDirty` is the only await.
+#[derive(Debug, Clone, PartialEq)]
+pub enum OpenDocumentsStep<V, K> {
+    /// the answer: the list
+    Done(Vec<OpenDocumentTab>),
+    /// `await docsQueryDirty(view.webContents)`: answer with the resume method
+    /// of the run, given `next`
+    QueryDocsDirty { view: V, next: K },
+    /// the promise rejected with this message
+    Rejected(String),
+}
+
+/// The dirty state of one document as far as it can be known without
+/// waiting.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DirtyAsk<V> {
+    Known(bool),
+    /// the docs editor must be asked: `await docsQueryDirty(view.webContents)`
+    QueryDocs(V),
+}
+
+/// `tabIsDirty` / `detachedIsDirty`: unsaved-changes state of one document,
+/// whichever family owns it.
+pub fn dirty_ask<V: Clone, H: EditorCalls<V> + ?Sized>(
+    host: &mut H,
+    kind: TabKind,
+    view: Option<&V>,
+) -> DirtyAsk<V> {
+    let Some(view) = view else {
+        return DirtyAsk::Known(false);
+    };
+    if host.view_destroyed(view) {
+        return DirtyAsk::Known(false);
+    }
+    let wc_id = host.view_id(view);
+    match kind {
+        TabKind::Sheets => DirtyAsk::Known(host.sheets_pending_edit_count(wc_id) > 0.0),
+        TabKind::Docs => DirtyAsk::QueryDocs(view.clone()),
+        TabKind::Pdf
+        | TabKind::Markdown
+        | TabKind::Html
+        | TabKind::Hwp
+        | TabKind::Slides
+        | TabKind::Mindmap
+        | TabKind::Epub
+        | TabKind::Diagram => DirtyAsk::Known(host.family_is_dirty(kind, wc_id)),
+        TabKind::Home | TabKind::Help => DirtyAsk::Known(false),
+    }
+}
+
+/// What the caller does next for an `ensureTabLoaded` run.
+#[derive(Debug, Clone, PartialEq)]
+pub enum EnsureStep<V> {
+    /// the answer
+    Done(TabLoadResult<V>),
+    /// `await opener.needsUser(context)`: answer with
+    /// `resume_ensure_needs_user(next, Ok(needs_user))`
+    NeedsUser {
+        opener: Opener,
+        context: UnloadedTabOpenContext,
+        next: EnsureAfterNeedsUser<V>,
+    },
+    /// `await lazy.ready` (the opener's `ready`, or the page load): answer with
+    /// `resume_ensure_ready(next, Ok(()))` when it resolved or `Err(message)`
+    /// when it rejected. Settle it too with [`TabManager::ready_settled`].
+    AwaitReady {
+        ready: Ready,
+        next: EnsureAfterReady<V>,
+    },
+    /// the `ensureTabLoaded` promise rejected with this message
+    Rejected(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum NeedsStage<V> {
+    /// the check of the tab's own opener, before the tab is loaded
+    Opener { id: String },
+    /// the check of the loaded tab's `lazy.needsUser`: the `ready` to wait on
+    /// next, and the tab's view then
+    Lazy { ready: Ready, view: Option<V> },
+}
+
+/// Where `ensureTabLoaded` goes on after a `needsUser` answer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnsureAfterNeedsUser<V>(NeedsStage<V>);
+
+/// Where `ensureTabLoaded` goes on after `lazy.ready` settled: the tab's view
+/// as it was when the wait began.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnsureAfterReady<V> {
+    view: Option<V>,
+}
+
 /// The state of `TabManager`, owned by the caller.
 pub struct TabManager<V> {
     tabs: Vec<TabRecord<V>>,
@@ -617,7 +740,8 @@ pub struct TabManager<V> {
     next_id: u64,
     html_full_screen_id: Option<String>,
     bleed_wc_ids: Vec<i64>,
-    closing_ids: Vec<String>,
+    /// `closingIds`: the tabs whose close is suspended on an answer
+    pending_closes: Vec<(String, ClosePhase<V>)>,
     full_screen_tracked: Vec<V>,
     spare_sheets_view: Option<V>,
     spare_sheets_timer: bool,
@@ -676,7 +800,7 @@ impl<V: Clone + PartialEq> TabManager<V> {
             next_id: 1,
             html_full_screen_id: None,
             bleed_wc_ids: Vec::new(),
-            closing_ids: Vec::new(),
+            pending_closes: Vec::new(),
             full_screen_tracked: Vec::new(),
             spare_sheets_view: None,
             spare_sheets_timer: false,
@@ -1041,51 +1165,76 @@ impl<V: Clone + PartialEq> TabManager<V> {
     }
 
     /// `openDocuments`: every editor tab except Home and chrome-free Present
-    /// tabs, with its dirty state resolved per family
-    pub fn open_documents(&self, host: &mut dyn TabHost<V>) -> Vec<OpenDocumentTab> {
+    /// tabs, with its dirty state resolved per family. The list and each
+    /// tab's `active` are read when the run begins; the tabs are asked in
+    /// strip order and the run waits for each docs answer
+    /// ([`OpenDocumentsStep::QueryDocsDirty`], resumed with
+    /// [`TabManager::resume_open_documents`]).
+    pub fn open_documents(
+        &self,
+        host: &mut dyn TabHost<V>,
+    ) -> OpenDocumentsStep<V, OpenDocumentsRun<V>> {
         // an unloaded tab is listed like any other (clean: it has no edits yet)
-        let mut out = Vec::new();
-        for tab in &self.tabs {
-            if tab.kind == TabKind::Home
-                || tab.present
-                || !(tab.view.is_some() || tab.opener.is_some())
-            {
-                continue;
-            }
-            out.push(OpenDocumentTab {
-                id: tab.id.clone(),
-                kind: tab.kind,
-                title: tab.title.clone(),
-                file_path: tab.file_path.clone().filter(|p| !p.is_empty()),
-                active: tab.id == self.active_id,
-                dirty: self.tab_is_dirty(host, tab),
-            });
-        }
-        out
+        let entries = self
+            .tabs
+            .iter()
+            .filter(|tab| {
+                !(tab.kind == TabKind::Home
+                    || tab.present
+                    || !(tab.view.is_some() || tab.opener.is_some()))
+            })
+            .map(|tab| {
+                (
+                    OpenDocumentTab {
+                        id: tab.id.clone(),
+                        kind: tab.kind,
+                        title: tab.title.clone(),
+                        file_path: tab.file_path.clone().filter(|p| !p.is_empty()),
+                        active: tab.id == self.active_id,
+                        dirty: false,
+                    },
+                    tab.kind,
+                    tab.view.clone(),
+                )
+            })
+            .collect();
+        Self::open_documents_advance(host, OpenDocumentsRun { entries, at: 0 })
     }
 
-    /// unsaved-changes state of one tab, whichever family owns it
-    fn tab_is_dirty(&self, host: &mut dyn TabHost<V>, tab: &TabRecord<V>) -> bool {
-        let Some(view) = &tab.view else {
-            return false;
-        };
-        if host.view_destroyed(view) {
-            return false;
+    /// the answer of the `docsQueryDirty` of [`TabManager::open_documents`]
+    pub fn resume_open_documents(
+        &self,
+        host: &mut dyn TabHost<V>,
+        mut run: OpenDocumentsRun<V>,
+        answer: Result<bool, String>,
+    ) -> OpenDocumentsStep<V, OpenDocumentsRun<V>> {
+        match answer {
+            Err(message) => OpenDocumentsStep::Rejected(message),
+            Ok(dirty) => {
+                run.entries[run.at].0.dirty = dirty;
+                run.at += 1;
+                Self::open_documents_advance(host, run)
+            }
         }
-        let wc_id = host.view_id(view);
-        match tab.kind {
-            TabKind::Sheets => host.sheets_pending_edit_count(wc_id) > 0.0,
-            TabKind::Docs => host.docs_query_dirty(view),
-            TabKind::Pdf
-            | TabKind::Markdown
-            | TabKind::Html
-            | TabKind::Hwp
-            | TabKind::Slides
-            | TabKind::Mindmap
-            | TabKind::Epub
-            | TabKind::Diagram => host.family_is_dirty(tab.kind, wc_id),
-            TabKind::Home | TabKind::Help => false,
+    }
+
+    fn open_documents_advance(
+        host: &mut dyn TabHost<V>,
+        mut run: OpenDocumentsRun<V>,
+    ) -> OpenDocumentsStep<V, OpenDocumentsRun<V>> {
+        while run.at < run.entries.len() {
+            let (_, kind, view) = &run.entries[run.at];
+            match dirty_ask(host, *kind, view.as_ref()) {
+                DirtyAsk::Known(dirty) => {
+                    run.entries[run.at].0.dirty = dirty;
+                    run.at += 1;
+                }
+                DirtyAsk::QueryDocs(view) => {
+                    return OpenDocumentsStep::QueryDocsDirty { view, next: run };
+                }
+            }
         }
+        OpenDocumentsStep::Done(run.entries.into_iter().map(|(tab, _, _)| tab).collect())
     }
 
     // ---- opening tabs ----
@@ -1708,58 +1857,115 @@ impl<V: Clone + PartialEq> TabManager<V> {
     }
 
     /// `ensureTabLoaded`: load the tab if it is unloaded, without activating
-    /// it, and resolve once its document is ready
-    pub fn ensure_tab_loaded(
-        &mut self,
-        host: &mut dyn TabHost<V>,
-        id: &str,
-    ) -> TabResult<TabLoadResult<V>> {
+    /// it, and resolve once its document is ready. The two awaits that can
+    /// wait on a person or a renderer are steps ([`EnsureStep`]): the
+    /// opener's `needsUser` and `lazy.ready`.
+    pub fn ensure_tab_loaded(&mut self, host: &mut dyn TabHost<V>, id: &str) -> EnsureStep<V> {
         if self.index_of(id).is_none() || id == HOME_ID {
-            return Ok(TabLoadResult::Missing);
+            return EnsureStep::Done(TabLoadResult::Missing);
         }
         let opener = self.tab_by_id(id).and_then(|t| t.opener);
         if let Some(opener) = opener {
             if opener.has_needs_user {
                 let context = self.open_context(self.index_of(id).unwrap_or(0));
-                if host.opener_needs_user(&opener, &context) {
-                    return Ok(TabLoadResult::NeedsUser);
-                }
+                return EnsureStep::NeedsUser {
+                    opener,
+                    context,
+                    next: EnsureAfterNeedsUser(NeedsStage::Opener { id: id.to_owned() }),
+                };
             }
-            // the answer may have taken a while: the tab can be gone or loaded by now
-            if self.index_of(id).is_none() {
-                return Ok(TabLoadResult::Missing);
-            }
-            if !self.load_tab(host, id) {
-                let title = self
-                    .tab_by_id(id)
-                    .map(|t| t.title.clone())
-                    .unwrap_or_default();
-                return Err(TabError(format!("\"{title}\" could not be opened")));
-            }
+            return self.ensure_after_opener(host, id);
         }
-        let lazy = self
-            .tab_by_id(id)
-            .and_then(|t| t.lazy.as_ref())
+        self.ensure_lazy(host, id)
+    }
+
+    /// the answer of `opener.needsUser` of [`EnsureStep::NeedsUser`]
+    pub fn resume_ensure_needs_user(
+        &mut self,
+        host: &mut dyn TabHost<V>,
+        next: EnsureAfterNeedsUser<V>,
+        answer: Result<bool, String>,
+    ) -> EnsureStep<V> {
+        match answer {
+            Err(message) => EnsureStep::Rejected(message),
+            Ok(true) => EnsureStep::Done(TabLoadResult::NeedsUser),
+            Ok(false) => match next.0 {
+                NeedsStage::Opener { id } => self.ensure_after_opener(host, &id),
+                NeedsStage::Lazy { ready, view } => EnsureStep::AwaitReady {
+                    ready,
+                    next: EnsureAfterReady { view },
+                },
+            },
+        }
+    }
+
+    /// the end of `lazy.ready` of [`EnsureStep::AwaitReady`]
+    pub fn resume_ensure_ready(
+        &mut self,
+        host: &mut dyn TabHost<V>,
+        next: EnsureAfterReady<V>,
+        answer: Result<(), String>,
+    ) -> EnsureStep<V> {
+        match answer {
+            Err(message) => EnsureStep::Rejected(message),
+            Ok(()) => Self::ensure_finish(host, next.view),
+        }
+    }
+
+    /// the part after the opener's `needsUser` check
+    fn ensure_after_opener(&mut self, host: &mut dyn TabHost<V>, id: &str) -> EnsureStep<V> {
+        // the answer may have taken a while: the tab can be gone or loaded by now
+        if self.index_of(id).is_none() {
+            return EnsureStep::Done(TabLoadResult::Missing);
+        }
+        if !self.load_tab(host, id) {
+            let title = self
+                .tab_by_id(id)
+                .map(|t| t.title.clone())
+                .unwrap_or_default();
+            return EnsureStep::Rejected(format!("\"{title}\" could not be opened"));
+        }
+        self.ensure_lazy(host, id)
+    }
+
+    /// `const lazy = tab.lazy` and what follows it
+    fn ensure_lazy(&mut self, host: &mut dyn TabHost<V>, id: &str) -> EnsureStep<V> {
+        let Some(index) = self.index_of(id) else {
+            return EnsureStep::Done(TabLoadResult::Missing);
+        };
+        let view = self.tabs[index].view.clone();
+        let lazy = self.tabs[index]
+            .lazy
+            .as_ref()
             .map(|l| (l.ready, l.settled, l.needs_user));
         if let Some((ready, settled, needs_user)) = lazy
             && !settled
         {
             if let Some(needs_user) = needs_user {
-                let context = self.open_context(self.index_of(id).unwrap_or(0));
-                if host.opener_needs_user(&needs_user, &context) {
-                    return Ok(TabLoadResult::NeedsUser);
-                }
+                let context = self.open_context(index);
+                return EnsureStep::NeedsUser {
+                    opener: needs_user,
+                    context,
+                    next: EnsureAfterNeedsUser(NeedsStage::Lazy { ready, view }),
+                };
             }
-            host.await_ready(&ready).map_err(TabError)?;
+            return EnsureStep::AwaitReady {
+                ready,
+                next: EnsureAfterReady { view },
+            };
         }
-        let view = self.tab_by_id(id).and_then(|t| t.view.clone());
+        Self::ensure_finish(host, view)
+    }
+
+    /// `const contents = tab.view?.webContents` and the answer
+    fn ensure_finish(host: &mut dyn TabHost<V>, view: Option<V>) -> EnsureStep<V> {
         let Some(view) = view else {
-            return Ok(TabLoadResult::Missing);
+            return EnsureStep::Done(TabLoadResult::Missing);
         };
         if host.view_destroyed(&view) {
-            return Ok(TabLoadResult::Missing);
+            return EnsureStep::Done(TabLoadResult::Missing);
         }
-        Ok(TabLoadResult::Ready(view))
+        EnsureStep::Done(TabLoadResult::Ready(view))
     }
 
     /// a document's ready promise settled (resolved or rejected)
@@ -2613,23 +2819,29 @@ impl<V: Clone + PartialEq> TabManager<V> {
 
     // ---- closing ----
 
-    /// `closeActiveTab`
-    pub fn close_active_tab(&mut self, host: &mut dyn TabHost<V>) {
+    /// `closingIds.has(id)`: a close of the tab is waiting on an answer
+    fn is_closing(&self, id: &str) -> bool {
+        self.pending_closes.iter().any(|(closing, _)| closing == id)
+    }
+
+    /// `closeActiveTab`: `closeTab` of the active tab (no-op for Home)
+    pub fn close_active_tab(&mut self, host: &mut dyn TabHost<V>) -> TabCloseStep<V> {
         let id = self.active_id.clone();
-        self.close_tab(host, &id);
+        self.close_tab(host, &id)
     }
 
     /// `closeTab`: runs the family's unsaved-changes prompt when the tab is
-    /// dirty; returns when the tab is closed or the close was cancelled
-    pub fn close_tab(&mut self, host: &mut dyn TabHost<V>, id: &str) {
+    /// dirty. The awaits are steps: see [`TabCloseStep`]; a run that needs
+    /// none ends in [`TabCloseStep::Done`] at once.
+    pub fn close_tab(&mut self, host: &mut dyn TabHost<V>, id: &str) -> TabCloseStep<V> {
         if id == HOME_ID {
-            return;
+            return TabCloseStep::Done;
         }
         let Some(index) = self.index_of(id) else {
-            return;
+            return TabCloseStep::Done;
         };
-        if self.closing_ids.iter().any(|c| c == id) {
-            return;
+        if self.is_closing(id) {
+            return TabCloseStep::Done;
         }
         let kind = self.tabs[index].kind;
         let view = self.tabs[index].view.clone();
@@ -2671,29 +2883,80 @@ impl<V: Clone + PartialEq> TabManager<V> {
             && kind == TabKind::Docs
             && let Some(view) = &view
         {
-            self.closing_ids.push(id.to_owned());
-            let dirty = host.docs_query_dirty(view);
-            self.closing_ids.retain(|c| c != id);
-            if dirty {
-                close_guard = Some(TabKind::Docs);
-            }
+            self.pending_closes
+                .push((id.to_owned(), ClosePhase::Query { view: view.clone() }));
+            return TabCloseStep::QueryDocsDirty {
+                id: id.to_owned(),
+                view: view.clone(),
+            };
         }
-        if let (Some(guard), Some(view)) = (close_guard, &view) {
-            // Bring the tab into view for the prompt, and put the arrangement
-            // back exactly as it was afterwards.
-            self.begin_exclusive_prompt();
-            if self.active_id != id {
-                self.activate_tab(host, id);
-            }
-            self.closing_ids.push(id.to_owned());
-            let allowed = host.request_close(guard, view);
-            self.closing_ids.retain(|c| c != id);
-            self.end_exclusive_prompt(host);
-            if !allowed {
-                return;
-            }
+        if let (Some(guard), Some(view)) = (close_guard, view) {
+            return self.begin_close_prompt(host, id, guard, view);
         }
         self.remove_tab(host, id);
+        TabCloseStep::Done
+    }
+
+    /// the answer of the step [`TabManager::close_tab`] last gave for `id`;
+    /// `Err` is what the awaited call rejected with. A call for a tab with no
+    /// open step ends at once.
+    pub fn resume_close(
+        &mut self,
+        host: &mut dyn TabHost<V>,
+        id: &str,
+        answer: Result<bool, String>,
+    ) -> TabCloseStep<V> {
+        let Some(at) = self
+            .pending_closes
+            .iter()
+            .position(|(closing, _)| closing == id)
+        else {
+            return TabCloseStep::Done;
+        };
+        let (_, phase) = self.pending_closes.remove(at);
+        match phase {
+            ClosePhase::Query { view } => match answer {
+                Err(message) => TabCloseStep::Rejected(message),
+                Ok(true) => self.begin_close_prompt(host, id, TabKind::Docs, view),
+                Ok(false) => {
+                    self.remove_tab(host, id);
+                    TabCloseStep::Done
+                }
+            },
+            ClosePhase::Prompt => {
+                self.end_exclusive_prompt(host);
+                match answer {
+                    Err(message) => TabCloseStep::Rejected(message),
+                    Ok(false) => TabCloseStep::Done,
+                    Ok(true) => {
+                        self.remove_tab(host, id);
+                        TabCloseStep::Done
+                    }
+                }
+            }
+        }
+    }
+
+    /// Bring the tab into view for the prompt, and put the arrangement back
+    /// exactly as it was afterwards (`resume_close` does that).
+    fn begin_close_prompt(
+        &mut self,
+        host: &mut dyn TabHost<V>,
+        id: &str,
+        kind: TabKind,
+        view: V,
+    ) -> TabCloseStep<V> {
+        self.begin_exclusive_prompt();
+        if self.active_id != id {
+            self.activate_tab(host, id);
+        }
+        self.pending_closes
+            .push((id.to_owned(), ClosePhase::Prompt));
+        TabCloseStep::RequestClose {
+            id: id.to_owned(),
+            kind,
+            view,
+        }
     }
 
     /// `closeTabWithoutPrompt`: false when there is no such tab or one is
@@ -2705,7 +2968,7 @@ impl<V: Clone + PartialEq> TabManager<V> {
         let Some(index) = self.index_of(id) else {
             return false;
         };
-        if self.closing_ids.iter().any(|c| c == id) {
+        if self.is_closing(id) {
             return false;
         }
         // a memo editor's text is not in the document yet: a promptless close
@@ -2804,7 +3067,7 @@ impl<V: Clone + PartialEq> TabManager<V> {
         let idx = self.index_of(id)?;
         {
             let tab = &self.tabs[idx];
-            if tab.present || self.closing_ids.iter().any(|c| c == id) {
+            if tab.present || self.is_closing(id) {
                 return None;
             }
         }
@@ -2831,9 +3094,7 @@ impl<V: Clone + PartialEq> TabManager<V> {
     /// `canDetachTab`
     pub fn can_detach_tab(&self, id: &str) -> bool {
         self.tab_by_id(id).is_some_and(|t| {
-            (t.view.is_some() || t.opener.is_some())
-                && !t.present
-                && !self.closing_ids.iter().any(|c| c == id)
+            (t.view.is_some() || t.opener.is_some()) && !t.present && !self.is_closing(id)
         })
     }
 

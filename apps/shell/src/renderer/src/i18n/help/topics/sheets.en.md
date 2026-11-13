@@ -26,9 +26,7 @@ Sheets is the spreadsheet editor; calculation runs in a separate Rust engine pro
 - **View**: gridlines, formula bar, headings and cross-highlight toggles; zoom; **Normal** and **Page Break Preview**. Gridlines and headings are saved with the sheet; cross-highlight is a preference of your own.
 - **Chart Design**: appears with a chart selected — chart type, styles and colors, edit the data range.
 
-The Data tab, button by button (left to right in the picture):
-
-![The Data tab](img/sheets-data.png)
+The Data tab, button by button (left to right):
 
 - **Pivot table**: build a pivot from the current range; drag fields to aggregate.
 - **Refresh**: recalculate the current pivot's data.
@@ -48,8 +46,6 @@ The Data tab, button by button (left to right in the picture):
 - **Subtotal**: insert subtotal rows per category.
 
 The Formulas tab, button by button:
-
-![The Formulas tab](img/sheets-formulas.png)
 
 - **Insert function** (fx): search functions with an argument wizard.
 - **AutoSum** (dropdown): one-click SUM, plus average/count/max/min.
