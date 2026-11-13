@@ -31,7 +31,7 @@ use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
 use shell_contract::{Batch, IpcValue, Provided, ViewId, WindowId};
 
-pub(crate) use hosts::*;
+pub use hosts::*;
 
 use super::Grants;
 use crate::kit::{Entry, IntoIpc};
@@ -288,7 +288,7 @@ pub(crate) fn int_text(n: f64) -> String {
 }
 
 /// The calls other areas make into the PDF tools
-pub(crate) struct PdfTools {
+pub struct PdfTools {
     ctx: Rc<Ctx>,
     structure: structure::Structure,
     window: window::Window,
@@ -296,7 +296,8 @@ pub(crate) struct PdfTools {
     convert: convert::Convert,
 }
 
-// called by other areas (menus, Save As, the editor's ribbon) through the provided table
+// called by other areas (menus, Save As, the editor's ribbon) through the
+// provided table; unused until lib.rs re-exports the type for the shell
 #[allow(dead_code)]
 impl PdfTools {
     /// `requestPdfConvertDialog(contents, format, outPath)`
@@ -400,12 +401,87 @@ pub(crate) fn entries(
     Ok(all)
 }
 
+/// The calls the shell makes into the PDF tools outside a channel, as
+/// ipc-probe's `trigger` steps name them (`d2/pdf-tools:<what>`). `args` are
+/// the step's arguments; `then` gets the outcome. False for an unknown `what`.
+#[cfg(feature = "probe")]
+// lib.rs routes `d2/pdf-tools:` steps here once the lead wires triggers in
+#[allow(dead_code)]
+pub(crate) fn probe_trigger(
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    let Some(tools) = provided.all::<PdfTools>().pop() else {
+        return false;
+    };
+    let s = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
+    let answer = match what {
+        // `createPdfView(openPath)`'s `grantAndTrack`: the view's only grant is its file
+        "open-view" => {
+            let mut allowed = std::collections::HashSet::new();
+            if let Some(path) = s(0).filter(|p| std::path::Path::new(p).exists()) {
+                allowed.insert(path.to_owned());
+            }
+            tools.ctx.grants.0.insert(view, allowed);
+            IpcValue::Undefined
+        }
+        "request-convert-dialog" => {
+            tools.request_convert_dialog(Some(view), s(0).unwrap_or(""), s(1));
+            IpcValue::Undefined
+        }
+        // the attempt's password goes to the log when the prompt settles
+        "prompt-password" => {
+            let log = services.hosts.get::<hosts::fake::ProbeLog>().cloned();
+            let state = crate::kit::from_json(args.get(0).unwrap_or(&serde_json::Value::Null));
+            tools.prompt_password(
+                tools.ctx.window_of(view),
+                state,
+                Box::new(move |password| {
+                    if let Some(log) = log {
+                        log.lock()
+                            .unwrap()
+                            .push(serde_json::json!(["promptPdfPassword.settled", password]));
+                    }
+                }),
+            );
+            IpcValue::Undefined
+        }
+        "close-password-dialog" => {
+            tools.close_password_dialog();
+            IpcValue::Undefined
+        }
+        "grant-structure-target" => IpcValue::Bool(tools.grant_structure_target(
+            view,
+            s(0).unwrap_or(""),
+            s(1).unwrap_or(""),
+            s(2).unwrap_or(""),
+        )),
+        "open-with-file" => {
+            IpcValue::Bool(tools.open_with_file(s(0).unwrap_or(""), s(1).unwrap_or("")))
+        }
+        "open-window" => {
+            tools.open_window();
+            IpcValue::Undefined
+        }
+        "cancel-all" => IpcValue::Number(tools.cancel_all() as f64),
+        _ => return false,
+    };
+    then(Ok(answer));
+    true
+}
+
 /// The fakes of this part's hosts: one [`hosts::fake::Fake`] for both
 /// traits, answering from `case.tools` (`hosts.d2.pdf.tools`)
 #[cfg(any(test, feature = "probe"))]
 pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+    let log = hosts.get::<hosts::fake::ProbeLog>().cloned();
     let fake = std::sync::Arc::new(hosts::fake::Fake::new(
         case.get("tools").unwrap_or(&serde_json::Value::Null),
+        log,
     ));
     hosts.insert::<PdfToolsEngineHost>(fake.clone());
     hosts.insert::<PdfToolsShellHost>(fake);
@@ -443,7 +519,7 @@ pub(crate) mod test_support {
 
     pub fn tools(case: Value) -> T {
         GRANTS.with(|g| *g.borrow_mut() = None);
-        let fake = Arc::new(Fake::new(&case));
+        let fake = Arc::new(Fake::new(&case, None));
         let f = fake.clone();
         let mut rt = Rt::new(move |h| {
             h.insert::<PdfToolsEngineHost>(f.clone());
@@ -501,5 +577,68 @@ pub(crate) mod test_support {
     /// what a test compares a reply with
     pub fn j(v: &IpcValue) -> Value {
         crate::kit::to_json(v).unwrap_or(Value::Null)
+    }
+}
+
+#[cfg(all(test, feature = "probe"))]
+mod trigger_tests {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use serde_json::json;
+    use shell_contract::{IpcValue, ViewId};
+
+    use super::test_support::*;
+
+    fn trigger(t: &T, what: &str, view: u32, args: serde_json::Value) -> Option<IpcValue> {
+        let got = Rc::new(RefCell::new(None));
+        let g = got.clone();
+        let known = super::probe_trigger(
+            what,
+            ViewId(view),
+            &args,
+            &t.rt.services,
+            &t.rt.provided(),
+            Box::new(move |r| *g.borrow_mut() = Some(r.unwrap())),
+        );
+        assert!(known || got.borrow().is_none());
+        got.take()
+    }
+
+    #[test]
+    fn triggers_reach_the_tools_and_unknown_names_are_refused() {
+        let mut t = tools(json!({}));
+        assert_eq!(trigger(&t, "no-such-thing", 5, json!([])), None);
+        let pdf = t.pdf_view(5);
+        let src = t.file("a.pdf", b"x");
+        // the view set-up grants the view its existing file only
+        trigger(&t, "open-view", 5, json!([t.rt.dir.join("gone.pdf")]));
+        assert_eq!(
+            j(&t.call("pdf:store-doc-hash", pdf, vec![v(json!(src))]))["error"],
+            json!("not-granted")
+        );
+        assert_eq!(
+            trigger(&t, "open-view", 5, json!([src])),
+            Some(IpcValue::Undefined)
+        );
+        assert_eq!(
+            j(&t.call("pdf:store-doc-hash", pdf, vec![v(json!(src))]))["ok"],
+            json!(true)
+        );
+        let out = t.rt.dir.join("a.md").to_string_lossy().into_owned();
+        assert_eq!(
+            trigger(&t, "grant-structure-target", 5, json!([src, out, "md"])),
+            Some(IpcValue::Bool(true))
+        );
+        assert_eq!(
+            trigger(&t, "grant-structure-target", 5, json!([src, src, "md"])),
+            Some(IpcValue::Bool(false))
+        );
+        trigger(&t, "request-convert-dialog", 5, json!(["md"]));
+        assert_eq!(j(&t.rt.events()[0].args[0]), json!({ "format": "md" }));
+        assert_eq!(
+            trigger(&t, "cancel-all", 5, json!([])),
+            Some(IpcValue::Number(0.0))
+        );
     }
 }
