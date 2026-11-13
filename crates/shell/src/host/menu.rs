@@ -18,7 +18,6 @@ mod context;
 mod doc_links;
 mod dock;
 mod fonts;
-mod save_unlocked;
 
 pub(crate) use app::{app_menu_activate, app_menu_popup};
 // what batch A and the editors' hosts call for the document links

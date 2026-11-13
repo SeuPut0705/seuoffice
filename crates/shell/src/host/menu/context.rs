@@ -18,7 +18,9 @@ use main_core::packages::electron_utils::context_menu::{
 };
 use main_core::packages::electron_utils::dialog_memory::Dialog;
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
-use main_core::packages::electron_utils::save_image::{SaveImageOptions, fetch_image_for_save};
+use main_core::packages::electron_utils::save_image::{
+    SaveImageOptions, fetch_image_for_save, save_fetched_image,
+};
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
 use shell_contract::ids::{ViewId, WindowId};
@@ -28,6 +30,7 @@ use shell_ipc_m::hosts::MHostRef;
 use shell_ipc_m::intercept_context_menu;
 use shell_ipc_m::state::MStateRef;
 use shell_ipc_w::SharedDialogMemory;
+use shell_ipc_w::shared_dialog::{save_confirmed, with_shared_memory};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, LogicalPosition, Manager};
 use tauri_runtime_cef::WebviewCefExt;
@@ -35,7 +38,6 @@ use tauri_runtime_cef::WebviewCefExt;
 use super::super::contents::cdp;
 use super::super::w::post_core;
 use super::super::window::Windows;
-use super::save_unlocked;
 use crate::views::ViewTable;
 
 /// Menu ids of this module start with this; the app menu's with `m-app-`
@@ -245,23 +247,26 @@ fn run(
                     Ok(image) => image,
                     Err(error) => return eprintln!("shell: save image: {error}"),
                 };
-                let opts = SaveImageOptions {
-                    title: &title,
-                    fallback_dir: None,
+                // the shared memory is copied and written back under short
+                // locks, never held while the user picks (W's helper)
+                let mut dialog = SaveDialog {
+                    host: dialogs,
+                    confirmed: false,
                 };
-                // the shared memory is locked only to read and to record:
-                // never while the user picks
-                let options = save_unlocked::anchored_options(
-                    &memory,
-                    parent.as_ref(),
-                    &url,
-                    image.mime.clone(),
-                    &opts,
-                );
-                let answer = SaveDialog(dialogs).show_save_dialog(parent.as_ref(), &options);
-                let result =
-                    save_unlocked::save_picked(parent.as_ref(), &url, image, &opts, &answer);
-                save_unlocked::remember_pick(&memory, parent.as_ref(), &options, &answer);
+                let result = with_shared_memory(&memory, |memory| {
+                    let result = save_fetched_image(
+                        memory,
+                        &mut dialog,
+                        parent.as_ref(),
+                        &url,
+                        image,
+                        &SaveImageOptions {
+                            title: &title,
+                            fallback_dir: None,
+                        },
+                    );
+                    (result, dialog.confirmed)
+                });
                 if let Some(error) = result.error {
                     eprintln!("shell: save image: {error}");
                 }
@@ -386,7 +391,11 @@ impl Response for Fetched {
 }
 
 /// `dialog.showSaveDialog` as `showSaveDialogWithMemory` calls it
-struct SaveDialog(DialogsHost);
+/// The save dialog of Save Image As; `confirmed` once the user picked a file
+struct SaveDialog {
+    host: DialogsHost,
+    confirmed: bool,
+}
 
 impl Dialog for SaveDialog {
     type Window = WindowId;
@@ -433,7 +442,7 @@ impl Dialog for SaveDialog {
                 .collect(),
             _ => Vec::new(),
         };
-        let picked = self.0.save(
+        let picked = self.host.save(
             parent.copied(),
             &FileDialog {
                 title: text("title"),
@@ -452,6 +461,8 @@ impl Dialog for SaveDialog {
                     .unwrap_or_default(),
             ),
         );
-        JsonValue::Object(answer)
+        let answer = JsonValue::Object(answer);
+        self.confirmed = save_confirmed(&answer);
+        answer
     }
 }
