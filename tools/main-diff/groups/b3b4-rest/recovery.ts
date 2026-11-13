@@ -1068,6 +1068,50 @@ const textCases: Case[] = [
     { views: { u: { id: 7, savePath: '', dirty: true } } },
     'an empty save path is no path: the document is untitled',
   ),
+  tc(
+    [
+      { op: 'storeWrite', id: HA, text: 'copy of an earlier run', title: 'a.html' },
+      step('track', 'a'),
+      step('forget', 'a'),
+      readCopy(HA),
+    ],
+    { views: { a: { id: 1, savePath: doc('a.html'), dirty: false } } },
+    'a clean view that never wrote or loaded the copy leaves it alone when it closes',
+  ),
+  tc(
+    [
+      { op: 'storeWrite', id: HA, text: 'saved copy', title: 'a.html' },
+      step('track', 'b'),
+      step('resolve', 'a'),
+    ],
+    {
+      response: 0,
+      views: {
+        a: { id: 1, openPath: doc('a.html') },
+        b: { id: 2, openPath: doc('a.html'), destroyed: true },
+      },
+    },
+    'a destroyed pane the module tracks does not count as a sibling that already asked',
+  ),
+  tc(
+    [
+      step('resolve', 'a'),
+      step('set', 'a', { destroyed: true }),
+      step('openFile', 'a', { filePath: doc('a.html'), decision: 'restore' }),
+    ],
+    { views: { a: { id: 1 } } },
+    'a view that asked and was destroyed since is not reloaded for the shell decision',
+  ),
+  tc(
+    [
+      step('track', 'a'),
+      write('a', 'one'),
+      step('set', 'a', { destroyed: true }),
+      step('renamed', 'a', { old: doc('old.html') }),
+    ],
+    {},
+    'a rename of a destroyed view asks nothing of its renderer',
+  ),
 ]
 
 // ---------------------------------------------------------------------------
@@ -1586,6 +1630,27 @@ const docsCases: Case[] = [
     ],
     {},
     'a crashed tab is forgotten but keeps its copies',
+  ),
+  dc(
+    [
+      { op: 'storeWrite', id: DU('only'), text: 'one' },
+      { op: 'take', tab: 1, copy: DU('only'), title: 'One', ext: '.docx', accept: 'all' },
+      { op: 'take', tab: 1, copy: DU('only'), title: 'One', ext: '.docx', accept: 'all' },
+      { op: 'storeRead', id: DU('only') },
+      { op: 'untitledOf', tab: 1 },
+    ],
+    {},
+    'taking the copy the tab already holds again does not delete it',
+  ),
+  dc(
+    [
+      { op: 'storeWrite', id: DA, text: 'orphan', title: 'a.docx' },
+      { op: 'take', tab: 1, copy: DA, title: 'a.docx', ext: '.docx', accept: 'all' },
+      { op: 'storeRead', id: DU('uuid-1') },
+      { op: 'storeRead', id: DA },
+    ],
+    {},
+    'a file copy is adopted from the docs folder into the untitled slot',
   ),
 ]
 
@@ -2179,6 +2244,41 @@ const pdfCases: Case[] = [
       'work/c.pdf': { text: 'c', mtimeMs: NOW - 2 * DAY },
     },
   ),
+  pc(
+    [
+      resolveOpen(1, doc('a.pdf')),
+      pwrite(1, doc('a.pdf'), make('%PDF one', { during: { op: 'dontSave', id: 1, path: null } })),
+      { op: 'storeRead', id: PA },
+    ],
+    {},
+    "Don't Save with no copy to delete while the bytes are made still supersedes the write",
+  ),
+  pc(
+    [
+      { op: 'resolvedNow', id: 1, path: doc('a.pdf') },
+      pwrite(1, doc('a.pdf'), make('%PDF one')),
+      { op: 'storeRead', id: PA },
+    ],
+    {},
+    'a path that needs no question is recorded as answered, so the view may write for it',
+  ),
+  pc(
+    [
+      {
+        op: 'storeWrite',
+        id: U('pdf', 'seed-1', '.pdf'),
+        text: '%PDF untitled',
+        title: 'Untitled copy',
+      },
+      { op: 'openUntitled', id: 1, copy: U('pdf', 'seed-1', '.pdf'), title: 'Untitled copy' },
+      { op: 'now', ms: FUTURE },
+      { op: 'sweep' },
+      { op: 'ls', dir: '$DIR/work' },
+    ],
+    {},
+    'a working file an open view uses stays however old the clock says it is',
+    { 'work/old.pdf': { text: 'old', mtimeMs: NOW - 10 * DAY } },
+  ),
 ]
 
 const encrypted = (text: string, bytesAsView = false): Case => ({
@@ -2466,6 +2566,14 @@ export const part: Group = {
             mtimeMs: 1_600_000_000_000,
           },
           [`${SHEETS_DIR}/unsaved-new.json`]: JSON.stringify(['/w/book.xlsx', '/w/two.xlsx']),
+          [SHEETS_DIR]: { dir: true, mode: 0o555 },
+        },
+      ),
+      migrateCase(
+        { dir: '$DIR/ud/sheets-autosave' },
+        'a read-only store folder: the emptied index cannot be removed and the warning says so',
+        {
+          [`${SHEETS_DIR}/unsaved-new.json`]: JSON.stringify(['/w/gone.xlsx']),
           [SHEETS_DIR]: { dir: true, mode: 0o555 },
         },
       ),

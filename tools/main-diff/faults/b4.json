@@ -1378,8 +1378,8 @@
   {
     "name": "pdf: timeout wins never",
     "file": "main-core/src/slides/pdf_export.rs",
-    "find": "Step::Hangs => return Err(timed_out()),\n        }\n        match win.execute_javascript",
-    "replace": "Step::Hangs => {}\n        }\n        match win.execute_javascript",
+    "find": "if answer == RendererAnswer::TimedOut {",
+    "replace": "if answer == RendererAnswer::TimedOut && false {",
     "fn": ["slides/pdf-export.exportSlidesPdf"]
   },
   {
@@ -2705,5 +2705,26 @@
     "find": "\"Unexpected token '{token}', \\\"{}\\\" is not valid JSON\",",
     "replace": "\"Unexpected token '{token}', \\\"{}\\\" is not valid JSON.\",",
     "fn": ["zotero-wire.ZoteroWireClient"]
+  },
+  {
+    "name": "pdf: a probe that rejects still prints",
+    "file": "main-core/src/slides/pdf_export.rs",
+    "find": "Ok(ExecOutcome::Settled) => {",
+    "replace": "Ok(ExecOutcome::Settled | ExecOutcome::Rejected(_)) => {",
+    "fn": ["slides/pdf-export.exportSlidesPdf"]
+  },
+  {
+    "name": "hwp printer: the dialog opens before the page loads",
+    "file": "main-core/src/hwp/print_document.rs",
+    "find": "                loaded: false,",
+    "replace": "                loaded: true,",
+    "fn": ["hwp/print-document.printJobToPrinter"]
+  },
+  {
+    "name": "hwp printer: a failed print leaves the window",
+    "file": "main-core/src/hwp/print_document.rs",
+    "find": "WindowStep::Done(released.and(sent))",
+    "replace": "WindowStep::Done(sent)",
+    "fn": ["hwp/print-document.printJobToPrinter"]
   }
 ]

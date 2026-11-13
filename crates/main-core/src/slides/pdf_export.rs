@@ -1,16 +1,22 @@
 //! `apps/slides/src/main/pdf-export.ts`.
 //!
-//! The hidden window is a [`PdfExportWindow`]: the methods the TypeScript calls
-//! on it. A call that never settles is [`Step::Hangs`]: the watchdog timer of
-//! the TypeScript then wins its race, which is the explicit step the timer
-//! becomes here. `os.tmpdir()` is a parameter.
+//! The hidden window comes from the caller's `createWindow` as a
+//! [`PdfExportWindow`]; its renderer calls (`loadFile`, `executeJavaScript`,
+//! `printToPDF`) are the steps of a [`SlidesPdfJob`] the caller carries out.
+//! The watchdog timer is the caller's: it starts when the job first awaits
+//! (`SlidesPdfJob::watchdog_ms`), and if it fires before the job is done the
+//! awaited call is answered with [`RendererAnswer::TimedOut`]. `os.tmpdir()`
+//! is a parameter.
 
 use jscompat::node_path::host::join;
 use jscompat::{js_regex, math_round, number_to_string};
 use serde_json::{Map, Number, Value};
 
 use crate::node_fs::node_error;
-use crate::packages::electron_utils::print_window::{JsError, rm_recursive_force};
+use crate::packages::electron_utils::print_window::{
+    ExecOutcome, JsError, RendererAnswer, RendererCall, WindowStep, load_call, rm_recursive_force,
+    wrong_answer,
+};
 
 /// one clickable overlay: fractions of the page box and the target
 #[derive(Debug, Clone, PartialEq)]
@@ -29,19 +35,9 @@ pub enum ExportPdfPage {
     Png(String),
 }
 
-/// What a call of the window did: settled, or never.
-pub enum Step<T> {
-    Done(Result<T, JsError>),
-    Hangs,
-}
-
-/// `PdfExportWindow`
+/// `PdfExportWindow`: what the export calls on its hidden window without
+/// waiting for the renderer.
 pub trait PdfExportWindow {
-    fn load_file(&mut self, path: &str) -> Step<()>;
-    /// `webContents.executeJavaScript(script, userGesture)`
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> Step<()>;
-    /// `webContents.printToPDF(options)`; `options` is the plain object the TypeScript passes
-    fn print_to_pdf(&mut self, options: &Value) -> Step<Vec<u8>>;
     fn destroy(&mut self) -> Result<(), JsError>;
 }
 
@@ -217,70 +213,171 @@ fn error_text(error: &JsError) -> String {
     format!("Error: {}", error.message)
 }
 
-/// `exportSlidesPdf(options)`. `Err` is a rejection: `createWindow` throwing,
-/// or `destroy` / the removal of the temp folder throwing in the `finally`.
-pub fn export_slides_pdf<W: PdfExportWindow>(
+/// Where `exportSlidesPdf` waits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExportPhase {
+    Loading,
+    Probing,
+    Printing,
+}
+
+/// `exportSlidesPdf` between its awaits: the window, the temp folder, the
+/// page size and where the PDF goes.
+#[derive(Debug)]
+pub struct SlidesPdfJob<W> {
+    win: W,
+    temp_dir: String,
+    width_in: f64,
+    height_in: f64,
+    file_path: String,
+    timeout_ms: f64,
+    phase: ExportPhase,
+}
+
+/// A step of `exportSlidesPdf`; [`WindowStep::Done`] holds the result once the
+/// window is destroyed and the temp folder removed. `Err` there is a
+/// rejection: `createWindow` throwing, or `destroy` / the removal of the temp
+/// folder throwing in the `finally`.
+pub type SlidesPdfStep<W> = WindowStep<SlidesPdfJob<W>, Result<ExportSlidesPdfResult, JsError>>;
+
+/// `exportSlidesPdf(options)` up to its first await.
+pub fn begin_export_slides_pdf<W: PdfExportWindow>(
     options: &ExportSlidesPdfOptions,
     create_window: impl FnOnce() -> Result<W, JsError>,
-    open_exported_pdf: &mut dyn FnMut(&str) -> Result<(), JsError>,
-) -> Result<ExportSlidesPdfResult, JsError> {
+) -> SlidesPdfStep<W> {
     // PDF page size: fixed 7.5in height, width by slide ratio (16:9 -> 13.333in, 4:3 -> 10in)
     let height_in = PDF_EXPORT_HEIGHT_IN;
     let width_in = export_page_width_in(options.width_px, options.height_px);
-    let mut win = create_window()?;
-    let mut temp_dir: Option<String> = None;
-    let outcome = (|| -> Result<ExportSlidesPdfResult, JsError> {
-        let dir =
-            crate::node_fs::mkdtemp_random(&join(&[options.tmp_dir, "seuoffice-slides-pdf-"]))?;
-        let dir = temp_dir.insert(dir).as_str();
-        let html_path = join(&[dir, "slides.html"]);
-        let html = build_pdf_export_html(
-            options.pages,
+    let mut win = match create_window() {
+        Ok(win) => win,
+        Err(error) => return WindowStep::Done(Err(error)),
+    };
+    let temp_dir =
+        match crate::node_fs::mkdtemp_random(&join(&[options.tmp_dir, "seuoffice-slides-pdf-"])) {
+            Ok(dir) => dir,
+            Err(error) => return end(&mut win, None, Err(error.into())),
+        };
+    let html_path = join(&[&temp_dir, "slides.html"]);
+    let html = build_pdf_export_html(
+        options.pages,
+        width_in,
+        height_in,
+        options.links,
+        options.font_css,
+    );
+    if let Err(e) = std::fs::write(&html_path, html) {
+        let error = node_error(&e, "open", &html_path).into();
+        return end(&mut win, Some(&temp_dir), Err(error));
+    }
+    WindowStep::Await {
+        call: load_call(&html_path),
+        job: SlidesPdfJob {
+            win,
+            temp_dir,
             width_in,
             height_in,
-            options.links,
-            options.font_css,
-        );
-        std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;
-        let timed_out = || {
-            JsError::plain(format!(
+            file_path: options.file_path.to_owned(),
+            timeout_ms: options.timeout_ms,
+            phase: ExportPhase::Loading,
+        },
+    }
+}
+
+impl<W: PdfExportWindow> SlidesPdfJob<W> {
+    /// The window the awaited call is carried out on.
+    pub fn window(&mut self) -> &mut W {
+        &mut self.win
+    }
+
+    /// The watchdog the caller starts when the job first awaits: a renderer
+    /// that never settles must fail the export instead of spinning forever.
+    pub fn watchdog_ms(&self) -> f64 {
+        self.timeout_ms
+    }
+
+    /// The answer to the call this export waits for. `open_exported_pdf` is
+    /// `openExportedPdf`, called once the PDF is written.
+    pub fn resume(
+        mut self,
+        answer: RendererAnswer,
+        open_exported_pdf: &mut dyn FnMut(&str) -> Result<(), JsError>,
+    ) -> SlidesPdfStep<W> {
+        if answer == RendererAnswer::TimedOut {
+            let error = JsError::plain(format!(
                 "slides PDF export timed out after {}ms",
-                number_to_string(options.timeout_ms)
-            ))
-        };
-        match win.load_file(&html_path) {
-            Step::Done(result) => result?,
-            Step::Hangs => return Err(timed_out()),
+                number_to_string(self.timeout_ms)
+            ));
+            return self.end(Err(error));
         }
-        match win.execute_javascript(PRINT_READY_SCRIPT, true) {
-            Step::Done(result) => result?,
-            Step::Hangs => return Err(timed_out()),
+        match self.phase {
+            ExportPhase::Loading => match answer.into_loaded() {
+                Ok(()) => {
+                    self.phase = ExportPhase::Probing;
+                    WindowStep::Await {
+                        call: RendererCall::ExecuteJavaScript {
+                            script: PRINT_READY_SCRIPT,
+                            user_gesture: true,
+                            race_ms: None,
+                        },
+                        job: self,
+                    }
+                }
+                Err(error) => self.end(Err(error)),
+            },
+            ExportPhase::Probing => match answer.into_executed() {
+                Ok(ExecOutcome::Settled) => {
+                    self.phase = ExportPhase::Printing;
+                    let options = print_options(self.width_in, self.height_in);
+                    WindowStep::Await {
+                        call: RendererCall::PrintToPdf { options },
+                        job: self,
+                    }
+                }
+                Ok(ExecOutcome::Rejected(message) | ExecOutcome::Throws(message)) => {
+                    self.end(Err(JsError::plain(message)))
+                }
+                // no timer races this probe: only the watchdog, answered as TimedOut
+                Ok(ExecOutcome::Pending) => self.end(Err(wrong_answer("executeJavaScript"))),
+                Err(error) => self.end(Err(error)),
+            },
+            ExportPhase::Printing => {
+                let written = answer.into_pdf().and_then(|pdf| {
+                    std::fs::write(&self.file_path, pdf)
+                        .map_err(|e| JsError::from(node_error(&e, "open", &self.file_path)))?;
+                    open_exported_pdf(&self.file_path)
+                });
+                let result = written.map(|()| ExportSlidesPdfResult {
+                    ok: true,
+                    path: Some(self.file_path.clone()),
+                    error: None,
+                });
+                self.end(result)
+            }
         }
-        let pdf = match win.print_to_pdf(&print_options(width_in, height_in)) {
-            Step::Done(result) => result?,
-            Step::Hangs => return Err(timed_out()),
-        };
-        std::fs::write(options.file_path, pdf)
-            .map_err(|e| node_error(&e, "open", options.file_path))?;
-        open_exported_pdf(options.file_path)?;
-        Ok(ExportSlidesPdfResult {
-            ok: true,
-            path: Some(options.file_path.to_owned()),
-            error: None,
-        })
-    })();
+    }
+
+    fn end(mut self, outcome: Result<ExportSlidesPdfResult, JsError>) -> SlidesPdfStep<W> {
+        end(&mut self.win, Some(&self.temp_dir), outcome)
+    }
+}
+
+/// the `catch` and `finally`: an error becomes `{ ok: false, error }`, then the
+/// window goes first and the temp folder after it, also when `destroy` threw;
+/// what those throw replaces the result, the removal first
+fn end<W: PdfExportWindow>(
+    win: &mut W,
+    temp_dir: Option<&str>,
+    outcome: Result<ExportSlidesPdfResult, JsError>,
+) -> SlidesPdfStep<W> {
     let result = outcome.unwrap_or_else(|error| ExportSlidesPdfResult {
         ok: false,
         path: None,
         error: Some(error_text(&error)),
     });
-    // finally: the window goes first, then the temp folder, also when destroy threw
     let destroyed = win.destroy();
-    let removed = match temp_dir.as_deref() {
+    let removed = match temp_dir {
         Some(dir) => rm_recursive_force(dir).map_err(JsError::from),
         None => Ok(()),
     };
-    removed?;
-    destroyed?;
-    Ok(result)
+    WindowStep::Done(removed.and(destroyed).map(|()| result))
 }

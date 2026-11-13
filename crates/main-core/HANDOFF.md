@@ -1,20 +1,22 @@
-# 2단계 넘김 글 (MacBook, 2026-11-13)
+# 2단계 넘김 글 (MacBook, 2026-11-14)
 
 중심 프로세스(Electron main)를 Rust로 옮기는 일(결정 0030)의 지금 상태. 가지는 `feat/rust-stage2-plan`이고 main에는 아직 합치지 않았다. 합치는 순서는 B → C2/C3 → D3 → 2단계다.
 
 ## 지금 상태
 
-- `crates/main-core`는 B1–B5 묶음의 Electron 없는 모듈과 B6(Electron을 직접 쓰는 모듈)의 판단을 옮겼다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
-- main 07a251652를 합쳤다(1bf2c0bfd). 이 가지의 `apps/`, `packages/`는 그 main과 같다.
+- `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다(엔진을 기다리는 모듈 제외; `shell/knowledge-base`는 검토 뒤 마저 옮김). 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
+- main 8b9fd99ea를 합쳤다(305eba4a8). 이 가지의 `apps/`, `packages/`는 그 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
-- 이 기계에서 마지막으로 본 결과(전체 비교, 그룹마다 따로 프로세스): 함수 1,100개, 34,785번, 다른 것 0, 적힌 것 10. clippy(`-D warnings`)는 macOS에서 깨끗하다.
-- 러너 실행 43348725507(헤드 87af9aa75, B1–B5와 d8·d9 결함)은 GitHub API 한도에 걸려 끝을 확인하지 못했다. B6 결함(`faults/b6-*.json`, 452개)과 `launch-recovery` 결함은 아직 러너에서 끝까지 확인하지 않았다.
+- 합친 뒤 이 기계에서 본 것: `cargo check -p main-core --tests` 경고 없음, `cargo fmt --all --check`, `tools/main-diff`의 tsc·prettier, 결함 5,973개의 `find`가 모두 한 번.
+- 마지막 러너 결과(43415208707, e8208d3d2, 다섯 가지를 합치기 전): 비교 35,914번 다른 것 0, 적힌 것 10, 함수 1,223개; 결함 1,707개 모두 잡힘; Windows 비교, clippy, 서식 통과. 남았던 빨강(sites 시험, 비교 엔진의 `host_callback`)은 680d88362에서 고쳤다.
+- 소유자 결정으로 OMPdesk 1판이 나올 때까지 Actions 실행을 시작하지 않는다(`gh workflow run`, `gh run rerun`, 실행을 부르는 가지로의 푸시 모두). `feat/rust-stage2-*`로의 푸시는 실행을 부르지 않는다.
 
 ## 다음 할 일
 
-1. 러너에서 비교와 결함 전부를 돌린다(아래 명령에 `b6-*.json`과 `d9.json`을 더함). 놓친 결함은 경계 입력을 더하거나 결함을 바꾼다.
-2. main(ec2d64f09 이후)을 합치고, 바뀐 TypeScript 가운데 이 가지가 옮긴 파일을 Rust로 따라 고친다.
-3. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
+1. Actions가 다시 열리면: 이 가지에서 비교+clippy+이 가지 몫의 결함을 한 번, 다섯 가지는 각자 자기 결함 파일로 한 번(한 실행에 다 넣으면 120분 제한을 넘는다). 고친 것은 그 가지에서 고치고 여기로 다시 합친다.
+2. 다르게 나온 것과 놓친 결함을 고친다(새 케이스는 목록 끝에).
+3. main을 다시 합치고, 바뀐 TypeScript 가운데 이 가지가 옮긴 파일을 Rust로 따라 고친다.
+4. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
 
 ## 돌리는 법
 
@@ -31,8 +33,11 @@ npx tsx main.ts --list                                                          
 node faults.mjs faults/b1.json,faults/b2.json      # FAULT_SHARD=i/n 으로 나눠 돌림
 
 # 러너(비교 + Windows + 결함 6조각)
+# 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 5,973개 전부는 한 실행에 들지 않으므로
+# 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store):
 gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
-  -f main_faults=tools/main-diff/faults/b1.json,tools/main-diff/faults/b2.json,tools/main-diff/faults/b3.json,tools/main-diff/faults/b4.json,tools/main-diff/faults/b5.json,tools/main-diff/faults/d8.json,tools/main-diff/faults/d9.json,tools/main-diff/faults/b6-utils.json,tools/main-diff/faults/b6-shell.json,tools/main-diff/faults/b6-apps.json,tools/main-diff/faults/b6-tabs.json
+  -f main_faults=$(ls tools/main-diff/faults/{b1,b2,b3,b4,b5,d8,d9,b2-cli,b4-fonts,b4-pdf-store}.json tools/main-diff/faults/b6-*.json | paste -sd, -)
+# 나머지는 실행마다 한 묶음: b3-projects.*, b3b4-rest-*, b5-agent-*, b5-mcp, b5-provider-*
 ```
 
 산출물은 `main-diff-out`, `main-diff-windows-out`, `main-diff-faults-0..5`다. 같은 가지에 푸시하면 돌던 실행이 취소된다.
@@ -48,9 +53,7 @@ gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
 
 ## 알려진 빨강 (이 가지 탓 아님)
 
-- `crates` 작업의 Format: `office-wasm/src/invoke/table.rs`
-- Unit tests의 `jscompat` sites: B의 `docx-engine` 파일. main-core 시험은 따로 돌린다(`cargo test -p main-core`).
-- docx gate와 pptx 작업들: 이 가지에 B·C의 TypeScript가 없다.
+- 없음(680d88362 기준). B4가 main에 들어오면 `office-wasm/src/invoke/table.rs`, `jscompat/tests/sites.rs`, `tools/docx-diff/model-schema.ts`, `tools/docx-diff/engine.ts`는 B4 쪽을 따른다.
 
 ## 열린 질문
 
