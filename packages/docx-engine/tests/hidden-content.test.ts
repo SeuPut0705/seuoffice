@@ -156,4 +156,16 @@ describe('clearHiddenMarks', () => {
     const text = doc.blocks.map((b) => b.runs?.map((r) => r.text).join('') ?? '').join('\n')
     expect(text).toContain(`A & B <tag> & C${SECRET}`)
   })
+
+  it('never drops the words of a CDATA section that spell a mark', async () => {
+    const literal = '<go:redact w:label="x"/> stays'
+    const bytes = await buildDocx({
+      bodyXml: `<w:p><w:r><w:t><![CDATA[${literal}]]></w:t></w:r>${mark()}</w:p>`,
+    })
+    const cleared = await clearHiddenMarks(bytes).catch(() => null)
+    // refusing is fine; a copy that claims to be clear must keep those words
+    if (cleared === null) return
+    const after = await (await JSZip.loadAsync(cleared)).file('word/document.xml')!.async('string')
+    expect(after).toContain(`<![CDATA[${literal}]]>`)
+  })
 })

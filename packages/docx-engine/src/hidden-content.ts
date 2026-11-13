@@ -61,6 +61,17 @@ const MARK_TAG = new RegExp(
   'g',
 )
 
+/** CDATA sections: their text is words, not markup, so no mark is cut from them */
+const CDATA = /(<!\[CDATA\[[\s\S]*?\]\]>)/
+
+/** `xml` with every mark element cut out of its markup */
+function cutMarks(xml: string): string {
+  return xml
+    .split(CDATA)
+    .map((piece, i) => (i % 2 === 1 ? piece : piece.replace(MARK_TAG, '')))
+    .join('')
+}
+
 /**
  * The package with every mark taken off: the words stay, readable by anyone.
  * The namespace declaration stays too (an ignorable prefix must stay declared).
@@ -75,7 +86,7 @@ export async function clearHiddenMarks(bytes: Uint8Array): Promise<Uint8Array> {
   for (const path of await wordParts(zip)) {
     const xml = await zip.file(path)!.async('string')
     if (!holdsMark(xml)) continue
-    const cleared = xml.replace(MARK_TAG, '')
+    const cleared = cutMarks(xml)
     if (holdsMark(cleared)) throw new Error(`could not clear the marks in ${path}`)
     zip.file(path, cleared)
   }
