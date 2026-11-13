@@ -374,9 +374,11 @@ impl HomeApp for Unbuilt {
     fn folder_watchers_changed(&self) {
         unbuilt("HomeApp::folder_watchers_changed");
     }
+    /// batch A's codec over safeStorage (`host/secrets.rs` sets it)
     fn secrets(&self) -> Option<&dyn AiSecretCodec> {
-        unbuilt("HomeApp::secrets");
-        None
+        super::secrets::CODEC
+            .get()
+            .map(|codec| codec.as_ref() as &dyn AiSecretCodec)
     }
     fn probe_decision(&self, _: &FileSearchSettings) -> Result<(), String> {
         unbuilt("HomeApp::probe_decision");
