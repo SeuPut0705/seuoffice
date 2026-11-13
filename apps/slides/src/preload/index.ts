@@ -106,6 +106,7 @@ import type {
   MasterAddElementOp,
   ExportImagesOp,
   SavePictureOp,
+  WithheldExportFormat,
   ExportPdfOp,
   PrintSlidesOp,
   PrinterInfo,
@@ -433,6 +434,8 @@ const api: SlidesApi = {
   pickExportPdfPath: (defaultName: string) =>
     ipcRenderer.invoke('slides:pick-export-pdf-path', defaultName),
   savePicture: (op: SavePictureOp) => ipcRenderer.invoke('slides:save-picture', op),
+  askWithheldExport: (format: WithheldExportFormat) =>
+    ipcRenderer.invoke('slides:ask-withheld-export', format),
   exportPdf: (op: ExportPdfOp) => ipcRenderer.invoke('slides:export-pdf', op),
   printSlides: (op: PrintSlidesOp) => ipcRenderer.invoke('slides:print', op),
   listPrinters: async () => {

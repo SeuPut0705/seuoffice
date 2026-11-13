@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./hwp": "./src/hwp.ts",
-    "./redaction": "./src/redaction.ts"
+    "./redaction": "./src/redaction.ts",
+    "./hidden-content": "./src/hidden-content.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
