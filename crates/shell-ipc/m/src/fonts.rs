@@ -1,6 +1,5 @@
 //! Font channels: the installed-font queries of the docs, sheets and slides
-//! renderers, the PDF editor's fonts and fingerprints, and the slides
-//! sessions' private fonts and font/theme edits.
+//! renderers, and the PDF editor's fonts.
 //!
 //! What sits in the `ipcMain` handler bodies (argument filtering) is ported
 //! here; `familyInfoFor`'s own filtering (non-array input, 256-unit names,
@@ -109,53 +108,6 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
             cx.services.workers.spawn(Box::new(move || {
                 reply.reply(Ok(strings(fonts.list_edit_fonts())))
             }));
-        }
-    })?;
-
-    // the request `undefined` of a call without arguments reaches the job as `null`
-    invoke_later(registry, "pdf:store-page-fingerprints", {
-        let cx = cx.clone();
-        move |call, args, reply| {
-            cx.peers
-                .store_page_fingerprints(call.sender.view, as_serde(arg(&args, 0)), reply)
-        }
-    })?;
-
-    invoke(registry, "slides:private-font-faces", {
-        let cx = cx.clone();
-        move |_, _| Ok(from_serde(&cx.peers.slides_private_font_faces()))
-    })?;
-
-    invoke(registry, "slides:private-font-data", {
-        let cx = cx.clone();
-        move |_, args| {
-            // `extractFace` returns an ArrayBuffer
-            Ok(
-                match cx.peers.slides_private_font_data(&as_serde(arg(&args, 0))) {
-                    Some(bytes) => IpcValue::Bytes(BytesKind::ArrayBuffer, bytes),
-                    None => IpcValue::Null,
-                },
-            )
-        }
-    })?;
-
-    invoke(registry, "slides:set-element-font", {
-        let cx = cx.clone();
-        move |call, args| {
-            let op = as_serde(arg(&args, 0));
-            Ok(from_serde(
-                &cx.peers.slides_set_element_font(call.sender.view, &op),
-            ))
-        }
-    })?;
-
-    invoke(registry, "slides:apply-theme", {
-        let cx = cx.clone();
-        move |call, args| {
-            let op = as_serde(arg(&args, 0));
-            Ok(from_serde(
-                &cx.peers.slides_apply_theme(call.sender.view, &op),
-            ))
         }
     })
 }
@@ -328,100 +280,6 @@ mod tests {
         assert_eq!(
             call(&none, Surface::Pdf, "pdf:list-edit-fonts", vec![]),
             strings(Vec::<String>::new())
-        );
-    }
-
-    #[test]
-    fn page_fingerprints_forward_the_request_with_the_sender() {
-        let ok = json!({ "ok": true, "docHash": "h", "fingerprints": [] });
-        let p = probe(json!({ "fingerprints": ok }));
-        let request = object([("path", text("/a.pdf")), ("password", IpcValue::Undefined)]);
-        assert_eq!(
-            call(
-                &p,
-                Surface::Pdf,
-                "pdf:store-page-fingerprints",
-                vec![request]
-            ),
-            from_serde(&ok)
-        );
-        // no argument: the job gets null and refuses it itself
-        call(&p, Surface::Pdf, "pdf:store-page-fingerprints", vec![]);
-        assert_eq!(
-            p.take_calls(),
-            vec![r#"fingerprints 1 {"path":"/a.pdf"}"#, "fingerprints 1 null"]
-        );
-        let refused = probe(json!({}));
-        assert_eq!(
-            call(
-                &refused,
-                Surface::Pdf,
-                "pdf:store-page-fingerprints",
-                vec![text("x")]
-            ),
-            object([
-                ("ok", IpcValue::Bool(false)),
-                ("error", text("invalid-request")),
-                ("message", text("request must be an object")),
-            ])
-        );
-    }
-
-    #[test]
-    fn private_font_faces_and_data() {
-        let faces = json!([{ "id": "f1", "family": "Calibri", "bold": false, "italic": false }]);
-        let p = Probe::new(
-            json!({ "privateFontFaces": faces, "privateFontData": { "f1": "AAEC" } }),
-            vec![sender(1, Surface::Slides)],
-        );
-        let run = |channel: &str, args: Vec<IpcValue>| {
-            p.call(sender(1, Surface::Slides), channel, args).unwrap()
-        };
-        assert_eq!(run("slides:private-font-faces", vec![]), from_serde(&faces));
-        // what the renderer gets for an `ArrayBuffer`
-        assert_eq!(
-            run("slides:private-font-data", vec![text("f1")]),
-            IpcValue::Bytes(BytesKind::ArrayBuffer, vec![0, 1, 2])
-        );
-        for id in [text("unknown"), IpcValue::Number(1.0), IpcValue::Undefined] {
-            assert_eq!(run("slides:private-font-data", vec![id]), IpcValue::Null);
-        }
-    }
-
-    #[test]
-    fn element_font_and_theme_ops_reach_the_session_of_the_sender() {
-        let rendered = json!({ "index": 2, "html": "<svg/>" });
-        let p = Probe::new(
-            json!({ "setElementFont": rendered, "applyTheme": { "error": "bad theme" } }),
-            vec![sender(1, Surface::Slides)],
-        );
-        let run = |channel: &str, args: Vec<IpcValue>| {
-            p.call(sender(1, Surface::Slides), channel, args).unwrap()
-        };
-        let font = object([
-            ("slideIndex", IpcValue::Number(2.0)),
-            ("sourceIds", strings(["a"])),
-            ("bold", IpcValue::Bool(true)),
-        ]);
-        assert_eq!(
-            run("slides:set-element-font", vec![font]),
-            from_serde(&rendered)
-        );
-        assert_eq!(
-            run(
-                "slides:apply-theme",
-                vec![object([("name", text("Office"))])]
-            ),
-            object([("error", text("bad theme"))])
-        );
-        run("slides:apply-theme", vec![]);
-        assert_eq!(
-            p.take_calls(),
-            vec![
-                r#"setElementFont 1 {"slideIndex":2.0,"sourceIds":["a"],"bold":true}"#,
-                r#"applyTheme 1 {"name":"Office"}"#,
-                "applyTheme 1 null",
-            ]
         );
     }
 }

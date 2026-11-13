@@ -322,22 +322,6 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
     })?;
 
     let c = cx.clone();
-    invoke(registry, "app:get-split-role", move |call, _| {
-        Ok(c.peers
-            .split_role_of(call.sender.view)
-            .map_or(IpcValue::Null, |role| string(role.as_str())))
-    })?;
-    let c = cx.clone();
-    send(registry, "app:view-focused", move |call, _| {
-        c.peers.focus_pane_of(call.sender.view)
-    })?;
-    let c = cx.clone();
-    send(registry, "app:open-dropped-files", move |_, args| {
-        let raw = to_serde(arg(&args, 0)).unwrap_or(serde_json::Value::Null);
-        c.peers.open_dropped_files(&raw)
-    })?;
-
-    let c = cx.clone();
     invoke(registry, "slides:open-font-settings", move |_, _| {
         if c.host.reveal_home()
             && let Some(view) = c.main_window.view()
@@ -706,30 +690,6 @@ mod tests {
             Ok(string("nord"))
         );
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "[\n  1\n]");
-    }
-
-    #[test]
-    fn split_roles_focus_and_dropped_files_go_to_the_tab_manager() {
-        let p = probe(json!({ "splitRoles": { "2": "secondary" } }));
-        assert_eq!(
-            p.call(sender(2, Docs), "app:get-split-role", vec![]),
-            Ok(string("secondary"))
-        );
-        assert_eq!(
-            p.call(sender(1, Shell), "app:get-split-role", vec![]),
-            Ok(IpcValue::Null)
-        );
-        p.call(sender(2, Docs), "app:view-focused", vec![]).unwrap();
-        p.call(
-            sender(2, Docs),
-            "app:open-dropped-files",
-            vec![IpcValue::Array(vec![string("/a.docx")])],
-        )
-        .unwrap();
-        assert_eq!(
-            p.take_calls(),
-            vec!["focusPane 2", "openDropped [\"/a.docx\"]"]
-        );
     }
 
     #[test]
