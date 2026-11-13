@@ -245,8 +245,88 @@ impl Ids {
     }
 }
 
+/// The answer of a handler as the renderer receives it: what `main-core` built
+/// from JSON, with the keys the TypeScript literals carry as `undefined` put back
 fn answer(reply: Responder, value: JsonValue) {
-    reply.reply(Ok(from_json(&value)))
+    let mut answer = from_json(&value);
+    with_unset_keys(&mut answer);
+    reply.reply(Ok(answer))
+}
+
+/// Puts `key: undefined` into `entries` after the key `after` (at the end when `None`),
+/// unless the key is there. JSON has no `undefined`, so `main-core` leaves such
+/// keys out; the TypeScript literals that build the objects always have them.
+fn unset_key(entries: &mut Vec<(String, IpcValue)>, key: &str, after: Option<&str>) {
+    if entries.iter().any(|(name, _)| name == key) {
+        return;
+    }
+    let at = after
+        .and_then(|after| entries.iter().position(|(name, _)| name == after))
+        .map_or(entries.len(), |anchor| anchor + 1);
+    entries.insert(at, (key.to_owned(), IpcValue::Undefined));
+}
+
+/// The objects of `user-skills-service.ts` whose literals hold an optional key
+/// as `key: value` rather than as a spread, found by their keys, nested ones first:
+///
+/// - `viewOf`: `plugin` after `source`, `template` after `mcpServers`, `unreadable`
+///   before `files` (after `editors` when there), `github` before `owned`, `shadowedBy` last
+/// - `read`'s content: `template` after `body`
+/// - `aiRead`'s skill: `template` after `files`
+/// - `candidateView`: `license` after `urlCount`, `problem` last
+/// - `importPreviewOf`: `rootLicense` last
+fn with_unset_keys(value: &mut IpcValue) {
+    match value {
+        IpcValue::Array(items) => items.iter_mut().for_each(with_unset_keys),
+        IpcValue::Object(entries) => {
+            entries
+                .iter_mut()
+                .for_each(|(_, member)| with_unset_keys(member));
+            let has = |entries: &[(String, IpcValue)], keys: &[&str]| {
+                keys.iter()
+                    .all(|key| entries.iter().any(|(name, _)| name == key))
+            };
+            if has(entries, &["id", "source", "templateExists", "owned", "can"]) {
+                unset_key(entries, "plugin", Some("source"));
+                unset_key(entries, "template", Some("mcpServers"));
+                let before_files = if entries.iter().any(|(name, _)| name == "editors") {
+                    "editors"
+                } else {
+                    "agentOnly"
+                };
+                unset_key(entries, "unreadable", Some(before_files));
+                unset_key(entries, "github", Some("bytes"));
+                unset_key(entries, "shadowedBy", None);
+            } else if has(
+                entries,
+                &["key", "rel", "urlCount", "emptyBody", "warnings"],
+            ) {
+                unset_key(entries, "license", Some("urlCount"));
+                unset_key(entries, "problem", None);
+            } else if has(entries, &["token", "origin", "candidates"]) {
+                unset_key(entries, "rootLicense", None);
+            } else if has(
+                entries,
+                &["id", "name", "title", "description", "body", "files"],
+            ) {
+                unset_key(entries, "template", Some("body"));
+            } else if has(
+                entries,
+                &[
+                    "id",
+                    "name",
+                    "title",
+                    "body",
+                    "files",
+                    "hasScripts",
+                    "mcpServers",
+                ],
+            ) {
+                unset_key(entries, "template", Some("files"));
+            }
+        }
+        _ => {}
+    }
 }
 
 fn undefined(reply: Responder) {
