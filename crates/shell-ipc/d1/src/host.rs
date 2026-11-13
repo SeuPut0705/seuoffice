@@ -1,18 +1,47 @@
 //! What the four apps share beyond the contract's hosts: the UI language,
-//! `app.getPath` in the shape `main-core` reads it, and Electron's `dialog`
-//! as `main-core`'s [`Dialog`] over the shell's [`Dialogs`] host, with the
-//! remembered folder of `showOpenDialogWithMemory`.
+//! `app.getPath` in the shape `main-core` reads it, Electron's `dialog` as
+//! `main-core`'s [`Dialog`] over the shell's [`Dialogs`] host, with the
+//! remembered folder of `showOpenDialogWithMemory`, and a view's end for
+//! state that lives on the core thread.
 
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use jscompat::{JsObject, JsonValue};
 use main_core::packages::electron_utils::default_save_dir::{PathProvider, SaveDirState, Thrown};
 use main_core::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
 use main_core::packages::i18n::Lang;
-use shell_contract::WindowId;
 use shell_contract::hosts::{Dialogs, FileDialog, FileFilter};
-use shell_contract::runtime::{AppPaths, PathName};
+use shell_contract::runtime::{AppPaths, PathName, Services};
+use shell_contract::{ViewId, WindowId};
+
+type GoneListener = Rc<dyn Fn(ViewId)>;
+
+thread_local! {
+    /// the core thread's view-gone listeners; see [`on_view_gone`]
+    static GONE: RefCell<Vec<GoneListener>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `webContents.once('destroyed', …)` for state that is not `Send` (an
+/// `Rc<RefCell<…>>` a handler captured). [`shell_contract::runtime::Views`]
+/// takes a `Send` listener and runs it on the core thread; this keeps the
+/// real listener in a core-thread slot and hands the shell a `Send` one that
+/// looks it up. Call from `register`, which runs on the core thread.
+pub fn on_view_gone(services: &Services, listener: impl Fn(ViewId) + 'static) {
+    let slot = GONE.with(|gone| {
+        let mut gone = gone.borrow_mut();
+        gone.push(Rc::new(listener));
+        gone.len() - 1
+    });
+    services.views.on_destroyed(Box::new(move |view| {
+        let listener = GONE.with(|gone| gone.borrow().get(slot).cloned());
+        if let Some(listener) = listener {
+            listener(view)
+        }
+    }));
+}
 
 /// `getUiLang()` of `@seuoffice/i18n`: the app-wide UI language, which batch
 /// M keeps. The shell inserts it as a [`LocaleHost`].
@@ -25,8 +54,8 @@ pub type LocaleHost = Arc<dyn Locale>;
 /// What the TypeScript kept once per process and every app module of the
 /// batch reads: the folder the last confirmed file dialog picked (Electron's
 /// `dialog` is one object, so its memory is one) and the default save
-/// folder's retry state. A `Mutex` because the shell's view listeners must
-/// be `Send`; every use is on the core thread.
+/// folder's retry state. A `Mutex` because [`shell_contract::Hosts`] holds
+/// `Send` values only; every use is on the core thread.
 #[derive(Debug, Default)]
 pub struct Shared {
     pub dialog_memory: Mutex<DialogMemory>,
