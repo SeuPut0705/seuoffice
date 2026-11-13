@@ -30,6 +30,7 @@ use super::types::{
     result_response, schema,
 };
 use crate::packages::zod::{ZodShape, parse_error_message, safe_parse, to_json_schema};
+use crate::shell::mcp::mcp_server::{HostCall, Settled};
 
 // ---- the sans-IO surface -------------------------------------------------
 
@@ -123,6 +124,13 @@ pub enum Command {
     DestroySocket { socket: SocketId },
     /// the logger option
     Log(String),
+    /// a tool of the session awaits a host call: the caller carries it out and
+    /// answers with `McpServerService::resume_tool(session_id, ticket, settled)`
+    ToolCall {
+        session_id: String,
+        ticket: Ticket,
+        call: HostCall,
+    },
     /// the signal of a deferred request fired; its answer is dropped when settled
     Aborted(Aborted),
     /// the promise of `start` settled
@@ -248,6 +256,21 @@ pub trait SessionServer {
     fn take_aborted(&mut self) -> Vec<Aborted> {
         Vec::new()
     }
+    /// the awaits tools started since the last call, in order
+    fn take_host_calls(&mut self) -> Vec<(Ticket, HostCall)> {
+        Vec::new()
+    }
+    /// the awaited host call of a tool settled: runs the rest of the tool
+    /// and, when it ends, what the SDK sends then
+    fn resume_tool(&mut self, ticket: Ticket, settled: Settled) -> Vec<Outgoing> {
+        let _ = (ticket, settled);
+        Vec::new()
+    }
+    /// a tool of this server is still running (it runs to the end even when
+    /// its request was aborted or the session closed)
+    fn has_pending_tools(&self) -> bool {
+        false
+    }
 }
 
 // ---- Server ----------------------------------------------------------------
@@ -360,6 +383,9 @@ const TICKS_AT_ONCE: u32 = 0;
 enum Reply {
     Done(Result<JsonValue, HandlerError>),
     Later(Ticket),
+    /// a tool of `McpServer` awaits: the SDK listens to no signal there, so
+    /// no `Aborted` is reported for it
+    ToolLater(Ticket),
 }
 
 struct HandlerOutcome {
@@ -387,6 +413,8 @@ struct Pending {
     kind: RequestSchema,
     /// `signal.aborted`
     aborted: bool,
+    /// the abort is reported to the caller (`HandlerReply::Later`)
+    reports_abort: bool,
 }
 
 type TickedHandler<'h> = Box<dyn FnMut(&JsonValue, &RequestExtra) -> HandlerOutcome + 'h>;
@@ -699,7 +727,8 @@ impl<'h> Server<'h> {
         };
         let result = match outcome.reply {
             Reply::Done(result) => result,
-            Reply::Later(ticket) => {
+            Reply::Later(ticket) | Reply::ToolLater(ticket) => {
+                let reports_abort = matches!(outcome.reply, Reply::Later(_));
                 // the handler's promise is pending: its abort controller is
                 // in the map until it settles
                 self.pending.push(Pending {
@@ -709,6 +738,7 @@ impl<'h> Server<'h> {
                     task_requested: task_requested_of(&parsed),
                     kind,
                     aborted: false,
+                    reports_abort,
                 });
                 return Vec::new();
             }
@@ -726,11 +756,13 @@ impl<'h> Server<'h> {
             return;
         }
         self.pending[at].aborted = true;
-        self.aborted.push(Aborted {
-            session_id: self.pending[at].session_id.clone(),
-            ticket: self.pending[at].ticket,
-            cause,
-        });
+        if self.pending[at].reports_abort {
+            self.aborted.push(Aborted {
+                session_id: self.pending[at].session_id.clone(),
+                ticket: self.pending[at].ticket,
+                cause,
+            });
+        }
     }
 
     /// `_onnotification`: only `notifications/cancelled` does anything the
@@ -1048,8 +1080,8 @@ pub struct ToolConfig {
     pub input_schema: Option<Rc<ZodShape>>,
 }
 
-/// What a tool callback answers: the `CallToolResult` it returned, or the
-/// message of what it threw (`McpServer` makes a tool error of it).
+/// What a tool callback answers: the `CallToolResult` it returned (the
+/// shell's wrapper never rejects: a throw is a result with `isError`).
 pub struct ToolReturn {
     pub result: JsonValue,
     /// the work behind the callback rejected, which ends its promise chain
@@ -1057,10 +1089,19 @@ pub struct ToolReturn {
     pub rejected: bool,
 }
 
+/// A step of a tool callback: done, or awaiting a host call (the promise of
+/// the callback stays pending until `McpServer::resume_tool`).
+pub enum CallStep<'h> {
+    Done(ToolReturn),
+    Await {
+        call: HostCall,
+        then: Box<dyn FnOnce(Settled) -> CallStep<'h> + 'h>,
+    },
+}
+
 /// The callback of a tool, called with the parsed arguments, `None` where
 /// the tool has no schema (the SDK hands such a callback its `extra`).
-pub type ToolCallback<'h> =
-    Rc<RefCell<dyn FnMut(Option<&JsonValue>) -> Result<ToolReturn, String> + 'h>>;
+pub type ToolCallback<'h> = Rc<RefCell<dyn FnMut(Option<&JsonValue>) -> CallStep<'h> + 'h>>;
 
 struct RegisteredTool<'h> {
     description: Option<String>,
@@ -1068,9 +1109,15 @@ struct RegisteredTool<'h> {
     callback: ToolCallback<'h>,
 }
 
+type Continuation<'h> = Box<dyn FnOnce(Settled) -> CallStep<'h> + 'h>;
+
 struct Registry<'h> {
     tools: JsObject<RegisteredTool<'h>>,
     max_tool_input_elements: Option<f64>,
+    /// tool calls awaiting a host call, by the ticket of their request
+    inflight: Vec<(Ticket, Continuation<'h>)>,
+    /// the awaits not yet taken by the caller
+    host_calls: Vec<(Ticket, HostCall)>,
 }
 
 /// `new McpServer(serverInfo, options)`'s options
@@ -1152,6 +1199,8 @@ impl<'h> McpServer<'h> {
             registry: Rc::new(RefCell::new(Registry {
                 tools: JsObject::new(),
                 max_tool_input_elements: options.max_tool_input_elements.filter(|n| n.is_finite()),
+                inflight: Vec::new(),
+                host_calls: Vec::new(),
             })),
             tool_handlers_initialized: false,
         }
@@ -1204,7 +1253,7 @@ impl<'h> McpServer<'h> {
         let registry = Rc::clone(&self.registry);
         self.server.set_ticked_handler(
             RequestSchema::CallTool,
-            Box::new(move |request, _| call_tool(&registry, request)),
+            Box::new(move |request, extra| call_tool(&registry, request, extra.ticket)),
         )?;
         self.tool_handlers_initialized = true;
         Ok(())
@@ -1237,7 +1286,11 @@ fn list_tools(registry: &Registry<'_>) -> JsonValue {
 }
 
 /// the `tools/call` handler
-fn call_tool(registry: &Rc<RefCell<Registry<'_>>>, request: &JsonValue) -> HandlerOutcome {
+fn call_tool<'h>(
+    registry: &Rc<RefCell<Registry<'h>>>,
+    request: &JsonValue,
+    ticket: Ticket,
+) -> HandlerOutcome {
     let null = JsonValue::Null;
     let params = request.get("params");
     let params = params.as_deref().unwrap_or(&null);
@@ -1247,7 +1300,16 @@ fn call_tool(registry: &Rc<RefCell<Registry<'_>>>, request: &JsonValue) -> Handl
     };
     let arguments = params.get("arguments").map(|v| v.into_owned());
     let (result, ticks) = match run_tool(registry, &name, arguments.as_ref()) {
-        Ok(done) => done,
+        Ok(ToolRun::Done(done)) => done,
+        Ok(ToolRun::Await { call, then }) => {
+            let mut registry = registry.borrow_mut();
+            registry.inflight.push((ticket, then));
+            registry.host_calls.push((ticket, call));
+            return HandlerOutcome {
+                reply: Reply::ToolLater(ticket),
+                ticks: None,
+            };
+        }
         // `error instanceof Error ? error.message : String(error)`
         Err((message, ticks)) => (create_tool_error(&message), ticks),
     };
@@ -1257,13 +1319,22 @@ fn call_tool(registry: &Rc<RefCell<Registry<'_>>>, request: &JsonValue) -> Handl
     }
 }
 
+/// how far the `try` of the `tools/call` handler got
+enum ToolRun<'h> {
+    Done((JsonValue, u32)),
+    Await {
+        call: HostCall,
+        then: Continuation<'h>,
+    },
+}
+
 /// the body of the `try` of the `tools/call` handler; `Err` is the message
 /// of what it threw
-fn run_tool(
-    registry: &Rc<RefCell<Registry<'_>>>,
+fn run_tool<'h>(
+    registry: &Rc<RefCell<Registry<'h>>>,
     name: &str,
     arguments: Option<&JsonValue>,
-) -> Result<(JsonValue, u32), (String, u32)> {
+) -> Result<ToolRun<'h>, (String, u32)> {
     let (tool_callback, input_schema, max_elements) = {
         let registry = registry.borrow();
         match registry.tools.get(name) {
@@ -1342,23 +1413,16 @@ fn run_tool(
     // `executeToolHandler`
     let answer = (tool_callback.borrow_mut())(args.as_ref());
     match answer {
-        Ok(returned) => {
+        CallStep::Done(returned) => {
             let ticks = match (has_schema, returned.rejected) {
                 (true, false) => TICKS_CALL_SCHEMA,
                 (true, true) => TICKS_CALL_SCHEMA_REJECTED,
                 (false, false) => TICKS_CALL_PLAIN,
                 (false, true) => TICKS_CALL_PLAIN_REJECTED,
             };
-            Ok((returned.result, ticks))
+            Ok(ToolRun::Done((returned.result, ticks)))
         }
-        Err(message) => Err((
-            message,
-            if has_schema {
-                TICKS_CALL_SCHEMA_REJECTED
-            } else {
-                TICKS_CALL_PLAIN_REJECTED
-            },
-        )),
+        CallStep::Await { call, then } => Ok(ToolRun::Await { call, then }),
     }
 }
 
@@ -1381,5 +1445,35 @@ impl SessionServer for McpServer<'_> {
 
     fn take_aborted(&mut self) -> Vec<Aborted> {
         self.server.take_aborted()
+    }
+
+    fn take_host_calls(&mut self) -> Vec<(Ticket, HostCall)> {
+        std::mem::take(&mut self.registry.borrow_mut().host_calls)
+    }
+
+    /// the promise of the tool callback settles after its awaited call did:
+    /// the rest runs, and at the end the response is written as for any
+    /// request that answered later (nothing when its request was aborted)
+    fn resume_tool(&mut self, ticket: Ticket, settled: Settled) -> Vec<Outgoing> {
+        let continuation = {
+            let mut registry = self.registry.borrow_mut();
+            let Some(at) = registry.inflight.iter().position(|(t, _)| *t == ticket) else {
+                return Vec::new();
+            };
+            registry.inflight.remove(at).1
+        };
+        match continuation(settled) {
+            CallStep::Done(returned) => self.server.settle(ticket, Ok(returned.result)),
+            CallStep::Await { call, then } => {
+                let mut registry = self.registry.borrow_mut();
+                registry.inflight.push((ticket, then));
+                registry.host_calls.push((ticket, call));
+                Vec::new()
+            }
+        }
+    }
+
+    fn has_pending_tools(&self) -> bool {
+        !self.registry.borrow().inflight.is_empty()
     }
 }

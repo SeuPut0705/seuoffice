@@ -15,7 +15,12 @@
  * - tools: tool descriptors `{ name, description, schema?, handler }`; `schema`
  *   is a shape descriptor of zod.ts (`[[key, desc], ...]`), `handler` is
  *   `{ returns: v }`, `{ undefined: true }`, `{ throws: text }`, `{ echo: true }` or
- *   `{ counter: true }` (a number per call, one count per tool object).
+ *   `{ counter: true }` (a number per call, one count per tool object) or
+ *   `{ answers: true }` (the list of what its awaits answered). Any of them may
+ *   be preceded by awaits: `{ awaits: [{ control, method, args? }], then: handler }`,
+ *   each await a host call the script settles with a `resume` step (`call` its
+ *   number in order of issue, `result` or `error`); `"$args"` in `args` is the
+ *   tool's arguments. A call shows as `calls: ["call N: Control.method [args]"]`.
  * - mode: `tools` (the fixed set, the default), `factory` (`toolsFactory`, a
  *   fresh set per client session) or `server` (`serverFactory` over the SDK's
  *   low-level Server: `{ name, version, instructions?, capabilities?,
@@ -27,7 +32,8 @@
  *   that many SSE frames), `read` (more frames of an open stream), `close`,
  *   `tick` (ms of the fake clock: the heartbeats and the start retry delay),
  *   `block` / `unblock` (another program holds the fixed port), `start`
- *   (`fixed: true` for the blocked port; not awaited), `stop`, `state`.
+ *   (`fixed: true` for the blocked port; not awaited), `stop`, `state`, `settle`
+ *   (a deferred server's call), `resume` (a tool's awaited host call).
  * Placeholders in headers and paths: `$PORT`, `$SID1`, `$SID2` (the session
  * ids in the order they first appear). The answers show the port as `$PORT`
  * and the ids as `<sid1>`, a duration as `<n>ms`.
@@ -84,7 +90,42 @@ interface Scenario {
   steps: Step[]
 }
 
-function handlerOf(spec: Record<string, unknown>): (args: Record<string, unknown>) => unknown {
+interface AwaitSpec {
+  control: string
+  method: string
+  args?: unknown[]
+}
+
+/** the host calls the tools await: the script settles them by `resume` steps */
+interface HostCalls {
+  pending: { resolve: (value: unknown) => void; reject: (error: unknown) => void }[]
+  lines: string[]
+}
+
+function handlerOf(
+  spec: Record<string, unknown>,
+  host: HostCalls,
+): (args: Record<string, unknown>) => unknown {
+  const then = thenOf(spec.then === undefined ? spec : (spec.then as Record<string, unknown>))
+  const awaits = (spec.awaits ?? []) as AwaitSpec[]
+  if (awaits.length === 0) return (args) => then(args, [])
+  return async (args) => {
+    const answers: unknown[] = []
+    for (const a of awaits) {
+      const callArgs = (a.args ?? []).map((v) => (v === '$args' ? args : v))
+      host.lines.push(
+        `call ${host.pending.length + 1}: ${a.control}.${a.method} ${JSON.stringify(callArgs)}`,
+      )
+      answers.push(await new Promise((resolve, reject) => host.pending.push({ resolve, reject })))
+    }
+    return then(args, answers)
+  }
+}
+
+/** what a tool does after its awaits: answers them, or returns/throws what the case says */
+function thenOf(
+  spec: Record<string, unknown>,
+): (args: Record<string, unknown>, answers: unknown[]) => unknown {
   if ('returns' in spec) return () => spec.returns
   if (spec.undefined === true) return () => undefined
   if ('throws' in spec) {
@@ -93,6 +134,7 @@ function handlerOf(spec: Record<string, unknown>): (args: Record<string, unknown
     }
   }
   if (spec.echo === true) return (args) => args
+  if (spec.answers === true) return (_args, answers) => answers
   if (spec.counter === true) {
     let n = 0
     return () => ++n
@@ -100,12 +142,12 @@ function handlerOf(spec: Record<string, unknown>): (args: Record<string, unknown
   throw new Error(`unknown handler ${JSON.stringify(spec)}`)
 }
 
-function toolsOf(specs: ToolSpec[]) {
+function toolsOf(specs: ToolSpec[], host: HostCalls) {
   return specs.map((t) => ({
     name: t.name,
     description: t.description,
     ...(t.schema !== undefined ? { inputSchema: shapeOf(t.schema) as z.ZodRawShape } : {}),
-    handler: handlerOf(t.handler),
+    handler: handlerOf(t.handler, host),
   }))
 }
 
@@ -183,7 +225,8 @@ async function scenario(scenarioArg: unknown, cx: TsContext): Promise<unknown> {
   mock.timers.enable({ apis: ['setInterval', 'setTimeout'] })
 
   const deferred: Deferred = { calls: [], aborts: [] }
-  const toolsFactory = () => toolsOf(spec.tools ?? [])
+  const host: HostCalls = { pending: [], lines: [] }
+  const toolsFactory = () => toolsOf(spec.tools ?? [], host)
   const service = new McpServerService({
     port: 0,
     logger: (message) => logs.push(message),
@@ -420,6 +463,13 @@ async function scenario(scenarioArg: unknown, cx: TsContext): Promise<unknown> {
           await settle()
           break
         }
+        case 'resume': {
+          const call = host.pending[Number(step.call) - 1]
+          if ('error' in step) call.reject(new Error(String(step.error)))
+          else call.resolve(step.result)
+          await settle()
+          break
+        }
         case 'settle': {
           const call = deferred.calls[Number(step.call) - 1]
           if ('error' in step) {
@@ -457,6 +507,7 @@ async function scenario(scenarioArg: unknown, cx: TsContext): Promise<unknown> {
       }
       void outcome
       if (deferred.aborts.length) out.aborts = deferred.aborts.splice(0)
+      if (host.lines.length) out.calls = host.lines.splice(0)
       const lines = logs.splice(0)
       if (lines.length) out.logs = lines.map(norm)
       results.push(out)
@@ -1353,6 +1404,184 @@ const deferred = scenarios(
   },
 )
 
+const await1 = (method: string, ...args: unknown[]) => ({ control: 'DocsControl', method, args })
+const AWAIT_TOOLS: ToolSpec[] = [
+  {
+    name: 'read',
+    description: 'Reads through a control',
+    schema: [['path', ['string']]],
+    handler: { awaits: [await1('read', '$args')], then: { answers: true } },
+  },
+  {
+    name: 'two',
+    description: 'Two awaits',
+    handler: {
+      awaits: [await1('first'), { control: 'SlidesControl', method: 'second', args: [1, 'x'] }],
+      then: { answers: true },
+    },
+  },
+  {
+    name: 'finally_throws',
+    description: 'Throws after an await',
+    handler: { awaits: [await1('check')], then: { throws: 'failed after await' } },
+  },
+  {
+    name: 'plain_after',
+    description: 'A string after an await',
+    handler: { awaits: [await1('ping')], then: { returns: 'done' } },
+  },
+  { name: 'now', description: 'No await', handler: { returns: 'immediately' } },
+  { name: 'count', description: 'A counter', handler: { counter: true } },
+]
+const tool = (id: number, name: string, args?: unknown, open?: string, sid = 1) =>
+  post(
+    rpc(id, 'tools/call', { name, ...(args !== undefined ? { arguments: args } : {}) }),
+    sid,
+    {},
+    open ? { open } : {},
+  )
+const resume = (call: number, result?: unknown): Step => ({
+  op: 'resume',
+  call,
+  ...(result !== undefined ? { result } : {}),
+})
+const resumeError = (call: number, error: string): Step => ({ op: 'resume', call, error })
+
+const awaiting = scenarios(
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'read', { path: 'a.docx' }, 'a'),
+      resume(1, { text: 'hello', n: 2 }),
+      { op: 'read', id: 'a' },
+      tool(3, 'read', { path: 5 }),
+      tool(4, 'plain_after', undefined, 'b'),
+      resume(2),
+      { op: 'read', id: 'b' },
+      tool(5, 'plain_after', undefined, 'c'),
+      resume(3, null),
+      { op: 'read', id: 'c' },
+      tool(6, 'now'),
+      resume(1, 'again'),
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'finally_throws', undefined, 'a'),
+      resume(1, 'ok'),
+      { op: 'read', id: 'a' },
+      tool(3, 'read', { path: 'b' }, 'b'),
+      resumeError(2, 'renderer gone'),
+      { op: 'read', id: 'b' },
+      tool(4, 'two', undefined, 'c'),
+      resume(3, 'one'),
+      resumeError(4, 'second failed'),
+      { op: 'read', id: 'c' },
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'two', undefined, 'a'),
+      { op: 'tick', ms: 15000 },
+      resume(1, 'one'),
+      { op: 'read', id: 'a' },
+      resume(2, { k: [1, 2] }),
+      { op: 'read', id: 'a' },
+      resume(2, 'second time'),
+      resume(1, 'second time'),
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'read', { path: 'a' }, 'a'),
+      tool(3, 'two', undefined, 'b'),
+      tool(4, 'now'),
+      tool(5, 'read', { path: 'c' }, 'c'),
+      resume(3, 'c answer'),
+      { op: 'read', id: 'c' },
+      resume(2, 'b one'),
+      resume(4, 'b second'),
+      { op: 'read', id: 'b' },
+      resume(1, 'a answer'),
+      { op: 'read', id: 'a' },
+      post(
+        [
+          rpc(6, 'tools/call', { name: 'read', arguments: { path: 'x' } }),
+          rpc(7, 'tools/call', { name: 'now' }),
+          rpc(8, 'ping'),
+        ],
+        1,
+        {},
+        { open: 'batch', frames: 2 },
+      ),
+      resume(5, 'batched'),
+      { op: 'read', id: 'batch' },
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'two', undefined, 'a'),
+      tool(3, 'read', { path: 'z' }, 'z'),
+      post(notice('notifications/cancelled', { requestId: 2, reason: 'stop' }), 1),
+      resume(1, 'one'),
+      resume(2, 'second'),
+      { op: 'read', id: 'a' },
+      resume(3, 'still answered'),
+      { op: 'read', id: 'z' },
+      tool(4, 'read', { path: 'd' }, 'd'),
+      request('DELETE', '/mcp', { 'mcp-session-id': '$SID1' }),
+      resume(4, 'late'),
+      { op: 'read', id: 'd' },
+      tool(5, 'now', undefined, undefined, 1),
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    steps: [
+      ...OPEN,
+      tool(2, 'two', undefined, 'a'),
+      tool(3, 'read', { path: 'z' }, 'z'),
+      { op: 'stop' },
+      { op: 'read', id: 'a' },
+      resume(1, 'after stop'),
+      resume(2, 'after stop too'),
+      resume(3, 'orphan'),
+      { op: 'start' },
+      post(init()),
+      tool(2, 'read', { path: 'new' }, 'n', 2),
+      resume(4, 'fresh'),
+      { op: 'read', id: 'n' },
+    ],
+  },
+  {
+    tools: AWAIT_TOOLS,
+    mode: 'factory',
+    steps: [
+      get('/sse', { open: 's', frames: 1 }),
+      legacyPost(init()),
+      legacyPost(rpc(2, 'tools/call', { name: 'two' })),
+      legacyPost(rpc(3, 'tools/call', { name: 'read', arguments: { path: 'q' } })),
+      resume(1, 'legacy one'),
+      resume(3, 'q answer'),
+      { op: 'read', id: 's' },
+      resume(2, 'legacy second'),
+      { op: 'read', id: 's' },
+      legacyPost(rpc(4, 'tools/call', { name: 'finally_throws' })),
+      { op: 'close', id: 's' },
+      resume(4, 'x'),
+    ],
+  },
+)
+
 const lifecycle = scenarios(
   {
     tools: TOOLS,
@@ -1508,6 +1737,7 @@ const scenarioSpec: FnSpec = {
     ...legacy,
     ...modes,
     ...deferred,
+    ...awaiting,
     ...lifecycle,
   ],
 }

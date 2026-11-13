@@ -23,9 +23,13 @@
 //! and the lines of the logger. `crypto.randomUUID()` and `Date.now()` are
 //! asked of the [`McpHost`].
 //!
-//! The tools are called synchronously, as a [`ToolHandler`] returns a value:
-//! a tool whose TypeScript awaits host work is a plain call over a host trait
-//! (crates/README.md). A tool that has no `inputSchema` is called with `{}`
+//! A tool is a [`ToolHandler`]: a step function in the order of the TypeScript.
+//! Each renderer-bound `await` is a [`ToolStep::Await`]: the service issues
+//! `Command::ToolCall { session_id, ticket, call }` and the host answers with
+//! [`McpServerService::resume_tool`], which runs the rest of the tool. A tool
+//! runs to its end even when its request was cancelled or its session closed
+//! (the SDK listens to no signal for `McpServer` tools); only the response is
+//! not written then. A tool that has no `inputSchema` is called with `{}`
 //! where the SDK hands its callback the request's `extra` object.
 
 use std::cell::RefCell;
@@ -38,9 +42,9 @@ use url::Url;
 
 use crate::packages::i18n::{OLD_MCP_TOOL_NAMES, PRODUCT_NAME};
 use crate::packages::mcp_sdk::server::{
-    Aborted, Command, HandlerError, Io, McpServer, McpServerOptions, MessageExtra, Outgoing,
-    ResponseId, SdkIo, ServerOptions, SessionServer, SocketId, StartError, StartId, StopId, Ticket,
-    TimerId, ToolCallback, ToolConfig, ToolReturn,
+    Aborted, CallStep, Command, HandlerError, Io, McpServer, McpServerOptions, MessageExtra,
+    Outgoing, ResponseId, SdkIo, ServerOptions, SessionServer, SocketId, StartError, StartId,
+    StopId, Ticket, TimerId, ToolCallback, ToolConfig, ToolReturn,
 };
 use crate::packages::mcp_sdk::sse_server::SseServerTransport;
 use crate::packages::mcp_sdk::streamable_http_server::{
@@ -52,8 +56,30 @@ pub use crate::packages::mcp_sdk::server::{
     ListenerId, SdkHost as McpHost, SessionServer as McpSessionServer,
 };
 
-/// a tool handler: the parsed arguments (`args ?? {}`) in, the value (None = undefined) or the message of what it threw
-pub type ToolHandler<'h> = Box<dyn FnMut(JsonValue) -> Result<Option<JsonValue>, String> + 'h>;
+/// what a tool handler asks the host to do and wait for: the TS interface
+/// (`"DocsControl"`, `"SlidesControl"`, `"SheetsControl"`, `"OpenDocumentsControl"`,
+/// `"DiagramControl"`, `"FamilyDriver"`, `"TargetResolver"`, `"AgentSkillToolHooks"`, ...),
+/// its method as the TS names it, and the arguments in TS order as JSON
+#[derive(Debug, Clone, PartialEq)]
+pub struct HostCall {
+    pub control: &'static str,
+    pub method: &'static str,
+    pub args: Vec<JsonValue>,
+}
+
+/// how the awaited call settled: its value (None = undefined) or the message it threw
+pub type Settled = Result<Option<JsonValue>, String>;
+
+pub enum ToolStep<'h> {
+    Done(Settled),
+    Await {
+        call: HostCall,
+        then: Box<dyn FnOnce(Settled) -> ToolStep<'h> + 'h>,
+    },
+}
+
+/// a tool handler: the parsed arguments (`args ?? {}`) in, the steps of the tool out
+pub type ToolHandler<'h> = Box<dyn FnMut(JsonValue) -> ToolStep<'h> + 'h>;
 
 /// `McpToolDefinition`
 pub struct McpToolDefinition<'h> {
@@ -180,6 +206,18 @@ impl SessionServer for AnsweringOldToolNames<'_> {
     fn take_aborted(&mut self) -> Vec<Aborted> {
         self.inner.take_aborted()
     }
+
+    fn take_host_calls(&mut self) -> Vec<(Ticket, HostCall)> {
+        self.inner.take_host_calls()
+    }
+
+    fn resume_tool(&mut self, ticket: Ticket, settled: Settled) -> Vec<Outgoing> {
+        self.inner.resume_tool(ticket, settled)
+    }
+
+    fn has_pending_tools(&self) -> bool {
+        self.inner.has_pending_tools()
+    }
 }
 
 struct StreamableSession<'h> {
@@ -232,7 +270,8 @@ fn object(entries: Vec<(&str, JsonValue)>) -> JsonValue {
 }
 
 /// The callback `createSessionServer` registers for a tool: runs the tool,
-/// logs, and turns what it threw into an `isError` result.
+/// logs when its promise settles, and turns what it threw into an `isError`
+/// result.
 fn tool_callback<'h>(
     io: Io,
     name: String,
@@ -244,38 +283,54 @@ fn tool_callback<'h>(
             Some(args) => args.clone(),
             None => JsonValue::Object(JsObject::new()),
         };
-        let outcome = (handler.borrow_mut())(args);
-        let elapsed = number_to_string(io.now_ms() - started);
-        match outcome {
-            Ok(result) => {
-                io.log(format!("[mcp] tool {name} ok ({elapsed}ms)"));
-                let mut block = vec![("type", JsonValue::String("text".into()))];
-                if let Some(text) = stringify_result(result.as_ref()) {
-                    block.push(("text", JsonValue::String(text)));
-                }
-                Ok(ToolReturn {
-                    result: object(vec![("content", JsonValue::Array(vec![object(block)]))]),
-                    rejected: false,
-                })
-            }
-            Err(message) => {
-                io.log(format!("[mcp] tool {name} error ({elapsed}ms): {message}"));
-                Ok(ToolReturn {
-                    result: object(vec![
-                        (
-                            "content",
-                            JsonValue::Array(vec![object(vec![
-                                ("type", JsonValue::String("text".into())),
-                                ("text", JsonValue::String(message)),
-                            ])]),
-                        ),
-                        ("isError", JsonValue::Bool(true)),
-                    ]),
-                    rejected: true,
-                })
-            }
-        }
+        let step = (handler.borrow_mut())(args);
+        wrapped(Rc::clone(&io), name.clone(), started, step)
     }))
+}
+
+/// the wrapper around `await tool.handler(args ?? {})`, from one step on
+fn wrapped<'h>(io: Io, name: String, started: f64, step: ToolStep<'h>) -> CallStep<'h> {
+    match step {
+        ToolStep::Await { call, then } => CallStep::Await {
+            call,
+            then: Box::new(move |settled| {
+                let next = then(settled);
+                wrapped(io, name, started, next)
+            }),
+        },
+        ToolStep::Done(outcome) => {
+            let elapsed = number_to_string(io.now_ms() - started);
+            CallStep::Done(match outcome {
+                Ok(result) => {
+                    io.log(format!("[mcp] tool {name} ok ({elapsed}ms)"));
+                    let mut block = vec![("type", JsonValue::String("text".into()))];
+                    if let Some(text) = stringify_result(result.as_ref()) {
+                        block.push(("text", JsonValue::String(text)));
+                    }
+                    ToolReturn {
+                        result: object(vec![("content", JsonValue::Array(vec![object(block)]))]),
+                        rejected: false,
+                    }
+                }
+                Err(message) => {
+                    io.log(format!("[mcp] tool {name} error ({elapsed}ms): {message}"));
+                    ToolReturn {
+                        result: object(vec![
+                            (
+                                "content",
+                                JsonValue::Array(vec![object(vec![
+                                    ("type", JsonValue::String("text".into())),
+                                    ("text", JsonValue::String(message)),
+                                ])]),
+                            ),
+                            ("isError", JsonValue::Bool(true)),
+                        ]),
+                        rejected: true,
+                    }
+                }
+            })
+        }
+    }
 }
 
 /// `headerValue(req.headers[name])` of a header Node keeps as one string
@@ -302,8 +357,16 @@ fn parse_url(text: &str, base: &str) -> Result<Url, ()> {
         .map_err(|_| ())
 }
 
-/// the signals that fired in a session's server, as commands
-fn drain_aborted(io: &Io, server: &mut dyn SessionServer) {
+/// what a session's server left for the caller: the awaits its tools started
+/// and the signals that fired, as commands
+fn drain_server(io: &Io, session_id: &str, server: &mut dyn SessionServer) {
+    for (ticket, call) in server.take_host_calls() {
+        io.push(Command::ToolCall {
+            session_id: session_id.to_owned(),
+            ticket,
+            call,
+        });
+    }
     for aborted in server.take_aborted() {
         io.push(Command::Aborted(aborted));
     }
@@ -337,6 +400,8 @@ pub struct McpServerService<'h> {
     /// every `http.Server` made, with whether its promise settled
     listeners: Vec<(ListenerId, bool)>,
     pending_stops: Vec<(ListenerId, StopId)>,
+    /// servers of sessions that ended while a tool of theirs still runs
+    orphans: Vec<(String, Box<dyn SessionServer + 'h>)>,
     next_start: u32,
     next_stop: u32,
     next_listener: u32,
@@ -366,6 +431,7 @@ impl<'h> McpServerService<'h> {
             starts: Vec::new(),
             listeners: Vec::new(),
             pending_stops: Vec::new(),
+            orphans: Vec::new(),
             next_start: 1,
             next_stop: 1,
             next_listener: 1,
@@ -708,10 +774,28 @@ impl<'h> McpServerService<'h> {
             .handle_request(res, req, parsed_body, &[], &mut *session.server);
         if session.transport.take_closed() {
             session.server.on_close();
-            drain_aborted(&self.io, &mut *session.server);
-            self.streamable.delete(key);
+            drain_server(&self.io, key, &mut *session.server);
+            self.retire_streamable(key);
         } else {
-            drain_aborted(&self.io, &mut *session.server);
+            drain_server(&self.io, key, &mut *session.server);
+        }
+    }
+
+    /// a streamable session ended: it is forgotten, but its tools run on
+    fn retire_streamable(&mut self, key: &str) {
+        if let Some(session) = self.streamable.delete(key)
+            && session.server.has_pending_tools()
+        {
+            self.orphans.push((key.to_owned(), session.server));
+        }
+    }
+
+    /// a legacy session ended: it is forgotten, but its tools run on
+    fn retire_legacy(&mut self, key: &str) {
+        if let Some(session) = self.legacy.delete(key)
+            && session.server.has_pending_tools()
+        {
+            self.orphans.push((key.to_owned(), session.server));
         }
     }
 
@@ -783,9 +867,9 @@ impl<'h> McpServerService<'h> {
             if let Some(session) = self.legacy.get_mut(&id) {
                 session.transport.on_response_closed();
                 session.server.on_close();
-                drain_aborted(&self.io, &mut *session.server);
+                drain_server(&self.io, &id, &mut *session.server);
             }
-            self.legacy.delete(&id);
+            self.retire_legacy(&id);
         }
     }
 
@@ -835,7 +919,7 @@ impl<'h> McpServerService<'h> {
         if session.transport.take_closed() {
             session.server.on_close();
         }
-        drain_aborted(&self.io, &mut *session.server);
+        drain_server(&self.io, &session_id, &mut *session.server);
         outcome.map_err(|message| format!("Error: {message}"))
     }
 
@@ -1191,23 +1275,32 @@ impl<'h> McpServerService<'h> {
             if let Some(session) = self.legacy.get_mut(&key) {
                 session.transport.close();
                 session.server.on_close();
-                drain_aborted(&self.io, &mut *session.server);
+                drain_server(&self.io, &key, &mut *session.server);
                 let res = session.res;
                 if let Some(heartbeat) = self.heartbeats.iter_mut().find(|h| h.res == res) {
                     heartbeat.ended = true;
                 }
             }
         }
-        self.legacy.clear();
+        for key in self.legacy.keys().map(str::to_owned).collect::<Vec<_>>() {
+            self.retire_legacy(&key);
+        }
         let keys: Vec<String> = self.streamable.keys().map(str::to_owned).collect();
         for key in keys {
             if let Some(session) = self.streamable.get_mut(&key) {
                 session.transport.close();
                 session.server.on_close();
-                drain_aborted(&self.io, &mut *session.server);
+                drain_server(&self.io, &key, &mut *session.server);
             }
         }
-        self.streamable.clear();
+        for key in self
+            .streamable
+            .keys()
+            .map(str::to_owned)
+            .collect::<Vec<_>>()
+        {
+            self.retire_streamable(&key);
+        }
         for socket in std::mem::take(&mut self.sockets) {
             self.io.push(Command::DestroySocket { socket });
         }
@@ -1231,11 +1324,42 @@ impl<'h> McpServerService<'h> {
         if let Some(session) = self.streamable.get_mut(session_id) {
             let outgoing = session.server.settle(ticket, result);
             session.transport.send_outgoing(outgoing);
-            drain_aborted(&self.io, &mut *session.server);
+            drain_server(&self.io, session_id, &mut *session.server);
         } else if let Some(session) = self.legacy.get_mut(session_id) {
             let outgoing = session.server.settle(ticket, result);
             session.transport.send_outgoing(outgoing);
-            drain_aborted(&self.io, &mut *session.server);
+            drain_server(&self.io, session_id, &mut *session.server);
+        }
+        self.io.take()
+    }
+
+    /// the host call a tool awaited (`Command::ToolCall`) settled: the rest of
+    /// the tool runs, and at its end the response is written where the SDK
+    /// writes it (the SSE stream of the POST that carried the call, or the
+    /// legacy SSE stream), with the `[mcp] tool ... ok|error` line logged.
+    /// A call whose request was cancelled, or whose session ended, still runs
+    /// (and logs) to its end; its response is not written.
+    pub fn resume_tool(
+        &mut self,
+        session_id: &str,
+        ticket: Ticket,
+        answer: Settled,
+    ) -> Vec<Command> {
+        if let Some(session) = self.streamable.get_mut(session_id) {
+            let outgoing = session.server.resume_tool(ticket, answer);
+            session.transport.send_outgoing(outgoing);
+            drain_server(&self.io, session_id, &mut *session.server);
+        } else if let Some(session) = self.legacy.get_mut(session_id) {
+            let outgoing = session.server.resume_tool(ticket, answer);
+            session.transport.send_outgoing(outgoing);
+            drain_server(&self.io, session_id, &mut *session.server);
+        } else if let Some(at) = self.orphans.iter().position(|(id, _)| id == session_id) {
+            let server = &mut self.orphans[at].1;
+            server.resume_tool(ticket, answer);
+            drain_server(&self.io, session_id, &mut **server);
+            if !server.has_pending_tools() {
+                self.orphans.remove(at);
+            }
         }
         self.io.take()
     }

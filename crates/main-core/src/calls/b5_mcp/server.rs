@@ -10,7 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use jscompat::{JsonValue, json_value_from_serde};
+use jscompat::{JsonValue, json_stringify, json_value_from_serde};
 use serde_json::{Map, Value};
 
 use super::super::{Answer, CallError, Context, arg, print_js};
@@ -21,7 +21,8 @@ use crate::packages::mcp_sdk::server::{
 };
 use crate::packages::mcp_sdk::streamable_http_server::HttpRequest;
 use crate::shell::mcp::mcp_server::{
-    McpHost, McpServerService, McpServerServiceOptions, McpToolDefinition,
+    HostCall, McpHost, McpServerService, McpServerServiceOptions, McpToolDefinition, Settled,
+    ToolHandler, ToolStep,
 };
 
 /// the port the system picks for port 0
@@ -57,38 +58,133 @@ fn text(value: &str) -> Value {
     Value::String(value.to_owned())
 }
 
+/// what a tool does after its awaits
+enum Then {
+    Returns(JsonValue),
+    Throws(String),
+    Echo,
+    Answers,
+    Counter(Rc<Cell<f64>>),
+    Nothing,
+}
+
+struct AwaitSpec {
+    control: &'static str,
+    method: &'static str,
+    args: Vec<Value>,
+}
+
+fn finish(then: &Then, args: &JsonValue, answers: Vec<JsonValue>) -> Settled {
+    match then {
+        Then::Returns(value) => Ok(Some(value.clone())),
+        Then::Throws(message) => Err(message.clone()),
+        Then::Echo => Ok(Some(args.clone())),
+        Then::Answers => Ok(Some(JsonValue::Array(answers))),
+        Then::Counter(n) => {
+            n.set(n.get() + 1.0);
+            Ok(Some(JsonValue::Number(n.get())))
+        }
+        Then::Nothing => Ok(None),
+    }
+}
+
+/// the tool from its `idx`-th await on
+fn tool_step(
+    awaits: Rc<Vec<AwaitSpec>>,
+    idx: usize,
+    args: JsonValue,
+    answers: Vec<JsonValue>,
+    then: Rc<Then>,
+) -> ToolStep<'static> {
+    let Some(a) = awaits.get(idx) else {
+        return ToolStep::Done(finish(&then, &args, answers));
+    };
+    let call = HostCall {
+        control: a.control,
+        method: a.method,
+        args: a
+            .args
+            .iter()
+            .map(|v| {
+                if v == "$args" {
+                    args.clone()
+                } else {
+                    json_value_from_serde(v)
+                }
+            })
+            .collect(),
+    };
+    ToolStep::Await {
+        call,
+        then: Box::new(move |settled| match settled {
+            Err(message) => ToolStep::Done(Err(message)),
+            Ok(value) => {
+                let mut answers = answers;
+                answers.push(value.unwrap_or(JsonValue::Null));
+                tool_step(awaits, idx + 1, args, answers, then)
+            }
+        }),
+    }
+}
+
+/// a tool's handler from its descriptor
+fn handler_of(spec: &Value) -> ToolHandler<'static> {
+    let body = spec.get("then").unwrap_or(spec);
+    let then = Rc::new(if let Some(value) = body.get("returns") {
+        Then::Returns(json_value_from_serde(value))
+    } else if let Some(message) = body.get("throws") {
+        Then::Throws(message.as_str().unwrap_or("").to_owned())
+    } else if body.get("echo") == Some(&Value::Bool(true)) {
+        Then::Echo
+    } else if body.get("answers") == Some(&Value::Bool(true)) {
+        Then::Answers
+    } else if body.get("counter") == Some(&Value::Bool(true)) {
+        Then::Counter(Rc::new(Cell::new(0.0)))
+    } else {
+        Then::Nothing
+    });
+    let awaits: Rc<Vec<AwaitSpec>> = Rc::new(
+        spec.get("awaits")
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .map(|a| AwaitSpec {
+                        control: Box::leak(
+                            a["control"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_owned()
+                                .into_boxed_str(),
+                        ),
+                        method: Box::leak(
+                            a["method"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_owned()
+                                .into_boxed_str(),
+                        ),
+                        args: a
+                            .get("args")
+                            .and_then(Value::as_array)
+                            .cloned()
+                            .unwrap_or_default(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+    );
+    Box::new(move |args| tool_step(Rc::clone(&awaits), 0, args, Vec::new(), Rc::clone(&then)))
+}
+
 /// the tools a descriptor list names
 fn tools_of(specs: &[Value]) -> Vec<McpToolDefinition<'static>> {
     specs
         .iter()
-        .map(|spec| {
-            let handler = spec.get("handler").cloned().unwrap_or(Value::Null);
-            let mut counter = 0.0;
-            let returns = handler.get("returns").map(json_value_from_serde);
-            let throws = handler
-                .get("throws")
-                .map(|v| v.as_str().unwrap_or("").to_owned());
-            let echo = handler.get("echo") == Some(&Value::Bool(true));
-            let count = handler.get("counter") == Some(&Value::Bool(true));
-            McpToolDefinition {
-                name: spec["name"].as_str().unwrap_or("").to_owned(),
-                description: spec["description"].as_str().unwrap_or("").to_owned(),
-                input_schema: spec.get("schema").map(shape_of),
-                handler: Box::new(move |args| {
-                    if let Some(returns) = &returns {
-                        Ok(Some(returns.clone()))
-                    } else if let Some(message) = &throws {
-                        Err(message.clone())
-                    } else if echo {
-                        Ok(Some(args))
-                    } else if count {
-                        counter += 1.0;
-                        Ok(Some(JsonValue::Number(counter)))
-                    } else {
-                        Ok(None)
-                    }
-                }),
-            }
+        .map(|spec| McpToolDefinition {
+            name: spec["name"].as_str().unwrap_or("").to_owned(),
+            description: spec["description"].as_str().unwrap_or("").to_owned(),
+            input_schema: spec.get("schema").map(shape_of),
+            handler: handler_of(spec.get("handler").unwrap_or(&Value::Null)),
         })
         .collect()
 }
@@ -277,6 +373,9 @@ struct World {
     open: Vec<(String, ResponseId, usize)>,
     calls: Calls,
     aborts: Vec<String>,
+    /// the host calls tools awaited: session and ticket, in order of issue
+    tool_calls: Vec<(String, Ticket)>,
+    call_lines: Vec<String>,
 }
 
 fn frames_of(text: &str) -> Vec<String> {
@@ -433,6 +532,20 @@ impl World {
             Command::CloseListener { listener } => {
                 self.bound.retain(|(held, _)| *held != listener);
                 queue.push_back(Item::Closed(listener));
+            }
+            Command::ToolCall {
+                session_id,
+                ticket,
+                call,
+            } => {
+                self.tool_calls.push((session_id, ticket));
+                self.call_lines.push(format!(
+                    "call {}: {}.{} {}",
+                    self.tool_calls.len(),
+                    call.control,
+                    call.method,
+                    json_stringify(&JsonValue::Array(call.args))
+                ));
             }
             Command::Aborted(aborted) => {
                 let n = self
@@ -743,6 +856,8 @@ fn scenario(spec: &Value) -> Answer {
         open: Vec::new(),
         calls: Rc::clone(&calls),
         aborts: Vec::new(),
+        tool_calls: Vec::new(),
+        call_lines: Vec::new(),
     };
     if spec.get("start") != Some(&Value::Bool(false)) {
         let (_, commands) = world.service.start(Some(0.0));
@@ -805,6 +920,17 @@ fn scenario(spec: &Value) -> Answer {
             "stop" => {
                 let (id, commands) = world.service.stop();
                 world.stopped.push((id, false));
+                world.run(commands);
+            }
+            "resume" => {
+                let n = step["call"].as_f64().unwrap_or(0.0) as usize;
+                let (session, ticket) = world.tool_calls[n - 1].clone();
+                let answer: Settled = if let Some(message) = step.get("error") {
+                    Err(message.as_str().unwrap_or("").to_owned())
+                } else {
+                    Ok(step.get("result").map(json_value_from_serde))
+                };
+                let commands = world.service.resume_tool(&session, ticket, answer);
                 world.run(commands);
             }
             "settle" => {
@@ -875,6 +1001,13 @@ fn scenario(spec: &Value) -> Answer {
             let lines = std::mem::take(&mut world.aborts);
             out.insert(
                 "aborts".to_owned(),
+                Value::Array(lines.into_iter().map(Value::String).collect()),
+            );
+        }
+        if !world.call_lines.is_empty() {
+            let lines = std::mem::take(&mut world.call_lines);
+            out.insert(
+                "calls".to_owned(),
                 Value::Array(lines.into_iter().map(Value::String).collect()),
             );
         }

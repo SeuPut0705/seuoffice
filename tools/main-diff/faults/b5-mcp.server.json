@@ -198,8 +198,8 @@
   {
     "name": "server legacy session kept after close",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "            self.legacy.delete(&id);\n        }\n    }\n\n    fn handle_legacy_message",
-    "replace": "        }\n    }\n\n    fn handle_legacy_message",
+    "find": "self.retire_legacy(&id);",
+    "replace": "",
     "fn": ["mcp-server.scenario"]
   },
   {
@@ -681,43 +681,120 @@
   {
     "name": "server stop does not report streamable aborts",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "                session.server.on_close();\n                drain_aborted(&self.io, &mut *session.server);\n            }\n        }\n        self.streamable.clear();",
-    "replace": "                session.server.on_close();\n            }\n        }\n        self.streamable.clear();",
+    "find": "session.server.on_close();\n                drain_server(&self.io, &key, &mut *session.server);\n            }\n        }\n        for key in self\n            .streamable",
+    "replace": "session.server.on_close();\n            }\n        }\n        for key in self\n            .streamable",
     "fn": ["mcp-server.scenario"]
   },
   {
     "name": "server stop does not report legacy aborts",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "                session.server.on_close();\n                drain_aborted(&self.io, &mut *session.server);\n                let res = session.res;",
-    "replace": "                session.server.on_close();\n                let res = session.res;",
+    "find": "drain_server(&self.io, &key, &mut *session.server);\n                let res = session.res;",
+    "replace": "let res = session.res;",
     "fn": ["mcp-server.scenario"]
   },
   {
     "name": "server legacy close does not report aborts",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "                session.transport.on_response_closed();\n                session.server.on_close();\n                drain_aborted(&self.io, &mut *session.server);",
-    "replace": "                session.transport.on_response_closed();\n                session.server.on_close();",
+    "find": "session.server.on_close();\n                drain_server(&self.io, &id, &mut *session.server);",
+    "replace": "session.server.on_close();",
     "fn": ["mcp-server.scenario"]
   },
   {
     "name": "server streamable cancel not reported",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "        } else {\n            drain_aborted(&self.io, &mut *session.server);\n        }\n    }",
-    "replace": "        }\n    }",
+    "find": "} else {\n            drain_server(&self.io, key, &mut *session.server);\n        }\n    }",
+    "replace": "}\n    }",
     "fn": ["mcp-server.scenario"]
   },
   {
     "name": "server legacy cancel not reported",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "        drain_aborted(&self.io, &mut *session.server);\n        outcome.map_err",
-    "replace": "        outcome.map_err",
+    "find": "drain_server(&self.io, &session_id, &mut *session.server);\n        outcome.map_err",
+    "replace": "outcome.map_err",
     "fn": ["mcp-server.scenario"]
   },
   {
     "name": "server settle skips legacy sessions",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
-    "find": "} else if let Some(session) = self.legacy.get_mut(session_id) {",
-    "replace": "} else if let Some(session) = self.legacy.get_mut(\"\") {",
+    "find": "} else if let Some(session) = self.legacy.get_mut(session_id) {\n            let outgoing = session.server.settle(",
+    "replace": "} else if let Some(session) = self.legacy.get_mut(\"\") {\n            let outgoing = session.server.settle(",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server drops tools of an ended streamable session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if let Some(session) = self.streamable.delete(key)\n            && session.server.has_pending_tools()",
+    "replace": "if let Some(session) = self.streamable.delete(key)\n            && false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server drops tools of an ended legacy session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if let Some(session) = self.legacy.delete(key)\n            && session.server.has_pending_tools()",
+    "replace": "if let Some(session) = self.legacy.delete(key)\n            && false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server never finds orphans to resume",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "self.orphans.iter().position(|(id, _)| id == session_id)",
+    "replace": "self.orphans.iter().position(|_| false)",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server keeps finished orphans",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "if !server.has_pending_tools() {\n                self.orphans.remove(at);",
+    "replace": "if false {\n                self.orphans.remove(at);",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server resume skips legacy sessions",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "} else if let Some(session) = self.legacy.get_mut(session_id) {\n            let outgoing = session.server.resume_tool",
+    "replace": "} else if let Some(session) = self.legacy.get_mut(\"\") {\n            let outgoing = session.server.resume_tool",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server tool call without its session",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "session_id: session_id.to_owned(),",
+    "replace": "session_id: String::new(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk abort reported for tools",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "let reports_abort = matches!(outcome.reply, Reply::Later(_));",
+    "replace": "let reports_abort = true;",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool response not written",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "CallStep::Done(returned) => self.server.settle(ticket, Ok(returned.result)),",
+    "replace": "CallStep::Done(_) => Vec::new(),",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk tool never pending",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "!self.registry.borrow().inflight.is_empty()",
+    "replace": "false",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk second await not issued",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "registry.host_calls.push((ticket, call));\n                Vec::new()",
+    "replace": "Vec::new()",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk first await not issued",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "            registry.inflight.push((ticket, then));\n            registry.host_calls.push((ticket, call));\n            return HandlerOutcome {",
+    "replace": "            registry.inflight.push((ticket, then));\n            return HandlerOutcome {",
     "fn": ["mcp-server.scenario"]
   }
 ]
