@@ -2,7 +2,7 @@
   "name": "@seuoffice/markdown",
   "productName": "SeuOffice Markdown",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "Markdown editor module: TipTap block editor over plain .md files, hosted by shell tabs",
   "main": "out/main/index.js",

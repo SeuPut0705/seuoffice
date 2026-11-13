@@ -4,8 +4,10 @@ defect: some precomposed dot-below+above-mark glyphs (e.g. U+1EAC) reuse the
 dot-below-only composition, dropping the circumflex/breve. Rebuilds them as
 <above-mark glyph components> + <dot-below component>. Advance widths untouched.
 
-Also renames the family to "Carlito GO" (OFL Reserved Font Name rule, since the
-glyph data is modified). Idempotent: files are rewritten only when changed.
+Also renames the family to "SeuOffice Sans GO": the glyph data is modified, and
+OFL 1.1 keeps the Reserved Font Name "Carlito" out of a Modified Version's
+name. The copyright, trademark and description records that name Carlito stay.
+Idempotent: files are rewritten only when changed.
 
 Usage:
   patch-carlito-vi.py            patch fonts in place
@@ -103,17 +105,23 @@ def fix(font, broken):
     return fixed
 
 
+FAMILY = "SeuOffice Sans GO"
+PS_FAMILY = "SeuOfficeSansGO"
+
+
 def rename(font):
     changed = False
     for rec in font["name"].names:
-        s = rec.toUnicode()
-        if "Carlito" not in s or "Carlito GO" in s or "CarlitoGO" in s:
+        if rec.nameID not in (1, 3, 4, 6, 16, 17):
             continue
+        s = rec.toUnicode()
+        # the earlier spellings of this build first, then the upstream name
         if rec.nameID == 6:  # PostScript name: no spaces
-            rec.string = s.replace("Carlito", "CarlitoGO")
-            changed = True
-        elif rec.nameID in (1, 3, 4, 16, 17):
-            rec.string = s.replace("Carlito", "Carlito GO")
+            new = s.replace("CarlitoGO", PS_FAMILY).replace("Carlito", PS_FAMILY)
+        else:
+            new = s.replace("Carlito GO", FAMILY).replace("Carlito", FAMILY)
+        if new != s:
+            rec.string = new
             changed = True
     return changed
 

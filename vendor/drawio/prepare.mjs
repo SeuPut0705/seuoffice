@@ -1,7 +1,7 @@
 /**
  * Build step of the diagram editor: puts the trimmed draw.io bundle at
  * apps/diagram/out/drawio/ (see bundle.mjs). Runs before every build and dev
- * run of @genoffice/diagram; a cached, verified download and an up-to-date
+ * run of @seuoffice/diagram; a cached, verified download and an up-to-date
  * output make it a no-op. Any failure (download, hash, cut) exits non-zero
  * so the build stops.
  *
