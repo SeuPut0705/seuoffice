@@ -780,7 +780,7 @@ mod tests {
     /// core thread, as the shell builds them
     struct World {
         net: Arc<HttpNet>,
-        core: Arc<CoreThread>,
+        core: Arc<dyn Thread>,
         services: Services,
         stop: Option<tokio::sync::oneshot::Sender<()>>,
         runner: Option<std::thread::JoinHandle<()>>,
@@ -788,10 +788,28 @@ mod tests {
 
     impl World {
         fn new() -> World {
-            let tokio_rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
+            World::build(None)
+        }
+
+        /// The host on a runtime of two threads, its posts to the core
+        /// thread through `gate`
+        fn gated(gate: Arc<Gate>) -> World {
+            World::build(Some(gate))
+        }
+
+        fn build(gate: Option<Arc<Gate>>) -> World {
+            let tokio_rt = if gate.is_some() {
+                tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(2)
+                    .enable_all()
+                    .build()
+                    .unwrap()
+            } else {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+            };
             let handle = tokio_rt.handle().clone();
             let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
             let runner = std::thread::spawn(move || {
@@ -802,8 +820,13 @@ mod tests {
             let spawn: Spawn = Arc::new(move |future| {
                 handle.spawn(future);
             });
-            let core = CoreThread::spawn("http-test-core");
-            let core_thread: Arc<dyn Thread> = core.clone();
+            let core_thread: Arc<dyn Thread> = match gate {
+                Some(gate) => Arc::new(Gated {
+                    core: CoreThread::spawn("http-test-core"),
+                    gate,
+                }),
+                None => CoreThread::spawn("http-test-core") as Arc<dyn Thread>,
+            };
             let views = Arc::new(ViewTable::new(
                 Arc::new(TauriOutlet::default()),
                 core_thread.clone(),
@@ -812,14 +835,14 @@ mod tests {
                 net: Arc::new(HttpNet::new(spawn)),
                 services: Services {
                     ui: CoreThread::spawn("http-test-ui"),
-                    core: core_thread,
+                    core: core_thread.clone(),
                     workers: Arc::new(ThreadWorkers) as Arc<dyn Workers>,
                     events: Arc::new(NoEvents),
                     views: views as Arc<dyn Views>,
                     paths: Arc::new(ShellPaths::new()),
                     hosts: Arc::new(Hosts::default()),
                 },
-                core,
+                core: core_thread,
                 stop: Some(stop),
                 runner: Some(runner),
             }
@@ -975,5 +998,142 @@ mod tests {
             );
         }
         assert_eq!(w.held_after_settling((0, 0, 0)), (0, 0, 0));
+    }
+
+    /// Holds the first post the host makes once armed (from a thread of its
+    /// runtime: not the core thread, not the AI runtime's timers) until it
+    /// is opened: the moment between a read's answer being decided and its
+    /// reaching the core thread
+    #[derive(Default)]
+    struct Gate {
+        armed: std::sync::atomic::AtomicBool,
+        held: std::sync::atomic::AtomicBool,
+        /// answers the host posted while the held one waited
+        overtaking: std::sync::atomic::AtomicUsize,
+        open: (Mutex<bool>, std::sync::Condvar),
+    }
+
+    impl Gate {
+        fn hold_here(&self) {
+            let by_host = std::thread::current()
+                .name()
+                .is_none_or(|name| name != "http-test-core" && name != "ai-runtime-timers");
+            if !by_host || !self.armed.load(Ordering::SeqCst) {
+                return;
+            }
+            if self.held.swap(true, Ordering::SeqCst) {
+                if !*self.open.0.lock().unwrap() {
+                    self.overtaking.fetch_add(1, Ordering::SeqCst);
+                }
+                return;
+            }
+            // the runtime's other tasks (the connection's among them) go on
+            // while this thread waits
+            tokio::task::block_in_place(|| {
+                let (open, opened) = &self.open;
+                let guard = open.lock().unwrap();
+                let _unused = opened
+                    .wait_timeout_while(guard, Duration::from_secs(5), |open| !*open)
+                    .unwrap();
+            });
+        }
+
+        fn open(&self) {
+            *self.open.0.lock().unwrap() = true;
+            self.open.1.notify_all();
+        }
+    }
+
+    struct Gated {
+        core: Arc<CoreThread>,
+        gate: Arc<Gate>,
+    }
+
+    impl Thread for Gated {
+        fn post(&self, job: Box<dyn FnOnce() + Send>) {
+            self.gate.hold_here();
+            self.core.post(job);
+        }
+
+        fn is_current(&self) -> bool {
+            self.core.is_current()
+        }
+    }
+
+    /// A read's chunk held on its way to the core thread while a later read
+    /// of the same body is made: no later answer may be posted before it
+    /// (a runtime that ends a body's pending reads with the first End it is
+    /// handed would end the earlier read without its chunk)
+    #[test]
+    fn a_later_read_is_not_answered_before_an_earlier_one() {
+        let gate = Arc::new(Gate::default());
+        let w = World::gated(gate.clone());
+        let url = serve_slowly();
+        let armed = gate.clone();
+        let opener = gate.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(600));
+            opener.open();
+        });
+        let order = w.run(move |rt| async move {
+            let response = std::rc::Rc::new(
+                rt.fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap(),
+            );
+            armed.armed.store(true, Ordering::SeqCst);
+            let order: std::rc::Rc<std::cell::RefCell<Vec<(u8, ReadOutcome)>>> =
+                std::rc::Rc::default();
+            let read = |n: u8| {
+                let (response, order) = (response.clone(), order.clone());
+                async move {
+                    let got = response.read().await.map_err(|e| e.message);
+                    order.borrow_mut().push((n, got));
+                }
+            };
+            rt.spawn_local(read(1));
+            rt.spawn_local(read(2));
+            // the first chunk is in and held at the gate by now
+            rt.sleep(150.0).await;
+            rt.spawn_local(read(3));
+            while order.borrow().len() < 3 {
+                rt.sleep(10.0).await;
+            }
+            order.take()
+        });
+        assert!(gate.held.load(Ordering::SeqCst), "the gate held no answer");
+        assert_eq!(
+            gate.overtaking.load(Ordering::SeqCst),
+            0,
+            "answers posted while an earlier one was on its way"
+        );
+        assert_eq!(
+            order.first(),
+            Some(&(1, Ok(Some(b"hello".to_vec())))),
+            "the reads ended in this order: {order:?}"
+        );
+    }
+
+    /// A chunked body: one chunk at once, its end 300 ms later
+    fn serve_slowly() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let _ = stream.write_all(
+                    b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+                      transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+                );
+                std::thread::sleep(Duration::from_millis(300));
+                let _ = stream.write_all(b"0\r\n\r\n");
+            }
+        });
+        address
     }
 }
