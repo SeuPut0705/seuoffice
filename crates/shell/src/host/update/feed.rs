@@ -943,6 +943,14 @@ releaseDate: '2026-11-14T00:00:00.000Z'
             assert_eq!(picked.url, "SeuOffice-0.13.0-mac.zip");
         }
         assert!(ChannelFile::parse("files:\n").is_none());
+        // the stable build's zip carries the channel in its name
+        let stable = ChannelFile::parse(
+            "version: 0.13.0\nfiles:\n  - url: SeuOffice-0.13.0-arm64-mac-stable.zip\n    sha512: DDD==\n  - url: SeuOffice-0.13.0-arm64-stable.dmg\n    sha512: EEE==\n",
+        )
+        .unwrap();
+        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+            assert_eq!(stable.pick().unwrap().url, "SeuOffice-0.13.0-arm64-mac-stable.zip");
+        }
     }
 
     #[test]
