@@ -31,9 +31,16 @@ process.env.MAIN_DIFF_PROFILE ??= 'node-faults'
 const results = []
 
 // the group of each function: a comparison runs only the groups a fault names
+const listed = spawnSync('npx', ['tsx', 'main.ts', '--list'], { cwd: tool, encoding: 'utf8' })
+if (listed.status !== 0) {
+  console.error(
+    `main.ts --list failed (${listed.status ?? listed.signal}):\n${listed.stdout}${listed.stderr}`,
+  )
+  process.exit(1)
+}
 const groupOf = new Map(
-  spawnSync('npx', ['tsx', 'main.ts', '--list'], { cwd: tool, encoding: 'utf8' })
-    .stdout.split('\n')
+  listed.stdout
+    .split('\n')
     .filter(Boolean)
     .map((line) => line.split('\t').reverse()),
 )
