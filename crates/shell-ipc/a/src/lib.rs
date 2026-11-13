@@ -14,6 +14,7 @@ mod probe;
 pub mod secrets;
 pub mod shell_ai_prefs;
 mod value;
+pub mod zotero;
 
 use shell_contract::Batch;
 use shell_contract::ipc::{RegisterBatch, RegisterError, Registry};
