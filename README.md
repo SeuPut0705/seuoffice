@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="macOS 다운로드 (Apple Silicon)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="macOS 다운로드 (Apple Silicon)"></a>
   &nbsp;
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Windows 다운로드 (x64)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Windows 다운로드 (x64)"></a>
 </p>
 
 <p align="center">
-  <sub>Apple Silicon Mac · Windows x64 · 무료 · 소스 공개(FSL-1.1-ALv2) · <a href="https://github.com/SeuPut0705/seuoffice/releases">모든 판과 미리보기 판</a></sub>
+  <sub>Apple Silicon Mac · Windows x64 · 무료 · 소스 공개(FSL-1.1-ALv2) · <a href="https://github.com/seuput-inc/seuoffice/releases">모든 판과 미리보기 판</a></sub>
 </p>
 
 <p align="center">

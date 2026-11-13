@@ -47,7 +47,7 @@ export const USER_DATA_DIR_NAME = 'seuoffice'
 export const DEV_USER_DATA_DIR_NAME = `${USER_DATA_DIR_NAME}-Dev`
 
 /** The product's public GitHub repository: issues, releases and update checks all point here. */
-export const PRODUCT_REPO_OWNER = 'SeuPut0705'
+export const PRODUCT_REPO_OWNER = 'seuput-inc'
 export const PRODUCT_REPO_NAME = 'seuoffice'
 /** `owner/repo`; the URLs built from it live in @seuoffice/electron-utils (github-menu.ts) */
 export const PRODUCT_REPO_SLUG = `${PRODUCT_REPO_OWNER}/${PRODUCT_REPO_NAME}`
