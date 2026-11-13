@@ -1645,6 +1645,8 @@ const docsCases: Case[] = [
   dc(
     [
       { op: 'storeWrite', id: DA, text: 'orphan', title: 'a.docx' },
+      // the adopted meta's writtenAt is the copy's mtime, which the disk sets
+      { op: 'touch', dir: '$DIR/ud', mtimeMs: 1_700_000_000_000 },
       { op: 'take', tab: 1, copy: DA, title: 'a.docx', ext: '.docx', accept: 'all' },
       { op: 'storeRead', id: DU('uuid-1') },
       { op: 'storeRead', id: DA },

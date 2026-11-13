@@ -135,7 +135,7 @@ function failure(error: unknown): unknown {
 
 async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
   const dir = raw.dir
-  const real = realpathSync(dir)
+  const real = realpathSync.native(dir)
   // the keys of the stored records are paths too, and the case writes them with the literal `$DIR`
   const spec = deep(raw, (text) =>
     text.startsWith(dir)

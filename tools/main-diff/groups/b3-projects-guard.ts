@@ -105,7 +105,7 @@ function onDisk(run: (run: Run, args: Any[]) => unknown): FnSpec['ts'] {
   return async (all, cx) => {
     const [ctx, ...rest] = all as [FsCtx, ...unknown[]]
     makeLinks(ctx.links)
-    const real = realpathSync(ctx.dir)
+    const real = realpathSync.native(ctx.dir)
     const toReal = (text: string): string =>
       text.startsWith(ctx.dir) ? real + text.slice(ctx.dir.length) : text
     const toDir = (text: string): string =>
