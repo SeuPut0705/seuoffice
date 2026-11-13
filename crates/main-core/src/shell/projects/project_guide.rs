@@ -54,7 +54,7 @@ use jscompat::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::chat_store::{ChatDataChange, ChatStoreGuide};
+use super::chat_store::{ChatDataChange, ChatStoreError, ChatStoreGuide};
 use super::cloud_files::{SyncFolderOptions, is_under_known_sync_folder};
 use super::context::assemble_trusted_context;
 use super::folder_files::{
@@ -2498,25 +2498,19 @@ macro_rules! guide_traits {
                 data_dir: Option<&str>,
             ) -> DataUpdateOutcome {
                 let guide = self.guide();
-                // an install id the guide could not store fails the change, as the
-                // TypeScript's thrown error would
-                let mut failed: Option<GuideError> = None;
+                // what the change throws (an install id the settings file
+                // refused) fails the write, which the guide reports as
+                // unwritable, as the TypeScript's `tryWrite` does
                 ProjectGuide::update_data(
                     guide,
                     id,
                     rel_path,
                     &mut |current: Option<&str>| -> Result<Option<String>, GuideError> {
-                        let next = change(current, &mut || match guide.install_id() {
-                            Ok(install_id) => install_id,
-                            Err(error) => {
-                                failed.get_or_insert(error);
-                                String::new()
-                            }
-                        });
-                        match failed.take() {
-                            Some(error) => Err(error),
-                            None => Ok(next),
-                        }
+                        change(current, &mut || {
+                            ProjectGuide::install_id(guide)
+                                .map_err(|error| ChatStoreError(error.message()))
+                        })
+                        .map_err(|ChatStoreError(message)| GuideError::Plain(message))
                     },
                     data_dir,
                 )
@@ -2534,11 +2528,9 @@ macro_rules! guide_traits {
                     .flatten()
             }
 
-            fn install_id(&mut self) -> String {
-                let guide = self.guide();
-                // the id is made even when the settings file refuses it
-                // (the TypeScript throws): a message still has an author
-                ProjectGuide::install_id(guide).unwrap_or_else(|_| guide.new_id())
+            fn install_id(&mut self) -> Result<String, ChatStoreError> {
+                ProjectGuide::install_id(self.guide())
+                    .map_err(|error| ChatStoreError(error.message()))
             }
 
             fn trust_state(&mut self, id: &str) -> ProjectTrustState {

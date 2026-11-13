@@ -7,11 +7,13 @@
  * on the folders of the case and answers `[[op, result], ...]`, where `result`
  * is what the method answered, `null` for the operations that only change the
  * world or answer nothing, and `{ error, code, refused }` where it threw (the
- * message with a temp file's random name written `.<hex>.tmp`, the `code` of a
- * Node error, the `reason` of a `ProjectWriteRefused`).
+ * message with a temp file's random name written `.<hex>.tmp`, and the temp
+ * file of the settings file, named for the process and a UUID, written
+ * `.<pid>.<uuid>.tmp`; the `code` of a Node error, the `reason` of a
+ * `ProjectWriteRefused`).
  *
- * The scenario is `{ dir, platform, startMs, tickMs, ids, language, env, home,
- * userData, defaultParent, touchWriteMs, contextFiles, settings, trust, ops }`:
+ * The scenario is `{ dir, platform, startMs, tickMs, ids, chatIds, language, env,
+ * home, userData, defaultParent, touchWriteMs, contextFiles, settings, trust, ops }`:
  * - `dir` is `$DIR`; every string of the scenario that starts with it is
  *   written below the real path of `dir` (the project folders are canonical
  *   paths and a temporary folder may lie under a link), and what comes back
@@ -25,6 +27,12 @@
  * - the clock reads `startMs`, then moves `tickMs` on each read; `ids` are the
  *   new ids in order (`extraN` after the last), each logged as `['newId', id]`;
  *   the time zone is UTC;
+ * - the `chat*` operations run on one `ProjectChatStore` built on the first of
+ *   them over the scenario's own guide (the real one: the install id the store
+ *   asks for is the guide's `installId`, which throws where the settings file
+ *   cannot take a new id); it reads the same clock, its new chat ids are
+ *   `chatIds` in order (`chatN` after the last), each logged as
+ *   `['chatId', id]`, and its `trash` only logs `['trash', path]`;
  * - `trust` are the answers of the trust prompt in order (`'use'`, `'without'`,
  *   `null` for a closed prompt; closed once they run out); each prompt is the
  *   log line `['trust', prompt]`;
@@ -44,7 +52,11 @@
  * and the visibility of each probe), `readContext`, `detail`, `getSettings`,
  * `setSettings`, `decideTrust`, `saveInstructions`, `addIgnore`, `removeIgnore`,
  * `editMemory`, `saveMemory`, `consolidate`, `undo`, `selection`,
- * `setSelection`, `recordOutsideChat`, `adoptHint`, `flushTouches`), or one
+ * `setSelection`, `recordOutsideChat`, `adoptHint`, `flushTouches`), one of the
+ * chat store (`chatNew {projectId}`, `chatAppend {projectId, chatId, role, text,
+ * editor, docPath?}`, `chatList {projectId}`, `chatOpen {projectId, chatId}`,
+ * `chatRename {projectId, chatId, title}`, `chatInfo {projectId, chatId}`, each
+ * answering as the method does), or
  * that changes or reads the world: `touchTimer`, `fireTimer`, `queueTrust`,
  * `clock`, `fsWrite`, `fsMkdir`, `fsRemove`, `fsLink`, `fsChmod`, `settingsFile`.
  *
@@ -67,8 +79,10 @@ import type { Case, FnSpec, Group, TsContext } from '../types.ts'
 
 const guideModule = await import('../../../apps/shell/src/main/projects/project-guide.ts')
 const { ProjectWriteRefused } = await import('../../../apps/shell/src/main/projects/write-guard.ts')
+const chatStoreModule = await import('../../../apps/shell/src/main/projects/chat-store.ts')
 
 type Any = any // eslint-disable-line @typescript-eslint/no-explicit-any
+type ChatStore = InstanceType<typeof chatStoreModule.ProjectChatStore>
 
 interface Scenario {
   dir: string
@@ -76,6 +90,7 @@ interface Scenario {
   startMs?: number
   tickMs?: number
   ids?: string[]
+  chatIds?: string[]
   language?: string
   env?: Record<string, string>
   home?: string
@@ -90,7 +105,13 @@ interface Scenario {
 
 type Op = { op: string } & Record<string, Any>
 
-const maskTmp = (text: string): string => text.replace(/\.[0-9a-f]{12}\.tmp/g, '.<hex>.tmp')
+const maskTmp = (text: string): string =>
+  text
+    .replace(/\.[0-9a-f]{12}\.tmp/g, '.<hex>.tmp')
+    .replace(
+      /\.\d+\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp/g,
+      '.<pid>.<uuid>.tmp',
+    )
 
 function deep(value: unknown, map: (text: string) => string): unknown {
   if (typeof value === 'string') return map(value)
@@ -135,8 +156,15 @@ async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
   const note = (...line: unknown[]): void => cx.log(...line)
   let clock = spec.startMs ?? 0
   const tick = spec.tickMs ?? 0
+  const readClock = (): Date => {
+    const at = clock
+    clock += tick
+    return new Date(at)
+  }
   const ids = [...(spec.ids ?? [])]
   let extra = 0
+  const chatIds = [...(spec.chatIds ?? [])]
+  let chatExtra = 0
   const answers = [...(spec.trust ?? [])]
   const language = spec.language ?? 'en'
   const env = spec.env ?? {}
@@ -167,11 +195,7 @@ async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
       defaultParentDir: () => defaultParent,
       platform: (spec.platform ?? 'linux') as NodeJS.Platform,
       env,
-      now: () => {
-        const at = clock
-        clock += tick
-        return new Date(at)
-      },
+      now: readClock,
       newId: () => {
         const id = ids.shift() ?? `extra${++extra}`
         note('newId', id)
@@ -200,12 +224,26 @@ async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
       note('trust', JSON.parse(JSON.stringify(prompt)))
       return (answers.shift() ?? null) as 'use' | 'without' | null
     }
+    let chats: ChatStore | null = null
+    const chatStore = (): ChatStore =>
+      (chats ??= new chatStoreModule.ProjectChatStore({
+        guide,
+        trash: async (path) => note('trash', path),
+        now: readClock,
+        newId: () => {
+          const id = chatIds.shift() ?? `chat${++chatExtra}`
+          note('chatId', id)
+          return id
+        },
+        platform: (spec.platform ?? 'linux') as NodeJS.Platform,
+      }))
     const results: unknown[] = []
     for (const op of spec.ops) {
       let value: unknown
       try {
         value = await runOp(guide, op, ask, {
           note,
+          chats: chatStore,
           setClock: (ms) => {
             clock = ms
           },
@@ -238,6 +276,7 @@ async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
 
 interface World {
   note: (...line: unknown[]) => void
+  chats: () => ChatStore
   setClock: (ms: number) => void
   pushAnswers: (list: (string | null)[]) => void
   timer: () => { delay: number } | null
@@ -353,6 +392,25 @@ async function runOp(
       return guide.adoptFolderHint(op.doc, ask)
     case 'flushTouches':
       return guide.flushTouches()
+    case 'chatNew':
+      return world.chats().newChat(op.projectId)
+    case 'chatAppend':
+      return world
+        .chats()
+        .append(
+          { projectId: op.projectId, chatId: op.chatId, role: op.role, text: op.text },
+          { editor: op.editor, docPath: op.docPath ?? null },
+        )
+    case 'chatList':
+      return world.chats().listChats(op.projectId)
+    case 'chatOpen':
+      return world.chats().openChat({ projectId: op.projectId, chatId: op.chatId })
+    case 'chatRename':
+      return world
+        .chats()
+        .renameChat({ projectId: op.projectId, chatId: op.chatId, title: op.title })
+    case 'chatInfo':
+      return world.chats().chatInfo({ projectId: op.projectId, chatId: op.chatId })
     case 'touchTimer': {
       const timer = world.timer()
       return timer ? { armed: true, delay: timer.delay } : null
@@ -426,6 +484,18 @@ const without = (hashes: Record<string, string> = {}) => ({ decision: 'without',
 
 const op = (name: string, extra: Record<string, unknown> = {}): Op => ({ op: name, ...extra })
 const settingsFile = op('settingsFile')
+
+// the chat store over the real guide (`chatNew` and the others): the chats of project p1
+const noInstall = (extra: Record<string, unknown> = {}): Record<string, unknown> =>
+  stored({ ...extra, installId: undefined })
+const listedAlpha = { list: [entry('p1', 'alpha')], trust: { p1: used() } }
+const chatInfoFile = (id: string, origin: string, title: string): string =>
+  `${JSON.stringify({ version: 1, id, projectId: 'p1', title, createdAt: OLD, updatedAt: OLD, origin, lastEditor: 'home', documents: [] }, null, 2)}\n`
+const chatLine = (seq: number, role: string, text: string, origin: string): string =>
+  `${JSON.stringify({ seq, ts: OLD, role, text, editor: 'home', origin })}\n`
+const chatSay = (chatId: string, role: string, text: string, extra: Record<string, unknown> = {}) =>
+  op('chatAppend', { projectId: 'p1', chatId, role, text, editor: 'home', ...extra })
+const readOnly = (mode: number) => op('fsChmod', { path: `${D}/userData`, mode })
 
 const scenario = (note: string, args: unknown[], files?: Case['files']): Case => ({
   args,
@@ -1385,6 +1455,86 @@ const cases: Case[] = [
       'hintfolder/.seuoffice/instructions.md': 'Hint rules.\n',
       'hintfolder/sub/x.docx': 'x',
     },
+  ),
+  scenario(
+    'chat store over the real guide: an install id the settings file cannot take is thrown by append, makes a write unwritable, and is made once the folder takes it',
+    run(
+      [
+        readOnly(0o555),
+        op('chatNew', { projectId: 'p1' }),
+        chatSay('c1', 'user', 'hello'),
+        chatSay('c1', 'assistant', 'hi there'),
+        op('chatList', { projectId: 'p1' }),
+        op('chatRename', { projectId: 'p1', chatId: 'c0', title: 'Old chat' }),
+        op('isUnwritable', { id: 'p1' }),
+        readOnly(0o755),
+        op('retryUnwritable', { id: 'p1' }),
+        op('isUnwritable', { id: 'p1' }),
+        chatSay('c1', 'user', 'hello'),
+        chatSay('c1', 'assistant', 'hi there'),
+        op('chatOpen', { projectId: 'p1', chatId: 'c1' }),
+        settingsFile,
+      ],
+      {
+        ids: ['i1', 'i2', 'i3', 'i4'],
+        chatIds: ['c1'],
+        tickMs: 1000,
+        settings: noInstall(listedAlpha),
+      },
+    ),
+    { ...alpha, 'alpha/.seuoffice/chats/c0.jsonl': chatLine(0, 'user', 'earlier', 'old-install') },
+  ),
+  scenario(
+    'chat store over the real guide: a chat of another install is told apart only with an install id, which the settings file may refuse',
+    run(
+      [
+        readOnly(0o555),
+        op('chatList', { projectId: 'p1' }),
+        op('chatOpen', { projectId: 'p1', chatId: 'c9' }),
+        op('chatInfo', { projectId: 'p1', chatId: 'c9' }),
+        op('chatInfo', { projectId: 'p1', chatId: 'c8' }),
+        readOnly(0o755),
+        op('chatList', { projectId: 'p1' }),
+        op('chatOpen', { projectId: 'p1', chatId: 'c9' }),
+        settingsFile,
+      ],
+      { ids: ['i1', 'i2', 'i3', 'i4'], tickMs: 1000, settings: noInstall(listedAlpha) },
+    ),
+    {
+      ...alpha,
+      'alpha/.seuoffice/chats/c9.json': chatInfoFile('c9', 'other-install', 'From another PC'),
+      'alpha/.seuoffice/chats/c9.jsonl': chatLine(0, 'user', 'written elsewhere', 'other-install'),
+    },
+  ),
+  scenario(
+    'chat store over the real guide: new, append, rename, list, open and info with the install id stored',
+    run(
+      [
+        op('chatNew', { projectId: 'p1' }),
+        op('chatNew', { projectId: 'nope' }),
+        op('chatList', { projectId: 'bad id' }),
+        chatSay('c1', 'user', 'plan the week'),
+        chatSay('c1', 'assistant', 'here is a plan', {
+          docPath: `${D}/alpha/a.txt`,
+          editor: 'docs',
+        }),
+        chatSay('c1', 'user', 'now the budget', {
+          docPath: `${D}/outside/b.docx`,
+          editor: 'markdown',
+        }),
+        chatSay('c1', 'system', 'no role'),
+        chatSay('c1', 'user', 'no editor', { editor: 'nobody' }),
+        op('chatRename', { projectId: 'p1', chatId: 'c1', title: 'Weekly plan' }),
+        op('chatList', { projectId: 'p1' }),
+        op('chatOpen', { projectId: 'p1', chatId: 'c1' }),
+        op('chatInfo', { projectId: 'p1', chatId: 'c1' }),
+        op('chatInfo', { projectId: 'p1', chatId: 'c2' }),
+        op('chatOpen', { projectId: 'p1', chatId: 'c2' }),
+        settingsFile,
+      ],
+      { chatIds: ['c1', 'c2'], tickMs: 1000, settings: stored(listedAlpha) },
+    ),
+    { ...alpha, 'outside/b.docx': 'b' },
   ),
 ]
 
