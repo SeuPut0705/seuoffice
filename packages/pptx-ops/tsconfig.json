@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    // WebAssembly and BufferSource of the engine loader
     "lib": ["ES2022", "DOM"],
     "paths": {
       "@seuoffice/pptx-engine": ["../pptx-engine/src/index.ts"],
