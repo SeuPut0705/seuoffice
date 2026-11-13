@@ -12,4 +12,6 @@ probe = ["dep:serde_json"]
 
 [dependencies]
 shell-contract = { path = "../../shell-contract" }
+main-core.workspace = true
+jscompat.workspace = true
 serde_json = { workspace = true, optional = true }
