@@ -18,6 +18,10 @@
       "node": "./src/node/redaction.ts",
       "default": "./src/redaction.ts"
     },
+    "./hidden-content": {
+      "node": "./src/node/hidden-content.ts",
+      "default": "./src/hidden-content.ts"
+    },
     "./init": "./src/init.ts"
   },
   "scripts": {

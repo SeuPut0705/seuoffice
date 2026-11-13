@@ -309,7 +309,7 @@ function installDesktop(): void {
         hash: 'h',
       }
     }),
-    confirmMarkedOdt: vi.fn(async () => 'cancel'),
+    confirmMarkedExport: vi.fn(async () => 'cancel'),
   }
   ;(window as unknown as { desktop: unknown }).desktop = desktop
 }
@@ -401,9 +401,9 @@ describe('a marked ODT tab across a restart', () => {
     expect(ctx.dirtyRef.current).toBe(true)
 
     pickedPath = originalPath
-    desktop.confirmMarkedOdt.mockResolvedValue('cancel')
+    desktop.confirmMarkedExport.mockResolvedValue('cancel')
     expect(await save(ctx, false)).toBe(false)
-    expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+    expect(desktop.confirmMarkedExport).toHaveBeenCalledTimes(1)
     expect(saveCalls).toHaveLength(0)
     expect(Buffer.from(readFileSync(originalPath)).equals(Buffer.from(originalBytes))).toBe(true)
   })
@@ -412,7 +412,7 @@ describe('a marked ODT tab across a restart', () => {
     await crashedRun()
     const { ctx } = await restoredDraft()
     pickedPath = originalPath
-    desktop.confirmMarkedOdt.mockResolvedValue('docx')
+    desktop.confirmMarkedExport.mockResolvedValue('docx')
     desktop.pickSaveAsPath.mockImplementation(async (_n, _s, format) => ({
       path:
         format === 'docx' && desktop.pickSaveAsPath.mock.calls.length > 1
@@ -426,7 +426,7 @@ describe('a marked ODT tab across a restart', () => {
 
     const again = await restoredDraftAgain()
     desktop.pickSaveAsPath.mockImplementation(async () => ({ path: originalPath }))
-    desktop.confirmMarkedOdt.mockResolvedValue('clear')
+    desktop.confirmMarkedExport.mockResolvedValue('clear')
     setFormatChangeHost((_request, confirm) => confirm(true))
     expect(await save(again, true)).toBe(true)
     const last = saveCalls[saveCalls.length - 1]

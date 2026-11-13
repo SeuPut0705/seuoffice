@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { NO_REDACTIONS } from '../src/renderer/ai/redact'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   handleExportPdf,
@@ -139,6 +140,8 @@ describe('print and PDF workbook readiness coordination', () => {
       },
       setPendingEdits: vi.fn(),
       requestVisualInstall: vi.fn(),
+      redactions: () => NO_REDACTIONS,
+      requestSaveAs: () => undefined,
       runOps: () => Promise.reject(new Error('page layout ops are not used here')),
     }
   }
@@ -419,6 +422,8 @@ describe('headless export (outPath): every sheet, formulas settled', () => {
         setMessage: (message: string) => messages.push(message),
         setPendingEdits: vi.fn(),
         requestVisualInstall: vi.fn(),
+        redactions: () => NO_REDACTIONS,
+        requestSaveAs: () => undefined,
         runOps: () => Promise.reject(new Error('not used')),
       } as PageLayoutContext,
       sheet1,

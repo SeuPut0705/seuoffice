@@ -23,8 +23,8 @@ pub use load::{
     LoadFailure, load_docx_package, load_package, load_zip_package, load_zip_package_staged,
 };
 pub use normalize::{
-    dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
-    normalize_ooxml_xml,
+    canonical_xml_syntax, dedupe_style_refs, has_duplicate_style_refs, has_universal_measures,
+    needs_ooxml_normalization, normalize_ooxml_xml,
 };
 pub use package::{Package, Part, PartName, ReadError};
 

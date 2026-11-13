@@ -16,6 +16,7 @@ use super::runs::runs_xml_in;
 use super::{escape_xml_text, split_xml_children};
 use crate::inline_opaque::ContentControlPart;
 use crate::model::{ParaFormat, Run};
+use crate::xml_tag::{TagName, find_start_tag, xml_segments};
 
 /// `xml.indexOf(needle, from)` for an ASCII needle: a match always starts on
 /// a character boundary, and `from` need not be one.
@@ -271,70 +272,6 @@ pub fn patch_math_tokens(xml: &str, tokens: &[String]) -> String {
 }
 
 // ---- table cell text patching ----
-
-/// One top-level segment, in UTF-8 byte offsets of the text scanned.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct XmlSegment {
-    pub start: usize,
-    pub end: usize,
-}
-
-/// Top-level segments of `tag` between [from, to), depth-aware for nesting.
-pub fn xml_segments(xml: &str, tag: &str, from: usize, to: usize) -> Vec<XmlSegment> {
-    let open_prefix = format!("<{tag}");
-    let close_tag = format!("</{tag}>");
-    let bytes = xml.as_bytes();
-    let mut segs = Vec::new();
-    let mut depth = 0i64;
-    let mut seg_start = 0;
-    let mut i = from;
-    while i < to {
-        let o = index_of(xml, &open_prefix, i).filter(|&o| o < to);
-        let c = index_of(xml, &close_tag, i).filter(|&c| c < to);
-        // a trailing self-closing element (Word's empty <w:p/>) has no close tag after it
-        match (o, c) {
-            (None, None) => break,
-            (Some(o), c) if c.is_none_or(|c| o < c) => {
-                let after = bytes.get(o + open_prefix.len()).copied();
-                if !matches!(after, Some(b'>' | b' ' | b'/')) {
-                    i = o + open_prefix.len(); // prefix of a longer tag (w:tr vs w:trPr)
-                    continue;
-                }
-                let gt = index_of(xml, ">", o);
-                if let Some(gt) = gt.filter(|&gt| gt > 0 && bytes[gt - 1] == b'/') {
-                    if depth == 0 {
-                        segs.push(XmlSegment {
-                            start: o,
-                            end: gt + 1,
-                        });
-                    }
-                    i = gt + 1;
-                    continue;
-                }
-                if depth == 0 {
-                    seg_start = o;
-                }
-                depth += 1;
-                i = o + open_prefix.len();
-            }
-            (_, Some(c)) => {
-                if depth == 0 {
-                    break;
-                }
-                depth -= 1;
-                if depth == 0 {
-                    segs.push(XmlSegment {
-                        start: seg_start,
-                        end: c + close_tag.len(),
-                    });
-                }
-                i = c + close_tag.len();
-            }
-            (Some(_), None) => unreachable!("an open tag with no close tag takes the branch above"),
-        }
-    }
-    segs
-}
 
 fn segment_texts<'a>(xml: &'a str, tag: &str, from: usize, to: usize) -> Vec<&'a str> {
     xml_segments(xml, tag, from, to)
@@ -830,12 +767,12 @@ fn patch_txbx_content(
     paras: &[Option<TextboxParaPatch>],
     part: &ContentControlPart,
 ) -> Result<String, RegexLimit> {
-    let Some(open) = js_regex!(r"^<w:txbxContent(?: [^>]*)?>").exec(seg_xml) else {
+    let open = find_start_tag(seg_xml, TagName::Exact("w:txbxContent"), 0).map(|tag| tag.text);
+    let close = txbx_close_tag(seg_xml);
+    let (Some(open), Some(close)) = (open, close) else {
         return Ok(seg_xml.to_owned());
     };
-    let open = open.as_str();
-    let to = seg_xml.len().saturating_sub("</w:txbxContent>".len());
-    let originals = segment_texts(seg_xml, "w:p", open.len(), to);
+    let originals = segment_texts(seg_xml, "w:p", open.len(), seg_xml.len() - close.len());
     if originals.is_empty() {
         return Ok(seg_xml.to_owned());
     }
@@ -864,8 +801,17 @@ fn patch_txbx_content(
             runs_xml_in(&patch.runs, part)?
         ));
     }
-    out.push_str("</w:txbxContent>");
+    out.push_str(close);
     Ok(out)
+}
+
+/// `/<\/w:txbxContent\s*>$/.exec(xml)?.[0]`: the end tag the text ends with.
+fn txbx_close_tag(xml: &str) -> Option<&str> {
+    let before_gt = xml.strip_suffix('>')?;
+    let name = before_gt
+        .trim_end_matches(is_js_space)
+        .strip_suffix("</w:txbxContent")?;
+    Some(&xml[name.len()..])
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -896,15 +842,11 @@ pub fn patch_textbox_paras(
     let segs = xml_segments(paragraph_xml, "w:txbxContent", 0, paragraph_xml.len());
     let mut xml = paragraph_xml.to_owned();
     if !segs.is_empty() && !by_index.is_empty() {
-        let fallbacks: Vec<(usize, usize)> =
-            js_regex!(r"<mc:Fallback>[\s\S]*?<\/mc:Fallback>", "g")
-                .find_iter(paragraph_xml)
-                .map(|m| (m.start(), m.end()))
-                .collect();
+        let fallbacks = xml_segments(paragraph_xml, "mc:Fallback", 0, paragraph_xml.len());
         let in_fallback = |pos: usize| {
             fallbacks
                 .iter()
-                .any(|&(start, end)| pos >= start && pos < end)
+                .any(|fallback| pos >= fallback.start && pos < fallback.end)
         };
         let mut out = String::new();
         let mut cursor = 0;

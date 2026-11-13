@@ -194,6 +194,8 @@ export interface StoriesOptions {
   pictures?: boolean
   /** the hidden runs' words are the placeholder itself, `{{client phone}}`, so that what a model reads of them equals what they say; the body also holds an inline control around one */
   literal?: boolean
+  /** mutatedStoriesDocx rewrites the tags of the package's relationship parts too */
+  rels?: boolean
 }
 
 const controlOf = (runs: string) =>
@@ -382,7 +384,8 @@ export async function mutatedStoriesDocx(
     ),
   )
   for (const path of Object.keys(zip.files)) {
-    if (!/^word\/[^/]+\.xml$/.test(path)) continue
+    const rels = options.rels === true && /(?:^|\/)_rels\/[^/]*\.rels$/.test(path)
+    if (!rels && !/^word\/[^/]+\.xml$/.test(path)) continue
     zip.file(path, mutate(await zip.file(path)!.async('string'), mutation))
   }
   writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))

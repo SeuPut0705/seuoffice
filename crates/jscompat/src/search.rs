@@ -78,6 +78,32 @@ pub fn try_replace_first_with(
     Ok(out)
 }
 
+/// A pattern built at run time, written the way `new RegExp(pattern)` without
+/// the `u` flag reads it: a character outside the BMP is two code units, and
+/// `\uD83D(?:)\uDE00` written for each says so where the pattern text itself
+/// cannot (`JsRegex::new` refuses such a character, and a pair of adjacent
+/// escapes). Equal to the pattern
+/// when it holds none.
+pub fn units_pattern(pattern: &str) -> std::borrow::Cow<'_, str> {
+    if pattern.chars().all(|c| c.len_utf8() < 4) {
+        return std::borrow::Cow::Borrowed(pattern);
+    }
+    let mut out = String::with_capacity(pattern.len() + 8);
+    for c in pattern.chars() {
+        if c.len_utf8() < 4 {
+            out.push(c);
+        } else {
+            let mut units = [0u16; 2];
+            let [high, low] = *c.encode_utf16(&mut units).iter().as_slice() else {
+                unreachable!("a character outside the BMP is two units")
+            };
+            // the empty group keeps the two halves from reading as one character
+            out.push_str(&format!("\\u{high:04X}(?:)\\u{low:04X}"));
+        }
+    }
+    std::borrow::Cow::Owned(out)
+}
+
 /// Text as a pattern that matches only itself: every syntax character of a
 /// regular expression escaped with a backslash, and `/` too.
 pub fn regex_escape(text: &str) -> String {
@@ -109,6 +135,19 @@ pub fn regex_escape(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_pattern_names_astral_characters_by_their_units() {
+        assert_eq!(super::units_pattern("a(b"), "a(b");
+        assert_eq!(
+            super::units_pattern("Id=\"\u{1F600}\""),
+            "Id=\"\\uD83D(?:)\\uDE00\""
+        );
+        let pattern = super::units_pattern("Id=\"\u{1F600}\"");
+        let re = crate::TryJsRegex::new(&pattern, "").unwrap();
+        assert!(re.try_test("x Id=\"\u{1F600}\" y").unwrap());
+        assert!(!re.try_test("x Id=\"b\" y").unwrap());
+    }
+
     use super::*;
 
     #[test]

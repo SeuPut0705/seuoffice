@@ -227,7 +227,7 @@ const FONT_KEY = '{1A2B3C4D-5E6F-7081-92A3-B4C5D6E7F809}'
  * embedded fonts, comments with pictures and replies, protection, picture
  * bullets, numbering style links, two styles of one heading level.
  */
-function richPackages(): Record<string, EntrySpec[]> {
+function richPackages(withHidden = false): Record<string, EntrySpec[]> {
   const settings = (inner: string): string =>
     `<?xml version="1.0"?><w:settings xmlns:w="${W}">${inner}</w:settings>`
   const lvl = (ilvl: string, inner: string): string => `<w:lvl w:ilvl="${ilvl}">${inner}</w:lvl>`
@@ -389,10 +389,24 @@ function richPackages(): Record<string, EntrySpec[]> {
       { name: 'word/media/c1.PNG', data: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0, 0xff, 0xfe]) },
       { name: 'word/media/c2.gif', data: 'GIF89a' },
     ],
-    // hidden from AI: the comments of the stories of hidden-stories.ts (every spelling of the mark,
+    // hidden from AI (built containers only, not mutation seeds: they would dilute the seeds that
+    // reach the readers the tracked documents lack): the comments of the stories of hidden-stories.ts (every spelling of the mark,
     // every tag mutation), and ones whose tags a pattern reads differently from the parser
+    ...(withHidden
+      ? {
+          // a relationship id with a character outside the BMP goes into a pattern without `u`: two units in JavaScript
+          'a package with a comment picture whose relationship id is an emoji': [
+            ...common,
+            {
+              name: 'word/comments.xml',
+              data: `<w:comments xmlns:w="${W}">${comment('1', 'A', picture('\u{1F600}', '1', '1'))}${comment('2', 'B', picture('rId1', '9525', '9525'))}</w:comments>`,
+            },
+            { name: 'word/_rels/comments.xml.rels', data: commentRels },
+          ] as EntrySpec[],
+        }
+      : {}),
     ...Object.fromEntries(
-      [...STORIES.map((story) => story.comments), ...COMMENT_PARTS.slice(STORIES.length)].map(
+      (withHidden ? [...STORIES.map((story) => story.comments), ...COMMENT_PARTS.slice(STORIES.length)] : []).map(
         (data, index): [string, EntrySpec[]] => [
           `a package with comments hidden from AI (${index})`,
           [...common, { name: 'word/comments.xml', data }],
@@ -914,7 +928,7 @@ export function oddContainers(): Array<[name: string, docx: Uint8Array]> {
       ),
     ),
     ...Object.fromEntries(
-      Object.entries(richPackages()).map(([name, entries]) => [name, buildZip(entries)]),
+      Object.entries(richPackages(true)).map(([name, entries]) => [name, buildZip(entries)]),
     ),
   }
   return Object.entries(cases)

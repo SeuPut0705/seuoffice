@@ -434,11 +434,11 @@ function resolveField(op: Op, doc: PmNode, pos: number, now = new Date()): Resol
 }
 
 /** position inside the block where the field goes: end, start, or right after `afterText` */
-function insertionPos(b: TopBlock, op: Op): number {
+function insertionPos(doc: PmNode, b: TopBlock, op: Op): number {
   const contentStart = b.pos + 1
   const contentEnd = b.pos + b.node.nodeSize - 1
   if (typeof op.afterText !== 'string') return op.position === 'start' ? contentStart : contentEnd
-  const where = posAfterText(b.node, contentStart, op.afterText, `block ${b.index}`)
+  const where = posAfterText(doc, b.node, contentStart, op.afterText, `block ${b.index}`)
   if ('error' in where) throw new Error(`insertField: ${where.error}`)
   return where.pos
 }
@@ -469,7 +469,7 @@ function singleTextBlock(op: Op, env: RunEnv, h: FieldOpHelpers, name: string): 
 function runInsertField(op: Op, env: RunEnv, h: FieldOpHelpers): OpResult {
   const { tr, schema } = env
   const b = singleTextBlock(op, env, h, 'insertField')
-  const pos = insertionPos(b, op)
+  const pos = insertionPos(tr.doc, b, op)
   const r = resolveField(op, tr.doc, pos)
   const fieldMark = r.refName
     ? schema.marks.refField!.create({ name: r.refName, instr: ` ${r.instr.trim()} `, dirty: false })

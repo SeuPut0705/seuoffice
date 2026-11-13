@@ -3,13 +3,16 @@
 // parse-package.ts, and the two readers of text-patch.ts and hf-root.ts that
 // find tags past a comment or a CDATA section.
 import { commentEntries } from './reference/comment-slices'
-import { hfKeptRoot } from './reference/hf-root'
+import { hfKeptRoot, hfRootOpen } from './reference/hf-root'
 import { editedCommentModelText } from './reference/parse-package'
 import { patchParagraphTexts } from './reference/text-patch'
 import {
   firstMarkLabel,
   hasMarkElement,
   hasWithheldTrace,
+  hiddenRunProperties,
+  withheldBlockLabel,
+  withheldPartLabel,
   overWithheld,
   overWithheldModelText,
   parseEntry,
@@ -17,7 +20,7 @@ import {
   withheldLabelOf,
   withheldNode,
   withheldText,
-  withRedactNamespace,
+  withRedactRoot,
 } from './reference/withheld'
 import type { XNode } from './reference/xml-utils'
 import { findChildren } from './reference/xml-utils'
@@ -90,6 +93,7 @@ const GENERATED_ENTRIES: string[] = [
   '<w:comment w:id="1"><w:p><w:r><w:t>words</w:t><w:t>second</w:t></w:r><w:r><w:footnoteRef/></w:r><w:r><w:drawing/></w:r></w:p></w:comment>',
   '<w:footnote w:id="1"><w:p><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> </w:t></w:r><w:r><w:t xml:space="preserve">note words</w:t></w:r></w:p></w:footnote>',
   '<w:comment w:id="1"><w:p/></w:comment>',
+  '<w:comment w:id="1"><w:p><w:r><w:drawing/></w:r><w:r><w:pict>x</w:pict></w:r><w:r><w:object/></w:r><w:r><w:sym w:font="a"/></w:r><w:r><mc:AlternateContent><mc:Choice/></mc:AlternateContent></w:r><w:r><w:drawingX/></w:r><w:r><w:symbol/></w:r></w:p></w:comment>',
   '',
   'no runs',
 ]
@@ -173,6 +177,41 @@ export const WITHHELD: CallSpec[] = [
     ],
   },
   {
+    fn: 'withheld.withheldPartLabel',
+    call: (text) => withheldPartLabel(text),
+    built: texts([
+      ...R_PRS,
+      ...ENTRY_PARTS,
+      '<c:chart><a:r><a:rPr><go:redact label="axis"/></a:rPr></a:r></c:chart>',
+      "<c:chart><go:redact w:label='w'/></c:chart>",
+      '<c:chart><go:redact label = "a &amp; b" w:label="x"/></c:chart>',
+      '<c:chart><go:redact label=""/></c:chart>',
+      '<c:chart><go:redact/></c:chart>',
+      '<c:chart><go:redact xlabel="no" label="yes"/></c:chart>',
+      '<c:chart><redact\nlabel="nl"/></c:chart>',
+      '<c:chart><!-- <go:redact label="c"/> --></c:chart>',
+    ]),
+  },
+  {
+    fn: 'withheld.withheldBlockLabel',
+    call: (text) => withheldBlockLabel(text),
+    built: texts([
+      ...ENTRY_PARTS,
+      '<w:p><w:r><w:drawing><w:txbxContent><w:p><w:r><w:rPr><go:redact w:label="box"/></w:rPr><w:t>x</w:t></w:r></w:p></w:txbxContent></w:drawing></w:r></w:p>',
+      '<w:p><w:fldSimple w:instr="X"><w:r><w:rPr><go:redact w:label="field"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple></w:p>',
+      '<w:p><w:pPr><w:rPr><go:redact w:label="mark"/></w:rPr></w:pPr></w:p>',
+      '<w:p><w:r><w:rPr><go:redact/></w:rPr><w:t>a</w:t></w:r><w:r><w:rPr><go:redact w:label="second"/></w:rPr></w:r></w:p>',
+      '<w:p><go:redact w:label="x"/><w:r><w:t>a</w:t></w:r>',
+      '<w:p><w:r><w:t>unclosed <go:redact w:label="x"/>',
+    ]),
+  },
+  {
+    fn: 'withheld.hiddenRunProperties',
+    call: (text) => hiddenRunProperties(text),
+    built: LABELS.map((text) => ({ text })),
+    mutation: 'none',
+  },
+  {
     fn: 'withheld.hasWithheldTrace',
     call: (text) => hasWithheldTrace(text),
     built: texts([...R_PRS, ...ENTRY_PARTS]),
@@ -242,9 +281,10 @@ export const WITHHELD: CallSpec[] = [
     built: GENERATED_ENTRIES.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
   },
   {
-    fn: 'withheld.withRedactNamespace',
-    call: (text, args) => withRedactNamespace(text, args.rootTag as string),
-    built: NAMESPACE_PARTS.map(([rootTag, text]) => ({ text, args: { rootTag } })),
+    // main replaced withRedactNamespace(part, rootTag) by withRedactRoot(part)
+    fn: 'withheld.withRedactRoot',
+    call: (text) => withRedactRoot(text),
+    built: NAMESPACE_PARTS.map(([, text]) => ({ text })),
   },
   {
     fn: 'withheld.commentEntries',
@@ -280,6 +320,24 @@ export const WITHHELD: CallSpec[] = [
     built: [
       ...ENTRY_PARTS.flatMap(stripAndPatch),
       ...MASKED_ENTRIES.flatMap(stripAndPatch),
+    ],
+  },
+  {
+    fn: 'withheld.hfRootOpen',
+    call: (text, args) => hfRootOpen(args.root as 'w:hdr' | 'w:ftr', args.absent === true ? null : text),
+    built: [
+      ...HF_PARTS.map(({ root, xml }) => ({ text: xml, args: { root } })),
+      ...(['w:hdr', 'w:ftr'] as const).flatMap((root) => [
+        { text: '', args: { root, absent: true } },
+        { text: '<a/>', args: { root } },
+        { text: `<${root}/>`, args: { root } },
+        { text: `<${root} xmlns:w="x" xmlns:r = "y" />`, args: { root } },
+        { text: `<${root} xmlns:w="x"\n  xmlns:v='urn:schemas-microsoft-com:vml'  >`, args: { root } },
+        { text: `<${root} a=">" xmlns:w10="z"\t>`, args: { root } },
+        { text: `<${root} xmlns:o="o" xmlns:w="w" xmlns:r="r" xmlns:v="v" xmlns:w10="w10">`, args: { root } },
+        { text: `<!-- <${root} xmlns:w="x"> --><${root}>`, args: { root } },
+        { text: `<${root} xmlns:wx="x">`, args: { root } },
+      ]),
     ],
   },
   {

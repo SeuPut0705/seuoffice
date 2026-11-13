@@ -28,6 +28,7 @@
     "@seuoffice/docx-engine": "*",
     "@seuoffice/electron-utils": "*",
     "@seuoffice/engine-wasm": "*",
+    "@seuoffice/file-parse": "*",
     "@seuoffice/google-drive": "*",
     "@seuoffice/cli": "*",
     "@seuoffice/i18n": "*",
