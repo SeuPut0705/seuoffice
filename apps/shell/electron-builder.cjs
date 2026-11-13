@@ -37,7 +37,7 @@ const PRODUCT_NAME = 'SeuOffice'
 // folder that caches the installer and downloaded updates after it
 // (<local app data>/<name>-updater), so a shared name is a shared folder.
 const PACKAGED_APP_NAME = 'seuoffice'
-const REPO_OWNER = 'SeuPut0705'
+const REPO_OWNER = 'seuput-inc'
 const REPO_NAME = 'seuoffice'
 const MAINTAINER = 'SeuPut <228744781+SeuPut0705@users.noreply.github.com>'
 

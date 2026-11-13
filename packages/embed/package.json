@@ -5,12 +5,12 @@
   "description": "Open a document in a seuoffice iframe from its bytes and file name",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SeuPut0705/seuoffice.git",
+    "url": "git+https://github.com/seuput-inc/seuoffice.git",
     "directory": "packages/embed"
   },
-  "homepage": "https://github.com/SeuPut0705/seuoffice#readme",
+  "homepage": "https://github.com/seuput-inc/seuoffice#readme",
   "bugs": {
-    "url": "https://github.com/SeuPut0705/seuoffice/issues"
+    "url": "https://github.com/seuput-inc/seuoffice/issues"
   },
   "private": false,
   "type": "module",
