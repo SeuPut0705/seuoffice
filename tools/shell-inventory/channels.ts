@@ -353,9 +353,9 @@ const BATCHES = [
   {
     id: 'U',
     title:
-      '업데이트·설치·충돌과 복구: 업데이터와 업데이트 창, 충돌 감시, 실행 복구, 각 앱의 문서 복구',
-    en: 'Updates, install, crash and recovery',
-    rule: /^update[:-]|recovery|crash|install|relaunch/,
+      '업데이트·충돌·실행 복구: 업데이터와 업데이트 창, 충돌 감시, 실행 복구 목록. 각 앱의 문서 복구는 그 문서 상태를 가진 D1·D2에',
+    en: 'Updates, crash and launch recovery',
+    rule: /^update[:-]|^recovery:(?:get|submit)-launch-list$|crash|relaunch/,
   },
   {
     id: 'A',
@@ -392,6 +392,10 @@ const BATCHES = [
     rule: /^(docs|hwp|html|markdown|epub|pdf|pdf-tools|pdf-password):/,
   },
 ] as const
+/** channels whose name matches an earlier batch's rule but whose state lives elsewhere */
+const PINNED: Record<string, string> = {
+  'slides:font-install-local': 'D1',
+}
 const APP_BATCH: Record<string, string> = {
   shell: 'W',
   slides: 'D1',
@@ -405,6 +409,7 @@ for (const c of channels.values()) {
   const owners = c.handlers.length > 0 ? c.handlers : c.senders
   c.owner = owners[0]
   c.batch =
+    PINNED[c.name] ??
     BATCHES.find((b) => b.rule.test(c.name))?.id ??
     (c.owner ? (APP_BATCH[c.owner.split('/')[0]] ?? 'D2') : undefined)
 }

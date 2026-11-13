@@ -136,3 +136,12 @@ pub type DialogsHost = Arc<dyn Dialogs>;
 pub type OsShellHost = Arc<dyn OsShell>;
 pub type ClipboardHost = Arc<dyn Clipboard>;
 pub type ContentsHost = Arc<dyn Contents>;
+
+/// The shell window (Electron's `shellWindow`): the parent of app-wide
+/// dialogs and the only sender some channels accept
+pub trait MainWindow: Send + Sync {
+    fn view(&self) -> Option<ViewId>;
+    fn window(&self) -> Option<WindowId>;
+}
+
+pub type MainWindowHost = Arc<dyn MainWindow>;

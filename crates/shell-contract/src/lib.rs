@@ -18,6 +18,6 @@ pub mod value;
 
 pub use channels::{Batch, CHANNELS, ChannelSpec, PRELOADS, PreloadSpec, Surface};
 pub use error::IpcError;
-pub use hosts::{ClipboardHost, ContentsHost, DialogsHost, Hosts, OsShellHost};
+pub use hosts::{ClipboardHost, ContentsHost, DialogsHost, Hosts, MainWindowHost, OsShellHost};
 pub use ids::{DocumentHandle, RequestId, ViewId, WindowId};
 pub use value::{BytesKind, IpcValue};
