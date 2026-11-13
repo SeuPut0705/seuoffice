@@ -210,15 +210,15 @@ pub(crate) fn move_pdf_file_no_clobber(source: &str, target: &str) -> NoClobber 
 }
 
 /// The result store the note links live in (`ResultStore` under userData)
-struct Store<'a>(&'a Editor, String);
+struct Store(super::hosts::PdfEngineHost, String);
 
 fn thrown(e: String) -> Thrown {
     Thrown(e)
 }
 
-impl NoteLinkStore for Store<'_> {
+impl NoteLinkStore for Store {
     fn read_note_links(&self) -> Result<NoteLinks, Thrown> {
-        self.0.engine.read_note_links(&self.1).map_err(thrown)
+        self.0.read_note_links(&self.1).map_err(thrown)
     }
     fn find_note_link(
         &self,
@@ -226,19 +226,16 @@ impl NoteLinkStore for Store<'_> {
         doc_hash: &str,
     ) -> Result<Option<FoundNoteLink>, Thrown> {
         self.0
-            .engine
             .find_note_link(&self.1, pdf_path, doc_hash)
             .map_err(thrown)
     }
     fn set_note_link(&self, pdf_path: &str, link: &NoteLink) -> Result<(), Thrown> {
         self.0
-            .engine
             .set_note_link(&self.1, pdf_path, link)
             .map_err(thrown)
     }
     fn update_note_link_doc_hash(&self, pdf_path: &str, doc_hash: &str) -> Result<bool, Thrown> {
         self.0
-            .engine
             .update_note_link_doc_hash(&self.1, pdf_path, doc_hash)
             .map_err(thrown)
     }
@@ -264,7 +261,7 @@ impl NoteHost for Hooks<'_> {
 /// The deps `createNoteLinkService` was given
 pub(super) struct NoteDeps<'a> {
     ed: &'a Editor,
-    store: Store<'a>,
+    store: Store,
     hooks: Hooks<'a>,
 }
 
@@ -272,7 +269,7 @@ impl<'a> NoteDeps<'a> {
     pub fn new(ed: &'a Editor) -> Self {
         NoteDeps {
             ed,
-            store: Store(ed, ed.path(PathName::UserData)),
+            store: Store(ed.engine.clone(), ed.path(PathName::UserData)),
             hooks: Hooks(ed),
         }
     }
@@ -316,6 +313,55 @@ impl NoteLinkDeps for NoteDeps<'_> {
     }
     fn host(&self) -> Result<&dyn NoteHost, Thrown> {
         Ok(&self.hooks)
+    }
+}
+
+/// The deps `noteLinks.afterSave(path)` reaches, owned so it runs on a
+/// worker: the result store and the file hash (it reads the whole PDF)
+pub(super) struct AfterSaveDeps(Store);
+
+impl AfterSaveDeps {
+    pub fn new(ed: &Editor) -> Self {
+        AfterSaveDeps(Store(ed.engine.clone(), ed.path(PathName::UserData)))
+    }
+}
+
+/// No shell hooks: `afterSave` only touches the store
+struct NoHooks;
+
+impl NoteHost for NoHooks {
+    fn has_open_note(&self) -> bool {
+        false
+    }
+    fn has_insert_into_note(&self) -> bool {
+        false
+    }
+    fn open_note(&self, _path: &str) -> Result<bool, Thrown> {
+        Ok(false)
+    }
+    fn insert_into_note(&self, _path: &str, _text: &str) -> Result<bool, Thrown> {
+        Ok(false)
+    }
+}
+
+impl NoteLinkDeps for AfterSaveDeps {
+    fn store(&self) -> Result<&dyn NoteLinkStore, Thrown> {
+        Ok(&self.0)
+    }
+    fn hash_file(&self, path: &str) -> Result<String, Thrown> {
+        self.0.0.document_hash_of_file(path).map_err(thrown)
+    }
+    fn is_untitled(&self, _pdf_path: &str) -> Result<bool, Thrown> {
+        Ok(false)
+    }
+    fn pick_note_path(&self, _owner: f64, _default_path: &str) -> Result<Option<String>, Thrown> {
+        Ok(None)
+    }
+    fn note_word(&self) -> Result<String, Thrown> {
+        Ok(String::new())
+    }
+    fn host(&self) -> Result<&dyn NoteHost, Thrown> {
+        Ok(&NoHooks)
     }
 }
 

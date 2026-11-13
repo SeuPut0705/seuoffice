@@ -30,7 +30,9 @@ impl Editor {
         self: &Rc<Self>,
         view: ViewId,
         path: &str,
-        read: impl FnOnce(&dyn super::PdfEngine, &[u8]) -> Result<IpcValue, String> + Send + 'static,
+        read: impl FnOnce(&dyn super::hosts::PdfEngine, &[u8]) -> Result<IpcValue, String>
+        + Send
+        + 'static,
         reply: shell_contract::ipc::Responder,
     ) {
         let bytes = self.document_bytes(view, path);

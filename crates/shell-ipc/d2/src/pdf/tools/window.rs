@@ -9,8 +9,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use jscompat::JsonValue;
 use jscompat::node_path::host::{basename, dirname, resolve};
-use jscompat::{JsonValue, random_uuid};
 use main_core::packages::electron_utils::dialog_memory::save_as_suggestion;
 use main_core::pdf::atomic_write::write_pdf_atomically;
 use main_core::pdf::generated_output::{exists_sync, unique_generated_pdf_path};
@@ -223,7 +223,7 @@ impl Window {
                     match r {
                         Ok((name, pages, size, path)) => {
                             let p = Picked {
-                                id: random_uuid(),
+                                id: me.ctx.shell.random_uuid(),
                                 kind,
                                 name,
                                 pages,
@@ -377,7 +377,7 @@ impl Window {
         if self.s.borrow().finding.is_some() || self.s.borrow().running {
             return r.reply(Ok(failed("busy")));
         }
-        let job_id = random_uuid();
+        let job_id = self.ctx.shell.random_uuid();
         self.s.borrow_mut().finding = Some(job_id.clone());
         let job = obj([
             ("op", "blankPages".into_ipc()),
@@ -716,7 +716,7 @@ impl Run {
     /// `runToolJob(owner, tool, path, options)`: add a password, remove one
     /// or repair in the job process, and check the answer is what the tool promises
     fn run_job(self, options: IpcValue) {
-        let job_id = random_uuid();
+        let job_id = self.w.ctx.shell.random_uuid();
         self.w.s.borrow_mut().running_job = Some(job_id.clone());
         let job = tools::job_for(self.tool, &self.sources[0].path, &options);
         let ctx = self.w.ctx.clone();
@@ -816,14 +816,31 @@ impl Run {
         let Some(targets) = self.pick_targets(&names) else {
             return self.done(canceled());
         };
-        for target in &targets {
-            if self.sources.iter().any(|s| same_path(&s.path, target)) {
-                return self.fail("same-as-source");
-            }
-            if self.w.ctx.shell.file_has_unsaved_changes(target) {
-                return self.fail("unsaved-target");
-            }
+        self.check_targets(made, targets, 0)
+    }
+
+    /// each target in turn: never a source, never a file open with unsaved changes
+    fn check_targets(self, made: Vec<Vec<u8>>, targets: Vec<String>, i: usize) {
+        let Some(target) = targets.get(i).cloned() else {
+            return self.write(made, targets);
+        };
+        if self.sources.iter().any(|s| same_path(&s.path, &target)) {
+            return self.fail("same-as-source");
         }
+        let shell = self.w.ctx.shell.clone();
+        shell.file_has_unsaved_changes(
+            &target,
+            Box::new(move |unsaved| {
+                if unsaved {
+                    self.fail("unsaved-target")
+                } else {
+                    self.check_targets(made, targets, i + 1)
+                }
+            }),
+        )
+    }
+
+    fn write(self, made: Vec<Vec<u8>>, targets: Vec<String>) {
         let services = self.w.ctx.services.clone();
         let written = targets.clone();
         kit::on_worker(
@@ -841,7 +858,7 @@ impl Run {
                 };
                 let mut outputs = Vec::new();
                 for (target, size) in targets.into_iter().zip(sizes) {
-                    let id = random_uuid();
+                    let id = self.w.ctx.shell.random_uuid();
                     outputs.push(obj([
                         ("id", id.clone().into_ipc()),
                         ("name", basename(&target, None).into_ipc()),
@@ -1112,5 +1129,47 @@ mod tests {
         t.rt.drain();
         let events = t.rt.events();
         assert_eq!(events.last().unwrap().channel, "pdf-tools:start-ready");
+    }
+
+    #[test]
+    fn a_run_waits_for_the_unsaved_check_before_it_writes() {
+        use super::super::hosts::fake::resume_unsaved;
+        let mut t = tools(json!({ "file_has_unsaved_changes": ["hold", "hold"] }));
+        let win = open(&mut t);
+        let a = t.file("a.pdf", b"a");
+        let id = pick(&mut t, win, &[&a], vec![])["inputs"][0]["id"].clone();
+        let out = t.rt.dir.join("out.pdf");
+        let run = |t: &mut T| {
+            t.rt.invoke(
+                "pdf-tools:run",
+                win,
+                vec![v(json!({ "tool": "reverse", "inputIds": [id] }))],
+            )
+        };
+        // not unsaved: the write waits for the answer, then happens
+        t.rt.script().save.push_back(Some(out.clone()));
+        let pending = run(&mut t);
+        assert!(pending.take().is_none());
+        assert!(!out.exists());
+        // a second run while the first waits is busy
+        assert_eq!(
+            j(&run(&mut t).take().unwrap().unwrap())["error"],
+            json!("busy")
+        );
+        assert!(resume_unsaved(false));
+        t.rt.drain();
+        assert_eq!(j(&pending.take().unwrap().unwrap())["ok"], json!(true));
+        assert!(out.exists());
+        // open with unsaved changes: refused, nothing written
+        std::fs::remove_file(&out).unwrap();
+        t.rt.script().save.push_back(Some(out.clone()));
+        let pending = run(&mut t);
+        assert!(pending.take().is_none());
+        assert!(resume_unsaved(true));
+        assert_eq!(
+            j(&pending.take().unwrap().unwrap()),
+            json!({ "ok": false, "error": "unsaved-target" })
+        );
+        assert!(!out.exists());
     }
 }

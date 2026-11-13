@@ -40,6 +40,9 @@ use crate::kit::{self, Entry, IntoIpc};
 
 const NOT_OPENED: &str = "save target is not an opened document";
 
+/// `MARKED_EXPORT_FORMATS`: the formats that ask before marked content is written
+const MARKED_EXPORT_FORMATS: [&str; 6] = ["odt", "pdf", "hwp", "html", "md", "png"];
+
 /// What a write left: what landed, the plain document, the absorbed picture
 /// hashes, and the disk state to remember
 pub(crate) struct Written {
@@ -358,7 +361,7 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                 let dir = dirname(&path);
                 let pdf_path = join(&[
                     &d.temp_dir(),
-                    &format!("seuoffice-docs-images-{}.pdf", jscompat::random_uuid()),
+                    &format!("seuoffice-docs-images-{}.pdf", d.shell.random_uuid()),
                 ]);
                 d.add_image_export(view, &pdf_path, &dir);
                 picked.set("dir", dir).set("pdfPath", pdf_path).done()
@@ -501,7 +504,8 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
             let view = cx.sender.view;
             let skipped = || Obj::new().set("ok", false).set("skipped", true).done();
             // an orphaned renderer, or a document that has its file already
-            if d.is_torn_down(view) || d.open_doc.contains(view) {
+            if !d.shell.writes_new_documents() || d.is_torn_down(view) || d.open_doc.contains(view)
+            {
                 return responder.reply(Ok(skipped()));
             }
             let (Some(default_name), Some(_)) =
@@ -690,14 +694,17 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                 (_, DocFormat::Odt) => CopyTarget::Untitled(".odt"),
                 _ => CopyTarget::Untitled(".docx"),
             };
-            let pending =
-                match d.with_store(|store| d.book.borrow_mut().begin_copy(store, view, &target)) {
-                    Ok(p) => p,
-                    Err(_) => {
-                        return responder
-                            .reply(Ok(Obj::new().set("ok", false).set("failed", true).done()));
-                    }
-                };
+            let pending = match d.with_store(|store| {
+                d.book
+                    .borrow_mut()
+                    .begin_copy(store, view, &target, &|| d.shell.random_uuid())
+            }) {
+                Ok(p) => p,
+                Err(_) => {
+                    return responder
+                        .reply(Ok(Obj::new().set("ok", false).set("failed", true).done()));
+                }
+            };
             // the copy follows the disk's password, never the desired next one: an
             // encrypted file without its password, or a new document waiting for
             // its first password save, skips the tick
@@ -725,6 +732,7 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
             let data = args.take(1);
             let engine = d.engine.clone();
             let shared = d.recovery_shared.clone();
+            let shell = d.shell.clone();
             let user_data = d.user_data(&[]);
             let original = original_path.clone();
             let d2 = d.clone();
@@ -744,9 +752,11 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                         },
                     )
                     .map_err(|_| ())?;
-                    write_copy(&shared, &user_data, &pending, bytes, copy_title, original)
-                        .map(|r| (r, pending))
-                        .map_err(|_| ())
+                    write_copy(
+                        &shared, &user_data, &shell, &pending, bytes, copy_title, original,
+                    )
+                    .map(|r| (r, pending))
+                    .map_err(|_| ())
                 },
                 move |result| {
                     responder.reply(Ok(match result {
@@ -837,39 +847,61 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
     ));
 
     let d = docs.clone();
-    all.push(kit::invoke("docs:confirm-marked-odt", move |cx, _args| {
-        let view = cx.sender.view;
-        if d.is_torn_down(view) {
-            return Ok("cancel".into_ipc());
-        }
-        let b = marked_odt_box(&MarkedOdtText {
-            title: d.tm("markedOdtTitle"),
-            message: d.tm("markedOdtMessage"),
-            detail: d.tm("markedOdtDetail"),
-            save_docx: Some(d.tm("markedOdtDocx")),
-            clear_marks: d.tm("markedOdtClear"),
-            cancel: d.tm("btnCancel"),
-        });
-        let response = d.message(
-            d.parent(view),
-            MessageBox {
-                kind: Some(b.kind.into()),
-                title: Some(b.title),
-                message: b.message,
-                detail: Some(b.detail),
-                buttons: b.buttons,
-                default_id: Some(b.default_id as usize),
-                cancel_id: Some(b.cancel_id),
-                checkbox_label: None,
-            },
-        );
-        let choice = match marked_odt_choice(response as f64, true) {
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Docx => "docx",
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Clear => "clear",
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Cancel => "cancel",
-        };
-        Ok(choice.into_ipc())
-    }));
+    all.push(kit::invoke(
+        "docs:confirm-marked-export",
+        move |cx, args| {
+            let view = cx.sender.view;
+            if d.is_torn_down(view) {
+                return Ok("cancel".into_ipc());
+            }
+            // an unknown format answers as a cancel
+            let Some(format) = args.str(0).filter(|f| MARKED_EXPORT_FORMATS.contains(f)) else {
+                return Ok("cancel".into_ipc());
+            };
+            let odt = format == "odt";
+            let b = marked_odt_box(&MarkedOdtText {
+                title: d.tm("markedTitle"),
+                message: d.tm(if odt {
+                    "markedOdtMessage"
+                } else {
+                    "markedExportMessage"
+                }),
+                detail: d.tm(if odt {
+                    "markedOdtDetail"
+                } else {
+                    "markedExportDetail"
+                }),
+                save_docx: Some(d.tm("markedDocx")),
+                clear_marks: d.tm(if odt {
+                    "markedOdtClear"
+                } else {
+                    "markedExportClear"
+                }),
+                cancel: d.tm("btnCancel"),
+            });
+            let response = d.message(
+                d.parent(view),
+                MessageBox {
+                    kind: Some(b.kind.into()),
+                    title: Some(b.title),
+                    message: b.message,
+                    detail: Some(b.detail),
+                    buttons: b.buttons,
+                    default_id: Some(b.default_id as usize),
+                    cancel_id: Some(b.cancel_id),
+                    checkbox_label: None,
+                },
+            );
+            let choice = match marked_odt_choice(response as f64, true) {
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Docx => "docx",
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Clear => "clear",
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Cancel => {
+                    "cancel"
+                }
+            };
+            Ok(choice.into_ipc())
+        },
+    ));
 
     let d = docs.clone();
     all.push(kit::invoke_later(

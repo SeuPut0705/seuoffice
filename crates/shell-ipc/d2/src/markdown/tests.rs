@@ -184,6 +184,41 @@ fn save_as_pdf_prints_the_screen_and_opens_it() {
 }
 
 #[test]
+fn save_as_pdf_of_a_marked_document_waits_for_the_renderers_export() {
+    let mut rt = rt();
+    let v = view_on(&rt, 1, None);
+    let target = rt.dir.join("m.pdf");
+    let target_s = target.to_string_lossy().into_owned();
+    rt.script().save.push_back(Some(target.clone()));
+    let request = obj([
+        ("text", s("x")),
+        ("mode", s("saveAs")),
+        ("pdfHtml", s("<p>x</p>")),
+        ("holdsHiddenContent", true.into_ipc()),
+    ]);
+    let reply = rt.invoke_now("markdown:save", v, vec![request]).unwrap();
+    assert_eq!(field(&reply, "exportAs"), &s("pdf"));
+    assert!(!target.exists(), "nothing printed yet");
+    let export = |to: &str| obj([("html", s("<p>clear</p>")), ("saveAsTarget", s(to))]);
+    assert_eq!(
+        rt.invoke_now("markdown:export-pdf", v, vec![export("/elsewhere.pdf")]),
+        Ok(failure("markdown: save target not approved"))
+    );
+    assert_eq!(
+        rt.invoke_now("markdown:export-pdf", v, vec![export(&target_s)]),
+        Ok(ok_path(&target_s))
+    );
+    assert_eq!(std::fs::read(&target).unwrap(), b"%PDF");
+    let dialogs = rt
+        .script()
+        .calls
+        .iter()
+        .filter(|c| matches!(c, HostCall::Save(..)))
+        .count();
+    assert_eq!(dialogs, 1, "one dialog: the Save As");
+}
+
+#[test]
 fn an_unnamed_first_save_with_a_suggestion_lands_beside_the_others() {
     let mut rt = rt();
     note(&rt, "Plan.md", "taken");
@@ -542,20 +577,43 @@ fn an_odt_export_confirms_its_report() {
 }
 
 #[test]
-fn the_marked_odt_box_answers_the_pressed_way_out() {
+fn the_marked_export_box_names_the_format_and_answers_the_pressed_way_out() {
     let mut rt = rt();
     let v = view_on(&rt, 1, None);
     rt.script().message.extend([0, 1, 2]);
-    for want in ["docx", "clear", "cancel"] {
+    for (format, want) in [("odt", "docx"), ("pdf", "clear"), ("png", "cancel")] {
         assert_eq!(
-            rt.invoke_now("markdown:confirm-marked-odt", v, vec![]),
+            rt.invoke_now("markdown:confirm-marked-export", v, vec![s(format)]),
             Ok(s(want))
         );
     }
+    let messages: Vec<String> = rt
+        .script()
+        .calls
+        .iter()
+        .filter_map(|c| match c {
+            HostCall::Message(_, b) => Some(b.message.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "This document has content hidden from AI, and an ODT file cannot keep that.",
+            "This document has content hidden from AI, and a PDF file cannot keep that.",
+            "This document has content hidden from AI, and page images cannot keep that.",
+        ]
+    );
+    // an unknown format asks nothing
+    assert_eq!(
+        rt.invoke_now("markdown:confirm-marked-export", v, vec![s("docx")]),
+        Ok(s("cancel"))
+    );
+    assert_eq!(rt.script().calls.len(), 3);
     let mut rt = rt_with(json!({ "is_headless": true }));
     let v = view_on(&rt, 1, None);
     assert_eq!(
-        rt.invoke_now("markdown:confirm-marked-odt", v, vec![]),
+        rt.invoke_now("markdown:confirm-marked-export", v, vec![s("pdf")]),
         Ok(s("cancel"))
     );
     assert!(rt.script().calls.is_empty());
@@ -732,4 +790,51 @@ fn registers_every_text_editor_channel_and_nothing_else() {
         })
         .collect();
     assert_eq!(got, want);
+}
+
+/// runs `d2/markdown:<what>` as ipc-probe's trigger step does
+fn trigger(rt: &mut Rt, what: &str, view: u32, args: serde_json::Value) -> Got<IpcValue> {
+    let (got, then) = catch();
+    let known = super::probe_trigger(
+        what,
+        shell_contract::ViewId(view),
+        &args,
+        &rt.services,
+        &rt.provided(),
+        then,
+    );
+    assert!(known, "{what}");
+    rt.drain();
+    got
+}
+
+#[test]
+fn triggers_queue_note_appends_and_run_headless_exports() {
+    let mut rt = rt();
+    let path = note(&rt, "t.md", "x");
+    let v = rt.view(1, Surface::Markdown);
+    trigger(&mut rt, "open-view", 1, json!([path]));
+    trigger(&mut rt, "queue-note-append", 1, json!([path, "quote"]));
+    assert_eq!(rt.events()[0].channel, "markdown:note-append-ready");
+    assert_eq!(
+        rt.invoke_now("markdown:note-append-take", v, vec![]),
+        Ok(IpcValue::Array(vec![s("quote")]))
+    );
+    let w = rt.view(2, Surface::Markdown);
+    let done = trigger(
+        &mut rt,
+        "export-pdf-headless",
+        2,
+        json!([path, "/o.pdf", 1000]),
+    );
+    assert_eq!(
+        rt.invoke_now("markdown:consume-headless-export", w, vec![]),
+        Ok(s("/o.pdf"))
+    );
+    rt.advance(Duration::from_millis(1000));
+    let error = done.borrow().clone().unwrap().unwrap_err();
+    assert_eq!(error.message, "markdown export timed out after 1000ms");
+    let renamed = vault(&rt).join("u.md");
+    trigger(&mut rt, "file-renamed", 1, json!([path, renamed]));
+    assert_eq!(rt.events().last().unwrap().channel, "markdown:file-renamed");
 }

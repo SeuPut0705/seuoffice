@@ -82,8 +82,15 @@ impl T {
         self.call("docs:open-path", vec![s(path)])
     }
 
+    /// the hosts' log lines, as compact JSON
     fn calls(&self) -> Vec<String> {
-        self.fake.calls.lock().unwrap().clone()
+        self.fake
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|l| l.to_string())
+            .collect()
     }
 
     fn channels(&self) -> Vec<&'static str> {
@@ -98,7 +105,7 @@ fn opening_a_file_grants_its_save_and_lists_it_as_recent() {
     let opened = t.open(&path);
     assert_eq!(get(&opened, "path"), &s(&path));
     assert_eq!(get(&opened, "name"), &s("a.docx"));
-    assert_eq!(get(&opened, "dataUrl"), &s("handoff:plain docx"));
+    assert_eq!(get(&opened, "dataUrl"), &s("handoff:706c61696e20646f6378"));
     assert_eq!(get(&opened, "hash"), &s(&super::sha256_hex(b"plain docx")));
     assert_eq!(get(&opened, "encrypted"), &IpcValue::Bool(false));
     assert!(
@@ -108,7 +115,10 @@ fn opening_a_file_grants_its_save_and_lists_it_as_recent() {
         t.call("docs:recent", vec![]),
         IpcValue::Array(vec![s(&path)])
     );
-    assert!(t.calls().contains(&format!("file_opened 1 {path}")));
+    assert!(
+        t.calls()
+            .contains(&serde_json::json!(["fileOpenedHook", 1, path]).to_string())
+    );
     // the original is archived under its hash
     assert!(
         t.rt.dir
@@ -373,7 +383,7 @@ fn save_into_project_goes_where_the_shell_puts_it_or_is_skipped() {
     assert!(
         p.calls()
             .iter()
-            .any(|c| c == "write_new_document 1 My_ Doc.docx body")
+            .any(|c| c == r#"["writeNewDocument",1,"My_ Doc.docx","626f6479"]"#)
     );
     // the document has its file now
     assert_eq!(
@@ -406,7 +416,10 @@ fn a_password_set_for_the_document_encrypts_its_next_save() {
     );
     t.call("docs:save", vec![s(&path), ab(b"text")]);
     assert_eq!(std::fs::read(&path).unwrap(), b"ENC:text");
-    assert!(t.calls().contains(&"encrypt_docx pw".to_owned()));
+    assert!(
+        t.calls()
+            .contains(&r#"["officeCrypto.encrypt","pw"]"#.to_owned())
+    );
 }
 
 #[test]
@@ -607,7 +620,10 @@ fn a_copy_left_from_a_crash_is_offered_when_its_file_opens() {
     let opened =
         t.rt.invoke_now("docs:open-path", b, vec![s(&path)])
             .unwrap();
-    assert_eq!(get(&opened, "dataUrl"), &s("handoff:unsaved edits"));
+    assert_eq!(
+        get(&opened, "dataUrl"),
+        &s("handoff:756e7361766564206564697473")
+    );
     assert_eq!(get(&opened, "recovered"), &IpcValue::Bool(true));
 }
 
@@ -654,7 +670,7 @@ fn first_document_queues_are_taken_once() {
         obj(&[
             ("path", s("Report.docx")),
             ("name", s("Report.docx")),
-            ("dataUrl", s("handoff:tpl")),
+            ("dataUrl", s("handoff:74706c")),
             ("hash", s("")),
             ("untitledCopy", true.into_ipc()),
         ])
@@ -736,10 +752,10 @@ fn only_the_active_tab_patches_the_view_menu() {
     assert_eq!(
         t.calls(),
         vec![
-            "checked docs-menu-ai-sidebar true",
-            "checked docs-menu-dark-mode false",
-            "enabled docs-menu-insert-equation false",
-            "enabled docs-menu-insert-comment false",
+            r#"["MenuItem.checked","docs-menu-ai-sidebar",true]"#,
+            r#"["MenuItem.checked","docs-menu-dark-mode",false]"#,
+            r#"["MenuItem.enabled","docs-menu-insert-equation",false]"#,
+            r#"["MenuItem.enabled","docs-menu-insert-comment",false]"#,
         ]
     );
 }
@@ -768,7 +784,10 @@ fn a_torn_down_tab_loses_its_writes() {
         t.call("docs:save-as-pick", vec![s("n.docx")]),
         IpcValue::Null
     );
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("cancel"));
+    assert_eq!(
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
+        s("cancel")
+    );
 }
 
 #[test]
@@ -795,9 +814,8 @@ fn a_renamed_file_keeps_its_grant_under_the_new_name() {
 }
 
 #[test]
-fn the_editor_saves_through_the_renderer_and_exports_by_menu_command() {
-    let mut t = T::new(json!({}));
-    let a = t.a;
+fn the_editor_saves_and_exports_by_menu_command() {
+    let t = T::new(json!({}));
     let editor = editor_for(&t.rt.provided(), ViewId(1)).unwrap();
     assert!(editor.owns(ViewId(1)));
     let other = t.rt.view(3, Surface::Pdf);
@@ -809,14 +827,20 @@ fn the_editor_saves_through_the_renderer_and_exports_by_menu_command() {
         SaveMode::Save,
         Box::new(move |r| *g.borrow_mut() = Some(r)),
     );
-    assert_eq!(t.channels(), vec!["docs:close-save-request"]);
-    t.rt.send("docs:close-save-result", a, vec![false.into_ipc()]);
-    assert_eq!(*got.borrow(), Some(Ok(false)));
+    // the tab menu's save is the renderer's own flow: the command goes out
+    assert_eq!(*got.borrow(), Some(Ok(true)));
     editor.export_request(ViewId(1), "pdf");
-    let events = t.rt.events();
+    let events: Vec<_> =
+        t.rt.events()
+            .into_iter()
+            .map(|e| (e.channel, e.args[0].clone()))
+            .collect();
     assert_eq!(
-        (events[0].channel, events[0].args[0].clone()),
-        ("menu:command", s("export-pdf"))
+        events,
+        vec![
+            ("menu:command", s("save")),
+            ("menu:command", s("export-pdf"))
+        ]
     );
 }
 
@@ -1041,10 +1065,11 @@ fn copying_a_picture_puts_its_bitmap_and_sized_html_on_the_clipboard() {
         vec![s("data:image/png;base64,aGk="), s(meta)],
     );
     assert_eq!(ok, true.into_ipc());
-    let html = format!(
-        "write_clipboard_image 2 <img src=\"data:image/png;base64,aGk=\" width=\"5\" height=\"20\" data-image-meta=\"{}\">",
-        "{&quot;imageWidthPx&quot;:5,&quot;x&quot;:&quot;&lt;&quot;}"
-    );
+    let html = serde_json::json!(["clipboard.write", {
+        "html": "<img src=\"data:image/png;base64,aGk=\" width=\"5\" height=\"20\" data-image-meta=\"{&quot;imageWidthPx&quot;:5,&quot;x&quot;:&quot;&lt;&quot;}\">",
+        "text": null
+    }])
+    .to_string();
     assert!(t.calls().contains(&html), "{:?}", t.calls());
 }
 
@@ -1065,7 +1090,9 @@ fn capture_rect_checks_its_rectangle() {
         t.call("docs:capture-rect", vec![rect]),
         kit::u8_array(b"png".to_vec())
     );
-    assert!(t.calls().contains(&"capture_rect 1 0 1 11 5".to_owned()));
+    assert!(t.calls().contains(
+        &r#"["webContents.capturePage",1,{"x":0,"y":1,"width":11,"height":5}]"#.to_owned()
+    ));
 }
 
 #[test]
@@ -1090,7 +1117,11 @@ fn ai_documents_open_in_a_tab_or_are_written_beside_the_others() {
         ])],
     );
     assert_eq!(docx, obj(&[("ok", true.into_ipc())]));
-    assert!(t.calls().iter().any(|c| c.starts_with("open_ai_doc_tab")));
+    assert!(
+        t.calls()
+            .iter()
+            .any(|c| c.starts_with(r#"["openAiDocTabFor""#))
+    );
     let md = t.call(
         "docs:create-document",
         vec![obj(&[
@@ -1143,16 +1174,26 @@ fn analyze_media_rejects_a_missing_request_and_answers_the_tool() {
         vec![obj(&[("mediaUrls", IpcValue::Array(vec![s("u"), s("")]))])],
     );
     assert_eq!(r, obj(&[("text", s("a cat"))]));
-    assert!(t.calls().contains(&"analyze_media u".to_owned()));
+    assert!(
+        t.calls()
+            .iter()
+            .any(|c| c.starts_with(r#"["analyzeMediaTool""#) && c.contains(r#"["u"]"#))
+    );
 }
 
 #[test]
 fn marked_odt_answers_the_button_pressed() {
     let mut t = T::new(json!({}));
     t.rt.script().message.push_back(1);
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("clear"));
+    assert_eq!(
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
+        s("clear")
+    );
     t.rt.script().message.push_back(0);
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("docx"));
+    assert_eq!(
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
+        s("docx")
+    );
 }
 
 #[test]
@@ -1164,7 +1205,7 @@ fn materialize_takes_only_an_array_buffer() {
     );
     assert_eq!(
         t.call("docs:materialize-docx", vec![ab(b"x")]),
-        obj(&[("dataUrl", s("handoff:x"))])
+        obj(&[("dataUrl", s("handoff:78"))])
     );
 }
 
@@ -1231,7 +1272,10 @@ fn a_destroyed_view_drops_its_state() {
     assert!(editor.is_none());
     assert!(t.editor().torn_down(ViewId(1)));
     assert_eq!(t.editor().document_path(ViewId(1)), None);
-    assert!(t.calls().contains(&"forget_lazy_media_owner 1".to_owned()));
+    assert!(
+        t.calls()
+            .contains(&r#"["forgetLazyMediaOwner",1]"#.to_owned())
+    );
 }
 
 #[test]
@@ -1256,7 +1300,7 @@ fn an_untitled_copy_reopens_in_a_new_tab_that_keeps_writing_it() {
     );
     let restored = t.rt.invoke_now("docs:consume-copy", b, vec![]).unwrap();
     assert_eq!(get(&restored, "name"), &s("Notes.docx"));
-    assert_eq!(get(&restored, "dataUrl"), &s("handoff:draft"));
+    assert_eq!(get(&restored, "dataUrl"), &s("handoff:6472616674"));
     assert_eq!(get(&restored, "recovered"), &IpcValue::Bool(true));
     assert_eq!(t.editor().recovery_identity(ViewId(2)), Some(copy));
 }

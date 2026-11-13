@@ -19,6 +19,9 @@ type Settle = Box<dyn FnOnce(Option<String>)>;
 struct State {
     /// `pwWin`'s view
     view: Option<ViewId>,
+    /// windows `closePdfPasswordDialog` closed whose `closed` has not come yet:
+    /// it still answers the pending prompt as cancelled
+    closing: Vec<ViewId>,
     /// `currentState`: a `PdfPasswordUiState`
     current: Option<IpcValue>,
     /// `pendingResolve`
@@ -39,11 +42,20 @@ impl Password {
         // closing the window any other way (Alt+F4) counts as cancel
         let closed = kit::on_view_destroyed(&ctx.services, move |view| {
             let Some(state) = weak.upgrade() else { return };
-            if state.borrow().view != Some(view) {
-                return;
+            let ours = {
+                let mut s = state.borrow_mut();
+                let closing = s.closing.len();
+                s.closing.retain(|v| *v != view);
+                if s.view == Some(view) {
+                    s.view = None;
+                    true
+                } else {
+                    s.closing.len() != closing
+                }
+            };
+            if ours {
+                settle(&state, None);
             }
-            state.borrow_mut().view = None;
-            settle(&state, None);
         });
         Password {
             ctx: ctx.clone(),
@@ -109,6 +121,7 @@ impl Password {
         if let Some(view) = view.filter(|v| self.ctx.alive(*v))
             && let Some(window) = self.ctx.window_of(view)
         {
+            self.state.borrow_mut().closing.push(view);
             self.ctx.contents.close_window(window);
         }
     }
@@ -234,5 +247,24 @@ mod tests {
         assert_eq!(*got.borrow(), vec![None]);
         t.rt.destroy(ViewId(901));
         assert_eq!(got.borrow()[1].as_deref(), Some("2 cancelled"));
+    }
+
+    #[test]
+    fn closing_the_dialog_with_a_prompt_pending_cancels_it_once() {
+        let mut t = tools(json!({}));
+        let tools = t.tools();
+        let got: Rc<RefCell<Vec<Option<String>>>> = Rc::default();
+        let g = got.clone();
+        tools.prompt_password(None, state(), Box::new(move |p| g.borrow_mut().push(p)));
+        t.rt.view(901, Surface::ShellPdfPassword);
+        tools.close_password_dialog();
+        assert!(got.borrow().is_empty());
+        // the window's `closed` answers the pending prompt
+        t.rt.destroy(ViewId(901));
+        assert_eq!(*got.borrow(), vec![None]);
+        // a later window of the same view number settles nothing more
+        t.rt.view(901, Surface::ShellPdfPassword);
+        t.rt.destroy(ViewId(901));
+        assert_eq!(*got.borrow(), vec![None]);
     }
 }

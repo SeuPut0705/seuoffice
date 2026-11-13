@@ -1,8 +1,7 @@
 //! What other areas call on the Word editor: [`DocumentEditors`] for the
 //! tabs, menus and MCP, and the functions `docs-main.ts` exported to the
 //! shell (the first-document queues, teardown, crash recovery's contract,
-//! the MCP write grant, the headless export). Those have no caller in Rust
-//! yet: their contract with the shell is still open.
+//! the MCP write grant, the headless export), public for the shell.
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -19,7 +18,7 @@ use super::Docs;
 use crate::kit;
 
 /// The Word editor of every docs view
-pub(crate) struct DocsEditors(pub Rc<Docs>);
+pub struct DocsEditors(pub(super) Rc<Docs>);
 
 impl DocumentEditors for DocsEditors {
     fn owns(&self, view: ViewId) -> bool {
@@ -30,25 +29,20 @@ impl DocumentEditors for DocsEditors {
             .is_some_and(|s| s.surface == Surface::Docs)
     }
 
-    /// `'save'` runs the renderer's full save flow (the close guard's
-    /// `docs:close-save-request`, which asks for a file when there is none)
-    /// and answers its outcome. `'saveAs'` is the tab menu's
-    /// `menu:command 'save-as'`: the renderer reports nothing back, so the
-    /// answer is that the request went out.
+    /// The shell's tab menu saved a Word tab with `menu:command 'save'` or
+    /// `'save-as'` (tab-document-actions.ts): the renderer runs its own save
+    /// flow and reports nothing back, so the answer is that the request went out.
     fn request_save(&self, view: ViewId, mode: SaveMode, then: Then<bool>) {
-        match mode {
-            SaveMode::Save => self
-                .0
-                .request_renderer_save(view, Box::new(move |ok| then(Ok(ok)))),
-            SaveMode::SaveAs => {
-                self.0.services.events.emit(
-                    Target::View(view),
-                    "menu:command",
-                    vec![IpcValue::String("save-as".into())],
-                );
-                then(Ok(true))
-            }
-        }
+        let command = match mode {
+            SaveMode::Save => "save",
+            SaveMode::SaveAs => "save-as",
+        };
+        self.0.services.events.emit(
+            Target::View(view),
+            "menu:command",
+            vec![IpcValue::String(command.into())],
+        );
+        then(Ok(true))
     }
 
     fn request_close(&self, view: ViewId, parent: Option<WindowId>, then: Then<bool>) {
@@ -103,51 +97,50 @@ impl DocumentEditors for DocsEditors {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl DocsEditors {
     /// `markDocsNewBlank(wcId)`
-    pub(crate) fn mark_new_blank(&self, view: ViewId) {
+    pub fn mark_new_blank(&self, view: ViewId) {
         self.0.new_blank.borrow_mut().insert(view);
     }
 
     /// `queueDocsCopy(wcId, { path, name })`
-    pub(crate) fn queue_copy(&self, view: ViewId, path: String, name: String) {
+    pub fn queue_copy(&self, view: ViewId, path: String, name: String) {
         self.0.doc_copies.insert(view, (path, name));
     }
 
     /// `createDocsView(openPath)`'s queue: the tab's first document
-    pub(crate) fn queue_open(&self, view: ViewId, path: String) {
+    pub fn queue_open(&self, view: ViewId, path: String) {
         self.0.window_opens.insert(view, path);
     }
 
     /// `authorizeMcpDocWrite(wcId, filePath)`
-    pub(crate) fn authorize_mcp_doc_write(&self, view: ViewId, path: &str) {
+    pub fn authorize_mcp_doc_write(&self, view: ViewId, path: &str) {
         self.0.allow_doc_write(view, path)
     }
 
     /// `teardownDocsRenderer(contents)`; `crashed` is `contents.isCrashed()`
-    pub(crate) fn teardown(&self, view: ViewId, crashed: bool) {
+    pub fn teardown(&self, view: ViewId, crashed: bool) {
         self.0.teardown(view, crashed)
     }
 
     /// `discardDocsRecovery(contents)`
-    pub(crate) fn discard_recovery(&self, view: ViewId) {
+    pub fn discard_recovery(&self, view: ViewId) {
         let open = self.0.open_doc.get(view);
         self.0.discard_tab_copies(view, open.as_deref())
     }
 
     /// `docsRecoveryIdentity(webContentsId)`
-    pub(crate) fn recovery_identity(&self, view: ViewId) -> Option<RecoveryUntitledIdentity> {
+    pub fn recovery_identity(&self, view: ViewId) -> Option<RecoveryUntitledIdentity> {
         self.0.book.borrow().untitled_of(view)
     }
 
     /// `docsRecoveryEditor.writeCopiesNow`
-    pub(crate) fn write_copies_now(&self, then: Box<dyn FnOnce()>) {
+    pub fn write_copies_now(&self, then: Box<dyn FnOnce()>) {
         self.0.write_copies_now(then)
     }
 
     /// `docsRecoveryEditor.openFileWithDecision`
-    pub(crate) fn open_file_with_decision(
+    pub fn open_file_with_decision(
         &self,
         view: ViewId,
         path: String,
@@ -157,7 +150,7 @@ impl DocsEditors {
     }
 
     /// `docsRecoveryEditor.openUntitledCopy`
-    pub(crate) fn open_untitled_copy(
+    pub fn open_untitled_copy(
         &self,
         view: ViewId,
         copy: RecoveryIdentity,
@@ -169,7 +162,7 @@ impl DocsEditors {
     }
 
     /// `createAiDocument(request, ownerWebContentsId)` as other apps call it
-    pub(crate) fn create_ai_document(
+    pub fn create_ai_document(
         &self,
         request: &IpcValue,
         owner: ViewId,
@@ -179,7 +172,7 @@ impl DocsEditors {
     }
 
     /// `exportDocsHeadless` past its hidden window
-    pub(crate) fn begin_headless_export(
+    pub fn begin_headless_export(
         &self,
         view: ViewId,
         input: String,

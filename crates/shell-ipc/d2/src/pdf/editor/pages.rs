@@ -95,16 +95,21 @@ impl Editor {
         picked_paths(&result)
     }
 
-    /// `uniqueGeneratedPdfPath(configuredDefaultSaveDir(app), String(name || fallback))`
-    fn generated_path(&self, suggested: &IpcValue, fallback: &str) -> Result<String, String> {
-        let dir = self.default_save_dir()?;
+    /// What `uniqueGeneratedPdfPath(configuredDefaultSaveDir(app), String(name
+    /// || fallback))` needs from the core thread: the save folder (its
+    /// usability cache lives here) and the name. The rest runs on a worker
+    /// ([`write_generated`]).
+    fn generated_place(
+        &self,
+        suggested: &IpcValue,
+        fallback: &str,
+    ) -> (Result<String, String>, String) {
         let name = if truthy(suggested) {
             js_string(suggested)
         } else {
             fallback.to_owned()
         };
-        unique_generated_pdf_path(&dir, Some(&JsonValue::String(name)), &exists_sync)
-            .map_err(|e| e.0)
+        (self.default_save_dir(), name)
     }
 
     /// An operation on the file's bytes whose result replaces the file, as this view
@@ -152,28 +157,44 @@ impl Editor {
         reply: shell_contract::ipc::Responder,
     ) {
         let ed = self.clone();
+        let (dir, name) = self.generated_place(&suggested, fallback);
         kit::on_worker(
             &self.services,
-            move || read_file(&path).and_then(op),
-            move |bytes| {
-                let result = bytes.and_then(|bytes| {
-                    let target = ed.generated_path(&suggested, fallback)?;
-                    write_file(&target, &bytes)?;
-                    Ok(target)
-                });
-                match result {
-                    Ok(target) => {
-                        ed.open_generated_pdf(&target);
-                        reply.reply(Ok(obj([
-                            ("ok", true.into_ipc()),
-                            ("savedPath", target.into_ipc()),
-                        ])))
-                    }
-                    Err(m) => reply.reply(Ok(failed(m))),
+            move || {
+                let bytes = read_file(&path).and_then(op)?;
+                write_generated(dir, &name, &bytes)
+            },
+            move |result| match result {
+                Ok(target) => {
+                    ed.open_generated_pdf(&target);
+                    reply.reply(Ok(obj([
+                        ("ok", true.into_ipc()),
+                        ("savedPath", target.into_ipc()),
+                    ])))
                 }
+                Err(m) => reply.reply(Ok(failed(m))),
             },
         );
     }
+}
+
+/// On a worker, after the operation succeeded: a free name in the save
+/// folder, then the write. The folder's error comes after the operation's,
+/// as in the TypeScript.
+fn write_generated(
+    dir: Result<String, String>,
+    name: &str,
+    bytes: &[u8],
+) -> Result<String, String> {
+    let dir = dir?;
+    let target = unique_generated_pdf_path(
+        &dir,
+        Some(&JsonValue::String(name.to_owned())),
+        &exists_sync,
+    )
+    .map_err(|e| e.0)?;
+    write_file(&target, bytes)?;
+    Ok(target)
 }
 
 pub(super) fn entries(ed: &Rc<Editor>) -> Vec<Entry> {
@@ -435,19 +456,15 @@ pub(super) fn entries(ed: &Rc<Editor>) -> Vec<Entry> {
             }
             let engine = e.engine.clone();
             let ed = e.clone();
-            let suggested = field(&request, "suggestedName").clone();
+            let (dir, name) = e.generated_place(field(&request, "suggestedName"), "merged.pdf");
             kit::on_worker(
                 &e.services,
                 move || {
                     let (base, others) = read_merge_inputs(&path, &picked)?;
-                    engine.merge_pdf(&base, &others)
+                    let (bytes, appended) = engine.merge_pdf(&base, &others)?;
+                    Ok((write_generated(dir, &name, &bytes)?, appended))
                 },
-                move |merged| {
-                    let result = merged.and_then(|(bytes, appended)| {
-                        let target = ed.generated_path(&suggested, "merged.pdf")?;
-                        write_file(&target, &bytes)?;
-                        Ok((target, appended))
-                    });
+                move |result: Result<_, String>| {
                     reply.reply(Ok(match result {
                         Ok((target, appended)) => {
                             ed.open_generated_pdf(&target);
