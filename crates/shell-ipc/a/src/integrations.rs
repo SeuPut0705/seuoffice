@@ -338,8 +338,14 @@ impl IntegrationsPort {
         let skills_dir = match dir {
             None | Some(JsonValue::Null) => row.as_ref().map(|r| r.skills_dir.clone()),
             Some(JsonValue::String(dir)) => Some(dir.clone()),
-            // a number, flag or object is no folder: the check below refuses it
-            Some(_) => return Err(unknown_target()),
+            // a number, flag or object is no folder: `!skillsDir` refuses a falsy one at
+            // once, a truthy one reaches `isInstallableSkillDir(dir, vouchedSkillDirs())`
+            Some(other) => {
+                if other.truthy() {
+                    let _ = self.vouched_skill_dirs();
+                }
+                return Err(unknown_target());
+            }
         };
         let skills_dir = skills_dir
             .filter(|dir| !dir.is_empty())

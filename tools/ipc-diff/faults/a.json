@@ -82,5 +82,201 @@
     "find": "self.dialogs.message(Some(cx.sender.window), &options)",
     "replace": "self.dialogs.message(None, &options)",
     "groups": ["a/outbound"]
+  },
+  {
+    "name": "integrations copy text changed",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.clipboard.write_text(text);",
+    "replace": "self.clipboard.write_text(&text.to_uppercase());",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations pick forgets the picked folder",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "*self.picked.borrow_mut() = chosen.clone();",
+    "replace": "*self.picked.borrow_mut() = None;",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations picked folder is not vouched",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "dirs.extend(self.picked.borrow().clone());",
+    "replace": "let _ = self.picked.borrow().clone();",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations install does not save the ledger",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.save_ledger(ledger)?;\n        self.state_of(&skills_dir)",
+    "replace": "drop(ledger);\n        self.state_of(&skills_dir)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations legacy row needs no copy of ours",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "row.as_ref().is_some_and(|r| r.legacy)",
+    "replace": "false",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations shared row leaves the older copies",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "row.as_ref().is_some_and(|r| r.id == SHARED_AGENT_ID)",
+    "replace": "false",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations rewrites every older copy",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if state.status == \"outdated\" {",
+    "replace": "if state.status != \"installed\" {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations uninstall saves on the wrong branch",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if self.skills.uninstall_skill(&target.skills_dir, &mut ledger) {",
+    "replace": "if !self.skills.uninstall_skill(&target.skills_dir, &mut ledger) {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations folder dialog without createDirectory",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "properties: vec![\"openDirectory\".into(), \"createDirectory\".into()],",
+    "replace": "properties: vec![\"openDirectory\".into()],",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations zip name without the version",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "format!(\"{CLI_COMMAND}-skill-{}.zip\", skill.version)",
+    "replace": "format!(\"{CLI_COMMAND}-skill.zip\")",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations an empty save path is taken",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".filter(|path| !path.as_os_str().is_empty())",
+    "replace": ".filter(|_| true)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a bad package.json reads as 0",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Err(_) => String::new(),",
+    "replace": "Err(_) => \"0\".to_owned(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations ephemeral outside a packaged app",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.is_packaged()",
+    "replace": "true",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations APPIMAGE ignored",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.env(\"APPIMAGE\").as_deref()",
+    "replace": "None",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations wrong launcher file",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "&launcher_file_name(&self.skills.platform()),",
+    "replace": "&launcher_file_name(\"win32\"),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations needs-cli keeps the major only",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ">=\\s*(\\d+\\.\\d+\\.\\d+)",
+    "replace": ">=\\s*(\\d+)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations status reads no ledger",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".skill_rows(&ledger)",
+    "replace": ".skill_rows(&Ledger::new())",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations null target worded as undefined",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(JsonValue::Null) => return Err(type_error(\"null\")),",
+    "replace": "Some(JsonValue::Null) => return Err(type_error(\"undefined\")),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations bundled skill from no bytes",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "self.skills.bundled_skill_from(bytes)",
+    "replace": "self.skills.bundled_skill_from(Vec::new())",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations zip written empty",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "std::fs::write(&path, zip)",
+    "replace": "std::fs::write(&path, b\"\")",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a null title is the word null",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "None | Some(JsonValue::Null) => String::new(),",
+    "replace": "None => String::new(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations legacy flag not shown",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if row.legacy {",
+    "replace": "if false {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a truthy non-string folder skips the vouched list",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "if other.truthy() {",
+    "replace": "if false {",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations folder dialog without the shell window",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".open(self.main_window.window(), &options)",
+    "replace": ".open(None, &options)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations save dialog without the shell window",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": ".save(self.main_window.window(), &options)",
+    "replace": ".save(None, &options)",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations ledger ignored",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(JsonValue::Object(raw)) => raw.clone(),",
+    "replace": "Some(JsonValue::Object(_)) => Ledger::new(),",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations any folder is vouched",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "&& !is_installable_skill_dir(",
+    "replace": "&& is_installable_skill_dir(",
+    "groups": ["a/integrations"]
+  },
+  {
+    "name": "integrations a title that is no string is empty",
+    "file": "shell-ipc/a/src/integrations.rs",
+    "find": "Some(value) => to_primitive(Some(value)).map_or_else(|e| e.0, |p| p.to_js_string()),",
+    "replace": "Some(JsonValue::String(s)) => s.clone(),\n        Some(_) => String::new(),",
+    "groups": ["a/integrations"]
   }
 ]
