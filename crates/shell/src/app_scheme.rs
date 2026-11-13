@@ -44,18 +44,19 @@ fn apps_dir() -> PathBuf {
     )
 }
 
-/// The folder of one host's bundle. A packaged shell carries them under
-/// `<resources>/renderer/<host>` (batch U's bundle section); a shell run from
-/// a checkout reads `apps/<app>/out/renderer`, where electron-vite builds
-/// them. `help` is the shell's own bundle (help mode), as in the Electron build.
+/// The folder of one host's bundle. A packaged shell carries them where the
+/// Electron build did, `<resources>/modules/<app>/renderer` (batch U's bundle
+/// job; `resources` is [`crate::paths::resources_path`]); a shell run from a
+/// checkout reads `apps/<app>/out/renderer`, where electron-vite builds them.
+/// `help` is the shell's own bundle (help mode), as in the Electron build.
 fn root_of(host: &str, resources: Option<&PathBuf>) -> PathBuf {
+    let app = if host == "help" { SHELL_HOST } else { host };
     if let Some(resources) = resources {
-        let packaged = resources.join("renderer").join(host);
+        let packaged = resources.join("modules").join(app).join("renderer");
         if packaged.is_dir() {
             return packaged;
         }
     }
-    let app = if host == "help" { SHELL_HOST } else { host };
     apps_dir().join(app).join("out").join("renderer")
 }
 
@@ -247,6 +248,25 @@ mod tests {
         assert_eq!(byte_range("bytes=2-99", 10), Some((2, 9)));
         assert_eq!(byte_range("bytes=5-2", 10), None);
         assert_eq!(byte_range("items=0-1", 10), None);
+    }
+
+    #[test]
+    fn a_packaged_shell_serves_each_host_from_its_modules_folder() {
+        let resources = std::env::temp_dir().join(format!("w-app-scheme-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&resources);
+        let folder = |host: &str| {
+            let app = if host == "help" { SHELL_HOST } else { host };
+            resources.join("modules").join(app).join("renderer")
+        };
+        for host in hosts() {
+            std::fs::create_dir_all(folder(host)).unwrap();
+        }
+        let served = roots(Some(resources.clone()), false);
+        assert_eq!(served.len(), hosts().count());
+        for (host, root) in served {
+            assert_eq!(PathBuf::from(root), folder(&host), "{host}");
+        }
+        let _ = std::fs::remove_dir_all(&resources);
     }
 
     #[test]

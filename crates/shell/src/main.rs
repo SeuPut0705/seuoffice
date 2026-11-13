@@ -292,7 +292,7 @@ fn main() {
             app_scheme::scheme_of(host),
             move |ctx, request, responder| {
                 let roots = ROOTS.get_or_init(|| {
-                    app_scheme::roots(ctx.app_handle().path().resource_dir().ok(), measure_page)
+                    app_scheme::roots(paths::resources_path(ctx.app_handle()), measure_page)
                 });
                 let label = ctx.webview_label().to_owned();
                 // reading a file is not for the UI thread
