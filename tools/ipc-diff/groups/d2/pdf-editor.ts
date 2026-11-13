@@ -16,15 +16,19 @@
  * calls into the editor (`flushPdfSave`, `requestPdfSaveAsOutcome`, ...).
  * The Rust side is `pdf::editor::probe::probe_trigger`.
  *
- * Not compared: `pdf:disk-file-changed` comes from a real folder watch and
- * its 400 ms settle timer, which a case cannot drive on the TypeScript side.
+ * `pdf:disk-file-changed`: pdf-main's `fs.watch` is the fake of
+ * `pdf-editor-fakes.ts`, which reports only what the `disk-change` trigger
+ * tells it; the trigger then waits out pdf-main's real settle timers. The
+ * Rust side runs the watcher's timers at once (`disk_change_now`).
  */
 import { registerHooks } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import type * as PdfMainModule from '../../../../apps/pdf/src/main/pdf-main.ts'
 import type { Call, Case, Group, LoadContext } from '../../types.ts'
-import { resetPdfEditorFakes } from './pdf-editor-fakes.ts'
+import { fireWatch, resetPdfEditorFakes } from './pdf-editor-fakes.ts'
+import { basename, dirname, join } from 'node:path'
+import { rmSync, writeFileSync } from 'node:fs'
 
 const ENTRY = 'apps/pdf/src/main/pdf-main.ts'
 type PdfMain = typeof PdfMainModule
@@ -48,16 +52,25 @@ const FAKED_FILES = [
 ]
 const FAKED_PACKAGES = ['pdf-lib', '@seuoffice/ai-search', '@seuoffice/ai-provider/subscription']
 const CRYPTO = 'ipc-diff:d2-pdf-editor-crypto'
+const FS = 'ipc-diff:d2-pdf-editor-fs'
+const OS = 'ipc-diff:d2-pdf-editor-os'
+const fromPdfMain = (parent: string | undefined) =>
+  /\/apps\/pdf\/src\/main\/pdf-main\.ts/.test(parent ?? '')
 
 registerHooks({
   resolve(specifier, context, next) {
     if (FAKED_PACKAGES.includes(specifier)) return { url: FAKES, shortCircuit: true }
     // pdf-main's certificate ids come from randomUUID: numbered per case
-    if (
-      (specifier === 'node:crypto' || specifier === 'crypto') &&
-      /\/apps\/pdf\/src\/main\/pdf-main\.ts/.test(context.parentURL ?? '')
-    ) {
+    if ((specifier === 'node:crypto' || specifier === 'crypto') && fromPdfMain(context.parentURL)) {
       return { url: CRYPTO, shortCircuit: true }
+    }
+    // its folder watch reports only what a case tells it (PdfShell::watch_dir)
+    if ((specifier === 'node:fs' || specifier === 'fs') && fromPdfMain(context.parentURL)) {
+      return { url: FS, shortCircuit: true }
+    }
+    // its recovery working folder (and the sweep of it) under the case's temp
+    if ((specifier === 'node:os' || specifier === 'os') && fromPdfMain(context.parentURL)) {
+      return { url: OS, shortCircuit: true }
     }
     const resolved = next(specifier, context)
     const path = resolved.url.split('?')[0]
@@ -69,6 +82,20 @@ registerHooks({
       return {
         format: 'module',
         source: `export * from 'node:crypto'\nexport { randomUUID } from ${JSON.stringify(FAKES)}`,
+        shortCircuit: true,
+      }
+    }
+    if (url === OS) {
+      return {
+        format: 'module',
+        source: `export * from 'node:os'\nexport { tmpdir } from ${JSON.stringify(FAKES)}`,
+        shortCircuit: true,
+      }
+    }
+    if (url === FS) {
+      return {
+        format: 'module',
+        source: `export * from 'node:fs'\nexport { watch } from ${JSON.stringify(FAKES)}`,
         shortCircuit: true,
       }
     }
@@ -129,7 +156,7 @@ function hook(l: Loaded, contents: Record<string, unknown>): Record<string, unkn
 
 async function load(cx: LoadContext): Promise<void> {
   const pdf = ((cx.case.hosts ?? {}).d2 as { pdf?: unknown } | undefined)?.pdf
-  resetPdfEditorFakes(pdf, cx.electron.log)
+  resetPdfEditorFakes(pdf, cx.electron.log, join(cx.dir, 'temp'))
   const shared = (cx.case.hosts?.shared ?? {}) as { recoveryRunId?: string }
   ;(globalThis as Record<symbol, unknown>)[Symbol.for('seuoffice.recovery-store.shared')] = {
     shuttingDown: false,
@@ -197,33 +224,52 @@ async function load(cx: LoadContext): Promise<void> {
   )
   // registerPdfIpc runs with the first view; a view no case calls from
   l.mod.createPdfView(null)
+  lastOutcome = undefined
   loaded = l
 }
 
-/** the shell's calls into the editor, by the name of the pdf-main.ts function */
-export const triggers: Record<string, (view: number, args: unknown[]) => Promise<unknown>> = {
+/** what the last waiting shell call settled to; undefined while it waits */
+let lastOutcome: { value: unknown } | { error: string } | undefined
+
+/**
+ * Starts a shell call that waits for the renderer: the trigger answers at
+ * once, `outcome` tells what it settled to (probe.rs does the same)
+ */
+function waiting(run: Promise<unknown>): Promise<undefined> {
+  lastOutcome = undefined
+  run.then(
+    (value) => (lastOutcome = { value }),
+    (err: unknown) => (lastOutcome = { error: String(err) }),
+  )
+  return Promise.resolve(undefined)
+}
+
+/** the shell's calls into the editor, by `d2/pdf:<name>`: the pdf-main.ts export */
+const calls: Record<string, (view: number, args: unknown[]) => Promise<unknown>> = {
   async 'open-view'(view, args) {
     const l = loaded!
     l.next = hook(l, l.cx.electron.contents(view) as unknown as Record<string, unknown>)
     l.mod.createPdfView((args[0] as string | undefined) ?? null)
   },
-  'flush-pdf-save': (view, args) => loaded!.mod.flushPdfSave(contentsOf(view), args[0] === true),
+  'flush-pdf-save': (view, args) =>
+    waiting(loaded!.mod.flushPdfSave(contentsOf(view), args[0] === true)),
   'request-pdf-close': (view, args) => {
     const BrowserWindow = loaded!.cx.electron.BrowserWindow as { fromId(id: number): unknown }
     const parent = typeof args[0] === 'number' ? BrowserWindow.fromId(args[0]) : undefined
-    return loaded!.mod.requestPdfClose(contentsOf(view), parent as never)
+    return waiting(loaded!.mod.requestPdfClose(contentsOf(view), parent as never))
   },
-  'request-pdf-save-as-outcome': async (view, args) =>
-    loaded!.mod.requestPdfSaveAsOutcome(contentsOf(view), args[0] as string),
-  'request-pdf-save-as': async (view, args) =>
-    loaded!.mod.requestPdfSaveAs(contentsOf(view), args[0] as string),
+  'request-pdf-save-as-outcome': (view, args) =>
+    waiting(loaded!.mod.requestPdfSaveAsOutcome(contentsOf(view), args[0] as string)),
+  'request-pdf-save-as': (view, args) =>
+    waiting(loaded!.mod.requestPdfSaveAs(contentsOf(view), args[0] as string)),
+  outcome: async () => lastOutcome ?? null,
   'request-pdf-page-images': async (view, args) =>
     loaded!.mod.requestPdfPageImages(contentsOf(view), args[0] as string),
   'set-pdf-save-as-in-flight': async (view, args) =>
     loaded!.mod.setPdfSaveAsInFlight(contentsOf(view), args[0] === true),
   'pdf-file-renamed': async (view, args) =>
     loaded!.mod.pdfFileRenamed(contentsOf(view), args[0] as string, args[1] as string),
-  'write-pdf-copies-now': () => loaded!.mod.writePdfCopiesNow(),
+  'write-pdf-copies-now': () => waiting(loaded!.mod.writePdfCopiesNow()),
   'discard-pdf-recovery': async (view) => loaded!.mod.discardPdfRecovery(contentsOf(view)),
   'pdf-close-cancelled': async (view) => loaded!.mod.pdfCloseCancelled(contentsOf(view)),
   'pdf-is-dirty': async (view) => loaded!.mod.pdfIsDirty(view),
@@ -234,10 +280,25 @@ export const triggers: Record<string, (view: number, args: unknown[]) => Promise
     loaded!.mod.markPdfUntitledCopy(args[0] as string),
   'open-file-with-decision': async (view, args) =>
     loaded!.mod.pdfRecoveryEditor.openFileWithDecision(contentsOf(view), args[0] as never),
+  async 'disk-change'(_view, args) {
+    const path = String(args[0])
+    if (typeof args[1] === 'string') writeFileSync(path, args[1])
+    else rmSync(path, { force: true })
+    fireWatch(dirname(path), basename(path))
+    // pdf-main's settle timer (400 ms) runs twice for a change, twice for a removal
+    await new Promise((r) => setTimeout(r, 2000))
+  },
   'window-open': async (view, args) => loaded!.hooked.get(view)?.open?.({ url: args[0] }),
   'render-process-gone': async (view) => fire(view, 'render-process-gone'),
   'did-start-loading': async (view) => fire(view, 'did-start-loading'),
 }
+
+export const triggers: Group['triggers'] = Object.fromEntries(
+  Object.entries(calls).map(([name, run]) => [
+    `d2/pdf:${name}`,
+    (_cx: unknown, view: number, args: unknown[]) => run(view, args),
+  ]),
+)
 
 function contentsOf(view: number): never {
   return loaded!.cx.electron.contents(view) as never
@@ -250,7 +311,6 @@ function fire(view: number, event: string): void {
 // ---- cases ----
 
 /** a step of a case: a renderer call, or the shell calling the editor */
-type Step = Call | { kind: 'trigger'; name: string; view?: number; args: unknown[] }
 
 const DOC = '$DIR/doc.pdf'
 const ORIGINAL = '%PDF-1.7 original %%EOF'
@@ -263,12 +323,17 @@ const files = { 'doc.pdf': ORIGINAL }
 
 const call = (channel: string, ...args: unknown[]): Call => ({ channel, args })
 const send = (channel: string, ...args: unknown[]): Call => ({ channel, kind: 'send', args })
-const trigger = (name: string, ...args: unknown[]): Step => ({
+const trigger = (name: string, ...args: unknown[]): Call => ({
+  channel: `d2/pdf:${name}`,
   kind: 'trigger',
   name: `d2/pdf:${name}`,
   view: 1,
   args,
 })
+/** what the last waiting trigger settled to: `null` while it waits */
+const outcome = () => trigger('outcome')
+/** the answer of the deferred step at `index` */
+const awaitStep = (index: number): Call => ({ channel: '', args: [], await: index })
 const open = (path = DOC) => trigger('open-view', path)
 const u8 = (text: string) => ({
   args: { $: 'b', k: 'u8', i: 0 },
@@ -295,7 +360,7 @@ interface CaseIn {
   files?: Case['files']
   pdf?: { engine?: Record<string, unknown>; shell?: Record<string, unknown> }
   shared?: Record<string, unknown>
-  calls: Step[]
+  calls: Call[]
 }
 const c = (x: CaseIn): Case =>
   ({
@@ -562,6 +627,16 @@ const cases: Case[] = [
     ],
   }),
   c({
+    note: 'another program changes the file, then removes it: the view hears of both',
+    calls: [
+      open(),
+      call('pdf:read-file', DOC),
+      call('pdf:watch-disk-file', DOC),
+      trigger('disk-change', DOC, '%PDF-1.7 rewritten elsewhere %%EOF'),
+      trigger('disk-change', DOC, null),
+    ],
+  }),
+  c({
     note: 'save in place and its refusals',
     files: { ...files, 'copy.pdf': 'c' },
     calls: [
@@ -591,7 +666,9 @@ const cases: Case[] = [
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true, redactions: [] }),
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true }),
       save({ targetPath: '$DIR/copy.pdf', annotations: 'strip', encryption: {} }),
+      outcome(),
       send('pdf:save-as-result', true),
+      outcome(),
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true }),
     ],
   }),
@@ -600,9 +677,12 @@ const cases: Case[] = [
     calls: [
       open(),
       trigger('request-pdf-save-as-outcome', '$DIR/a.pdf'),
+      outcome(),
       send('pdf:save-as-result', 'cancelled'),
+      outcome(),
       trigger('request-pdf-save-as', '$DIR/b.pdf'),
       send('pdf:save-as-result', 'oops'),
+      outcome(),
     ],
   }),
   c({
@@ -630,6 +710,8 @@ const cases: Case[] = [
       save({ targetPath: '$DIR/red.pdf', redactions: [{ pageIndex: 0, rect: [0, 0, 10, 10] }] }),
       call('pdf:read-file', '$DIR/red.pdf'),
       call('pdf:read-file', DOC),
+      send('pdf:save-as-result', true),
+      outcome(),
     ],
   }),
   c({
@@ -640,6 +722,10 @@ const cases: Case[] = [
       call('pdf:request-redaction-copy', DOC),
       call('pdf:request-redaction-copy', '$DIR/other.pdf'),
       trigger('set-pdf-save-as-in-flight', true),
+      { ...call('pdf:request-redaction-copy', DOC), defer: true },
+      call('pdf:request-redaction-copy', DOC),
+      send('pdf:save-as-result', true),
+      awaitStep(4),
     ],
   }),
   c({
@@ -782,7 +868,7 @@ const cases: Case[] = [
     views: TWO_VIEWS,
     calls: [
       open(),
-      { kind: 'trigger', name: 'd2/pdf:open-view', view: 2, args: ['$DIR/two.pdf'] },
+      { ...trigger('open-view', '$DIR/two.pdf'), view: 2 },
       call('pdf:paste-pages', { path: DOC }),
       call('pdf:copy-pages', { source: { path: DOC, encryption: {} }, pages: [0] }),
       call('pdf:copy-pages', { source: { path: DOC, targetPath: '$DIR/x.pdf' }, pages: [0] }),
@@ -1039,10 +1125,13 @@ const cases: Case[] = [
     calls: [
       open(),
       trigger('flush-pdf-save', true),
+      outcome(),
       send('pdf:dirty-changed', true),
       trigger('pdf-is-dirty'),
       trigger('flush-pdf-save', false),
+      outcome(),
       send('pdf:close-save-result', true),
+      outcome(),
     ],
   }),
   c({
@@ -1052,9 +1141,13 @@ const cases: Case[] = [
       open(),
       send('pdf:dirty-changed', true),
       trigger('request-pdf-close', 1),
+      outcome(),
       send('pdf:close-save-result', 'yes'),
+      outcome(),
       trigger('request-pdf-close'),
+      outcome(),
       trigger('request-pdf-close', 1),
+      outcome(),
       trigger('pdf-close-cancelled'),
       call('pdf:recovery-resume'),
     ],
@@ -1098,9 +1191,12 @@ const cases: Case[] = [
     calls: [
       open(),
       trigger('write-pdf-copies-now'),
+      outcome(),
       send('pdf:dirty-changed', true),
       trigger('write-pdf-copies-now'),
+      outcome(),
       send('pdf:recovery-flush-done'),
+      outcome(),
     ],
   }),
   c({
@@ -1130,7 +1226,7 @@ const cases: Case[] = [
   }),
 ]
 
-export const group: Group & { triggers: typeof triggers } = {
+export const group: Group = {
   batch: 'D2',
   load,
   cases,
@@ -1141,8 +1237,6 @@ export const group: Group & { triggers: typeof triggers } = {
     'pdf:save-as-result': 'a send answers nothing; the waiting Save As shows the result',
     'pdf:recovery-flush-done': 'a send answers nothing; the waiting session end shows it',
     'pdf:release-certificate': 'a send answers nothing',
-    'pdf:request-redaction-copy':
-      "its other answer waits for the renderer's Save As result, which a later call of the same case gives, and the harness awaits each invoke",
     'pdf:list-system-certificates':
       'the platform decides the listing (macOS has no supported store); the store password only reaches an NSS store',
   },

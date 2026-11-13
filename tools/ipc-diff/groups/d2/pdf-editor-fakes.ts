@@ -19,18 +19,22 @@ interface State {
   used: Map<string, number>
   held: { bytes: Uint8Array; count: number } | null
   uuid: number
+  /** the folder watches pdf-main made, by folder */
+  watches: Map<string, (event: string, name: string | null) => void>
+  /** the case's temp folder: pdf-main's `tmpdir()` */
+  tmp: string
 }
 
 const KEY = Symbol.for('ipc-diff.d2.pdf-editor')
 const holder = globalThis as unknown as Record<symbol, State>
 
 /** The case's answers and log; every case starts afresh */
-export function resetPdfEditorFakes(pdf: unknown, log: unknown[]): void {
+export function resetPdfEditorFakes(pdf: unknown, log: unknown[], tmp: string): void {
   const engine = ((pdf as { engine?: unknown } | undefined)?.engine ?? {}) as Record<
     string,
     unknown
   >
-  holder[KEY] = { engine, log, used: new Map(), held: null, uuid: 0 }
+  holder[KEY] = { engine, log, used: new Map(), held: null, uuid: 0, watches: new Map(), tmp }
 }
 
 const st = (): State => holder[KEY]
@@ -341,6 +345,9 @@ export function sharedSubscriptionStatuses(): unknown[] {
 
 // ---- packages/pdf-structure/src/store ----
 
+/** the store's own key of a PDF: note-link's `afterSave` looks the link up by it */
+export { noteLinkKey } from '../../../../packages/pdf-structure/src/store/note-links.ts'
+
 export class ResultStore {
   constructor(_dir: string) {}
   async readNoteLinks() {
@@ -375,4 +382,38 @@ export function randomUUID(): string {
   const s = st()
   s.uuid += 1
   return `00000000-0000-4000-8000-${String(s.uuid).padStart(12, '0')}`
+}
+
+// ---- node:fs `watch` of pdf-main.ts (diskWatchDeps), as PdfShell::watch_dir ----
+
+/** a folder watch that reports only what a case's `disk-change` trigger tells it */
+export function watch(
+  dir: string,
+  _options: unknown,
+  listener: (event: string, name: string | null) => void,
+) {
+  const watches = st().watches
+  watches.set(dir, listener)
+  return {
+    on: () => {},
+    close: () => {
+      if (watches.get(dir) === listener) watches.delete(dir)
+    },
+  }
+}
+
+/** the folder watch of `dir` reports `name` */
+export function fireWatch(dir: string, name: string): void {
+  st().watches.get(dir)?.('change', name)
+}
+
+// ---- node:os `tmpdir` of pdf-main.ts ----
+
+/**
+ * The case's `temp`, as the Rust side's `app.getPath('temp')`: the recovery
+ * working folder and its sweep (files over a day old are deleted) stay in
+ * the case, never the machine's own temporary folder
+ */
+export function tmpdir(): string {
+  return st().tmp
 }
