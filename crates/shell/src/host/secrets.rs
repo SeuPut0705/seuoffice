@@ -6,7 +6,7 @@
 //! installed app (decision 0019); an unpackaged Electron run took the
 //! product name of apps/shell/package.json, `SeuOffice`.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use shell_contract::Hosts;
 use shell_contract::runtime::{AppPaths, PathName};
@@ -16,6 +16,10 @@ use shell_ipc_a::secrets::{
 
 use super::HostContext;
 use crate::paths::ShellPaths;
+
+/// The codec, for the shell's own stand-ins that hand it out (the home
+/// screen's settings in `unbuilt.rs`), which are installed before this file
+pub(super) static CODEC: OnceLock<SecretCodecHost> = OnceLock::new();
 
 /// `app.getName()` when Electron fixed the keychain item
 const KEY_APP_NAME: &str = if cfg!(debug_assertions) {
@@ -30,6 +34,7 @@ pub fn install(hosts: &mut Hosts, _cx: &HostContext) {
         user_data: ShellPaths::new().path(PathName::UserData),
     }));
     let codec: SecretCodecHost = Arc::new(ShellSecretCodec::new(storage.clone()));
+    let _ = CODEC.set(codec.clone());
     hosts.insert(storage);
     hosts.insert(codec);
 }
