@@ -657,6 +657,28 @@ const folderFilesSpec: Group = {
       },
     ],
   },
+  // the hard-link cases of `plainFileIn` alone: the Windows comparison runs
+  // them without the link cases (the Rust side makes links on Unix only)
+  'folder-files.plainFileIn.hardLinks': {
+    ts: onFolder((root, segments) => folderFiles.plainFileIn(root as string, segments as string[])),
+    cases: [
+      {
+        args: [LINKS_NONE, '$DIR/proj', ['a.txt']],
+        files: { 'proj/a.txt': 'x' },
+        note: 'a file with one name',
+      },
+      {
+        args: [LINKS_NONE, '$DIR/proj', ['b.txt']],
+        files: { 'proj/a.txt': 'x', 'proj/b.txt': { link: 'proj/a.txt' } },
+        note: 'a file with a second hard link',
+      },
+      {
+        args: [LINKS_NONE, '$DIR/proj', ['a.txt']],
+        files: { 'proj/a.txt': 'x', 'other.txt': { link: 'proj/a.txt' } },
+        note: 'the second name is outside the folder',
+      },
+    ],
+  },
   'folder-files.realPlainFileIn': {
     ts: onFolder((root, segments, plat) =>
       folderFiles.realPlainFileIn(
