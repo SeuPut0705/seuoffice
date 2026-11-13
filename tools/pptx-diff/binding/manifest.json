@@ -15449,6 +15449,40 @@
     },
     {
       "module": "redaction-xml",
+      "name": "diagramDataRedactLabel",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "dataXml",
+          "type": "string | undefined",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": {
+        "path": "pptx_engine::redaction_xml::diagram_data_redact_label",
+        "file": "crates/pptx-engine/src/redaction_xml.rs",
+        "name": "diagram_data_redact_label",
+        "vis": "pub",
+        "params": ["data_xml: Option<&str>"],
+        "ret": "Result<Option<String>, String>",
+        "reachable": true
+      },
+      "route": "table",
+      "note": "nothing outside the package uses it: the module drops it unless a kept piece names it"
+    },
+    {
+      "module": "redaction-xml",
       "name": "syncRedactExt",
       "kind": "function",
       "async": false,
@@ -15613,7 +15647,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": ["index", "package", "test"],
+      "required": ["index", "test"],
       "rust": null,
       "route": "none"
     },
@@ -20004,7 +20038,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": ["index", "test"],
+      "required": ["index", "package", "test"],
       "rust": {
         "path": "pptx_engine::zip::resolve_target",
         "file": "crates/pptx-engine/src/zip.rs",

@@ -962,6 +962,34 @@ const SMARTART: Array<{
     spTree: gf(DIAGRAM_URI, RELS),
     ctx: { ...SMARTART_CTX, theme: undefined },
   },
+  {
+    // every run and picture drawn for the diagram is withheld under the data's first label
+    name: 'smartart whose data part holds a hidden run, drawn and laid out',
+    spTree: many(
+      gf(DIAGRAM_URI, relIds('r:dm="rId2" r:lo="rId3" r:cs="rId5"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing" r:lo="rId3" r:cs="rId5"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdStub" r:lo="rIdSlash"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdEmptyData"')),
+    ),
+    ctx: {
+      ...SMARTART_CTX,
+      diagramDatas: [
+        ['rId2', DATA.replace('<a:rPr lang="en-US"/>', `<a:rPr lang="en-US">${REDACT}</a:rPr>`)],
+        [
+          'rIdNoDrawing',
+          DATA.replace(
+            '<a:rPr lang="en-US"/>',
+            `<a:rPr>${REDACT.replace('label="face"', "label=''")}</a:rPr>`,
+          ),
+        ],
+        [
+          'rIdStub',
+          DATA.replace('</dgm:ptLst>', '<!-- &#60;x:redact label="ref"/> --></dgm:ptLst>'),
+        ],
+        ['rIdEmptyData', ''],
+      ],
+    },
+  },
 ]
 
 export const SLIDES: Array<{

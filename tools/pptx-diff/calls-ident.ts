@@ -28,6 +28,7 @@ import {
   syncModel3dFrame,
 } from './reference/model3d'
 import {
+  diagramDataRedactLabel,
   hasRedactExtIn,
   readRedactLabel,
   REDACT_EL,
@@ -951,6 +952,35 @@ export const IDENT: CallSpec[] = [
     built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({
       text,
     })),
+  },
+  {
+    fn: 'pptxIdent.redaction-xml.diagramDataRedactLabel',
+    call: (text) => diagramDataRedactLabel(text),
+    fromDocument: (parts) =>
+      [...parts]
+        .filter(([path]) => /^ppt\/diagrams\/data\d*\.xml$/.test(path))
+        .map(([, text]) => ({ text })),
+    built: [
+      '',
+      '<dgm:dataModel/>',
+      ...PROPS,
+      ...REDACT_FORMS,
+      `<dgm:pt><a:rPr><a:extLst>${redactExtXml('client phone')}</a:extLst></a:rPr></dgm:pt>`,
+      `<x:redact label='single'/>`,
+      '<redact label=""/>',
+      '<redact/>',
+      '<go:redacted label="no"/>',
+      '<go:redact\tlabel = "spaced"></go:redact>',
+      '<go:redact x="a" label="second"/><go:redact label="third"/>',
+      `<a:ext uri="${REDACT_EXT_URI}"/>`,
+      // the mark spelt with character references, valid and not
+      '&#60;go:redact label="ref"/>',
+      '&#x3C;go&#x3a;redact label="hex"/>',
+      `&#x7B;9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}`,
+      '&#xD800;redact label="surrogate"/>',
+      '&#1114112;redact&#99999999999999999999;/>',
+      '&#0;<redact label="nul"/>',
+    ].map((text) => ({ text })),
   },
   {
     fn: 'pptxIdent.redaction-xml.syncRedactExt',

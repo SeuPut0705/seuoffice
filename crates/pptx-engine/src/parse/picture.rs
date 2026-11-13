@@ -24,7 +24,7 @@ use crate::chart::{ResolveFill, UserLine, parse_chart_xml};
 use crate::chartex::parse_chart_ex_xml;
 use crate::custgeom::parse_cust_geom;
 use crate::placeholder::{resolve_placeholder_preset_geom, resolve_placeholder_transform};
-use crate::redaction_xml::read_redact_label;
+use crate::redaction_xml::{diagram_data_redact_label, read_redact_label};
 use crate::theme::{Theme, theme_with_override};
 use crate::types::{
     ByteAnchor, ChartElement, ElementType, Insets, MediaKind, Paragraph, PassthroughElement,
@@ -649,6 +649,10 @@ pub(super) fn graphic_frame_passthrough(
                 }
             }
         }
+        let hidden = diagram_data_redact_label(lookup(ctx.diagram_datas, dm).map(String::as_str))?;
+        if let (Some(label), Some(shapes)) = (hidden, el.preview_shapes.as_mut()) {
+            withhold_shape_text(shapes, &label);
+        }
     }
     // OLE read-only preview: p:pic embedded in graphicData (often inside mc:AlternateContent/mc:Fallback),
     // or, in legacy converted decks, a VML shape keyed by the oleObj spid (v:imagedata, usually WMF/EMF)
@@ -681,6 +685,29 @@ pub(super) fn graphic_frame_passthrough(
         }
     }
     Ok(SlideElement::Passthrough(Box::new(el)))
+}
+
+/// Every run and picture of the shapes drawn for a diagram, withheld under `label`.
+fn withhold_shape_text(shapes: &mut [SlideElement], label: &str) {
+    for shape in shapes {
+        match shape {
+            SlideElement::Group(group) => {
+                if let Some(children) = group.children.as_mut() {
+                    withhold_shape_text(children, label);
+                }
+            }
+            SlideElement::Picture(picture) => picture.redact.set(label.to_owned()),
+            SlideElement::Text(text) => {
+                let paragraphs = text.text.as_mut().and_then(|body| body.paragraphs.as_mut());
+                for paragraph in paragraphs.into_iter().flatten() {
+                    for run in paragraph.runs.as_mut().into_iter().flatten() {
+                        run.redact.set(label.to_owned());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// `sh.text?.paragraphs?.some((par) => par.runs?.some((r) => r.text?.trim()))`
