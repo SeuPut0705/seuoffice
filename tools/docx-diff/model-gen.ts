@@ -438,8 +438,10 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
         : null
   const value = (field: (typeof fields)[number]): string => {
     if (field.optional) return field.local
-    // a key whose value may be undefined (`payload: string | undefined`): JSON.stringify drops it
-    if (/^Option</.test(field.type)) return `${field.local}.flatten()`
+    // a key whose value may be undefined (`payload: string | undefined`): a
+    // caller's object may leave it out, read leniently; the parse writes it
+    if (/^Option</.test(field.type))
+      return `${field.local}.map_or_else(|| wire::absent(${field.key}).map(|()| None), Ok)?`
     const stand = standIn(field.type)
     return stand === null
       ? `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
