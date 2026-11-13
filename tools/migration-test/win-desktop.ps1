@@ -126,8 +126,18 @@ public static class MigrationDialogs {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+  static extern IntPtr SendMessageTimeout(IntPtr h, uint m, IntPtr w, StringBuilder l, uint flags, uint ms, out IntPtr result);
   static string Class(IntPtr h) { var s = new StringBuilder(256); GetClassName(h, s, 256); return s.ToString(); }
+  // a top-level window's caption; GetWindowText reads no control of another process
   static string Text(IntPtr h) { var s = new StringBuilder(2048); GetWindowText(h, s, 2048); return s.ToString(); }
+  // a control's text in another process: WM_GETTEXT, abort if hung, 2 s at most
+  static string ControlText(IntPtr h) {
+    var s = new StringBuilder(2048);
+    IntPtr copied;
+    if (SendMessageTimeout(h, 0x000D, (IntPtr)s.Capacity, s, 0x0002, 2000, out copied) == IntPtr.Zero) return "";
+    return s.ToString();
+  }
   public static string[] Answer(int pid, string mustContain) {
     var answered = new List<string>();
     EnumWindows((h, l) => {
@@ -136,7 +146,7 @@ public static class MigrationDialogs {
       if (owner != (uint)pid || !IsWindowVisible(h) || Class(h) != "#32770") return true;
       var text = new StringBuilder();
       EnumChildWindows(h, (c, l2) => {
-        if (Class(c) == "Static") text.Append(Text(c)).Append(' ');
+        if (Class(c) == "Static") text.Append(ControlText(c)).Append(' ');
         return true;
       }, IntPtr.Zero);
       if (text.ToString().Contains(mustContain)) {
