@@ -83,15 +83,13 @@ impl Editor {
         options: jscompat::JsObject<JsonValue>,
     ) -> Vec<String> {
         let parent = self.contents.window_of(view);
-        let mut memory = std::mem::take(&mut self.st.borrow_mut().memory);
         let result = show_open_dialog_with_memory(
-            &mut memory,
+            &mut self.memory.lock().unwrap_or_else(|e| e.into_inner()),
             &mut Files(&*self.dialogs),
             parent.as_ref(),
             &options,
             None,
         );
-        self.st.borrow_mut().memory = memory;
         picked_paths(&result)
     }
 

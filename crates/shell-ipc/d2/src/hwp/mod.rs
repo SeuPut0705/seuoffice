@@ -197,10 +197,7 @@ pub(crate) fn entries(
     provided.add::<HwpEditors>(editors);
     let mut all = editor::entries(&hwp);
     all.extend(recovery::entries(&hwp));
-    all.extend(attachments::entries_with(
-        services,
-        Rc::clone(&hwp.dialog_memory),
-    )?);
+    all.extend(attachments::entries(services)?);
     all.extend(ai_image::entries(services)?);
     Ok(all)
 }

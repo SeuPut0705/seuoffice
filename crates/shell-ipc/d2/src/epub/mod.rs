@@ -24,7 +24,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use jscompat::node_path::host::{basename, dirname, extname, is_absolute, join};
@@ -175,8 +175,6 @@ struct State {
     views: BTreeMap<ViewId, ViewState>,
     /// `readingState`, made on first use
     reading: Option<ReadingState<ReadingDeps>>,
-    /// `dialog-memory`'s last folder
-    dialog_memory: DialogMemory,
     attach: attachments::AttachState,
 }
 
@@ -188,6 +186,8 @@ struct Epub {
     contents: ContentsHost,
     os: OsShellHost,
     state: RefCell<State>,
+    /// `dialog-memory`'s last folder: the shell's one
+    dialog_memory: Arc<Mutex<DialogMemory>>,
     /// `wc.once('destroyed', () => forgetView(wcId))`
     _destroyed: Rc<dyn Fn(ViewId)>,
 }
@@ -201,6 +201,7 @@ pub(crate) fn entries(
     let dialogs = services.hosts.need::<DialogsHost>(Batch::D2)?;
     let contents = services.hosts.need::<ContentsHost>(Batch::D2)?;
     let os = services.hosts.need::<OsShellHost>(Batch::D2)?;
+    let dialog_memory = services.hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?;
     let epub = Rc::new_cyclic(|weak: &Weak<Epub>| {
         let weak = weak.clone();
         Epub {
@@ -216,6 +217,7 @@ pub(crate) fn entries(
             contents,
             os,
             state: RefCell::default(),
+            dialog_memory,
         }
     });
     // the concrete type too: the calls that are not `DocumentEditors`
@@ -1234,7 +1236,7 @@ impl Epub {
     fn save_dialog(&self, view: ViewId, options: JsObject<JsonValue>) -> Option<String> {
         let parent = self.parent(view);
         let result = show_save_dialog_with_memory(
-            &mut self.state.borrow_mut().dialog_memory,
+            &mut self.dialog_memory.lock().unwrap_or_else(|e| e.into_inner()),
             &mut DialogAdapter(&*self.dialogs),
             parent.as_ref(),
             &options,

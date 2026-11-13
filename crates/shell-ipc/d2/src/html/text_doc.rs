@@ -136,7 +136,7 @@ pub(crate) struct TextDocs {
     /// a worker that shows a dialog (`saveImageFromUrl`) takes it along
     memory: Arc<Mutex<DialogMemory>>,
     /// `configuredDefaultSaveDir`'s fallback state
-    save_dir: RefCell<SaveDirState>,
+    save_dir: Arc<Mutex<SaveDirState>>,
 }
 
 /// what runs when a view is destroyed
@@ -187,6 +187,8 @@ impl TextDocs {
         let dialogs = services.hosts.need::<DialogsHost>(Batch::D2)?;
         let contents = services.hosts.need::<ContentsHost>(Batch::D2)?;
         let recovery_hosts = RecoveryHosts::need(services)?;
+        let memory = services.hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?;
+        let save_dir = services.hosts.need::<Arc<Mutex<SaveDirState>>>(Batch::D2)?;
         let docs = Rc::new_cyclic(|me: &Weak<TextDocs>| {
             let read = |f: fn(&TextDocs, ViewId) -> Option<String>| {
                 let me = me.clone();
@@ -255,8 +257,8 @@ impl TextDocs {
                 headless_waiters: RefCell::default(),
                 cleanups: RefCell::default(),
                 destroyed_hook: RefCell::default(),
-                memory: Arc::default(),
-                save_dir: RefCell::default(),
+                memory,
+                save_dir,
             }
         });
         let me = Rc::downgrade(&docs);
@@ -291,7 +293,7 @@ impl TextDocs {
     pub(crate) fn default_save_dir(&self) -> Result<String, IpcError> {
         configured_default_save_dir(
             &AppPathProvider(self.services.paths.as_ref()),
-            &mut self.save_dir.borrow_mut(),
+            &mut self.save_dir.lock().unwrap_or_else(|e| e.into_inner()),
             self.now_ms(),
         )
         .map_err(|e| kit::error(e.0))

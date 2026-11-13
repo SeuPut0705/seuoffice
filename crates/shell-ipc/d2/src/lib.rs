@@ -165,4 +165,51 @@ mod tests {
             "missing {missing:?}, extra {extra:?}"
         );
     }
+
+    /// The folder confirmed in one app's dialog is where another app's dialog
+    /// opens: the TypeScript keeps one memory for the whole process
+    #[test]
+    fn a_folder_picked_in_one_app_is_where_another_apps_dialog_opens() {
+        use shell_contract::{IpcValue, Surface};
+
+        use crate::testing::HostCall;
+
+        let mut rt = Rt::new(|hosts| {
+            hosts.insert::<Arc<Mutex<SharedRecoveryState>>>(Arc::new(Mutex::new(
+                SharedRecoveryState::new("0000000000000000"),
+            )));
+            super::fakes(hosts, &serde_json::Value::Null)
+        });
+        for app in super::APPS {
+            rt.register(*app).unwrap();
+        }
+        let picked = rt.dir.join("picked");
+        std::fs::create_dir_all(&picked).unwrap();
+        let html = rt.view(1, Surface::Html);
+        let docs = rt.view(2, Surface::Docs);
+        rt.script().save.push_back(Some(picked.join("a.html")));
+        let request = IpcValue::Object(vec![
+            ("text".into(), IpcValue::String("x".into())),
+            ("mode".into(), IpcValue::String("save".into())),
+        ]);
+        rt.invoke_now("html:save", html, vec![request]).unwrap();
+        // the other editor's save dialog starts in that folder
+        rt.script().save.push_back(None);
+        rt.invoke_now(
+            "docs:save-as-pick",
+            docs,
+            vec![IpcValue::String("b.docx".into())],
+        )
+        .unwrap();
+        let calls = rt.script().calls.clone();
+        let Some(HostCall::Save(_, second)) = calls
+            .iter()
+            .filter(|c| matches!(c, HostCall::Save(..)))
+            .nth(1)
+        else {
+            panic!("{calls:?}")
+        };
+        let start = second.default_path.clone().unwrap();
+        assert!(start.starts_with(&picked), "{start:?} not in {picked:?}");
+    }
 }

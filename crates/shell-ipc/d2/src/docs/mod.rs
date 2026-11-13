@@ -83,7 +83,8 @@ pub(crate) struct Docs {
     test_export_dir: Option<String>,
     /// `lastUsedDirectoryByDialog` of the dialog memory
     memory: Arc<Mutex<DialogMemory>>,
-    save_dir: RefCell<SaveDirState>,
+    /// the shell's one default-save-folder state
+    save_dir: Arc<Mutex<SaveDirState>>,
     /// `docWritablePaths`
     doc_writable: ViewMap<HashSet<String>>,
     /// `pdfWritablePaths`
@@ -151,8 +152,8 @@ pub(crate) fn entries(
         test_export_dir: std::env::var("SEUOFFICE_TEST_EXPORT_DIR")
             .ok()
             .filter(|d| !d.is_empty()),
-        memory: Arc::default(),
-        save_dir: RefCell::new(SaveDirState::new()),
+        memory: services.hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?,
+        save_dir: services.hosts.need::<Arc<Mutex<SaveDirState>>>(Batch::D2)?,
         doc_writable: ViewMap::new(services),
         pdf_writable: ViewMap::new(services),
         torn_down: RefCell::default(),
@@ -405,7 +406,7 @@ impl Docs {
     fn default_save_dir(&self) -> Result<String, String> {
         configured_default_save_dir(
             &Paths(self.services.paths.as_ref()),
-            &mut self.save_dir.borrow_mut(),
+            &mut self.save_dir.lock().unwrap_or_else(|e| e.into_inner()),
             recovery_now_ms(),
         )
         .map_err(|e| e.0)
