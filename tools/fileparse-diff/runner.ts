@@ -255,6 +255,7 @@ export async function runSuite(config: SuiteConfig): Promise<boolean> {
       if (!spec.extensions.includes(ext)) continue
       const bytes = new Uint8Array(readFileSync(resolve(repoRoot, path)))
       const input: Input = spec.mutateText ? { label: path, text: Buffer.from(bytes).toString('utf8') } : { label: path, bytes }
+      if (spec.corpusExtension) input.args = { ext }
       await check(spec, input, corpus)
       if (spec.isActive?.(input)) activeCorpus++
       if (spec.seedCorpus !== false && seeds.length < 40 && bytes.length < 1_000_000) seeds.push(input)

@@ -181,10 +181,13 @@ pub fn file_holds_hidden_content(bytes: &[u8], ext: &str) -> Result<bool, String
         _ => {}
     }
     // `JSZip.loadAsync(bytes).catch(() => null)`: a zip JSZip cannot load holds
-    // no mark; the gate's refusal is not a load failure and stays an error
+    // no mark. JSZip looks for the end record over the whole file, the gate over
+    // its last 64 KiB: only bytes with no end record anywhere fail both. Any
+    // other refusal of the gate stays an error, the closed side.
     let package = match load_zip_package_staged(bytes, &DEFAULT_ZIP_LIMITS, false) {
         Ok(package) => package,
         Err(LoadFailure::Archive(_)) => return Ok(false),
+        Err(_) if !bytes.windows(4).any(|window| window == b"PK\x05\x06") => return Ok(false),
         Err(failure) => return Err(failure.into_message()),
     };
     let prefix = if kind == "docx" { "word/" } else { "ppt/" };
