@@ -817,5 +817,96 @@
     "find": "Some(message) => run_failed(&message),\n                        None => command_ok(),",
     "replace": "Some(_) => command_ok(),\n                        None => command_ok(),",
     "groups": ["a/zotero"]
+  },
+  {
+    "name": "skills-changed-event-wrong-channel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".emit(Target::All, CHANGED, Vec::new())",
+    "replace": ".emit(Target::All, DROPPED, Vec::new())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "skills-dropped-event-wrong-channel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".emit(Target::All, DROPPED, Vec::new())",
+    "replace": ".emit(Target::All, CHANGED, Vec::new())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "any-window-may-manage",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "self.main == Some(sender.view)",
+    "replace": "self.main.is_some()",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "agent-window-is-a-docs-window",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "sender.surface == Surface::ShellAgent",
+    "replace": "sender.surface == Surface::Docs",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "settings-open-on-wrong-page",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "JsonValue::String(\"skills\".into())",
+    "replace": "JsonValue::String(\"agents\".into())",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "import-temp-folder-renamed",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".join(\"seuoffice-skills\")",
+    "replace": ".join(\"skills\")",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "template-copies-folder-renamed",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": ".join(\"seuoffice-template-copies\")",
+    "replace": ".join(\"template-copies\")",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "preview-end-goes-to-every-view",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "Target::View(view_of(owner_id))",
+    "replace": "Target::All",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "picked-paths-dropped",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "result.set(\"filePaths\", JsonValue::Array(paths));",
+    "replace": "result.set(\"filePaths\", JsonValue::Array(Vec::new()));",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "dialog-properties-dropped",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "properties: strings_of(options.get(\"properties\")),",
+    "replace": "properties: Vec::new(),",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "agent-notice-never-due",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "Ok(agent_skill_notice_due(&self.env.settings_path()))",
+    "replace": "Ok(false)",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "copy-follows-wrong-panel",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "view_of(contents_id), view_of(opener_id)",
+    "replace": "view_of(opener_id), view_of(contents_id)",
+    "groups": ["a/user-skills"]
+  },
+  {
+    "name": "preview-original-loses-file-name",
+    "file": "shell-ipc/a/src/user_skills.rs",
+    "find": "IpcValue::String(file_name)",
+    "replace": "IpcValue::String(String::new())",
+    "groups": ["a/user-skills"]
   }
 ]

@@ -166,15 +166,15 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
 
 /// Runs the named trigger of this batch for an event no channel call
 /// reaches (tools/ipc-diff `trigger` cases); `false` for a name it does not
-/// know. Batch A has none yet: its ported events all follow a channel call.
+/// know: the skills dropped on a window (`a/skills-drop`).
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
-    _name: &str,
+    name: &str,
     _view: shell_contract::ViewId,
-    _args: &serde_json::Value,
+    args: &serde_json::Value,
     _services: &Services,
-    _provided: &std::rc::Rc<shell_contract::Provided>,
-    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+    provided: &std::rc::Rc<shell_contract::Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
 ) -> bool {
-    false
+    user_skills::probe_trigger(name, args, provided, then)
 }
