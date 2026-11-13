@@ -140,6 +140,37 @@ export function readWoff2(path: string): Woff2Font {
   }
 }
 
+/** one untransformed table of any WOFF2 file, glyf/loca transformed or not */
+export function readWoff2Table(path: string, wanted: string): Buffer | undefined {
+  const buf = readFileSync(path)
+  if (buf.toString('latin1', 0, 4) !== 'wOF2') throw new Error('not woff2')
+  const numTables = buf.readUInt16BE(12)
+  const totalCompressedSize = buf.readUInt32BE(20)
+  let off = 48
+  let at = 0
+  let found: { at: number; len: number } | undefined
+  for (let i = 0; i < numTables; i++) {
+    const flags = buf[off++]
+    let tag: string
+    if ((flags & 0x3f) === 0x3f) {
+      tag = buf.toString('latin1', off, off + 4)
+      off += 4
+    } else {
+      tag = KNOWN_TAGS[flags & 0x3f]
+    }
+    const transform = (flags >> 6) & 0x3
+    let len: number
+    ;[len, off] = uintBase128(buf, off)
+    const transformed = tag === 'glyf' || tag === 'loca' ? transform !== 3 : transform !== 0
+    if (transformed) [len, off] = uintBase128(buf, off)
+    if (tag === wanted) found = { at, len }
+    at += len
+  }
+  if (!found) return undefined
+  const raw = brotliDecompressSync(buf.subarray(off, off + totalCompressedSize))
+  return raw.subarray(found.at, found.at + found.len)
+}
+
 function parseCmap(cmap: Buffer): Map<number, number> {
   const n = cmap.readUInt16BE(2)
   let best = -1
