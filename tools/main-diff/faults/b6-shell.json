@@ -1,0 +1,1364 @@
+[
+  {
+    "name": "error-dialog: a second call while a box is up is not dropped (control)",
+    "file": "main-core/src/shell/error_dialog.rs",
+    "find": "        if self.showing {\n            return None;\n        }",
+    "replace": "        if false {\n            return None;\n        }",
+    "fn": [
+      "error-dialog.showErrorDialog"
+    ]
+  },
+  {
+    "name": "error-dialog: a destroyed parent still gets the box",
+    "file": "main-core/src/shell/error_dialog.rs",
+    "find": "let over_parent = matches!(win, Some(win) if !win.is_destroyed());",
+    "replace": "let over_parent = matches!(win, Some(_));",
+    "fn": [
+      "error-dialog.showErrorDialog"
+    ]
+  },
+  {
+    "name": "error-dialog: undefined prints as null",
+    "file": "main-core/src/shell/error_dialog.rs",
+    "find": "ErrorValue::Undefined => \"undefined\".to_owned(),",
+    "replace": "ErrorValue::Undefined => \"null\".to_owned(),",
+    "fn": [
+      "error-dialog.showErrorDialog"
+    ]
+  },
+  {
+    "name": "error-dialog: an answered box does not free the next",
+    "file": "main-core/src/shell/error_dialog.rs",
+    "find": "    pub fn settled(&mut self) {\n        self.showing = false;",
+    "replace": "    pub fn settled(&mut self) {\n        self.showing = true;",
+    "fn": [
+      "error-dialog.showErrorDialog"
+    ]
+  },
+  {
+    "name": "permission-guard: the docs dev server reads the wrong variable",
+    "file": "main-core/src/shell/permission_guard.rs",
+    "find": "(\"docs\", \"DOCS_RENDERER_URL\"),",
+    "replace": "(\"docs\", \"DOC_RENDERER_URL\"),",
+    "fn": [
+      "permission-guard.installShellPermissionGuard"
+    ]
+  },
+  {
+    "name": "permission-guard: the epub dev server is lost",
+    "file": "main-core/src/shell/permission_guard.rs",
+    "find": "(\"epub\", \"EPUB_RENDERER_URL\"),",
+    "replace": "(\"epub\", \"EPUB_RENDERER_URLS\"),",
+    "fn": [
+      "permission-guard.installShellPermissionGuard"
+    ]
+  },
+  {
+    "name": "permission-guard: the shell's own folder is named docs",
+    "file": "main-core/src/shell/permission_guard.rs",
+    "find": "file_roots: vec![(\"shell\".to_owned(), renderer_dir.to_owned())],",
+    "replace": "file_roots: vec![(\"docs\".to_owned(), renderer_dir.to_owned())],",
+    "fn": [
+      "permission-guard.installShellPermissionGuard"
+    ]
+  },
+  {
+    "name": "cli-link: Windows re-checks every launch",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "if platform == \"win32\" && recorded {",
+    "replace": "if platform == \"linux\" && recorded {",
+    "fn": [
+      "cli-link.installCliLinkBestEffort"
+    ]
+  },
+  {
+    "name": "cli-link: a dev run links too",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "    if !host.is_packaged() {\n        return;\n    }",
+    "replace": "    if false {\n        return;\n    }",
+    "fn": [
+      "cli-link.installCliLinkBestEffort"
+    ]
+  },
+  {
+    "name": "cli-link: the temporary-mount notice changes",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "\"[seuoffice] cli link skipped: app runs from a temporary mount\"",
+    "replace": "\"[seuoffice] cli link skipped\"",
+    "fn": [
+      "cli-link.installCliLinkBestEffort"
+    ]
+  },
+  {
+    "name": "cli-link: the record forgets the location",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "record.set(\"location\", JsonValue::String(location.to_owned()));",
+    "replace": "let _ = location;",
+    "fn": [
+      "cli-link.installCliLinkBestEffort"
+    ]
+  },
+  {
+    "name": "cli-link: a disk image is not temporary",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "js_regex!(r\"^\\/Volumes\\/\")",
+    "replace": "js_regex!(r\"^\\/Volume\\/\")",
+    "fn": [
+      "cli-link.isEphemeralInstall"
+    ]
+  },
+  {
+    "name": "cli-link: a FUSE mount is not temporary",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "js_regex!(r\"\\/\\.mount_[^/]+\\/\")",
+    "replace": "js_regex!(r\"\\/\\.mounts_[^/]+\\/\")",
+    "fn": [
+      "cli-link.isEphemeralInstall"
+    ]
+  },
+  {
+    "name": "cli-link: APPIMAGE is ignored",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "    if truthy(appimage).is_some() {\n        return true;\n    }",
+    "replace": "    if false {\n        return true;\n    }",
+    "fn": [
+      "cli-link.isEphemeralInstall"
+    ]
+  },
+  {
+    "name": "cli-link: the auth folder variable loses",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "Some(dir) => dir.to_owned(),",
+    "replace": "Some(_) => app_home_dir(home_dir),",
+    "fn": [
+      "cli-link.launcherFilePath"
+    ]
+  },
+  {
+    "name": "cli-link: a launcher file that is right is rewritten",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "        return Ok(false);",
+    "replace": "        return Ok(true);",
+    "fn": [
+      "cli-link.writeLauncherFile"
+    ]
+  },
+  {
+    "name": "cli-link: the launcher file has no newline",
+    "file": "main-core/src/shell/cli_link.rs",
+    "find": "let content = format!(\"{launcher_dir}\\n\");",
+    "replace": "let content = launcher_dir.to_owned();",
+    "fn": [
+      "cli-link.writeLauncherFile"
+    ]
+  },
+  {
+    "name": "pointer-size: the smallest pointer is 17",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "const MIN_PX: f64 = 16.0;",
+    "replace": "const MIN_PX: f64 = 17.0;",
+    "fn": [
+      "pointer-size.parseCursorBaseSize"
+    ]
+  },
+  {
+    "name": "pointer-size: hex is read as decimal",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "parse_int(&value, Radix::Sixteen)",
+    "replace": "parse_int(&value, Radix::Ten)",
+    "fn": [
+      "pointer-size.parseCursorBaseSize"
+    ]
+  },
+  {
+    "name": "pointer-size: every platform reads the registry",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "if platform != \"win32\" {",
+    "replace": "if platform == \"win32\" {",
+    "fn": [
+      "pointer-size.readPointerSize"
+    ]
+  },
+  {
+    "name": "pointer-size: a repeated size is applied again",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "        if px == self.current {",
+    "replace": "        if false {",
+    "fn": [
+      "pointer-size.installPointerSize"
+    ]
+  },
+  {
+    "name": "pointer-size: the memory is not kept",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "        self.current = px;",
+    "replace": "        self.current = self.current;",
+    "fn": [
+      "pointer-size.installPointerSize"
+    ]
+  },
+  {
+    "name": "pointer-size: a destroyed view gets the script",
+    "file": "main-core/src/shell/pointer_size.rs",
+    "find": "    if contents.is_destroyed() {\n        return;\n    }",
+    "replace": "    if false {\n        return;\n    }",
+    "fn": [
+      "pointer-size.applyPointerSizeTo"
+    ]
+  },
+  {
+    "name": "renderer-disposal: a released view can be released again",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "        if self.closed.contains(&target.id()) {\n            return false;",
+    "replace": "        if false {\n            return false;",
+    "fn": [
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: a view with no process is not ended at once",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "    if target.get_os_process_id()? == 0 {",
+    "replace": "    if target.get_os_process_id()? != 0 {",
+    "fn": [
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: close runs on a destroyed view",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "        if !target.is_destroyed()? {\n            target.close()?;",
+    "replace": "        if target.is_destroyed()? {\n            target.close()?;",
+    "fn": [
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: a target with no process may end",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "        if pid == 0 {",
+    "replace": "        if false {",
+    "fn": [
+      "renderer-disposal.canEndRendererProcess",
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: a closed peer still holds the process",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "                && !self.closed.contains(&peer.id())",
+    "replace": "                && true",
+    "fn": [
+      "renderer-disposal.canEndRendererProcess",
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: the target counts as its own peer",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "            if peer.id() != target.id()",
+    "replace": "            if peer.id() == target.id()",
+    "fn": [
+      "renderer-disposal.canEndRendererProcess"
+    ]
+  },
+  {
+    "name": "renderer-disposal: a destroyed peer holds the process",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "                && !peer.is_destroyed()?",
+    "replace": "                && true",
+    "fn": [
+      "renderer-disposal.canEndRendererProcess",
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "renderer-disposal: the closed set is not filled",
+    "file": "main-core/src/shell/renderer_disposal.rs",
+    "find": "        self.closed.insert(target.id());",
+    "replace": "        let _ = target.id();",
+    "fn": [
+      "renderer-disposal.wasReleasedRenderer",
+      "renderer-disposal.releaseClosedRenderer"
+    ]
+  },
+  {
+    "name": "ui-scale: the 110 percent preset is 120",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "[1.0, 1.1, 1.25, 1.5];",
+    "replace": "[1.0, 1.2, 1.25, 1.5];",
+    "fn": [
+      "ui-scale.stepUiScale",
+      "ui-scale.UI_SCALE_STEPS"
+    ]
+  },
+  {
+    "name": "ui-scale: the step search is off by a tolerance",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "*step >= scale - 1e-9",
+    "replace": "*step >= scale + 1e-9",
+    "fn": [
+      "ui-scale.stepUiScale",
+      "ui-scale.changeUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: the scale is not raised to the minimum",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "math_min(UI_SCALE_MAX, math_max(UI_SCALE_MIN, scale))",
+    "replace": "math_min(UI_SCALE_MAX, scale)",
+    "fn": [
+      "ui-scale.clampUiScale",
+      "ui-scale.setUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: an infinite stored scale is trusted",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "if stored.is_finite() =>",
+    "replace": "=>",
+    "fn": [
+      "ui-scale.readUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: a destroyed view gets the scale in the loop",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "        if contents.is_destroyed() {\n            continue;\n        }",
+    "replace": "        if false {\n            continue;\n        }",
+    "fn": [
+      "ui-scale.applyUiScaleToAll",
+      "ui-scale.setUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: a destroyed view gets the script",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "    if contents.is_destroyed() {\n        return;\n    }",
+    "replace": "    if false {\n        return;\n    }",
+    "fn": [
+      "ui-scale.applyUiScaleTo"
+    ]
+  },
+  {
+    "name": "ui-scale: a failed write does not stop the apply",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "        write_app_setting(settings_path, UI_SCALE_KEY, Some(JsonValue::Number(next)))?;",
+    "replace": "        let _ = write_app_setting(settings_path, UI_SCALE_KEY, Some(JsonValue::Number(next)));",
+    "fn": [
+      "ui-scale.setUiScale",
+      "ui-scale.changeUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: only the first listener is told",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "for listener in &mut self.change_listeners {",
+    "replace": "for listener in self.change_listeners.iter_mut().take(1) {",
+    "fn": [
+      "ui-scale.onUiScaleChanged",
+      "ui-scale.setUiScale"
+    ]
+  },
+  {
+    "name": "ui-scale: reset steps instead",
+    "file": "main-core/src/shell/ui_scale.rs",
+    "find": "        if direction == 0 {",
+    "replace": "        if direction == 7 {",
+    "fn": [
+      "ui-scale.changeUiScale"
+    ]
+  },
+  {
+    "name": "crash-watch: a killed renderer is asked about",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "reason != \"clean-exit\" && reason != \"killed\"",
+    "replace": "reason != \"clean-exit\"",
+    "fn": [
+      "crash-watch.shouldPromptForGoneRenderer",
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: an ended utility process is logged",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "details.reason == \"killed\" && details.kind == \"Utility\"",
+    "replace": "details.reason == \"killed\" && details.kind == \"GPU\"",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a clean child exit is logged",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        if not_a_crash(&details.reason) {\n            return Ok(());",
+    "replace": "        if false {\n            return Ok(());",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a clean renderer exit is logged",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        if not_a_crash(&details.reason) {\n            return Ok(None);",
+    "replace": "        if false {\n            return Ok(None);",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a released renderer is logged",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        if disposal.was_released_renderer(wc.id()) {",
+    "replace": "        if false {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: an editor that throws is named docs",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": ".unwrap_or_else(|_| \"other\".to_owned());",
+    "replace": ".unwrap_or_else(|_| \"docs\".to_owned());",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a killed renderer prompts",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        if !self.host.prompt() || !should_prompt_for_gone_renderer(&details.reason) {",
+    "replace": "        if !self.host.prompt() {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a second crash prompts again",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "if wc.is_destroyed() || self.prompting.contains(&wc.id()) {",
+    "replace": "if wc.is_destroyed() {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: slides are closed instead of reloaded",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "if doc.kind == \"slides\" {",
+    "replace": "if doc.kind == \"sheets\" {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the box cancels on the first button",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "cancel_id: Some(1),",
+    "replace": "cancel_id: Some(0),",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a destroyed renderer is still acted on",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        if response != 0.0 || wc.is_destroyed() {",
+    "replace": "        if response != 0.0 {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: an untitled copy is reopened without a way to",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        let copy = if self.host.can_reopen_untitled() {",
+    "replace": "        let copy = if true {",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: an unhandled rejection is not kept on the console",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        self.host.warn_unhandled_rejection(shown);",
+    "replace": "        let _ = shown;",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the figures lose to the entry",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        memory.assign(&entry);",
+    "replace": "        let _ = &entry;",
+    "fn": [
+      "crash-watch.startCrashWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the PC floor is 500",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "pub const LOW_MEMORY_FLOOR_MB: f64 = 512.0;",
+    "replace": "pub const LOW_MEMORY_FLOOR_MB: f64 = 500.0;",
+    "fn": [
+      "crash-watch.isLowMemory",
+      "crash-watch.LOW_MEMORY_FLOOR_MB",
+      "crash-watch.startLowMemoryWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the PC share is 10 percent",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "pub const LOW_MEMORY_SHARE: f64 = 0.08;",
+    "replace": "pub const LOW_MEMORY_SHARE: f64 = 0.1;",
+    "fn": [
+      "crash-watch.isLowMemory",
+      "crash-watch.LOW_MEMORY_SHARE"
+    ]
+  },
+  {
+    "name": "crash-watch: the heap share is 90 percent",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "pub const HEAP_SHORT_SHARE: f64 = 0.85;",
+    "replace": "pub const HEAP_SHORT_SHARE: f64 = 0.9;",
+    "fn": [
+      "crash-watch.isHeapShort",
+      "crash-watch.HEAP_SHORT_SHARE"
+    ]
+  },
+  {
+    "name": "crash-watch: a heap with no limit is short",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "heap_limit_mb > 0.0 && heap_mb",
+    "replace": "heap_mb",
+    "fn": [
+      "crash-watch.isHeapShort"
+    ]
+  },
+  {
+    "name": "crash-watch: the default cooldown is five minutes",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "cooldown_ms.unwrap_or(10.0 * 60_000.0)",
+    "replace": "cooldown_ms.unwrap_or(5.0 * 60_000.0)",
+    "fn": [
+      "crash-watch.startLowMemoryWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the cooldown is exclusive",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "if host.now() - self.last_at < self.cooldown_ms {",
+    "replace": "if host.now() - self.last_at <= self.cooldown_ms {",
+    "fn": [
+      "crash-watch.startLowMemoryWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: a line does not take the cooldown",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "        self.last_at = host.now();",
+    "replace": "        self.last_at = f64::NEG_INFINITY;",
+    "fn": [
+      "crash-watch.startLowMemoryWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the heap reason is named heap",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "\"main-heap\"",
+    "replace": "\"heap\"",
+    "fn": [
+      "crash-watch.startLowMemoryWatch"
+    ]
+  },
+  {
+    "name": "crash-watch: the app figure is in thousands",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "(\"appMB\", number(math_round(app_kb / 1024.0))),",
+    "replace": "(\"appMB\", number(math_round(app_kb / 1000.0))),",
+    "fn": [
+      "crash-watch.memoryFigures"
+    ]
+  },
+  {
+    "name": "crash-watch: the main figure rounds up",
+    "file": "main-core/src/shell/crash_watch.rs",
+    "find": "(\"mainMB\", number(math_round(source.rss() / MB))),",
+    "replace": "(\"mainMB\", number((source.rss() / MB).ceil())),",
+    "fn": [
+      "crash-watch.mainProcessFigures",
+      "crash-watch.memoryFigures"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a renderer needs no growth to be asked again",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const MEMORY_REPROMPT_GROWTH: f64 = 1.25;",
+    "replace": "const MEMORY_REPROMPT_GROWTH: f64 = 1.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the memory floor is 1024",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const MEMORY_LIMIT_FLOOR_MB: f64 = 1536.0;",
+    "replace": "const MEMORY_LIMIT_FLOOR_MB: f64 = 1024.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the PC share is a quarter",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const MEMORY_LIMIT_SHARE_OF_PC: f64 = 1.0 / 8.0;",
+    "replace": "const MEMORY_LIMIT_SHARE_OF_PC: f64 = 1.0 / 4.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: four reports are kept",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const KEPT_REPORTS: usize = 5;",
+    "replace": "const KEPT_REPORTS: usize = 4;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the cpu limit is 100",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const DEFAULT_CPU_LIMIT_PERCENT: f64 = 90.0;",
+    "replace": "const DEFAULT_CPU_LIMIT_PERCENT: f64 = 100.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the default cooldown is half a minute",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "const DEFAULT_REPORT_COOLDOWN_MS: f64 = 15.0 * 60_000.0;",
+    "replace": "const DEFAULT_REPORT_COOLDOWN_MS: f64 = 0.5 * 60_000.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a cool sample does not reset the count",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "state.hot = if hot { state.hot + 1.0 } else { 0.0 };",
+    "replace": "state.hot = state.hot + 1.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the first prompt needs growth",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "let escalated = state.prompted_memory_mb.is_none()",
+    "replace": "let escalated = false",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a burning core needs no cooldown to escalate",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "                || cpu > self.cpu_limit_percent\n                || memory_mb >=",
+    "replace": "                || memory_mb >=",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: an ignored renderer is still reported",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "            if state.ignored {\n                continue;",
+    "replace": "            if false {\n                continue;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: cpu is ten times smaller",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "/ ((now - sampled_at) / 1000.0)) * 100.0;",
+    "replace": "/ ((now - sampled_at) / 1000.0)) * 10.0;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a zero profile time still profiles",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "if self.profile_ms > 0.0 {",
+    "replace": "if self.profile_ms >= 0.0 {",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a held debugger is attached to",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "    if wc.is_destroyed() || wc.debugger_is_attached() {",
+    "replace": "    if wc.is_destroyed() {",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the debugger protocol is 1.2",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "wc.debugger_attach(\"1.3\")?;",
+    "replace": "wc.debugger_attach(\"1.2\")?;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: close is the first button",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "if response == 1.0 && !wc.is_destroyed() {",
+    "replace": "if response == 0.0 && !wc.is_destroyed() {",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: ignore is the close button",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "Ok(response == 2.0)",
+    "replace": "Ok(response == 1.0)",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a renderer being asked is asked again",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "        if state.borrow().prompting {\n            return None;",
+    "replace": "        if false {\n            return None;",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: the box cancels on the second button",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "                cancel_id: Some(0),",
+    "replace": "                cancel_id: Some(1),",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "renderer-watchdog: a GPU process counts",
+    "file": "main-core/src/shell/renderer_watchdog.rs",
+    "find": "if metric.kind != \"Tab\" {",
+    "replace": "if metric.kind != \"GPU\" {",
+    "fn": [
+      "renderer-watchdog.startRendererWatchdog"
+    ]
+  },
+  {
+    "name": "recovery-shell: hwp asks the docs editor",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "\"hwp\" => editors.hwp_recovery_identity(contents),",
+    "replace": "\"hwp\" => editors.docs_recovery_identity(contents.id()),",
+    "fn": [
+      "recovery-shell.editorRecoveryIdentity"
+    ]
+  },
+  {
+    "name": "recovery-shell: a destroyed webContents is asked",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "    if contents.is_destroyed() {\n        return None;\n    }\n    let answer",
+    "replace": "    if false {\n        return None;\n    }\n    let answer",
+    "fn": [
+      "recovery-shell.editorRecoveryIdentity",
+      "recovery-shell.tabUntitledCopy"
+    ]
+  },
+  {
+    "name": "recovery-shell: a tab with a file still answers with its planned copy",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "        if tab_file_path.is_some_and(|p| !p.is_empty()) {\n            return None;\n        }\n        self.planned_untitled.get(tab_id)",
+    "replace": "        if false {\n            return None;\n        }\n        self.planned_untitled.get(tab_id)",
+    "fn": [
+      "recovery-shell.tabUntitledCopy"
+    ]
+  },
+  {
+    "name": "recovery-shell: help has a crashed copy",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "if tab_kind == \"home\" || tab_kind == \"help\" {",
+    "replace": "if tab_kind == \"home\" {",
+    "fn": [
+      "recovery-shell.crashedUntitledCopy"
+    ]
+  },
+  {
+    "name": "recovery-shell: a copy that is not on disk is reopened",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "Ok(store.copy_info(&identity)?.map(|_| untitled))",
+    "replace": "Ok(Some(untitled))",
+    "fn": [
+      "recovery-shell.crashedUntitledCopy"
+    ]
+  },
+  {
+    "name": "recovery-shell: a tab with a file uses the planned copy",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "            && !tab_file_path.is_some_and(|p| !p.is_empty())\n            && let Some(id)",
+    "replace": "            && let Some(id)",
+    "fn": [
+      "recovery-shell.crashedUntitledCopy"
+    ]
+  },
+  {
+    "name": "recovery-shell: a blocked file tab needs no user",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "                if deps.blocked() {\n                    return true;",
+    "replace": "                if deps.blocked() {\n                    return false;",
+    "fn": [
+      "recovery-shell.restoredTabOpener"
+    ]
+  },
+  {
+    "name": "recovery-shell: docs nudge the sheets view",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "if context.kind == \"sheets\" {",
+    "replace": "if context.kind == \"docs\" {",
+    "fn": [
+      "recovery-shell.restoredTabOpener"
+    ]
+  },
+  {
+    "name": "recovery-shell: the sheets view includes the AI handlers",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "return editors.create_sheets_view(false, true);",
+    "replace": "return editors.create_sheets_view(true, true);",
+    "fn": [
+      "recovery-shell.restoredTabOpener"
+    ]
+  },
+  {
+    "name": "recovery-shell: pdf copies open in a plain view",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "    if kind == \"pdf\" {\n        return editors.create_pdf_view();",
+    "replace": "    if kind == \"docs\" {\n        return editors.create_pdf_view();",
+    "fn": [
+      "recovery-shell.restoredTabOpener"
+    ]
+  },
+  {
+    "name": "recovery-shell: only the first of two reorders is kept",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "if let Some(slot) = slot.filter(|slot| *slot > 0) {",
+    "replace": "if let Some(slot) = slot.filter(|slot| *slot >= 0) {",
+    "fn": [
+      "recovery-shell.runLaunchRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: the split focus follows the wrong pane",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "            \"a\"\n        } else if outcome.front.as_deref() == Some(split.b.as_str()) {",
+    "replace": "            \"b\"\n        } else if outcome.front.as_deref() == Some(split.b.as_str()) {",
+    "fn": [
+      "recovery-shell.runLaunchRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: the front tab is activated inside a split",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "    if !deps.manager().split_state()\n        && let Some(front) = &front\n    {",
+    "replace": "    if let Some(front) = &front\n    {",
+    "fn": [
+      "recovery-shell.runLaunchRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: a plan with rows asks nobody",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "    if plan.items.is_empty() {",
+    "replace": "    if false {",
+    "fn": [
+      "recovery-shell.runLaunchRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: an installer reopen is not told to the judge",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "            deps.reopened_by_installer(),\n        );",
+    "replace": "            false,\n        );",
+    "fn": [
+      "recovery-shell.runLaunchRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: only the first hwp title is pushed",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "if tab.kind != \"hwp\" || tab.file_path.as_deref().is_some_and(|p| !p.is_empty()) {",
+    "replace": "if tab.kind != \"hwp\" {",
+    "fn": [
+      "recovery-shell.pushHwpRecoveryTitles"
+    ]
+  },
+  {
+    "name": "recovery-shell: the title lookup goes to three editors",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "pub const RECOVERY_TITLE_SOURCES: [&str; 4] = [\"markdown\", \"html\", \"mindmap\", \"diagram\"];",
+    "replace": "pub const RECOVERY_TITLE_SOURCES: [&str; 4] = [\"markdown\", \"html\", \"mindmap\", \"mindmap\"];",
+    "fn": [
+      "recovery-shell.installRecoveryTitleSources"
+    ]
+  },
+  {
+    "name": "recovery-shell: slides discard a copy too",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "        \"diagram\" => editors.discard_diagram_recovery(contents),",
+    "replace": "        \"diagram\" => editors.discard_diagram_recovery(contents),\n        \"slides\" => editors.discard_docs_recovery(contents),",
+    "fn": [
+      "recovery-shell.discardEditorRecovery"
+    ]
+  },
+  {
+    "name": "recovery-shell: the reopened copy is not noted",
+    "file": "main-core/src/shell/recovery_shell.rs",
+    "find": "        let id = manager.add_unloaded_tab(tab_spec(&planned))?;\n        self.note_planned(&id, &planned);",
+    "replace": "        let id = manager.add_unloaded_tab(tab_spec(&planned))?;",
+    "fn": [
+      "recovery-shell.reopenUntitledCopy",
+      "recovery-shell.tabUntitledCopy"
+    ]
+  },
+  {
+    "name": "updater: the first check comes after 14 seconds",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "pub const FIRST_CHECK_DELAY_MS: f64 = 15_000.0;",
+    "replace": "pub const FIRST_CHECK_DELAY_MS: f64 = 14_000.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the recheck is every half hour",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "pub const RECHECK_INTERVAL_MS: f64 = 60.0 * 60.0 * 1000.0;",
+    "replace": "pub const RECHECK_INTERVAL_MS: f64 = 30.0 * 60.0 * 1000.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the cache retry waits a minute",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "pub const CACHE_RETRY_DELAY_MS: f64 = 30_000.0;",
+    "replace": "pub const CACHE_RETRY_DELAY_MS: f64 = 60_000.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: three failures are needed for manual",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "pub const MANUAL_FALLBACK_AFTER: f64 = 2.0;",
+    "replace": "pub const MANUAL_FALLBACK_AFTER: f64 = 3.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a 404 is a failure",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "    \"HTTP_ERROR_404\",",
+    "replace": "    \"HTTP_ERROR_405\",",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a missing element is a failure",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "    \"ERR_XML_MISSED_ELEMENT\",",
+    "replace": "    \"ERR_XML_MISSED_ELEMENTS\",",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: manual download names the latest page",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        Some(version) => github_release_tag_url(version),",
+    "replace": "        Some(_) => GITHUB_LATEST_RELEASE_URL.to_owned(),",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the Mac restart note is the Windows one",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "self.t(lang, \"updRestartNoteMac\")",
+    "replace": "self.t(lang, \"updRestartNote\")",
+    "fn": [
+      "updater.initAutoUpdater",
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: Linux says what Windows says",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            } else {\n                String::new()\n            },",
+    "replace": "            } else {\n                self.t(lang, \"updRestartNote\")\n            },",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the dialog button opens nothing",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            if response == 1.0 {\n                host.open_external(GITHUB_LATEST_RELEASE_URL);",
+    "replace": "            if response == 0.0 {\n                host.open_external(GITHUB_LATEST_RELEASE_URL);",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a failed check says it is up to date",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            if !is_no_release_error(&err) {",
+    "replace": "            if is_no_release_error(&err) {",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: an available update gets the up-to-date box",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if matches!(&result, Some(Some(answer)) if answer.is_update_available) {",
+    "replace": "        if false {",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a manual check is a scheduled one",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "self.logger.step(\"check-start\", &[(\"by\", text(\"user\"))]);",
+    "replace": "self.logger.step(\"check-start\", &[(\"by\", text(\"schedule\"))]);",
+    "fn": [
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a scheduled check is a user one",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "self.logger.step(\"check-start\", &[(\"by\", text(\"schedule\"))]);",
+    "replace": "self.logger.step(\"check-start\", &[(\"by\", text(\"user\"))]);",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: any platform updates",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if platform != \"win32\" && platform != \"darwin\" && !is_linux_app_image {",
+    "replace": "        if platform != \"win32\" && platform != \"darwin\" && platform != \"linux\" {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the latest channel allows no prerelease",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            channel == BuildUpdateChannel::Latest,",
+    "replace": "            channel == BuildUpdateChannel::Stable,",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: downgrades are allowed",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "host.configure(UpdaterSetting::AllowDowngrade(false));",
+    "replace": "host.configure(UpdaterSetting::AllowDowngrade(true));",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: an install on quit is allowed",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "host.configure(UpdaterSetting::AutoInstallOnAppQuit(false));",
+    "replace": "host.configure(UpdaterSetting::AutoInstallOnAppQuit(true));",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the stable channel is not selected",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if channel == BuildUpdateChannel::Stable {\n            host.configure(UpdaterSetting::Channel(\"stable\"));",
+    "replace": "        if channel == BuildUpdateChannel::Latest {\n            host.configure(UpdaterSetting::Channel(\"stable\"));",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: Mac leftovers stay",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            if mac_bundle.is_some() && block.is_none() {\n                remove_mac_leftovers(",
+    "replace": "            if false {\n                remove_mac_leftovers(",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the install-start age is in tenths of seconds",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "to_fixed_1((self.logger.env.now_ms() - since) / 1000.0)",
+    "replace": "to_fixed_1((self.logger.env.now_ms() - since) / 100.0)",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: toFixed rounds a tie down",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "if frac.as_bytes()[1] >= b'5' {",
+    "replace": "if frac.as_bytes()[1] > b'5' {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a Mac swap that did not take is retried",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "                || (flow.is_mac && flow.install_failures >= 1)",
+    "replace": "                || (false && flow.install_failures >= 1)",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a first failure goes to manual",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            } else if flow.install_failures == 1 {",
+    "replace": "            } else if flow.install_failures == 2 {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a newer release after a finished download takes the window",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            && (self.flow().download_in_flight || self.flow().phase == UpdatePhase::Downloaded)",
+    "replace": "            && (self.flow().download_in_flight)",
+    "fn": [
+      "updater.initAutoUpdater",
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a scheduled check brings back the flow",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            if self.manual_check_in_flight && !host.is_update_window_open() {",
+    "replace": "            if !host.is_update_window_open() {",
+    "fn": [
+      "updater.initAutoUpdater",
+      "updater.checkForUpdatesNow"
+    ]
+  },
+  {
+    "name": "updater: a repeat resets an open window",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if same_version_recheck && host.is_update_window_open() {",
+    "replace": "        if same_version_recheck {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a declined version is offered again",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if self.dismissed_version.as_deref() == Some(version) {",
+    "replace": "        if false {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a stale download is accepted",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if self.flow().latest_seen_version.as_deref() != Some(version) {",
+    "replace": "        if self.flow().latest_seen_version.as_deref() == Some(version) {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a finished download behind a window steals the focus",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            host.show_update_window(&state, true);",
+    "replace": "            host.show_update_window(&state, false);",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a finished download is started again",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if matches!(flow.phase, UpdatePhase::Downloading | UpdatePhase::Downloaded) {",
+    "replace": "        if matches!(flow.phase, UpdatePhase::Downloading) {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: progress counts when no download runs",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "                if !self.flow().download_in_flight {\n                    return Ok(());",
+    "replace": "                if false {\n                    return Ok(());",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: install before a download restarts",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "                if flow.phase != UpdatePhase::Downloaded {",
+    "replace": "                if false {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: an ordinary quit installs",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if !self.restart.update_restart_requested() {",
+    "replace": "        if false {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the installer is silent on Windows",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "let visible = host.platform() == \"win32\";",
+    "replace": "let visible = host.platform() != \"win32\";",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a failed installer start is not noticed",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if host.install(!visible, true) != Some(true) {",
+    "replace": "        if host.install(!visible, true) == Some(true) {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: tries do not count",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        let tries = next_attempt_tries(self.flow().failed_install.as_ref(), version);",
+    "replace": "        let tries = next_attempt_tries(None, version);",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a failure counts twice",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        flow.failed_attempts += 1.0;",
+    "replace": "        flow.failed_attempts += 2.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: later does not mute the version",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "                self.dismissed_version = self.flow().latest_seen_version.clone();",
+    "replace": "                self.dismissed_version = None;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: background checks ignore the setting",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if !host.auto_check_enabled() {",
+    "replace": "        if false {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the cache is pruned during a download",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if self.flow().download_in_flight || self.flow().phase == UpdatePhase::Downloaded {\n            return;\n        }\n        let logger",
+    "replace": "        let logger",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the preview shows after a second",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "host.set_timeout(Timer::FakeShow, 1500.0);",
+    "replace": "host.set_timeout(Timer::FakeShow, 1000.0);",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the preview moves in steps of five",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        *pct += 4.0;",
+    "replace": "        *pct += 5.0;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the preview finishes one step late",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if now >= 100.0 {",
+    "replace": "        if now > 100.0 {",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the preview runs in a packaged app",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "            .filter(|_| !packaged)",
+    "replace": "            .filter(|_| packaged)",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: the admin prompt is expected everywhere",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if host.platform() != \"win32\" {\n            return false;",
+    "replace": "        if false {\n            return false;",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater: a writable install folder asks for an administrator",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        !self.flow().install_dir_ok.unwrap_or(false)",
+    "replace": "        self.flow().install_dir_ok.unwrap_or(false)",
+    "fn": [
+      "updater.initAutoUpdater"
+    ]
+  }
+]

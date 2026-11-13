@@ -8,4 +8,5 @@ pub mod generate_handoff_ipc;
 pub mod marked_html;
 pub mod old_names;
 pub mod preview_document;
+pub mod preview_protocol;
 pub mod single_file_html;

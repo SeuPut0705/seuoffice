@@ -14,6 +14,7 @@ pub mod font_locate;
 pub mod font_similar;
 pub mod font_subset;
 pub mod generated_output;
+pub mod image_edit;
 pub mod node_io;
 pub mod note_link;
 pub mod ocr;

@@ -16,5 +16,6 @@ pub mod save_failure_log;
 pub mod session_rename;
 pub mod session_reopen;
 pub mod temp_files;
+pub mod template_fonts;
 pub mod workbook_save_resolve;
 pub mod xlsx_sidecar_client;

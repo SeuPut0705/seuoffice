@@ -1,0 +1,1832 @@
+[
+  {
+    "name": "history length",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "pub const MAX_HISTORY: usize = 50;",
+    "replace": "pub const MAX_HISTORY: usize = 49;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "clipboard token longest length",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "const MAX_TOKEN_LENGTH: usize = 256;",
+    "replace": "const MAX_TOKEN_LENGTH: usize = 255;",
+    "fn": [
+      "element-clipboard.isElementClipboardToken",
+      "element-clipboard.elementClipboardMarkerMatches"
+    ]
+  },
+  {
+    "name": "clipboard empty token is a token",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "length > 0 && length <= MAX_TOKEN_LENGTH",
+    "replace": "length >= 0 && length <= MAX_TOKEN_LENGTH",
+    "fn": [
+      "element-clipboard.isElementClipboardToken"
+    ]
+  },
+  {
+    "name": "clipboard token length counts code points",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "let length = token.encode_utf16().count();",
+    "replace": "let length = token.chars().count();",
+    "fn": [
+      "element-clipboard.isElementClipboardToken",
+      "element-clipboard.elementClipboardMarkerMatches"
+    ]
+  },
+  {
+    "name": "clipboard buffer read that throws counts as a match",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "Err(HostThrew) => false,",
+    "replace": "Err(HostThrew) => true,",
+    "fn": [
+      "element-clipboard.elementClipboardMarkerMatches",
+      "element-clipboard.canWriteElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard html token compared for inequality",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "found.get(1) == Some(encoded_token.as_str())",
+    "replace": "found.get(1) != Some(encoded_token.as_str())",
+    "fn": [
+      "element-clipboard.elementClipboardMarkerMatches"
+    ]
+  },
+  {
+    "name": "clipboard buffer compared for inequality",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "Ok(bytes) => bytes == token.as_bytes(),",
+    "replace": "Ok(bytes) => bytes != token.as_bytes(),",
+    "fn": [
+      "element-clipboard.elementClipboardMarkerMatches"
+    ]
+  },
+  {
+    "name": "clipboard marker needs both buffer and html",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "is_token_text(token) && (marker_buffer_matches(host, token) || marker_html_matches(host, token))",
+    "replace": "is_token_text(token) && (marker_buffer_matches(host, token) && marker_html_matches(host, token))",
+    "fn": [
+      "element-clipboard.elementClipboardMarkerMatches"
+    ]
+  },
+  {
+    "name": "clipboard other sender is allowed",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "current.sender_id == sender_id",
+    "replace": "current.sender_id != sender_id",
+    "fn": [
+      "element-clipboard.canWriteElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard other token is allowed",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "&current.token == token",
+    "replace": "&current.token != token",
+    "fn": [
+      "element-clipboard.canWriteElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard base64 length need not be a multiple of 4",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "|| length % 4 != 0",
+    "replace": "|| length % 4 == 4",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard base64 alphabet lacks the slash",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "[A-Za-z0-9+/]*={0,2}$",
+    "replace": "[A-Za-z0-9+]*={0,2}$",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard empty image is written",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "if host.image_is_empty(&decoded)? {",
+    "replace": "if !host.image_is_empty(&decoded)? {",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard empty png is written",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "if normalized_png.is_empty() {",
+    "replace": "if !normalized_png.is_empty() {",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard writes over a clipboard that moved on",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "if !element_clipboard_marker_matches(&*host, token) {",
+    "replace": "if element_clipboard_marker_matches(&*host, token) {",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "clipboard html marker attribute name",
+    "file": "main-core/src/slides/element_clipboard.rs",
+    "find": "data-seuoffice-slides-elements=\\\"{}\\\">\",",
+    "replace": "data-seuoffice-slides-element=\\\"{}\\\">\",",
+    "fn": [
+      "element-clipboard.writeElementClipboardImage"
+    ]
+  },
+  {
+    "name": "font store folder name",
+    "file": "main-core/src/slides/font_store.rs",
+    "find": "join(&[&get_user_data(), \"fonts\"])",
+    "replace": "join(&[&get_user_data(), \"font\"])",
+    "fn": [
+      "slides/font-store.fontStoreDir",
+      "slides/font-store.initFontStore",
+      "slides/font-store.installLocalFontFiles"
+    ]
+  },
+  {
+    "name": "font store is not wired into the registry",
+    "file": "main-core/src/slides/font_store.rs",
+    "find": "set_user_font_dir(&dir);",
+    "replace": "let _ = &dir;",
+    "fn": [
+      "slides/font-store.initFontStore"
+    ]
+  },
+  {
+    "name": "font store installs without the name reader",
+    "file": "main-core/src/slides/font_store.rs",
+    "find": "font_file_families: Some(font_file_families),",
+    "replace": "font_file_families: None,",
+    "fn": [
+      "slides/font-store.installLocalFontFiles"
+    ]
+  },
+  {
+    "name": "template font bold weight",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "(\"Pretendard\", \"Pretendard-Bold.otf\", \"700\"),",
+    "replace": "(\"Pretendard\", \"Pretendard-Bold.otf\", \"600\"),",
+    "fn": [
+      "sheets/template-fonts.templateFontFaceCss",
+      "sheets/template-fonts.withTemplateFontFaces"
+    ]
+  },
+  {
+    "name": "template font variable range",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "\"400 900\"),",
+    "replace": "\"400 800\"),",
+    "fn": [
+      "sheets/template-fonts.templateFontFaceCss",
+      "sheets/template-fonts.withTemplateFontFaces"
+    ]
+  },
+  {
+    "name": "template font scheme",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "scheme: TEMPLATE_FONT_SCHEME,",
+    "replace": "scheme: \"seuoffice-docx-medi\",",
+    "fn": [
+      "sheets/template-fonts.installStandaloneTemplateFontProtocol"
+    ]
+  },
+  {
+    "name": "template font fallback status",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "status: 404,",
+    "replace": "status: 410,",
+    "fn": [
+      "sheets/template-fonts.installStandaloneTemplateFontProtocol"
+    ]
+  },
+  {
+    "name": "template font css after the doctype",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": ".or_else(|| js_regex!(r\"^\\s*<!doctype[^>]*>\", \"i\").exec(html))",
+    "replace": ".or_else(|| None)",
+    "fn": [
+      "sheets/template-fonts.withTemplateFontFaces"
+    ]
+  },
+  {
+    "name": "template font css anchor is any head-like tag",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "js_regex!(r\"<head\\b[^>]*>\", \"i\")",
+    "replace": "js_regex!(r\"<head[^>]*>\", \"i\")",
+    "fn": [
+      "sheets/template-fonts.withTemplateFontFaces"
+    ]
+  },
+  {
+    "name": "template font css before the anchor",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "let at = anchor.map_or(0, |found| found.end());",
+    "replace": "let at = anchor.map_or(0, |found| found.start());",
+    "fn": [
+      "sheets/template-fonts.withTemplateFontFaces"
+    ]
+  },
+  {
+    "name": "template font dir of a packaged app",
+    "file": "main-core/src/sheets/template_fonts.rs",
+    "find": "self.is_packaged\n",
+    "replace": "!self.is_packaged\n",
+    "fn": [
+      "sheets/template-fonts.sheetsTemplateFontsDir",
+      "sheets/template-fonts.installStandaloneTemplateFontProtocol"
+    ]
+  },
+  {
+    "name": "preview host without its port",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "(Some(host), Some(port)) => format!(\"{host}:{port}\"),",
+    "replace": "(Some(host), Some(_)) => host.to_owned(),",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview view id may be empty",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "js_regex!(r\"^view-(\\d+)$\")",
+    "replace": "js_regex!(r\"^view-(\\d*)$\")",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview bad address status",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "return PreviewAnswer::Status(400);",
+    "replace": "return PreviewAnswer::Status(404);",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview unknown view status",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "None => PreviewAnswer::Status(404),",
+    "replace": "None => PreviewAnswer::Status(410),",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview cache header",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "(\"Cache-Control\", \"no-store\"),",
+    "replace": "(\"Cache-Control\", \"no-cache\"),",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview content type",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "(\"Content-Type\", \"text/html; charset=utf-8\"),",
+    "replace": "(\"Content-Type\", \"text/html\"),",
+    "fn": [
+      "preview-protocol.registerPreviewProtocol"
+    ]
+  },
+  {
+    "name": "preview scheme streams",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "stream: None,",
+    "replace": "stream: Some(true),",
+    "fn": [
+      "preview-protocol.registerPrivilegedSchemes"
+    ]
+  },
+  {
+    "name": "asset scheme under the preview name",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "scheme: ASSET_SCHEME,",
+    "replace": "scheme: PREVIEW_SCHEME,",
+    "fn": [
+      "preview-protocol.registerPrivilegedSchemes"
+    ]
+  },
+  {
+    "name": "extra schemes are dropped",
+    "file": "main-core/src/html/preview_protocol.rs",
+    "find": "list.extend(extra.iter().cloned().map(PrivilegedScheme::Extra));",
+    "replace": "let _ = extra;",
+    "fn": [
+      "preview-protocol.registerPrivilegedSchemes"
+    ]
+  },
+  {
+    "name": "print margins",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "margins.insert(side.into(), number(margin));",
+    "replace": "margins.insert(side.into(), number(margin * 2.0));",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print is silent",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "map.insert(\"silent\".into(), Value::Bool(false));",
+    "replace": "map.insert(\"silent\".into(), Value::Bool(true));",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print page size",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "map.insert(\"pageSize\".into(), Value::from(options.page_size.as_str()));",
+    "replace": "map.insert(\"pageSize\".into(), Value::from(\"A4\"));",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print landscape",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "map.insert(\"landscape\".into(), Value::Bool(options.landscape));",
+    "replace": "map.insert(\"landscape\".into(), Value::Bool(false));",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print page range dropped",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "if let Some(range) = pages {",
+    "replace": "if let Some(range) = pages.filter(|_| false) {",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print cancel is case sensitive",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "js_regex!(r\"cancel\", \"i\")",
+    "replace": "js_regex!(r\"cancel\", \"\")",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print failure without reason",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "PrintDialogOutcome::Failed(\"print failed\".to_owned())",
+    "replace": "PrintDialogOutcome::Failed(\"failed\".to_owned())",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print shows the window on darwin",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "if platform == \"win32\" {",
+    "replace": "if platform == \"darwin\" {",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print swallows a window that cannot be destroyed",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "window.destroy()?;",
+    "replace": "let _ = window.destroy();",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "print error text",
+    "file": "main-core/src/markdown/print_document.rs",
+    "find": "Err(error) => PrintDialogOutcome::Failed(error.message),",
+    "replace": "Err(error) => PrintDialogOutcome::Failed(format!(\"{}!\", error.message)),",
+    "fn": [
+      "markdown/print-document.printMarkdownDocument"
+    ]
+  },
+  {
+    "name": "pdf margins",
+    "file": "main-core/src/markdown/print_pdf.rs",
+    "find": "margins.insert(side.into(), number(margin));",
+    "replace": "margins.insert(side.into(), number(margin + 1.0));",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf"
+    ]
+  },
+  {
+    "name": "pdf background",
+    "file": "main-core/src/markdown/print_pdf.rs",
+    "find": "Value::Bool(options.print_background),",
+    "replace": "Value::Bool(true),",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf"
+    ]
+  },
+  {
+    "name": "pdf landscape",
+    "file": "main-core/src/markdown/print_pdf.rs",
+    "find": "map.insert(\"landscape\".into(), Value::Bool(options.landscape));",
+    "replace": "map.insert(\"landscape\".into(), Value::Bool(false));",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf"
+    ]
+  },
+  {
+    "name": "pdf window that cannot be destroyed",
+    "file": "main-core/src/markdown/print_pdf.rs",
+    "find": "window.destroy()?;",
+    "replace": "let _ = window.destroy();",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf"
+    ]
+  },
+  {
+    "name": "pdf page size",
+    "file": "main-core/src/markdown/print_pdf.rs",
+    "find": "map.insert(\"pageSize\".into(), Value::from(options.page_size.as_str()));",
+    "replace": "map.insert(\"pageSize\".into(), Value::from(\"A4\"));",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf"
+    ]
+  },
+  {
+    "name": "updater first check delay",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "updater.set_timeout(FIRST_CHECK_DELAY_MS);",
+    "replace": "updater.set_timeout(RECHECK_INTERVAL_MS);",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater recheck interval",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "pub const RECHECK_INTERVAL_MS: f64 = 4.0 * 60.0 * 60.0 * 1000.0;",
+    "replace": "pub const RECHECK_INTERVAL_MS: f64 = 3.0 * 60.0 * 60.0 * 1000.0;",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater init runs twice",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "if self.started {",
+    "replace": "if false {",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater unpacked runs register",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "if !is_packaged {",
+    "replace": "if is_packaged {",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater is not served on macOS",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "if platform != \"win32\" && platform != \"darwin\" {",
+    "replace": "if platform != \"win32\" {",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater differential download",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "updater.set_disable_differential_download(true);",
+    "replace": "updater.set_disable_differential_download(false);",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater install on quit",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "updater.set_auto_install_on_app_quit(true);",
+    "replace": "updater.set_auto_install_on_app_quit(false);",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater asks again for a declined version",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "if self.dismissed_version.as_deref() == Some(version) {",
+    "replace": "if self.dismissed_version.as_deref() != Some(version) {",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater installs on the later button",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "if response == 0.0 {",
+    "replace": "if response == 1.0 {",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater forgets a declined version",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "self.dismissed_version = Some(version.to_owned());",
+    "replace": "let _ = version;",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater cancel button",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "cancel_id: Some(1),",
+    "replace": "cancel_id: Some(0),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater button order",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "buttons: vec![t.t(lang, \"updInstall\", None), t.t(lang, \"updLater\", None)],",
+    "replace": "buttons: vec![t.t(lang, \"updLater\", None), t.t(lang, \"updInstall\", None)],",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater headline without version",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "message: format!(\"{} ({version})\", t.t(lang, \"updHeadline\", None)),",
+    "replace": "message: t.t(lang, \"updHeadline\", None),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater log tag",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "pub const LOG_TAG: &str = \"[docs-updater]\";",
+    "replace": "pub const LOG_TAG: &str = \"[docs-update]\";",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater downloaded line",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "JsonValue::String(\"downloaded:\".to_owned()),",
+    "replace": "JsonValue::String(\"download:\".to_owned()),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater check failed line",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "JsonValue::String(\"check failed:\".to_owned()),",
+    "replace": "JsonValue::String(\"check fail:\".to_owned()),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater error line",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "JsonValue::String(\"error:\".to_owned()),",
+    "replace": "JsonValue::String(\"err:\".to_owned()),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater error message",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "Thrown::Error(message) => JsonValue::String(message.clone()),",
+    "replace": "Thrown::Error(_) => JsonValue::String(String::new()),",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater english install label",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "\"Restart & Install\",",
+    "replace": "\"Restart and Install\",",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater box without parent",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "let response = show_over_open_parent(dialog, window, &options);",
+    "replace": "let response = show_over_open_parent(dialog, None::<&W>, &options);",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "updater quit arguments",
+    "file": "main-core/src/docs/updater.rs",
+    "find": "updater.quit_and_install(true, true);",
+    "replace": "updater.quit_and_install(true, false);",
+    "fn": [
+      "docs/updater.initDocsAutoUpdater"
+    ]
+  },
+  {
+    "name": "diagram spell checker",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "host.set_spell_checker_enabled(false);",
+    "replace": "host.set_spell_checker_enabled(true);",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram renderer scheme not handled",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "host.handle_protocol(RENDERER_SCHEME);",
+    "replace": "host.handle_protocol(DRAWIO_SCHEME);",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram permission",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "permission == \"clipboard-sanitized-write\"",
+    "replace": "permission == \"clipboard-read\"",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram methods",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "if method != \"GET\" && method != \"HEAD\" {",
+    "replace": "if method != \"GET\" {",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram method status",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "return not_found(405);",
+    "replace": "return not_found(404);",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram start page match",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "if relative != \"index.html\" {",
+    "replace": "if relative != \"index.htm\" {",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram start page head body",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "body: if method == \"HEAD\" { None } else { Some(html) },",
+    "replace": "body: Some(html),",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram file head",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "head: method == \"HEAD\",",
+    "replace": "head: false,",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram folder served",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "Ok(info) if info.is_file() => {}",
+    "replace": "Ok(_info) => {}",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram renderer headers",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "(\"X-Content-Type-Options\".to_owned(), \"nosniff\".to_owned()),",
+    "replace": "(\"X-Content-Type-Options\".to_owned(), \"sniff\".to_owned()),",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram refusal status",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "DrawioTarget::Refused { status } => not_found(status),",
+    "replace": "DrawioTarget::Refused { status: _ } => not_found(404),",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram request screen",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "!screen_request(&mut self.request_log, url, &dev_origins)",
+    "replace": "screen_request(&mut self.request_log, url, &dev_origins)",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram schemes unsorted",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "schemes.sort();",
+    "replace": "",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram installs twice",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "if self.installed.is_some() {",
+    "replace": "if false {",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram dev origins in the policy",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "ancestors.extend(paths.dev_origins.iter().cloned());",
+    "replace": "",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "diagram print page policy",
+    "file": "main-core/src/diagram/diagram_session.rs",
+    "find": "&print_page_csp()",
+    "replace": "&csp",
+    "fn": [
+      "diagram-session.scenario"
+    ]
+  },
+  {
+    "name": "lazy media threshold",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "const LAZY_MEDIA_MIN_BYTES: u64 = 1024 * 1024;",
+    "replace": "const LAZY_MEDIA_MIN_BYTES: u64 = 10 * 1024 * 1024;",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media threshold side",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if media < LAZY_MEDIA_MIN_BYTES {",
+    "replace": "if media > LAZY_MEDIA_MIN_BYTES {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media counts every part",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if is_lazy_media_part(&entry.name) {",
+    "replace": "if !is_lazy_media_part(&entry.name) {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media picture types",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "jpe?g|gif|bmp|webp|svg",
+    "replace": "jpe?g|gif|webp|svg",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media path length",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "> MAX_LAZY_PART_CHARS",
+    "replace": "> 5120",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media parent segment",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": ".any(|segment| segment == \"..\")",
+    "replace": ".any(|segment| segment == \"...\")",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media deflate refused",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if entry.method != 0 && entry.method != 8 {",
+    "replace": "if entry.method != 0 {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media stored and deflated swapped",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "let body = if entry.method == 0 {",
+    "replace": "let body = if entry.method == 8 {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media jpeg mime",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "\"jpeg\" => \"image/jpeg\",",
+    "replace": "\"jpeg\" => \"image/jpg\",",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media table kept on a new path",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if source.path != path {",
+    "replace": "if false {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media forget keeps the owned",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": ".filter(|(_, source)| source.owners.is_empty())",
+    "replace": ".filter(|(_, source)| !source.owners.is_empty())",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media forget removes the other owners",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "source.owners.retain(|owner| *owner != wc_id);",
+    "replace": "source.owners.retain(|owner| *owner == wc_id);",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media move of another path",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if source.path != old_path {",
+    "replace": "if source.path == old_path {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media table never fresh",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "table.size == info.size && table.mtime_ms == info.mtime_ms",
+    "replace": "table.size == info.size && table.mtime_ms != info.mtime_ms",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media table cached for memory sources",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if source.bytes.is_none() {",
+    "replace": "if source.bytes.is_some() {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media materialize skipped",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "if hashes.is_empty() {",
+    "replace": "if !hashes.is_empty() {",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media handoff length",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "(\"Content-Length\".to_owned(), handed.len().to_string()),",
+    "replace": "(\"Content-Length\".to_owned(), (handed.len() + 1).to_string()),",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media handoff type",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "\"application/octet-stream\".to_owned(),",
+    "replace": "\"application/x-stream\".to_owned(),",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media handoff origin",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "(\"Access-Control-Allow-Origin\".to_owned(), \"*\".to_owned()),",
+    "replace": "(\"Access-Control-Allow-Origin\".to_owned(), \"null\".to_owned()),",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media register when handled",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "Ok(!is_handled())",
+    "replace": "Ok(is_handled())",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media not found status",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "status: 404,",
+    "replace": "status: 410,",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media truncated message",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "\"lazy media: source file truncated\"",
+    "replace": "\"lazy media: source truncated\"",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media zip never closed",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "lib.close_zip_file(zip);\n        opened",
+    "replace": "drop(zip);\n        opened",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "lazy media source never registered",
+    "file": "main-core/src/docs/lazy_media.rs",
+    "find": "self.register_source(&hash, file_path, wc_id);\n            Some(OpenedLazyDocx",
+    "replace": "let _ = wc_id;\n            Some(OpenedLazyDocx",
+    "fn": [
+      "docs/lazy-media.scenario"
+    ]
+  },
+  {
+    "name": "image match tolerance",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "pub const MATCH_TOL: f64 = 2.0;",
+    "replace": "pub const MATCH_TOL: f64 = 1.0;",
+    "fn": [
+      "image-edit.matchImage",
+      "image-edit.applyImageEdits",
+      "image-edit.verifyImageEdits"
+    ]
+  },
+  {
+    "name": "image match tolerance edge",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if d <= MATCH_TOL && d < best_d {",
+    "replace": "if d < MATCH_TOL && d < best_d {",
+    "fn": [
+      "image-edit.matchImage"
+    ]
+  },
+  {
+    "name": "image match ties go to the later",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "d < best_d",
+    "replace": "d <= best_d",
+    "fn": [
+      "image-edit.matchImage"
+    ]
+  },
+  {
+    "name": "image matrix 90",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "[0.0, h, -w, 0.0, x2, y1]",
+    "replace": "[0.0, h, -w, 0.0, x1, y1]",
+    "fn": [
+      "image-edit.imageMatrix"
+    ]
+  },
+  {
+    "name": "image matrix 180",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "[-w, 0.0, 0.0, -h, x2, y2]",
+    "replace": "[-w, 0.0, 0.0, -h, x2, y1]",
+    "fn": [
+      "image-edit.imageMatrix"
+    ]
+  },
+  {
+    "name": "image matrix 270",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "[0.0, -h, w, 0.0, x1, y2]",
+    "replace": "[0.0, -h, w, 0.0, x2, y2]",
+    "fn": [
+      "image-edit.imageMatrix"
+    ]
+  },
+  {
+    "name": "image matrix negative rotation",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "let turn = ((rotate % 360.0) + 360.0) % 360.0;",
+    "replace": "let turn = rotate % 360.0;",
+    "fn": [
+      "image-edit.imageMatrix"
+    ]
+  },
+  {
+    "name": "image quarter turn matrix",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "[0.0, -1.0, 1.0, 0.0],",
+    "replace": "[0.0, 1.0, -1.0, 0.0],",
+    "fn": [
+      "image-edit.applyImageGeometry"
+    ]
+  },
+  {
+    "name": "image odd turn swaps the sides",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if turns % 2.0 == 1.0 {",
+    "replace": "if turns % 2.0 == 0.0 {",
+    "fn": [
+      "image-edit.applyImageGeometry"
+    ]
+  },
+  {
+    "name": "image odd turn width",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "ox1 = cx - h / 2.0;",
+    "replace": "ox1 = cx - w / 2.0;",
+    "fn": [
+      "image-edit.applyImageGeometry"
+    ]
+  },
+  {
+    "name": "image scale threshold",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "oh > 1e-6",
+    "replace": "oh > 1e-9",
+    "fn": [
+      "image-edit.applyImageGeometry"
+    ]
+  },
+  {
+    "name": "image fractional turn",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if turns.fract() != 0.0 || turns >= 4.0 {",
+    "replace": "if turns >= 4.0 {",
+    "fn": [
+      "image-edit.applyImageGeometry"
+    ]
+  },
+  {
+    "name": "image scale from the wrong rect",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "for matrix in image_geometry_transforms(bounds, &edit.rect, edit.quarter_turns)? {",
+    "replace": "for matrix in image_geometry_transforms(bounds, &edit.old_rect, edit.quarter_turns)? {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image unpremultiply of transparent",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if a > 0 && a < 255 {",
+    "replace": "if a < 255 {",
+    "fn": [
+      "image-edit.decodeImage"
+    ]
+  },
+  {
+    "name": "image unpremultiply factor",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "f64::from(bgra[i + k]) * 255.0 / f64::from(a)",
+    "replace": "f64::from(bgra[i + k]) * 254.0 / f64::from(a)",
+    "fn": [
+      "image-edit.decodeImage"
+    ]
+  },
+  {
+    "name": "image decode of an empty image",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if is_empty {\n        return Err(\"could not decode the image data\".to_owned());",
+    "replace": "if !is_empty {\n        return Err(\"could not decode the image data\".to_owned());",
+    "fn": [
+      "image-edit.decodeImage",
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image page at the count exists",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if edit.page_index < 0.0 || edit.page_index >= f64::from(page_count) {",
+    "replace": "if edit.page_index < 0.0 || edit.page_index > f64::from(page_count) {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image missing page text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "reason: \"page does not exist\".to_owned(),",
+    "replace": "reason: \"no such page\".to_owned(),",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image load failure text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "\"could not load page {}\",",
+    "replace": "\"could not open page {}\",",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image content regenerated without edits",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if applied > 0 && !host.generate_content(page) {",
+    "replace": "if !host.generate_content(page) {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image saved flag",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "applied_total += applied;",
+    "replace": "applied_total += 0;",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image census not carried across pages",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "tree_loaded = guard.tree_loaded;",
+    "replace": "",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image shared template lifted",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if !exclusive(host, guard, &target) {",
+    "replace": "if exclusive(host, guard, &target) {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image layer move remove",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if !host.remove_object(page, obj) {",
+    "replace": "if host.remove_object(page, obj) {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image layer below text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "let text_index = if layer == \"belowText\" {",
+    "replace": "let text_index = if layer == \"aboveText\" {",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image reinsert after a failed move",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "host.insert_object(page, obj);\n                return Err",
+    "replace": "host.destroy_object(obj);\n                return Err",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image inserted image destroyed",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "host.destroy_object(img_obj);",
+    "replace": "host.insert_object(page, img_obj);",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image insert below text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "edit.layer.as_deref() == Some(\"belowText\")",
+    "replace": "edit.layer.as_deref() == Some(\"aboveText\")",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image deleted object kept",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "host.destroy_object(target.obj);",
+    "replace": "",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image delete is a transform",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "EditKind::DeleteImage => delete_image(host, page, edit, &mut guard),",
+    "replace": "EditKind::DeleteImage => transform_image(host, page, edit, &mut guard),",
+    "fn": [
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image listing size cut",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "o.bounds[2] - o.bounds[0] < 3.0",
+    "replace": "o.bounds[2] - o.bounds[0] <= 3.0",
+    "fn": [
+      "image-edit.listPageImages"
+    ]
+  },
+  {
+    "name": "image listing z band",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "text_index.is_some_and(|text| o.index > text)",
+    "replace": "text_index.is_some_and(|text| o.index >= text)",
+    "fn": [
+      "image-edit.listPageImages"
+    ]
+  },
+  {
+    "name": "image first text object",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": ".find(|o| o.kind == FPDF_PAGEOBJ_TEXT)",
+    "replace": ".find(|o| o.kind != FPDF_PAGEOBJ_TEXT)",
+    "fn": [
+      "image-edit.listPageImages",
+      "image-edit.applyImageEdits"
+    ]
+  },
+  {
+    "name": "image verify missing text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "\"image missing from saved output\"",
+    "replace": "\"image gone from saved output\"",
+    "fn": [
+      "image-edit.verifyImageEdits"
+    ]
+  },
+  {
+    "name": "image verify unreadable text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "\"page unreadable in saved output\"",
+    "replace": "\"page unreadable\"",
+    "fn": [
+      "image-edit.verifyImageEdits"
+    ]
+  },
+  {
+    "name": "image verify page missing text",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "\"page missing from saved output\"",
+    "replace": "\"page missing\"",
+    "fn": [
+      "image-edit.verifyImageEdits"
+    ]
+  },
+  {
+    "name": "image verify page at the count",
+    "file": "main-core/src/pdf/image_edit.rs",
+    "find": "if *page_index < 0.0 || *page_index >= f64::from(page_count) {",
+    "replace": "if *page_index < 0.0 || *page_index > f64::from(page_count) {",
+    "fn": [
+      "image-edit.verifyImageEdits"
+    ]
+  },
+  {
+    "name": "ai snapshots kept",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "pub const MAX_AI_SNAPSHOTS: usize = 20;",
+    "replace": "pub const MAX_AI_SNAPSHOTS: usize = 21;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "op log length",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "pub const OP_LOG_MAX: usize = 200;",
+    "replace": "pub const OP_LOG_MAX: usize = 201;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "meta rev step",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.meta_rev = Some(self.meta_rev.unwrap_or(0) + 1);",
+    "replace": "self.meta_rev = Some(self.meta_rev.unwrap_or(0) + 2);",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "journal of nothing",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if records.is_empty() {\n            return;\n        }\n        let seq",
+    "replace": "if !records.is_empty() {\n            return;\n        }\n        let seq",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "journal empty slide id",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "slide_id: record.slide_id.filter(|id| !id.is_empty()),",
+    "replace": "slide_id: record.slide_id,",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "push keeps redo",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.redo_stack = Vec::new();\n        self.schedule_history_notify();",
+    "replace": "self.schedule_history_notify();",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "history notify not coalesced",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if self.history_notify_scheduled {",
+    "replace": "if false {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "can redo flag",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "can_redo: !self.redo_stack.is_empty(),",
+    "replace": "can_redo: self.redo_stack.is_empty(),",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "ai run flag",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "ai_run_active: self.ai_run,",
+    "replace": "ai_run_active: false,",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "batch depth",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "batch.depth += 1;",
+    "replace": "batch.depth += 2;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "batch start",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "undo_start: self.undo_stack.len(),",
+    "replace": "undo_start: 0,",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "batch end depth",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if batch.depth > 0 {",
+    "replace": "if batch.depth >= 0 {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "batch without edits",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if self.undo_stack.len() <= batch.undo_start {",
+    "replace": "if self.undo_stack.len() < batch.undo_start {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "batch edits kept",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.undo_stack.truncate(batch.undo_start);",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "first ai snapshot id",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "next_ai_snapshot_id: 1,",
+    "replace": "next_ai_snapshot_id: 0,",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "ai snapshot eviction",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "map.remove(0);",
+    "replace": "map.pop();",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "restore keeps the meta flag",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.meta_dirty = self.deck.restore_snapshot(fresh);",
+    "replace": "self.deck.restore_snapshot(fresh);",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "reset marker without a journal",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if self.op_log.as_ref().is_some_and(|log| !log.is_empty()) {",
+    "replace": "if true {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "ai restore is not an undo step",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.push_history();\n        self.restore_snapshot(&snapshot);",
+    "replace": "self.restore_snapshot(&snapshot);",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "ai restore keeps the point",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "map.retain(|(key, _)| *key as f64 != id);",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "stale batch kept as a point",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.register_ai_snapshot(ids, &collapsed);",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "carry for a titled deck",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if previous.path.is_empty() {",
+    "replace": "if !previous.path.is_empty() {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "carry of the undo stack",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "replacement.undo_stack = previous.undo_stack.clone();",
+    "replace": "replacement.undo_stack = Vec::new();",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "deck broadcast not coalesced",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if self.deck_broadcast_scheduled {",
+    "replace": "if false {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "queued update not replaced",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "*last = Some(update);",
+    "replace": "let _ = update;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "lone window gets the broadcast",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if attached < 2 {",
+    "replace": "if attached < 1 {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "every update partial",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "updates.iter().all(Option::is_some)",
+    "replace": "updates.iter().any(Option::is_some)",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "merged update keeps the first slide",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "Some(entry) => entry.1 = slide.clone(),",
+    "replace": "Some(_) => {}",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "merged slides outside the order",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "Some(path) => last_order.iter().any(|p| p == path),",
+    "replace": "Some(_) => true,",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "renumbered slides",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "old_index.is_some_and(|old| old != i) && slide.has_number",
+    "replace": "old_index.is_some_and(|old| old == i) && slide.has_number",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "new slides rebuilt",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if old_index.is_none() || changed.contains(&(i as f64)) || renumber {",
+    "replace": "if changed.contains(&(i as f64)) || renumber {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "changed slides rebuilt",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "changed.contains(&(i as f64)) || renumber",
+    "replace": "false || renumber",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "destroyed own window",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if !own.is_destroyed() {",
+    "replace": "if own.is_destroyed() {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "destroyed shell window",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "Some(shell) if !shell.is_destroyed() => Some(shell),",
+    "replace": "Some(shell) if shell.is_destroyed() => Some(shell),",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "host window hook",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": ".or_else(|| host_window_hook.and_then(|hook| hook()));",
+    "replace": ";\n    let _ = host_window_hook;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "dialog parent order",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "focused.or(shell_window)",
+    "replace": "shell_window.or(focused)",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "font registry reset",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "reset_font_registry();",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "font metrics dropped on reset",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.metrics = None;",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg slot background1",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"background1\" => \"bg1\",",
+    "replace": "\"background1\" => \"bg2\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg slot text2",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"text2\" => \"tx2\",",
+    "replace": "\"text2\" => \"tx1\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg slot accent6",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"accent6\" => \"accent6\",",
+    "replace": "\"accent6\" => \"accent5\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg slot followed hyperlink",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"followedhyperlink\" => \"folHlink\",",
+    "replace": "\"followedhyperlink\" => \"hlink\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg slot case",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "let slot = found.get(1).unwrap_or(\"\").to_lowercase();",
+    "replace": "let slot = found.get(1).unwrap_or(\"\").to_owned();",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg stroke kind",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if found.get(2) == Some(\"Stroke\") {",
+    "replace": "if found.get(2) == Some(\"Fill\") {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "svg color map error",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": ".is_err()\n    {",
+    "replace": ".is_ok()\n    {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "media key without context",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "format!(\"{}:{mime}:{context}\", self.byte_version(Some(&bytes)))",
+    "replace": "format!(\"{}:{mime}\", self.byte_version(Some(&bytes)))",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "media url host",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"seuoffice-slide-media://archive/{}?mime={}\",",
+    "replace": "\"seuoffice-slide-media://archives/{}?mime={}\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "byte version step",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "self.next_byte_version += 1;",
+    "replace": "self.next_byte_version += 2;",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "media context text",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "\"{}:{version}\",",
+    "replace": "\"{}={version}\",",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "media context for svg",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if mime == DisplayMime::Mime(\"image/svg+xml\") {",
+    "replace": "if false {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "prune keeps the dropped",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "if !keep {",
+    "replace": "if keep {",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "tiff mime after conversion",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "mime = \"image/png\".to_owned();",
+    "replace": "",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  },
+  {
+    "name": "jpeg orientation",
+    "file": "main-core/src/slides/session_state.rs",
+    "find": "body = neutralize_jpeg_orientation(bytes);",
+    "replace": "body = bytes.to_vec();",
+    "fn": [
+      "slides/session-state.scenario"
+    ]
+  }
+]

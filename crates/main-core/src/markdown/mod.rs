@@ -7,6 +7,8 @@ pub mod conversion_lifecycle;
 pub mod image_export;
 pub mod image_host;
 pub mod old_names;
+pub mod print_document;
+pub mod print_pdf;
 pub mod wiki_create;
 pub mod wiki_fragment;
 pub mod wiki_heads;

@@ -3,8 +3,10 @@
 
 pub mod ai_default_fonts;
 pub mod cfb_sniff;
+pub mod element_clipboard;
 pub mod export_images;
 pub mod font_scan;
+pub mod font_store;
 pub mod generated_page_temp;
 pub mod jpeg_orientation;
 pub mod media_mime;
@@ -15,6 +17,7 @@ pub mod pdf_export;
 pub mod picture_frame;
 pub mod save_as_formats;
 pub mod seed_queue;
+pub mod session_state;
 pub mod shaped_metrics;
 pub mod template_selection;
 pub mod template_selection_store;

@@ -17,13 +17,15 @@ import { registerHooks } from 'node:module'
 
 type Fake = Record<string, unknown>
 
-/** every name a main-process module imports from 'electron' */
+/** every name a main-process module (or a preload module it reaches) imports from 'electron' */
 const NAMES = [
   'app',
   'BrowserWindow',
   'clipboard',
+  'contextBridge',
   'dialog',
   'ipcMain',
+  'ipcRenderer',
   'Menu',
   'nativeImage',
   'nativeTheme',
@@ -34,6 +36,7 @@ const NAMES = [
   'shell',
   'webContents',
   'WebContentsView',
+  'webUtils',
 ]
 
 const BASE: Fake = { ipcMain: { handle() {}, removeHandler() {}, on() {} } }
