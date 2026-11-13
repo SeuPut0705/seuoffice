@@ -1,11 +1,13 @@
 import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
-import { REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
-import { REDACT_EXT_URI } from '@seuoffice/pptx-engine'
+import {
+  fileHoldsHiddenContent,
+  HIDDEN_CONTENT_EXTENSIONS,
+  packageHoldsMark,
+  xmlHoldsMark,
+} from '@seuoffice/file-parse/hidden-content'
 import JSZip from 'jszip'
 import { CliError, EXIT } from '../result'
-import { decodeText } from '../fs'
-import { decodeHtmlBytes } from './html-text'
 import { openDeck } from './pptx'
 import { withheldCellsIn } from './xlsx'
 
@@ -16,93 +18,32 @@ import { withheldCellsIn } from './xlsx'
  * editor sends the model no screenshot of a slide that withholds anything.
  *
  * This runs before the app is started, and reads only whether a mark is there, not what it
- * hides. A part is judged by the mark's traces in its XML (the namespace the mark is
- * written in, a `redact` element, the deck extension's id), so a spelling the readers do
- * not understand still counts.
+ * hides (@seuoffice/file-parse/hidden-content, which the app's own headless export reads too).
  */
 
-const NUMERIC_REFERENCE = /&#(?:x([0-9a-fA-F]+)|(\d+));/g
-
-/** the part's XML with numeric references spelled out, so a reference cannot hide a namespace */
-function spelledOut(xml: string): string {
-  if (!xml.includes('&#')) return xml
-  return xml.replace(NUMERIC_REFERENCE, (all, hex: string | undefined, dec: string | undefined) => {
-    const code = hex === undefined ? Number(dec) : Number.parseInt(hex, 16)
-    return code <= 0x10ffff && (code < 0xd800 || code > 0xdfff) ? String.fromCodePoint(code) : all
-  })
-}
-
-function holdsMark(xml: string): boolean {
-  const text = spelledOut(xml)
-  return (
-    REDACT_NAMESPACES.some((ns) => text.includes(ns)) ||
-    text.includes(REDACT_EXT_URI) ||
-    /<(?:[\w.-]+:)?redact[\s/>]/.test(text)
-  )
-}
-
-async function anyMarkIn(zip: JSZip, paths: string[]): Promise<boolean> {
-  for (const path of paths) {
-    const part = zip.file(path)
-    if (part && holdsMark(await part.async('string'))) return true
+/** a deck's slides (or its slide `only`), a deck the engine cannot lay out judged by every slide part */
+async function deckHoldsMark(bytes: Uint8Array, only: number | undefined): Promise<boolean> {
+  const zip = await JSZip.loadAsync(bytes).catch(() => null)
+  if (!zip) return false
+  const opened = await openDeck(bytes).catch(() => null)
+  if (!opened) return packageHoldsMark(zip, /^ppt\/slides\/[^/]+\.xml$/)
+  for (const [index, slide] of opened.deck.slides.entries()) {
+    if (only !== undefined && index !== only) continue
+    const part = zip.file(slide.path)
+    if (part && xmlHoldsMark(await part.async('string'))) return true
   }
   return false
-}
-
-async function deckHoldsMark(
-  zip: JSZip,
-  bytes: Uint8Array,
-  only: number | undefined,
-): Promise<boolean> {
-  const opened = await openDeck(bytes).catch(() => null)
-  // a deck the engine cannot lay out is judged by every slide part it holds
-  const slides = opened
-    ? opened.deck.slides
-        .filter((_, index) => only === undefined || index === only)
-        .map((s) => s.path)
-    : Object.keys(zip.files).filter((p) => /^ppt\/slides\/[^/]+\.xml$/.test(p))
-  return anyMarkIn(zip, slides)
-}
-
-async function documentHoldsMark(zip: JSZip): Promise<boolean> {
-  // every part of the document, comments and notes included: the printer may draw any of them
-  return anyMarkIn(
-    zip,
-    Object.keys(zip.files).filter((p) => /^word\/.*\.xml$/.test(p)),
-  )
-}
-
-const HOLDERS = ['pptx', 'docx', 'xlsx', 'xlsm', 'md', 'markdown', 'html', 'htm']
-
-/** the HTML app's three marks: an element, an attribute's value, a script literal (apps/html marked-html.ts) */
-const HTML_MARK = /data-gx-redact|gx:redact:/i
-/** the markdown app's persisted span (apps/markdown editor/Redaction.ts) */
-const MARKDOWN_MARK = /<span\b[^>]*\bdata-redaction\b/i
-
-/** Whether a Markdown file's text holds a span hidden from AI. */
-export function markdownHoldsMark(text: string): boolean {
-  return MARKDOWN_MARK.test(text)
-}
-
-/** Whether an HTML page's text holds any mark of the HTML app. */
-export function htmlHoldsMark(text: string): boolean {
-  return HTML_MARK.test(text)
 }
 
 /** Whether `path` (or its slide `only`, 0-based, of a deck) holds content hidden from AI. */
 export async function holdsHiddenContent(path: string, only?: number): Promise<boolean> {
   const ext = extname(path).slice(1).toLowerCase()
-  if (!HOLDERS.includes(ext)) return false
+  if (!HIDDEN_CONTENT_EXTENSIONS.includes(ext)) return false
   const bytes = new Uint8Array(await readFile(path))
-  if (ext === 'md' || ext === 'markdown') return markdownHoldsMark(decodeText(bytes))
-  if (ext === 'html' || ext === 'htm') return htmlHoldsMark(decodeHtmlBytes(bytes))
-  if (ext === 'pptx' || ext === 'docx') {
-    // not a package at all: it holds no mark, and the route that reads it fails as it always did
-    const zip = await JSZip.loadAsync(bytes).catch(() => null)
-    if (!zip) return false
-    return ext === 'pptx' ? deckHoldsMark(zip, bytes, only) : documentHoldsMark(zip)
-  }
-  return (await withheldCellsIn(bytes)) !== null
+  // the command line's own errors for a workbook record it cannot read
+  if (ext === 'xlsx' || ext === 'xlsm') return (await withheldCellsIn(bytes)) !== null
+  if (ext === 'pptx') return deckHoldsMark(bytes, only)
+  return fileHoldsHiddenContent(bytes, ext)
 }
 
 /**
