@@ -27,7 +27,7 @@ stop_app() {
 version() { /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist"; }
 trap 'stop_app; kill ${feed:-0} 2>/dev/null || true' EXIT
 
-gh release download "$from" --repo SeuPut0705/seuoffice --dir "$out/from" --pattern 'SeuOffice-*-arm64-mac.zip' --clobber
+gh release download "$from" --repo seuput-inc/seuoffice --dir "$out/from" --pattern 'SeuOffice-*-arm64-mac.zip' --clobber
 zip=$(ls "$out"/from/SeuOffice-*-arm64-mac.zip | grep -v stable | head -1)
 rm -rf "$app"
 ditto -x -k "$zip" /Applications

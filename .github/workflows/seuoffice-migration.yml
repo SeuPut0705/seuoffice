@@ -38,7 +38,7 @@ permissions:
 
 env:
   GH_TOKEN: ${{ github.token }}
-  GH_REPO: SeuPut0705/seuoffice
+  GH_REPO: seuput-inc/seuoffice
 
 jobs:
   resolve:

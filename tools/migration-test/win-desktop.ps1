@@ -174,7 +174,7 @@ try {
   # 1. the Electron build to start from
   $dl = Join-Path $Out 'from'
   New-Item -ItemType Directory -Force -Path $dl | Out-Null
-  gh release download $From --repo SeuPut0705/seuoffice --dir $dl --pattern 'SeuOffice-Setup-*.exe' --clobber
+  gh release download $From --repo seuput-inc/seuoffice --dir $dl --pattern 'SeuOffice-Setup-*.exe' --clobber
   $fromExe = Get-ChildItem $dl -Filter 'SeuOffice-Setup-*.exe' | Where-Object { $_.Name -notmatch 'stable' } |
     Select-Object -First 1
   if (-not $fromExe) { Fail "no Windows installer in release $From" }
