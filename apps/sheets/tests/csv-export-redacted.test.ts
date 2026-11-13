@@ -114,13 +114,13 @@ const HIDDEN_ELSEWHERE = buildRedactionIndex(
 )
 
 const exportCsv = vi.fn()
-const askWithheldCsv = vi.fn()
+const askWithheldExport = vi.fn()
 
 beforeEach(() => {
   setModuleLang('en')
   exportCsv.mockReset().mockResolvedValue({ canceled: false, path: '/docs/book.csv' })
-  askWithheldCsv.mockReset()
-  vi.stubGlobal('window', { desktopApi: { exportCsv, askWithheldCsv } })
+  askWithheldExport.mockReset()
+  vi.stubGlobal('window', { desktopApi: { exportCsv, askWithheldExport } })
 })
 
 afterEach(() => {
@@ -144,19 +144,19 @@ function run(index: ReturnType<typeof redactionIndexOf>, requestSaveAs = vi.fn()
 
 describe('exporting a sheet that holds a cell hidden from the AI as CSV', () => {
   it('goes to Save As .xlsx and writes no CSV when the person asks for that', async () => {
-    askWithheldCsv.mockResolvedValue('xlsx')
+    askWithheldExport.mockResolvedValue('xlsx')
     const { done, requestSaveAs } = run(HIDDEN_A1)
     await done
-    expect(askWithheldCsv).toHaveBeenCalledTimes(1)
+    expect(askWithheldExport).toHaveBeenCalledTimes(1)
     expect(exportCsv).not.toHaveBeenCalled()
     expect(requestSaveAs).toHaveBeenCalledTimes(1)
   })
 
   it('writes the real values, and says no mark came with them, when the person asks for that', async () => {
-    askWithheldCsv.mockResolvedValue('export')
+    askWithheldExport.mockResolvedValue('export')
     const { done, requestSaveAs } = run(HIDDEN_A1)
     await done
-    expect(askWithheldCsv).toHaveBeenCalledTimes(1)
+    expect(askWithheldExport).toHaveBeenCalledTimes(1)
     expect(requestSaveAs).not.toHaveBeenCalled()
     expect(exportCsv).toHaveBeenCalledTimes(1)
     // the values as they are, never a placeholder, and nothing else in the file
@@ -164,7 +164,7 @@ describe('exporting a sheet that holds a cell hidden from the AI as CSV', () => 
   })
 
   it('writes nothing when the person cancels', async () => {
-    askWithheldCsv.mockResolvedValue('cancel')
+    askWithheldExport.mockResolvedValue('cancel')
     const { done, requestSaveAs, messages } = run(HIDDEN_A1)
     await done
     expect(exportCsv).not.toHaveBeenCalled()
@@ -173,9 +173,9 @@ describe('exporting a sheet that holds a cell hidden from the AI as CSV', () => 
   })
 
   it('asks about a record that could not be read, which hides every cell', async () => {
-    askWithheldCsv.mockResolvedValue('cancel')
+    askWithheldExport.mockResolvedValue('cancel')
     await run(redactionIndexOf(REDACTIONS_UNREADABLE)).done
-    expect(askWithheldCsv).toHaveBeenCalledTimes(1)
+    expect(askWithheldExport).toHaveBeenCalledTimes(1)
     expect(exportCsv).not.toHaveBeenCalled()
   })
 
@@ -184,7 +184,7 @@ describe('exporting a sheet that holds a cell hidden from the AI as CSV', () => 
     ['a mark on another sheet only', HIDDEN_ELSEWHERE],
   ])('still writes for %s', async (_what, index) => {
     await run(index).done
-    expect(askWithheldCsv).not.toHaveBeenCalled()
+    expect(askWithheldExport).not.toHaveBeenCalled()
     expect(exportCsv).toHaveBeenCalledTimes(1)
   })
 
