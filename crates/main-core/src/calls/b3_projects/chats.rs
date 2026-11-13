@@ -522,7 +522,7 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
 
 /// what a thrown `Error` is in a result
 fn thrown(error: &ChatStoreError) -> Value {
-    json!({ "error": error.0 })
+    json!({ "error": error.message })
 }
 
 /// an id the spec gave; anything else is no id, as the TypeScript finds it
