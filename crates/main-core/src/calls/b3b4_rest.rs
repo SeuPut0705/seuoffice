@@ -6,6 +6,7 @@
 
 mod index_core;
 mod index_store;
+mod recovery;
 mod shell_rest;
 
 use serde_json::Value;
@@ -16,4 +17,5 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
     index_core::call(name, args, cx)
         .or_else(|| index_store::call(name, args, cx))
         .or_else(|| shell_rest::call(name, args, cx))
+        .or_else(|| recovery::call(name, args, cx))
 }

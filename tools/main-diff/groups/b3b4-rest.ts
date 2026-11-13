@@ -13,6 +13,7 @@ const parts = await Promise.all([
   import('./b3b4-rest/index-core.ts'),
   import('./b3b4-rest/index-store.ts'),
   import('./b3b4-rest/shell-rest.ts'),
+  import('./b3b4-rest/recovery.ts'),
 ])
 
 export const group: Group = Object.assign({}, ...parts.map((part) => part.part))
