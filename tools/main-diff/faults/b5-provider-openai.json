@@ -1,0 +1,458 @@
+[
+  {
+    "name": "an html page is told by its first 30 characters",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "slice_to(trim_start(body), 30)",
+    "replace": "slice_to(trim_start(body), 5)",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "a plain body is cut at 500 characters",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "Ok(slice_to(body, 500))",
+    "replace": "Ok(slice_to(body, 400))",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "a title is cut at 60 characters",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "slice_to(&title, 60)",
+    "replace": "slice_to(&title, 50)",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "a body page is an html page",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "[\"<!doctype\", \"<html\", \"<head\", \"<body\"]",
+    "replace": "[\"<!doctype\", \"<html\", \"<head\"]",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "block page parts are joined with a comma",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "parts.join(\", \")",
+    "replace": "parts.join(\"; \")",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "the error code is worded",
+    "file": "main-core/src/packages/ai_provider/http_error.rs",
+    "find": "format!(\"error code {code}\")",
+    "replace": "format!(\"error code: {code}\")",
+    "fn": ["http-error.httpBodyDetail"]
+  },
+  {
+    "name": "a ceiling is a multiple of 1024 only",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "n >= 1024.0 && (n % 1024.0 == 0.0 || n % 1000.0 == 0.0)",
+    "replace": "n >= 1024.0 && (n % 1024.0 == 0.0)",
+    "fn": ["output-cap.parseOutputCapRejection"]
+  },
+  {
+    "name": "a ceiling may equal the request",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "if n < requested && looks_like_ceiling(n)",
+    "replace": "if n <= requested && looks_like_ceiling(n)",
+    "fn": ["output-cap.parseOutputCapRejection"]
+  },
+  {
+    "name": "no ceiling answers zero",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "(best > 0.0).then_some(best)",
+    "replace": "Some(best)",
+    "fn": ["output-cap.parseOutputCapRejection"]
+  },
+  {
+    "name": "the ceiling is not remembered",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "caps.borrow_mut().model_caps.set(key, ceiling);",
+    "replace": "let _ = (&key, ceiling);",
+    "fn": ["output-cap.withOutputCapFallback"]
+  },
+  {
+    "name": "the ceiling is remembered per model only",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "format!(\"{base_url}\\0{model}\")",
+    "replace": "format!(\"{model}\\0{}\", base_url.len().min(0))",
+    "fn": ["output-cap.withOutputCapFallback"]
+  },
+  {
+    "name": "reset keeps the ceilings",
+    "file": "main-core/src/packages/ai_provider/output_cap.rs",
+    "find": "self.model_caps.clear();",
+    "replace": "let _ = &self.model_caps;",
+    "fn": ["output-cap.resetOutputCaps"]
+  },
+  {
+    "name": "usage is asked for the other way round",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if request_usage {",
+    "replace": "if !request_usage {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "the stream flag is off",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "body.set(\"stream\", JsonValue::Bool(true));",
+    "replace": "body.set(\"stream\", JsonValue::Bool(false));",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "the positional cap wins over the option",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "options.max_tokens.unwrap_or(max_tokens)",
+    "replace": "Some(max_tokens).unwrap_or(0.0)",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a chat leaves out its cap",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if let Some(max_tokens) = options.max_tokens {",
+    "replace": "if let Some(max_tokens) = options.max_tokens.filter(|_| false) {",
+    "fn": ["openai-compatible.chatOpenAiCompatible"]
+  },
+  {
+    "name": "the renamed cap is not used",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if options.use_max_completion_tokens {",
+    "replace": "if !options.use_max_completion_tokens {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a resent tool name is appended",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "pending.name = if name.starts_with(&pending.name) {",
+    "replace": "pending.name = if name.starts_with(\"\\u{0}\") {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "tool calls are flushed in reverse index order",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "|a, b| a.index - b.index",
+    "replace": "|a, b| b.index - a.index",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "the first tool call is the truncated one",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "stop_reason == Some(\"max_tokens\") && position == last",
+    "replace": "stop_reason == Some(\"max_tokens\") && position == 0",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a stream cut after output is not an error",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if !saw_finish && !saw_done && emitted {",
+    "replace": "if !saw_finish && !saw_done && emitted && false {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a cut stream without output is the cut-after-output error",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if !emitted && !saw_finish {",
+    "replace": "if !emitted && !saw_finish && false {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "an abnormal finish is forgotten",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "abnormal_finish = Some(js_string(finish_reason));",
+    "replace": "abnormal_finish = None;",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a tool_calls finish is abnormal",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "&& !is_str(Some(finish_reason), \"tool_calls\")",
+    "replace": "",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a json body may carry a credits notice",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "throw_if_credits_notice(&json_body)?;",
+    "replace": "let _ = &json_body;",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a json body length finish does not truncate the last call",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "last.set(\"truncated\", JsonValue::Bool(true));",
+    "replace": "last.set(\"truncated\", JsonValue::Bool(false));",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a json body length finish gives no stop reason",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if length_finish && let Some(on_stop_reason) = &cb.on_stop_reason {",
+    "replace": "if !length_finish && let Some(on_stop_reason) = &cb.on_stop_reason {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "an empty json body is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "\"The model returned no content: {}\",",
+    "replace": "\"The model returned no content! {}\",",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "any HTTP error retries without stream_options",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "r\"HTTP 4\\d\\d:[\\s\\S]*stream_options\"",
+    "replace": "r\"HTTP \\d\\d\\d:[\\s\\S]*stream_options\"",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a rejecting gateway is not remembered",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": ".usage_rejected_gateways.set(base_url, ());",
+    "replace": ".usage_rejected_gateways.set(\"\", ());",
+    "fn": ["openai-compatible.resetUsageRejectedGateways"]
+  },
+  {
+    "name": "reset keeps the rejected gateways",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "self.usage_rejected_gateways.clear();",
+    "replace": "let _ = &self.usage_rejected_gateways;",
+    "fn": ["openai-compatible.resetUsageRejectedGateways"]
+  },
+  {
+    "name": "the key is sent without a check",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if is_truthy(prop(config, \"apiKey\")) {",
+    "replace": "if !is_truthy(prop(config, \"apiKey\")) {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "reasoning is not echoed",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "if echo_reasoning && is_truthy(prop(m, \"reasoning\")) {",
+    "replace": "if !echo_reasoning && is_truthy(prop(m, \"reasoning\")) {",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "an empty assistant turn has another placeholder",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "text(\"(no content)\")",
+    "replace": "text(\"(no content!)\")",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a failed tool result is not marked",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "format!(\"Error: {}\", value_key(prop(r, \"output\")))",
+    "replace": "format!(\"{}\", value_key(prop(r, \"output\")))",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "an http failure is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "\"HTTP {}: {}\",",
+    "replace": "\"HTTP {} {}\",",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "the connect timeout of a stream is the idle one too",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "create_stream_watchdog(rt, Some(&cb.signal), options.timeout_ms, options.timeout_ms)",
+    "replace": "create_stream_watchdog(rt, Some(&cb.signal), options.timeout_ms, None)",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a chat budget keeps the default idle timeout",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "Some(timeout_ms), Some(timeout_ms));",
+    "replace": "Some(timeout_ms), None);",
+    "fn": ["openai-compatible.chatOpenAiCompatible"]
+  },
+  {
+    "name": "a non-json chat answer is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "\"AI returned a non-JSON response: {}\",",
+    "replace": "\"AI returned a non-JSON response! {}\",",
+    "fn": ["openai-compatible.chatOpenAiCompatible"]
+  },
+  {
+    "name": "an empty chat answer is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "\"AI returned an empty response\".to_owned(),",
+    "replace": "\"AI returned an empty response!\".to_owned(),",
+    "fn": ["openai-compatible.chatOpenAiCompatible"]
+  },
+  {
+    "name": "the signature prefix",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "const REASONING_SIGNATURE_PREFIX: &str = \"oai-rs:\";",
+    "replace": "const REASONING_SIGNATURE_PREFIX: &str = \"oai-rs;\";",
+    "fn": ["openai-responses.streamOpenAiResponses", "openai-responses.chatOpenAiResponses"]
+  },
+  {
+    "name": "a cut-off response is read at another reason",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "\"max_output_tokens\",\n    );",
+    "replace": "\"max_output_token\",\n    );",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "the reasoning signature is not attached",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "first.set(\"signature\", text(reasoning_signature(id, encrypted)));",
+    "replace": "let _ = (first, id, encrypted);",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "an item budget one too small",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "argument_chars.len() as f64 + 1.0,",
+    "replace": "argument_chars.len() as f64 + 2.0,",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "argument fragments alone are not a dropped connection",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "if sent_call || !argument_chars.is_empty() {",
+    "replace": "if sent_call {",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "a stream cut after output is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "\"The model stream ended before response.completed\"",
+    "replace": "\"The model stream ended before response.completed!\"",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "a failure without a message has another text",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "let fallback = text(\"response.failed\");",
+    "replace": "let fallback = text(\"response failed\");",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "images carry no detail",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "part.set(\"detail\", text(\"auto\"));",
+    "replace": "part.set(\"detail\", text(\"high\"));",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "a replayed reasoning item has a summary",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "item.set(\"summary\", JsonValue::Array(Vec::new()));",
+    "replace": "item.set(\"summary\", JsonValue::Null);",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "the response is stored",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "body.set(\"store\", JsonValue::Bool(false));",
+    "replace": "body.set(\"store\", JsonValue::Bool(true));",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "an empty effort is sent",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": ".filter(|e| !e.is_empty())",
+    "replace": "",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "the summary mode",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "reasoning.set(\"summary\", text(\"auto\"));",
+    "replace": "reasoning.set(\"summary\", text(\"detailed\"));",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "a chat cap",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "16384.0,",
+    "replace": "16000.0,",
+    "fn": ["openai-responses.chatOpenAiResponses"]
+  },
+  {
+    "name": "extra headers are dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "headers.assign(extra);",
+    "replace": "let _ = extra;",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "the idle timeout of a stream is the default",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "Some(&cb.signal), None, options.idle_timeout_ms)",
+    "replace": "Some(&cb.signal), None, None)",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "an empty chat answer is worded otherwise (responses)",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "\"AI returned an empty response\".to_owned(),",
+    "replace": "\"AI returned an empty response!\".to_owned(),",
+    "fn": ["openai-responses.chatOpenAiResponses"]
+  },
+  {
+    "name": "a gateway without a url",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "\"The AI gateway has no URL: set it in Settings\"",
+    "replace": "\"The AI gateway has no URL\"",
+    "fn": ["gateway-complete.streamGatewayComplete", "gateway-complete.chatGatewayComplete"]
+  },
+  {
+    "name": "a token is not trimmed",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "let token = trim(&token);",
+    "replace": "let token = token.as_str();",
+    "fn": [
+      "gateway-complete.streamGatewayComplete",
+      "gateway-complete.chatGatewayComplete",
+      "gateway-complete.setGatewayTokenProvider"
+    ]
+  },
+  {
+    "name": "the token is not put into the config",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "authorized.set(\"apiKey\", text(token));",
+    "replace": "let _ = token;",
+    "fn": ["gateway-complete.streamGatewayComplete", "gateway-complete.chatGatewayComplete"]
+  },
+  {
+    "name": "the default provider reads nothing",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "None => rt.env(GATEWAY_TOKEN_ENV).unwrap_or_default(),",
+    "replace": "None => String::new(),",
+    "fn": [
+      "gateway-complete.streamGatewayComplete",
+      "gateway-complete.chatGatewayComplete",
+      "gateway-complete.setGatewayTokenProvider"
+    ]
+  },
+  {
+    "name": "a config error of a chat rejects",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "Err(e) => return Ok(AiChatResponse::failed(e.message_or_string())),",
+    "replace": "Err(e) => return Err(e),",
+    "fn": ["gateway-complete.chatGatewayComplete"]
+  },
+  {
+    "name": "a missing url is checked after the token",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "if base_url.is_empty() {",
+    "replace": "if base_url.is_empty() && false {",
+    "fn": ["gateway-complete.streamGatewayComplete", "gateway-complete.chatGatewayComplete"]
+  },
+  {
+    "name": "the environment variable name",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "pub const GATEWAY_TOKEN_ENV: &str = \"SEUOFFICE_AI_GATEWAY_TOKEN\";",
+    "replace": "pub const GATEWAY_TOKEN_ENV: &str = \"SEUOFFICE_AI_GATEWAY_TOKEN2\";",
+    "fn": ["gateway-complete.GATEWAY_TOKEN_ENV", "gateway-complete.streamGatewayComplete"]
+  },
+  {
+    "name": "clearing the provider keeps it",
+    "file": "main-core/src/packages/ai_provider/protocols_gateway_complete.rs",
+    "find": "self.token_provider = next;",
+    "replace": "if next.is_some() { self.token_provider = next; }",
+    "fn": ["gateway-complete.setGatewayTokenProvider"]
+  }
+]
