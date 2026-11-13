@@ -16,7 +16,7 @@
 // name an input that would show it), BUILD (the faulted Rust does not build:
 // not a fault, rewrite it), BAD (find is not there exactly once).
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -42,7 +42,8 @@ for (const file of files) {
   for (const [i, fault] of faults.entries()) {
     if (i !== 0 && i % shards !== shard) continue
     const path = join(crates, fault.file)
-    const original = readFileSync(path, 'utf8')
+    // a file that is gone (moved, merged) is a BAD entry, not the end of the shard
+    const original = existsSync(path) ? readFileSync(path, 'utf8') : ''
     const count = original.split(fault.find).length - 1
     let verdict
     let detail

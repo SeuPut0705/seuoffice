@@ -2289,9 +2289,9 @@
   },
   {
     "name": "integrator: set keeps old value",
-    "file": "main-core/src/markdown/ord_map.rs",
-    "find": "                slot.1 = value;",
-    "replace": "                let _ = value;",
+    "file": "jscompat/src/map.rs",
+    "find": "            Some(&at) => self.entries[at].1 = value,",
+    "replace": "            Some(&at) => drop(value),",
     "fn": ["wiki-fragment.rememberWikiFragment", "wiki-fragment.takeWikiFragment"]
   },
   {
