@@ -563,3 +563,23 @@ fn the_menus_reach_the_update_check() {
     check.check_now();
     assert_eq!(*f.updater.0.lock().unwrap(), 1);
 }
+
+#[test]
+fn what_waits_for_the_launch_runs_once_it_has_its_answer() {
+    let f = fixture();
+    let list = launch_list::current().unwrap();
+    let ran = Rc::new(RefCell::new(Vec::new()));
+    let r = ran.clone();
+    list.when_unblocked(Box::new(move || r.borrow_mut().push("early")));
+    assert!(ran.borrow().is_empty(), "the launch has no answer yet");
+    list.publish(vec![row("a")], Rc::new(|_, done| done.settle(Ok(()))));
+    assert!(ran.borrow().is_empty(), "the list is up");
+    list.publish_none();
+    assert!(ran.borrow().is_empty(), "a second publish changes nothing");
+    f.call(launch_list::SUBMIT, vec![decisions("a", "restore")])
+        .unwrap();
+    assert_eq!(*ran.borrow(), ["early"]);
+    let r = ran.clone();
+    list.when_unblocked(Box::new(move || r.borrow_mut().push("late")));
+    assert_eq!(*ran.borrow(), ["early", "late"]);
+}

@@ -38,6 +38,8 @@ struct State {
     in_sync_apply: bool,
     /// what an apply settled with before it returned
     settled_early: Option<Result<(), IpcError>>,
+    /// what waits for the launch to have its answer
+    unblocked: Vec<Box<dyn FnOnce()>>,
 }
 
 pub struct LaunchList {
@@ -123,6 +125,7 @@ impl LaunchList {
                 applying: Vec::new(),
                 in_sync_apply: false,
                 settled_early: None,
+                unblocked: Vec::new(),
             }),
         }
     }
@@ -159,7 +162,23 @@ impl LaunchList {
         }
     }
 
+    /// Runs `then` once the launch has its answer (`blocking()` is false):
+    /// now, or when the list is answered or found empty
+    pub fn when_unblocked(&self, then: Box<dyn FnOnce()>) {
+        if self.blocking() {
+            self.state.borrow_mut().unblocked.push(then);
+        } else {
+            then();
+        }
+    }
+
     fn wake(&self, woken: usize) {
+        if !self.blocking() {
+            let waiting = std::mem::take(&mut self.state.borrow_mut().unblocked);
+            for then in waiting {
+                then();
+            }
+        }
         if woken == 0 {
             return;
         }

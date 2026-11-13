@@ -105,8 +105,6 @@ pub struct Feed {
     allow_prerelease: bool,
     allow_downgrade: bool,
     found: Option<Found>,
-    /// the file the last download left, ready to install
-    downloaded: Option<PathBuf>,
 }
 
 impl Feed {
@@ -117,7 +115,6 @@ impl Feed {
             allow_prerelease: false,
             allow_downgrade: false,
             found: None,
-            downloaded: None,
         }
     }
 

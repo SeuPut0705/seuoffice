@@ -169,20 +169,30 @@ struct Driver {
     shell: ShellUpdater,
 }
 
+type DriverJob = Box<dyn FnOnce(&mut Updater, &mut ShellUpdater)>;
+
+thread_local! {
+    /// Jobs that came while the updater was busy (a host call re-entered)
+    static QUEUED: RefCell<Vec<DriverJob>> = const { RefCell::new(Vec::new()) };
+}
+
 /// Runs `job` with the updater on the core thread; a call made while the
-/// updater is busy (a host call that re-entered) runs right after it
+/// updater is busy runs right after the call that is running
 fn with_driver(job: impl FnOnce(&mut Updater, &mut ShellUpdater) + 'static) {
-    let ran = DRIVER.with(|d| match d.try_borrow_mut() {
-        Ok(mut driver) => {
-            if let Some(driver) = driver.as_mut() {
+    let busy = DRIVER.with(|d| d.try_borrow_mut().is_err());
+    QUEUED.with(|q| q.borrow_mut().push(Box::new(job)));
+    if busy {
+        return;
+    }
+    while let Some(job) = QUEUED.with(|q| {
+        let mut q = q.borrow_mut();
+        (!q.is_empty()).then(|| q.remove(0))
+    }) {
+        DRIVER.with(|d| {
+            if let Some(driver) = d.borrow_mut().as_mut() {
                 job(&mut driver.updater, &mut driver.shell);
             }
-            None
-        }
-        Err(_) => Some(job),
-    });
-    if let Some(job) = ran {
-        post_core(move |_, _| with_driver(job));
+        });
     }
 }
 
@@ -393,9 +403,10 @@ impl UpdaterHost for ShellUpdater {
     }
 
     fn auto_check_enabled(&self) -> bool {
+        // `readAppSettings(..).autoUpdateCheck !== false`
         read_app_settings(&self.settings_path())
             .get("autoUpdateCheck")
-            .is_none_or(|v| v != &jscompat::JsonValue::Bool(false))
+            .is_none_or(|v| serde_json::to_value(v).ok() != Some(serde_json::Value::Bool(false)))
     }
 
     fn quit_soon(&mut self) {
