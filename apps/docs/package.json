@@ -24,6 +24,7 @@
     "@seuoffice/ai-search": "*",
     "@seuoffice/compound-file": "*",
     "@seuoffice/docx-engine": "*",
+    "@seuoffice/engine-wasm": "*",
     "@seuoffice/file-parse": "*",
     "@seuoffice/project-store": "*",
     "@seuoffice/ui": "*",

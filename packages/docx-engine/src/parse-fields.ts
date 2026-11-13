@@ -13,7 +13,8 @@ import { invoke } from './engine'
  *  name "toc 1" when the styleId is opaque (html2docx exports numeric ids) */
 export function tocLevelOf(styleId: string, styles?: Map<string, StyleInfo>): number | null {
   if (typeof styleId !== 'string') return null
-  return invoke('tocLevelOf', [styleId, styles]) as never
+  const style = styles?.get(styleId)
+  return invoke('tocLevelOf', [styleId, style ? new Map([[styleId, style]]) : undefined]) as never
 }
 export function fieldDisplayOf(
   xml: string,
