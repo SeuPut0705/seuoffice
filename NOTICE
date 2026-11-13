@@ -291,10 +291,9 @@ The seuoffice source as of v0.12.41 (tag v0.12.41, commit
 Copyright 2026 SeuPut (최진서) and licensed by SeuPut under the Functional
 Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2), in
 LICENSE (shipped as LICENSE.txt). From commit <FSL_SWITCH_COMMIT> on, every
-distribution of that code, source or binary, is under FSL-1.1-ALv2. The
-v0.12.41 release files already published are not rebuilt or replaced: the
-first build that ships the FSL LICENSE carries the next version number and
-holds the code of v0.12.41 plus the licence change.
+distribution of that code, source or binary, is under FSL-1.1-ALv2. The first
+release under FSL-1.1-ALv2 is 0.12.42. The v0.12.41 release files already
+published are not rebuilt or replaced.
 
 Copies received under the Apache License, Version 2.0, before the switch
 (any version up to and including the published v0.12.41 release files) keep
