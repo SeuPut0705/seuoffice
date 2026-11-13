@@ -59,7 +59,7 @@
     "name": "a union folds branches that are not bare types",
     "file": "main-core/src/packages/zod.rs",
     "find": "if entries.len() != 1 || entries[0].0 != \"type\" {",
-    "replace": "if entries[0].0 != \"type\" {",
+    "replace": "if entries.is_empty() || entries[0].0 != \"type\" {",
     "fn": ["zod.toJsonSchema"]
   },
   {
@@ -1086,10 +1086,10 @@
     "fn": ["toml.parseToml"]
   },
   {
-    "name": "toml a surrogate escape is allowed",
+    "name": "toml a unicode escape reads eight digits for u",
     "file": "main-core/src/shell/mcp_client/toml.rs",
-    "find": "(0xd800..=0xdfff).contains(&code)",
-    "replace": "(0xd801..=0xdfff).contains(&code)",
+    "find": "let size = if u == 'u' { 4 } else { 8 };",
+    "replace": "let size = if u == 'u' { 8 } else { 4 };",
     "fn": ["toml.parseToml"]
   },
   {
@@ -1261,10 +1261,10 @@
     "fn": ["paste.placeholderVariable"]
   },
   {
-    "name": "paste a JSON line from the position counts from zero",
+    "name": "paste a JSON error line is read from the column",
     "file": "main-core/src/shell/mcp_client/paste.rs",
-    "find": ".matches('\\n')\n            .count()\n            + 1,",
-    "replace": ".matches('\\n')\n            .count(),",
+    "find": "js_regex!(r\"line (\\d+)\", \"i\")",
+    "replace": "js_regex!(r\"column (\\d+)\", \"i\")",
     "fn": ["paste.parseMcpPaste"]
   },
   {
@@ -1345,10 +1345,10 @@
     "fn": ["local-launch.prepareLocalLaunch", "local-launch.plannedLaunch"]
   },
   {
-    "name": "launch a path is a bare command",
+    "name": "launch the Windows bare name keeps its case",
     "file": "main-core/src/shell/mcp_client/local_launch.rs",
-    "find": "if trimmed.is_empty() || trimmed.contains(['\\\\', '/']) {",
-    "replace": "if trimmed.is_empty() {",
+    "find": "let lower = trimmed.to_lowercase();",
+    "replace": "let lower = trimmed.to_owned();",
     "fn": ["local-launch.prepareLocalLaunch", "local-launch.plannedLaunch"]
   },
   {
@@ -1429,10 +1429,10 @@
     "fn": ["runtime-archive.extractRuntimeArchive"]
   },
   {
-    "name": "extract a symbolic link with no target is made",
+    "name": "extract a symbolic link over a file leaves the file",
     "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
-    "find": "if link.is_empty()",
-    "replace": "if false",
+    "find": "remove_forced(target)?;",
+    "replace": "remove_forced(\"\")?;",
     "fn": ["runtime-archive.extractRuntimeArchive"]
   },
   {
@@ -2437,10 +2437,10 @@
     "fn": ["mcp-server.scenario"]
   },
   {
-    "name": "server keeps finished orphans",
+    "name": "server forgets an orphan after its first resume",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
     "find": "if !server.has_pending_tools() {\n                self.orphans.remove(at);",
-    "replace": "if false {\n                self.orphans.remove(at);",
+    "replace": "if true {\n                self.orphans.remove(at);",
     "fn": ["mcp-server.scenario"]
   },
   {
@@ -3494,8 +3494,8 @@
   {
     "name": "session require text",
     "file": "main-core/src/shell/mcp/tools/session_tools.rs",
-    "find": "\"the active session is a {} \u2014 call create_session with family \\\"{}\\\" first\"",
-    "replace": "\"the active session is a {} \u2014 call create_session with family {} first\"",
+    "find": "\"the active session is a {} — call create_session with family \\\"{}\\\" first\"",
+    "replace": "\"the active session is a {} — call create_session with family {} first\"",
     "fn": ["session-tools.createSessionHost", "session-tools.contentTarget", "document-tools.call"]
   },
   {
@@ -3803,7 +3803,7 @@
   {
     "name": "pdf probe failure text",
     "file": "main-core/src/shell/mcp/tools/pdf_tools.rs",
-    "find": "\"could not open the PDF \u2014 it may be encrypted or corrupt\"",
+    "find": "\"could not open the PDF — it may be encrypted or corrupt\"",
     "replace": "\"could not open the PDF\"",
     "fn": ["pdf-tools.call"]
   },
@@ -4067,10 +4067,10 @@
     "fn": ["app-mcp.scenario"]
   },
   {
-    "name": "a single active diagram is no front when two exist",
+    "name": "two active diagrams with none detached have no front",
     "file": "main-core/src/shell/mcp/tools/diagram_tools.rs",
-    "find": "if active.len() <= 1 {",
-    "replace": "if active.len() <= 0 {",
+    "find": ".or(active.first())",
+    "replace": ".or(None)",
     "fn": ["diagram-tools.frontDiagram", "diagram-tools.call"]
   },
   {
@@ -4319,10 +4319,10 @@
     "fn": ["local.scenario"]
   },
   {
-    "name": "local a write to a stopped server has another message",
+    "name": "local a write to a stopped server reads as a timeout",
     "file": "main-core/src/shell/mcp_client/local.rs",
-    "find": "\"The server is not running\",",
-    "replace": "\"The server stopped\",",
+    "find": "error_code::CONNECTION_CLOSED,\n                \"The server is not running\",",
+    "replace": "error_code::REQUEST_TIMEOUT,\n                \"The server is not running\",",
     "fn": ["local.scenario"]
   },
   {
@@ -4382,10 +4382,10 @@
     "fn": ["local.scenario"]
   },
   {
-    "name": "local a starting server is not idle after stop",
+    "name": "local a stopped server keeps its idle timer",
     "file": "main-core/src/shell/mcp_client/local.rs",
-    "find": "if matches!(self.state, LocalMcpState::Running | LocalMcpState::Starting) {",
-    "replace": "if matches!(self.state, LocalMcpState::Running) {",
+    "find": "self.clear_idle(host);\n        let Some(child) = self.running.take() else {",
+    "replace": "let Some(child) = self.running.take() else {",
     "fn": ["local.scenario"]
   },
   {
@@ -5248,10 +5248,10 @@
     "fn": ["hub.scenario"]
   },
   {
-    "name": "the caller is the window id plus one",
+    "name": "a destroyed window stays watched",
     "file": "main-core/src/shell/mcp_client/hub_ipc.rs",
-    "find": "        number_to_string(sender_id)",
-    "replace": "        number_to_string(sender_id + 1.0)",
+    "find": "        self.watched.retain(|id| *id != sender_id);",
+    "replace": "        let _ = sender_id;",
     "fn": ["hub.scenario"]
   },
   {

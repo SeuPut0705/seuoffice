@@ -317,6 +317,8 @@ const bufferCases: Case[] = cases(
   [{ ops: [{ append: '{"jsonrpc":"2.0","method":"x"}' }, { clear: true }, { read: true }] }],
   [{ ops: [{ append: { hex: 'ff0a' } }, { read: true }] }],
   [{ ops: [{ append: '{"jsonrpc":"2.0","method":"x"}\r\r\n' }, { readAll: true }] }],
+  [{ ops: [{ append: '{"jsonrpc":"2.0","method"\r\n' }, { read: true }] }],
+  [{ ops: [{ append: '{"a"\r\n' }, { read: true }] }],
   [
     {
       ops: [
@@ -1047,6 +1049,7 @@ const UNFOLLOWED: Array<[ResponseDesc, string]> = [
   [{ status: 302 }, 'https://a.example/x'],
   [{ status: 302, headers: { location: '' } }, 'https://a.example/x'],
   [{ status: 303, headers: { location: 'http://[bad' } }, 'https://a.example/x'],
+  [{ status: 303, headers: { location: 'http://a.example/y' } }, 'https://a.example/x'],
   [{ status: 200, headers: { location: 'https://b.example/' } }, 'https://a.example/x'],
   [{ status: 302, headers: { location: 'https://u:p@b.example/y?z=1#h' } }, 'http://a.example/x'],
   [
@@ -1114,6 +1117,7 @@ const fetchWithinOriginSpec: FnSpec = {
       },
     ],
     [{ fetches: [redirect(303, '/b'), { body: 'not reached' }], init: { method: 'DELETE' } }],
+    [{ fetches: [redirect(303, '/b'), { body: 'see other' }] }],
     [{ fetches: [redirect(302, '/b'), { body: 'get follows' }], init: { method: 'get' } }],
     [{ fetches: [redirect(302, '/b')], init: { redirect: 'manual' } }],
     [{ fetches: [redirect(302, '/b')], init: { redirect: 'error' } }],
