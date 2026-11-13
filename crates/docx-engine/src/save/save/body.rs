@@ -27,11 +27,8 @@ use crate::save::parts::hf_parts::{
 };
 use crate::section::HfKind;
 use crate::section::{hf_reference_r_id, hf_reference_tags, hf_reference_type};
+use crate::withheld::{REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS, REDACT_PREFIX};
 use crate::xml_tag::{TagName, find_start_tag};
-
-const REDACT_NS: &str = "https://genspark.ai/genoffice/redaction/2026";
-const REDACT_PREFIX: &str = "go";
-const REDACT_EL: &str = "go:redact";
 
 /// `UnwrapSlice`: the bytes of a control shell on one block, by their place in it.
 struct UnwrapSlice {
