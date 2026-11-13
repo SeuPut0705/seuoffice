@@ -398,17 +398,75 @@ jobs:
       - name: EPUB parity gate
         if: steps.has.outputs.gate == 'true'
         run: npm --prefix tools/epub-diff run gate -- --save out/ci.json
-      - name: EPUB seeded faults
-        if: steps.has.outputs.gate == 'true'
-        run: npm --prefix tools/epub-diff run faults
       - name: Keep the EPUB gate output
         if: always() && steps.has.outputs.gate == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: epub-diff-out
+          path: tools/epub-diff/out/ci.json
+          if-no-files-found: error
+
+  # One Rust fault at a time through the EPUB gate, each rebuilding the wasm:
+  # eight shards keep every one well inside its limit
+  epub_faults:
+    needs: epub
+    if: ${{ !inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+      - name: Is the EPUB gate in this tree
+        id: has
+        run: |
+          if [ -f tools/epub-diff/package.json ]; then echo "gate=true" >> "$GITHUB_OUTPUT"; else echo "gate=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.gate == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+      - uses: actions/cache@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
           path: |
-            tools/epub-diff/out/ci.json
-            tools/epub-diff/out/faults-*/*.json
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-epub-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-fileparse-${{ runner.os }}-
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: steps.has.outputs.gate == 'true'
+        run: npm ci
+      - name: EPUB seeded faults
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/epub-diff run faults -- --shard ${{ matrix.shard }}/8
+      - name: Keep the EPUB fault evidence
+        if: always() && steps.has.outputs.gate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: epub-faults-out-${{ matrix.shard }}
+          path: tools/epub-diff/out/faults-*/*.json
           if-no-files-found: error
 
   pptx:
