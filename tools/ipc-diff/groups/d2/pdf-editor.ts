@@ -224,7 +224,24 @@ async function load(cx: LoadContext): Promise<void> {
   )
   // registerPdfIpc runs with the first view; a view no case calls from
   l.mod.createPdfView(null)
+  lastOutcome = undefined
   loaded = l
+}
+
+/** what the last waiting shell call settled to; undefined while it waits */
+let lastOutcome: { value: unknown } | { error: string } | undefined
+
+/**
+ * Starts a shell call that waits for the renderer: the trigger answers at
+ * once, `outcome` tells what it settled to (probe.rs does the same)
+ */
+function waiting(run: Promise<unknown>): Promise<undefined> {
+  lastOutcome = undefined
+  run.then(
+    (value) => (lastOutcome = { value }),
+    (err: unknown) => (lastOutcome = { error: String(err) }),
+  )
+  return Promise.resolve(undefined)
 }
 
 /** the shell's calls into the editor, by `d2/pdf:<name>`: the pdf-main.ts export */
@@ -234,23 +251,25 @@ const calls: Record<string, (view: number, args: unknown[]) => Promise<unknown>>
     l.next = hook(l, l.cx.electron.contents(view) as unknown as Record<string, unknown>)
     l.mod.createPdfView((args[0] as string | undefined) ?? null)
   },
-  'flush-pdf-save': (view, args) => loaded!.mod.flushPdfSave(contentsOf(view), args[0] === true),
+  'flush-pdf-save': (view, args) =>
+    waiting(loaded!.mod.flushPdfSave(contentsOf(view), args[0] === true)),
   'request-pdf-close': (view, args) => {
     const BrowserWindow = loaded!.cx.electron.BrowserWindow as { fromId(id: number): unknown }
     const parent = typeof args[0] === 'number' ? BrowserWindow.fromId(args[0]) : undefined
-    return loaded!.mod.requestPdfClose(contentsOf(view), parent as never)
+    return waiting(loaded!.mod.requestPdfClose(contentsOf(view), parent as never))
   },
-  'request-pdf-save-as-outcome': async (view, args) =>
-    loaded!.mod.requestPdfSaveAsOutcome(contentsOf(view), args[0] as string),
-  'request-pdf-save-as': async (view, args) =>
-    loaded!.mod.requestPdfSaveAs(contentsOf(view), args[0] as string),
+  'request-pdf-save-as-outcome': (view, args) =>
+    waiting(loaded!.mod.requestPdfSaveAsOutcome(contentsOf(view), args[0] as string)),
+  'request-pdf-save-as': (view, args) =>
+    waiting(loaded!.mod.requestPdfSaveAs(contentsOf(view), args[0] as string)),
+  outcome: async () => lastOutcome ?? null,
   'request-pdf-page-images': async (view, args) =>
     loaded!.mod.requestPdfPageImages(contentsOf(view), args[0] as string),
   'set-pdf-save-as-in-flight': async (view, args) =>
     loaded!.mod.setPdfSaveAsInFlight(contentsOf(view), args[0] === true),
   'pdf-file-renamed': async (view, args) =>
     loaded!.mod.pdfFileRenamed(contentsOf(view), args[0] as string, args[1] as string),
-  'write-pdf-copies-now': () => loaded!.mod.writePdfCopiesNow(),
+  'write-pdf-copies-now': () => waiting(loaded!.mod.writePdfCopiesNow()),
   'discard-pdf-recovery': async (view) => loaded!.mod.discardPdfRecovery(contentsOf(view)),
   'pdf-close-cancelled': async (view) => loaded!.mod.pdfCloseCancelled(contentsOf(view)),
   'pdf-is-dirty': async (view) => loaded!.mod.pdfIsDirty(view),
@@ -311,11 +330,8 @@ const trigger = (name: string, ...args: unknown[]): Call => ({
   view: 1,
   args,
 })
-/** a trigger that waits for the renderer: its answer is taken by `awaitStep` */
-const waits = (name: string, ...args: unknown[]): Call => ({
-  ...trigger(name, ...args),
-  defer: true,
-})
+/** what the last waiting trigger settled to: `null` while it waits */
+const outcome = () => trigger('outcome')
 /** the answer of the deferred step at `index` */
 const awaitStep = (index: number): Call => ({ channel: '', args: [], await: index })
 const open = (path = DOC) => trigger('open-view', path)
@@ -646,12 +662,13 @@ const cases: Case[] = [
     note: 'Save As through the shell: the copy goes to the granted target only',
     calls: [
       open(),
-      waits('request-pdf-save-as-outcome', '$DIR/copy.pdf'),
+      trigger('request-pdf-save-as-outcome', '$DIR/copy.pdf'),
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true, redactions: [] }),
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true }),
       save({ targetPath: '$DIR/copy.pdf', annotations: 'strip', encryption: {} }),
+      outcome(),
       send('pdf:save-as-result', true),
-      awaitStep(1),
+      outcome(),
       save({ targetPath: '$DIR/copy.pdf', copyOnly: true }),
     ],
   }),
@@ -659,12 +676,13 @@ const cases: Case[] = [
     note: 'a Save As the renderer cancels, then one it fails',
     calls: [
       open(),
-      waits('request-pdf-save-as-outcome', '$DIR/a.pdf'),
+      trigger('request-pdf-save-as-outcome', '$DIR/a.pdf'),
+      outcome(),
       send('pdf:save-as-result', 'cancelled'),
-      awaitStep(1),
-      waits('request-pdf-save-as', '$DIR/b.pdf'),
+      outcome(),
+      trigger('request-pdf-save-as', '$DIR/b.pdf'),
       send('pdf:save-as-result', 'oops'),
-      awaitStep(4),
+      outcome(),
     ],
   }),
   c({
@@ -678,7 +696,7 @@ const cases: Case[] = [
       open(),
       save({ redactions: [{ pageIndex: 0, rect: [0, 0, 10, 10] }] }),
       save({ redactions: [{ pageIndex: -1, rect: [0, 0, 10, 10] }] }),
-      waits('request-pdf-save-as-outcome', '$DIR/red.pdf'),
+      trigger('request-pdf-save-as-outcome', '$DIR/red.pdf'),
       save({
         targetPath: '$DIR/red.pdf',
         redactions: [{ pageIndex: 0, rect: [0, 0, 10, 10] }],
@@ -693,7 +711,7 @@ const cases: Case[] = [
       call('pdf:read-file', '$DIR/red.pdf'),
       call('pdf:read-file', DOC),
       send('pdf:save-as-result', true),
-      awaitStep(3),
+      outcome(),
     ],
   }),
   c({
@@ -1107,11 +1125,13 @@ const cases: Case[] = [
     calls: [
       open(),
       trigger('flush-pdf-save', true),
+      outcome(),
       send('pdf:dirty-changed', true),
       trigger('pdf-is-dirty'),
-      waits('flush-pdf-save', false),
+      trigger('flush-pdf-save', false),
+      outcome(),
       send('pdf:close-save-result', true),
-      awaitStep(4),
+      outcome(),
     ],
   }),
   c({
@@ -1120,11 +1140,14 @@ const cases: Case[] = [
     calls: [
       open(),
       send('pdf:dirty-changed', true),
-      waits('request-pdf-close', 1),
-      send('pdf:close-save-result', 'yes'),
-      awaitStep(2),
-      trigger('request-pdf-close'),
       trigger('request-pdf-close', 1),
+      outcome(),
+      send('pdf:close-save-result', 'yes'),
+      outcome(),
+      trigger('request-pdf-close'),
+      outcome(),
+      trigger('request-pdf-close', 1),
+      outcome(),
       trigger('pdf-close-cancelled'),
       call('pdf:recovery-resume'),
     ],
@@ -1168,10 +1191,12 @@ const cases: Case[] = [
     calls: [
       open(),
       trigger('write-pdf-copies-now'),
+      outcome(),
       send('pdf:dirty-changed', true),
-      waits('write-pdf-copies-now'),
+      trigger('write-pdf-copies-now'),
+      outcome(),
       send('pdf:recovery-flush-done'),
-      awaitStep(3),
+      outcome(),
     ],
   }),
   c({
