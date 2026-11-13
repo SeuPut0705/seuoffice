@@ -13,6 +13,9 @@
 #   block-start     the updated exe cannot start (an Image File Execution
 #                   Options debugger that does not exist; needs an
 #                   administrator, otherwise the run reports it skipped)
+#   lock-file       a file inside the old install stays open (no delete share,
+#                   as an antivirus scan or a viewer holds it) for the whole
+#                   update; the old version must stay installed and start
 #
 #   win-desktop.ps1 -From v0.12.20 -To C:\b\SeuOffice-Setup-0.13.0.exe -ToVersion 0.13.0 `
 #     [-Next C:\b\SeuOffice-Setup-0.13.1.exe -NextVersion 0.13.1] [-Fault none] -Out C:\mig\run1
@@ -26,7 +29,7 @@ param(
   [Parameter(Mandatory)] [string]$ToVersion,
   [string]$Next,
   [string]$NextVersion,
-  [ValidateSet('none', 'kill-installer', 'block-start')] [string]$Fault = 'none',
+  [ValidateSet('none', 'kill-installer', 'block-start', 'lock-file')] [string]$Fault = 'none',
   [Parameter(Mandatory)] [string]$Out,
   [int]$Port = 9229,
   [int]$FeedPort = 8765,
@@ -148,6 +151,15 @@ try {
     Set-ItemProperty -Path $ifeo -Name Debugger -Value 'C:\migration-test\no-such-debugger.exe'
   }
   $installersBefore = @(Get-Process | ForEach-Object Id)
+  $held = $null
+  if ($Fault -eq 'lock-file') {
+    # read share only: the file can be read, not renamed, moved or deleted,
+    # and neither can the folder it sits in
+    $target = Get-ChildItem (InstallDir) -Recurse -File |
+      Where-Object { $_.Name -ne 'SeuOffice.exe' } | Select-Object -First 1
+    $held = [IO.File]::Open($target.FullName, 'Open', 'Read', 'Read')
+    Step 'file-held' @{ path = $target.FullName }
+  }
   & node (Join-Path $here 'probe.mjs') update --port $Port --version $ToVersion
   if ($LASTEXITCODE -ne 0) { Fail 'the update did not reach "downloaded"' }
   $t = [Diagnostics.Stopwatch]::StartNew()
@@ -170,6 +182,7 @@ try {
   Start-Sleep 5
   $started = [bool](AppProcesses)
   if ($Fault -eq 'block-start') { Remove-Item -Force -Path $ifeo }
+  if ($held) { $held.Dispose(); $held = $null }
   StopApp
   $version = ExeVersion
   $files = if (Test-Path (InstallDir)) { @(Get-ChildItem (InstallDir) | ForEach-Object Name) } else { @() }
@@ -208,6 +221,7 @@ try {
   $result.passed = $true
 } finally {
   if ($Fault -eq 'block-start' -and (Test-Path $ifeo)) { Remove-Item -Force -Path $ifeo }
+  if ($held) { $held.Dispose() }
   if ($script:feed) { Stop-Process -Id $script:feed.Id -Force -ErrorAction SilentlyContinue }
   StopApp
   Save
