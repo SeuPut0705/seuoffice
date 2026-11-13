@@ -21,7 +21,7 @@
  * - `app.getAppPath()`: `hosts.a.userSkills.appPath`, `$DIR/app` by default.
  *
  * `os.homedir()` and `os.tmpdir()` are the case's `home` and `temp` folders
- * (HOME and TMPDIR), as `app.getPath` names them for the Rust side. The ids
+ * (patched while that folder is there), as `app.getPath` names them for the Rust side. The ids
  * `randomUUID()` makes in the IPC module and the entry are counted
  * (`00000000-0000-4000-8000-000000000001`, ...) and `Date.now()` is fixed, as
  * the Rust probe pins them, so a case can name the token of a preview.
@@ -35,7 +35,7 @@
  * The drop queue is filled by the shell's drop handler, not by a channel: the
  * `a/skills-drop` trigger calls `userSkillsIpc.queueDropped(entry)` on both sides.
  */
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire, registerHooks, syncBuiltinESMExports } from 'node:module'
 import { homedir, tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -51,6 +51,10 @@ import { builtinSkillsDirFor } from '../../../../apps/shell/src/main/user-skills
 import { HOME_CHANNELS } from '../../../../apps/shell/src/shared/home-api.ts'
 import type { Call, Case, Group, LoadContext, View } from '../../types.ts'
 import { entryStatements } from './lib/entry-source.ts'
+import os from 'node:os'
+
+const REAL_HOMEDIR = os.homedir
+const REAL_TMPDIR = os.tmpdir
 
 const SERVICE = 'apps/shell/src/main/user-skills/user-skills-service.ts'
 const SKILLS_IPC = 'apps/shell/src/main/user-skills/user-skills-ipc.ts'
@@ -368,9 +372,14 @@ async function load(cx: LoadContext): Promise<void> {
   const copyTabs = setup.copyTabs ?? {}
   const log = cx.electron.log
 
-  // the folders `app.getPath` names: HOME and TMPDIR are what os.homedir() and os.tmpdir() read
-  process.env.HOME = join(cx.dir, 'home')
-  process.env.TMPDIR = join(cx.dir, 'temp')
+  // the folders `app.getPath` names, while the case's folder is there:
+  // outside a case (the harness makes its folders between cases, after the
+  // case's own is gone) the real ones answer (as groups/m/print/host.ts does)
+  const home = join(cx.dir, 'home')
+  const temp = join(cx.dir, 'temp')
+  os.homedir = () => (existsSync(home) ? home : REAL_HOMEDIR())
+  os.tmpdir = () => (existsSync(temp) ? temp : REAL_TMPDIR())
+  syncBuiltinESMExports()
   counted = 0
   Date.now = () => NOW
   ;(globalThis as Record<symbol, unknown>)[HOST] = importerHost(setup, log)

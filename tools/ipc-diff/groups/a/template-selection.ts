@@ -32,10 +32,11 @@ const views: View[] = [
   { view: 3, window: 3, surface: 'Slides' },
 ]
 const get = (view: number): Call => ({ channel: TEMPLATE_SELECTION_GET_CHANNEL, view, args: [] })
-const set = (view: number, selection: unknown): Call => ({
+/** `set(view)` sends no argument at all */
+const set = (view: number, ...selection: unknown[]): Call => ({
   channel: TEMPLATE_SELECTION_SET_CHANNEL,
   view,
-  args: [selection],
+  args: selection,
 })
 const builtin = { kind: 'builtin', key: 'coral', adjustments: ['bigger titles'] }
 const saved = { kind: 'saved', key: 'my style' }

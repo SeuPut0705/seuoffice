@@ -42,7 +42,7 @@ cef = "=154.5.0"
 # ports (host/net/). The system's TLS and trust store and proxy, as
 # Chromium's net in the Electron build used; the four content decoders
 # undici and Chromium both apply.
-reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls", "system-proxy", "stream", "multipart", "http2", "charset", "gzip", "brotli", "deflate", "zstd"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "system-proxy", "stream", "multipart", "http2", "charset", "gzip", "brotli", "deflate", "zstd"] }
 # A's loopback servers of the sign-ins (host/net/http.rs) and the stream the
 # AI runtime reads a body through: all already pulled by reqwest and tauri
 hyper = { version = "1", features = ["server", "http1"] }
