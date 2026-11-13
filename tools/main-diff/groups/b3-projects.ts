@@ -9,5 +9,6 @@ import { cloud } from './b3-projects-cloud.ts'
 import { files } from './b3-projects-files.ts'
 import { foundation } from './b3-projects-foundation.ts'
 import { guard } from './b3-projects-guard.ts'
+import { ipc } from './b3-projects-ipc.ts'
 
-export const group: Group = { ...foundation, ...cloud, ...guard, ...files, ...chats }
+export const group: Group = { ...foundation, ...cloud, ...guard, ...files, ...chats, ...ipc }

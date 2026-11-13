@@ -8,6 +8,7 @@ mod cloud;
 mod files;
 mod foundation;
 mod guard;
+mod ipc;
 
 use serde_json::Value;
 
@@ -21,6 +22,7 @@ const PARTS: &[Part] = &[
     guard::call,
     files::call,
     chats::call,
+    ipc::call,
 ];
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {

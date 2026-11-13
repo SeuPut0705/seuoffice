@@ -15,6 +15,7 @@ pub mod project_dialog_text;
 pub mod project_files;
 pub mod project_guide;
 pub mod project_index;
+pub mod project_ipc;
 pub mod project_tools;
 pub mod selection;
 pub mod stand_ins;

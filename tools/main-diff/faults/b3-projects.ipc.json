@@ -1,0 +1,436 @@
+[
+  {
+    "name": "project-ipc: the bad request message is another text",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "pub const PROJECT_IPC_BAD_REQUEST: &str = \"invalid project folder request\";",
+    "replace": "pub const PROJECT_IPC_BAD_REQUEST: &str = \"invalid project folder requests\";",
+    "fn": ["project-ipc.PROJECT_IPC_BAD_REQUEST", "project-ipc.removeFromList"]
+  },
+  {
+    "name": "project-ipc: the unknown window message is another text",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "pub const PROJECT_IPC_UNKNOWN_WINDOW: &str = \"not an AI window\";",
+    "replace": "pub const PROJECT_IPC_UNKNOWN_WINDOW: &str = \"not an AI window.\";",
+    "fn": ["project-ipc.PROJECT_IPC_UNKNOWN_WINDOW", "project-ipc.getSelection"]
+  },
+  {
+    "name": "project-ipc: the return arm time is a millisecond short",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "pub const TRUST_RETURN_ARM_MS: f64 = 1_000.0;",
+    "replace": "pub const TRUST_RETURN_ARM_MS: f64 = 999.0;",
+    "fn": ["project-ipc.TRUST_RETURN_ARM_MS"]
+  },
+  {
+    "name": "project-ipc: a project id that is not valid is taken",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(id)) if is_valid_project_id(id) => Ok(id.clone()),",
+    "replace": "Some(JsonValue::String(id)) => Ok(id.clone()),",
+    "fn": ["project-ipc.removeFromList", "project-ipc.readContext"]
+  },
+  {
+    "name": "project-ipc: a chat ref needs one valid id, not both",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if is_valid_project_id(project_id) && is_valid_project_id(chat_id) =>",
+    "replace": "if is_valid_project_id(project_id) || is_valid_project_id(chat_id) =>",
+    "fn": ["project-ipc.openChat", "project-ipc.deleteChat"]
+  },
+  {
+    "name": "project-ipc: an empty text is no text",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(text)) => Ok(text),",
+    "replace": "Some(JsonValue::String(text)) if !text.is_empty() => Ok(text),",
+    "fn": ["project-ipc.saveMemory", "project-ipc.renameChat"]
+  },
+  {
+    "name": "project-ipc: a remove op is not known",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(op)) if op == \"remove\" => {",
+    "replace": "Some(JsonValue::String(op)) if op == \"removed\" => {",
+    "fn": ["project-ipc.editMemory"]
+  },
+  {
+    "name": "project-ipc: a replace op swaps the old and the new text",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "return Ok(ProjectMemoryOp::Replace { old, new });",
+    "replace": "return Ok(ProjectMemoryOp::Replace { old: new, new: old });",
+    "fn": ["project-ipc.editMemory", "project-ipc.remember"]
+  },
+  {
+    "name": "project-ipc: the memory section is not known",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(text)) if text == \"memory\" => Some(ProjectScreenSection::Memory),",
+    "replace": "Some(JsonValue::String(text)) if text == \"memories\" => Some(ProjectScreenSection::Memory),",
+    "fn": ["project-ipc.openProjectScreen"]
+  },
+  {
+    "name": "project-ipc: a lower case drive letter is no drive",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "(Some(letter), Some(':')) if letter.is_ascii_alphabetic()",
+    "replace": "(Some(letter), Some(':')) if letter.is_ascii_uppercase()",
+    "fn": ["project-ipc.openDocumentChat"]
+  },
+  {
+    "name": "project-ipc: an absolute chat document is taken",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if rel.is_empty() || is_absolute(rel) || drive {",
+    "replace": "if rel.is_empty() || drive {",
+    "fn": ["project-ipc.openDocumentChat"]
+  },
+  {
+    "name": "project-ipc: a dot segment of a chat document is taken",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "segments.iter().any(|s| *s == \"..\" || *s == \".\")",
+    "replace": "segments.iter().any(|s| *s == \"..\")",
+    "fn": ["project-ipc.openDocumentChat"]
+  },
+  {
+    "name": "project-ipc: the sender hears its own message",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if matches!(from, Some(JsonValue::Number(n)) if *n == target as f64) {",
+    "replace": "if matches!(from, Some(JsonValue::Number(n)) if *n != target as f64) {",
+    "fn": ["project-ipc.appendChat", "project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: the messages the store's listener saw are dropped",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "self.forward_appended(deps);",
+    "replace": "let _ = deps.chats.take_appended();",
+    "fn": ["project-ipc.appendChat", "project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a window that is gone when a message is forwarded is kept",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "            if !host.send(target, channel, &payload) {\n                self.forget(target);\n            }\n        }\n    }\n\n    /// the events the chat store's listener saw",
+    "replace": "            let _ = host.send(target, channel, &payload);\n        }\n    }\n\n    /// the events the chat store's listener saw",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a window that is gone when a change is announced is kept",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "            if !host.send(target, channel, &payload) {\n                self.forget(target);\n            }\n        }\n    }\n\n    /// `announced(projectId, part, write)`",
+    "replace": "            let _ = host.send(target, channel, &payload);\n        }\n    }\n\n    /// `announced(projectId, part, write)`",
+    "fn": ["project-ipc.removeFromList"]
+  },
+  {
+    "name": "project-ipc: a change is told to windows that listen to nothing of it",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": ".filter(|(_, methods)| methods.contains(&ProjectFolderEventMethod::OnProjectChanged))",
+    "replace": ".filter(|(_, methods)| !methods.is_empty())",
+    "fn": ["project-ipc.removeFromList"]
+  },
+  {
+    "name": "project-ipc: an event for a window that is gone is held for it",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "            self.forget(target);\n            return;\n        }\n        match self.held.get_mut(&target) {",
+    "replace": "            return;\n        }\n        match self.held.get_mut(&target) {",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: the first held event of a kind wins",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(waiting) => waiting.set(method, payload),",
+    "replace": "Some(_) => {}",
+    "fn": ["project-ipc.openProjectScreen", "project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a window showing a chat it is shown again moves to the end",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if self.watching.get(&sender) == Some(&key) {",
+    "replace": "if false {",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a reload keeps the project an untitled window chose",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "        self.untitled.remove(&sender);",
+    "replace": "        let _ = &self.untitled;",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a reload keeps the project the panel chose",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "        self.chosen.remove(&sender);",
+    "replace": "        let _ = &self.chosen;",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a closed window keeps what is held for it",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "self.reset(sender);\n        self.held.remove(&sender);",
+    "replace": "self.reset(sender);",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a method that only starts like an event is listened to",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": ".find(|method| method.as_str() == name)",
+    "replace": ".find(|method| name.starts_with(method.as_str()))",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a listening that is not true is taken",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if !matches!(on, Some(JsonValue::Bool(true))) {",
+    "replace": "if matches!(on, Some(JsonValue::Bool(false))) {",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: an untitled window's own choice is not asked",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if let Some(project_id) = self.untitled.get(&sender) {",
+    "replace": "if let Some(project_id) = self.untitled.get(&-1) {",
+    "fn": ["project-ipc.setSelection", "project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: the window project is the chat, not the project",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "deps.guide.get_selection(&target).ok()?.project_id",
+    "replace": "deps.guide.get_selection(&target).ok()?.initial_chat_id",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: choosing no project keeps the chat shown",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if project_id.is_none() {",
+    "replace": "if false {",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: the panel's answer is not remembered",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "let selection = deps.guide.get_selection(&target)?;\n                self.chosen.set(sender, selection.project_id.clone());",
+    "replace": "let selection = deps.guide.get_selection(&target)?;",
+    "fn": ["project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a document's chat is never looked up",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "selection.initial_chat_id = match (project_id, doc_path) {",
+    "replace": "selection.initial_chat_id = match (project_id, None::<String>) {",
+    "fn": ["project-ipc.getSelection", "project-ipc.setSelection"]
+  },
+  {
+    "name": "project-ipc: an empty root opens the file manager",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if let Some(root) = truthy(root.as_deref()) {",
+    "replace": "if let Some(root) = root.as_deref() {",
+    "fn": ["project-ipc.openInFileManager"]
+  },
+  {
+    "name": "project-ipc: a window with no document is refused for another reason",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "reason: FolderRefusalReason::NotAFolder,",
+    "replace": "reason: FolderRefusalReason::DriveRoot,",
+    "fn": ["project-ipc.adoptFolderHint"]
+  },
+  {
+    "name": "project-ipc: attaching with no document is unwritable",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "return reply(&ProjectWriteResult::Ok);",
+    "replace": "return reply(&ProjectWriteResult::Unwritable);",
+    "fn": ["project-ipc.attachDocument"]
+  },
+  {
+    "name": "project-ipc: an empty document path looks for the earlier chat",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if let Some(doc_path) = truthy(doc_path_of(&win)) {",
+    "replace": "if let Some(doc_path) = doc_path_of(&win) {",
+    "fn": ["project-ipc.listChats"]
+  },
+  {
+    "name": "project-ipc: the limit of a chat is one more",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "args.set(\"limit\", JsonValue::Number(*limit));",
+    "replace": "args.set(\"limit\", JsonValue::Number(*limit + 1.0));",
+    "fn": ["project-ipc.openChat"]
+  },
+  {
+    "name": "project-ipc: a chat that is not found is shown",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if status_of(&opened) == Some(\"ok\") {",
+    "replace": "if status_of(&opened) == Some(\"not-found\") {",
+    "fn": ["project-ipc.openChat", "project-ipc.scenario"]
+  },
+  {
+    "name": "project-ipc: a pending message is announced",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if status_of(&result) == Some(\"saved\") {",
+    "replace": "if status_of(&result) == Some(\"pending\") {",
+    "fn": ["project-ipc.appendChat"]
+  },
+  {
+    "name": "project-ipc: deleting a chat stops every window showing any chat",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if result == ProjectWriteResult::Ok && self.watching.get(&sender) == Some(&key) {",
+    "replace": "if result == ProjectWriteResult::Ok {",
+    "fn": ["project-ipc.deleteChat"]
+  },
+  {
+    "name": "project-ipc: a chat last used at home opens its document",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "&& info.last_editor != ProjectEditor::Home",
+    "replace": "&& info.last_editor == ProjectEditor::Home",
+    "fn": ["project-ipc.openDocumentChat"]
+  },
+  {
+    "name": "project-ipc: a document that does not open does not fall back to the home tab",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if target.is_none() {",
+    "replace": "if false {",
+    "fn": ["project-ipc.openDocumentChat"]
+  },
+  {
+    "name": "project-ipc: a settings key is read under another name",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "field(patch, \"memoryEnabled\")",
+    "replace": "field(patch, \"memoryEnable\")",
+    "fn": ["project-ipc.setSettings"]
+  },
+  {
+    "name": "project-ipc: the without decision is another word",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(text)) if text == \"without\" => {",
+    "replace": "Some(JsonValue::String(text)) if text == \"withou\" => {",
+    "fn": ["project-ipc.decideTrust"]
+  },
+  {
+    "name": "project-ipc: saved instructions are announced as settings",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "ProjectChangedPart::Instructions,",
+    "replace": "ProjectChangedPart::Settings,",
+    "fn": ["project-ipc.saveInstructions"]
+  },
+  {
+    "name": "project-ipc: the consolidation entries are cut to one",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "deps.guide.apply_memory_consolidation(&project_id, entries);",
+    "replace": "deps.guide.apply_memory_consolidation(&project_id, &entries[..entries.len().min(1)]);",
+    "fn": ["project-ipc.applyMemoryConsolidation"]
+  },
+  {
+    "name": "project-ipc: the ignored files are not marked with the resolver",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(resolver) => with_cloud_flags(&files, resolver),",
+    "replace": "Some(_) => files,",
+    "fn": ["project-ipc.listIgnoredFiles"]
+  },
+  {
+    "name": "project-ipc: a project name is trimmed as Rust trims",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "Some(JsonValue::String(name)) => trim(name).to_owned(),",
+    "replace": "Some(JsonValue::String(name)) => name.trim().to_owned(),",
+    "fn": ["project-ipc.createProject"]
+  },
+  {
+    "name": "project-ipc: a text for otherPlace is a place",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if matches!(field(raw, \"otherPlace\"), Some(JsonValue::Bool(true))) {",
+    "replace": "if matches!(field(raw, \"otherPlace\"), Some(JsonValue::Bool(true) | JsonValue::String(_))) {",
+    "fn": ["project-ipc.createProject"]
+  },
+  {
+    "name": "project-ipc: the second create does not use the folder",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "request.use_existing = Some(true);",
+    "replace": "request.use_existing = Some(false);",
+    "fn": ["project-ipc.createProject"]
+  },
+  {
+    "name": "project-ipc: a cancelled create is cancelled at the trust stage",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "fn cancelled_create() -> CreateProjectResult {\n    CreateProjectResult::Cancelled {\n        stage: AddFolderStage::Dialog,",
+    "replace": "fn cancelled_create() -> CreateProjectResult {\n    CreateProjectResult::Cancelled {\n        stage: AddFolderStage::Trust,",
+    "fn": ["project-ipc.createProject"]
+  },
+  {
+    "name": "project-ipc: the list changes when an addition is cancelled",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if matches!(result, AddFolderResult::Added { .. }) {",
+    "replace": "if matches!(result, AddFolderResult::Cancelled { .. }) {",
+    "fn": ["project-ipc.addFolder", "project-ipc.relocateProject"]
+  },
+  {
+    "name": "project-ipc: the list does not change when a project is created",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "CreateProjectResult::Added { .. } | CreateProjectResult::Created { .. }",
+    "replace": "CreateProjectResult::Added { .. }",
+    "fn": ["project-ipc.createProject"]
+  },
+  {
+    "name": "project-ipc: the trust prompt is cancelled when the files opened and the person came back",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if self.show_trust_files(prompt) && !self.dialogs.wait_for_return(self.sender) {",
+    "replace": "if self.show_trust_files(prompt) || !self.dialogs.wait_for_return(self.sender) {",
+    "fn": ["project-ipc.addFolder"]
+  },
+  {
+    "name": "project-ipc: an empty text of the prompt is opened and a missing one is not",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "            if text.is_none() {",
+    "replace": "            if text.is_some() {",
+    "fn": ["project-ipc.addFolder"]
+  },
+  {
+    "name": "project-ipc: the chats folder opens when there are no chats",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if !prompt.foreign_chats.is_empty() {",
+    "replace": "if prompt.foreign_chats.is_empty() {",
+    "fn": ["project-ipc.addFolder"]
+  },
+  {
+    "name": "project-ipc: a scope that is not in the request is asked for its project",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "let project_id = if field(raw, \"scope\").is_none() {",
+    "replace": "let project_id = if field(raw, \"scope\").is_some() {",
+    "fn": ["project-ipc.remember"]
+  },
+  {
+    "name": "project-ipc: the AI's remember is the person's",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": ".edit_memory(project_id, &change, MemoryAuthor::Ai);",
+    "replace": ".edit_memory(project_id, &change, MemoryAuthor::Person);",
+    "fn": ["project-ipc.remember"]
+  },
+  {
+    "name": "project-ipc: every write is announced",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "*self == ProjectWriteResult::Ok",
+    "replace": "true",
+    "fn": ["project-ipc.renameProject", "project-ipc.saveMemory"]
+  },
+  {
+    "name": "project-ipc: a refused memory edit is announced",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "impl Wrote for ProjectMemoryEditResult {\n    fn wrote(&self) -> bool {\n        matches!(self, Self::Ok { .. })",
+    "replace": "impl Wrote for ProjectMemoryEditResult {\n    fn wrote(&self) -> bool {\n        true",
+    "fn": ["project-ipc.editMemory", "project-ipc.remember"]
+  },
+  {
+    "name": "project-ipc: a focus before the blur is a return",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if self.outcome.is_none() && self.armed {",
+    "replace": "if self.outcome.is_none() {",
+    "fn": ["project-ipc.waitForPageReturn"]
+  },
+  {
+    "name": "project-ipc: a blur does not arm the watch",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "    pub fn blur(&mut self) {\n        self.arm();",
+    "replace": "    pub fn blur(&mut self) {",
+    "fn": ["project-ipc.waitForPageReturn"]
+  },
+  {
+    "name": "project-ipc: a page that is gone is a return",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "outcome: page_destroyed.then_some(false),",
+    "replace": "outcome: page_destroyed.then_some(true),",
+    "fn": ["project-ipc.waitForPageReturn"]
+  },
+  {
+    "name": "project-ipc: a return is the page gone",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "            self.outcome = Some(true);",
+    "replace": "            self.outcome = Some(false);",
+    "fn": ["project-ipc.waitForPageReturn"]
+  }
+]
