@@ -96,5 +96,12 @@
     "find": "default_id: Some(1),",
     "replace": "default_id: Some(0),",
     "groups": ["d2/docs-close"]
+  },
+  {
+    "name": "a failed autosave on close closes with no prompt",
+    "file": "shell-ipc/d2/src/docs/close.rs",
+    "find": "docs.close_prompt(view, parent, state, done)",
+    "replace": "done(true)",
+    "groups": ["d2/docs-close"]
   }
 ]
