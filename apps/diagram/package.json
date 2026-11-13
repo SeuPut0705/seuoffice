@@ -2,7 +2,7 @@
   "name": "@seuoffice/diagram",
   "productName": "SeuOffice Diagram",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "Diagram editor module: hosts the draw.io editor offline in a shell tab to open, edit, save and export .drawio diagrams",
   "main": "out/main/index.js",

@@ -10,6 +10,7 @@ import { modelSaveAsName } from './file-naming'
 import type { ActionCtx } from './action-context'
 import { collectExportPdfLinks } from './export-links'
 import { renderSlidesToPdfPages } from './export-pages'
+import { confirmExportWithoutMarks } from './export-marks'
 import { renderSlidesToImageBase64 } from './export-render'
 import { projectPanelText, runFileNaming } from '@seuoffice/ui'
 import { getLang, t } from './i18n/locale'
@@ -262,6 +263,8 @@ export function exportBaseName(ctx: ActionCtx): string {
  * PNG or JPG, written to disk by the main process. `saveAsTarget` (Save As ›
  * PNG) is the name the Save As dialog returned: no folder picker, and the
  * files are that name, numbered per page when there is more than one.
+ *
+ * A deck with content hidden from the AI asks first: the images carry no mark.
  */
 export async function exportImages(
   ctx: ActionCtx,
@@ -273,6 +276,7 @@ export async function exportImages(
     ctx.setStatus(t('appExportNoSlides'))
     return
   }
+  if (!(await confirmExportWithoutMarks(ctx, visible, format === 'jpg' ? 'JPG' : 'PNG'))) return
   const dir =
     saveAsTarget !== undefined
       ? saveAsTarget.slice(0, saveAsTarget.length - baseName(saveAsTarget).length - 1)
@@ -326,13 +330,21 @@ async function collectPdfLinks(ctx: ActionCtx): Promise<ExportPdfLink[][]> {
  * `outPath` skips the save dialog — the headless CLI entry or the Save As
  * dialog (Save As › PDF) already chose where the file goes. Resolves true only
  * when a PDF was written.
+ *
+ * A deck with content hidden from the AI asks first: the PDF carries no mark.
+ * `silent` (the headless CLI) has no one to ask, so such a deck throws instead.
  */
-export async function exportPdf(ctx: ActionCtx, outPath?: string): Promise<boolean> {
+export async function exportPdf(
+  ctx: ActionCtx,
+  outPath?: string,
+  options: { readonly silent?: boolean } = {},
+): Promise<boolean> {
   const visible = ctx.slides.filter((s) => !s.hidden)
   if (visible.length === 0) {
     ctx.setStatus(t('appExportNoSlides'))
     return false
   }
+  if (!(await confirmExportWithoutMarks(ctx, visible, 'PDF', options.silent))) return false
   const target = outPath ?? (await window.slidesApi.pickExportPdfPath(`${exportBaseName(ctx)}.pdf`))
   if (!target) return false
   ctx.setStatus(t('appExportPdfProgress'))

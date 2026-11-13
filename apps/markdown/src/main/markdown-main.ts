@@ -60,7 +60,7 @@ import {
 } from './asset-lifecycle'
 import { createMarkdownConversionSession, writeMarkdownConversion } from './conversion-lifecycle'
 import { normalizeMarkdownTheme, type MarkdownTheme } from '../shared/markdown-theme'
-import { askMarkedOdt, confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
+import { askMarkedExport, confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { registerMarkdownSeedIpc } from './seed-main'
 import { registerMarkdownNoteAppendIpc } from './note-append'
 import { createTextRecovery } from './recovery'
@@ -589,7 +589,7 @@ async function saveIntoProject(
 }
 
 /** Save As › the export a picked extension selects (rendered documents only) */
-const SAVE_AS_EXPORT_BY_EXT: Record<string, 'pdf' | SaveAsExportFormat> = {
+const SAVE_AS_EXPORT_BY_EXT: Record<string, SaveAsExportFormat> = {
   '.pdf': 'pdf',
   '.docx': 'docx',
   '.odt': 'odt',
@@ -597,8 +597,9 @@ const SAVE_AS_EXPORT_BY_EXT: Record<string, 'pdf' | SaveAsExportFormat> = {
 }
 
 /**
- * Save As › Word, ODT or page images: the path the dialog approved for this
- * view, waiting for the renderer to build the export (taken once).
+ * Save As › Word, ODT, page images (or the PDF of a document with hidden
+ * content): the path the dialog approved for this view, waiting for the renderer
+ * to build the export (taken once).
  */
 const saveAsExportTargets = new Map<number, { format: SaveAsExportFormat; path: string }>()
 
@@ -927,10 +928,16 @@ function registerMarkdownIpc(): void {
           (await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined, defaultName))
         if (target === 'canceled') return done({ ok: true, canceled: true })
         if (!target) return done({ ok: false, error: 'markdown: no save target' })
-        if (pdfHtml !== undefined && /\.pdf$/i.test(target)) {
+        if (
+          pdfHtml !== undefined &&
+          /\.pdf$/i.test(target) &&
+          request.holdsHiddenContent !== true
+        ) {
           // Save As › PDF: a rendered copy of what is on screen (the same PDF
           // the export menu writes). The document keeps its path, unsaved edits
-          // and assets; nothing below is a save.
+          // and assets; nothing below is a save. A document holding content hidden
+          // from AI is not written here: a PDF cannot keep the mark, so the
+          // renderer asks first (below), like for Word and ODT.
           try {
             const pdf = await printMarkdownPdf(pdfHtml)
             await writeFile(target, pdf)
@@ -942,10 +949,11 @@ function registerMarkdownIpc(): void {
         }
         const exportAs =
           pdfHtml !== undefined ? SAVE_AS_EXPORT_BY_EXT[extname(target).toLowerCase()] : undefined
-        if (exportAs && exportAs !== 'pdf') {
-          // Save As › Word, ODT or page images: the renderer builds the copy with
-          // its export code and writes it to this approved path. Nothing here is
-          // a save; the document keeps its path, unsaved edits and assets.
+        if (exportAs) {
+          // Save As › Word, ODT, page images or the PDF of a marked document: the
+          // renderer builds the copy with its export code and writes it to this
+          // approved path. Nothing here is a save; the document keeps its path,
+          // unsaved edits and assets.
           saveAsExportTargets.set(e.sender.id, { format: exportAs, path: target })
           return done({ ok: true, path: target, exportAs })
         }
@@ -1273,14 +1281,15 @@ function registerMarkdownIpc(): void {
     },
   )
 
-  // A document with content hidden from AI is not written as ODT: one message
-  // box with the two ways out; the renderer carries the answer out.
-  ipcMain.handle(MARKDOWN_CHANNELS.confirmMarkedOdt, async (e) => {
+  // A document with content hidden from AI is not written as ODT, PDF or page
+  // images: one message box with the two ways out; the renderer carries the answer out.
+  ipcMain.handle(MARKDOWN_CHANNELS.confirmMarkedExport, async (e, format: unknown) => {
     // a headless export has no one to ask: nothing is written
     if (isHeadlessMode()) return 'cancel'
+    if (format !== 'odt' && format !== 'pdf' && format !== 'png') return 'cancel'
     const win =
       BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
-    return askMarkedOdt((options) =>
+    return askMarkedExport(format, (options) =>
       win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
     )
   })
@@ -1298,9 +1307,13 @@ function registerMarkdownIpc(): void {
           .trim() || tm('untitledFile')
       const win =
         BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
+      // Save As › PDF already chose (and approved) the path: no second dialog
+      const approved = takeSaveAsExportTarget(e.sender.id, 'pdf', request.saveAsTarget)
+      if (approved === null) return { ok: false, error: 'markdown: save target not approved' }
       // Headless export has no dialog to authorize a path; the CLI already chose one.
-      const picked =
-        isHeadlessMode() && typeof request.outPath === 'string' && request.outPath
+      const picked = approved
+        ? { canceled: false, filePath: approved }
+        : isHeadlessMode() && typeof request.outPath === 'string' && request.outPath
           ? { canceled: false, filePath: request.outPath }
           : await showSaveDialogWithMemory(
               dialog,

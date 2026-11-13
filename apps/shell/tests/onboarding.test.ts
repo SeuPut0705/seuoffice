@@ -249,7 +249,7 @@ describe('Onboarding', () => {
     expect(step.querySelector('.onb-body')!.textContent).toBe(strings.en.onbWelcomeBody)
     // no superlative of its own
     expect(step.textContent).not.toMatch(/\b(first|best|leading|most|only)\b|AI-native/i)
-    expect(strings.en.onbWelcomeSubtitle).toBe('An open-source office suite')
+    expect(strings.en.onbWelcomeSubtitle).toBe('A source-available office suite')
   })
 
   it('can be completed without connecting a subscription', async () => {

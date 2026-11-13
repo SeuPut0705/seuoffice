@@ -4,7 +4,8 @@ import {
   serializeMarkdown,
   type MarkdownSourceSnapshot,
 } from './markdown/roundtripSerializer'
-import { clearRedaction, holdsRedaction } from './editor/redact'
+import { holdsRedaction } from './editor/redact'
+import { planMarkedExport } from './export/marked-export'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AiMark,
@@ -836,6 +837,9 @@ export default function App() {
           suggestedName,
           auto,
           ...(pdfHtml !== undefined ? { pdfHtml } : {}),
+          ...(pdfHtml !== undefined && holdsRedaction(current.getJSON())
+            ? { holdsHiddenContent: true }
+            : {}),
           ...(defaultName ? { defaultName } : {}),
         })
         if (result.ok && 'path' in result) {
@@ -964,6 +968,19 @@ export default function App() {
       const current = editorRef.current
       if (!current || statusRef.current !== 'ready') return false
       const suggestedName = exportBaseName(filePathRef.current, current)
+      // A PDF, page images or an ODT cannot keep content hidden from AI: Word
+      // instead, or the export without the marks, or nothing is written. The
+      // headless export (`outPath`) has no one to ask, so it is refused.
+      const plan = await planMarkedExport(
+        format,
+        current.getJSON(),
+        outPath ? null : (askFormat) => window.markdownApi.confirmMarkedExport(askFormat),
+      )
+      if (plan.kind === 'declined') return false
+      if (plan.kind === 'save-as-docx') return runExportRef.current('docx')
+      if (plan.kind === 'refused') {
+        throw new Error(translate('exportMarkedRefused', { format: format.toUpperCase() }))
+      }
       if (format === 'png') {
         if (exportingImagesRef.current) return false
         exportingImagesRef.current = true
@@ -1010,6 +1027,7 @@ export default function App() {
             html,
             suggestedName,
             ...(outPath ? { outPath } : {}),
+            ...(saveAsTarget ? { saveAsTarget } : {}),
           })
           if (!result.ok) console.error('[markdown] pdf export failed:', result.error)
           return result.ok && !('canceled' in result)
@@ -1022,16 +1040,8 @@ export default function App() {
           const result = await renderDiagram(language, source, DOCX_MAX_IMAGE_PX)
           return result.ok ? diagramSvgToPng(result.svg, DOCX_MAX_IMAGE_PX) : null
         }
-        let json = current.getJSON()
-        // An ODT cannot keep content hidden from AI: Word instead, or the marks
-        // cleared for this copy (the document keeps them), or nothing is written.
-        if (format === 'odt' && holdsRedaction(json)) {
-          const choice = await window.markdownApi.confirmMarkedOdt()
-          if (choice === 'cancel') return false
-          if (choice === 'docx') return runExportRef.current('docx')
-          json = clearRedaction(json)
-        }
-        const bytes = await exportDocxBytes(json, loadImage, rasterizeDiagram)
+        // an ODT's copy has its marks cleared when the person chose that (the document keeps them)
+        const bytes = await exportDocxBytes(plan.json, loadImage, rasterizeDiagram)
         if (format === 'odt') {
           // same Word bytes as the docx export; the main process converts them to ODT
           const result = await window.markdownApi.exportOdt({
