@@ -152,6 +152,8 @@ export interface ChartDataDialogInit {
 /** App state bundle passed to every extracted action; refreshed each render. */
 export interface ActionCtx {
   // Document
+  /** Opens Save As: .pptx keeps the marks hiding content from the AI that a PDF or picture cannot. */
+  requestSaveAs: () => void
   slides: RenderSlide[]
   setSlides: Set<RenderSlide[]>
   current: number
