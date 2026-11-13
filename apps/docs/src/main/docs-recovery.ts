@@ -51,13 +51,15 @@ export interface DocsRecovery {
    * disk. `prepare` may be async (a docx gets its lazily served pictures back
    * first, like a save); answering null skips this tick. Resolves 'written',
    * 'skipped' (prepare said no, or a delete superseded the write) or rejects
-   * on a disk error (the caller backs off).
+   * on a disk error (the caller backs off). `originalPath`: an untitled copy's
+   * file of origin (a marked ODT tab's docx copy), offered as its first Save As.
    */
   writeCopy(
     tabId: number,
     target: DocsCopyTarget,
     prepare: () => Buffer | null | Promise<Buffer | null>,
     title: string,
+    originalPath?: string,
   ): Promise<'written' | 'skipped'>
   /**
    * A save of this tab landed. `paths`: the file copies it makes stale (the
@@ -178,7 +180,7 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
     store,
     fileIdentity,
 
-    async writeCopy(tabId, target, prepare, title) {
+    async writeCopy(tabId, target, prepare, title, originalPath) {
       // a headless export's hidden window converts the file and goes; it keeps no copy
       if (isHeadlessMode()) return 'skipped'
       const identity: RecoveryIdentity =
@@ -188,12 +190,31 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
       const ticket = store.beginWrite(identity)
       const bytes = await prepare()
       if (!bytes) return 'skipped'
-      const result = await store.writeCopy(identity, bytes, { title, ticket })
+      const result = await store.writeCopy(identity, bytes, {
+        title,
+        ticket,
+        ...(originalPath ? { originalPath } : {}),
+      })
       if (result !== 'written') return 'skipped'
-      if (!isUntitledIdentity(identity)) {
+      if (isUntitledIdentity(identity)) {
+        // a docx copy of an ODT tab (marked content) is newer than any ODT copy
+        // the tab wrote before its content was marked: that one must not be
+        // offered again beside it
+        if (originalPath) {
+          if (store.deleteCopy(fileIdentity(originalPath), 'saved') === 'deleted') {
+            pathsByTab.get(tabId)?.delete(originalPath)
+          }
+        }
+      } else {
         const paths = pathsByTab.get(tabId) ?? new Set<string>()
         paths.add(identity.filePath)
         pathsByTab.set(tabId, paths)
+        // the tab writes its file's copy again (its marks are gone): the docx
+        // copy it wrote while marked is stale
+        const slot = untitledByTab.get(tabId)
+        if (slot && store.copyInfo(slot)?.originalPath === identity.filePath) {
+          dropUntitled(tabId, 'saved')
+        }
       }
       // a copy means unsaved changes: an earlier "clean" answer no longer holds
       if (outcomes.get(tabId) === 'clean') outcomes.delete(tabId)

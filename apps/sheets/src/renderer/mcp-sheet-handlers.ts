@@ -11,7 +11,7 @@ import type {
   ChangePlan,
 } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { redactionIndexOf, type RedactionLoad } from './ai/redact-load'
-import { redactGuardForOps } from './ai/redact-guard'
+import { redactGuardForOps, type GuardTable } from './ai/redact-guard'
 import type { SheetRef } from './mcp-sheet-refs'
 import { awaitFormulaValues, formulaTargetsFromOps, rememberFormulaValue } from './formula-values'
 import { readCells, type WorkbookReadContext } from './ai/workbook-readers'
@@ -59,6 +59,8 @@ export function readCellsForMcp(
 export interface McpApplyContext {
   readonly redactionLoad: () => RedactionLoad
   readonly sheets: () => readonly SheetRef[]
+  /** the tables of a sheet, for the write guard */
+  readonly tablesOf?: (sheetId: string) => readonly GuardTable[]
   readonly plan: (ops: readonly WorkbookOperation[]) => ChangePlan
   readonly apply: (ops: readonly WorkbookOperation[]) => Promise<ApplyOutcome>
   readonly readCells: (addresses: readonly string[], sheetId: string) => Record<string, CellState>
@@ -84,6 +86,7 @@ export async function applyOpsForMcp(
     (name) =>
       sheets.find((sheet) => sheet.name === name)?.id ??
       sheets.find((sheet) => sheet.name.toLowerCase() === name.toLowerCase())?.id,
+    ctx.tablesOf,
   )
   if (refusal) {
     return {

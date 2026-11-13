@@ -113,6 +113,8 @@ const STORIES = [
   ['picture', 'P', 6],
   ['picture in a group', 'Q', 3],
   ['shape filled with a picture', 'S', 8],
+  ['chart title', 'K', 9],
+  ['chart axis title', 'A', 9],
 ] as const
 
 describe.each(STORIES)('a hidden run in a %s, on its own', (_place, tag, at) => {
@@ -136,11 +138,17 @@ describe.each(STORIES)('a hidden run in a %s, on its own', (_place, tag, at) => 
     const el = node.durableId ?? node.sourceId
     // the words of the echo are the placeholder's own: marked, not the words, decide
     const needle = tag === 'E' ? '{{client' : SECRET.slice(0, 5)
-    expect(redactGuardFor({ op: 'findReplace', find: needle }, slides)).not.toBeNull()
+    // a search cannot reach the text of a chart
+    if (tag !== 'K' && tag !== 'A') {
+      expect(redactGuardFor({ op: 'findReplace', find: needle }, slides)).not.toBeNull()
+    }
     // as the executor reads an op: the slide by its index or its durable id
     expect(redactGuardFor({ op: 'deleteSlide', target: { slide: 0 } }, slides)).not.toBeNull()
     expect(redactGuardFor({ op: 'deleteSlide', target: { slide: 's_1' } }, slides)).not.toBeNull()
     expect(redactGuardFor({ op: 'deleteElement', target: { slide: 0, el } }, slides)).not.toBeNull()
+    if (node.type === 'chart') {
+      expect(redactGuardFor({ op: 'setChart', target: { slide: 0, el } }, slides)).not.toBeNull()
+    }
     if (node.type === 'table') {
       expect(
         redactGuardFor({ op: 'setTableCell', target: { slide: 0, el } }, slides),
@@ -187,5 +195,44 @@ describe.each(STORIES)('a page redo of a page with a hidden run in a %s', (_plac
     expect(result.isError).toBe(true)
     expect(generatePageLocal).not.toHaveBeenCalled()
     expect(regenerateSlide).not.toHaveBeenCalled()
+  })
+})
+
+describe.each(['K', 'A'] as const)('a chart with its %s run hidden', (tag) => {
+  it('reads as its marker, and the plain chart beside it reads as it did', async () => {
+    const slides = (await slidesOf('none', [tag]))!
+    const charts = slides[0]!.nodes.filter((n) => n.type === 'chart')
+    expect(charts.map((n) => n.redact)).toEqual([LABEL, undefined])
+    expect(textForModel(charts[0]!)).toBe(PLACEHOLDER)
+    expect(textForModel(charts[1]!)).toBe('')
+    expect(textForModel(charts[0]!, true)).toBe('')
+  })
+
+  it('is refused an edit_chart, and the deck is left as it was', async () => {
+    const slides = (await slidesOf('none', [tag]))!
+    const editChart = vi.fn(async () => null)
+    ;(window as unknown as { slidesApi: unknown }).slidesApi = { editChart }
+    const chart = slides[0]!.nodes.find((n) => n.type === 'chart')!
+    const result = await createSlidesSkill(access(slides)).executeTool({
+      id: 't',
+      name: 'edit_chart',
+      input: { slideIndex: 0, sourceId: chart.durableId ?? chart.sourceId, title: 'New title' },
+    })
+    expect(result.isError).toBe(true)
+    expect(editChart).not.toHaveBeenCalled()
+  })
+
+  it('edit_chart still edits the plain chart', async () => {
+    const slides = (await slidesOf('none', [tag]))!
+    const editChart = vi.fn(async () => ({ slide: slides[0]! }))
+    ;(window as unknown as { slidesApi: unknown }).slidesApi = { editChart }
+    const plain = slides[0]!.nodes.filter((n) => n.type === 'chart')[1]!
+    const result = await createSlidesSkill(access(slides)).executeTool({
+      id: 't',
+      name: 'edit_chart',
+      input: { slideIndex: 0, sourceId: plain.durableId ?? plain.sourceId, title: 'New title' },
+    })
+    expect(result.isError).toBeFalsy()
+    expect(editChart).toHaveBeenCalledTimes(1)
   })
 })

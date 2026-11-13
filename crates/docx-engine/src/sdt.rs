@@ -5,6 +5,7 @@
 //! UTF-16 code units, so a caller that hands them to JavaScript converts.
 
 use jscompat::{JsRegex, RegexLimit, js_regex, try_js_regex};
+use ooxml_xml::mask_opaque;
 use serde::Serialize;
 
 /// A `<w:sdt>…</w:sdt>` element's ranges inside the scanned xml.
@@ -98,7 +99,9 @@ pub fn sdt_ranges(xml: &str) -> Result<Vec<SdtRange>, RegexLimit> {
 
     let mut ranges = Vec::new();
     let mut stack: Vec<Open> = Vec::new();
-    for found in try_js_regex!(TAG).try_find_iter(xml) {
+    // tags are found where comments and CDATA cannot fake one
+    let masked = mask_opaque(xml);
+    for found in try_js_regex!(TAG).try_find_iter(&masked) {
         let found = found?;
         let closing = found.get(1) == Some("/");
         let self_closing = found.get(3).unwrap_or("").ends_with('/');

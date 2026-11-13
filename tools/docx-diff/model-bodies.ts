@@ -509,4 +509,25 @@ export const MODEL_BODIES: ModelBody[] = [
       },
     ],
   },
+  {
+    // firstPageBreakAt (parse.ts parseDocx): the first sectPr ends the first page, so cover art after it
+    // is not pinned to the page; the closing sectPr of the body is a later boundary and must not be taken
+    name: 'page-pinned cover art after a section break',
+    docRootExtraAttrs: DRAWING,
+    bodyXml:
+      p('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>', r('First section')) +
+      p(
+        '',
+        '<w:r><w:drawing><wp:anchor behindDoc="1" distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="3" locked="0" layoutInCell="1" allowOverlap="1">' +
+          '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>' +
+          '<wp:positionV relativeFrom="page"><wp:posOffset>1371600</wp:posOffset></wp:positionV>' +
+          '<wp:extent cx="2540000" cy="762000"/><wp:wrapNone/><wp:docPr id="24" name="Cover banner"/>' +
+          '<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          '<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2540000" cy="762000"/></a:xfrm>' +
+          '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill></wps:spPr>' +
+          `<wps:txbx><w:txbxContent>${p('', r('Cover banner'))}</w:txbxContent></wps:txbx>` +
+          '<wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>',
+      ) +
+      p('', r('Second section')),
+  },
 ]

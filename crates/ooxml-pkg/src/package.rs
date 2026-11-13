@@ -291,6 +291,10 @@ impl Package {
             }
             _ => self.parts.retain(|part| !part.name.starts_with(&key)),
         }
+        self.reindex();
+    }
+
+    fn reindex(&mut self) {
         self.by_name = self
             .parts
             .iter()
@@ -302,6 +306,57 @@ impl Package {
             .iter()
             .filter(|part| array_index(&part.name).is_some())
             .count();
+    }
+
+    /// `zip.remove(name)` for each name in turn, with one index rebuild
+    /// instead of one per name (which is quadratic in the names removed).
+    pub fn remove_all<I, S>(&mut self, names: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        // What each `remove` would take, against the package as it stands at
+        // the start. A name a previous removal already took finds nothing now,
+        // and the folder prefix it then falls back to lies under what that
+        // removal took, so only a file taken by its own name needs tracking.
+        let mut files: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        let mut folders: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut loose: Vec<String> = Vec::new();
+        for name in names {
+            let name = name.as_ref();
+            let mut key = name.to_owned();
+            let mut found = self.by_name.get(key.as_str()).copied();
+            if found.is_some_and(|index| files.contains(&index)) {
+                found = None;
+            }
+            if found.is_none() {
+                if !key.ends_with('/') {
+                    key.push('/');
+                }
+                found = self.by_name.get(key.as_str()).copied();
+            }
+            match found {
+                Some(index) if !self.parts[index].is_dir => {
+                    files.insert(index);
+                }
+                _ if key.ends_with('/') => {
+                    folders.insert(key);
+                }
+                _ => loose.push(key),
+            }
+        }
+        let under_folder = |name: &str| {
+            name.match_indices('/')
+                .any(|(slash, _)| folders.contains(&name[..=slash]))
+                || loose.iter().any(|key| name.starts_with(key.as_str()))
+        };
+        let mut index = 0;
+        self.parts.retain(|part| {
+            let keep = !files.contains(&index) && !under_folder(part.name.as_str());
+            index += 1;
+            keep
+        });
+        self.reindex();
     }
 
     pub fn parts(&self) -> &[Part] {

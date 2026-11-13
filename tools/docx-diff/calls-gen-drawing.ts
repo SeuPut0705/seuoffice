@@ -17,8 +17,8 @@ import {
   type ShapeStylePatch,
   swapAnchorWrap,
   type TextboxSizePatch,
-  xmlSegments,
 } from './reference/generate'
+import { xmlSegments } from './reference/xml-tag'
 import type { ImageWrap } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 

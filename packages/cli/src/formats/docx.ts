@@ -492,7 +492,9 @@ async function applyRevisionOp(
   const body = ops.applyRevisionSelection(doc.editor, sel, mode)
   let elsewhere = 0
   if (!bodyOnly) {
+    // the parts it never loads: changes that would remove words hidden from AI stay pending
     const filter: RevisionXmlFilter = {
+      keepHidden: true,
       ...(sel.author !== undefined ? { author: sel.author } : {}),
       ...(sel.type !== undefined ? { type: sel.type } : {}),
       ...(sel.before !== undefined ? { before: sel.before } : {}),
@@ -526,6 +528,7 @@ async function applyRevisionOp(
   if (done.length)
     parts.push(`${done.length} tracked change(s) (${done.map((e) => e.id).join(', ')})`)
   if (elsewhere) parts.push(`${elsewhere} in headers, footers and notes`)
+  const withheld = 'error' in body ? [] : body.withheld
   const left = ops.listRevisionEntries(doc.editor.state.doc)
   const leftElsewhere = await countRevisionsElsewhere(doc)
   const still: string[] = []
@@ -534,8 +537,10 @@ async function applyRevisionOp(
     still.push(
       `${left.length ? 'and' : 'Still'} ${leftElsewhere} in headers, footers and notes${bodyOnly ? ' (ids address the body; all: true or author / type / before reach them)' : ''}`,
     )
+  const withheldNote =
+    withheld.length > 0 ? ` ${ops.withheldNote(withheld)}. Do not retry them.` : ''
   return {
-    output: `${verb} ${parts.join(' and ')}. ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
+    output: `${verb} ${parts.join(' and ')}.${withheldNote} ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
   }
 }
 
@@ -844,16 +849,18 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
     flush(index - 1)
     // pending tracked deletions are dropped, as serializeRangeToHtml drops them
     if (doc.mods.protocol.isTrackedDeleted(node)) return
-    const formula = node.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
+    // a block hidden from AI (a picture) reads as its placeholder, as it does in every AI reader
+    const view = modelViewOf(doc, node)
+    const formula = view.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
     if (formula?.latex) {
       parts.push(`<div data-type="block-math" data-latex="${escapeHtml(formula.latex)}"></div>`)
     } else if (formula?.tokens?.length) {
       formulasAsText++
       parts.push(`<p>${escapeHtml(formula.tokens.join(' '))}</p>`)
-    } else if (node.attrs.blockType === 'image') {
+    } else if (view.attrs.blockType === 'image' && typeof view.attrs.redact !== 'string') {
       skipped.images++
     } else {
-      const preview = String(node.attrs.previewText ?? '')
+      const preview = String(view.attrs.previewText ?? '')
         .replace(/\s+/g, ' ')
         .trim()
       if (preview) parts.push(`<p>${escapeHtml(preview)}</p>`)
@@ -2169,13 +2176,15 @@ export interface RevisionSummary {
   text: string
   /** formatting changes: `field: old → new` pairs */
   change?: string
+  /** present when the change covers words hidden from AI (left to the person to accept or reject) */
+  hidden?: true
 }
 
 /** Pending tracked changes in document order, ids as accept_changes / reject_changes take them. */
 export function listRevisions(doc: OpenDocument): RevisionSummary[] {
   return doc.mods.revisionOps
     .listRevisionEntries(doc.editor.state.doc)
-    .map(({ from: _from, to: _to, ...rest }) => rest)
+    .map(({ from: _from, to: _to, hidden, ...rest }) => (hidden ? { ...rest, hidden } : rest))
 }
 
 const CONTENT_OPS = [

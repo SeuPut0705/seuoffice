@@ -276,7 +276,17 @@ const CHART = struct<ChartDisplay | NewChart>()({
   name: 'text',
   categories: 'text',
   numFmt: 'text',
-  ...tokens('partPath', 'color', 'pointColors', 'palette', 'frameLine', 'line', 'gridLine'),
+  // never set in the editor: the block carries the label (escaped) as its own `redact`
+  ...tokens(
+    'partPath',
+    'color',
+    'pointColors',
+    'palette',
+    'frameLine',
+    'line',
+    'gridLine',
+    'redact',
+  ),
 })
 
 /** a SmartArt's resolved shapes */

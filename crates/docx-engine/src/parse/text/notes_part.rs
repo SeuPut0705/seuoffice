@@ -87,8 +87,8 @@ pub fn parse_notes_part(
 /// The resolver of `standaloneNoteParagraphReader`: no styles, builtin defaults.
 fn standalone_resolver() -> ResolveCtx {
     ResolveCtx {
-        styles: JsMap::new(),
-        numbering: JsMap::new(),
+        styles: Rc::new(JsMap::new()),
+        numbering: Rc::new(JsMap::new()),
         compat: ResolveCompat {
             mode: jscompat::JsNum(0.0),
             additive_para_spacing: false,

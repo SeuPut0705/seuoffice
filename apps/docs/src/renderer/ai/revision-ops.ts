@@ -10,6 +10,7 @@ import {
 } from '../editor/revisions'
 import type { StoryKind, StoryRevision } from '../editor/story-revisions'
 import { redactTextBetween } from './redact-view'
+import { REDACT_MARK } from './redact'
 
 export type RevisionType = 'insertion' | 'deletion' | 'formatting' | 'move'
 
@@ -37,6 +38,8 @@ export interface RevisionEntry {
   /** absent for body changes; the story a change outside the body lives in */
   location?: StoryKind
   story?: StoryRevision
+  /** the change covers words hidden from AI */
+  hidden: boolean
 }
 
 export interface RevisionSelector {
@@ -140,6 +143,30 @@ function paragraphFormatChange(doc: PmNode, r: RevisionRange): string | undefine
   return pairs.length ? pairs.join('; ') : undefined
 }
 
+function holdsHiddenWords(doc: PmNode, from: number, to: number): boolean {
+  let found = false
+  doc.nodesBetween(from, to, (node) => {
+    if (node.isText && node.marks.some((m) => m.type.name === REDACT_MARK)) found = true
+    return !found
+  })
+  return found
+}
+
+/** kinds whose acceptance (`accept`) or rejection (`reject`) takes the changed content away */
+const REMOVED_ON_ACCEPT = new Set<RevisionRange['kind']>(['del', 'blockDel', 'rowDel'])
+const REMOVED_ON_REJECT = new Set<RevisionRange['kind']>(['ins', 'blockIns', 'rowIns'])
+
+/**
+ * Whether acting on the change would remove words a person hid from AI. A model
+ * cannot see them, so it cannot judge the removal: the person decides. (Keeping
+ * the words, rejecting a deletion or accepting an insertion, and a formatting
+ * change, which never touches the words, are the model's to do.)
+ */
+export function removesHiddenWords(entry: RevisionEntry, mode: 'accept' | 'reject'): boolean {
+  if (!entry.hidden) return false
+  return (mode === 'accept' ? REMOVED_ON_ACCEPT : REMOVED_ON_REJECT).has(entry.kind)
+}
+
 /** Every pending tracked change with a positional id and enough context to pick it (stories after the body). */
 export function listRevisionEntries(doc: PmNode, stories: StoryRevision[] = []): RevisionEntry[] {
   const body: RevisionEntry[] = collectRevisions(doc).map((r, i) => {
@@ -163,6 +190,7 @@ export function listRevisionEntries(doc: PmNode, stories: StoryRevision[] = []):
       ...(change ? { change } : {}),
       from: r.from,
       to: r.to,
+      hidden: holdsHiddenWords(doc, r.from, r.to),
     }
   })
   const outside: RevisionEntry[] = stories.map((r, i) => ({
@@ -173,11 +201,13 @@ export function listRevisionEntries(doc: PmNode, stories: StoryRevision[] = []):
     ...(r.date ? { date: r.date } : {}),
     // header / footer parts sit in no body block: -1 never matches a blockIndex / blockRange pick
     blockIndex: r.from >= 0 ? blockIndexOfPos(doc, r.from) : -1,
-    text: r.story.text,
+    // a model's copy: the story's runs hidden from AI read as their placeholders
+    text: r.story.modelText,
     from: r.from,
     to: r.to,
     location: r.story.kind,
     story: r,
+    hidden: r.story.hidden,
   }))
   return [...body, ...outside]
 }
@@ -303,12 +333,23 @@ export function applyRevisionSelection(
   sel: RevisionSelector,
   mode: 'accept' | 'reject',
   stories?: StoryRevisionAccess,
-): { entries: RevisionEntry[]; locked: RevisionEntry[] } | { error: string } {
-  const picked = selectRevisions(editor.state.doc, sel, stories?.list() ?? [])
-  if ('error' in picked) return picked
+):
+  | { entries: RevisionEntry[]; locked: RevisionEntry[]; withheld: RevisionEntry[] }
+  | { error: string } {
+  const chosen = selectRevisions(editor.state.doc, sel, stories?.list() ?? [])
+  if ('error' in chosen) return chosen
+  // changes that would remove words hidden from AI are left pending, for the person
+  const withheld = chosen.entries.filter((e) => removesHiddenWords(e, mode))
+  if (withheld.length === chosen.entries.length) {
+    return {
+      error: `${withheldNote(withheld)}; nothing was changed`,
+    }
+  }
+  const picked = { entries: chosen.entries.filter((e) => !withheld.includes(e)) }
   // stories first: textbox entries address their anchor node by position, which body edits shift
   const outside = picked.entries.filter((e) => e.story).map((e) => e.story!)
-  if (outside.length) stories?.apply(outside, mode, !!sel.all)
+  // `all` replays on the part's bytes as a whole: with changes left pending it must name them one by one
+  if (outside.length) stories?.apply(outside, mode, !!sel.all && withheld.length === 0)
   const body = picked.entries.filter((e) => !e.story)
   const ranges = body.map((e) => ({
     from: e.from,
@@ -318,5 +359,10 @@ export function applyRevisionSelection(
     ...(e.date ? { date: e.date } : {}),
   }))
   const left = applyRevisions(editor, ranges, mode)
-  return { ...picked, locked: body.filter((_, i) => left.includes(ranges[i])) }
+  return { ...picked, withheld, locked: body.filter((_, i) => left.includes(ranges[i])) }
+}
+
+/** what a model is told of the changes it may not take: the ids, and that the person decides */
+export function withheldNote(entries: readonly RevisionEntry[]): string {
+  return `${entries.length} tracked change(s) (${entries.map((e) => e.id).join(', ')}) would remove words the person hid from AI, so they are left pending for the person to decide`
 }

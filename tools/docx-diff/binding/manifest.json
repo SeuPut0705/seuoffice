@@ -1662,9 +1662,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::comment_entries",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "comment_entries",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "Result<Vec<CommentEntry>, RegexLimit>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "compare",
@@ -1765,7 +1772,7 @@
           "options: &CompareOptions",
           "now: &str"
         ],
-        "ret": "ComparePlan",
+        "ret": "Result<ComparePlan, String>",
         "reachable": true
       },
       "route": "table"
@@ -3520,61 +3527,6 @@
         "reachable": true
       },
       "route": "table"
-    },
-    {
-      "module": "generate",
-      "name": "xmlSegments",
-      "kind": "function",
-      "async": false,
-      "params": [
-        {
-          "name": "xml",
-          "type": "string",
-          "optional": false,
-          "rest": false,
-          "codec": "json"
-        },
-        {
-          "name": "tag",
-          "type": "string",
-          "optional": false,
-          "rest": false,
-          "codec": "json"
-        },
-        {
-          "name": "from",
-          "type": "number",
-          "optional": false,
-          "rest": false,
-          "codec": "json"
-        },
-        {
-          "name": "to",
-          "type": "number",
-          "optional": false,
-          "rest": false,
-          "codec": "json"
-        }
-      ],
-      "ret": {
-        "type": "{ start: number; end: number; }[]",
-        "null": false,
-        "undef": false,
-        "shape": null,
-        "bytes": false
-      },
-      "required": ["test"],
-      "rust": {
-        "path": "docx_engine::generate::text_patch::xml_segments",
-        "file": "crates/docx-engine/src/generate/text_patch.rs",
-        "name": "xml_segments",
-        "vis": "pub",
-        "params": ["xml: &str", "tag: &str", "from: usize", "to: usize"],
-        "ret": "Vec<XmlSegment>",
-        "reachable": true
-      },
-      "route": "ts",
-      "reason": "the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ"
     },
     {
       "module": "generate",
@@ -5415,6 +5367,58 @@
       "required": [],
       "rust": null,
       "route": "none"
+    },
+    {
+      "module": "hidden-content",
+      "name": "docxHoldsHiddenContent",
+      "kind": "function",
+      "async": true,
+      "params": [
+        {
+          "name": "bytes",
+          "type": "Uint8Array<ArrayBufferLike>",
+          "optional": false,
+          "rest": false,
+          "codec": "bytes"
+        }
+      ],
+      "ret": {
+        "type": "boolean",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package", "test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "hidden-content",
+      "name": "clearHiddenMarks",
+      "kind": "function",
+      "async": true,
+      "params": [
+        {
+          "name": "bytes",
+          "type": "Uint8Array<ArrayBufferLike>",
+          "optional": false,
+          "rest": false,
+          "codec": "bytes"
+        }
+      ],
+      "ret": {
+        "type": "Uint8Array<ArrayBufferLike>",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": true
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "ink",
@@ -8066,9 +8070,16 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::notes::note_model_text",
+        "file": "crates/docx-engine/src/notes.rs",
+        "name": "note_model_text",
+        "vis": "pub",
+        "params": ["rich_paras: &[Vec<crate::model::NoteRun>]"],
+        "ret": "Option<String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "notes",
@@ -8381,6 +8392,32 @@
         "reachable": true
       },
       "route": "table"
+    },
+    {
+      "module": "ooxml-normalize",
+      "name": "canonicalXmlSyntax",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "ooxml-normalize",
@@ -9006,7 +9043,7 @@
       "async": false,
       "params": [
         {
-          "name": "frag",
+          "name": "source",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -10076,9 +10113,16 @@
         "bytes": false
       },
       "required": ["index", "package"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::settings::edited_comment_model_text",
+        "file": "crates/docx-engine/src/settings.rs",
+        "name": "edited_comment_model_text",
+        "vis": "pub",
+        "params": ["marked_xml: &str", "text: &str"],
+        "ret": "Result<Option<String>, RegexLimit>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "parse-package",
@@ -10451,7 +10495,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": [],
+      "required": ["test"],
       "rust": null,
       "route": "ts",
       "reason": "no Rust port names it"
@@ -10496,7 +10540,7 @@
       "async": false,
       "params": [
         {
-          "name": "xml",
+          "name": "source",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -10562,7 +10606,7 @@
       "async": false,
       "params": [
         {
-          "name": "xml",
+          "name": "source",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -10609,7 +10653,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": [],
+      "required": ["test"],
       "rust": {
         "path": "docx_engine::props::strip_textboxes",
         "file": "crates/docx-engine/src/props/paragraph.rs",
@@ -13619,7 +13663,7 @@
       "async": false,
       "params": [
         {
-          "name": "xml",
+          "name": "source",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -14188,7 +14232,7 @@
       "async": false,
       "params": [
         {
-          "name": "drawingXml",
+          "name": "source",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -18080,7 +18124,7 @@
         "name": "patch_paragraph_texts",
         "vis": "pub",
         "params": ["entry_xml: &str", "new_text: &str", "strip_first_para_leading_space: bool"],
-        "ret": "Option<String>",
+        "ret": "Result<Option<String>, RegexLimit>",
         "reachable": true
       },
       "route": "table"
@@ -20655,9 +20699,16 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::withheld_label_of",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "withheld_label_of",
+        "vis": "pub",
+        "params": ["r_pr_xml: Option<&str>"],
+        "ret": "Option<String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20676,6 +20727,39 @@
       "ret": {
         "type": "boolean",
         "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": {
+        "path": "docx_engine::withheld::has_withheld_trace",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "has_withheld_trace",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "bool",
+        "reachable": true
+      },
+      "route": "table"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldPartLabel",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "partXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | null",
+        "null": true,
         "undef": false,
         "shape": null,
         "bytes": false
@@ -20707,9 +20791,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::has_mark_element",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "has_mark_element",
+        "vis": "pub",
+        "params": ["node: &XNode"],
+        "ret": "bool",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20727,6 +20818,39 @@
       ],
       "ret": {
         "type": "XNode | null",
+        "null": true,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": {
+        "path": "docx_engine::withheld::withheld_node",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "withheld_node",
+        "vis": "pub",
+        "params": ["node: &XNode"],
+        "ret": "Option<XNode>",
+        "reachable": true
+      },
+      "route": "table"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldBlockLabel",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "blockXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | null",
         "null": true,
         "undef": false,
         "shape": null,
@@ -20759,9 +20883,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::runs_text",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "runs_text",
+        "vis": "pub",
+        "params": ["node: &XNode"],
+        "ret": "String",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20785,9 +20916,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::parse_entry",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "parse_entry",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "Option<XNode>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20818,9 +20956,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::withheld_text",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "withheld_text",
+        "vis": "pub",
+        "params": ["node: &XNode", "text_of: &dyn Fn(&XNode) -> String"],
+        "ret": "Option<String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20844,9 +20989,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::first_mark_label",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "first_mark_label",
+        "vis": "pub",
+        "params": ["entry_xml: &str"],
+        "ret": "String",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20877,6 +21029,39 @@
         "bytes": false
       },
       "required": [],
+      "rust": {
+        "path": "docx_engine::withheld::over_withheld_model_text",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "over_withheld_model_text",
+        "vis": "pub",
+        "params": ["text: &str", "label: &str"],
+        "ret": "String",
+        "reachable": true
+      },
+      "route": "table"
+    },
+    {
+      "module": "withheld",
+      "name": "hiddenRunProperties",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
       "rust": null,
       "route": "ts",
       "reason": "no Rust port names it"
@@ -20910,9 +21095,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::over_withheld",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "over_withheld",
+        "vis": "pub",
+        "params": ["entry_xml: &str", "label: &str"],
+        "ret": "String",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20943,9 +21135,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::with_redact_namespace",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "with_redact_namespace",
+        "vis": "pub",
+        "params": ["part_xml: &str", "root_tag: &str"],
+        "ret": "Result<String, RegexError>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -21363,7 +21562,8 @@
         "ret": "Option<StartTag<'t>>",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "takes a RegExp (a host object) and answers UTF-16 offsets; the Rust port matches by name and answers UTF-8 offsets for the engine"
     },
     {
       "module": "xml-tag",
@@ -21414,6 +21614,160 @@
     },
     {
       "module": "xml-tag",
+      "name": "elementInner",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "xml-tag",
+      "name": "xmlSegments",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "from",
+          "type": "number",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "to",
+          "type": "number",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "{ start: number; end: number; }[]",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": {
+        "path": "docx_engine::generate::text_patch::xml_segments",
+        "file": "crates/docx-engine/src/generate/text_patch.rs",
+        "name": "xml_segments",
+        "vis": "pub",
+        "params": ["xml: &str", "tag: &str", "from: usize", "to: usize"],
+        "ret": "Vec<XmlSegment>",
+        "reachable": true
+      },
+      "route": "ts",
+      "reason": "the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ"
+    },
+    {
+      "module": "xml-tag",
+      "name": "replaceSegments",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "replace",
+          "type": "(element: string) => string",
+          "optional": false,
+          "rest": false,
+          "codec": "callback"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "xml-tag",
+      "name": "removeSegments",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "xml-tag",
       "name": "StartTag",
       "kind": "type",
       "async": false,
@@ -21451,7 +21805,15 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
+      "rust": {
+        "path": "docx_engine::withheld::name_of",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "name_of",
+        "vis": "",
+        "params": ["node: &XNode"],
+        "ret": "Option<&str>",
+        "reachable": true
+      },
       "route": "ts",
       "reason": "a module of the host side of the package: it stays TypeScript and engine-free"
     },

@@ -111,6 +111,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let kind: NoteKind = required(args, "kind")?;
             value(notes::parse_notes_xml(text, kind))
         }
+        "noteModelText" => {
+            let rich_paras: Vec<Vec<docx_engine::model::NoteRun>> = required(args, "richParas")?;
+            optional(notes::note_model_text(&rich_paras))
+        }
         "nextNoteId" => {
             let kind: NoteKind = required(args, "kind")?;
             value(notes::next_note_id(&notes::parse_notes_xml(text, kind)))

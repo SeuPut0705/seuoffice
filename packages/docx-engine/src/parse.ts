@@ -103,6 +103,6 @@ export type RunPictureAnchor = Pick<
  * in-line picture). The save diffs the editor's geometry against this, so a
  * picture nobody moved keeps its bytes.
  */
-export function runPictureAnchorOf(drawingXml: string): RunPictureAnchor {
-  return invoke('runPictureAnchorOf', [drawingXml]) as never
+export function runPictureAnchorOf(source: string): RunPictureAnchor {
+  return invoke('runPictureAnchorOf', [source]) as never
 }

@@ -155,8 +155,8 @@ describe('HTML ODT export wiring', () => {
     const odtHandler = main.slice(main.indexOf('HTML_CHANNELS.exportOdt,'))
     // both handlers (and Save As) go through the shared writers, which render
     // the docx the same way
-    expect(docxHandler).toContain(
-      'writeHtmlDocx(request.html, savePathByWc.get(e.sender.id), picked.filePath)',
+    expect(docxHandler).toMatch(
+      /writeHtmlDocx\(\s*request\.html,\s*savePathByWc\.get\(e\.sender\.id\),\s*picked\.filePath,\s*win,?\s*\)/,
     )
     expect(odtHandler).toContain('writeHtmlOdt(')
     expect(odtHandler).toContain('() => savePathByWc.get(e.sender.id)')
@@ -167,7 +167,7 @@ describe('HTML ODT export wiring', () => {
         main.indexOf('\n}\n', main.indexOf(`async function ${name}(`)),
       )
     expect(writer('writeHtmlDocx')).toContain('renderHtmlDocx(html, docPath, workDir)')
-    expect(writer('writeHtmlOdt')).toContain('renderHtmlDocx(html, docPath(), workDir)')
+    expect(writer('writeHtmlOdt')).toContain('renderHtmlDocx(plan.html, docPath(), workDir)')
   })
 
   it('takes its attachment formats from the one shared list', async () => {

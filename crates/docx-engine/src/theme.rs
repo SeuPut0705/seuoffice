@@ -88,7 +88,11 @@ impl ThemeColors {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThemeFonts {
+    /// `''` where a caller's object leaves it out, as a TypeScript reader of
+    /// the East Asian slots never looks at it (the parse always writes it)
+    #[serde(default)]
     pub major: String,
+    #[serde(default)]
     pub minor: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub east_asia: Option<String>,

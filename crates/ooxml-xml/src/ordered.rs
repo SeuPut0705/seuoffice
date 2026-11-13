@@ -13,13 +13,13 @@ use std::fmt;
 
 use jscompat::{is_js_space, trim, trim_start};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XNode {
     Element(XElement),
     Text(String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XElement {
     pub name: String,
     /// In the order a JavaScript object enumerates them: integer-like names

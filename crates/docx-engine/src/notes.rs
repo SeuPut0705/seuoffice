@@ -1,16 +1,20 @@
 //! The read side of packages/docx-engine/src/notes.ts (word/footnotes.xml,
-//! word/endnotes.xml): `parseNotesXml`, `nextNoteId`, `rootAttributes`.
+//! word/endnotes.xml): `parseNotesXml`, `nextNoteId`, `rootAttributes`,
+//! `noteModelText`.
 //!
 //! Entries carrying a w:type attribute (separator, continuationSeparator, ...)
 //! are structural; only typeless entries are real notes.
 
 use jscompat::{
-    Radix, RegexError, TryJsRegex, js_regex, number_to_string, parse_int, trim, trim_start, truthy,
+    Radix, RegexError, RegexLimit, TryJsRegex, js_regex, number_to_string, parse_int, trim,
+    trim_start, truthy, try_js_regex,
 };
+use ooxml_xml::{XNode, serialize};
 use serde::{Deserialize, Serialize};
 
 use crate::vml::math_max;
-use crate::xml_text::decode_entities;
+use crate::withheld::{parse_entry, placeholder_source, runs_text, withheld_text};
+use crate::xml_text::{decode_entities, decode_numeric_char_refs};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +33,10 @@ pub struct NoteInfo {
     /// plain text, paragraphs joined with \n
     #[serde(default)]
     pub text: String,
+    /// the text as a model may read it, each run hidden from AI as its
+    /// placeholder; absent when the note hides nothing
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub style_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -73,23 +81,109 @@ fn has_note_ref_mark(entry_xml: &str) -> bool {
     js_regex!(r"<w:(?:footnote|endnote)Ref\b\s*\/?>").test(entry_xml)
 }
 
+/// A note's text as a model may read it, from its display runs: each run
+/// hidden from AI as its placeholder (neighbours under one label as one),
+/// `None` when no run hides anything. Kept in step with the runs when a person
+/// accepts or rejects a change in the note.
+///
+/// `noteModelText`
+pub fn note_model_text(rich_paras: &[Vec<crate::model::NoteRun>]) -> Option<String> {
+    if !rich_paras.iter().any(|runs| {
+        runs.iter()
+            .any(|run| run.redact.is_some() && run.del.is_none())
+    }) {
+        return None;
+    }
+    Some(
+        rich_paras
+            .iter()
+            .map(|runs| {
+                let mut line = String::new();
+                let mut label: Option<&str> = None;
+                for run in runs {
+                    if run.del.is_some() {
+                        continue;
+                    }
+                    match run.redact.as_deref() {
+                        None => line.push_str(&run.text),
+                        Some(redact) if Some(redact) != label => {
+                            line.push_str(&placeholder_source(redact));
+                        }
+                        Some(_) => {}
+                    }
+                    label = run.redact.as_deref();
+                }
+                line
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+}
+
+/// A note as the parser finds it, before a paragraph reader is asked.
+struct ParsedNote {
+    id: String,
+    text: String,
+    model_text: Option<String>,
+    /// the entry as the parser read it, for the readers that take XML
+    entry_xml: String,
+}
+
+/// The real notes of a part, found in the parser's tree: markup inside CDATA is
+/// text, not a note; none when the part does not parse.
+fn parsed_notes(xml: &str, kind: NoteKind) -> Vec<ParsedNote> {
+    let Some(root) = parse_entry(xml) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for entry in root.find_children(entry_tag(kind)) {
+        // separator / continuation entries
+        if entry.attr("w:type").is_some() {
+            continue;
+        }
+        // an entry with no body at all (<w:footnote w:id="1"/>) is no note
+        let Some(id) = truthy(entry.attr("w:id")).filter(|_| !entry.children().is_empty()) else {
+            continue;
+        };
+        let text = note_tree_text(entry);
+        // each run hidden from AI as its placeholder, or the whole note withheld
+        // when a mark sits where no run accounts for it
+        let model_text = withheld_text(entry, &note_tree_text).filter(|model| *model != text);
+        out.push(ParsedNote {
+            id: id.to_owned(),
+            text,
+            model_text,
+            entry_xml: serialize(entry),
+        });
+    }
+    out
+}
+
+fn entry_tag(kind: NoteKind) -> &'static str {
+    match kind {
+        NoteKind::Footnote => "w:footnote",
+        NoteKind::Endnote => "w:endnote",
+    }
+}
+
 /// Real notes (separator entries excluded), in file order. The paragraph
 /// reader of the original (`read`, supplied by the document parser) is not
-/// ported: these are the notes it returns without one.
+/// ported here: these are the notes it returns without one.
 pub fn parse_notes_xml(xml: &str, kind: NoteKind) -> Vec<NoteInfo> {
-    note_entries_of(xml, kind)
+    parsed_notes(xml, kind)
         .into_iter()
-        .map(|entry| NoteInfo {
+        .map(|note| NoteInfo {
             style_id: js_regex!(r#"<w:pStyle w:val="([^"]+)""#)
-                .exec(entry.xml)
+                .exec(&note.entry_xml)
                 .and_then(|found| found.get(1))
                 .map(str::to_owned),
             zotero_field: js_regex!(r"ADDIN\s+(?:ZOTERO_|CSL_)")
-                .test(entry.xml)
+                .test(&note.entry_xml)
                 .then_some(true),
-            no_ref_mark: (!has_note_ref_mark(entry.xml)).then_some(true),
-            id: entry.id.to_owned(),
-            text: entry.text,
+            no_ref_mark: (!has_note_ref_mark(&note.entry_xml)).then_some(true),
+            id: note.id,
+            text: note.text,
+            model_text: note.model_text,
         })
         .collect()
 }
@@ -116,9 +210,9 @@ pub fn parse_notes_xml_with(
     read: &mut dyn FnMut(&str) -> Result<NoteParagraph, String>,
 ) -> Result<Vec<crate::model::NoteInfo>, String> {
     let mut out = Vec::new();
-    for entry in note_entries_of(xml, kind) {
+    for note in parsed_notes(xml, kind) {
         let mut paras = Vec::new();
-        for p_xml in note_paragraphs_of(entry.xml) {
+        for p_xml in note_paragraphs_of(&note.entry_xml) {
             paras.push(read(p_xml)?);
         }
         let first = paras.first();
@@ -139,21 +233,21 @@ pub fn parse_notes_xml_with(
         let style_id = match first {
             Some(first) => first.style_id.clone(),
             None => js_regex!(r#"<w:pStyle w:val="([^"]+)""#)
-                .exec(entry.xml)
+                .exec(&note.entry_xml)
                 .and_then(|found| found.get(1))
                 .map(str::to_owned),
         };
         out.push(crate::model::NoteInfo {
-            id: entry.id.to_owned(),
-            text: entry.text,
-            model_text: None,
+            id: note.id,
+            text: note.text,
+            model_text: note.model_text,
             rich_paras: first.is_some().then_some(rich_paras),
             style_id: truthy(style_id.as_deref()).map(str::to_owned),
             zotero_field: js_regex!(r"ADDIN\s+(?:ZOTERO_|CSL_)")
-                .test(entry.xml)
+                .test(&note.entry_xml)
                 .then_some(crate::model::True),
             spacing: first.map(|first| first.spacing.clone()),
-            no_ref_mark: (!has_note_ref_mark(entry.xml)).then_some(crate::model::True),
+            no_ref_mark: (!has_note_ref_mark(&note.entry_xml)).then_some(crate::model::True),
             revisions_resolved: None,
         });
     }
@@ -168,39 +262,117 @@ fn note_paragraphs_of(entry_xml: &str) -> impl Iterator<Item = &str> {
         .map(|found| found.as_str())
 }
 
+/// An entry of a notes part with its exact XML slice, whether it carries a
+/// w:type, and its w:id as the parser reads it.
+pub(crate) struct NoteSlice<'x> {
+    pub(crate) id: Option<String>,
+    pub(crate) typed: bool,
+    pub(crate) xml: &'x str,
+}
+
+/// `noteSlicesOf`: every entry of a notes part with its exact XML slice, found
+/// the way the parser finds them: any quotes, white space around `=` and
+/// before the closing `>`, `>` or `/>` inside a value, and nothing inside a
+/// comment or CDATA taken for a tag. The save keeps an entry's bytes only when it finds it here; one
+/// it misses is written anew from plain text and loses its runs, a
+/// hidden-from-AI mark among them.
+pub(crate) fn note_slices_of(xml: &str, kind: NoteKind) -> Result<Vec<NoteSlice<'_>>, RegexLimit> {
+    let tokens = match kind {
+        NoteKind::Footnote => try_js_regex!(
+            r#"<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<(/?)w:footnote\b((?:[^>"']|"[^"]*"|'[^']*')*?)(/?)>"#,
+            "g"
+        ),
+        NoteKind::Endnote => try_js_regex!(
+            r#"<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<(/?)w:endnote\b((?:[^>"']|"[^"]*"|'[^']*')*?)(/?)>"#,
+            "g"
+        ),
+    };
+    let mut out = Vec::new();
+    // the start of the open tag and its attributes
+    let mut open: Option<(usize, &str)> = None;
+    for found in tokens.try_find_iter(xml) {
+        let found = found?;
+        // a comment, CDATA or a processing instruction
+        let Some(attrs) = found.get(2) else {
+            continue;
+        };
+        if found.get(1) != Some("/") {
+            // a self-closing entry has no body: it is no note, and nothing to keep
+            if found.get(3) != Some("/") {
+                open = Some((found.start(), attrs));
+            }
+            continue;
+        }
+        let Some((start, attrs)) = open.take() else {
+            continue;
+        };
+        out.push(NoteSlice {
+            id: attr_value(
+                attrs,
+                js_regex!(r#"(?:^|\s)w:id\s*=\s*(?:"([^"]*)"|'([^']*)')"#),
+            ),
+            typed: attr_value(
+                attrs,
+                js_regex!(r#"(?:^|\s)w:type\s*=\s*(?:"([^"]*)"|'([^']*)')"#),
+            )
+            .is_some(),
+            xml: &xml[start..found.end()],
+        });
+    }
+    Ok(out)
+}
+
+/// An attribute of an open tag's text, written with either quote, its entities decoded.
+fn attr_value(attrs: &str, pattern: &jscompat::JsRegex) -> Option<String> {
+    let found = pattern.exec(attrs)?;
+    Some(decode_entities(found.get(1).or(found.get(2))?))
+}
+
 pub(crate) struct NoteEntry<'x> {
-    pub(crate) id: &'x str,
+    pub(crate) id: String,
     pub(crate) text: String,
     pub(crate) xml: &'x str,
 }
 
-/// Typeless (real) note entries with their exact XML slice and plain text.
-pub(crate) fn note_entries_of(xml: &str, kind: NoteKind) -> Vec<NoteEntry<'_>> {
-    // the attribute run must not end in "/" so a self-closing empty entry is
-    // not read as an open tag over the next entry
-    let entry = match kind {
-        NoteKind::Footnote => js_regex!(r"<w:footnote(\s[^>]*[^/>])?>([\s\S]*?)</w:footnote>"),
-        NoteKind::Endnote => js_regex!(r"<w:endnote(\s[^>]*[^/>])?>([\s\S]*?)</w:endnote>"),
-    };
-    let mut out = Vec::new();
-    for found in entry.find_iter(xml) {
-        let attrs = found.get(1).unwrap_or("");
-        if js_regex!(r#"w:type=(?:"[^"]*"|'[^']*')"#).test(attrs) {
-            continue;
-        }
-        let id = js_regex!(r#"w:id=(?:"([^"]+)"|'([^']+)')"#)
-            .exec(attrs)
-            .and_then(|id| truthy(id.get(1)).or(truthy(id.get(2))));
-        let Some(id) = id else {
-            continue;
-        };
-        out.push(NoteEntry {
-            id,
-            text: note_entry_plain_text(found.get(2).unwrap_or("")),
-            xml: found.as_str(),
-        });
+/// `noteEntriesOf`: typeless (real) note entries with their exact XML slice and
+/// their text as the parser reads it.
+pub(crate) fn note_entries_of(xml: &str, kind: NoteKind) -> Result<Vec<NoteEntry<'_>>, RegexLimit> {
+    Ok(note_slices_of(xml, kind)?
+        .into_iter()
+        .filter_map(|slice| {
+            let id = slice.id.filter(|id| !id.is_empty());
+            match (slice.typed, id) {
+                (false, Some(id)) => Some(NoteEntry {
+                    id,
+                    text: entry_text(slice.xml),
+                    xml: slice.xml,
+                }),
+                _ => None,
+            }
+        })
+        .collect())
+}
+
+/// `entryText`: a note slice's text as the parser reads it (the pattern's
+/// reading when it does not parse).
+pub(crate) fn entry_text(entry_xml: &str) -> String {
+    match parse_entry(entry_xml) {
+        Some(node) => note_tree_text(&node),
+        None => note_entry_plain_text(entry_xml),
     }
-    out
+}
+
+/// `noteTreeText`: a parsed note's text: its paragraphs' run text, the first
+/// one's leading spacer dropped.
+fn note_tree_text(entry: &XNode) -> String {
+    let mut paras: Vec<String> = entry
+        .find_children("w:p")
+        .map(|para| decode_numeric_char_refs(&runs_text(para)).into_owned())
+        .collect();
+    if let Some(first) = paras.first_mut() {
+        *first = trim_start(first).to_owned();
+    }
+    paras.join("\n")
 }
 
 /// Paragraph texts joined with newlines; the first paragraph starts with the

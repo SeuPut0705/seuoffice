@@ -158,7 +158,7 @@ export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphR
     return {
       id,
       text,
-      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
+      ...(modelText !== undefined ? { modelText } : {}),
       ...(first ? { richParas } : {}),
       ...(styleId ? { styleId } : {}),
       ...(/ADDIN\s+(?:ZOTERO_|CSL_)/.test(entryXml) ? { zoteroField: true as const } : {}),
@@ -363,6 +363,18 @@ function noteEntryXml(kind: NoteKind, note: NoteInfo, revAttrs: NoteRevAttrs): s
   return `<${entry} w:id="${escapeXmlAttr(note.id)}">${paras.join('')}</${entry}>`
 }
 
+/** the runs of a note's own XML that hold a picture, a drawing or an object: each as a run of its own, without the run's properties */
+function pictureRunsOf(entryXml: string): string[] {
+  const drawings = entryXml.match(/<w:(drawing|pict|object)(?:\s[^>]*)?>[\s\S]*?<\/w:\1>/g)
+  return (drawings ?? []).map((drawing) => `<w:r>${drawing}</w:r>`)
+}
+
+/** `entryXml` with the pictures of the entry it replaces at the end of its last paragraph, as comments keep theirs */
+function withPictureRuns(entryXml: string, originalEntryXml: string): string {
+  const runs = pictureRunsOf(originalEntryXml).join('')
+  return runs === '' ? entryXml : entryXml.replace(/<\/w:p>(?![\s\S]*<\/w:p>)/, `${runs}</w:p>`)
+}
+
 /**
  * Regenerate the notes part from the full desired list. Structural entries
  * (separator/continuation) from the original part are kept byte-identical;
@@ -403,7 +415,9 @@ export function buildNotesXml(
       if (patched !== null) return patched
       // an edit that cannot be patched around hidden runs: written anew, every
       // word of the note is hidden under the first label it carried
-      const entry = noteEntryXml(kind, n, revAttrs)
+      // The note's pictures ride into the new entry: a picture is no text, and
+      // one that sat in a hidden run is hidden with the rest of the note.
+      const entry = withPictureRuns(noteEntryXml(kind, n, revAttrs), orig.xml)
       return hasWithheldTrace(orig.xml) ? overWithheld(entry, firstMarkLabel(orig.xml)) : entry
     })
     .join('')

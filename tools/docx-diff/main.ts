@@ -47,6 +47,7 @@ import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 import { modelAfterCorpus, modelOnDocument, reportModel } from './model-run'
 import { parseOnDocument, reportParse } from './model-parse'
 import { reportSave, saveAfterCorpus, saveOnDocument } from './model-save'
+import { buildModelBody, MODEL_BODIES } from './model-bodies'
 import type { ParsedDocFull } from './reference/patch'
 
 const FUZZ_CASES = option('--fuzz', 20_000)
@@ -177,6 +178,11 @@ await packageAfterCorpus(random)
 await callsAfterCorpus(random)
 await modelAfterCorpus()
 await saveAfterCorpus()
+// the documents built to reach what the corpus does not cross the whole Rust parser as well
+for (const { name, ...options } of MODEL_BODIES) {
+  const bytes = await buildModelBody(options)
+  parseOnDocument(`model body ${name}`, bytes, await parseDocx(bytes))
+}
 const written = await compareBlankBytes()
 comparisons.writtenZips.compared = written.compared
 comparisons.writtenZips.differences.push(...written.differences)

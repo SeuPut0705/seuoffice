@@ -290,6 +290,10 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
     if (piece.wrapped || piece.replaced) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
+      // a parameter shadows an import of its name inside the wrapper (withheldText's `textOf`)
+      if (ts.isFunctionDeclaration(stmt))
+        for (const param of stmt.parameters)
+          if (ts.isIdentifier(param.name)) piece.refs.delete(param.name.text)
     } else if (!(ts.isExportDeclaration(stmt) && stmt.moduleSpecifier))
       identifiersOf(stmt, piece.refs)
     // an `export { x } from '…'` names x in another module, not this one's import of it

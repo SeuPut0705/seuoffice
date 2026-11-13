@@ -51,9 +51,23 @@ const UNRAWABLE = new Set(['self', 'Self', 'super', 'crate'])
 const TAKEN = new Set(
   (
     'Bytes Deserialize Deserializer False FieldKey Fields JsNum JsObject Key MapAccess MapEntries NumberRecord ' +
-    'Option Result Seen Serialize SerializeMap Serializer String True Vec Visitor'
+    'Option Result Seen Serialize SerializeMap Serializer SharedStr String True Vec Visitor'
   ).split(' '),
 )
+
+/**
+ * The fields that hold the data URL of a media part. The TypeScript holds one
+ * string per part however many images refer to it; these fields hold a
+ * `SharedStr` for the same reason.
+ */
+const SHARED_STRING_FIELDS = new Set([
+  'Block.imageDataUrl',
+  'RunImage.dataUrl',
+  'RunImageLayersItem.dataUrl',
+  'HfImage.dataUrl',
+  'DiagramShape.imageDataUrl',
+  'TextboxDisplay.fillImageDataUrl',
+])
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 
@@ -212,7 +226,10 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     const rust = fieldName(field.name)
     const holders = levels.slice(1).filter((level) => at < level.count)
     const holder = holders.at(-1) ?? levels[0]!
-    const plain = rustType(field.type)
+    const shared = SHARED_STRING_FIELDS.has(`${typeName(definition.name)}.${field.name}`)
+    if (shared && field.type.kind !== 'string')
+      throw new Error(`${definition.name}.${field.name} is no string`)
+    const plain = shared ? 'SharedStr' : rustType(field.type)
     return {
       ...field,
       rust,
@@ -438,8 +455,10 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
         : null
   const value = (field: (typeof fields)[number]): string => {
     if (field.optional) return field.local
-    // a key whose value may be undefined (`payload: string | undefined`): JSON.stringify drops it
-    if (/^Option</.test(field.type)) return `${field.local}.flatten()`
+    // a key whose value may be undefined (`payload: string | undefined`): a
+    // caller's object may leave it out, read leniently; the parse writes it
+    if (/^Option</.test(field.type))
+      return `${field.local}.map_or_else(|| wire::absent(${field.key}).map(|()| None), Ok)?`
     const stand = standIn(field.type)
     return stand === null
       ? `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
@@ -616,14 +635,16 @@ export function generate(schema: ModelSchema, orders: OrderTable): string {
     }
   })
   const used = new Set(
-    blocks.join('\n').match(/\b(?:Bytes|False|JsObject|MapEntries|NumberRecord|True)\b/g),
+    blocks.join('\n').match(/\b(?:Bytes|False|JsObject|MapEntries|NumberRecord|SharedStr|True)\b/g),
   )
   const wire = [
     'self',
     'FieldKey',
     'Key',
     'Seen',
-    ...['Bytes', 'False', 'MapEntries', 'NumberRecord', 'True'].filter((name) => used.has(name)),
+    ...['Bytes', 'False', 'MapEntries', 'NumberRecord', 'SharedStr', 'True'].filter((name) =>
+      used.has(name),
+    ),
   ]
   const jscompat = ['JsNum', ...(used.has('JsObject') ? ['JsObject'] : [])]
   const dispatch = definitions.map(

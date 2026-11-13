@@ -190,7 +190,7 @@ export function hiddenPictureRunOf(
 const plainPictureRun = () => `<w:r>${drawingOf('plain', pictureIds.plain)}</w:r>`
 
 export interface StoriesOptions {
-  /** each story also holds a hidden picture (PICTURE_STORIES); the header, a second comment and a body paragraph of their own hold a plain one */
+  /** each story also holds a hidden picture (PICTURE_STORIES); the header, the note, a second comment and a body paragraph of their own hold a plain one */
   pictures?: boolean
   /** the hidden runs' words are the placeholder itself, `{{client phone}}`, so that what a model reads of them equals what they say; the body also holds an inline control around one */
   literal?: boolean
@@ -271,7 +271,7 @@ export async function hiddenStoriesDocx(
           `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:footnotes ${W_NS}${drawingNs}>` +
           '<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>' +
           '<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>' +
-          `<w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${plainRun(' See ')}${hiddenRun(ns, words('N'))}${picture('N')}</w:p></w:footnote>` +
+          `<w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${plainRun(' See ')}${hiddenRun(ns, words('N'))}${picture('N')}${plainPicture}</w:p></w:footnote>` +
           '</w:footnotes>',
         contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml',
       },
@@ -286,7 +286,9 @@ export async function hiddenStoriesDocx(
             },
             {
               path: 'word/_rels/footnotes.xml.rels',
-              xml: relsPart(imageRels(['N'])),
+              xml: relsPart(
+                `<Relationship Id="rId10" Type="${IMAGE_REL}" Target="media/image1.png"/>${imageRels(['N'])}`,
+              ),
               contentType: '',
             },
           ]
@@ -343,7 +345,7 @@ export const TAG_MUTATIONS = {
 export type TagMutation = keyof typeof TAG_MUTATIONS | 'all'
 export const TAG_MUTATION_NAMES = [...Object.keys(TAG_MUTATIONS), 'all'] as TagMutation[]
 
-function mutate(xml: string, mutation: TagMutation): string {
+export function mutate(xml: string, mutation: TagMutation): string {
   if (mutation !== 'all') return TAG_MUTATIONS[mutation](xml)
   const order: Array<keyof typeof TAG_MUTATIONS> = [
     'single quotes',
