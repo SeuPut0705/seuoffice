@@ -38,3 +38,8 @@ pub fn install(hosts: &mut Hosts, _cx: &HostContext) {
     hosts.insert(storage);
     hosts.insert(codec);
 }
+
+// The shell's tests build batch A with its probe fakes: the storage the shell
+// makes in a test has no key, so no test reads the person's keychain item
+#[cfg(test)]
+const _: () = assert!(!shell_ipc_a::secrets::OS_KEY_STORE);

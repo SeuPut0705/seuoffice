@@ -17,6 +17,7 @@ use main_core::packages::ai_provider::settings_secrets::CodecThrow;
 use main_core::shell::ai_secrets::SafeStorageLike;
 
 pub use oscrypt::{Key, Opened};
+pub use platform::OS_KEY_STORE;
 
 const ENCRYPT_UNAVAILABLE: &str = "Error while encrypting the text provided to safeStorage.encryptString. Encryption is not available.";
 const DECRYPT_UNAVAILABLE: &str = "Error while decrypting the ciphertext provided to safeStorage.decryptString. Decryption is not available.";
@@ -106,7 +107,10 @@ impl SafeStorageLike for OsSafeStorage {
 }
 
 /// A random keychain password as Chromium makes one: base64 of 16 bytes
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(
+    any(not(target_os = "macos"), test, feature = "probe"),
+    allow(dead_code)
+)]
 fn new_keychain_password() -> Option<String> {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).ok()?;
@@ -170,3 +174,21 @@ impl ShellSecretCodec {
 /// codec over it
 pub type SafeStorageHost = std::sync::Arc<OsSafeStorage>;
 pub type SecretCodecHost = std::sync::Arc<ShellSecretCodec>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A unit test never reads the person's keychain item or DPAPI key: the
+    /// storage of a test build has no key, whatever its place names
+    #[test]
+    fn a_test_build_never_reaches_the_os_key_store() {
+        assert!(!OS_KEY_STORE);
+        let storage = OsSafeStorage::new(KeyPlace {
+            app_name: "seuoffice".into(),
+            user_data: std::env::temp_dir().join("shell-a-no-keychain"),
+        });
+        assert!(!storage.is_encryption_available());
+        assert!(storage.encrypt_string("secret").is_err());
+    }
+}
