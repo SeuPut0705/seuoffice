@@ -821,7 +821,8 @@
         "ret": "CharClass",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -845,16 +846,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::is_hangul_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_hangul_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -882,12 +876,13 @@
         "path": "docx_engine::char_class::is_east_asian_char",
         "file": "crates/docx-engine/src/char_class.rs",
         "name": "is_east_asian_char",
-        "vis": "pub",
+        "vis": "",
         "params": ["cp: u32"],
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -920,7 +915,8 @@
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -944,16 +940,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::is_cjk_letter_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_cjk_letter_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -977,16 +966,9 @@
         "bytes": false
       },
       "required": ["index"],
-      "rust": {
-        "path": "docx_engine::char_class::is_latin_alnum_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_latin_alnum_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1010,16 +992,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::text_has_east_asian",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "text_has_east_asian",
-        "vis": "pub",
-        "params": ["text: &str"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1043,16 +1018,9 @@
         "bytes": false
       },
       "required": ["index"],
-      "rust": {
-        "path": "docx_engine::char_class::text_has_hangul_chars",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "text_has_hangul_chars",
-        "vis": "pub",
-        "params": ["text: &str"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1092,7 +1060,8 @@
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1670,6 +1639,32 @@
       "required": [],
       "rust": null,
       "route": "none"
+    },
+    {
+      "module": "comment-slices",
+      "name": "commentEntries",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "{ id: string; xml: string; }[]",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "compare",
@@ -8051,6 +8046,32 @@
     },
     {
       "module": "notes",
+      "name": "noteModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "richParas",
+          "type": "readonly NoteRun[][]",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package", "test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "notes",
       "name": "parseNotesXml",
       "kind": "function",
       "async": false,
@@ -10025,6 +10046,39 @@
         "reachable": true
       },
       "route": "table"
+    },
+    {
+      "module": "parse-package",
+      "name": "editedCommentModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "markedXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "parse-package",
@@ -20580,6 +20634,337 @@
       "route": "none"
     },
     {
+      "module": "withheld",
+      "name": "withheldLabelOf",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "rPrXml",
+          "type": "string | undefined",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | null",
+        "null": true,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package", "test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "hasWithheldTrace",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "boolean",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "hasMarkElement",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "boolean",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldNode",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "XNode | null",
+        "null": true,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "runsText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "parseEntry",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "XNode | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        },
+        {
+          "name": "textOf",
+          "type": "(node: XNode) => string",
+          "optional": false,
+          "rest": false,
+          "codec": "callback"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "firstMarkLabel",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "entryXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "overWithheldModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "text",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "overWithheld",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "entryXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withRedactNamespace",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "partXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "rootTag",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "WITHHELD_ENTRY_TEXT",
+      "kind": "const",
+      "async": false,
+      "params": [],
+      "ret": {
+        "type": "",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "none"
+    },
+    {
       "module": "xml-number",
       "name": "xmlInt",
       "kind": "function",
@@ -21462,6 +21847,32 @@
         "bytes": false
       },
       "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "a module of the host side of the package: it stays TypeScript and engine-free"
+    },
+    {
+      "module": "xml-utils",
+      "name": "maskOpaque",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
       "rust": null,
       "route": "ts",
       "reason": "a module of the host side of the package: it stays TypeScript and engine-free"

@@ -155,7 +155,7 @@ pub fn generate_storing(
         // what the caller asks to store
         let (method, stored) = if part.is_dir || data.is_empty() {
             (STORE, Vec::new())
-        } else if stored(&part.name) {
+        } else if stored(part.name.as_str()) {
             (STORE, data.to_vec())
         } else {
             (DEFLATE, deflate(data)?)

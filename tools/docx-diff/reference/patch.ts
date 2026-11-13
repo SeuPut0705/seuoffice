@@ -115,7 +115,16 @@ import {
   watermarkParagraphXml,
   type Watermark,
 } from './watermark'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { escapeXmlAttr, escapeXmlText, findChildren } from './xml-utils'
+import { commentEntries } from './comment-slices'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withRedactNamespace,
+} from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -1569,9 +1578,7 @@ export async function saveDocx(
     if (originalCommentsXml) {
       const origRelsFile = zip.file('word/_rels/comments.xml.rels')
       const origRels = origRelsFile ? await origRelsFile.async('string') : null
-      for (const m of originalCommentsXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-        const id = /w:id="([^"]+)"/.exec(m)?.[1]
-        if (!id) continue
+      for (const { id, xml: m } of commentEntries(originalCommentsXml)) {
         const blipRel = /r:embed="([^"]+)"/.exec(m)?.[1]
         const rel =
           blipRel && origRels
@@ -2882,9 +2889,8 @@ function buildCommentsXml(
 ): string {
   const originals = new Map<string, { text: string; xml: string }>()
   if (originalXml) {
-    for (const m of originalXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-      const id = /w:id="([^"]+)"/.exec(m)?.[1]
-      if (id) originals.set(id, { text: commentPlainText(m), xml: m })
+    for (const { id, xml: m } of commentEntries(originalXml)) {
+      originals.set(id, { text: commentPlainText(m), xml: m })
     }
   }
   const body = comments
@@ -2899,6 +2905,9 @@ function buildCommentsXml(
         const patched = patchParagraphTexts(orig.xml, c.text)
         if (patched !== null) return patched
       }
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the comment is hidden under the first label it carried
+      const hiddenLabel = orig && hasWithheldTrace(orig.xml) ? firstMarkLabel(orig.xml) : null
       const attrs =
         `w:id="${escapeXmlAttr(c.id)}" w:author="${escapeXmlAttr(c.author)}"` +
         (c.initials ? ` w:initials="${escapeXmlAttr(c.initials)}"` : '') +
@@ -2916,7 +2925,8 @@ function buildCommentsXml(
       if (run && paras.length > 0) {
         paras[paras.length - 1] = paras[paras.length - 1]!.replace(/<\/w:p>$/, `${run}</w:p>`)
       }
-      return `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      const entry = `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      return hiddenLabel === null ? entry : overWithheld(entry, hiddenLabel)
     })
     .join('')
   // Rebuilt comments always emit w14:paraId (ensured above), so w14 must be bound even
@@ -2931,7 +2941,10 @@ function buildCommentsXml(
         }
       : {}),
   })
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`
+  return withRedactNamespace(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`,
+    'w:comments',
+  )
 }
 
 /** word/commentsExtended.xml: one commentEx per comment (reply parent-child + resolved flag) */
@@ -2956,28 +2969,10 @@ function buildCommentsExtendedXml(comments: CommentInfo[]): string {
   )
 }
 
-/** Aligned with parseComments' textOf: each w:p's w:t text, '\n' between paragraphs */
+/** A comment's text as parseComments reads it, so an unchanged comment keeps its bytes */
 function commentPlainText(commentXml: string): string {
-  const paras: string[] = []
-  // the self-closing form first: the open-to-close alternative would swallow it
-  const pRe = /<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>/g
-  let p: RegExpExecArray | null
-  while ((p = pRe.exec(commentXml)) !== null) {
-    const texts: string[] = []
-    const tRe = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g
-    let t: RegExpExecArray | null
-    while ((t = tRe.exec(p[0])) !== null) texts.push(t[1])
-    paras.push(
-      texts
-        .join('')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&amp;/g, '&'),
-    )
-  }
-  return paras.join('\n')
+  const node = parseEntry(commentXml)
+  return node ? findChildren(node, 'w:p').map(runsText).join('\n') : ''
 }
 
 /** set or remove <w:documentProtection> at its CT_Settings position */

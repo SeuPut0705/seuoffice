@@ -12,7 +12,9 @@ import { invoke } from './engine'
 /** TOC entry level: styleId "TOC1" (Word) / "TOC 1" (Pages), or the style's
  *  name "toc 1" when the styleId is opaque (html2docx exports numeric ids) */
 export function tocLevelOf(styleId: string, styles?: Map<string, StyleInfo>): number | null {
-  return invoke('tocLevelOf', [styleId, styles]) as never
+  if (typeof styleId !== 'string') return null
+  const style = styles?.get(styleId)
+  return invoke('tocLevelOf', [styleId, style ? new Map([[styleId, style]]) : undefined]) as never
 }
 export function fieldDisplayOf(
   xml: string,

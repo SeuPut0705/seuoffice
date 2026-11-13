@@ -51,10 +51,7 @@ async function converted(item: Owed, input: Uint8Array): Promise<string | Uint8A
  * must convert it answers what it owes, the host converts, and the engine
  * parses again with the answers until it owes nothing.
  */
-export async function parseDocx(
-  bytes: Uint8Array,
-  options: object = {},
-): Promise<unknown> {
+export async function parseDocx(bytes: Uint8Array, options: object = {}): Promise<unknown> {
   ensureEngine()
   const resolved: Record<string, string | null | { $blob: number }> = {}
   const resolvedBlobs: Uint8Array[] = []

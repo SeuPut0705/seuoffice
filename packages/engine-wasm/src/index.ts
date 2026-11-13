@@ -70,10 +70,11 @@ const ERRNO_SUCCESS = 0
 const ERRNO_BADF = 8
 
 /**
- * The WASI imports the engine uses, and nothing else: it reads no file, no
- * clock and no argument. `fd_write` takes what Rust prints on a panic (stdout
- * and stderr) to the console; `proc_exit` throws, since a reactor never exits
- * on purpose.
+ * The WASI imports the engine uses, and nothing else: it reads no file and no
+ * argument. `fd_write` takes what Rust prints on a panic (stdout and stderr)
+ * to the console; `proc_exit` throws, since a reactor never exits on purpose.
+ * `clock_time_get` is there for the HWP reader (rhwp), which reads the clock
+ * in places; the document readers themselves take their time from the host.
  */
 function wasiImports(memory: () => WebAssembly.Memory): WebAssembly.ModuleImports {
   const view = (): DataView => new DataView(memory().buffer)
@@ -93,6 +94,12 @@ function wasiImports(memory: () => WebAssembly.Memory): WebAssembly.ModuleImport
       return ERRNO_SUCCESS
     },
     environ_get(): number {
+      return ERRNO_SUCCESS
+    },
+    // clock 0 is the wall clock, the others count from a fixed point (monotonic, CPU time)
+    clock_time_get(id: number, _precision: bigint, timeOut: number): number {
+      const milliseconds = id === 0 ? Date.now() : performance.now()
+      view().setBigUint64(timeOut, BigInt(Math.round(milliseconds * 1e6)), true)
       return ERRNO_SUCCESS
     },
     fd_write(fd: number, iovs: number, iovsLength: number, writtenOut: number): number {

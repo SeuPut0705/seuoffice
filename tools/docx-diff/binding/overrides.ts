@@ -23,6 +23,9 @@ export interface Override {
   callbacks?: true
 }
 
+const HOT_PER_CHARACTER =
+  'a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower'
+
 /** The 21 exports whose hand routes PortParseText wrote in crates/office-wasm/src/invoke/routes.rs. */
 export const ROUTES_HAND: Readonly<Record<string, true>> = {
   deobfuscateOdttf: true,
@@ -107,6 +110,18 @@ export const OVERRIDES: Record<string, Override> = {
         put(docx_engine::save::features::doc_properties_write::parse_property_changes(&input)?.to_json())`,
   },
   loadDocxZip: { reject: 'returns a JSZip (a host object)' },
+  // ---- per-character predicates the layout calls millions of times: a wasm call
+  // each (~4 us) made the render benchmark +13.2% slower and a 256 KiB edit
+  // time out (main's B4 decision 1: over 5% stays TypeScript only)
+  charClass: { reject: HOT_PER_CHARACTER },
+  isHangulChar: { reject: HOT_PER_CHARACTER },
+  isEastAsianChar: { reject: HOT_PER_CHARACTER },
+  isDoubleByteChar: { reject: HOT_PER_CHARACTER },
+  isCjkLetterChar: { reject: HOT_PER_CHARACTER },
+  isLatinAlnumChar: { reject: HOT_PER_CHARACTER },
+  textHasEastAsian: { reject: HOT_PER_CHARACTER },
+  textHasHangulChars: { reject: HOT_PER_CHARACTER },
+  isEastAsianLangTag: { reject: HOT_PER_CHARACTER },
   assertZipWithinLimits: {
     reject:
       'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)',
@@ -189,6 +204,15 @@ export const OVERRIDES: Record<string, Override> = {
   usablePositionOffset: { args: ["typeof value === 'number' ? value : NaN", 'emuPerUnit'] },
   // a Pick<> of a model type: the fields the builder does not read cross as placeholders
   anchoredInkRunXml: { args: ["{ blockIndex: 0, base64: '', ...ink }", 'rId', 'docPrId'] },
+  // a style id that is no string (a caller's partial StyleInfo) matches no
+  // pattern and no key of the map in the TypeScript: it is no TOC level. Only
+  // the style it names crosses: the renderer asks once per paragraph style,
+  // and the whole map each time made opening a document 30% slower
+  tocLevelOf: {
+    body: `if (typeof styleId !== 'string') return null
+  const style = styles?.get(styleId)
+  return invoke('tocLevelOf', [styleId, style ? new Map([[styleId, style]]) : undefined]) as never`,
+  },
   // ---- a Rust tuple where the TypeScript answers an object
   mergeRecords: {
     body: `const [merged, cursor] = invoke('mergeRecords', [blocks, data, startIndex]) as [Block[], MergeCursorState]

@@ -86,13 +86,13 @@ impl<'de> Deserialize<'de> for PictureWatermarkInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        PictureWatermarkInfoKey::RId => v_r_id = Some(map.next_value()?),
+                        PictureWatermarkInfoKey::RId => v_r_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         PictureWatermarkInfoKey::WidthPt => v_width_pt = Some(map.next_value()?),
                         PictureWatermarkInfoKey::HeightPt => v_height_pt = Some(map.next_value()?),
-                        PictureWatermarkInfoKey::Washout => v_washout = Some(map.next_value()?),
+                        PictureWatermarkInfoKey::Washout => v_washout = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(PictureWatermarkInfo { r_id: v_r_id.ok_or_else(|| A::Error::missing_field("rId"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))?, height_pt: v_height_pt.ok_or_else(|| A::Error::missing_field("heightPt"))?, washout: v_washout.ok_or_else(|| A::Error::missing_field("washout"))? })
+                Ok(PictureWatermarkInfo { r_id: v_r_id.map_or_else(|| wire::absent("rId").map(|()| Default::default()), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)?, height_pt: v_height_pt.map_or_else(|| wire::absent("heightPt").map(|()| JsNum(f64::NAN)), Ok)?, washout: v_washout.map_or_else(|| wire::absent("washout").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -186,14 +186,14 @@ impl<'de> Deserialize<'de> for RevisionInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RevisionInfoKey::Author => v_author = Some(map.next_value()?),
-                        RevisionInfoKey::Date => v_date = Some(map.next_value()?),
-                        RevisionInfoKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        RevisionInfoKey::Id => v_id = Some(map.next_value()?),
-                        RevisionInfoKey::Move => v_move = Some(map.next_value()?),
+                        RevisionInfoKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionInfoKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionInfoKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionInfoKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(RevisionInfo { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
+                Ok(RevisionInfo { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -326,18 +326,18 @@ impl<'de> Deserialize<'de> for PropChangeInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        PropChangeInfoKey::Author => v_author = Some(map.next_value()?),
-                        PropChangeInfoKey::Date => v_date = Some(map.next_value()?),
-                        PropChangeInfoKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        PropChangeInfoKey::Id => v_id = Some(map.next_value()?),
-                        PropChangeInfoKey::Move => v_move = Some(map.next_value()?),
-                        PropChangeInfoKey::OldXml => v_old_xml = Some(map.next_value()?),
-                        PropChangeInfoKey::VMerge => v_v_merge = Some(map.next_value()?),
-                        PropChangeInfoKey::VMergeOrig => v_v_merge_orig = Some(map.next_value()?),
-                        PropChangeInfoKey::Resolved => v_resolved = Some(map.next_value()?),
+                        PropChangeInfoKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::OldXml => v_old_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::VMerge => v_v_merge = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::VMergeOrig => v_v_merge_orig = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        PropChangeInfoKey::Resolved => v_resolved = map.next_value::<wire::OrAbsent<PropChangeInfoResolved>>()?.0,
                     }
                 }
-                Ok(PropChangeInfo { revision_info: RevisionInfo { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move }, old_xml: v_old_xml, v_merge: v_v_merge, v_merge_orig: v_v_merge_orig, resolved: v_resolved })
+                Ok(PropChangeInfo { revision_info: RevisionInfo { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move }, old_xml: v_old_xml, v_merge: v_v_merge, v_merge_orig: v_v_merge_orig, resolved: v_resolved })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -351,7 +351,7 @@ impl<'de> Deserialize<'de> for PropChangeInfo {
 pub enum PropChangeInfoResolved {
     Accept,
     Reject,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl PropChangeInfoResolved {
@@ -452,12 +452,12 @@ impl<'de> Deserialize<'de> for TextOutline {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextOutlineKey::Color => v_color = Some(map.next_value()?),
+                        TextOutlineKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TextOutlineKey::WidthPt => v_width_pt = Some(map.next_value()?),
                         TextOutlineKey::Alpha => v_alpha = Some(map.next_value()?),
                     }
                 }
-                Ok(TextOutline { color: v_color.ok_or_else(|| A::Error::missing_field("color"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))?, alpha: v_alpha })
+                Ok(TextOutline { color: v_color.map_or_else(|| wire::absent("color").map(|()| Default::default()), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)?, alpha: v_alpha })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -473,7 +473,7 @@ pub enum TextEffect {
     Emboss,
     Imprint,
     Shadow,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextEffect {
@@ -578,12 +578,12 @@ impl<'de> Deserialize<'de> for TextGlow {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextGlowKey::Color => v_color = Some(map.next_value()?),
+                        TextGlowKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TextGlowKey::RadiusPt => v_radius_pt = Some(map.next_value()?),
                         TextGlowKey::Alpha => v_alpha = Some(map.next_value()?),
                     }
                 }
-                Ok(TextGlow { color: v_color.ok_or_else(|| A::Error::missing_field("color"))?, radius_pt: v_radius_pt.ok_or_else(|| A::Error::missing_field("radiusPt"))?, alpha: v_alpha })
+                Ok(TextGlow { color: v_color.map_or_else(|| wire::absent("color").map(|()| Default::default()), Ok)?, radius_pt: v_radius_pt.map_or_else(|| wire::absent("radiusPt").map(|()| JsNum(f64::NAN)), Ok)?, alpha: v_alpha })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -814,67 +814,67 @@ impl<'de> Deserialize<'de> for Run {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunKey::Text => b_0.text.set(map.next_value()?),
-                        RunKey::RawRPr => b_0.raw_r_pr.set(map.next_value()?),
-                        RunKey::StyleId => b_0.style_id.set(map.next_value()?),
-                        RunKey::Bold => b_0.bold.set(map.next_value()?),
-                        RunKey::Italic => b_0.italic.set(map.next_value()?),
-                        RunKey::Underline => b_0.underline.set(map.next_value()?),
-                        RunKey::Strike => b_0.strike.set(map.next_value()?),
-                        RunKey::Color => b_0.color.set(map.next_value()?),
+                        RunKey::Text => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.text.set(value) },
+                        RunKey::RawRPr => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.raw_r_pr.set(value) },
+                        RunKey::StyleId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.style_id.set(value) },
+                        RunKey::Bold => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold.set(value) },
+                        RunKey::Italic => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.italic.set(value) },
+                        RunKey::Underline => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.underline.set(value) },
+                        RunKey::Strike => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.strike.set(value) },
+                        RunKey::Color => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.color.set(value) },
                         RunKey::SizeHalfPoints => b_0.size_half_points.set(map.next_value()?),
-                        RunKey::Font => b_0.font.set(map.next_value()?),
-                        RunKey::EaSlotEmpty => b_0.ea_slot_empty.set(map.next_value()?),
-                        RunKey::FontAscii => b_0.font_ascii.set(map.next_value()?),
-                        RunKey::EastAsiaFont => b_0.east_asia_font.set(map.next_value()?),
-                        RunKey::EastAsiaLang => b_0.east_asia_lang.set(map.next_value()?),
-                        RunKey::FontCs => b_0.font_cs.set(map.next_value()?),
-                        RunKey::ThemeRFonts => b_0.theme_r_fonts.set(map.next_value()?),
-                        RunKey::ThemeColor => b_0.theme_color.set(map.next_value()?),
-                        RunKey::CsFont => b_0.cs_font.set(map.next_value()?),
-                        RunKey::Rtl => b_0.rtl.set(map.next_value()?),
+                        RunKey::Font => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.font.set(value) },
+                        RunKey::EaSlotEmpty => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.ea_slot_empty.set(value) },
+                        RunKey::FontAscii => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.font_ascii.set(value) },
+                        RunKey::EastAsiaFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_font.set(value) },
+                        RunKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_lang.set(value) },
+                        RunKey::FontCs => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.font_cs.set(value) },
+                        RunKey::ThemeRFonts => if let Some(value) = map.next_value::<wire::OrAbsent<RunThemeRFonts>>()?.0 { b_0.theme_r_fonts.set(value) },
+                        RunKey::ThemeColor => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.theme_color.set(value) },
+                        RunKey::CsFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.cs_font.set(value) },
+                        RunKey::Rtl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.rtl.set(value) },
                         RunKey::CharSpacingTwips => b_0.char_spacing_twips.set(map.next_value()?),
                         RunKey::KernHalfPoints => b_0.kern_half_points.set(map.next_value()?),
-                        RunKey::Caps => b_0.caps.set(map.next_value()?),
-                        RunKey::Vanish => b_0.vanish.set(map.next_value()?),
-                        RunKey::VanishOwn => b_0.vanish_own.set(map.next_value()?),
+                        RunKey::Caps => if let Some(value) = map.next_value::<wire::OrAbsent<RunCaps>>()?.0 { b_0.caps.set(value) },
+                        RunKey::Vanish => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.vanish.set(value) },
+                        RunKey::VanishOwn => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.vanish_own.set(value) },
                         RunKey::CharScalePct => b_0.char_scale_pct.set(map.next_value()?),
-                        RunKey::Highlight => b_0.highlight.set(map.next_value()?),
-                        RunKey::Shading => b_0.shading.set(map.next_value()?),
-                        RunKey::ShadingDisplay => b_0.shading_display.set(map.next_value()?),
-                        RunKey::TextOutline => b_0.text_outline.set(map.next_value()?),
-                        RunKey::TextEffect => b_0.text_effect.set(map.next_value()?),
-                        RunKey::Dstrike => b_0.dstrike.set(map.next_value()?),
-                        RunKey::Glow => b_0.glow.set(map.next_value()?),
+                        RunKey::Highlight => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.highlight.set(value) },
+                        RunKey::Shading => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading.set(value) },
+                        RunKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading_display.set(value) },
+                        RunKey::TextOutline => if let Some(value) = map.next_value::<wire::OrAbsent<TextOutline>>()?.0 { b_0.text_outline.set(value) },
+                        RunKey::TextEffect => if let Some(value) = map.next_value::<wire::OrAbsent<TextEffect>>()?.0 { b_0.text_effect.set(value) },
+                        RunKey::Dstrike => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.dstrike.set(value) },
+                        RunKey::Glow => if let Some(value) = map.next_value::<wire::OrAbsent<TextGlow>>()?.0 { b_0.glow.set(value) },
                         RunKey::PositionHalfPoints => b_0.position_half_points.set(map.next_value()?),
-                        RunKey::Bdr => b_0.bdr.set(map.next_value()?),
-                        RunKey::Cs => b_0.cs.set(map.next_value()?),
-                        RunKey::Effective => b_0.effective.set(map.next_value()?),
-                        RunKey::VertAlign => b_0.vert_align.set(map.next_value()?),
-                        RunKey::Em => b_0.em.set(map.next_value()?),
-                        RunKey::Link => b_0.link.set(map.next_value()?),
-                        RunKey::CommentIds => b_0.comment_ids.set(map.next_value()?),
-                        RunKey::Ins => b_0.ins.set(map.next_value()?),
-                        RunKey::Del => b_0.del.set(map.next_value()?),
-                        RunKey::NoteRef => b_0.note_ref.set(map.next_value()?),
-                        RunKey::XeTerm => b_0.xe_term.set(map.next_value()?),
-                        RunKey::RefField => b_0.ref_field.set(map.next_value()?),
-                        RunKey::RefInstr => b_0.ref_instr.set(map.next_value()?),
-                        RunKey::InstrField => b_0.instr_field.set(map.next_value()?),
+                        RunKey::Bdr => if let Some(value) = map.next_value::<wire::OrAbsent<RunBdr>>()?.0 { b_0.bdr.set(value) },
+                        RunKey::Cs => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.cs.set(value) },
+                        RunKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectiveRPr>>()?.0 { b_0.effective.set(value) },
+                        RunKey::VertAlign => if let Some(value) = map.next_value::<wire::OrAbsent<RunVertAlign>>()?.0 { b_0.vert_align.set(value) },
+                        RunKey::Em => if let Some(value) = map.next_value::<wire::OrAbsent<RunEm>>()?.0 { b_0.em.set(value) },
+                        RunKey::Link => if let Some(value) = map.next_value::<wire::OrAbsent<RunLink>>()?.0 { b_0.link.set(value) },
+                        RunKey::CommentIds => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.comment_ids.set(value) },
+                        RunKey::Ins => if let Some(value) = map.next_value::<wire::OrAbsent<RevisionInfo>>()?.0 { b_0.ins.set(value) },
+                        RunKey::Del => if let Some(value) = map.next_value::<wire::OrAbsent<RevisionInfo>>()?.0 { b_0.del.set(value) },
+                        RunKey::NoteRef => if let Some(value) = map.next_value::<wire::OrAbsent<RunNoteRef>>()?.0 { b_0.note_ref.set(value) },
+                        RunKey::XeTerm => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.xe_term.set(value) },
+                        RunKey::RefField => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ref_field.set(value) },
+                        RunKey::RefInstr => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ref_instr.set(value) },
+                        RunKey::InstrField => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.instr_field.set(value) },
                         RunKey::ZoteroFieldId => b_0.zotero_field_id.set(map.next_value()?),
-                        RunKey::ZoteroFieldPart => b_0.zotero_field_part.set(map.next_value()?),
-                        RunKey::FldBeginXml => b_0.fld_begin_xml.set(map.next_value()?),
-                        RunKey::FldDirty => b_0.fld_dirty.set(map.next_value()?),
-                        RunKey::SdtCheckboxXml => b_0.sdt_checkbox_xml.set(map.next_value()?),
-                        RunKey::Wrap => b_0.wrap.set(map.next_value()?),
-                        RunKey::RPrChange => b_0.r_pr_change.set(map.next_value()?),
-                        RunKey::Math => b_0.math.set(map.next_value()?),
-                        RunKey::Sym => b_0.sym.set(map.next_value()?),
-                        RunKey::Ruby => b_0.ruby.set(map.next_value()?),
-                        RunKey::Image => b_0.image.set(map.next_value()?),
+                        RunKey::ZoteroFieldPart => if let Some(value) = map.next_value::<wire::OrAbsent<RunZoteroFieldPart>>()?.0 { b_0.zotero_field_part.set(value) },
+                        RunKey::FldBeginXml => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fld_begin_xml.set(value) },
+                        RunKey::FldDirty => if let Some(value) = map.next_value::<wire::OrAbsent<True>>()?.0 { b_0.fld_dirty.set(value) },
+                        RunKey::SdtCheckboxXml => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.sdt_checkbox_xml.set(value) },
+                        RunKey::Wrap => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<InlineWrap>>>()?.0 { b_0.wrap.set(value) },
+                        RunKey::RPrChange => if let Some(value) = map.next_value::<wire::OrAbsent<RunRPrChange>>()?.0 { b_0.r_pr_change.set(value) },
+                        RunKey::Math => if let Some(value) = map.next_value::<wire::OrAbsent<RunMath>>()?.0 { b_0.math.set(value) },
+                        RunKey::Sym => if let Some(value) = map.next_value::<wire::OrAbsent<RunSym>>()?.0 { b_0.sym.set(value) },
+                        RunKey::Ruby => if let Some(value) = map.next_value::<wire::OrAbsent<RunRuby>>()?.0 { b_0.ruby.set(value) },
+                        RunKey::Image => if let Some(value) = map.next_value::<wire::OrAbsent<RunImage>>()?.0 { b_0.image.set(value) },
                     }
                 }
-                if !b_0.text.has_key() {
+                if !b_0.text.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("text"));
                 }
                 Ok(b_0)
@@ -952,8 +952,8 @@ impl<'de> Deserialize<'de> for RunThemeRFonts {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunThemeRFontsKey::Font => v_font = Some(map.next_value()?),
-                        RunThemeRFontsKey::FontAscii => v_font_ascii = Some(map.next_value()?),
+                        RunThemeRFontsKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunThemeRFontsKey::FontAscii => v_font_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(RunThemeRFonts { font: v_font, font_ascii: v_font_ascii })
@@ -971,7 +971,7 @@ pub enum RunCaps {
     All,
     Small,
     None,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunCaps {
@@ -1081,13 +1081,13 @@ impl<'de> Deserialize<'de> for RunBdr {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunBdrKey::Val => v_val = Some(map.next_value()?),
+                        RunBdrKey::Val => v_val = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunBdrKey::Sz => v_sz = Some(map.next_value()?),
-                        RunBdrKey::Color => v_color = Some(map.next_value()?),
+                        RunBdrKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunBdrKey::Space => v_space = Some(map.next_value()?),
                     }
                 }
-                Ok(RunBdr { val: v_val.ok_or_else(|| A::Error::missing_field("val"))?, sz: v_sz.ok_or_else(|| A::Error::missing_field("sz"))?, color: v_color, space: v_space })
+                Ok(RunBdr { val: v_val.map_or_else(|| wire::absent("val").map(|()| Default::default()), Ok)?, sz: v_sz.map_or_else(|| wire::absent("sz").map(|()| JsNum(f64::NAN)), Ok)?, color: v_color, space: v_space })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1259,28 +1259,28 @@ impl<'de> Deserialize<'de> for EffectiveRPr {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EffectiveRPrKey::StyleId => v_style_id = Some(map.next_value()?),
-                        EffectiveRPrKey::Cs => v_cs = Some(map.next_value()?),
-                        EffectiveRPrKey::Bold => v_bold = Some(map.next_value()?),
-                        EffectiveRPrKey::Italic => v_italic = Some(map.next_value()?),
+                        EffectiveRPrKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrKey::Cs => v_cs = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectiveRPrKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectiveRPrKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         EffectiveRPrKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        EffectiveRPrKey::Fonts => v_fonts = Some(map.next_value()?),
-                        EffectiveRPrKey::Color => v_color = Some(map.next_value()?),
-                        EffectiveRPrKey::Underline => v_underline = Some(map.next_value()?),
-                        EffectiveRPrKey::Strike => v_strike = Some(map.next_value()?),
-                        EffectiveRPrKey::Caps => v_caps = Some(map.next_value()?),
-                        EffectiveRPrKey::Vanish => v_vanish = Some(map.next_value()?),
+                        EffectiveRPrKey::Fonts => v_fonts = map.next_value::<wire::OrAbsent<EffectiveRPrFonts>>()?.0,
+                        EffectiveRPrKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrKey::Underline => v_underline = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectiveRPrKey::Strike => v_strike = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectiveRPrKey::Caps => v_caps = map.next_value::<wire::OrAbsent<EffectiveRPrCaps>>()?.0,
+                        EffectiveRPrKey::Vanish => v_vanish = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         EffectiveRPrKey::CharSpacingTwips => v_char_spacing_twips = Some(map.next_value()?),
                         EffectiveRPrKey::KernHalfPoints => v_kern_half_points = Some(map.next_value()?),
-                        EffectiveRPrKey::VertAlign => v_vert_align = Some(map.next_value()?),
-                        EffectiveRPrKey::Bdr => v_bdr = Some(map.next_value()?),
-                        EffectiveRPrKey::Shading => v_shading = Some(map.next_value()?),
-                        EffectiveRPrKey::EastAsiaLang => v_east_asia_lang = Some(map.next_value()?),
-                        EffectiveRPrKey::Source => v_source = Some(map.next_value()?),
-                        EffectiveRPrKey::StyleXor => v_style_xor = Some(map.next_value()?),
+                        EffectiveRPrKey::VertAlign => v_vert_align = map.next_value::<wire::OrAbsent<EffectiveRPrVertAlign>>()?.0,
+                        EffectiveRPrKey::Bdr => v_bdr = map.next_value::<wire::OrAbsent<RunBdr>>()?.0,
+                        EffectiveRPrKey::Shading => v_shading = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrKey::EastAsiaLang => v_east_asia_lang = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrKey::Source => v_source = map.next_value::<wire::OrAbsent<JsObject<PropSource>>>()?.0,
+                        EffectiveRPrKey::StyleXor => v_style_xor = map.next_value::<wire::OrAbsent<Vec<EffectiveRPrStyleXorItem>>>()?.0,
                     }
                 }
-                Ok(EffectiveRPr { style_id: v_style_id, cs: v_cs.ok_or_else(|| A::Error::missing_field("cs"))?, bold: v_bold.ok_or_else(|| A::Error::missing_field("bold"))?, italic: v_italic.ok_or_else(|| A::Error::missing_field("italic"))?, size_half_points: v_size_half_points.ok_or_else(|| A::Error::missing_field("sizeHalfPoints"))?, fonts: v_fonts.ok_or_else(|| A::Error::missing_field("fonts"))?, color: v_color, underline: v_underline.ok_or_else(|| A::Error::missing_field("underline"))?, strike: v_strike.ok_or_else(|| A::Error::missing_field("strike"))?, caps: v_caps.ok_or_else(|| A::Error::missing_field("caps"))?, vanish: v_vanish.ok_or_else(|| A::Error::missing_field("vanish"))?, char_spacing_twips: v_char_spacing_twips.ok_or_else(|| A::Error::missing_field("charSpacingTwips"))?, kern_half_points: v_kern_half_points, vert_align: v_vert_align, bdr: v_bdr, shading: v_shading, east_asia_lang: v_east_asia_lang, source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, style_xor: v_style_xor })
+                Ok(EffectiveRPr { style_id: v_style_id, cs: v_cs.map_or_else(|| wire::absent("cs").map(|()| Default::default()), Ok)?, bold: v_bold.map_or_else(|| wire::absent("bold").map(|()| Default::default()), Ok)?, italic: v_italic.map_or_else(|| wire::absent("italic").map(|()| Default::default()), Ok)?, size_half_points: v_size_half_points.map_or_else(|| wire::absent("sizeHalfPoints").map(|()| JsNum(f64::NAN)), Ok)?, fonts: v_fonts.ok_or_else(|| A::Error::missing_field("fonts"))?, color: v_color, underline: v_underline.map_or_else(|| wire::absent("underline").map(|()| Default::default()), Ok)?, strike: v_strike.map_or_else(|| wire::absent("strike").map(|()| Default::default()), Ok)?, caps: v_caps.ok_or_else(|| A::Error::missing_field("caps"))?, vanish: v_vanish.map_or_else(|| wire::absent("vanish").map(|()| Default::default()), Ok)?, char_spacing_twips: v_char_spacing_twips.map_or_else(|| wire::absent("charSpacingTwips").map(|()| JsNum(f64::NAN)), Ok)?, kern_half_points: v_kern_half_points, vert_align: v_vert_align, bdr: v_bdr, shading: v_shading, east_asia_lang: v_east_asia_lang, source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, style_xor: v_style_xor })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1369,10 +1369,10 @@ impl<'de> Deserialize<'de> for EffectiveRPrFonts {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EffectiveRPrFontsKey::Ascii => v_ascii = Some(map.next_value()?),
-                        EffectiveRPrFontsKey::EastAsia => v_east_asia = Some(map.next_value()?),
-                        EffectiveRPrFontsKey::Cs => v_cs = Some(map.next_value()?),
-                        EffectiveRPrFontsKey::EaSlotEmpty => v_ea_slot_empty = Some(map.next_value()?),
+                        EffectiveRPrFontsKey::Ascii => v_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrFontsKey::EastAsia => v_east_asia = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrFontsKey::Cs => v_cs = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectiveRPrFontsKey::EaSlotEmpty => v_ea_slot_empty = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
                 Ok(EffectiveRPrFonts { ascii: v_ascii, east_asia: v_east_asia, cs: v_cs, ea_slot_empty: v_ea_slot_empty })
@@ -1390,7 +1390,7 @@ pub enum EffectiveRPrCaps {
     None,
     All,
     Small,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl EffectiveRPrCaps {
@@ -1429,7 +1429,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrCaps {
 pub enum EffectiveRPrVertAlign {
     Superscript,
     Subscript,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl EffectiveRPrVertAlign {
@@ -1471,7 +1471,7 @@ pub enum PropSource {
     TableStyle,
     DocDefaults,
     Builtin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl PropSource {
@@ -1520,7 +1520,7 @@ pub enum EffectiveRPrStyleXorItem {
     Italic,
     Strike,
     Vanish,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl EffectiveRPrStyleXorItem {
@@ -1561,7 +1561,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrStyleXorItem {
 pub enum RunVertAlign {
     Superscript,
     Subscript,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunVertAlign {
@@ -1600,7 +1600,7 @@ pub enum RunEm {
     Comma,
     Circle,
     UnderDot,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunEm {
@@ -1714,13 +1714,13 @@ impl<'de> Deserialize<'de> for RunLink {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunLinkKey::Href => v_href = Some(map.next_value()?),
-                        RunLinkKey::RId => v_r_id = Some(map.next_value()?),
-                        RunLinkKey::Tooltip => v_tooltip = Some(map.next_value()?),
-                        RunLinkKey::Plain => v_plain = Some(map.next_value()?),
+                        RunLinkKey::Href => v_href = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunLinkKey::RId => v_r_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunLinkKey::Tooltip => v_tooltip = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunLinkKey::Plain => v_plain = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(RunLink { href: v_href.ok_or_else(|| A::Error::missing_field("href"))?, r_id: v_r_id, tooltip: v_tooltip, plain: v_plain })
+                Ok(RunLink { href: v_href.map_or_else(|| wire::absent("href").map(|()| Default::default()), Ok)?, r_id: v_r_id, tooltip: v_tooltip, plain: v_plain })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1791,11 +1791,11 @@ impl<'de> Deserialize<'de> for RunNoteRef {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunNoteRefKey::Kind => v_kind = Some(map.next_value()?),
-                        RunNoteRefKey::Id => v_id = Some(map.next_value()?),
+                        RunNoteRefKey::Kind => v_kind = map.next_value::<wire::OrAbsent<RunNoteRefKind>>()?.0,
+                        RunNoteRefKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(RunNoteRef { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, id: v_id.ok_or_else(|| A::Error::missing_field("id"))? })
+                Ok(RunNoteRef { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1809,7 +1809,7 @@ impl<'de> Deserialize<'de> for RunNoteRef {
 pub enum RunNoteRefKind {
     Footnote,
     Endnote,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunNoteRefKind {
@@ -1848,7 +1848,7 @@ pub enum RunZoteroFieldPart {
     Begin,
     Inside,
     End,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunZoteroFieldPart {
@@ -1966,13 +1966,13 @@ impl<'de> Deserialize<'de> for InlineWrap {
                     }
                     match key {
                         InlineWrapKey::Seq => v_seq = Some(map.next_value()?),
-                        InlineWrapKey::Open => v_open = Some(map.next_value()?),
-                        InlineWrapKey::Close => v_close = Some(map.next_value()?),
-                        InlineWrapKey::Inside => v_inside = Some(map.next_value()?),
-                        InlineWrapKey::Text => v_text = Some(map.next_value()?),
+                        InlineWrapKey::Open => v_open = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineWrapKey::Close => v_close = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineWrapKey::Inside => v_inside = map.next_value::<wire::OrAbsent<InlineWrapInside>>()?.0,
+                        InlineWrapKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(InlineWrap { seq: v_seq.ok_or_else(|| A::Error::missing_field("seq"))?, open: v_open.ok_or_else(|| A::Error::missing_field("open"))?, close: v_close.ok_or_else(|| A::Error::missing_field("close"))?, inside: v_inside, text: v_text })
+                Ok(InlineWrap { seq: v_seq.map_or_else(|| wire::absent("seq").map(|()| JsNum(f64::NAN)), Ok)?, open: v_open.map_or_else(|| wire::absent("open").map(|()| Default::default()), Ok)?, close: v_close.map_or_else(|| wire::absent("close").map(|()| Default::default()), Ok)?, inside: v_inside, text: v_text })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1986,7 +1986,7 @@ impl<'de> Deserialize<'de> for InlineWrap {
 pub enum InlineWrapInside {
     Revision,
     Link,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl InlineWrapInside {
@@ -2117,16 +2117,16 @@ impl<'de> Deserialize<'de> for RunRPrChange {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunRPrChangeKey::Author => v_author = Some(map.next_value()?),
-                        RunRPrChangeKey::Date => v_date = Some(map.next_value()?),
-                        RunRPrChangeKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        RunRPrChangeKey::Id => v_id = Some(map.next_value()?),
-                        RunRPrChangeKey::Move => v_move = Some(map.next_value()?),
-                        RunRPrChangeKey::OldRPr => v_old_r_pr = Some(map.next_value()?),
-                        RunRPrChangeKey::Old => v_old = Some(map.next_value()?),
+                        RunRPrChangeKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::OldRPr => v_old_r_pr = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeKey::Old => v_old = map.next_value::<wire::OrAbsent<RunRPrChangeOld>>()?.0,
                     }
                 }
-                Ok(RunRPrChange { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move, old_r_pr: v_old_r_pr, old: v_old })
+                Ok(RunRPrChange { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move, old_r_pr: v_old_r_pr, old: v_old })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -2334,27 +2334,27 @@ impl<'de> Deserialize<'de> for RunRPrChangeOld {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunRPrChangeOldKey::Bold => v_bold = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Italic => v_italic = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Underline => v_underline = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Strike => v_strike = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Color => v_color = Some(map.next_value()?),
+                        RunRPrChangeOldKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::Underline => v_underline = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::Strike => v_strike = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunRPrChangeOldKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Font => v_font = Some(map.next_value()?),
-                        RunRPrChangeOldKey::FontAscii => v_font_ascii = Some(map.next_value()?),
+                        RunRPrChangeOldKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeOldKey::FontAscii => v_font_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunRPrChangeOldKey::CharSpacingTwips => v_char_spacing_twips = Some(map.next_value()?),
                         RunRPrChangeOldKey::CharScalePct => v_char_scale_pct = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Highlight => v_highlight = Some(map.next_value()?),
-                        RunRPrChangeOldKey::VertAlign => v_vert_align = Some(map.next_value()?),
-                        RunRPrChangeOldKey::StyleId => v_style_id = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Caps => v_caps = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Dstrike => v_dstrike = Some(map.next_value()?),
-                        RunRPrChangeOldKey::VanishOwn => v_vanish_own = Some(map.next_value()?),
+                        RunRPrChangeOldKey::Highlight => v_highlight = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeOldKey::VertAlign => v_vert_align = map.next_value::<wire::OrAbsent<RunRPrChangeOldVertAlign>>()?.0,
+                        RunRPrChangeOldKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeOldKey::Caps => v_caps = map.next_value::<wire::OrAbsent<RunRPrChangeOldCaps>>()?.0,
+                        RunRPrChangeOldKey::Dstrike => v_dstrike = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::VanishOwn => v_vanish_own = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         RunRPrChangeOldKey::KernHalfPoints => v_kern_half_points = Some(map.next_value()?),
                         RunRPrChangeOldKey::PositionHalfPoints => v_position_half_points = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Shading => v_shading = Some(map.next_value()?),
-                        RunRPrChangeOldKey::Rtl => v_rtl = Some(map.next_value()?),
-                        RunRPrChangeOldKey::ThemeColor => v_theme_color = Some(map.next_value()?),
+                        RunRPrChangeOldKey::Shading => v_shading = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRPrChangeOldKey::Rtl => v_rtl = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunRPrChangeOldKey::ThemeColor => v_theme_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(RunRPrChangeOld { bold: v_bold, italic: v_italic, underline: v_underline, strike: v_strike, color: v_color, size_half_points: v_size_half_points, font: v_font, font_ascii: v_font_ascii, char_spacing_twips: v_char_spacing_twips, char_scale_pct: v_char_scale_pct, highlight: v_highlight, vert_align: v_vert_align, style_id: v_style_id, caps: v_caps, dstrike: v_dstrike, vanish_own: v_vanish_own, kern_half_points: v_kern_half_points, position_half_points: v_position_half_points, shading: v_shading, rtl: v_rtl, theme_color: v_theme_color })
@@ -2371,7 +2371,7 @@ impl<'de> Deserialize<'de> for RunRPrChangeOld {
 pub enum RunRPrChangeOldVertAlign {
     Superscript,
     Subscript,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunRPrChangeOldVertAlign {
@@ -2409,7 +2409,7 @@ pub enum RunRPrChangeOldCaps {
     All,
     Small,
     None,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunRPrChangeOldCaps {
@@ -2514,12 +2514,12 @@ impl<'de> Deserialize<'de> for RunMath {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunMathKey::Omml => v_omml = Some(map.next_value()?),
-                        RunMathKey::Display => v_display = Some(map.next_value()?),
-                        RunMathKey::BreakAfter => v_break_after = Some(map.next_value()?),
+                        RunMathKey::Omml => v_omml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunMathKey::Display => v_display = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunMathKey::BreakAfter => v_break_after = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(RunMath { omml: v_omml.ok_or_else(|| A::Error::missing_field("omml"))?, display: v_display, break_after: v_break_after })
+                Ok(RunMath { omml: v_omml.map_or_else(|| wire::absent("omml").map(|()| Default::default()), Ok)?, display: v_display, break_after: v_break_after })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -2590,11 +2590,11 @@ impl<'de> Deserialize<'de> for RunSym {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunSymKey::Font => v_font = Some(map.next_value()?),
-                        RunSymKey::Char => v_char = Some(map.next_value()?),
+                        RunSymKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunSymKey::Char => v_char = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(RunSym { font: v_font.ok_or_else(|| A::Error::missing_field("font"))?, char: v_char.ok_or_else(|| A::Error::missing_field("char"))? })
+                Ok(RunSym { font: v_font.map_or_else(|| wire::absent("font").map(|()| Default::default()), Ok)?, char: v_char.map_or_else(|| wire::absent("char").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -2665,11 +2665,11 @@ impl<'de> Deserialize<'de> for RunRuby {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunRubyKey::Rt => v_rt = Some(map.next_value()?),
-                        RunRubyKey::Xml => v_xml = Some(map.next_value()?),
+                        RunRubyKey::Rt => v_rt = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunRubyKey::Xml => v_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(RunRuby { rt: v_rt.ok_or_else(|| A::Error::missing_field("rt"))?, xml: v_xml.ok_or_else(|| A::Error::missing_field("xml"))? })
+                Ok(RunRuby { rt: v_rt.map_or_else(|| wire::absent("rt").map(|()| Default::default()), Ok)?, xml: v_xml.map_or_else(|| wire::absent("xml").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -2887,32 +2887,32 @@ impl<'de> Deserialize<'de> for RunImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageKey::DataUrl => v_data_url = Some(map.next_value()?),
+                        RunImageKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunImageKey::WidthPx => v_width_px = Some(map.next_value()?),
                         RunImageKey::HeightPx => v_height_px = Some(map.next_value()?),
-                        RunImageKey::Xml => v_xml = Some(map.next_value()?),
-                        RunImageKey::Wrap => v_wrap = Some(map.next_value()?),
+                        RunImageKey::Xml => v_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunImageKey::Wrap => v_wrap = map.next_value::<wire::OrAbsent<ImageWrap>>()?.0,
                         RunImageKey::OffsetXEmu => v_offset_x_emu = Some(map.next_value()?),
                         RunImageKey::OffsetYEmu => v_offset_y_emu = Some(map.next_value()?),
-                        RunImageKey::RelV => v_rel_v = Some(map.next_value()?),
-                        RunImageKey::RelH => v_rel_h = Some(map.next_value()?),
-                        RunImageKey::PosH => v_pos_h = Some(map.next_value()?),
-                        RunImageKey::PosV => v_pos_v = Some(map.next_value()?),
+                        RunImageKey::RelV => v_rel_v = map.next_value::<wire::OrAbsent<RunImageRelV>>()?.0,
+                        RunImageKey::RelH => v_rel_h = map.next_value::<wire::OrAbsent<RunImageRelH>>()?.0,
+                        RunImageKey::PosH => v_pos_h = map.next_value::<wire::OrAbsent<RunImagePosH>>()?.0,
+                        RunImageKey::PosV => v_pos_v = map.next_value::<wire::OrAbsent<RunImagePosV>>()?.0,
                         RunImageKey::WrapDistTopEmu => v_wrap_dist_top_emu = Some(map.next_value()?),
                         RunImageKey::WrapDistBottomEmu => v_wrap_dist_bottom_emu = Some(map.next_value()?),
                         RunImageKey::WrapDistLeftEmu => v_wrap_dist_left_emu = Some(map.next_value()?),
                         RunImageKey::WrapDistRightEmu => v_wrap_dist_right_emu = Some(map.next_value()?),
-                        RunImageKey::NoOverlap => v_no_overlap = Some(map.next_value()?),
-                        RunImageKey::Border => v_border = Some(map.next_value()?),
-                        RunImageKey::LineCenterV => v_line_center_v = Some(map.next_value()?),
+                        RunImageKey::NoOverlap => v_no_overlap = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunImageKey::Border => v_border = map.next_value::<wire::OrAbsent<RunImageBorder>>()?.0,
+                        RunImageKey::LineCenterV => v_line_center_v = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         RunImageKey::RotDeg => v_rot_deg = Some(map.next_value()?),
-                        RunImageKey::FlipH => v_flip_h = Some(map.next_value()?),
-                        RunImageKey::FlipV => v_flip_v = Some(map.next_value()?),
-                        RunImageKey::Layers => v_layers = Some(map.next_value()?),
-                        RunImageKey::Rule => v_rule = Some(map.next_value()?),
+                        RunImageKey::FlipH => v_flip_h = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunImageKey::FlipV => v_flip_v = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        RunImageKey::Layers => v_layers = map.next_value::<wire::OrAbsent<Vec<RunImageLayersItem>>>()?.0,
+                        RunImageKey::Rule => v_rule = map.next_value::<wire::OrAbsent<RunImageRule>>()?.0,
                     }
                 }
-                Ok(RunImage { data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, width_px: v_width_px, height_px: v_height_px, xml: v_xml.ok_or_else(|| A::Error::missing_field("xml"))?, wrap: v_wrap, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, rel_v: v_rel_v, rel_h: v_rel_h, pos_h: v_pos_h, pos_v: v_pos_v, wrap_dist_top_emu: v_wrap_dist_top_emu, wrap_dist_bottom_emu: v_wrap_dist_bottom_emu, wrap_dist_left_emu: v_wrap_dist_left_emu, wrap_dist_right_emu: v_wrap_dist_right_emu, no_overlap: v_no_overlap, border: v_border, line_center_v: v_line_center_v, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v, layers: v_layers, rule: v_rule })
+                Ok(RunImage { data_url: v_data_url.map_or_else(|| wire::absent("dataUrl").map(|()| Default::default()), Ok)?, width_px: v_width_px, height_px: v_height_px, xml: v_xml.map_or_else(|| wire::absent("xml").map(|()| Default::default()), Ok)?, wrap: v_wrap, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, rel_v: v_rel_v, rel_h: v_rel_h, pos_h: v_pos_h, pos_v: v_pos_v, wrap_dist_top_emu: v_wrap_dist_top_emu, wrap_dist_bottom_emu: v_wrap_dist_bottom_emu, wrap_dist_left_emu: v_wrap_dist_left_emu, wrap_dist_right_emu: v_wrap_dist_right_emu, no_overlap: v_no_overlap, border: v_border, line_center_v: v_line_center_v, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v, layers: v_layers, rule: v_rule })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -2933,7 +2933,7 @@ pub enum ImageWrap {
     TopBottom,
     Behind,
     Front,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ImageWrap {
@@ -2985,7 +2985,7 @@ pub enum RunImageRelV {
     Page,
     Margin,
     Line,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunImageRelV {
@@ -3024,7 +3024,7 @@ impl<'de> Deserialize<'de> for RunImageRelV {
 pub enum RunImageRelH {
     Page,
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunImageRelH {
@@ -3062,7 +3062,7 @@ pub enum RunImagePosH {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunImagePosH {
@@ -3102,7 +3102,7 @@ pub enum RunImagePosV {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunImagePosV {
@@ -3198,11 +3198,11 @@ impl<'de> Deserialize<'de> for RunImageBorder {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageBorderKey::Color => v_color = Some(map.next_value()?),
+                        RunImageBorderKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunImageBorderKey::WidthPt => v_width_pt = Some(map.next_value()?),
                     }
                 }
-                Ok(RunImageBorder { color: v_color.ok_or_else(|| A::Error::missing_field("color"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))? })
+                Ok(RunImageBorder { color: v_color.map_or_else(|| wire::absent("color").map(|()| Default::default()), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3288,14 +3288,14 @@ impl<'de> Deserialize<'de> for RunImageLayersItem {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageLayersItemKey::DataUrl => v_data_url = Some(map.next_value()?),
+                        RunImageLayersItemKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunImageLayersItemKey::X => v_x = Some(map.next_value()?),
                         RunImageLayersItemKey::Y => v_y = Some(map.next_value()?),
                         RunImageLayersItemKey::W => v_w = Some(map.next_value()?),
                         RunImageLayersItemKey::H => v_h = Some(map.next_value()?),
                     }
                 }
-                Ok(RunImageLayersItem { data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, x: v_x.ok_or_else(|| A::Error::missing_field("x"))?, y: v_y.ok_or_else(|| A::Error::missing_field("y"))?, w: v_w.ok_or_else(|| A::Error::missing_field("w"))?, h: v_h.ok_or_else(|| A::Error::missing_field("h"))? })
+                Ok(RunImageLayersItem { data_url: v_data_url.map_or_else(|| wire::absent("dataUrl").map(|()| Default::default()), Ok)?, x: v_x.map_or_else(|| wire::absent("x").map(|()| JsNum(f64::NAN)), Ok)?, y: v_y.map_or_else(|| wire::absent("y").map(|()| JsNum(f64::NAN)), Ok)?, w: v_w.map_or_else(|| wire::absent("w").map(|()| JsNum(f64::NAN)), Ok)?, h: v_h.map_or_else(|| wire::absent("h").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3391,11 +3391,11 @@ impl<'de> Deserialize<'de> for RunImageRule {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageRuleKey::ColorHex => v_color_hex = Some(map.next_value()?),
+                        RunImageRuleKey::ColorHex => v_color_hex = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RunImageRuleKey::ThicknessPx => v_thickness_px = Some(map.next_value()?),
                         RunImageRuleKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
                         RunImageRuleKey::WidthPx => v_width_px = Some(map.next_value()?),
-                        RunImageRuleKey::Align => v_align = Some(map.next_value()?),
+                        RunImageRuleKey::Align => v_align = map.next_value::<wire::OrAbsent<RunImageRuleAlign>>()?.0,
                     }
                 }
                 Ok(RunImageRule { color_hex: v_color_hex, thickness_px: v_thickness_px, size_half_points: v_size_half_points, width_px: v_width_px, align: v_align })
@@ -3412,7 +3412,7 @@ impl<'de> Deserialize<'de> for RunImageRule {
 pub enum RunImageRuleAlign {
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RunImageRuleAlign {
@@ -3516,13 +3516,13 @@ impl<'de> Deserialize<'de> for CommentImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        CommentImageKey::Mime => v_mime = Some(map.next_value()?),
-                        CommentImageKey::Base64 => v_base64 = Some(map.next_value()?),
+                        CommentImageKey::Mime => v_mime = map.next_value::<wire::OrAbsent<NewImageMime>>()?.0,
+                        CommentImageKey::Base64 => v_base64 = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CommentImageKey::WidthPx => v_width_px = Some(map.next_value()?),
                         CommentImageKey::HeightPx => v_height_px = Some(map.next_value()?),
                     }
                 }
-                Ok(CommentImage { mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))?, base64: v_base64.ok_or_else(|| A::Error::missing_field("base64"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))? })
+                Ok(CommentImage { mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))?, base64: v_base64.map_or_else(|| wire::absent("base64").map(|()| Default::default()), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3687,25 +3687,25 @@ impl<'de> Deserialize<'de> for NewImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NewImageKey::Base64 => v_base64 = Some(map.next_value()?),
-                        NewImageKey::Mime => v_mime = Some(map.next_value()?),
-                        NewImageKey::SourcePart => v_source_part = Some(map.next_value()?),
+                        NewImageKey::Base64 => v_base64 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NewImageKey::Mime => v_mime = map.next_value::<wire::OrAbsent<NewImageMime>>()?.0,
+                        NewImageKey::SourcePart => v_source_part = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NewImageKey::WidthPx => v_width_px = Some(map.next_value()?),
                         NewImageKey::HeightPx => v_height_px = Some(map.next_value()?),
-                        NewImageKey::Align => v_align = Some(map.next_value()?),
-                        NewImageKey::AltText => v_alt_text = Some(map.next_value()?),
-                        NewImageKey::Wrap => v_wrap = Some(map.next_value()?),
-                        NewImageKey::PosOffsetEmu => v_pos_offset_emu = Some(map.next_value()?),
-                        NewImageKey::PosH => v_pos_h = Some(map.next_value()?),
-                        NewImageKey::PosV => v_pos_v = Some(map.next_value()?),
+                        NewImageKey::Align => v_align = map.next_value::<wire::OrAbsent<NewImageAlign>>()?.0,
+                        NewImageKey::AltText => v_alt_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NewImageKey::Wrap => v_wrap = map.next_value::<wire::OrAbsent<ImageWrap>>()?.0,
+                        NewImageKey::PosOffsetEmu => v_pos_offset_emu = map.next_value::<wire::OrAbsent<NewImagePosOffsetEmu>>()?.0,
+                        NewImageKey::PosH => v_pos_h = map.next_value::<wire::OrAbsent<NewImagePosH>>()?.0,
+                        NewImageKey::PosV => v_pos_v = map.next_value::<wire::OrAbsent<NewImagePosV>>()?.0,
                         NewImageKey::ZOrder => v_z_order = Some(map.next_value()?),
-                        NewImageKey::ParaSpacing => v_para_spacing = Some(map.next_value()?),
+                        NewImageKey::ParaSpacing => v_para_spacing = map.next_value::<wire::OrAbsent<NewImageParaSpacing>>()?.0,
                         NewImageKey::RotDeg => v_rot_deg = Some(map.next_value()?),
-                        NewImageKey::FlipH => v_flip_h = Some(map.next_value()?),
-                        NewImageKey::FlipV => v_flip_v = Some(map.next_value()?),
+                        NewImageKey::FlipH => v_flip_h = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NewImageKey::FlipV => v_flip_v = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(NewImage { base64: v_base64.ok_or_else(|| A::Error::missing_field("base64"))?, mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))?, source_part: v_source_part, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))?, align: v_align, alt_text: v_alt_text, wrap: v_wrap, pos_offset_emu: v_pos_offset_emu, pos_h: v_pos_h, pos_v: v_pos_v, z_order: v_z_order, para_spacing: v_para_spacing, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v })
+                Ok(NewImage { base64: v_base64.map_or_else(|| wire::absent("base64").map(|()| Default::default()), Ok)?, mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))?, source_part: v_source_part, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, align: v_align, alt_text: v_alt_text, wrap: v_wrap, pos_offset_emu: v_pos_offset_emu, pos_h: v_pos_h, pos_v: v_pos_v, z_order: v_z_order, para_spacing: v_para_spacing, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3720,7 +3720,7 @@ pub enum NewImageMime {
     ImagePng,
     ImageJpeg,
     ImageGif,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImageMime {
@@ -3760,7 +3760,7 @@ pub enum NewImageAlign {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImageAlign {
@@ -3865,10 +3865,10 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmu {
                     match key {
                         NewImagePosOffsetEmuKey::X => v_x = Some(map.next_value()?),
                         NewImagePosOffsetEmuKey::Y => v_y = Some(map.next_value()?),
-                        NewImagePosOffsetEmuKey::RelativeTo => v_relative_to = Some(map.next_value()?),
+                        NewImagePosOffsetEmuKey::RelativeTo => v_relative_to = map.next_value::<wire::OrAbsent<NewImagePosOffsetEmuRelativeTo>>()?.0,
                     }
                 }
-                Ok(NewImagePosOffsetEmu { x: v_x.ok_or_else(|| A::Error::missing_field("x"))?, y: v_y.ok_or_else(|| A::Error::missing_field("y"))?, relative_to: v_relative_to })
+                Ok(NewImagePosOffsetEmu { x: v_x.map_or_else(|| wire::absent("x").map(|()| JsNum(f64::NAN)), Ok)?, y: v_y.map_or_else(|| wire::absent("y").map(|()| JsNum(f64::NAN)), Ok)?, relative_to: v_relative_to })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3882,7 +3882,7 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmu {
 pub enum NewImagePosOffsetEmuRelativeTo {
     Page,
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImagePosOffsetEmuRelativeTo {
@@ -3920,7 +3920,7 @@ pub enum NewImagePosH {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImagePosH {
@@ -3960,7 +3960,7 @@ pub enum NewImagePosV {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImagePosV {
@@ -4077,7 +4077,7 @@ impl<'de> Deserialize<'de> for NewImageParaSpacing {
                         NewImageParaSpacingKey::BeforeTwips => v_before_twips = Some(map.next_value()?),
                         NewImageParaSpacingKey::AfterTwips => v_after_twips = Some(map.next_value()?),
                         NewImageParaSpacingKey::LineTwips => v_line_twips = Some(map.next_value()?),
-                        NewImageParaSpacingKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        NewImageParaSpacingKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<NewImageParaSpacingLineRule>>()?.0,
                     }
                 }
                 Ok(NewImageParaSpacing { before_twips: v_before_twips, after_twips: v_after_twips, line_twips: v_line_twips, line_rule: v_line_rule })
@@ -4094,7 +4094,7 @@ impl<'de> Deserialize<'de> for NewImageParaSpacing {
 pub enum NewImageParaSpacingLineRule {
     Exact,
     AtLeast,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewImageParaSpacingLineRule {
@@ -4132,6 +4132,8 @@ pub struct CommentInfo {
     pub initials: Option<String>,
     pub date: Option<String>,
     pub text: String,
+    pub model_text: Option<String>,
+    pub marked_xml: Option<String>,
     pub para_id: Option<String>,
     pub image: Option<CommentImage>,
     pub parent_id: Option<String>,
@@ -4146,6 +4148,8 @@ pub enum CommentInfoKey {
     Initials,
     Date,
     Text,
+    ModelText,
+    MarkedXml,
     Image,
     ParentId,
     Done,
@@ -4153,7 +4157,7 @@ pub enum CommentInfoKey {
 }
 
 impl FieldKey for CommentInfoKey {
-    const NAMES: &'static [&'static str] = &["id", "author", "initials", "date", "text", "image", "parentId", "done", "paraId"];
+    const NAMES: &'static [&'static str] = &["id", "author", "initials", "date", "text", "modelText", "markedXml", "image", "parentId", "done", "paraId"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -4162,6 +4166,8 @@ impl FieldKey for CommentInfoKey {
             "initials" => Some(Self::Initials),
             "date" => Some(Self::Date),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
+            "markedXml" => Some(Self::MarkedXml),
             "image" => Some(Self::Image),
             "parentId" => Some(Self::ParentId),
             "done" => Some(Self::Done),
@@ -4189,6 +4195,12 @@ impl Serialize for CommentInfo {
             map.serialize_entry("date", value)?;
         }
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
+        if let Some(value) = &self.marked_xml {
+            map.serialize_entry("markedXml", value)?;
+        }
         if let Some(value) = &self.para_id {
             map.serialize_entry("paraId", value)?;
         }
@@ -4222,6 +4234,8 @@ impl<'de> Deserialize<'de> for CommentInfo {
                 let mut v_initials = None;
                 let mut v_date = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
+                let mut v_marked_xml = None;
                 let mut v_image = None;
                 let mut v_parent_id = None;
                 let mut v_done = None;
@@ -4235,18 +4249,20 @@ impl<'de> Deserialize<'de> for CommentInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        CommentInfoKey::Id => v_id = Some(map.next_value()?),
-                        CommentInfoKey::Author => v_author = Some(map.next_value()?),
-                        CommentInfoKey::Initials => v_initials = Some(map.next_value()?),
-                        CommentInfoKey::Date => v_date = Some(map.next_value()?),
-                        CommentInfoKey::Text => v_text = Some(map.next_value()?),
-                        CommentInfoKey::Image => v_image = Some(map.next_value()?),
-                        CommentInfoKey::ParentId => v_parent_id = Some(map.next_value()?),
-                        CommentInfoKey::Done => v_done = Some(map.next_value()?),
-                        CommentInfoKey::ParaId => v_para_id = Some(map.next_value()?),
+                        CommentInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Initials => v_initials = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::MarkedXml => v_marked_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Image => v_image = map.next_value::<wire::OrAbsent<CommentImage>>()?.0,
+                        CommentInfoKey::ParentId => v_parent_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::Done => v_done = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        CommentInfoKey::ParaId => v_para_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(CommentInfo { id: v_id.ok_or_else(|| A::Error::missing_field("id"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, initials: v_initials, date: v_date, text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, image: v_image, parent_id: v_parent_id, done: v_done, para_id: v_para_id })
+                Ok(CommentInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, initials: v_initials, date: v_date, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text, marked_xml: v_marked_xml, image: v_image, parent_id: v_parent_id, done: v_done, para_id: v_para_id })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -4263,7 +4279,7 @@ pub enum ParaAlign {
     Right,
     Justify,
     Distribute,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaAlign {
@@ -4430,13 +4446,13 @@ impl<'de> Deserialize<'de> for SdtShell {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SdtShellKey::Alias => v_alias = Some(map.next_value()?),
-                        SdtShellKey::Tag => v_tag = Some(map.next_value()?),
-                        SdtShellKey::Lock => v_lock = Some(map.next_value()?),
-                        SdtShellKey::Id => v_id = Some(map.next_value()?),
-                        SdtShellKey::ControlType => v_control_type = Some(map.next_value()?),
-                        SdtShellKey::OpenXml => v_open_xml = Some(map.next_value()?),
-                        SdtShellKey::CloseXml => v_close_xml = Some(map.next_value()?),
+                        SdtShellKey::Alias => v_alias = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SdtShellKey::Tag => v_tag = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SdtShellKey::Lock => v_lock = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SdtShellKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SdtShellKey::ControlType => v_control_type = map.next_value::<wire::OrAbsent<SdtShellControlType>>()?.0,
+                        SdtShellKey::OpenXml => v_open_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SdtShellKey::CloseXml => v_close_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
                         SdtShellKey::Group => v_group = Some(map.next_value()?),
                         SdtShellKey::Level => v_level = Some(map.next_value()?),
                         SdtShellKey::OpenBlock => v_open_block = Some(map.next_value()?),
@@ -4445,7 +4461,7 @@ impl<'de> Deserialize<'de> for SdtShell {
                         SdtShellKey::CloseOffset => v_close_offset = Some(map.next_value()?),
                     }
                 }
-                Ok(SdtShell { alias: v_alias.ok_or_else(|| A::Error::missing_field("alias"))?, tag: v_tag.ok_or_else(|| A::Error::missing_field("tag"))?, lock: v_lock.ok_or_else(|| A::Error::missing_field("lock"))?, id: v_id.ok_or_else(|| A::Error::missing_field("id"))?, control_type: v_control_type.ok_or_else(|| A::Error::missing_field("controlType"))?, open_xml: v_open_xml.ok_or_else(|| A::Error::missing_field("openXml"))?, close_xml: v_close_xml.ok_or_else(|| A::Error::missing_field("closeXml"))?, group: v_group, level: v_level, open_block: v_open_block, open_offset: v_open_offset, close_block: v_close_block, close_offset: v_close_offset })
+                Ok(SdtShell { alias: v_alias.map_or_else(|| wire::absent("alias").map(|()| Default::default()), Ok)?, tag: v_tag.map_or_else(|| wire::absent("tag").map(|()| Default::default()), Ok)?, lock: v_lock.map_or_else(|| wire::absent("lock").map(|()| Default::default()), Ok)?, id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, control_type: v_control_type.ok_or_else(|| A::Error::missing_field("controlType"))?, open_xml: v_open_xml.map_or_else(|| wire::absent("openXml").map(|()| Default::default()), Ok)?, close_xml: v_close_xml.map_or_else(|| wire::absent("closeXml").map(|()| Default::default()), Ok)?, group: v_group, level: v_level, open_block: v_open_block, open_offset: v_open_offset, close_block: v_close_block, close_offset: v_close_offset })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -4462,7 +4478,7 @@ pub enum SdtShellControlType {
     Dropdown,
     Checkbox,
     Unknown,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SdtShellControlType {
@@ -4506,6 +4522,7 @@ pub struct InlineContentControl {
     pub lock: String,
     pub id: String,
     pub text: String,
+    pub model_text: Option<String>,
 }
 
 /// The keys of `InlineContentControl`, in declaration order.
@@ -4516,10 +4533,11 @@ pub enum InlineContentControlKey {
     Lock,
     Id,
     Text,
+    ModelText,
 }
 
 impl FieldKey for InlineContentControlKey {
-    const NAMES: &'static [&'static str] = &["tag", "title", "lock", "id", "text"];
+    const NAMES: &'static [&'static str] = &["tag", "title", "lock", "id", "text", "modelText"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -4528,6 +4546,7 @@ impl FieldKey for InlineContentControlKey {
             "lock" => Some(Self::Lock),
             "id" => Some(Self::Id),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
             _ => None,
         }
     }
@@ -4547,6 +4566,9 @@ impl Serialize for InlineContentControl {
         map.serialize_entry("lock", &self.lock)?;
         map.serialize_entry("id", &self.id)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
         map.end()
     }
 }
@@ -4568,6 +4590,7 @@ impl<'de> Deserialize<'de> for InlineContentControl {
                 let mut v_lock = None;
                 let mut v_id = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
                 while let Some(Key(key)) = map.next_key::<Key<InlineContentControlKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -4577,14 +4600,15 @@ impl<'de> Deserialize<'de> for InlineContentControl {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        InlineContentControlKey::Tag => v_tag = Some(map.next_value()?),
-                        InlineContentControlKey::Title => v_title = Some(map.next_value()?),
-                        InlineContentControlKey::Lock => v_lock = Some(map.next_value()?),
-                        InlineContentControlKey::Id => v_id = Some(map.next_value()?),
-                        InlineContentControlKey::Text => v_text = Some(map.next_value()?),
+                        InlineContentControlKey::Tag => v_tag = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::Title => v_title = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::Lock => v_lock = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(InlineContentControl { tag: v_tag.ok_or_else(|| A::Error::missing_field("tag"))?, title: v_title.ok_or_else(|| A::Error::missing_field("title"))?, lock: v_lock.ok_or_else(|| A::Error::missing_field("lock"))?, id: v_id.ok_or_else(|| A::Error::missing_field("id"))?, text: v_text.ok_or_else(|| A::Error::missing_field("text"))? })
+                Ok(InlineContentControl { tag: v_tag.map_or_else(|| wire::absent("tag").map(|()| Default::default()), Ok)?, title: v_title.map_or_else(|| wire::absent("title").map(|()| Default::default()), Ok)?, lock: v_lock.map_or_else(|| wire::absent("lock").map(|()| Default::default()), Ok)?, id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -4677,13 +4701,13 @@ impl<'de> Deserialize<'de> for TabStop {
                     }
                     match key {
                         TabStopKey::Pos => v_pos = Some(map.next_value()?),
-                        TabStopKey::Val => v_val = Some(map.next_value()?),
-                        TabStopKey::Leader => v_leader = Some(map.next_value()?),
-                        TabStopKey::Rel => v_rel = Some(map.next_value()?),
-                        TabStopKey::Inherited => v_inherited = Some(map.next_value()?),
+                        TabStopKey::Val => v_val = map.next_value::<wire::OrAbsent<TabStopVal>>()?.0,
+                        TabStopKey::Leader => v_leader = map.next_value::<wire::OrAbsent<TabStopLeader>>()?.0,
+                        TabStopKey::Rel => v_rel = map.next_value::<wire::OrAbsent<TabStopRel>>()?.0,
+                        TabStopKey::Inherited => v_inherited = map.next_value::<wire::OrAbsent<True>>()?.0,
                     }
                 }
-                Ok(TabStop { pos: v_pos.ok_or_else(|| A::Error::missing_field("pos"))?, val: v_val.ok_or_else(|| A::Error::missing_field("val"))?, leader: v_leader, rel: v_rel, inherited: v_inherited })
+                Ok(TabStop { pos: v_pos.map_or_else(|| wire::absent("pos").map(|()| JsNum(f64::NAN)), Ok)?, val: v_val.ok_or_else(|| A::Error::missing_field("val"))?, leader: v_leader, rel: v_rel, inherited: v_inherited })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -4701,7 +4725,7 @@ pub enum TabStopVal {
     Decimal,
     Bar,
     Clear,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TabStopVal {
@@ -4750,7 +4774,7 @@ pub enum TabStopLeader {
     Underscore,
     Heavy,
     MiddleDot,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TabStopLeader {
@@ -4794,7 +4818,7 @@ impl<'de> Deserialize<'de> for TabStopLeader {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TabStopRel {
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TabStopRel {
@@ -4904,10 +4928,10 @@ impl<'de> Deserialize<'de> for ParaBorderLine {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParaBorderLineKey::Color => v_color = Some(map.next_value()?),
+                        ParaBorderLineKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         ParaBorderLineKey::SzPt => v_sz_pt = Some(map.next_value()?),
                         ParaBorderLineKey::SpacePt => v_space_pt = Some(map.next_value()?),
-                        ParaBorderLineKey::None => v_none = Some(map.next_value()?),
+                        ParaBorderLineKey::None => v_none = map.next_value::<wire::OrAbsent<True>>()?.0,
                     }
                 }
                 Ok(ParaBorderLine { color: v_color, sz_pt: v_sz_pt, space_pt: v_space_pt, none: v_none })
@@ -5153,20 +5177,20 @@ impl<'de> Deserialize<'de> for ParaFrame {
                     match key {
                         ParaFrameKey::WTwips => v_w_twips = Some(map.next_value()?),
                         ParaFrameKey::HTwips => v_h_twips = Some(map.next_value()?),
-                        ParaFrameKey::HRule => v_h_rule = Some(map.next_value()?),
+                        ParaFrameKey::HRule => v_h_rule = map.next_value::<wire::OrAbsent<ParaFrameHRule>>()?.0,
                         ParaFrameKey::XTwips => v_x_twips = Some(map.next_value()?),
                         ParaFrameKey::YTwips => v_y_twips = Some(map.next_value()?),
-                        ParaFrameKey::HAnchor => v_h_anchor = Some(map.next_value()?),
-                        ParaFrameKey::VAnchor => v_v_anchor = Some(map.next_value()?),
-                        ParaFrameKey::Wrap => v_wrap = Some(map.next_value()?),
+                        ParaFrameKey::HAnchor => v_h_anchor = map.next_value::<wire::OrAbsent<ParaFrameHAnchor>>()?.0,
+                        ParaFrameKey::VAnchor => v_v_anchor = map.next_value::<wire::OrAbsent<ParaFrameVAnchor>>()?.0,
+                        ParaFrameKey::Wrap => v_wrap = map.next_value::<wire::OrAbsent<ParaFrameWrap>>()?.0,
                         ParaFrameKey::HSpaceTwips => v_h_space_twips = Some(map.next_value()?),
                         ParaFrameKey::VSpaceTwips => v_v_space_twips = Some(map.next_value()?),
-                        ParaFrameKey::XAlign => v_x_align = Some(map.next_value()?),
-                        ParaFrameKey::YAlign => v_y_align = Some(map.next_value()?),
-                        ParaFrameKey::AnchorLock => v_anchor_lock = Some(map.next_value()?),
+                        ParaFrameKey::XAlign => v_x_align = map.next_value::<wire::OrAbsent<ParaFrameXAlign>>()?.0,
+                        ParaFrameKey::YAlign => v_y_align = map.next_value::<wire::OrAbsent<ParaFrameYAlign>>()?.0,
+                        ParaFrameKey::AnchorLock => v_anchor_lock = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(ParaFrame { w_twips: v_w_twips.ok_or_else(|| A::Error::missing_field("wTwips"))?, h_twips: v_h_twips, h_rule: v_h_rule, x_twips: v_x_twips.ok_or_else(|| A::Error::missing_field("xTwips"))?, y_twips: v_y_twips.ok_or_else(|| A::Error::missing_field("yTwips"))?, h_anchor: v_h_anchor, v_anchor: v_v_anchor, wrap: v_wrap, h_space_twips: v_h_space_twips, v_space_twips: v_v_space_twips, x_align: v_x_align, y_align: v_y_align, anchor_lock: v_anchor_lock })
+                Ok(ParaFrame { w_twips: v_w_twips.map_or_else(|| wire::absent("wTwips").map(|()| JsNum(f64::NAN)), Ok)?, h_twips: v_h_twips, h_rule: v_h_rule, x_twips: v_x_twips.map_or_else(|| wire::absent("xTwips").map(|()| JsNum(f64::NAN)), Ok)?, y_twips: v_y_twips.map_or_else(|| wire::absent("yTwips").map(|()| JsNum(f64::NAN)), Ok)?, h_anchor: v_h_anchor, v_anchor: v_v_anchor, wrap: v_wrap, h_space_twips: v_h_space_twips, v_space_twips: v_v_space_twips, x_align: v_x_align, y_align: v_y_align, anchor_lock: v_anchor_lock })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -5180,7 +5204,7 @@ impl<'de> Deserialize<'de> for ParaFrame {
 pub enum ParaFrameHRule {
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameHRule {
@@ -5218,7 +5242,7 @@ pub enum ParaFrameHAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameHAnchor {
@@ -5258,7 +5282,7 @@ pub enum ParaFrameVAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameVAnchor {
@@ -5301,7 +5325,7 @@ pub enum ParaFrameWrap {
     NotBeside,
     Auto,
     Tight,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameWrap {
@@ -5349,7 +5373,7 @@ pub enum ParaFrameXAlign {
     Right,
     Inside,
     Outside,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameXAlign {
@@ -5396,7 +5420,7 @@ pub enum ParaFrameYAlign {
     Inside,
     Outside,
     Inline,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameYAlign {
@@ -5442,7 +5466,7 @@ pub enum TextFlowDirection {
     TbRl,
     TbRlV,
     BtLr,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextFlowDirection {
@@ -5558,7 +5582,7 @@ impl<'de> Deserialize<'de> for ImageEffects {
                     match key {
                         ImageEffectsKey::Bright => v_bright = Some(map.next_value()?),
                         ImageEffectsKey::Contrast => v_contrast = Some(map.next_value()?),
-                        ImageEffectsKey::Grayscale => v_grayscale = Some(map.next_value()?),
+                        ImageEffectsKey::Grayscale => v_grayscale = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ImageEffectsKey::BiLevelThresh => v_bi_level_thresh = Some(map.next_value()?),
                     }
                 }
@@ -5667,10 +5691,10 @@ impl<'de> Deserialize<'de> for ParaFrameBox {
                     match key {
                         ParaFrameBoxKey::WTwips => v_w_twips = Some(map.next_value()?),
                         ParaFrameBoxKey::HTwips => v_h_twips = Some(map.next_value()?),
-                        ParaFrameBoxKey::HRule => v_h_rule = Some(map.next_value()?),
+                        ParaFrameBoxKey::HRule => v_h_rule = map.next_value::<wire::OrAbsent<ParaFrameBoxHRule>>()?.0,
                         ParaFrameBoxKey::HSpaceTwips => v_h_space_twips = Some(map.next_value()?),
                         ParaFrameBoxKey::VSpaceTwips => v_v_space_twips = Some(map.next_value()?),
-                        ParaFrameBoxKey::FloatSide => v_float_side = Some(map.next_value()?),
+                        ParaFrameBoxKey::FloatSide => v_float_side = map.next_value::<wire::OrAbsent<ParaFrameBoxFloatSide>>()?.0,
                     }
                 }
                 Ok(ParaFrameBox { w_twips: v_w_twips, h_twips: v_h_twips, h_rule: v_h_rule, h_space_twips: v_h_space_twips, v_space_twips: v_v_space_twips, float_side: v_float_side })
@@ -5687,7 +5711,7 @@ impl<'de> Deserialize<'de> for ParaFrameBox {
 pub enum ParaFrameBoxHRule {
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameBoxHRule {
@@ -5724,7 +5748,7 @@ impl<'de> Deserialize<'de> for ParaFrameBoxHRule {
 pub enum ParaFrameBoxFloatSide {
     Left,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFrameBoxFloatSide {
@@ -6063,51 +6087,51 @@ impl<'de> Deserialize<'de> for ParaFormat {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParaFormatKey::Align => b_0.align.set(map.next_value()?),
+                        ParaFormatKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_0.align.set(value) },
                         ParaFormatKey::LineSpacing => b_0.line_spacing.set(map.next_value()?),
-                        ParaFormatKey::LineRule => b_0.line_rule.set(map.next_value()?),
+                        ParaFormatKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_0.line_rule.set(value) },
                         ParaFormatKey::LineRawTwips => b_0.line_raw_twips.set(map.next_value()?),
                         ParaFormatKey::IndentLeft => b_0.indent_left.set(map.next_value()?),
                         ParaFormatKey::IndentRight => b_0.indent_right.set(map.next_value()?),
                         ParaFormatKey::IndentFirstLine => b_0.indent_first_line.set(map.next_value()?),
-                        ParaFormatKey::CharIndents => b_0.char_indents.set(map.next_value()?),
-                        ParaFormatKey::DirectCharIndents => b_0.direct_char_indents.set(map.next_value()?),
+                        ParaFormatKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.char_indents.set(value) },
+                        ParaFormatKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.direct_char_indents.set(value) },
                         ParaFormatKey::SpaceBefore => b_0.space_before.set(map.next_value()?),
                         ParaFormatKey::SpaceAfter => b_0.space_after.set(map.next_value()?),
-                        ParaFormatKey::SpaceBeforeAuto => b_0.space_before_auto.set(map.next_value()?),
-                        ParaFormatKey::SpaceAfterAuto => b_0.space_after_auto.set(map.next_value()?),
-                        ParaFormatKey::PageBreakBefore => b_0.page_break_before.set(map.next_value()?),
-                        ParaFormatKey::KeepNext => b_0.keep_next.set(map.next_value()?),
-                        ParaFormatKey::KeepLines => b_0.keep_lines.set(map.next_value()?),
-                        ParaFormatKey::SuppressLineNumbers => b_0.suppress_line_numbers.set(map.next_value()?),
-                        ParaFormatKey::WidowControl => b_0.widow_control.set(map.next_value()?),
-                        ParaFormatKey::SnapToGrid => b_0.snap_to_grid.set(map.next_value()?),
-                        ParaFormatKey::AutoSpace => b_0.auto_space.set(map.next_value()?),
-                        ParaFormatKey::AutoSpaceDE => b_0.auto_space_d_e.set(map.next_value()?),
-                        ParaFormatKey::AutoSpaceDN => b_0.auto_space_d_n.set(map.next_value()?),
-                        ParaFormatKey::WordWrap => b_0.word_wrap.set(map.next_value()?),
-                        ParaFormatKey::OverflowPunct => b_0.overflow_punct.set(map.next_value()?),
-                        ParaFormatKey::EastAsiaLang => b_0.east_asia_lang.set(map.next_value()?),
-                        ParaFormatKey::ContextualSpacing => b_0.contextual_spacing.set(map.next_value()?),
-                        ParaFormatKey::ShadingFill => b_0.shading_fill.set(map.next_value()?),
-                        ParaFormatKey::ShadingDisplay => b_0.shading_display.set(map.next_value()?),
-                        ParaFormatKey::ShadingClear => b_0.shading_clear.set(map.next_value()?),
-                        ParaFormatKey::Borders => b_0.borders.set(map.next_value()?),
-                        ParaFormatKey::BorderStyle => b_0.border_style.set(map.next_value()?),
-                        ParaFormatKey::BorderLines => b_0.border_lines.set(map.next_value()?),
-                        ParaFormatKey::BorderReset => b_0.border_reset.set(map.next_value()?),
-                        ParaFormatKey::BorderPad => b_0.border_pad.set(map.next_value()?),
-                        ParaFormatKey::TabStops => b_0.tab_stops.set(map.next_value()?),
-                        ParaFormatKey::DropCap => b_0.drop_cap.set(map.next_value()?),
-                        ParaFormatKey::Frame => b_0.frame.set(map.next_value()?),
-                        ParaFormatKey::FrameBox => b_0.frame_box.set(map.next_value()?),
-                        ParaFormatKey::TextDirection => b_0.text_direction.set(map.next_value()?),
-                        ParaFormatKey::Bidi => b_0.bidi.set(map.next_value()?),
-                        ParaFormatKey::BidiInherited => b_0.bidi_inherited.set(map.next_value()?),
+                        ParaFormatKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_before_auto.set(value) },
+                        ParaFormatKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_after_auto.set(value) },
+                        ParaFormatKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.page_break_before.set(value) },
+                        ParaFormatKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.keep_next.set(value) },
+                        ParaFormatKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.keep_lines.set(value) },
+                        ParaFormatKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.suppress_line_numbers.set(value) },
+                        ParaFormatKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.widow_control.set(value) },
+                        ParaFormatKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.snap_to_grid.set(value) },
+                        ParaFormatKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_0.auto_space.set(value) },
+                        ParaFormatKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.auto_space_d_e.set(value) },
+                        ParaFormatKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.auto_space_d_n.set(value) },
+                        ParaFormatKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.word_wrap.set(value) },
+                        ParaFormatKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.overflow_punct.set(value) },
+                        ParaFormatKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_lang.set(value) },
+                        ParaFormatKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.contextual_spacing.set(value) },
+                        ParaFormatKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading_fill.set(value) },
+                        ParaFormatKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading_display.set(value) },
+                        ParaFormatKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.shading_clear.set(value) },
+                        ParaFormatKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.borders.set(value) },
+                        ParaFormatKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_0.border_style.set(value) },
+                        ParaFormatKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_0.border_lines.set(value) },
+                        ParaFormatKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.border_reset.set(value) },
+                        ParaFormatKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_0.border_pad.set(value) },
+                        ParaFormatKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_0.tab_stops.set(value) },
+                        ParaFormatKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_0.drop_cap.set(value) },
+                        ParaFormatKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_0.frame.set(value) },
+                        ParaFormatKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_0.frame_box.set(value) },
+                        ParaFormatKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_0.text_direction.set(value) },
+                        ParaFormatKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bidi.set(value) },
+                        ParaFormatKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bidi_inherited.set(value) },
                         ParaFormatKey::EmptyRunSizeHalfPoints => b_0.empty_run_size_half_points.set(map.next_value()?),
-                        ParaFormatKey::EmptyRunFontFamily => b_0.empty_run_font_family.set(map.next_value()?),
+                        ParaFormatKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.empty_run_font_family.set(value) },
                         ParaFormatKey::MarkSizeHalfPoints => b_0.mark_size_half_points.set(map.next_value()?),
-                        ParaFormatKey::Effective => b_0.effective.set(map.next_value()?),
+                        ParaFormatKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_0.effective.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -6125,7 +6149,7 @@ pub enum ParaFormatLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFormatLineRule {
@@ -6232,7 +6256,7 @@ impl<'de> Deserialize<'de> for ParaFormatBorderStyle {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParaFormatBorderStyleKey::Color => v_color = Some(map.next_value()?),
+                        ParaFormatBorderStyleKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         ParaFormatBorderStyleKey::SzEighths => v_sz_eighths = Some(map.next_value()?),
                         ParaFormatBorderStyleKey::SpacePt => v_space_pt = Some(map.next_value()?),
                     }
@@ -6326,10 +6350,10 @@ impl<'de> Deserialize<'de> for ParaFormatBorderLines {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParaFormatBorderLinesKey::T => v_t = Some(map.next_value()?),
-                        ParaFormatBorderLinesKey::B => v_b = Some(map.next_value()?),
-                        ParaFormatBorderLinesKey::L => v_l = Some(map.next_value()?),
-                        ParaFormatBorderLinesKey::R => v_r = Some(map.next_value()?),
+                        ParaFormatBorderLinesKey::T => v_t = map.next_value::<wire::OrAbsent<ParaBorderLine>>()?.0,
+                        ParaFormatBorderLinesKey::B => v_b = map.next_value::<wire::OrAbsent<ParaBorderLine>>()?.0,
+                        ParaFormatBorderLinesKey::L => v_l = map.next_value::<wire::OrAbsent<ParaBorderLine>>()?.0,
+                        ParaFormatBorderLinesKey::R => v_r = map.next_value::<wire::OrAbsent<ParaBorderLine>>()?.0,
                     }
                 }
                 Ok(ParaFormatBorderLines { t: v_t, b: v_b, l: v_l, r: v_r })
@@ -6498,11 +6522,11 @@ impl<'de> Deserialize<'de> for ParaFormatDropCap {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParaFormatDropCapKey::Type => v_type = Some(map.next_value()?),
+                        ParaFormatDropCapKey::Type => v_type = map.next_value::<wire::OrAbsent<ParaFormatDropCapType>>()?.0,
                         ParaFormatDropCapKey::Lines => v_lines = Some(map.next_value()?),
                     }
                 }
-                Ok(ParaFormatDropCap { r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, lines: v_lines.ok_or_else(|| A::Error::missing_field("lines"))? })
+                Ok(ParaFormatDropCap { r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, lines: v_lines.map_or_else(|| wire::absent("lines").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -6516,7 +6540,7 @@ impl<'de> Deserialize<'de> for ParaFormatDropCap {
 pub enum ParaFormatDropCapType {
     Drop,
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ParaFormatDropCapType {
@@ -6732,33 +6756,33 @@ impl<'de> Deserialize<'de> for EffectivePPr {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EffectivePPrKey::StyleId => v_style_id = Some(map.next_value()?),
-                        EffectivePPrKey::Align => v_align = Some(map.next_value()?),
-                        EffectivePPrKey::Bidi => v_bidi = Some(map.next_value()?),
-                        EffectivePPrKey::Indent => v_indent = Some(map.next_value()?),
-                        EffectivePPrKey::Spacing => v_spacing = Some(map.next_value()?),
-                        EffectivePPrKey::KeepNext => v_keep_next = Some(map.next_value()?),
-                        EffectivePPrKey::KeepLines => v_keep_lines = Some(map.next_value()?),
-                        EffectivePPrKey::PageBreakBefore => v_page_break_before = Some(map.next_value()?),
-                        EffectivePPrKey::WidowControl => v_widow_control = Some(map.next_value()?),
-                        EffectivePPrKey::ContextualSpacing => v_contextual_spacing = Some(map.next_value()?),
-                        EffectivePPrKey::SuppressLineNumbers => v_suppress_line_numbers = Some(map.next_value()?),
-                        EffectivePPrKey::SnapToGrid => v_snap_to_grid = Some(map.next_value()?),
-                        EffectivePPrKey::AutoSpaceDE => v_auto_space_d_e = Some(map.next_value()?),
-                        EffectivePPrKey::AutoSpaceDN => v_auto_space_d_n = Some(map.next_value()?),
-                        EffectivePPrKey::WordWrap => v_word_wrap = Some(map.next_value()?),
-                        EffectivePPrKey::OverflowPunct => v_overflow_punct = Some(map.next_value()?),
-                        EffectivePPrKey::TabStops => v_tab_stops = Some(map.next_value()?),
-                        EffectivePPrKey::Borders => v_borders = Some(map.next_value()?),
-                        EffectivePPrKey::Shading => v_shading = Some(map.next_value()?),
-                        EffectivePPrKey::EastAsiaLang => v_east_asia_lang = Some(map.next_value()?),
-                        EffectivePPrKey::List => v_list = Some(map.next_value()?),
-                        EffectivePPrKey::Mark => v_mark = Some(map.next_value()?),
-                        EffectivePPrKey::Hidden => v_hidden = Some(map.next_value()?),
-                        EffectivePPrKey::Source => v_source = Some(map.next_value()?),
+                        EffectivePPrKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectivePPrKey::Align => v_align = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0,
+                        EffectivePPrKey::Bidi => v_bidi = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::Indent => v_indent = map.next_value::<wire::OrAbsent<EffectivePPrIndent>>()?.0,
+                        EffectivePPrKey::Spacing => v_spacing = map.next_value::<wire::OrAbsent<EffectivePPrSpacing>>()?.0,
+                        EffectivePPrKey::KeepNext => v_keep_next = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::KeepLines => v_keep_lines = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::PageBreakBefore => v_page_break_before = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::WidowControl => v_widow_control = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::ContextualSpacing => v_contextual_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::SuppressLineNumbers => v_suppress_line_numbers = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::SnapToGrid => v_snap_to_grid = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::AutoSpaceDE => v_auto_space_d_e = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::AutoSpaceDN => v_auto_space_d_n = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::WordWrap => v_word_wrap = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::OverflowPunct => v_overflow_punct = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::TabStops => v_tab_stops = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0,
+                        EffectivePPrKey::Borders => v_borders = map.next_value::<wire::OrAbsent<ParaBorderSides>>()?.0,
+                        EffectivePPrKey::Shading => v_shading = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectivePPrKey::EastAsiaLang => v_east_asia_lang = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EffectivePPrKey::List => v_list = map.next_value::<wire::OrAbsent<EffectivePPrList>>()?.0,
+                        EffectivePPrKey::Mark => v_mark = map.next_value::<wire::OrAbsent<EffectiveRPr>>()?.0,
+                        EffectivePPrKey::Hidden => v_hidden = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrKey::Source => v_source = map.next_value::<wire::OrAbsent<JsObject<PropSource>>>()?.0,
                     }
                 }
-                Ok(EffectivePPr { style_id: v_style_id, align: v_align, bidi: v_bidi.ok_or_else(|| A::Error::missing_field("bidi"))?, indent: v_indent.ok_or_else(|| A::Error::missing_field("indent"))?, spacing: v_spacing.ok_or_else(|| A::Error::missing_field("spacing"))?, keep_next: v_keep_next.ok_or_else(|| A::Error::missing_field("keepNext"))?, keep_lines: v_keep_lines.ok_or_else(|| A::Error::missing_field("keepLines"))?, page_break_before: v_page_break_before.ok_or_else(|| A::Error::missing_field("pageBreakBefore"))?, widow_control: v_widow_control.ok_or_else(|| A::Error::missing_field("widowControl"))?, contextual_spacing: v_contextual_spacing.ok_or_else(|| A::Error::missing_field("contextualSpacing"))?, suppress_line_numbers: v_suppress_line_numbers.ok_or_else(|| A::Error::missing_field("suppressLineNumbers"))?, snap_to_grid: v_snap_to_grid.ok_or_else(|| A::Error::missing_field("snapToGrid"))?, auto_space_d_e: v_auto_space_d_e.ok_or_else(|| A::Error::missing_field("autoSpaceDE"))?, auto_space_d_n: v_auto_space_d_n.ok_or_else(|| A::Error::missing_field("autoSpaceDN"))?, word_wrap: v_word_wrap.ok_or_else(|| A::Error::missing_field("wordWrap"))?, overflow_punct: v_overflow_punct.ok_or_else(|| A::Error::missing_field("overflowPunct"))?, tab_stops: v_tab_stops.ok_or_else(|| A::Error::missing_field("tabStops"))?, borders: v_borders, shading: v_shading, east_asia_lang: v_east_asia_lang, list: v_list, mark: v_mark.ok_or_else(|| A::Error::missing_field("mark"))?, hidden: v_hidden.ok_or_else(|| A::Error::missing_field("hidden"))?, source: v_source.ok_or_else(|| A::Error::missing_field("source"))? })
+                Ok(EffectivePPr { style_id: v_style_id, align: v_align, bidi: v_bidi.map_or_else(|| wire::absent("bidi").map(|()| Default::default()), Ok)?, indent: v_indent.ok_or_else(|| A::Error::missing_field("indent"))?, spacing: v_spacing.ok_or_else(|| A::Error::missing_field("spacing"))?, keep_next: v_keep_next.map_or_else(|| wire::absent("keepNext").map(|()| Default::default()), Ok)?, keep_lines: v_keep_lines.map_or_else(|| wire::absent("keepLines").map(|()| Default::default()), Ok)?, page_break_before: v_page_break_before.map_or_else(|| wire::absent("pageBreakBefore").map(|()| Default::default()), Ok)?, widow_control: v_widow_control.map_or_else(|| wire::absent("widowControl").map(|()| Default::default()), Ok)?, contextual_spacing: v_contextual_spacing.map_or_else(|| wire::absent("contextualSpacing").map(|()| Default::default()), Ok)?, suppress_line_numbers: v_suppress_line_numbers.map_or_else(|| wire::absent("suppressLineNumbers").map(|()| Default::default()), Ok)?, snap_to_grid: v_snap_to_grid.map_or_else(|| wire::absent("snapToGrid").map(|()| Default::default()), Ok)?, auto_space_d_e: v_auto_space_d_e.map_or_else(|| wire::absent("autoSpaceDE").map(|()| Default::default()), Ok)?, auto_space_d_n: v_auto_space_d_n.map_or_else(|| wire::absent("autoSpaceDN").map(|()| Default::default()), Ok)?, word_wrap: v_word_wrap.map_or_else(|| wire::absent("wordWrap").map(|()| Default::default()), Ok)?, overflow_punct: v_overflow_punct.map_or_else(|| wire::absent("overflowPunct").map(|()| Default::default()), Ok)?, tab_stops: v_tab_stops.map_or_else(|| wire::absent("tabStops").map(|()| Default::default()), Ok)?, borders: v_borders, shading: v_shading, east_asia_lang: v_east_asia_lang, list: v_list, mark: v_mark.ok_or_else(|| A::Error::missing_field("mark"))?, hidden: v_hidden.map_or_else(|| wire::absent("hidden").map(|()| Default::default()), Ok)?, source: v_source.ok_or_else(|| A::Error::missing_field("source"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -6844,10 +6868,10 @@ impl<'de> Deserialize<'de> for EffectivePPrIndent {
                         EffectivePPrIndentKey::Left => v_left = Some(map.next_value()?),
                         EffectivePPrIndentKey::Right => v_right = Some(map.next_value()?),
                         EffectivePPrIndentKey::FirstLine => v_first_line = Some(map.next_value()?),
-                        EffectivePPrIndentKey::Chars => v_chars = Some(map.next_value()?),
+                        EffectivePPrIndentKey::Chars => v_chars = map.next_value::<wire::OrAbsent<CharIndents>>()?.0,
                     }
                 }
-                Ok(EffectivePPrIndent { left: v_left.ok_or_else(|| A::Error::missing_field("left"))?, right: v_right.ok_or_else(|| A::Error::missing_field("right"))?, first_line: v_first_line.ok_or_else(|| A::Error::missing_field("firstLine"))?, chars: v_chars })
+                Ok(EffectivePPrIndent { left: v_left.map_or_else(|| wire::absent("left").map(|()| JsNum(f64::NAN)), Ok)?, right: v_right.map_or_else(|| wire::absent("right").map(|()| JsNum(f64::NAN)), Ok)?, first_line: v_first_line.map_or_else(|| wire::absent("firstLine").map(|()| JsNum(f64::NAN)), Ok)?, chars: v_chars })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -6937,12 +6961,12 @@ impl<'de> Deserialize<'de> for EffectivePPrSpacing {
                     match key {
                         EffectivePPrSpacingKey::Before => v_before = Some(map.next_value()?),
                         EffectivePPrSpacingKey::After => v_after = Some(map.next_value()?),
-                        EffectivePPrSpacingKey::BeforeAuto => v_before_auto = Some(map.next_value()?),
-                        EffectivePPrSpacingKey::AfterAuto => v_after_auto = Some(map.next_value()?),
-                        EffectivePPrSpacingKey::Line => v_line = Some(map.next_value()?),
+                        EffectivePPrSpacingKey::BeforeAuto => v_before_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrSpacingKey::AfterAuto => v_after_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EffectivePPrSpacingKey::Line => v_line = map.next_value::<wire::OrAbsent<LineSpacing>>()?.0,
                     }
                 }
-                Ok(EffectivePPrSpacing { before: v_before.ok_or_else(|| A::Error::missing_field("before"))?, after: v_after.ok_or_else(|| A::Error::missing_field("after"))?, before_auto: v_before_auto.ok_or_else(|| A::Error::missing_field("beforeAuto"))?, after_auto: v_after_auto.ok_or_else(|| A::Error::missing_field("afterAuto"))?, line: v_line })
+                Ok(EffectivePPrSpacing { before: v_before.map_or_else(|| wire::absent("before").map(|()| JsNum(f64::NAN)), Ok)?, after: v_after.map_or_else(|| wire::absent("after").map(|()| JsNum(f64::NAN)), Ok)?, before_auto: v_before_auto.map_or_else(|| wire::absent("beforeAuto").map(|()| Default::default()), Ok)?, after_auto: v_after_auto.map_or_else(|| wire::absent("afterAuto").map(|()| Default::default()), Ok)?, line: v_line })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -7013,11 +7037,11 @@ impl<'de> Deserialize<'de> for LineSpacing {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        LineSpacingKey::Rule => v_rule = Some(map.next_value()?),
+                        LineSpacingKey::Rule => v_rule = map.next_value::<wire::OrAbsent<LineSpacingRule>>()?.0,
                         LineSpacingKey::Raw => v_raw = Some(map.next_value()?),
                     }
                 }
-                Ok(LineSpacing { rule: v_rule.ok_or_else(|| A::Error::missing_field("rule"))?, raw: v_raw.ok_or_else(|| A::Error::missing_field("raw"))? })
+                Ok(LineSpacing { rule: v_rule.ok_or_else(|| A::Error::missing_field("rule"))?, raw: v_raw.map_or_else(|| wire::absent("raw").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -7032,7 +7056,7 @@ pub enum LineSpacingRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl LineSpacingRule {
@@ -7135,12 +7159,12 @@ impl<'de> Deserialize<'de> for EffectivePPrList {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EffectivePPrListKey::NumId => v_num_id = Some(map.next_value()?),
+                        EffectivePPrListKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         EffectivePPrListKey::Ilvl => v_ilvl = Some(map.next_value()?),
-                        EffectivePPrListKey::Level => v_level = Some(map.next_value()?),
+                        EffectivePPrListKey::Level => v_level = map.next_value::<wire::OrAbsent<NumberingLevel>>()?.0,
                     }
                 }
-                Ok(EffectivePPrList { num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))?, level: v_level })
+                Ok(EffectivePPrList { num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)?, level: v_level })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -7349,31 +7373,31 @@ impl<'de> Deserialize<'de> for NumberingLevel {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NumberingLevelKey::NumFmt => v_num_fmt = Some(map.next_value()?),
-                        NumberingLevelKey::CustomFormat => v_custom_format = Some(map.next_value()?),
-                        NumberingLevelKey::LvlText => v_lvl_text = Some(map.next_value()?),
+                        NumberingLevelKey::NumFmt => v_num_fmt = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingLevelKey::CustomFormat => v_custom_format = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingLevelKey::LvlText => v_lvl_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NumberingLevelKey::Start => v_start = Some(map.next_value()?),
-                        NumberingLevelKey::Suff => v_suff = Some(map.next_value()?),
-                        NumberingLevelKey::IsLgl => v_is_lgl = Some(map.next_value()?),
-                        NumberingLevelKey::LvlJc => v_lvl_jc = Some(map.next_value()?),
+                        NumberingLevelKey::Suff => v_suff = map.next_value::<wire::OrAbsent<NumberingLevelSuff>>()?.0,
+                        NumberingLevelKey::IsLgl => v_is_lgl = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NumberingLevelKey::LvlJc => v_lvl_jc = map.next_value::<wire::OrAbsent<NumberingLevelLvlJc>>()?.0,
                         NumberingLevelKey::IndentLeft => v_indent_left = Some(map.next_value()?),
                         NumberingLevelKey::IndentRight => v_indent_right = Some(map.next_value()?),
-                        NumberingLevelKey::Bidi => v_bidi = Some(map.next_value()?),
+                        NumberingLevelKey::Bidi => v_bidi = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         NumberingLevelKey::Hanging => v_hanging = Some(map.next_value()?),
                         NumberingLevelKey::FirstLine => v_first_line = Some(map.next_value()?),
                         NumberingLevelKey::SzHalfPoints => v_sz_half_points = Some(map.next_value()?),
-                        NumberingLevelKey::Font => v_font = Some(map.next_value()?),
-                        NumberingLevelKey::Color => v_color = Some(map.next_value()?),
+                        NumberingLevelKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingLevelKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NumberingLevelKey::PicBulletId => v_pic_bullet_id = Some(map.next_value()?),
-                        NumberingLevelKey::PicBulletSrc => v_pic_bullet_src = Some(map.next_value()?),
-                        NumberingLevelKey::Bold => v_bold = Some(map.next_value()?),
-                        NumberingLevelKey::Italic => v_italic = Some(map.next_value()?),
+                        NumberingLevelKey::PicBulletSrc => v_pic_bullet_src = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingLevelKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NumberingLevelKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         NumberingLevelKey::TabStop => v_tab_stop = Some(map.next_value()?),
-                        NumberingLevelKey::PStyle => v_p_style = Some(map.next_value()?),
+                        NumberingLevelKey::PStyle => v_p_style = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NumberingLevelKey::LvlRestart => v_lvl_restart = Some(map.next_value()?),
                     }
                 }
-                Ok(NumberingLevel { num_fmt: v_num_fmt.ok_or_else(|| A::Error::missing_field("numFmt"))?, custom_format: v_custom_format, lvl_text: v_lvl_text.ok_or_else(|| A::Error::missing_field("lvlText"))?, start: v_start.ok_or_else(|| A::Error::missing_field("start"))?, suff: v_suff, is_lgl: v_is_lgl, lvl_jc: v_lvl_jc, indent_left: v_indent_left, indent_right: v_indent_right, bidi: v_bidi, hanging: v_hanging, first_line: v_first_line, sz_half_points: v_sz_half_points, font: v_font, color: v_color, pic_bullet_id: v_pic_bullet_id, pic_bullet_src: v_pic_bullet_src, bold: v_bold, italic: v_italic, tab_stop: v_tab_stop, p_style: v_p_style, lvl_restart: v_lvl_restart })
+                Ok(NumberingLevel { num_fmt: v_num_fmt.map_or_else(|| wire::absent("numFmt").map(|()| Default::default()), Ok)?, custom_format: v_custom_format, lvl_text: v_lvl_text.map_or_else(|| wire::absent("lvlText").map(|()| Default::default()), Ok)?, start: v_start.map_or_else(|| wire::absent("start").map(|()| JsNum(f64::NAN)), Ok)?, suff: v_suff, is_lgl: v_is_lgl, lvl_jc: v_lvl_jc, indent_left: v_indent_left, indent_right: v_indent_right, bidi: v_bidi, hanging: v_hanging, first_line: v_first_line, sz_half_points: v_sz_half_points, font: v_font, color: v_color, pic_bullet_id: v_pic_bullet_id, pic_bullet_src: v_pic_bullet_src, bold: v_bold, italic: v_italic, tab_stop: v_tab_stop, p_style: v_p_style, lvl_restart: v_lvl_restart })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -7388,7 +7412,7 @@ pub enum NumberingLevelSuff {
     Tab,
     Space,
     Nothing,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NumberingLevelSuff {
@@ -7428,7 +7452,7 @@ pub enum NumberingLevelLvlJc {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NumberingLevelLvlJc {
@@ -7539,10 +7563,10 @@ impl<'de> Deserialize<'de> for LineNumbering {
                         LineNumberingKey::CountBy => v_count_by = Some(map.next_value()?),
                         LineNumberingKey::Start => v_start = Some(map.next_value()?),
                         LineNumberingKey::Distance => v_distance = Some(map.next_value()?),
-                        LineNumberingKey::Restart => v_restart = Some(map.next_value()?),
+                        LineNumberingKey::Restart => v_restart = map.next_value::<wire::OrAbsent<LineNumberingRestart>>()?.0,
                     }
                 }
-                Ok(LineNumbering { count_by: v_count_by.ok_or_else(|| A::Error::missing_field("countBy"))?, start: v_start.ok_or_else(|| A::Error::missing_field("start"))?, distance: v_distance, restart: v_restart.ok_or_else(|| A::Error::missing_field("restart"))? })
+                Ok(LineNumbering { count_by: v_count_by.map_or_else(|| wire::absent("countBy").map(|()| JsNum(f64::NAN)), Ok)?, start: v_start.map_or_else(|| wire::absent("start").map(|()| JsNum(f64::NAN)), Ok)?, distance: v_distance, restart: v_restart.ok_or_else(|| A::Error::missing_field("restart"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -7557,7 +7581,7 @@ pub enum LineNumberingRestart {
     Continuous,
     NewPage,
     NewSection,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl LineNumberingRestart {
@@ -7662,7 +7686,7 @@ impl<'de> Deserialize<'de> for DocGrid {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DocGridKey::Type => v_type = Some(map.next_value()?),
+                        DocGridKey::Type => v_type = map.next_value::<wire::OrAbsent<DocGridType>>()?.0,
                         DocGridKey::LinePitch => v_line_pitch = Some(map.next_value()?),
                         DocGridKey::CharSpace => v_char_space = Some(map.next_value()?),
                     }
@@ -7683,7 +7707,7 @@ pub enum DocGridType {
     Lines,
     LinesAndChars,
     SnapToChars,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl DocGridType {
@@ -7779,10 +7803,10 @@ impl<'de> Deserialize<'de> for NoteProps {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NotePropsKey::Pos => b_0.pos.set(map.next_value()?),
-                        NotePropsKey::NumFmt => b_0.num_fmt.set(map.next_value()?),
+                        NotePropsKey::Pos => if let Some(value) = map.next_value::<wire::OrAbsent<NotePropsPos>>()?.0 { b_0.pos.set(value) },
+                        NotePropsKey::NumFmt => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.num_fmt.set(value) },
                         NotePropsKey::NumStart => b_0.num_start.set(map.next_value()?),
-                        NotePropsKey::NumRestart => b_0.num_restart.set(map.next_value()?),
+                        NotePropsKey::NumRestart => if let Some(value) = map.next_value::<wire::OrAbsent<NotePropsNumRestart>>()?.0 { b_0.num_restart.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -7801,7 +7825,7 @@ pub enum NotePropsPos {
     BeneathText,
     SectEnd,
     DocEnd,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NotePropsPos {
@@ -7843,7 +7867,7 @@ pub enum NotePropsNumRestart {
     Continuous,
     EachSect,
     EachPage,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NotePropsNumRestart {
@@ -8088,32 +8112,32 @@ impl<'de> Deserialize<'de> for SectionSettings {
                     match key {
                         SectionSettingsKey::PageWidth => v_page_width = Some(map.next_value()?),
                         SectionSettingsKey::PageHeight => v_page_height = Some(map.next_value()?),
-                        SectionSettingsKey::Orientation => v_orientation = Some(map.next_value()?),
+                        SectionSettingsKey::Orientation => v_orientation = map.next_value::<wire::OrAbsent<SectionSettingsOrientation>>()?.0,
                         SectionSettingsKey::MarginTop => v_margin_top = Some(map.next_value()?),
                         SectionSettingsKey::MarginRight => v_margin_right = Some(map.next_value()?),
                         SectionSettingsKey::MarginBottom => v_margin_bottom = Some(map.next_value()?),
                         SectionSettingsKey::MarginLeft => v_margin_left = Some(map.next_value()?),
-                        SectionSettingsKey::MarginTopFixed => v_margin_top_fixed = Some(map.next_value()?),
-                        SectionSettingsKey::MarginBottomFixed => v_margin_bottom_fixed = Some(map.next_value()?),
+                        SectionSettingsKey::MarginTopFixed => v_margin_top_fixed = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        SectionSettingsKey::MarginBottomFixed => v_margin_bottom_fixed = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         SectionSettingsKey::Gutter => v_gutter = Some(map.next_value()?),
-                        SectionSettingsKey::GutterAtTop => v_gutter_at_top = Some(map.next_value()?),
-                        SectionSettingsKey::PageBorder => v_page_border = Some(map.next_value()?),
-                        SectionSettingsKey::PageBorderProps => v_page_border_props = Some(map.next_value()?),
+                        SectionSettingsKey::GutterAtTop => v_gutter_at_top = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        SectionSettingsKey::PageBorder => v_page_border = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        SectionSettingsKey::PageBorderProps => v_page_border_props = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderProps>>()?.0,
                         SectionSettingsKey::Columns => v_columns = Some(map.next_value()?),
                         SectionSettingsKey::ColSpace => v_col_space = Some(map.next_value()?),
-                        SectionSettingsKey::ColWidths => v_col_widths = Some(map.next_value()?),
-                        SectionSettingsKey::LineNumbers => v_line_numbers = Some(map.next_value()?),
-                        SectionSettingsKey::Bidi => v_bidi = Some(map.next_value()?),
+                        SectionSettingsKey::ColWidths => v_col_widths = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0,
+                        SectionSettingsKey::LineNumbers => v_line_numbers = map.next_value::<wire::OrAbsent<LineNumbering>>()?.0,
+                        SectionSettingsKey::Bidi => v_bidi = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         SectionSettingsKey::HeaderDist => v_header_dist = Some(map.next_value()?),
                         SectionSettingsKey::FooterDist => v_footer_dist = Some(map.next_value()?),
-                        SectionSettingsKey::VAlign => v_v_align = Some(map.next_value()?),
-                        SectionSettingsKey::DocGrid => v_doc_grid = Some(map.next_value()?),
-                        SectionSettingsKey::TextDirection => v_text_direction = Some(map.next_value()?),
-                        SectionSettingsKey::FootnotePr => v_footnote_pr = Some(map.next_value()?),
-                        SectionSettingsKey::EndnotePr => v_endnote_pr = Some(map.next_value()?),
+                        SectionSettingsKey::VAlign => v_v_align = map.next_value::<wire::OrAbsent<SectionSettingsVAlign>>()?.0,
+                        SectionSettingsKey::DocGrid => v_doc_grid = map.next_value::<wire::OrAbsent<DocGrid>>()?.0,
+                        SectionSettingsKey::TextDirection => v_text_direction = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionSettingsKey::FootnotePr => v_footnote_pr = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
+                        SectionSettingsKey::EndnotePr => v_endnote_pr = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
                     }
                 }
-                Ok(SectionSettings { page_width: v_page_width.ok_or_else(|| A::Error::missing_field("pageWidth"))?, page_height: v_page_height.ok_or_else(|| A::Error::missing_field("pageHeight"))?, orientation: v_orientation.ok_or_else(|| A::Error::missing_field("orientation"))?, margin_top: v_margin_top.ok_or_else(|| A::Error::missing_field("marginTop"))?, margin_right: v_margin_right.ok_or_else(|| A::Error::missing_field("marginRight"))?, margin_bottom: v_margin_bottom.ok_or_else(|| A::Error::missing_field("marginBottom"))?, margin_left: v_margin_left.ok_or_else(|| A::Error::missing_field("marginLeft"))?, margin_top_fixed: v_margin_top_fixed, margin_bottom_fixed: v_margin_bottom_fixed, gutter: v_gutter, gutter_at_top: v_gutter_at_top, page_border: v_page_border.ok_or_else(|| A::Error::missing_field("pageBorder"))?, page_border_props: v_page_border_props, columns: v_columns.ok_or_else(|| A::Error::missing_field("columns"))?, col_space: v_col_space, col_widths: v_col_widths, line_numbers: v_line_numbers, bidi: v_bidi, header_dist: v_header_dist, footer_dist: v_footer_dist, v_align: v_v_align, doc_grid: v_doc_grid, text_direction: v_text_direction, footnote_pr: v_footnote_pr, endnote_pr: v_endnote_pr })
+                Ok(SectionSettings { page_width: v_page_width.map_or_else(|| wire::absent("pageWidth").map(|()| JsNum(f64::NAN)), Ok)?, page_height: v_page_height.map_or_else(|| wire::absent("pageHeight").map(|()| JsNum(f64::NAN)), Ok)?, orientation: v_orientation.ok_or_else(|| A::Error::missing_field("orientation"))?, margin_top: v_margin_top.map_or_else(|| wire::absent("marginTop").map(|()| JsNum(f64::NAN)), Ok)?, margin_right: v_margin_right.map_or_else(|| wire::absent("marginRight").map(|()| JsNum(f64::NAN)), Ok)?, margin_bottom: v_margin_bottom.map_or_else(|| wire::absent("marginBottom").map(|()| JsNum(f64::NAN)), Ok)?, margin_left: v_margin_left.map_or_else(|| wire::absent("marginLeft").map(|()| JsNum(f64::NAN)), Ok)?, margin_top_fixed: v_margin_top_fixed, margin_bottom_fixed: v_margin_bottom_fixed, gutter: v_gutter, gutter_at_top: v_gutter_at_top, page_border: v_page_border.map_or_else(|| wire::absent("pageBorder").map(|()| Default::default()), Ok)?, page_border_props: v_page_border_props, columns: v_columns.map_or_else(|| wire::absent("columns").map(|()| JsNum(f64::NAN)), Ok)?, col_space: v_col_space, col_widths: v_col_widths, line_numbers: v_line_numbers, bidi: v_bidi, header_dist: v_header_dist, footer_dist: v_footer_dist, v_align: v_v_align, doc_grid: v_doc_grid, text_direction: v_text_direction, footnote_pr: v_footnote_pr, endnote_pr: v_endnote_pr })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -8127,7 +8151,7 @@ impl<'de> Deserialize<'de> for SectionSettings {
 pub enum SectionSettingsOrientation {
     Portrait,
     Landscape,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionSettingsOrientation {
@@ -8256,16 +8280,16 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderProps {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionSettingsPageBorderPropsKey::Display => v_display = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsKey::OffsetFrom => v_offset_from = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsKey::ZOrder => v_z_order = Some(map.next_value()?),
+                        SectionSettingsPageBorderPropsKey::Display => v_display = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsDisplay>>()?.0,
+                        SectionSettingsPageBorderPropsKey::OffsetFrom => v_offset_from = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsOffsetFrom>>()?.0,
+                        SectionSettingsPageBorderPropsKey::ZOrder => v_z_order = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsZOrder>>()?.0,
                         SectionSettingsPageBorderPropsKey::SpacePt => v_space_pt = Some(map.next_value()?),
                         SectionSettingsPageBorderPropsKey::WidthPt => v_width_pt = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsKey::Color => v_color = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsKey::Sides => v_sides = Some(map.next_value()?),
+                        SectionSettingsPageBorderPropsKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionSettingsPageBorderPropsKey::Sides => v_sides = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsSides>>()?.0,
                     }
                 }
-                Ok(SectionSettingsPageBorderProps { display: v_display, offset_from: v_offset_from, z_order: v_z_order, space_pt: v_space_pt.ok_or_else(|| A::Error::missing_field("spacePt"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))?, color: v_color, sides: v_sides })
+                Ok(SectionSettingsPageBorderProps { display: v_display, offset_from: v_offset_from, z_order: v_z_order, space_pt: v_space_pt.map_or_else(|| wire::absent("spacePt").map(|()| JsNum(f64::NAN)), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)?, color: v_color, sides: v_sides })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -8279,7 +8303,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderProps {
 pub enum SectionSettingsPageBorderPropsDisplay {
     FirstPage,
     NotFirstPage,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionSettingsPageBorderPropsDisplay {
@@ -8316,7 +8340,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsDisplay {
 pub enum SectionSettingsPageBorderPropsOffsetFrom {
     Page,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionSettingsPageBorderPropsOffsetFrom {
@@ -8352,7 +8376,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsOffsetFrom {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsPageBorderPropsZOrder {
     Back,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionSettingsPageBorderPropsZOrder {
@@ -8462,10 +8486,10 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSides {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionSettingsPageBorderPropsSidesKey::Top => v_top = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesKey::Right => v_right = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesKey::Bottom => v_bottom = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesKey::Left => v_left = Some(map.next_value()?),
+                        SectionSettingsPageBorderPropsSidesKey::Top => v_top = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsSidesValue>>()?.0,
+                        SectionSettingsPageBorderPropsSidesKey::Right => v_right = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsSidesValue>>()?.0,
+                        SectionSettingsPageBorderPropsSidesKey::Bottom => v_bottom = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsSidesValue>>()?.0,
+                        SectionSettingsPageBorderPropsSidesKey::Left => v_left = map.next_value::<wire::OrAbsent<SectionSettingsPageBorderPropsSidesValue>>()?.0,
                     }
                 }
                 Ok(SectionSettingsPageBorderPropsSides { top: v_top, right: v_right, bottom: v_bottom, left: v_left })
@@ -8572,16 +8596,16 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSidesValue {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionSettingsPageBorderPropsSidesValueKey::Val => v_val = Some(map.next_value()?),
+                        SectionSettingsPageBorderPropsSidesValueKey::Val => v_val = map.next_value::<wire::OrAbsent<String>>()?.0,
                         SectionSettingsPageBorderPropsSidesValueKey::WidthPt => v_width_pt = Some(map.next_value()?),
                         SectionSettingsPageBorderPropsSidesValueKey::SpacePt => v_space_pt = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesValueKey::Color => v_color = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesValueKey::Art => v_art = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesValueKey::Shadow => v_shadow = Some(map.next_value()?),
-                        SectionSettingsPageBorderPropsSidesValueKey::Frame => v_frame = Some(map.next_value()?),
+                        SectionSettingsPageBorderPropsSidesValueKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionSettingsPageBorderPropsSidesValueKey::Art => v_art = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        SectionSettingsPageBorderPropsSidesValueKey::Shadow => v_shadow = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        SectionSettingsPageBorderPropsSidesValueKey::Frame => v_frame = map.next_value::<wire::OrAbsent<True>>()?.0,
                     }
                 }
-                Ok(SectionSettingsPageBorderPropsSidesValue { val: v_val.ok_or_else(|| A::Error::missing_field("val"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))?, space_pt: v_space_pt.ok_or_else(|| A::Error::missing_field("spacePt"))?, color: v_color, art: v_art, shadow: v_shadow, frame: v_frame })
+                Ok(SectionSettingsPageBorderPropsSidesValue { val: v_val.map_or_else(|| wire::absent("val").map(|()| Default::default()), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)?, space_pt: v_space_pt.map_or_else(|| wire::absent("spacePt").map(|()| JsNum(f64::NAN)), Ok)?, color: v_color, art: v_art, shadow: v_shadow, frame: v_frame })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -8597,7 +8621,7 @@ pub enum SectionSettingsVAlign {
     Center,
     Both,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionSettingsVAlign {
@@ -8746,20 +8770,20 @@ impl<'de> Deserialize<'de> for SectionInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionInfoKey::Settings => v_settings = Some(map.next_value()?),
-                        SectionInfoKey::StartType => v_start_type = Some(map.next_value()?),
+                        SectionInfoKey::Settings => v_settings = map.next_value::<wire::OrAbsent<SectionSettings>>()?.0,
+                        SectionInfoKey::StartType => v_start_type = map.next_value::<wire::OrAbsent<SectionInfoStartType>>()?.0,
                         SectionInfoKey::FirstBlockIndex => v_first_block_index = Some(map.next_value()?),
                         SectionInfoKey::LastBlockIndex => v_last_block_index = Some(map.next_value()?),
-                        SectionInfoKey::SectPrXml => v_sect_pr_xml = Some(map.next_value()?),
-                        SectionInfoKey::TitlePg => v_title_pg = Some(map.next_value()?),
+                        SectionInfoKey::SectPrXml => v_sect_pr_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoKey::TitlePg => v_title_pg = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         SectionInfoKey::PageNumberStart => v_page_number_start = Some(map.next_value()?),
-                        SectionInfoKey::PageNumberFmt => v_page_number_fmt = Some(map.next_value()?),
-                        SectionInfoKey::HeaderRefs => v_header_refs = Some(map.next_value()?),
-                        SectionInfoKey::FooterRefs => v_footer_refs = Some(map.next_value()?),
-                        SectionInfoKey::PendingBreak => v_pending_break = Some(map.next_value()?),
+                        SectionInfoKey::PageNumberFmt => v_page_number_fmt = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoKey::HeaderRefs => v_header_refs = map.next_value::<wire::OrAbsent<SectionInfoHeaderRefs>>()?.0,
+                        SectionInfoKey::FooterRefs => v_footer_refs = map.next_value::<wire::OrAbsent<SectionInfoFooterRefs>>()?.0,
+                        SectionInfoKey::PendingBreak => v_pending_break = map.next_value::<wire::OrAbsent<True>>()?.0,
                     }
                 }
-                Ok(SectionInfo { settings: v_settings.ok_or_else(|| A::Error::missing_field("settings"))?, start_type: v_start_type.ok_or_else(|| A::Error::missing_field("startType"))?, first_block_index: v_first_block_index.ok_or_else(|| A::Error::missing_field("firstBlockIndex"))?, last_block_index: v_last_block_index.ok_or_else(|| A::Error::missing_field("lastBlockIndex"))?, sect_pr_xml: v_sect_pr_xml.ok_or_else(|| A::Error::missing_field("sectPrXml"))?, title_pg: v_title_pg.ok_or_else(|| A::Error::missing_field("titlePg"))?, page_number_start: v_page_number_start, page_number_fmt: v_page_number_fmt, header_refs: v_header_refs.ok_or_else(|| A::Error::missing_field("headerRefs"))?, footer_refs: v_footer_refs.ok_or_else(|| A::Error::missing_field("footerRefs"))?, pending_break: v_pending_break })
+                Ok(SectionInfo { settings: v_settings.ok_or_else(|| A::Error::missing_field("settings"))?, start_type: v_start_type.ok_or_else(|| A::Error::missing_field("startType"))?, first_block_index: v_first_block_index.map_or_else(|| wire::absent("firstBlockIndex").map(|()| JsNum(f64::NAN)), Ok)?, last_block_index: v_last_block_index.map_or_else(|| wire::absent("lastBlockIndex").map(|()| JsNum(f64::NAN)), Ok)?, sect_pr_xml: v_sect_pr_xml.map_or_else(|| wire::absent("sectPrXml").map(|()| Default::default()), Ok)?, title_pg: v_title_pg.map_or_else(|| wire::absent("titlePg").map(|()| Default::default()), Ok)?, page_number_start: v_page_number_start, page_number_fmt: v_page_number_fmt, header_refs: v_header_refs.ok_or_else(|| A::Error::missing_field("headerRefs"))?, footer_refs: v_footer_refs.ok_or_else(|| A::Error::missing_field("footerRefs"))?, pending_break: v_pending_break })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -8776,7 +8800,7 @@ pub enum SectionInfoStartType {
     EvenPage,
     OddPage,
     NextColumn,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl SectionInfoStartType {
@@ -8887,9 +8911,9 @@ impl<'de> Deserialize<'de> for SectionInfoHeaderRefs {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionInfoHeaderRefsKey::Default => v_default = Some(map.next_value()?),
-                        SectionInfoHeaderRefsKey::First => v_first = Some(map.next_value()?),
-                        SectionInfoHeaderRefsKey::Even => v_even = Some(map.next_value()?),
+                        SectionInfoHeaderRefsKey::Default => v_default = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoHeaderRefsKey::First => v_first = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoHeaderRefsKey::Even => v_even = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(SectionInfoHeaderRefs { default: v_default, first: v_first, even: v_even })
@@ -8974,9 +8998,9 @@ impl<'de> Deserialize<'de> for SectionInfoFooterRefs {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SectionInfoFooterRefsKey::Default => v_default = Some(map.next_value()?),
-                        SectionInfoFooterRefsKey::First => v_first = Some(map.next_value()?),
-                        SectionInfoFooterRefsKey::Even => v_even = Some(map.next_value()?),
+                        SectionInfoFooterRefsKey::Default => v_default = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoFooterRefsKey::First => v_first = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SectionInfoFooterRefsKey::Even => v_even = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(SectionInfoFooterRefs { default: v_default, first: v_first, even: v_even })
@@ -9289,63 +9313,63 @@ impl<'de> Deserialize<'de> for HfParagraph {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfParagraphKey::Align => b_0.para_format.align.set(map.next_value()?),
+                        HfParagraphKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_0.para_format.align.set(value) },
                         HfParagraphKey::LineSpacing => b_0.para_format.line_spacing.set(map.next_value()?),
-                        HfParagraphKey::LineRule => b_0.para_format.line_rule.set(map.next_value()?),
+                        HfParagraphKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_0.para_format.line_rule.set(value) },
                         HfParagraphKey::LineRawTwips => b_0.para_format.line_raw_twips.set(map.next_value()?),
                         HfParagraphKey::IndentLeft => b_0.para_format.indent_left.set(map.next_value()?),
                         HfParagraphKey::IndentRight => b_0.para_format.indent_right.set(map.next_value()?),
                         HfParagraphKey::IndentFirstLine => b_0.para_format.indent_first_line.set(map.next_value()?),
-                        HfParagraphKey::CharIndents => b_0.para_format.char_indents.set(map.next_value()?),
-                        HfParagraphKey::DirectCharIndents => b_0.para_format.direct_char_indents.set(map.next_value()?),
+                        HfParagraphKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.para_format.char_indents.set(value) },
+                        HfParagraphKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.para_format.direct_char_indents.set(value) },
                         HfParagraphKey::SpaceBefore => b_0.para_format.space_before.set(map.next_value()?),
                         HfParagraphKey::SpaceAfter => b_0.para_format.space_after.set(map.next_value()?),
-                        HfParagraphKey::SpaceBeforeAuto => b_0.para_format.space_before_auto.set(map.next_value()?),
-                        HfParagraphKey::SpaceAfterAuto => b_0.para_format.space_after_auto.set(map.next_value()?),
-                        HfParagraphKey::PageBreakBefore => b_0.para_format.page_break_before.set(map.next_value()?),
-                        HfParagraphKey::KeepNext => b_0.para_format.keep_next.set(map.next_value()?),
-                        HfParagraphKey::KeepLines => b_0.para_format.keep_lines.set(map.next_value()?),
-                        HfParagraphKey::SuppressLineNumbers => b_0.para_format.suppress_line_numbers.set(map.next_value()?),
-                        HfParagraphKey::WidowControl => b_0.para_format.widow_control.set(map.next_value()?),
-                        HfParagraphKey::SnapToGrid => b_0.para_format.snap_to_grid.set(map.next_value()?),
-                        HfParagraphKey::AutoSpace => b_0.para_format.auto_space.set(map.next_value()?),
-                        HfParagraphKey::AutoSpaceDE => b_0.para_format.auto_space_d_e.set(map.next_value()?),
-                        HfParagraphKey::AutoSpaceDN => b_0.para_format.auto_space_d_n.set(map.next_value()?),
-                        HfParagraphKey::WordWrap => b_0.para_format.word_wrap.set(map.next_value()?),
-                        HfParagraphKey::OverflowPunct => b_0.para_format.overflow_punct.set(map.next_value()?),
-                        HfParagraphKey::EastAsiaLang => b_0.para_format.east_asia_lang.set(map.next_value()?),
-                        HfParagraphKey::ContextualSpacing => b_0.para_format.contextual_spacing.set(map.next_value()?),
-                        HfParagraphKey::ShadingFill => b_0.para_format.shading_fill.set(map.next_value()?),
-                        HfParagraphKey::ShadingDisplay => b_0.para_format.shading_display.set(map.next_value()?),
-                        HfParagraphKey::ShadingClear => b_0.para_format.shading_clear.set(map.next_value()?),
-                        HfParagraphKey::Borders => b_0.para_format.borders.set(map.next_value()?),
-                        HfParagraphKey::BorderStyle => b_0.para_format.border_style.set(map.next_value()?),
-                        HfParagraphKey::BorderLines => b_0.para_format.border_lines.set(map.next_value()?),
-                        HfParagraphKey::BorderReset => b_0.para_format.border_reset.set(map.next_value()?),
-                        HfParagraphKey::BorderPad => b_0.para_format.border_pad.set(map.next_value()?),
-                        HfParagraphKey::TabStops => b_0.para_format.tab_stops.set(map.next_value()?),
-                        HfParagraphKey::DropCap => b_0.para_format.drop_cap.set(map.next_value()?),
-                        HfParagraphKey::Frame => b_0.para_format.frame.set(map.next_value()?),
-                        HfParagraphKey::FrameBox => b_0.para_format.frame_box.set(map.next_value()?),
-                        HfParagraphKey::TextDirection => b_0.para_format.text_direction.set(map.next_value()?),
-                        HfParagraphKey::Bidi => b_0.para_format.bidi.set(map.next_value()?),
-                        HfParagraphKey::BidiInherited => b_0.para_format.bidi_inherited.set(map.next_value()?),
+                        HfParagraphKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.space_before_auto.set(value) },
+                        HfParagraphKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.space_after_auto.set(value) },
+                        HfParagraphKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.page_break_before.set(value) },
+                        HfParagraphKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.keep_next.set(value) },
+                        HfParagraphKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.keep_lines.set(value) },
+                        HfParagraphKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.suppress_line_numbers.set(value) },
+                        HfParagraphKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.widow_control.set(value) },
+                        HfParagraphKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.snap_to_grid.set(value) },
+                        HfParagraphKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_0.para_format.auto_space.set(value) },
+                        HfParagraphKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.auto_space_d_e.set(value) },
+                        HfParagraphKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.auto_space_d_n.set(value) },
+                        HfParagraphKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.word_wrap.set(value) },
+                        HfParagraphKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.overflow_punct.set(value) },
+                        HfParagraphKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.east_asia_lang.set(value) },
+                        HfParagraphKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.contextual_spacing.set(value) },
+                        HfParagraphKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.shading_fill.set(value) },
+                        HfParagraphKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.shading_display.set(value) },
+                        HfParagraphKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.shading_clear.set(value) },
+                        HfParagraphKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.borders.set(value) },
+                        HfParagraphKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_0.para_format.border_style.set(value) },
+                        HfParagraphKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_0.para_format.border_lines.set(value) },
+                        HfParagraphKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.border_reset.set(value) },
+                        HfParagraphKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_0.para_format.border_pad.set(value) },
+                        HfParagraphKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_0.para_format.tab_stops.set(value) },
+                        HfParagraphKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_0.para_format.drop_cap.set(value) },
+                        HfParagraphKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_0.para_format.frame.set(value) },
+                        HfParagraphKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_0.para_format.frame_box.set(value) },
+                        HfParagraphKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_0.para_format.text_direction.set(value) },
+                        HfParagraphKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.bidi.set(value) },
+                        HfParagraphKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.bidi_inherited.set(value) },
                         HfParagraphKey::EmptyRunSizeHalfPoints => b_0.para_format.empty_run_size_half_points.set(map.next_value()?),
-                        HfParagraphKey::EmptyRunFontFamily => b_0.para_format.empty_run_font_family.set(map.next_value()?),
+                        HfParagraphKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.empty_run_font_family.set(value) },
                         HfParagraphKey::MarkSizeHalfPoints => b_0.para_format.mark_size_half_points.set(map.next_value()?),
-                        HfParagraphKey::Effective => b_0.para_format.effective.set(map.next_value()?),
-                        HfParagraphKey::FrameXAlign => b_0.frame_x_align.set(map.next_value()?),
-                        HfParagraphKey::BoxAnchored => b_0.box_anchored.set(map.next_value()?),
-                        HfParagraphKey::Box => b_0.r#box.set(map.next_value()?),
-                        HfParagraphKey::PtabAligns => b_0.ptab_aligns.set(map.next_value()?),
-                        HfParagraphKey::EmptyRunFont => b_0.empty_run_font.set(map.next_value()?),
-                        HfParagraphKey::Runs => b_0.runs.set(map.next_value()?),
-                        HfParagraphKey::LineOnly => b_0.line_only.set(map.next_value()?),
-                        HfParagraphKey::Cells => b_0.cells.set(map.next_value()?),
-                        HfParagraphKey::Row => b_0.row.set(map.next_value()?),
+                        HfParagraphKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_0.para_format.effective.set(value) },
+                        HfParagraphKey::FrameXAlign => if let Some(value) = map.next_value::<wire::OrAbsent<HfParagraphFrameXAlign>>()?.0 { b_0.frame_x_align.set(value) },
+                        HfParagraphKey::BoxAnchored => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.box_anchored.set(value) },
+                        HfParagraphKey::Box => if let Some(value) = map.next_value::<wire::OrAbsent<HfTextBox>>()?.0 { b_0.r#box.set(value) },
+                        HfParagraphKey::PtabAligns => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Option<HfParagraphPtabAlignsItem>>>>()?.0 { b_0.ptab_aligns.set(value) },
+                        HfParagraphKey::EmptyRunFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.empty_run_font.set(value) },
+                        HfParagraphKey::Runs => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.runs.set(value) },
+                        HfParagraphKey::LineOnly => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.line_only.set(value) },
+                        HfParagraphKey::Cells => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<HfTableCell>>>()?.0 { b_0.cells.set(value) },
+                        HfParagraphKey::Row => if let Some(value) = map.next_value::<wire::OrAbsent<HfTableRow>>()?.0 { b_0.row.set(value) },
                     }
                 }
-                if !b_0.runs.has_key() {
+                if !b_0.runs.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("runs"));
                 }
                 Ok(b_0)
@@ -9363,7 +9387,7 @@ pub enum HfParagraphFrameXAlign {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfParagraphFrameXAlign {
@@ -9504,26 +9528,26 @@ impl<'de> Deserialize<'de> for HfTextBox {
                     match key {
                         HfTextBoxKey::WidthPx => b_0.width_px.set(map.next_value()?),
                         HfTextBoxKey::HeightPx => b_0.height_px.set(map.next_value()?),
-                        HfTextBoxKey::Behind => b_0.behind.set(map.next_value()?),
-                        HfTextBoxKey::PosH => b_0.pos_h.set(map.next_value()?),
-                        HfTextBoxKey::PosV => b_0.pos_v.set(map.next_value()?),
+                        HfTextBoxKey::Behind => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.behind.set(value) },
+                        HfTextBoxKey::PosH => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosH>>()?.0 { b_0.pos_h.set(value) },
+                        HfTextBoxKey::PosV => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosV>>()?.0 { b_0.pos_v.set(value) },
                         HfTextBoxKey::PosXPx => b_0.pos_x_px.set(map.next_value()?),
                         HfTextBoxKey::PosYPx => b_0.pos_y_px.set(map.next_value()?),
-                        HfTextBoxKey::PosHRel => b_0.pos_h_rel.set(map.next_value()?),
-                        HfTextBoxKey::PosVRel => b_0.pos_v_rel.set(map.next_value()?),
-                        HfTextBoxKey::Wrap => b_0.wrap.set(map.next_value()?),
+                        HfTextBoxKey::PosHRel => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosHRel>>()?.0 { b_0.pos_h_rel.set(value) },
+                        HfTextBoxKey::PosVRel => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosVRel>>()?.0 { b_0.pos_v_rel.set(value) },
+                        HfTextBoxKey::Wrap => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageWrap>>()?.0 { b_0.wrap.set(value) },
                         HfTextBoxKey::Id => b_0.id.set(map.next_value()?),
-                        HfTextBoxKey::Insets => b_0.insets.set(map.next_value()?),
-                        HfTextBoxKey::VAlign => b_0.v_align.set(map.next_value()?),
-                        HfTextBoxKey::Nowrap => b_0.nowrap.set(map.next_value()?),
-                        HfTextBoxKey::Autofit => b_0.autofit.set(map.next_value()?),
+                        HfTextBoxKey::Insets => if let Some(value) = map.next_value::<wire::OrAbsent<(JsNum, JsNum, JsNum, JsNum)>>()?.0 { b_0.insets.set(value) },
+                        HfTextBoxKey::VAlign => if let Some(value) = map.next_value::<wire::OrAbsent<HfTextBoxVAlign>>()?.0 { b_0.v_align.set(value) },
+                        HfTextBoxKey::Nowrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.nowrap.set(value) },
+                        HfTextBoxKey::Autofit => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.autofit.set(value) },
                         HfTextBoxKey::AnchorPara => b_0.anchor_para.set(map.next_value()?),
                         HfTextBoxKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                         HfTextBoxKey::BorderWidthPx => b_0.border_width_px.set(map.next_value()?),
-                        HfTextBoxKey::BorderColor => b_0.border_color.set(map.next_value()?),
+                        HfTextBoxKey::BorderColor => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.border_color.set(value) },
                     }
                 }
-                if !b_0.id.has_key() {
+                if !b_0.id.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("id"));
                 }
                 Ok(b_0)
@@ -9646,30 +9670,30 @@ impl<'de> Deserialize<'de> for HfImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfImageKey::DataUrl => b_0.data_url.set(map.next_value()?),
+                        HfImageKey::DataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.data_url.set(value) },
                         HfImageKey::WidthPx => b_0.width_px.set(map.next_value()?),
                         HfImageKey::HeightPx => b_0.height_px.set(map.next_value()?),
-                        HfImageKey::Floating => b_0.floating.set(map.next_value()?),
-                        HfImageKey::Behind => b_0.behind.set(map.next_value()?),
-                        HfImageKey::Watermark => b_0.watermark.set(map.next_value()?),
-                        HfImageKey::PosH => b_0.pos_h.set(map.next_value()?),
-                        HfImageKey::PosV => b_0.pos_v.set(map.next_value()?),
+                        HfImageKey::Floating => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.floating.set(value) },
+                        HfImageKey::Behind => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.behind.set(value) },
+                        HfImageKey::Watermark => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.watermark.set(value) },
+                        HfImageKey::PosH => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosH>>()?.0 { b_0.pos_h.set(value) },
+                        HfImageKey::PosV => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosV>>()?.0 { b_0.pos_v.set(value) },
                         HfImageKey::PosXPx => b_0.pos_x_px.set(map.next_value()?),
                         HfImageKey::PosYPx => b_0.pos_y_px.set(map.next_value()?),
-                        HfImageKey::PosHRel => b_0.pos_h_rel.set(map.next_value()?),
-                        HfImageKey::PosVRel => b_0.pos_v_rel.set(map.next_value()?),
-                        HfImageKey::Wrap => b_0.wrap.set(map.next_value()?),
-                        HfImageKey::Washout => b_0.washout.set(map.next_value()?),
+                        HfImageKey::PosHRel => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosHRel>>()?.0 { b_0.pos_h_rel.set(value) },
+                        HfImageKey::PosVRel => if let Some(value) = map.next_value::<wire::OrAbsent<HfImagePosVRel>>()?.0 { b_0.pos_v_rel.set(value) },
+                        HfImageKey::Wrap => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageWrap>>()?.0 { b_0.wrap.set(value) },
+                        HfImageKey::Washout => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageWashout>>()?.0 { b_0.washout.set(value) },
                         HfImageKey::RotationDeg => b_0.rotation_deg.set(map.next_value()?),
-                        HfImageKey::WordArt => b_0.word_art.set(map.next_value()?),
-                        HfImageKey::Align => b_0.align.set(map.next_value()?),
+                        HfImageKey::WordArt => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageWordArt>>()?.0 { b_0.word_art.set(value) },
+                        HfImageKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageAlign>>()?.0 { b_0.align.set(value) },
                         HfImageKey::AnchorPara => b_0.anchor_para.set(map.next_value()?),
-                        HfImageKey::Crop => b_0.crop.set(map.next_value()?),
+                        HfImageKey::Crop => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageCrop>>()?.0 { b_0.crop.set(value) },
                         HfImageKey::Drawing => b_0.drawing.set(map.next_value()?),
-                        HfImageKey::WrapDistPx => b_0.wrap_dist_px.set(map.next_value()?),
+                        HfImageKey::WrapDistPx => if let Some(value) = map.next_value::<wire::OrAbsent<HfImageWrapDistPx>>()?.0 { b_0.wrap_dist_px.set(value) },
                     }
                 }
-                if !b_0.data_url.has_key() {
+                if !b_0.data_url.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("dataUrl"));
                 }
                 Ok(b_0)
@@ -9687,7 +9711,7 @@ pub enum HfImagePosH {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImagePosH {
@@ -9727,7 +9751,7 @@ pub enum HfImagePosV {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImagePosV {
@@ -9768,7 +9792,7 @@ pub enum HfImagePosHRel {
     Margin,
     LeftMargin,
     RightMargin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImagePosHRel {
@@ -9812,7 +9836,7 @@ pub enum HfImagePosVRel {
     Paragraph,
     TopMargin,
     BottomMargin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImagePosVRel {
@@ -9858,7 +9882,7 @@ pub enum HfImageWrap {
     Tight,
     Through,
     TopBottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImageWrap {
@@ -9962,7 +9986,7 @@ impl<'de> Deserialize<'de> for HfImageWashout {
                         HfImageWashoutKey::BlackLevel => v_black_level = Some(map.next_value()?),
                     }
                 }
-                Ok(HfImageWashout { gain: v_gain.ok_or_else(|| A::Error::missing_field("gain"))?, black_level: v_black_level.ok_or_else(|| A::Error::missing_field("blackLevel"))? })
+                Ok(HfImageWashout { gain: v_gain.map_or_else(|| wire::absent("gain").map(|()| JsNum(f64::NAN)), Ok)?, black_level: v_black_level.map_or_else(|| wire::absent("blackLevel").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10059,15 +10083,15 @@ impl<'de> Deserialize<'de> for HfImageWordArt {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfImageWordArtKey::Text => v_text = Some(map.next_value()?),
-                        HfImageWordArtKey::FontFamily => v_font_family = Some(map.next_value()?),
-                        HfImageWordArtKey::Bold => v_bold = Some(map.next_value()?),
-                        HfImageWordArtKey::Italic => v_italic = Some(map.next_value()?),
-                        HfImageWordArtKey::ColorHex => v_color_hex = Some(map.next_value()?),
+                        HfImageWordArtKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HfImageWordArtKey::FontFamily => v_font_family = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HfImageWordArtKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfImageWordArtKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfImageWordArtKey::ColorHex => v_color_hex = map.next_value::<wire::OrAbsent<String>>()?.0,
                         HfImageWordArtKey::Opacity => v_opacity = Some(map.next_value()?),
                     }
                 }
-                Ok(HfImageWordArt { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, font_family: v_font_family, bold: v_bold, italic: v_italic, color_hex: v_color_hex.ok_or_else(|| A::Error::missing_field("colorHex"))?, opacity: v_opacity.ok_or_else(|| A::Error::missing_field("opacity"))? })
+                Ok(HfImageWordArt { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, font_family: v_font_family, bold: v_bold, italic: v_italic, color_hex: v_color_hex.map_or_else(|| wire::absent("colorHex").map(|()| Default::default()), Ok)?, opacity: v_opacity.map_or_else(|| wire::absent("opacity").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10082,7 +10106,7 @@ pub enum HfImageAlign {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfImageAlign {
@@ -10194,7 +10218,7 @@ impl<'de> Deserialize<'de> for HfImageCrop {
                         HfImageCropKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(HfImageCrop { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(HfImageCrop { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10281,7 +10305,7 @@ impl<'de> Deserialize<'de> for HfImageWrapDistPx {
                         HfImageWrapDistPxKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(HfImageWrapDistPx { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(HfImageWrapDistPx { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10296,7 +10320,7 @@ pub enum HfTextBoxVAlign {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTextBoxVAlign {
@@ -10336,7 +10360,7 @@ pub enum HfParagraphPtabAlignsItem {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfParagraphPtabAlignsItem {
@@ -10525,24 +10549,24 @@ impl<'de> Deserialize<'de> for HfTableCell {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfTableCellKey::Paras => v_paras = Some(map.next_value()?),
-                        HfTableCellKey::ParaProps => v_para_props = Some(map.next_value()?),
-                        HfTableCellKey::Align => v_align = Some(map.next_value()?),
+                        HfTableCellKey::Paras => v_paras = map.next_value::<wire::OrAbsent<Vec<Vec<Run>>>>()?.0,
+                        HfTableCellKey::ParaProps => v_para_props = map.next_value::<wire::OrAbsent<Vec<Option<HfCellParaProps>>>>()?.0,
+                        HfTableCellKey::Align => v_align = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0,
                         HfTableCellKey::WidthPct => v_width_pct = Some(map.next_value()?),
                         HfTableCellKey::WidthTwips => v_width_twips = Some(map.next_value()?),
-                        HfTableCellKey::Fill => v_fill = Some(map.next_value()?),
-                        HfTableCellKey::Borders => v_borders = Some(map.next_value()?),
-                        HfTableCellKey::VAlign => v_v_align = Some(map.next_value()?),
-                        HfTableCellKey::MarTwips => v_mar_twips = Some(map.next_value()?),
+                        HfTableCellKey::Fill => v_fill = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HfTableCellKey::Borders => v_borders = map.next_value::<wire::OrAbsent<CellBorders>>()?.0,
+                        HfTableCellKey::VAlign => v_v_align = map.next_value::<wire::OrAbsent<HfTableCellVAlign>>()?.0,
+                        HfTableCellKey::MarTwips => v_mar_twips = map.next_value::<wire::OrAbsent<CellMargins>>()?.0,
                         HfTableCellKey::VSpan => v_v_span = Some(map.next_value()?),
-                        HfTableCellKey::VMergeContinue => v_v_merge_continue = Some(map.next_value()?),
-                        HfTableCellKey::Locked => v_locked = Some(map.next_value()?),
-                        HfTableCellKey::Rewrite => v_rewrite = Some(map.next_value()?),
-                        HfTableCellKey::RewriteFormat => v_rewrite_format = Some(map.next_value()?),
-                        HfTableCellKey::PriorParaProps => v_prior_para_props = Some(map.next_value()?),
+                        HfTableCellKey::VMergeContinue => v_v_merge_continue = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        HfTableCellKey::Locked => v_locked = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        HfTableCellKey::Rewrite => v_rewrite = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        HfTableCellKey::RewriteFormat => v_rewrite_format = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0,
+                        HfTableCellKey::PriorParaProps => v_prior_para_props = map.next_value::<wire::OrAbsent<Vec<Option<HfCellParaProps>>>>()?.0,
                     }
                 }
-                Ok(HfTableCell { paras: v_paras.ok_or_else(|| A::Error::missing_field("paras"))?, para_props: v_para_props, align: v_align, width_pct: v_width_pct, width_twips: v_width_twips, fill: v_fill, borders: v_borders, v_align: v_v_align, mar_twips: v_mar_twips, v_span: v_v_span, v_merge_continue: v_v_merge_continue, locked: v_locked, rewrite: v_rewrite, rewrite_format: v_rewrite_format, prior_para_props: v_prior_para_props })
+                Ok(HfTableCell { paras: v_paras.map_or_else(|| wire::absent("paras").map(|()| Default::default()), Ok)?, para_props: v_para_props, align: v_align, width_pct: v_width_pct, width_twips: v_width_twips, fill: v_fill, borders: v_borders, v_align: v_v_align, mar_twips: v_mar_twips, v_span: v_v_span, v_merge_continue: v_v_merge_continue, locked: v_locked, rewrite: v_rewrite, rewrite_format: v_rewrite_format, prior_para_props: v_prior_para_props })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10687,17 +10711,17 @@ impl<'de> Deserialize<'de> for HfCellParaProps {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfCellParaPropsKey::Align => v_align = Some(map.next_value()?),
+                        HfCellParaPropsKey::Align => v_align = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0,
                         HfCellParaPropsKey::IndentLeft => v_indent_left = Some(map.next_value()?),
                         HfCellParaPropsKey::IndentFirstLine => v_indent_first_line = Some(map.next_value()?),
-                        HfCellParaPropsKey::TabStops => v_tab_stops = Some(map.next_value()?),
+                        HfCellParaPropsKey::TabStops => v_tab_stops = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0,
                         HfCellParaPropsKey::SpaceBefore => v_space_before = Some(map.next_value()?),
                         HfCellParaPropsKey::SpaceAfter => v_space_after = Some(map.next_value()?),
-                        HfCellParaPropsKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        HfCellParaPropsKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0,
                         HfCellParaPropsKey::LineRawTwips => v_line_raw_twips = Some(map.next_value()?),
                         HfCellParaPropsKey::LineSpacing => v_line_spacing = Some(map.next_value()?),
-                        HfCellParaPropsKey::WordWrap => v_word_wrap = Some(map.next_value()?),
-                        HfCellParaPropsKey::StyleId => v_style_id = Some(map.next_value()?),
+                        HfCellParaPropsKey::WordWrap => v_word_wrap = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfCellParaPropsKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         HfCellParaPropsKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
                     }
                 }
@@ -10776,12 +10800,12 @@ impl<'de> Deserialize<'de> for CellBorders {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        CellBordersKey::Top => b_0.top.set(map.next_value()?),
-                        CellBordersKey::Left => b_0.left.set(map.next_value()?),
-                        CellBordersKey::Bottom => b_0.bottom.set(map.next_value()?),
-                        CellBordersKey::Right => b_0.right.set(map.next_value()?),
-                        CellBordersKey::Tl2br => b_0.tl2br.set(map.next_value()?),
-                        CellBordersKey::Tr2bl => b_0.tr2bl.set(map.next_value()?),
+                        CellBordersKey::Top => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.top.set(value) },
+                        CellBordersKey::Left => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.left.set(value) },
+                        CellBordersKey::Bottom => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.bottom.set(value) },
+                        CellBordersKey::Right => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.right.set(value) },
+                        CellBordersKey::Tl2br => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.tl2br.set(value) },
+                        CellBordersKey::Tr2bl => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_0.tr2bl.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -10864,12 +10888,12 @@ impl<'de> Deserialize<'de> for CellBorder {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        CellBorderKey::Style => v_style = Some(map.next_value()?),
+                        CellBorderKey::Style => v_style = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CellBorderKey::SzEighths => v_sz_eighths = Some(map.next_value()?),
-                        CellBorderKey::Color => v_color = Some(map.next_value()?),
+                        CellBorderKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(CellBorder { style: v_style.ok_or_else(|| A::Error::missing_field("style"))?, sz_eighths: v_sz_eighths, color: v_color })
+                Ok(CellBorder { style: v_style.map_or_else(|| wire::absent("style").map(|()| Default::default()), Ok)?, sz_eighths: v_sz_eighths, color: v_color })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10884,7 +10908,7 @@ pub enum HfTableCellVAlign {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableCellVAlign {
@@ -11116,15 +11140,15 @@ impl<'de> Deserialize<'de> for HfTableRow {
                     }
                     match key {
                         HfTableRowKey::HeightTwips => v_height_twips = Some(map.next_value()?),
-                        HfTableRowKey::HeightRule => v_height_rule = Some(map.next_value()?),
+                        HfTableRowKey::HeightRule => v_height_rule = map.next_value::<wire::OrAbsent<HfTableRowHeightRule>>()?.0,
                         HfTableRowKey::IndentTwips => v_indent_twips = Some(map.next_value()?),
-                        HfTableRowKey::TabOverflow => v_tab_overflow = Some(map.next_value()?),
-                        HfTableRowKey::BidiVisual => v_bidi_visual = Some(map.next_value()?),
-                        HfTableRowKey::AdditiveSpacing => v_additive_spacing = Some(map.next_value()?),
-                        HfTableRowKey::Source => v_source = Some(map.next_value()?),
-                        HfTableRowKey::Align => v_align = Some(map.next_value()?),
+                        HfTableRowKey::TabOverflow => v_tab_overflow = map.next_value::<wire::OrAbsent<HfTableRowTabOverflow>>()?.0,
+                        HfTableRowKey::BidiVisual => v_bidi_visual = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfTableRowKey::AdditiveSpacing => v_additive_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfTableRowKey::Source => v_source = map.next_value::<wire::OrAbsent<HfTableRowSource>>()?.0,
+                        HfTableRowKey::Align => v_align = map.next_value::<wire::OrAbsent<HfTableRowAlign>>()?.0,
                         HfTableRowKey::WidthTwips => v_width_twips = Some(map.next_value()?),
-                        HfTableRowKey::Float => v_float = Some(map.next_value()?),
+                        HfTableRowKey::Float => v_float = map.next_value::<wire::OrAbsent<HfTableFloat>>()?.0,
                     }
                 }
                 Ok(HfTableRow { height_twips: v_height_twips, height_rule: v_height_rule, indent_twips: v_indent_twips, tab_overflow: v_tab_overflow, bidi_visual: v_bidi_visual, additive_spacing: v_additive_spacing, source: v_source, align: v_align, width_twips: v_width_twips, float: v_float })
@@ -11141,7 +11165,7 @@ impl<'de> Deserialize<'de> for HfTableRow {
 pub enum HfTableRowHeightRule {
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableRowHeightRule {
@@ -11178,7 +11202,7 @@ impl<'de> Deserialize<'de> for HfTableRowHeightRule {
 pub enum HfTableRowTabOverflow {
     Wrap,
     Clip,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableRowTabOverflow {
@@ -11276,7 +11300,7 @@ impl<'de> Deserialize<'de> for HfTableRowSource {
                         HfTableRowSourceKey::Tr => v_tr = Some(map.next_value()?),
                     }
                 }
-                Ok(HfTableRowSource { tbl: v_tbl.ok_or_else(|| A::Error::missing_field("tbl"))?, tr: v_tr.ok_or_else(|| A::Error::missing_field("tr"))? })
+                Ok(HfTableRowSource { tbl: v_tbl.map_or_else(|| wire::absent("tbl").map(|()| JsNum(f64::NAN)), Ok)?, tr: v_tr.map_or_else(|| wire::absent("tr").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -11290,7 +11314,7 @@ impl<'de> Deserialize<'de> for HfTableRowSource {
 pub enum HfTableRowAlign {
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableRowAlign {
@@ -11411,9 +11435,9 @@ impl<'de> Deserialize<'de> for HfTableFloat {
                     match key {
                         HfTableFloatKey::XTwips => v_x_twips = Some(map.next_value()?),
                         HfTableFloatKey::YTwips => v_y_twips = Some(map.next_value()?),
-                        HfTableFloatKey::HorzAnchor => v_horz_anchor = Some(map.next_value()?),
-                        HfTableFloatKey::VertAnchor => v_vert_anchor = Some(map.next_value()?),
-                        HfTableFloatKey::XSpec => v_x_spec = Some(map.next_value()?),
+                        HfTableFloatKey::HorzAnchor => v_horz_anchor = map.next_value::<wire::OrAbsent<HfTableFloatHorzAnchor>>()?.0,
+                        HfTableFloatKey::VertAnchor => v_vert_anchor = map.next_value::<wire::OrAbsent<HfTableFloatVertAnchor>>()?.0,
+                        HfTableFloatKey::XSpec => v_x_spec = map.next_value::<wire::OrAbsent<HfTableFloatXSpec>>()?.0,
                     }
                 }
                 Ok(HfTableFloat { x_twips: v_x_twips, y_twips: v_y_twips, horz_anchor: v_horz_anchor, vert_anchor: v_vert_anchor, x_spec: v_x_spec })
@@ -11431,7 +11455,7 @@ pub enum HfTableFloatHorzAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableFloatHorzAnchor {
@@ -11471,7 +11495,7 @@ pub enum HfTableFloatVertAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableFloatVertAnchor {
@@ -11513,7 +11537,7 @@ pub enum HfTableFloatXSpec {
     Right,
     Inside,
     Outside,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl HfTableFloatXSpec {
@@ -11623,13 +11647,13 @@ impl<'de> Deserialize<'de> for NumberingDef {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NumberingDefKey::NumId => v_num_id = Some(map.next_value()?),
-                        NumberingDefKey::AbstractNumId => v_abstract_num_id = Some(map.next_value()?),
-                        NumberingDefKey::Levels => v_levels = Some(map.next_value()?),
-                        NumberingDefKey::StartOverrides => v_start_overrides = Some(map.next_value()?),
+                        NumberingDefKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingDefKey::AbstractNumId => v_abstract_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NumberingDefKey::Levels => v_levels = map.next_value::<wire::OrAbsent<NumberRecord<NumberingLevel>>>()?.0,
+                        NumberingDefKey::StartOverrides => v_start_overrides = map.next_value::<wire::OrAbsent<NumberRecord<JsNum>>>()?.0,
                     }
                 }
-                Ok(NumberingDef { num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, abstract_num_id: v_abstract_num_id.ok_or_else(|| A::Error::missing_field("abstractNumId"))?, levels: v_levels.ok_or_else(|| A::Error::missing_field("levels"))?, start_overrides: v_start_overrides.ok_or_else(|| A::Error::missing_field("startOverrides"))? })
+                Ok(NumberingDef { num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, abstract_num_id: v_abstract_num_id.map_or_else(|| wire::absent("abstractNumId").map(|()| Default::default()), Ok)?, levels: v_levels.ok_or_else(|| A::Error::missing_field("levels"))?, start_overrides: v_start_overrides.ok_or_else(|| A::Error::missing_field("startOverrides"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -11744,17 +11768,17 @@ impl<'de> Deserialize<'de> for HeaderFooter {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HeaderFooterKey::Text => v_text = Some(map.next_value()?),
-                        HeaderFooterKey::PageNumber => v_page_number = Some(map.next_value()?),
-                        HeaderFooterKey::Paras => v_paras = Some(map.next_value()?),
-                        HeaderFooterKey::NewPictures => v_new_pictures = Some(map.next_value()?),
-                        HeaderFooterKey::PictureEdits => v_picture_edits = Some(map.next_value()?),
-                        HeaderFooterKey::PictureOnly => v_picture_only = Some(map.next_value()?),
-                        HeaderFooterKey::RevisionsResolved => v_revisions_resolved = Some(map.next_value()?),
-                        HeaderFooterKey::KeepContent => v_keep_content = Some(map.next_value()?),
+                        HeaderFooterKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HeaderFooterKey::PageNumber => v_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HeaderFooterKey::Paras => v_paras = map.next_value::<wire::OrAbsent<Vec<HfParagraph>>>()?.0,
+                        HeaderFooterKey::NewPictures => v_new_pictures = map.next_value::<wire::OrAbsent<JsObject<HeaderFooterNewPicturesValue>>>()?.0,
+                        HeaderFooterKey::PictureEdits => v_picture_edits = map.next_value::<wire::OrAbsent<NumberRecord<HfPictureEdit>>>()?.0,
+                        HeaderFooterKey::PictureOnly => v_picture_only = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HeaderFooterKey::RevisionsResolved => v_revisions_resolved = map.next_value::<wire::OrAbsent<Vec<RevisionResolution>>>()?.0,
+                        HeaderFooterKey::KeepContent => v_keep_content = map.next_value::<wire::OrAbsent<True>>()?.0,
                     }
                 }
-                Ok(HeaderFooter { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, page_number: v_page_number, paras: v_paras, new_pictures: v_new_pictures, picture_edits: v_picture_edits, picture_only: v_picture_only, revisions_resolved: v_revisions_resolved, keep_content: v_keep_content })
+                Ok(HeaderFooter { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, page_number: v_page_number, paras: v_paras, new_pictures: v_new_pictures, picture_edits: v_picture_edits, picture_only: v_picture_only, revisions_resolved: v_revisions_resolved, keep_content: v_keep_content })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -11825,11 +11849,11 @@ impl<'de> Deserialize<'de> for HeaderFooterNewPicturesValue {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HeaderFooterNewPicturesValueKey::Base64 => v_base64 = Some(map.next_value()?),
-                        HeaderFooterNewPicturesValueKey::Mime => v_mime = Some(map.next_value()?),
+                        HeaderFooterNewPicturesValueKey::Base64 => v_base64 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HeaderFooterNewPicturesValueKey::Mime => v_mime = map.next_value::<wire::OrAbsent<NewImageMime>>()?.0,
                     }
                 }
-                Ok(HeaderFooterNewPicturesValue { base64: v_base64.ok_or_else(|| A::Error::missing_field("base64"))?, mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))? })
+                Ok(HeaderFooterNewPicturesValue { base64: v_base64.map_or_else(|| wire::absent("base64").map(|()| Default::default()), Ok)?, mime: v_mime.ok_or_else(|| A::Error::missing_field("mime"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -11920,7 +11944,7 @@ impl<'de> Deserialize<'de> for HfPictureEdit {
                         HfPictureEditKey::HeightPx => v_height_px = Some(map.next_value()?),
                     }
                 }
-                Ok(HfPictureEdit { pos_x_px: v_pos_x_px, pos_y_px: v_pos_y_px, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))? })
+                Ok(HfPictureEdit { pos_x_px: v_pos_x_px, pos_y_px: v_pos_y_px, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -11993,8 +12017,8 @@ impl<'de> Deserialize<'de> for RevisionResolution {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RevisionResolutionKey::Mode => v_mode = Some(map.next_value()?),
-                        RevisionResolutionKey::Filter => v_filter = Some(map.next_value()?),
+                        RevisionResolutionKey::Mode => v_mode = map.next_value::<wire::OrAbsent<RevisionXmlMode>>()?.0,
+                        RevisionResolutionKey::Filter => v_filter = map.next_value::<wire::OrAbsent<RevisionXmlFilter>>()?.0,
                     }
                 }
                 Ok(RevisionResolution { mode: v_mode.ok_or_else(|| A::Error::missing_field("mode"))?, filter: v_filter })
@@ -12011,7 +12035,7 @@ impl<'de> Deserialize<'de> for RevisionResolution {
 pub enum RevisionXmlMode {
     Accept,
     Reject,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RevisionXmlMode {
@@ -12130,11 +12154,11 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RevisionXmlFilterKey::Author => v_author = Some(map.next_value()?),
-                        RevisionXmlFilterKey::Type => v_type = Some(map.next_value()?),
-                        RevisionXmlFilterKey::Before => v_before = Some(map.next_value()?),
-                        RevisionXmlFilterKey::Date => v_date = Some(map.next_value()?),
-                        RevisionXmlFilterKey::Ids => v_ids = Some(map.next_value()?),
+                        RevisionXmlFilterKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionXmlFilterKey::Type => v_type = map.next_value::<wire::OrAbsent<RevisionXmlType>>()?.0,
+                        RevisionXmlFilterKey::Before => v_before = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionXmlFilterKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RevisionXmlFilterKey::Ids => v_ids = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
                     }
                 }
                 Ok(RevisionXmlFilter { author: v_author, r#type: v_type, before: v_before, date: v_date, ids: v_ids })
@@ -12153,7 +12177,7 @@ pub enum RevisionXmlType {
     Deletion,
     Formatting,
     Move,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl RevisionXmlType {
@@ -12263,13 +12287,13 @@ impl<'de> Deserialize<'de> for HfPartInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfPartInfoKey::Text => v_text = Some(map.next_value()?),
-                        HfPartInfoKey::HasPageNumber => v_has_page_number = Some(map.next_value()?),
-                        HfPartInfoKey::Paras => v_paras = Some(map.next_value()?),
-                        HfPartInfoKey::Images => v_images = Some(map.next_value()?),
+                        HfPartInfoKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        HfPartInfoKey::HasPageNumber => v_has_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        HfPartInfoKey::Paras => v_paras = map.next_value::<wire::OrAbsent<Vec<HfParagraph>>>()?.0,
+                        HfPartInfoKey::Images => v_images = map.next_value::<wire::OrAbsent<Vec<HfImage>>>()?.0,
                     }
                 }
-                Ok(HfPartInfo { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, has_page_number: v_has_page_number.ok_or_else(|| A::Error::missing_field("hasPageNumber"))?, paras: v_paras.ok_or_else(|| A::Error::missing_field("paras"))?, images: v_images })
+                Ok(HfPartInfo { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, has_page_number: v_has_page_number.map_or_else(|| wire::absent("hasPageNumber").map(|()| Default::default()), Ok)?, paras: v_paras.map_or_else(|| wire::absent("paras").map(|()| Default::default()), Ok)?, images: v_images })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12280,6 +12304,7 @@ impl<'de> Deserialize<'de> for HfPartInfo {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NoteRun {
     pub text: String,
+    pub redact: Option<String>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
@@ -12298,6 +12323,7 @@ pub struct NoteRun {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NoteRunKey {
     Text,
+    Redact,
     Bold,
     Italic,
     Underline,
@@ -12313,11 +12339,12 @@ pub enum NoteRunKey {
 }
 
 impl FieldKey for NoteRunKey {
-    const NAMES: &'static [&'static str] = &["text", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "fontAscii", "font", "caps", "textOutline", "ins", "del"];
+    const NAMES: &'static [&'static str] = &["text", "redact", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "fontAscii", "font", "caps", "textOutline", "ins", "del"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
             "text" => Some(Self::Text),
+            "redact" => Some(Self::Redact),
             "bold" => Some(Self::Bold),
             "italic" => Some(Self::Italic),
             "underline" => Some(Self::Underline),
@@ -12345,6 +12372,9 @@ impl Serialize for NoteRun {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.redact {
+            map.serialize_entry("redact", value)?;
+        }
         if let Some(value) = &self.bold {
             map.serialize_entry("bold", value)?;
         }
@@ -12398,6 +12428,7 @@ impl<'de> Deserialize<'de> for NoteRun {
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<NoteRun, A::Error> {
                 let mut seen = Seen::default();
                 let mut v_text = None;
+                let mut v_redact = None;
                 let mut v_bold = None;
                 let mut v_italic = None;
                 let mut v_underline = None;
@@ -12419,22 +12450,23 @@ impl<'de> Deserialize<'de> for NoteRun {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NoteRunKey::Text => v_text = Some(map.next_value()?),
-                        NoteRunKey::Bold => v_bold = Some(map.next_value()?),
-                        NoteRunKey::Italic => v_italic = Some(map.next_value()?),
-                        NoteRunKey::Underline => v_underline = Some(map.next_value()?),
-                        NoteRunKey::Strike => v_strike = Some(map.next_value()?),
-                        NoteRunKey::Color => v_color = Some(map.next_value()?),
+                        NoteRunKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteRunKey::Redact => v_redact = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteRunKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NoteRunKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NoteRunKey::Underline => v_underline = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NoteRunKey::Strike => v_strike = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        NoteRunKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NoteRunKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        NoteRunKey::FontAscii => v_font_ascii = Some(map.next_value()?),
-                        NoteRunKey::Font => v_font = Some(map.next_value()?),
-                        NoteRunKey::Caps => v_caps = Some(map.next_value()?),
-                        NoteRunKey::TextOutline => v_text_outline = Some(map.next_value()?),
-                        NoteRunKey::Ins => v_ins = Some(map.next_value()?),
-                        NoteRunKey::Del => v_del = Some(map.next_value()?),
+                        NoteRunKey::FontAscii => v_font_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteRunKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteRunKey::Caps => v_caps = map.next_value::<wire::OrAbsent<NoteRunCaps>>()?.0,
+                        NoteRunKey::TextOutline => v_text_outline = map.next_value::<wire::OrAbsent<TextOutline>>()?.0,
+                        NoteRunKey::Ins => v_ins = map.next_value::<wire::OrAbsent<RevisionInfo>>()?.0,
+                        NoteRunKey::Del => v_del = map.next_value::<wire::OrAbsent<RevisionInfo>>()?.0,
                     }
                 }
-                Ok(NoteRun { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, bold: v_bold, italic: v_italic, underline: v_underline, strike: v_strike, color: v_color, size_half_points: v_size_half_points, font_ascii: v_font_ascii, font: v_font, caps: v_caps, text_outline: v_text_outline, ins: v_ins, del: v_del })
+                Ok(NoteRun { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, redact: v_redact, bold: v_bold, italic: v_italic, underline: v_underline, strike: v_strike, color: v_color, size_half_points: v_size_half_points, font_ascii: v_font_ascii, font: v_font, caps: v_caps, text_outline: v_text_outline, ins: v_ins, del: v_del })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12449,7 +12481,7 @@ pub enum NoteRunCaps {
     All,
     Small,
     None,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NoteRunCaps {
@@ -12486,6 +12518,7 @@ impl<'de> Deserialize<'de> for NoteRunCaps {
 pub struct NoteInfo {
     pub id: String,
     pub text: String,
+    pub model_text: Option<String>,
     pub rich_paras: Option<Vec<Vec<NoteRun>>>,
     pub style_id: Option<String>,
     pub zotero_field: Option<True>,
@@ -12499,6 +12532,7 @@ pub struct NoteInfo {
 pub enum NoteInfoKey {
     Id,
     Text,
+    ModelText,
     RichParas,
     NoRefMark,
     StyleId,
@@ -12508,12 +12542,13 @@ pub enum NoteInfoKey {
 }
 
 impl FieldKey for NoteInfoKey {
-    const NAMES: &'static [&'static str] = &["id", "text", "richParas", "noRefMark", "styleId", "zoteroField", "spacing", "revisionsResolved"];
+    const NAMES: &'static [&'static str] = &["id", "text", "modelText", "richParas", "noRefMark", "styleId", "zoteroField", "spacing", "revisionsResolved"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
             "id" => Some(Self::Id),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
             "richParas" => Some(Self::RichParas),
             "noRefMark" => Some(Self::NoRefMark),
             "styleId" => Some(Self::StyleId),
@@ -12536,6 +12571,9 @@ impl Serialize for NoteInfo {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("id", &self.id)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
         if let Some(value) = &self.rich_paras {
             map.serialize_entry("richParas", value)?;
         }
@@ -12572,6 +12610,7 @@ impl<'de> Deserialize<'de> for NoteInfo {
                 let mut seen = Seen::default();
                 let mut v_id = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
                 let mut v_rich_paras = None;
                 let mut v_no_ref_mark = None;
                 let mut v_style_id = None;
@@ -12587,17 +12626,18 @@ impl<'de> Deserialize<'de> for NoteInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NoteInfoKey::Id => v_id = Some(map.next_value()?),
-                        NoteInfoKey::Text => v_text = Some(map.next_value()?),
-                        NoteInfoKey::RichParas => v_rich_paras = Some(map.next_value()?),
-                        NoteInfoKey::NoRefMark => v_no_ref_mark = Some(map.next_value()?),
-                        NoteInfoKey::StyleId => v_style_id = Some(map.next_value()?),
-                        NoteInfoKey::ZoteroField => v_zotero_field = Some(map.next_value()?),
-                        NoteInfoKey::Spacing => v_spacing = Some(map.next_value()?),
-                        NoteInfoKey::RevisionsResolved => v_revisions_resolved = Some(map.next_value()?),
+                        NoteInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteInfoKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteInfoKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteInfoKey::RichParas => v_rich_paras = map.next_value::<wire::OrAbsent<Vec<Vec<NoteRun>>>>()?.0,
+                        NoteInfoKey::NoRefMark => v_no_ref_mark = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        NoteInfoKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteInfoKey::ZoteroField => v_zotero_field = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        NoteInfoKey::Spacing => v_spacing = map.next_value::<wire::OrAbsent<NoteInfoSpacing>>()?.0,
+                        NoteInfoKey::RevisionsResolved => v_revisions_resolved = map.next_value::<wire::OrAbsent<Vec<RevisionResolution>>>()?.0,
                     }
                 }
-                Ok(NoteInfo { id: v_id.ok_or_else(|| A::Error::missing_field("id"))?, text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, rich_paras: v_rich_paras, no_ref_mark: v_no_ref_mark, style_id: v_style_id, zotero_field: v_zotero_field, spacing: v_spacing, revisions_resolved: v_revisions_resolved })
+                Ok(NoteInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text, rich_paras: v_rich_paras, no_ref_mark: v_no_ref_mark, style_id: v_style_id, zotero_field: v_zotero_field, spacing: v_spacing, revisions_resolved: v_revisions_resolved })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12688,7 +12728,7 @@ impl<'de> Deserialize<'de> for NoteInfoSpacing {
                     match key {
                         NoteInfoSpacingKey::BeforeTwips => v_before_twips = Some(map.next_value()?),
                         NoteInfoSpacingKey::AfterTwips => v_after_twips = Some(map.next_value()?),
-                        NoteInfoSpacingKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        NoteInfoSpacingKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<NoteInfoSpacingLineRule>>()?.0,
                         NoteInfoSpacingKey::LineRawTwips => v_line_raw_twips = Some(map.next_value()?),
                     }
                 }
@@ -12707,7 +12747,7 @@ pub enum NoteInfoSpacingLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NoteInfoSpacingLineRule {
@@ -12875,21 +12915,21 @@ impl<'de> Deserialize<'de> for FieldRun {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FieldRunKey::Text => v_text = Some(map.next_value()?),
-                        FieldRunKey::Bold => v_bold = Some(map.next_value()?),
-                        FieldRunKey::Italic => v_italic = Some(map.next_value()?),
-                        FieldRunKey::Underline => v_underline = Some(map.next_value()?),
-                        FieldRunKey::Color => v_color = Some(map.next_value()?),
+                        FieldRunKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldRunKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldRunKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldRunKey::Underline => v_underline = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldRunKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         FieldRunKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        FieldRunKey::Font => v_font = Some(map.next_value()?),
-                        FieldRunKey::FontAscii => v_font_ascii = Some(map.next_value()?),
-                        FieldRunKey::CsFont => v_cs_font = Some(map.next_value()?),
-                        FieldRunKey::Link => v_link = Some(map.next_value()?),
-                        FieldRunKey::StyleId => v_style_id = Some(map.next_value()?),
-                        FieldRunKey::Math => v_math = Some(map.next_value()?),
+                        FieldRunKey::Font => v_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldRunKey::FontAscii => v_font_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldRunKey::CsFont => v_cs_font = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldRunKey::Link => v_link = map.next_value::<wire::OrAbsent<RunLink>>()?.0,
+                        FieldRunKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldRunKey::Math => v_math = map.next_value::<wire::OrAbsent<RunMath>>()?.0,
                     }
                 }
-                Ok(FieldRun { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, bold: v_bold, italic: v_italic, underline: v_underline, color: v_color, size_half_points: v_size_half_points, font: v_font, font_ascii: v_font_ascii, cs_font: v_cs_font, link: v_link, style_id: v_style_id, math: v_math })
+                Ok(FieldRun { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, bold: v_bold, italic: v_italic, underline: v_underline, color: v_color, size_half_points: v_size_half_points, font: v_font, font_ascii: v_font_ascii, cs_font: v_cs_font, link: v_link, style_id: v_style_id, math: v_math })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -13165,37 +13205,37 @@ impl<'de> Deserialize<'de> for FieldDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FieldDisplayKey::Kind => v_kind = Some(map.next_value()?),
-                        FieldDisplayKey::Left => v_left = Some(map.next_value()?),
-                        FieldDisplayKey::Right => v_right = Some(map.next_value()?),
+                        FieldDisplayKey::Kind => v_kind = map.next_value::<wire::OrAbsent<FieldDisplayKind>>()?.0,
+                        FieldDisplayKey::Left => v_left = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldDisplayKey::Right => v_right = map.next_value::<wire::OrAbsent<String>>()?.0,
                         FieldDisplayKey::Level => v_level = Some(map.next_value()?),
-                        FieldDisplayKey::Anchor => v_anchor = Some(map.next_value()?),
-                        FieldDisplayKey::Deleted => v_deleted = Some(map.next_value()?),
-                        FieldDisplayKey::MarkDeleted => v_mark_deleted = Some(map.next_value()?),
-                        FieldDisplayKey::Num => v_num = Some(map.next_value()?),
+                        FieldDisplayKey::Anchor => v_anchor = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldDisplayKey::Deleted => v_deleted = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldDisplayKey::MarkDeleted => v_mark_deleted = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldDisplayKey::Num => v_num = map.next_value::<wire::OrAbsent<String>>()?.0,
                         FieldDisplayKey::SzHalfPoints => v_sz_half_points = Some(map.next_value()?),
-                        FieldDisplayKey::FontFamily => v_font_family = Some(map.next_value()?),
-                        FieldDisplayKey::EaFontFamily => v_ea_font_family = Some(map.next_value()?),
-                        FieldDisplayKey::Bold => v_bold = Some(map.next_value()?),
-                        FieldDisplayKey::RunStyleId => v_run_style_id = Some(map.next_value()?),
+                        FieldDisplayKey::FontFamily => v_font_family = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldDisplayKey::EaFontFamily => v_ea_font_family = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FieldDisplayKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldDisplayKey::RunStyleId => v_run_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         FieldDisplayKey::NumTabTwips => v_num_tab_twips = Some(map.next_value()?),
                         FieldDisplayKey::HangTwips => v_hang_twips = Some(map.next_value()?),
-                        FieldDisplayKey::Leader => v_leader = Some(map.next_value()?),
+                        FieldDisplayKey::Leader => v_leader = map.next_value::<wire::OrAbsent<TabStopLeader>>()?.0,
                         FieldDisplayKey::RightTabTwips => v_right_tab_twips = Some(map.next_value()?),
-                        FieldDisplayKey::Runs => v_runs = Some(map.next_value()?),
-                        FieldDisplayKey::EmptyLine => v_empty_line = Some(map.next_value()?),
-                        FieldDisplayKey::Align => v_align = Some(map.next_value()?),
-                        FieldDisplayKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        FieldDisplayKey::Runs => v_runs = map.next_value::<wire::OrAbsent<Vec<FieldRun>>>()?.0,
+                        FieldDisplayKey::EmptyLine => v_empty_line = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldDisplayKey::Align => v_align = map.next_value::<wire::OrAbsent<FieldDisplayAlign>>()?.0,
+                        FieldDisplayKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<FieldDisplayLineRule>>()?.0,
                         FieldDisplayKey::LineRawTwips => v_line_raw_twips = Some(map.next_value()?),
                         FieldDisplayKey::LineSpacing => v_line_spacing = Some(map.next_value()?),
                         FieldDisplayKey::SpaceBeforeTwips => v_space_before_twips = Some(map.next_value()?),
                         FieldDisplayKey::SpaceAfterTwips => v_space_after_twips = Some(map.next_value()?),
-                        FieldDisplayKey::SpaceBeforeAuto => v_space_before_auto = Some(map.next_value()?),
-                        FieldDisplayKey::SpaceAfterAuto => v_space_after_auto = Some(map.next_value()?),
+                        FieldDisplayKey::SpaceBeforeAuto => v_space_before_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FieldDisplayKey::SpaceAfterAuto => v_space_after_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         FieldDisplayKey::IndentLeftTwips => v_indent_left_twips = Some(map.next_value()?),
                         FieldDisplayKey::IndentRightTwips => v_indent_right_twips = Some(map.next_value()?),
                         FieldDisplayKey::IndentFirstLineTwips => v_indent_first_line_twips = Some(map.next_value()?),
-                        FieldDisplayKey::AdditiveSpacing => v_additive_spacing = Some(map.next_value()?),
+                        FieldDisplayKey::AdditiveSpacing => v_additive_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
                 Ok(FieldDisplay { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, left: v_left, right: v_right, level: v_level, anchor: v_anchor, deleted: v_deleted, mark_deleted: v_mark_deleted, num: v_num, sz_half_points: v_sz_half_points, font_family: v_font_family, ea_font_family: v_ea_font_family, bold: v_bold, run_style_id: v_run_style_id, num_tab_twips: v_num_tab_twips, hang_twips: v_hang_twips, leader: v_leader, right_tab_twips: v_right_tab_twips, runs: v_runs, empty_line: v_empty_line, align: v_align, line_rule: v_line_rule, line_raw_twips: v_line_raw_twips, line_spacing: v_line_spacing, space_before_twips: v_space_before_twips, space_after_twips: v_space_after_twips, space_before_auto: v_space_before_auto, space_after_auto: v_space_after_auto, indent_left_twips: v_indent_left_twips, indent_right_twips: v_indent_right_twips, indent_first_line_twips: v_indent_first_line_twips, additive_spacing: v_additive_spacing })
@@ -13213,7 +13253,7 @@ pub enum FieldDisplayKind {
     TocLine,
     Text,
     PageBreak,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FieldDisplayKind {
@@ -13254,7 +13294,7 @@ pub enum FieldDisplayAlign {
     Center,
     Right,
     Justify,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FieldDisplayAlign {
@@ -13296,7 +13336,7 @@ pub enum FieldDisplayLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FieldDisplayLineRule {
@@ -13478,23 +13518,23 @@ impl<'de> Deserialize<'de> for FormulaDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FormulaDisplayKey::Tokens => v_tokens = Some(map.next_value()?),
-                        FormulaDisplayKey::Mathml => v_mathml = Some(map.next_value()?),
-                        FormulaDisplayKey::Omml => v_omml = Some(map.next_value()?),
-                        FormulaDisplayKey::Latex => v_latex = Some(map.next_value()?),
+                        FormulaDisplayKey::Tokens => v_tokens = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        FormulaDisplayKey::Mathml => v_mathml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FormulaDisplayKey::Omml => v_omml = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FormulaDisplayKey::Latex => v_latex = map.next_value::<wire::OrAbsent<String>>()?.0,
                         FormulaDisplayKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        FormulaDisplayKey::Align => v_align = Some(map.next_value()?),
+                        FormulaDisplayKey::Align => v_align = map.next_value::<wire::OrAbsent<FormulaDisplayAlign>>()?.0,
                         FormulaDisplayKey::SpaceBeforeTwips => v_space_before_twips = Some(map.next_value()?),
                         FormulaDisplayKey::SpaceAfterTwips => v_space_after_twips = Some(map.next_value()?),
-                        FormulaDisplayKey::SpaceBeforeAuto => v_space_before_auto = Some(map.next_value()?),
-                        FormulaDisplayKey::SpaceAfterAuto => v_space_after_auto = Some(map.next_value()?),
+                        FormulaDisplayKey::SpaceBeforeAuto => v_space_before_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        FormulaDisplayKey::SpaceAfterAuto => v_space_after_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         FormulaDisplayKey::IndentLeftTwips => v_indent_left_twips = Some(map.next_value()?),
                         FormulaDisplayKey::IndentRightTwips => v_indent_right_twips = Some(map.next_value()?),
                         FormulaDisplayKey::IndentFirstLineTwips => v_indent_first_line_twips = Some(map.next_value()?),
-                        FormulaDisplayKey::AdditiveSpacing => v_additive_spacing = Some(map.next_value()?),
+                        FormulaDisplayKey::AdditiveSpacing => v_additive_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(FormulaDisplay { tokens: v_tokens.ok_or_else(|| A::Error::missing_field("tokens"))?, mathml: v_mathml, omml: v_omml, latex: v_latex, size_half_points: v_size_half_points, align: v_align, space_before_twips: v_space_before_twips, space_after_twips: v_space_after_twips, space_before_auto: v_space_before_auto, space_after_auto: v_space_after_auto, indent_left_twips: v_indent_left_twips, indent_right_twips: v_indent_right_twips, indent_first_line_twips: v_indent_first_line_twips, additive_spacing: v_additive_spacing })
+                Ok(FormulaDisplay { tokens: v_tokens.map_or_else(|| wire::absent("tokens").map(|()| Default::default()), Ok)?, mathml: v_mathml, omml: v_omml, latex: v_latex, size_half_points: v_size_half_points, align: v_align, space_before_twips: v_space_before_twips, space_after_twips: v_space_after_twips, space_before_auto: v_space_before_auto, space_after_auto: v_space_after_auto, indent_left_twips: v_indent_left_twips, indent_right_twips: v_indent_right_twips, indent_first_line_twips: v_indent_first_line_twips, additive_spacing: v_additive_spacing })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -13510,7 +13550,7 @@ pub enum FormulaDisplayAlign {
     Right,
     Center,
     CenterGroup,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FormulaDisplayAlign {
@@ -13640,12 +13680,12 @@ impl<'de> Deserialize<'de> for ChartAxis {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartAxisKey::Title => v_title = Some(map.next_value()?),
-                        ChartAxisKey::Line => v_line = Some(map.next_value()?),
-                        ChartAxisKey::Deleted => v_deleted = Some(map.next_value()?),
+                        ChartAxisKey::Title => v_title = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartAxisKey::Line => v_line = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartAxisKey::Deleted => v_deleted = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ChartAxisKey::FontPt => v_font_pt = Some(map.next_value()?),
-                        ChartAxisKey::Color => v_color = Some(map.next_value()?),
-                        ChartAxisKey::GridLine => v_grid_line = Some(map.next_value()?),
+                        ChartAxisKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartAxisKey::GridLine => v_grid_line = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(ChartAxis { title: v_title, line: v_line, deleted: v_deleted, font_pt: v_font_pt, color: v_color, grid_line: v_grid_line })
@@ -13756,16 +13796,16 @@ impl<'de> Deserialize<'de> for ChartSeries {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartSeriesKey::Name => v_name = Some(map.next_value()?),
-                        ChartSeriesKey::Values => v_values = Some(map.next_value()?),
-                        ChartSeriesKey::Color => v_color = Some(map.next_value()?),
-                        ChartSeriesKey::PointColors => v_point_colors = Some(map.next_value()?),
-                        ChartSeriesKey::XValues => v_x_values = Some(map.next_value()?),
-                        ChartSeriesKey::Sizes => v_sizes = Some(map.next_value()?),
-                        ChartSeriesKey::Line => v_line = Some(map.next_value()?),
+                        ChartSeriesKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartSeriesKey::Values => v_values = map.next_value::<wire::OrAbsent<Vec<Option<JsNum>>>>()?.0,
+                        ChartSeriesKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartSeriesKey::PointColors => v_point_colors = map.next_value::<wire::OrAbsent<Vec<Option<String>>>>()?.0,
+                        ChartSeriesKey::XValues => v_x_values = map.next_value::<wire::OrAbsent<Vec<Option<JsNum>>>>()?.0,
+                        ChartSeriesKey::Sizes => v_sizes = map.next_value::<wire::OrAbsent<Vec<Option<JsNum>>>>()?.0,
+                        ChartSeriesKey::Line => v_line = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(ChartSeries { name: v_name, values: v_values.ok_or_else(|| A::Error::missing_field("values"))?, color: v_color, point_colors: v_point_colors, x_values: v_x_values, sizes: v_sizes, line: v_line })
+                Ok(ChartSeries { name: v_name, values: v_values.map_or_else(|| wire::absent("values").map(|()| Default::default()), Ok)?, color: v_color, point_colors: v_point_colors, x_values: v_x_values, sizes: v_sizes, line: v_line })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -13891,41 +13931,41 @@ impl<'de> Deserialize<'de> for ChartDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartDisplayKey::PartPath => b_0.part_path.set(map.next_value()?),
-                        ChartDisplayKey::Kind => b_0.kind.set(map.next_value()?),
-                        ChartDisplayKey::Horizontal => b_0.horizontal.set(map.next_value()?),
-                        ChartDisplayKey::Grouping => b_0.grouping.set(map.next_value()?),
-                        ChartDisplayKey::Markers => b_0.markers.set(map.next_value()?),
-                        ChartDisplayKey::RadarStyle => b_0.radar_style.set(map.next_value()?),
+                        ChartDisplayKey::PartPath => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.part_path.set(value) },
+                        ChartDisplayKey::Kind => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayKind>>()?.0 { b_0.kind.set(value) },
+                        ChartDisplayKey::Horizontal => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.horizontal.set(value) },
+                        ChartDisplayKey::Grouping => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayGrouping>>()?.0 { b_0.grouping.set(value) },
+                        ChartDisplayKey::Markers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.markers.set(value) },
+                        ChartDisplayKey::RadarStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayRadarStyle>>()?.0 { b_0.radar_style.set(value) },
                         ChartDisplayKey::HolePct => b_0.hole_pct.set(map.next_value()?),
                         ChartDisplayKey::ExplosionPct => b_0.explosion_pct.set(map.next_value()?),
-                        ChartDisplayKey::DataLabels => b_0.data_labels.set(map.next_value()?),
+                        ChartDisplayKey::DataLabels => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayDataLabels>>()?.0 { b_0.data_labels.set(value) },
                         ChartDisplayKey::TitleFontPt => b_0.title_font_pt.set(map.next_value()?),
                         ChartDisplayKey::LegendFontPt => b_0.legend_font_pt.set(map.next_value()?),
-                        ChartDisplayKey::LegendPos => b_0.legend_pos.set(map.next_value()?),
-                        ChartDisplayKey::NoLegend => b_0.no_legend.set(map.next_value()?),
-                        ChartDisplayKey::FrameLine => b_0.frame_line.set(map.next_value()?),
-                        ChartDisplayKey::XAxis => b_0.x_axis.set(map.next_value()?),
-                        ChartDisplayKey::YAxis => b_0.y_axis.set(map.next_value()?),
-                        ChartDisplayKey::DataTable => b_0.data_table.set(map.next_value()?),
-                        ChartDisplayKey::Title => b_0.title.set(map.next_value()?),
-                        ChartDisplayKey::Categories => b_0.categories.set(map.next_value()?),
-                        ChartDisplayKey::Series => b_0.series.set(map.next_value()?),
-                        ChartDisplayKey::Palette => b_0.palette.set(map.next_value()?),
+                        ChartDisplayKey::LegendPos => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayLegendPos>>()?.0 { b_0.legend_pos.set(value) },
+                        ChartDisplayKey::NoLegend => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.no_legend.set(value) },
+                        ChartDisplayKey::FrameLine => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.frame_line.set(value) },
+                        ChartDisplayKey::XAxis => if let Some(value) = map.next_value::<wire::OrAbsent<ChartAxis>>()?.0 { b_0.x_axis.set(value) },
+                        ChartDisplayKey::YAxis => if let Some(value) = map.next_value::<wire::OrAbsent<ChartAxis>>()?.0 { b_0.y_axis.set(value) },
+                        ChartDisplayKey::DataTable => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayDataTable>>()?.0 { b_0.data_table.set(value) },
+                        ChartDisplayKey::Title => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.title.set(value) },
+                        ChartDisplayKey::Categories => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.categories.set(value) },
+                        ChartDisplayKey::Series => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<ChartSeries>>>()?.0 { b_0.series.set(value) },
+                        ChartDisplayKey::Palette => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.palette.set(value) },
                         ChartDisplayKey::WidthPx => b_0.width_px.set(map.next_value()?),
                         ChartDisplayKey::HeightPx => b_0.height_px.set(map.next_value()?),
                     }
                 }
-                if !b_0.part_path.has_key() {
+                if !b_0.part_path.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("partPath"));
                 }
-                if !b_0.kind.has_key() {
+                if !b_0.kind.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("kind"));
                 }
-                if !b_0.categories.has_key() {
+                if !b_0.categories.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("categories"));
                 }
-                if !b_0.series.has_key() {
+                if !b_0.series.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("series"));
                 }
                 Ok(b_0)
@@ -13948,7 +13988,7 @@ pub enum ChartDisplayKind {
     Bubble,
     Radar,
     Other,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ChartDisplayKind {
@@ -13997,7 +14037,7 @@ impl<'de> Deserialize<'de> for ChartDisplayKind {
 pub enum ChartDisplayGrouping {
     Stacked,
     PercentStacked,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ChartDisplayGrouping {
@@ -14035,7 +14075,7 @@ pub enum ChartDisplayRadarStyle {
     Standard,
     Marker,
     Filled,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ChartDisplayRadarStyle {
@@ -14163,12 +14203,12 @@ impl<'de> Deserialize<'de> for ChartDisplayDataLabels {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartDisplayDataLabelsKey::Val => v_val = Some(map.next_value()?),
-                        ChartDisplayDataLabelsKey::Pct => v_pct = Some(map.next_value()?),
-                        ChartDisplayDataLabelsKey::Cat => v_cat = Some(map.next_value()?),
+                        ChartDisplayDataLabelsKey::Val => v_val = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataLabelsKey::Pct => v_pct = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataLabelsKey::Cat => v_cat = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ChartDisplayDataLabelsKey::FontPt => v_font_pt = Some(map.next_value()?),
-                        ChartDisplayDataLabelsKey::Color => v_color = Some(map.next_value()?),
-                        ChartDisplayDataLabelsKey::NumFmt => v_num_fmt = Some(map.next_value()?),
+                        ChartDisplayDataLabelsKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ChartDisplayDataLabelsKey::NumFmt => v_num_fmt = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(ChartDisplayDataLabels { val: v_val, pct: v_pct, cat: v_cat, font_pt: v_font_pt, color: v_color, num_fmt: v_num_fmt })
@@ -14188,7 +14228,7 @@ pub enum ChartDisplayLegendPos {
     R,
     T,
     Tr,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ChartDisplayLegendPos {
@@ -14305,14 +14345,14 @@ impl<'de> Deserialize<'de> for ChartDisplayDataTable {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartDisplayDataTableKey::Keys => v_keys = Some(map.next_value()?),
-                        ChartDisplayDataTableKey::Horz => v_horz = Some(map.next_value()?),
-                        ChartDisplayDataTableKey::Vert => v_vert = Some(map.next_value()?),
-                        ChartDisplayDataTableKey::Outline => v_outline = Some(map.next_value()?),
-                        ChartDisplayDataTableKey::Line => v_line = Some(map.next_value()?),
+                        ChartDisplayDataTableKey::Keys => v_keys = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataTableKey::Horz => v_horz = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataTableKey::Vert => v_vert = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataTableKey::Outline => v_outline = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ChartDisplayDataTableKey::Line => v_line = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(ChartDisplayDataTable { keys: v_keys.ok_or_else(|| A::Error::missing_field("keys"))?, horz: v_horz.ok_or_else(|| A::Error::missing_field("horz"))?, vert: v_vert.ok_or_else(|| A::Error::missing_field("vert"))?, outline: v_outline.ok_or_else(|| A::Error::missing_field("outline"))?, line: v_line })
+                Ok(ChartDisplayDataTable { keys: v_keys.map_or_else(|| wire::absent("keys").map(|()| Default::default()), Ok)?, horz: v_horz.map_or_else(|| wire::absent("horz").map(|()| Default::default()), Ok)?, vert: v_vert.map_or_else(|| wire::absent("vert").map(|()| Default::default()), Ok)?, outline: v_outline.map_or_else(|| wire::absent("outline").map(|()| Default::default()), Ok)?, line: v_line })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14415,28 +14455,28 @@ impl<'de> Deserialize<'de> for DiagramShape {
                         DiagramShapeKey::YPx => b_0.y_px.set(map.next_value()?),
                         DiagramShapeKey::WPx => b_0.w_px.set(map.next_value()?),
                         DiagramShapeKey::HPx => b_0.h_px.set(map.next_value()?),
-                        DiagramShapeKey::Prst => b_0.prst.set(map.next_value()?),
-                        DiagramShapeKey::FillHex => b_0.fill_hex.set(map.next_value()?),
-                        DiagramShapeKey::LnHex => b_0.ln_hex.set(map.next_value()?),
+                        DiagramShapeKey::Prst => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.prst.set(value) },
+                        DiagramShapeKey::FillHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill_hex.set(value) },
+                        DiagramShapeKey::LnHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ln_hex.set(value) },
                         DiagramShapeKey::LnWPx => b_0.ln_w_px.set(map.next_value()?),
-                        DiagramShapeKey::ImageDataUrl => b_0.image_data_url.set(map.next_value()?),
-                        DiagramShapeKey::FillRect => b_0.fill_rect.set(map.next_value()?),
-                        DiagramShapeKey::Texts => b_0.texts.set(map.next_value()?),
+                        DiagramShapeKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_data_url.set(value) },
+                        DiagramShapeKey::FillRect => if let Some(value) = map.next_value::<wire::OrAbsent<DiagramShapeFillRect>>()?.0 { b_0.fill_rect.set(value) },
+                        DiagramShapeKey::Texts => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.texts.set(value) },
                         DiagramShapeKey::FontSizePt => b_0.font_size_pt.set(map.next_value()?),
-                        DiagramShapeKey::TextColorHex => b_0.text_color_hex.set(map.next_value()?),
+                        DiagramShapeKey::TextColorHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.text_color_hex.set(value) },
                         DiagramShapeKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                     }
                 }
-                if !b_0.x_px.has_key() {
+                if !b_0.x_px.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("xPx"));
                 }
-                if !b_0.y_px.has_key() {
+                if !b_0.y_px.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("yPx"));
                 }
-                if !b_0.w_px.has_key() {
+                if !b_0.w_px.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("wPx"));
                 }
-                if !b_0.h_px.has_key() {
+                if !b_0.h_px.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("hPx"));
                 }
                 Ok(b_0)
@@ -14526,7 +14566,7 @@ impl<'de> Deserialize<'de> for DiagramShapeFillRect {
                         DiagramShapeFillRectKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(DiagramShapeFillRect { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(DiagramShapeFillRect { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14632,14 +14672,14 @@ impl<'de> Deserialize<'de> for DiagramDisplay {
                     match key {
                         DiagramDisplayKey::WidthPx => v_width_px = Some(map.next_value()?),
                         DiagramDisplayKey::HeightPx => v_height_px = Some(map.next_value()?),
-                        DiagramDisplayKey::Shapes => v_shapes = Some(map.next_value()?),
+                        DiagramDisplayKey::Shapes => v_shapes = map.next_value::<wire::OrAbsent<Vec<DiagramShape>>>()?.0,
                         DiagramDisplayKey::OffsetXEmu => v_offset_x_emu = Some(map.next_value()?),
                         DiagramDisplayKey::OffsetYEmu => v_offset_y_emu = Some(map.next_value()?),
-                        DiagramDisplayKey::Floating => v_floating = Some(map.next_value()?),
-                        DiagramDisplayKey::Canvas => v_canvas = Some(map.next_value()?),
+                        DiagramDisplayKey::Floating => v_floating = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        DiagramDisplayKey::Canvas => v_canvas = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(DiagramDisplay { width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))?, shapes: v_shapes.ok_or_else(|| A::Error::missing_field("shapes"))?, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, floating: v_floating, canvas: v_canvas })
+                Ok(DiagramDisplay { width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, shapes: v_shapes.map_or_else(|| wire::absent("shapes").map(|()| Default::default()), Ok)?, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, floating: v_floating, canvas: v_canvas })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14722,13 +14762,13 @@ impl<'de> Deserialize<'de> for NewChart {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NewChartKey::Kind => v_kind = Some(map.next_value()?),
-                        NewChartKey::Title => v_title = Some(map.next_value()?),
-                        NewChartKey::Categories => v_categories = Some(map.next_value()?),
-                        NewChartKey::Series => v_series = Some(map.next_value()?),
+                        NewChartKey::Kind => v_kind = map.next_value::<wire::OrAbsent<NewChartKind>>()?.0,
+                        NewChartKey::Title => v_title = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NewChartKey::Categories => v_categories = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        NewChartKey::Series => v_series = map.next_value::<wire::OrAbsent<Vec<NewChartSeriesItem>>>()?.0,
                     }
                 }
-                Ok(NewChart { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, title: v_title, categories: v_categories.ok_or_else(|| A::Error::missing_field("categories"))?, series: v_series.ok_or_else(|| A::Error::missing_field("series"))? })
+                Ok(NewChart { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, title: v_title, categories: v_categories.map_or_else(|| wire::absent("categories").map(|()| Default::default()), Ok)?, series: v_series.map_or_else(|| wire::absent("series").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14743,7 +14783,7 @@ pub enum NewChartKind {
     Bar,
     Line,
     Pie,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl NewChartKind {
@@ -14839,11 +14879,11 @@ impl<'de> Deserialize<'de> for NewChartSeriesItem {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NewChartSeriesItemKey::Name => v_name = Some(map.next_value()?),
-                        NewChartSeriesItemKey::Values => v_values = Some(map.next_value()?),
+                        NewChartSeriesItemKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NewChartSeriesItemKey::Values => v_values = map.next_value::<wire::OrAbsent<Vec<Option<JsNum>>>>()?.0,
                     }
                 }
-                Ok(NewChartSeriesItem { name: v_name.ok_or_else(|| A::Error::missing_field("name"))?, values: v_values.ok_or_else(|| A::Error::missing_field("values"))? })
+                Ok(NewChartSeriesItem { name: v_name.map_or_else(|| wire::absent("name").map(|()| Default::default()), Ok)?, values: v_values.map_or_else(|| wire::absent("values").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15165,57 +15205,57 @@ impl<'de> Deserialize<'de> for TableParagraph {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableParagraphKey::Align => b_1.align.set(map.next_value()?),
+                        TableParagraphKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_1.align.set(value) },
                         TableParagraphKey::LineSpacing => b_1.line_spacing.set(map.next_value()?),
-                        TableParagraphKey::LineRule => b_1.line_rule.set(map.next_value()?),
+                        TableParagraphKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_1.line_rule.set(value) },
                         TableParagraphKey::LineRawTwips => b_1.line_raw_twips.set(map.next_value()?),
                         TableParagraphKey::IndentLeft => b_1.indent_left.set(map.next_value()?),
                         TableParagraphKey::IndentRight => b_1.indent_right.set(map.next_value()?),
                         TableParagraphKey::IndentFirstLine => b_1.indent_first_line.set(map.next_value()?),
-                        TableParagraphKey::CharIndents => b_1.char_indents.set(map.next_value()?),
-                        TableParagraphKey::DirectCharIndents => b_1.direct_char_indents.set(map.next_value()?),
+                        TableParagraphKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.char_indents.set(value) },
+                        TableParagraphKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.direct_char_indents.set(value) },
                         TableParagraphKey::SpaceBefore => b_1.space_before.set(map.next_value()?),
                         TableParagraphKey::SpaceAfter => b_1.space_after.set(map.next_value()?),
-                        TableParagraphKey::SpaceBeforeAuto => b_1.space_before_auto.set(map.next_value()?),
-                        TableParagraphKey::SpaceAfterAuto => b_1.space_after_auto.set(map.next_value()?),
-                        TableParagraphKey::PageBreakBefore => b_1.page_break_before.set(map.next_value()?),
-                        TableParagraphKey::KeepNext => b_1.keep_next.set(map.next_value()?),
-                        TableParagraphKey::KeepLines => b_1.keep_lines.set(map.next_value()?),
-                        TableParagraphKey::SuppressLineNumbers => b_1.suppress_line_numbers.set(map.next_value()?),
-                        TableParagraphKey::WidowControl => b_1.widow_control.set(map.next_value()?),
-                        TableParagraphKey::SnapToGrid => b_1.snap_to_grid.set(map.next_value()?),
-                        TableParagraphKey::AutoSpace => b_1.auto_space.set(map.next_value()?),
-                        TableParagraphKey::AutoSpaceDE => b_1.auto_space_d_e.set(map.next_value()?),
-                        TableParagraphKey::AutoSpaceDN => b_1.auto_space_d_n.set(map.next_value()?),
-                        TableParagraphKey::WordWrap => b_1.word_wrap.set(map.next_value()?),
-                        TableParagraphKey::OverflowPunct => b_1.overflow_punct.set(map.next_value()?),
-                        TableParagraphKey::EastAsiaLang => b_1.east_asia_lang.set(map.next_value()?),
-                        TableParagraphKey::ContextualSpacing => b_1.contextual_spacing.set(map.next_value()?),
-                        TableParagraphKey::ShadingFill => b_1.shading_fill.set(map.next_value()?),
-                        TableParagraphKey::ShadingDisplay => b_1.shading_display.set(map.next_value()?),
-                        TableParagraphKey::ShadingClear => b_1.shading_clear.set(map.next_value()?),
-                        TableParagraphKey::Borders => b_1.borders.set(map.next_value()?),
-                        TableParagraphKey::BorderStyle => b_1.border_style.set(map.next_value()?),
-                        TableParagraphKey::BorderLines => b_1.border_lines.set(map.next_value()?),
-                        TableParagraphKey::BorderReset => b_1.border_reset.set(map.next_value()?),
-                        TableParagraphKey::BorderPad => b_1.border_pad.set(map.next_value()?),
-                        TableParagraphKey::TabStops => b_1.tab_stops.set(map.next_value()?),
-                        TableParagraphKey::DropCap => b_1.drop_cap.set(map.next_value()?),
-                        TableParagraphKey::Frame => b_1.frame.set(map.next_value()?),
-                        TableParagraphKey::FrameBox => b_1.frame_box.set(map.next_value()?),
-                        TableParagraphKey::TextDirection => b_1.text_direction.set(map.next_value()?),
-                        TableParagraphKey::Bidi => b_1.bidi.set(map.next_value()?),
-                        TableParagraphKey::BidiInherited => b_1.bidi_inherited.set(map.next_value()?),
+                        TableParagraphKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_before_auto.set(value) },
+                        TableParagraphKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_after_auto.set(value) },
+                        TableParagraphKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.page_break_before.set(value) },
+                        TableParagraphKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_next.set(value) },
+                        TableParagraphKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_lines.set(value) },
+                        TableParagraphKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.suppress_line_numbers.set(value) },
+                        TableParagraphKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.widow_control.set(value) },
+                        TableParagraphKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.snap_to_grid.set(value) },
+                        TableParagraphKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_1.auto_space.set(value) },
+                        TableParagraphKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_e.set(value) },
+                        TableParagraphKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_n.set(value) },
+                        TableParagraphKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.word_wrap.set(value) },
+                        TableParagraphKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.overflow_punct.set(value) },
+                        TableParagraphKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.east_asia_lang.set(value) },
+                        TableParagraphKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.contextual_spacing.set(value) },
+                        TableParagraphKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_fill.set(value) },
+                        TableParagraphKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_display.set(value) },
+                        TableParagraphKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.shading_clear.set(value) },
+                        TableParagraphKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.borders.set(value) },
+                        TableParagraphKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_1.border_style.set(value) },
+                        TableParagraphKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_1.border_lines.set(value) },
+                        TableParagraphKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.border_reset.set(value) },
+                        TableParagraphKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_1.border_pad.set(value) },
+                        TableParagraphKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_1.tab_stops.set(value) },
+                        TableParagraphKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_1.drop_cap.set(value) },
+                        TableParagraphKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_1.frame.set(value) },
+                        TableParagraphKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_1.frame_box.set(value) },
+                        TableParagraphKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_1.text_direction.set(value) },
+                        TableParagraphKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi.set(value) },
+                        TableParagraphKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi_inherited.set(value) },
                         TableParagraphKey::EmptyRunSizeHalfPoints => b_1.empty_run_size_half_points.set(map.next_value()?),
-                        TableParagraphKey::EmptyRunFontFamily => b_1.empty_run_font_family.set(map.next_value()?),
+                        TableParagraphKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.empty_run_font_family.set(value) },
                         TableParagraphKey::MarkSizeHalfPoints => b_1.mark_size_half_points.set(map.next_value()?),
-                        TableParagraphKey::Effective => b_1.effective.set(map.next_value()?),
-                        TableParagraphKey::Runs => v_runs = Some(map.next_value()?),
-                        TableParagraphKey::StyleId => v_style_id = Some(map.next_value()?),
-                        TableParagraphKey::List => v_list = Some(map.next_value()?),
+                        TableParagraphKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_1.effective.set(value) },
+                        TableParagraphKey::Runs => v_runs = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0,
+                        TableParagraphKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableParagraphKey::List => v_list = map.next_value::<wire::OrAbsent<TableParagraphList>>()?.0,
                     }
                 }
-                Ok(TableParagraph { para_format: b_1, runs: v_runs.ok_or_else(|| A::Error::missing_field("runs"))?, style_id: v_style_id, list: v_list })
+                Ok(TableParagraph { para_format: b_1, runs: v_runs.map_or_else(|| wire::absent("runs").map(|()| Default::default()), Ok)?, style_id: v_style_id, list: v_list })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15291,12 +15331,12 @@ impl<'de> Deserialize<'de> for TableParagraphList {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableParagraphListKey::Kind => v_kind = Some(map.next_value()?),
-                        TableParagraphListKey::NumId => v_num_id = Some(map.next_value()?),
+                        TableParagraphListKey::Kind => v_kind = map.next_value::<wire::OrAbsent<TableParagraphListKind>>()?.0,
+                        TableParagraphListKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TableParagraphListKey::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
-                Ok(TableParagraphList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))? })
+                Ok(TableParagraphList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15310,7 +15350,7 @@ impl<'de> Deserialize<'de> for TableParagraphList {
 pub enum TableParagraphListKind {
     Bullet,
     Ordered,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableParagraphListKind {
@@ -15455,14 +15495,14 @@ impl<'de> Deserialize<'de> for TableBorders {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableBordersKey::Top => b_1.top.set(map.next_value()?),
-                        TableBordersKey::Left => b_1.left.set(map.next_value()?),
-                        TableBordersKey::Bottom => b_1.bottom.set(map.next_value()?),
-                        TableBordersKey::Right => b_1.right.set(map.next_value()?),
-                        TableBordersKey::Tl2br => b_1.tl2br.set(map.next_value()?),
-                        TableBordersKey::Tr2bl => b_1.tr2bl.set(map.next_value()?),
-                        TableBordersKey::InsideH => v_inside_h = Some(map.next_value()?),
-                        TableBordersKey::InsideV => v_inside_v = Some(map.next_value()?),
+                        TableBordersKey::Top => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.top.set(value) },
+                        TableBordersKey::Left => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.left.set(value) },
+                        TableBordersKey::Bottom => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.bottom.set(value) },
+                        TableBordersKey::Right => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.right.set(value) },
+                        TableBordersKey::Tl2br => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.tl2br.set(value) },
+                        TableBordersKey::Tr2bl => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorder>>()?.0 { b_1.tr2bl.set(value) },
+                        TableBordersKey::InsideH => v_inside_h = map.next_value::<wire::OrAbsent<CellBorder>>()?.0,
+                        TableBordersKey::InsideV => v_inside_v = map.next_value::<wire::OrAbsent<CellBorder>>()?.0,
                     }
                 }
                 Ok(TableBorders { cell_borders: b_1, inside_h: v_inside_h, inside_v: v_inside_v })
@@ -15603,36 +15643,36 @@ impl<'de> Deserialize<'de> for TableCell {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableCellKey::Paras => b_0.paras.set(map.next_value()?),
-                        TableCellKey::RichParas => b_0.rich_paras.set(map.next_value()?),
-                        TableCellKey::CellMarTwips => b_0.cell_mar_twips.set(map.next_value()?),
-                        TableCellKey::NestedTables => b_0.nested_tables.set(map.next_value()?),
-                        TableCellKey::AnchoredBoxes => b_0.anchored_boxes.set(map.next_value()?),
-                        TableCellKey::AnchoredBoxAnchors => b_0.anchored_box_anchors.set(map.next_value()?),
-                        TableCellKey::NestedTableAnchors => b_0.nested_table_anchors.set(map.next_value()?),
+                        TableCellKey::Paras => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.paras.set(value) },
+                        TableCellKey::RichParas => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TableParagraph>>>()?.0 { b_0.rich_paras.set(value) },
+                        TableCellKey::CellMarTwips => if let Some(value) = map.next_value::<wire::OrAbsent<CellMargins>>()?.0 { b_0.cell_mar_twips.set(value) },
+                        TableCellKey::NestedTables => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TableModel>>>()?.0 { b_0.nested_tables.set(value) },
+                        TableCellKey::AnchoredBoxes => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TextboxDisplay>>>()?.0 { b_0.anchored_boxes.set(value) },
+                        TableCellKey::AnchoredBoxAnchors => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0 { b_0.anchored_box_anchors.set(value) },
+                        TableCellKey::NestedTableAnchors => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0 { b_0.nested_table_anchors.set(value) },
                         TableCellKey::ColSpan => b_0.col_span.set(map.next_value()?),
-                        TableCellKey::GridGap => b_0.grid_gap.set(map.next_value()?),
-                        TableCellKey::VMerge => b_0.v_merge.set(map.next_value()?),
-                        TableCellKey::Fill => b_0.fill.set(map.next_value()?),
-                        TableCellKey::Color => b_0.color.set(map.next_value()?),
-                        TableCellKey::Bold => b_0.bold.set(map.next_value()?),
-                        TableCellKey::StyleColor => b_0.style_color.set(map.next_value()?),
-                        TableCellKey::StyleBold => b_0.style_bold.set(map.next_value()?),
-                        TableCellKey::Align => b_0.align.set(map.next_value()?),
-                        TableCellKey::VAlign => b_0.v_align.set(map.next_value()?),
-                        TableCellKey::TextDirection => b_0.text_direction.set(map.next_value()?),
-                        TableCellKey::NoWrap => b_0.no_wrap.set(map.next_value()?),
-                        TableCellKey::HideMark => b_0.hide_mark.set(map.next_value()?),
-                        TableCellKey::TcPrEdited => b_0.tc_pr_edited.set(map.next_value()?),
-                        TableCellKey::HMerge => b_0.h_merge.set(map.next_value()?),
-                        TableCellKey::Borders => b_0.borders.set(map.next_value()?),
-                        TableCellKey::RawTcPr => b_0.raw_tc_pr.set(map.next_value()?),
-                        TableCellKey::CellRevision => b_0.cell_revision.set(map.next_value()?),
+                        TableCellKey::GridGap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.grid_gap.set(value) },
+                        TableCellKey::VMerge => if let Some(value) = map.next_value::<wire::OrAbsent<TableCellVMerge>>()?.0 { b_0.v_merge.set(value) },
+                        TableCellKey::Fill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill.set(value) },
+                        TableCellKey::Color => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.color.set(value) },
+                        TableCellKey::Bold => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold.set(value) },
+                        TableCellKey::StyleColor => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.style_color.set(value) },
+                        TableCellKey::StyleBold => if let Some(value) = map.next_value::<wire::OrAbsent<True>>()?.0 { b_0.style_bold.set(value) },
+                        TableCellKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_0.align.set(value) },
+                        TableCellKey::VAlign => if let Some(value) = map.next_value::<wire::OrAbsent<TableCellVAlign>>()?.0 { b_0.v_align.set(value) },
+                        TableCellKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TableCellTextDirection>>()?.0 { b_0.text_direction.set(value) },
+                        TableCellKey::NoWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.no_wrap.set(value) },
+                        TableCellKey::HideMark => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.hide_mark.set(value) },
+                        TableCellKey::TcPrEdited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.tc_pr_edited.set(value) },
+                        TableCellKey::HMerge => if let Some(value) = map.next_value::<wire::OrAbsent<TableCellHMerge>>()?.0 { b_0.h_merge.set(value) },
+                        TableCellKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<CellBorders>>()?.0 { b_0.borders.set(value) },
+                        TableCellKey::RawTcPr => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.raw_tc_pr.set(value) },
+                        TableCellKey::CellRevision => if let Some(value) = map.next_value::<wire::OrAbsent<TableCellCellRevision>>()?.0 { b_0.cell_revision.set(value) },
                         TableCellKey::TcPrChange => b_0.tc_pr_change.set(map.next_value()?),
                         TableCellKey::CellMerge => b_0.cell_merge.set(map.next_value()?),
                     }
                 }
-                if !b_0.paras.has_key() {
+                if !b_0.paras.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("paras"));
                 }
                 Ok(b_0)
@@ -15932,43 +15972,43 @@ impl<'de> Deserialize<'de> for TableModel {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableModelKey::Rows => v_rows = Some(map.next_value()?),
-                        TableModelKey::ColWidthsPct => v_col_widths_pct = Some(map.next_value()?),
-                        TableModelKey::ColWidthsTwips => v_col_widths_twips = Some(map.next_value()?),
+                        TableModelKey::Rows => v_rows = map.next_value::<wire::OrAbsent<Vec<Vec<TableCell>>>>()?.0,
+                        TableModelKey::ColWidthsPct => v_col_widths_pct = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0,
+                        TableModelKey::ColWidthsTwips => v_col_widths_twips = map.next_value::<wire::OrAbsent<Vec<JsNum>>>()?.0,
                         TableModelKey::WidthPct => v_width_pct = Some(map.next_value()?),
-                        TableModelKey::AutoLayout => v_auto_layout = Some(map.next_value()?),
-                        TableModelKey::LayoutGrid => v_layout_grid = Some(map.next_value()?),
-                        TableModelKey::ContentAutofit => v_content_autofit = Some(map.next_value()?),
-                        TableModelKey::AutoFit => v_auto_fit = Some(map.next_value()?),
-                        TableModelKey::DxaWidth => v_dxa_width = Some(map.next_value()?),
-                        TableModelKey::FixedLayout => v_fixed_layout = Some(map.next_value()?),
-                        TableModelKey::CellMarTwips => v_cell_mar_twips = Some(map.next_value()?),
+                        TableModelKey::AutoLayout => v_auto_layout = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableModelKey::LayoutGrid => v_layout_grid = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableModelKey::ContentAutofit => v_content_autofit = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableModelKey::AutoFit => v_auto_fit = map.next_value::<wire::OrAbsent<TableAutoFitMode>>()?.0,
+                        TableModelKey::DxaWidth => v_dxa_width = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableModelKey::FixedLayout => v_fixed_layout = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableModelKey::CellMarTwips => v_cell_mar_twips = map.next_value::<wire::OrAbsent<CellMargins>>()?.0,
                         TableModelKey::CellSpacingTwips => v_cell_spacing_twips = Some(map.next_value()?),
-                        TableModelKey::Fill => v_fill = Some(map.next_value()?),
-                        TableModelKey::Borders => v_borders = Some(map.next_value()?),
-                        TableModelKey::Align => v_align = Some(map.next_value()?),
+                        TableModelKey::Fill => v_fill = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelKey::Borders => v_borders = map.next_value::<wire::OrAbsent<TableBorders>>()?.0,
+                        TableModelKey::Align => v_align = map.next_value::<wire::OrAbsent<TableModelAlign>>()?.0,
                         TableModelKey::IndentTwips => v_indent_twips = Some(map.next_value()?),
-                        TableModelKey::FloatPos => v_float_pos = Some(map.next_value()?),
+                        TableModelKey::FloatPos => v_float_pos = map.next_value::<wire::OrAbsent<TableModelFloatPos>>()?.0,
                         TableModelKey::FloatSide => v_float_side = Some(map.next_value()?),
-                        TableModelKey::RowHeightsTwips => v_row_heights_twips = Some(map.next_value()?),
-                        TableModelKey::RowHeightRules => v_row_height_rules = Some(map.next_value()?),
-                        TableModelKey::RepeatHeaderRows => v_repeat_header_rows = Some(map.next_value()?),
-                        TableModelKey::RowCantSplit => v_row_cant_split = Some(map.next_value()?),
-                        TableModelKey::Caption => v_caption = Some(map.next_value()?),
-                        TableModelKey::Description => v_description = Some(map.next_value()?),
-                        TableModelKey::RawTrPrs => v_raw_tr_prs = Some(map.next_value()?),
-                        TableModelKey::RowRevisions => v_row_revisions = Some(map.next_value()?),
-                        TableModelKey::TblStyleId => v_tbl_style_id = Some(map.next_value()?),
-                        TableModelKey::TableLook => v_table_look = Some(map.next_value()?),
-                        TableModelKey::BidiVisual => v_bidi_visual = Some(map.next_value()?),
+                        TableModelKey::RowHeightsTwips => v_row_heights_twips = map.next_value::<wire::OrAbsent<Vec<Option<JsNum>>>>()?.0,
+                        TableModelKey::RowHeightRules => v_row_height_rules = map.next_value::<wire::OrAbsent<Vec<Option<TableModelRowHeightRulesItem>>>>()?.0,
+                        TableModelKey::RepeatHeaderRows => v_repeat_header_rows = map.next_value::<wire::OrAbsent<Vec<Option<bool>>>>()?.0,
+                        TableModelKey::RowCantSplit => v_row_cant_split = map.next_value::<wire::OrAbsent<Vec<Option<bool>>>>()?.0,
+                        TableModelKey::Caption => v_caption = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelKey::Description => v_description = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelKey::RawTrPrs => v_raw_tr_prs = map.next_value::<wire::OrAbsent<Vec<Option<String>>>>()?.0,
+                        TableModelKey::RowRevisions => v_row_revisions = map.next_value::<wire::OrAbsent<Vec<Option<TableModelRowRevisionsItem>>>>()?.0,
+                        TableModelKey::TblStyleId => v_tbl_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelKey::TableLook => v_table_look = map.next_value::<wire::OrAbsent<TableLook>>()?.0,
+                        TableModelKey::BidiVisual => v_bidi_visual = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         TableModelKey::TblPrChange => v_tbl_pr_change = Some(map.next_value()?),
                         TableModelKey::TblGridChange => v_tbl_grid_change = Some(map.next_value()?),
-                        TableModelKey::RowPrChanges => v_row_pr_changes = Some(map.next_value()?),
-                        TableModelKey::RawTblPrExs => v_raw_tbl_pr_exs = Some(map.next_value()?),
-                        TableModelKey::RowTblPrExChanges => v_row_tbl_pr_ex_changes = Some(map.next_value()?),
+                        TableModelKey::RowPrChanges => v_row_pr_changes = map.next_value::<wire::OrAbsent<Vec<Option<PropChangeInfo>>>>()?.0,
+                        TableModelKey::RawTblPrExs => v_raw_tbl_pr_exs = map.next_value::<wire::OrAbsent<Vec<Option<String>>>>()?.0,
+                        TableModelKey::RowTblPrExChanges => v_row_tbl_pr_ex_changes = map.next_value::<wire::OrAbsent<Vec<Option<PropChangeInfo>>>>()?.0,
                     }
                 }
-                Ok(TableModel { rows: v_rows.ok_or_else(|| A::Error::missing_field("rows"))?, col_widths_pct: v_col_widths_pct, col_widths_twips: v_col_widths_twips, width_pct: v_width_pct, auto_layout: v_auto_layout, layout_grid: v_layout_grid, content_autofit: v_content_autofit, auto_fit: v_auto_fit, dxa_width: v_dxa_width, fixed_layout: v_fixed_layout, cell_mar_twips: v_cell_mar_twips, cell_spacing_twips: v_cell_spacing_twips, fill: v_fill, borders: v_borders, align: v_align, indent_twips: v_indent_twips, float_pos: v_float_pos, float_side: v_float_side, row_heights_twips: v_row_heights_twips, row_height_rules: v_row_height_rules, repeat_header_rows: v_repeat_header_rows, row_cant_split: v_row_cant_split, caption: v_caption, description: v_description, raw_tr_prs: v_raw_tr_prs, row_revisions: v_row_revisions, tbl_style_id: v_tbl_style_id, table_look: v_table_look, bidi_visual: v_bidi_visual, tbl_pr_change: v_tbl_pr_change, tbl_grid_change: v_tbl_grid_change, row_pr_changes: v_row_pr_changes, raw_tbl_pr_exs: v_raw_tbl_pr_exs, row_tbl_pr_ex_changes: v_row_tbl_pr_ex_changes })
+                Ok(TableModel { rows: v_rows.map_or_else(|| wire::absent("rows").map(|()| Default::default()), Ok)?, col_widths_pct: v_col_widths_pct, col_widths_twips: v_col_widths_twips, width_pct: v_width_pct, auto_layout: v_auto_layout, layout_grid: v_layout_grid, content_autofit: v_content_autofit, auto_fit: v_auto_fit, dxa_width: v_dxa_width, fixed_layout: v_fixed_layout, cell_mar_twips: v_cell_mar_twips, cell_spacing_twips: v_cell_spacing_twips, fill: v_fill, borders: v_borders, align: v_align, indent_twips: v_indent_twips, float_pos: v_float_pos, float_side: v_float_side, row_heights_twips: v_row_heights_twips, row_height_rules: v_row_height_rules, repeat_header_rows: v_repeat_header_rows, row_cant_split: v_row_cant_split, caption: v_caption, description: v_description, raw_tr_prs: v_raw_tr_prs, row_revisions: v_row_revisions, tbl_style_id: v_tbl_style_id, table_look: v_table_look, bidi_visual: v_bidi_visual, tbl_pr_change: v_tbl_pr_change, tbl_grid_change: v_tbl_grid_change, row_pr_changes: v_row_pr_changes, raw_tbl_pr_exs: v_raw_tbl_pr_exs, row_tbl_pr_ex_changes: v_row_tbl_pr_ex_changes })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15983,7 +16023,7 @@ pub enum TableAutoFitMode {
     Contents,
     Window,
     Fixed,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableAutoFitMode {
@@ -16023,7 +16063,7 @@ pub enum TableModelAlign {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelAlign {
@@ -16156,14 +16196,14 @@ impl<'de> Deserialize<'de> for TableModelFloatPos {
                     match key {
                         TableModelFloatPosKey::XTwips => v_x_twips = Some(map.next_value()?),
                         TableModelFloatPosKey::YTwips => v_y_twips = Some(map.next_value()?),
-                        TableModelFloatPosKey::HorzAnchor => v_horz_anchor = Some(map.next_value()?),
-                        TableModelFloatPosKey::VertAnchor => v_vert_anchor = Some(map.next_value()?),
-                        TableModelFloatPosKey::XSpec => v_x_spec = Some(map.next_value()?),
-                        TableModelFloatPosKey::YSpec => v_y_spec = Some(map.next_value()?),
-                        TableModelFloatPosKey::DistanceTwips => v_distance_twips = Some(map.next_value()?),
+                        TableModelFloatPosKey::HorzAnchor => v_horz_anchor = map.next_value::<wire::OrAbsent<TableModelFloatPosHorzAnchor>>()?.0,
+                        TableModelFloatPosKey::VertAnchor => v_vert_anchor = map.next_value::<wire::OrAbsent<TableModelFloatPosVertAnchor>>()?.0,
+                        TableModelFloatPosKey::XSpec => v_x_spec = map.next_value::<wire::OrAbsent<TableModelFloatPosXSpec>>()?.0,
+                        TableModelFloatPosKey::YSpec => v_y_spec = map.next_value::<wire::OrAbsent<TableModelFloatPosYSpec>>()?.0,
+                        TableModelFloatPosKey::DistanceTwips => v_distance_twips = map.next_value::<wire::OrAbsent<CellMargins>>()?.0,
                     }
                 }
-                Ok(TableModelFloatPos { x_twips: v_x_twips.ok_or_else(|| A::Error::missing_field("xTwips"))?, y_twips: v_y_twips.ok_or_else(|| A::Error::missing_field("yTwips"))?, horz_anchor: v_horz_anchor, vert_anchor: v_vert_anchor, x_spec: v_x_spec, y_spec: v_y_spec, distance_twips: v_distance_twips })
+                Ok(TableModelFloatPos { x_twips: v_x_twips.map_or_else(|| wire::absent("xTwips").map(|()| JsNum(f64::NAN)), Ok)?, y_twips: v_y_twips.map_or_else(|| wire::absent("yTwips").map(|()| JsNum(f64::NAN)), Ok)?, horz_anchor: v_horz_anchor, vert_anchor: v_vert_anchor, x_spec: v_x_spec, y_spec: v_y_spec, distance_twips: v_distance_twips })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -16178,7 +16218,7 @@ pub enum TableModelFloatPosHorzAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelFloatPosHorzAnchor {
@@ -16218,7 +16258,7 @@ pub enum TableModelFloatPosVertAnchor {
     Page,
     Margin,
     Text,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelFloatPosVertAnchor {
@@ -16260,7 +16300,7 @@ pub enum TableModelFloatPosXSpec {
     Right,
     Inside,
     Outside,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelFloatPosXSpec {
@@ -16306,7 +16346,7 @@ pub enum TableModelFloatPosYSpec {
     Bottom,
     Inside,
     Outside,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelFloatPosYSpec {
@@ -16349,7 +16389,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPosYSpec {
 pub enum TableModelFloatSide {
     Left,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelFloatSide {
@@ -16386,7 +16426,7 @@ impl<'de> Deserialize<'de> for TableModelFloatSide {
 pub enum TableModelRowHeightRulesItem {
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelRowHeightRulesItem {
@@ -16508,15 +16548,15 @@ impl<'de> Deserialize<'de> for TableModelRowRevisionsItem {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableModelRowRevisionsItemKey::Kind => v_kind = Some(map.next_value()?),
-                        TableModelRowRevisionsItemKey::Author => v_author = Some(map.next_value()?),
-                        TableModelRowRevisionsItemKey::Date => v_date = Some(map.next_value()?),
-                        TableModelRowRevisionsItemKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        TableModelRowRevisionsItemKey::Id => v_id = Some(map.next_value()?),
-                        TableModelRowRevisionsItemKey::Move => v_move = Some(map.next_value()?),
+                        TableModelRowRevisionsItemKey::Kind => v_kind = map.next_value::<wire::OrAbsent<TableModelRowRevisionsItemKind>>()?.0,
+                        TableModelRowRevisionsItemKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelRowRevisionsItemKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelRowRevisionsItemKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelRowRevisionsItemKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableModelRowRevisionsItemKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(TableModelRowRevisionsItem { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
+                Ok(TableModelRowRevisionsItem { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -16530,7 +16570,7 @@ impl<'de> Deserialize<'de> for TableModelRowRevisionsItem {
 pub enum TableModelRowRevisionsItemKind {
     Ins,
     Del,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableModelRowRevisionsItemKind {
@@ -16644,15 +16684,15 @@ impl<'de> Deserialize<'de> for TableLook {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableLookKey::FirstRow => v_first_row = Some(map.next_value()?),
-                        TableLookKey::LastRow => v_last_row = Some(map.next_value()?),
-                        TableLookKey::FirstColumn => v_first_column = Some(map.next_value()?),
-                        TableLookKey::LastColumn => v_last_column = Some(map.next_value()?),
-                        TableLookKey::BandedRows => v_banded_rows = Some(map.next_value()?),
-                        TableLookKey::BandedColumns => v_banded_columns = Some(map.next_value()?),
+                        TableLookKey::FirstRow => v_first_row = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableLookKey::LastRow => v_last_row = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableLookKey::FirstColumn => v_first_column = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableLookKey::LastColumn => v_last_column = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableLookKey::BandedRows => v_banded_rows = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableLookKey::BandedColumns => v_banded_columns = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(TableLook { first_row: v_first_row.ok_or_else(|| A::Error::missing_field("firstRow"))?, last_row: v_last_row.ok_or_else(|| A::Error::missing_field("lastRow"))?, first_column: v_first_column.ok_or_else(|| A::Error::missing_field("firstColumn"))?, last_column: v_last_column.ok_or_else(|| A::Error::missing_field("lastColumn"))?, banded_rows: v_banded_rows.ok_or_else(|| A::Error::missing_field("bandedRows"))?, banded_columns: v_banded_columns.ok_or_else(|| A::Error::missing_field("bandedColumns"))? })
+                Ok(TableLook { first_row: v_first_row.map_or_else(|| wire::absent("firstRow").map(|()| Default::default()), Ok)?, last_row: v_last_row.map_or_else(|| wire::absent("lastRow").map(|()| Default::default()), Ok)?, first_column: v_first_column.map_or_else(|| wire::absent("firstColumn").map(|()| Default::default()), Ok)?, last_column: v_last_column.map_or_else(|| wire::absent("lastColumn").map(|()| Default::default()), Ok)?, banded_rows: v_banded_rows.map_or_else(|| wire::absent("bandedRows").map(|()| Default::default()), Ok)?, banded_columns: v_banded_columns.map_or_else(|| wire::absent("bandedColumns").map(|()| Default::default()), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -16865,9 +16905,9 @@ impl<'de> Deserialize<'de> for TextboxDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxDisplayKey::Fill => b_0.fill.set(map.next_value()?),
+                        TextboxDisplayKey::Fill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill.set(value) },
                         TextboxDisplayKey::FillAlpha => b_0.fill_alpha.set(map.next_value()?),
-                        TextboxDisplayKey::BorderColor => b_0.border_color.set(map.next_value()?),
+                        TextboxDisplayKey::BorderColor => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.border_color.set(value) },
                         TextboxDisplayKey::WidthPx => b_0.width_px.set(map.next_value()?),
                         TextboxDisplayKey::HeightPx => b_0.height_px.set(map.next_value()?),
                         TextboxDisplayKey::MinHeightPx => b_0.min_height_px.set(map.next_value()?),
@@ -16875,51 +16915,51 @@ impl<'de> Deserialize<'de> for TextboxDisplay {
                         TextboxDisplayKey::InsetRightPx => b_0.inset_right_px.set(map.next_value()?),
                         TextboxDisplayKey::InsetBottomPx => b_0.inset_bottom_px.set(map.next_value()?),
                         TextboxDisplayKey::InsetLeftPx => b_0.inset_left_px.set(map.next_value()?),
-                        TextboxDisplayKey::Prst => b_0.prst.set(map.next_value()?),
-                        TextboxDisplayKey::PathData => b_0.path_data.set(map.next_value()?),
-                        TextboxDisplayKey::WordArtId => b_0.word_art_id.set(map.next_value()?),
-                        TextboxDisplayKey::TextOutline => b_0.text_outline.set(map.next_value()?),
-                        TextboxDisplayKey::Nowrap => b_0.nowrap.set(map.next_value()?),
-                        TextboxDisplayKey::VAlign => b_0.v_align.set(map.next_value()?),
-                        TextboxDisplayKey::TextColor => b_0.text_color.set(map.next_value()?),
+                        TextboxDisplayKey::Prst => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.prst.set(value) },
+                        TextboxDisplayKey::PathData => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayPathData>>()?.0 { b_0.path_data.set(value) },
+                        TextboxDisplayKey::WordArtId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.word_art_id.set(value) },
+                        TextboxDisplayKey::TextOutline => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayTextOutline>>()?.0 { b_0.text_outline.set(value) },
+                        TextboxDisplayKey::Nowrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.nowrap.set(value) },
+                        TextboxDisplayKey::VAlign => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayVAlign>>()?.0 { b_0.v_align.set(value) },
+                        TextboxDisplayKey::TextColor => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.text_color.set(value) },
                         TextboxDisplayKey::TxbxIndex => b_0.txbx_index.set(map.next_value()?),
-                        TextboxDisplayKey::ShapeId => b_0.shape_id.set(map.next_value()?),
-                        TextboxDisplayKey::ReadOnly => b_0.read_only.set(map.next_value()?),
-                        TextboxDisplayKey::Picture => b_0.picture.set(map.next_value()?),
-                        TextboxDisplayKey::Paras => b_0.paras.set(map.next_value()?),
+                        TextboxDisplayKey::ShapeId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shape_id.set(value) },
+                        TextboxDisplayKey::ReadOnly => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.read_only.set(value) },
+                        TextboxDisplayKey::Picture => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.picture.set(value) },
+                        TextboxDisplayKey::Paras => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TextboxParaDisplay>>>()?.0 { b_0.paras.set(value) },
                         TextboxDisplayKey::OffsetXEmu => b_0.offset_x_emu.set(map.next_value()?),
                         TextboxDisplayKey::OffsetYEmu => b_0.offset_y_emu.set(map.next_value()?),
-                        TextboxDisplayKey::Floating => b_0.floating.set(map.next_value()?),
-                        TextboxDisplayKey::Behind => b_0.behind.set(map.next_value()?),
-                        TextboxDisplayKey::NoWrap => b_0.no_wrap.set(map.next_value()?),
+                        TextboxDisplayKey::Floating => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.floating.set(value) },
+                        TextboxDisplayKey::Behind => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.behind.set(value) },
+                        TextboxDisplayKey::NoWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.no_wrap.set(value) },
                         TextboxDisplayKey::Z => b_0.z.set(map.next_value()?),
-                        TextboxDisplayKey::PagePinned => b_0.page_pinned.set(map.next_value()?),
-                        TextboxDisplayKey::PageRelV => b_0.page_rel_v.set(map.next_value()?),
-                        TextboxDisplayKey::PageRelVFrom => b_0.page_rel_v_from.set(map.next_value()?),
-                        TextboxDisplayKey::PageRelX => b_0.page_rel_x.set(map.next_value()?),
-                        TextboxDisplayKey::PageRelXFrom => b_0.page_rel_x_from.set(map.next_value()?),
-                        TextboxDisplayKey::OutsideCell => b_0.outside_cell.set(map.next_value()?),
+                        TextboxDisplayKey::PagePinned => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.page_pinned.set(value) },
+                        TextboxDisplayKey::PageRelV => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.page_rel_v.set(value) },
+                        TextboxDisplayKey::PageRelVFrom => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayPageRelVFrom>>()?.0 { b_0.page_rel_v_from.set(value) },
+                        TextboxDisplayKey::PageRelX => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.page_rel_x.set(value) },
+                        TextboxDisplayKey::PageRelXFrom => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayPageRelXFrom>>()?.0 { b_0.page_rel_x_from.set(value) },
+                        TextboxDisplayKey::OutsideCell => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.outside_cell.set(value) },
                         TextboxDisplayKey::BandBottomPx => b_0.band_bottom_px.set(map.next_value()?),
                         TextboxDisplayKey::InlineExtentPx => b_0.inline_extent_px.set(map.next_value()?),
                         TextboxDisplayKey::BandTopPx => b_0.band_top_px.set(map.next_value()?),
-                        TextboxDisplayKey::BandOverflow => b_0.band_overflow.set(map.next_value()?),
-                        TextboxDisplayKey::WrapSides => b_0.wrap_sides.set(map.next_value()?),
-                        TextboxDisplayKey::WrapDistPx => b_0.wrap_dist_px.set(map.next_value()?),
-                        TextboxDisplayKey::WrapSide => b_0.wrap_side.set(map.next_value()?),
+                        TextboxDisplayKey::BandOverflow => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.band_overflow.set(value) },
+                        TextboxDisplayKey::WrapSides => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.wrap_sides.set(value) },
+                        TextboxDisplayKey::WrapDistPx => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayWrapDistPx>>()?.0 { b_0.wrap_dist_px.set(value) },
+                        TextboxDisplayKey::WrapSide => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayWrapSide>>()?.0 { b_0.wrap_side.set(value) },
                         TextboxDisplayKey::WrapEdgePx => b_0.wrap_edge_px.set(map.next_value()?),
                         TextboxDisplayKey::WrapGapPx => b_0.wrap_gap_px.set(map.next_value()?),
-                        TextboxDisplayKey::BandBeside => b_0.band_beside.set(map.next_value()?),
+                        TextboxDisplayKey::BandBeside => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.band_beside.set(value) },
                         TextboxDisplayKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                         TextboxDisplayKey::BorderWidthPx => b_0.border_width_px.set(map.next_value()?),
-                        TextboxDisplayKey::BorderDash => b_0.border_dash.set(map.next_value()?),
-                        TextboxDisplayKey::FillImageDataUrl => b_0.fill_image_data_url.set(map.next_value()?),
-                        TextboxDisplayKey::FillTile => b_0.fill_tile.set(map.next_value()?),
-                        TextboxDisplayKey::LineDiag => b_0.line_diag.set(map.next_value()?),
-                        TextboxDisplayKey::FlipH => b_0.flip_h.set(map.next_value()?),
-                        TextboxDisplayKey::FlipV => b_0.flip_v.set(map.next_value()?),
+                        TextboxDisplayKey::BorderDash => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayBorderDash>>()?.0 { b_0.border_dash.set(value) },
+                        TextboxDisplayKey::FillImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill_image_data_url.set(value) },
+                        TextboxDisplayKey::FillTile => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.fill_tile.set(value) },
+                        TextboxDisplayKey::LineDiag => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.line_diag.set(value) },
+                        TextboxDisplayKey::FlipH => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.flip_h.set(value) },
+                        TextboxDisplayKey::FlipV => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.flip_v.set(value) },
                     }
                 }
-                if !b_0.paras.has_key() {
+                if !b_0.paras.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("paras"));
                 }
                 Ok(b_0)
@@ -17004,9 +17044,9 @@ impl<'de> Deserialize<'de> for TextboxDisplayPathData {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxDisplayPathDataKey::Path => v_path = Some(map.next_value()?),
-                        TextboxDisplayPathDataKey::FillPath => v_fill_path = Some(map.next_value()?),
-                        TextboxDisplayPathDataKey::StrokePath => v_stroke_path = Some(map.next_value()?),
+                        TextboxDisplayPathDataKey::Path => v_path = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TextboxDisplayPathDataKey::FillPath => v_fill_path = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TextboxDisplayPathDataKey::StrokePath => v_stroke_path = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(TextboxDisplayPathData { path: v_path, fill_path: v_fill_path, stroke_path: v_stroke_path })
@@ -17080,11 +17120,11 @@ impl<'de> Deserialize<'de> for TextboxDisplayTextOutline {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxDisplayTextOutlineKey::ColorHex => v_color_hex = Some(map.next_value()?),
+                        TextboxDisplayTextOutlineKey::ColorHex => v_color_hex = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TextboxDisplayTextOutlineKey::WidthPx => v_width_px = Some(map.next_value()?),
                     }
                 }
-                Ok(TextboxDisplayTextOutline { color_hex: v_color_hex.ok_or_else(|| A::Error::missing_field("colorHex"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))? })
+                Ok(TextboxDisplayTextOutline { color_hex: v_color_hex.map_or_else(|| wire::absent("colorHex").map(|()| Default::default()), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -17098,7 +17138,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayTextOutline {
 pub enum TextboxDisplayVAlign {
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxDisplayVAlign {
@@ -17457,59 +17497,59 @@ impl<'de> Deserialize<'de> for TextboxParaDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxParaDisplayKey::Align => b_1.align.set(map.next_value()?),
+                        TextboxParaDisplayKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_1.align.set(value) },
                         TextboxParaDisplayKey::LineSpacing => b_1.line_spacing.set(map.next_value()?),
-                        TextboxParaDisplayKey::LineRule => b_1.line_rule.set(map.next_value()?),
+                        TextboxParaDisplayKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_1.line_rule.set(value) },
                         TextboxParaDisplayKey::LineRawTwips => b_1.line_raw_twips.set(map.next_value()?),
                         TextboxParaDisplayKey::IndentLeft => b_1.indent_left.set(map.next_value()?),
                         TextboxParaDisplayKey::IndentRight => b_1.indent_right.set(map.next_value()?),
                         TextboxParaDisplayKey::IndentFirstLine => b_1.indent_first_line.set(map.next_value()?),
-                        TextboxParaDisplayKey::CharIndents => b_1.char_indents.set(map.next_value()?),
-                        TextboxParaDisplayKey::DirectCharIndents => b_1.direct_char_indents.set(map.next_value()?),
+                        TextboxParaDisplayKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.char_indents.set(value) },
+                        TextboxParaDisplayKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.direct_char_indents.set(value) },
                         TextboxParaDisplayKey::SpaceBefore => b_1.space_before.set(map.next_value()?),
                         TextboxParaDisplayKey::SpaceAfter => b_1.space_after.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceBeforeAuto => b_1.space_before_auto.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceAfterAuto => b_1.space_after_auto.set(map.next_value()?),
-                        TextboxParaDisplayKey::PageBreakBefore => b_1.page_break_before.set(map.next_value()?),
-                        TextboxParaDisplayKey::KeepNext => b_1.keep_next.set(map.next_value()?),
-                        TextboxParaDisplayKey::KeepLines => b_1.keep_lines.set(map.next_value()?),
-                        TextboxParaDisplayKey::SuppressLineNumbers => b_1.suppress_line_numbers.set(map.next_value()?),
-                        TextboxParaDisplayKey::WidowControl => b_1.widow_control.set(map.next_value()?),
-                        TextboxParaDisplayKey::SnapToGrid => b_1.snap_to_grid.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpace => b_1.auto_space.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpaceDE => b_1.auto_space_d_e.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpaceDN => b_1.auto_space_d_n.set(map.next_value()?),
-                        TextboxParaDisplayKey::WordWrap => b_1.word_wrap.set(map.next_value()?),
-                        TextboxParaDisplayKey::OverflowPunct => b_1.overflow_punct.set(map.next_value()?),
-                        TextboxParaDisplayKey::EastAsiaLang => b_1.east_asia_lang.set(map.next_value()?),
-                        TextboxParaDisplayKey::ContextualSpacing => b_1.contextual_spacing.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingFill => b_1.shading_fill.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingDisplay => b_1.shading_display.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingClear => b_1.shading_clear.set(map.next_value()?),
-                        TextboxParaDisplayKey::Borders => b_1.borders.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderStyle => b_1.border_style.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderLines => b_1.border_lines.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderReset => b_1.border_reset.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderPad => b_1.border_pad.set(map.next_value()?),
-                        TextboxParaDisplayKey::TabStops => b_1.tab_stops.set(map.next_value()?),
-                        TextboxParaDisplayKey::DropCap => b_1.drop_cap.set(map.next_value()?),
-                        TextboxParaDisplayKey::Frame => b_1.frame.set(map.next_value()?),
-                        TextboxParaDisplayKey::FrameBox => b_1.frame_box.set(map.next_value()?),
-                        TextboxParaDisplayKey::TextDirection => b_1.text_direction.set(map.next_value()?),
-                        TextboxParaDisplayKey::Bidi => b_1.bidi.set(map.next_value()?),
-                        TextboxParaDisplayKey::BidiInherited => b_1.bidi_inherited.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_before_auto.set(value) },
+                        TextboxParaDisplayKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_after_auto.set(value) },
+                        TextboxParaDisplayKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.page_break_before.set(value) },
+                        TextboxParaDisplayKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_next.set(value) },
+                        TextboxParaDisplayKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_lines.set(value) },
+                        TextboxParaDisplayKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.suppress_line_numbers.set(value) },
+                        TextboxParaDisplayKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.widow_control.set(value) },
+                        TextboxParaDisplayKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.snap_to_grid.set(value) },
+                        TextboxParaDisplayKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_1.auto_space.set(value) },
+                        TextboxParaDisplayKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_e.set(value) },
+                        TextboxParaDisplayKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_n.set(value) },
+                        TextboxParaDisplayKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.word_wrap.set(value) },
+                        TextboxParaDisplayKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.overflow_punct.set(value) },
+                        TextboxParaDisplayKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.east_asia_lang.set(value) },
+                        TextboxParaDisplayKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.contextual_spacing.set(value) },
+                        TextboxParaDisplayKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_fill.set(value) },
+                        TextboxParaDisplayKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_display.set(value) },
+                        TextboxParaDisplayKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.shading_clear.set(value) },
+                        TextboxParaDisplayKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.borders.set(value) },
+                        TextboxParaDisplayKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_1.border_style.set(value) },
+                        TextboxParaDisplayKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_1.border_lines.set(value) },
+                        TextboxParaDisplayKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.border_reset.set(value) },
+                        TextboxParaDisplayKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_1.border_pad.set(value) },
+                        TextboxParaDisplayKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_1.tab_stops.set(value) },
+                        TextboxParaDisplayKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_1.drop_cap.set(value) },
+                        TextboxParaDisplayKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_1.frame.set(value) },
+                        TextboxParaDisplayKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_1.frame_box.set(value) },
+                        TextboxParaDisplayKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_1.text_direction.set(value) },
+                        TextboxParaDisplayKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi.set(value) },
+                        TextboxParaDisplayKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi_inherited.set(value) },
                         TextboxParaDisplayKey::EmptyRunSizeHalfPoints => b_1.empty_run_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::EmptyRunFontFamily => b_1.empty_run_font_family.set(map.next_value()?),
+                        TextboxParaDisplayKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.empty_run_font_family.set(value) },
                         TextboxParaDisplayKey::MarkSizeHalfPoints => b_1.mark_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::Effective => b_1.effective.set(map.next_value()?),
-                        TextboxParaDisplayKey::StyleId => v_style_id = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Runs => v_runs = Some(map.next_value()?),
-                        TextboxParaDisplayKey::ListMarker => v_list_marker = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Cells => v_cells = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Row => v_row = Some(map.next_value()?),
+                        TextboxParaDisplayKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_1.effective.set(value) },
+                        TextboxParaDisplayKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TextboxParaDisplayKey::Runs => v_runs = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0,
+                        TextboxParaDisplayKey::ListMarker => v_list_marker = map.next_value::<wire::OrAbsent<TextboxListMarker>>()?.0,
+                        TextboxParaDisplayKey::Cells => v_cells = map.next_value::<wire::OrAbsent<Vec<HfTableCell>>>()?.0,
+                        TextboxParaDisplayKey::Row => v_row = map.next_value::<wire::OrAbsent<HfTableRow>>()?.0,
                     }
                 }
-                Ok(TextboxParaDisplay { para_format: b_1, style_id: v_style_id, runs: v_runs.ok_or_else(|| A::Error::missing_field("runs"))?, list_marker: v_list_marker, cells: v_cells, row: v_row })
+                Ok(TextboxParaDisplay { para_format: b_1, style_id: v_style_id, runs: v_runs.map_or_else(|| wire::absent("runs").map(|()| Default::default()), Ok)?, list_marker: v_list_marker, cells: v_cells, row: v_row })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -17652,21 +17692,21 @@ impl<'de> Deserialize<'de> for TextboxListMarker {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxListMarkerKey::Text => v_text = Some(map.next_value()?),
-                        TextboxListMarkerKey::NumId => v_num_id = Some(map.next_value()?),
+                        TextboxListMarkerKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TextboxListMarkerKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TextboxListMarkerKey::Ilvl => v_ilvl = Some(map.next_value()?),
-                        TextboxListMarkerKey::Kind => v_kind = Some(map.next_value()?),
-                        TextboxListMarkerKey::Symbol => v_symbol = Some(map.next_value()?),
-                        TextboxListMarkerKey::PicBulletSrc => v_pic_bullet_src = Some(map.next_value()?),
+                        TextboxListMarkerKey::Kind => v_kind = map.next_value::<wire::OrAbsent<TextboxListMarkerKind>>()?.0,
+                        TextboxListMarkerKey::Symbol => v_symbol = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TextboxListMarkerKey::PicBulletSrc => v_pic_bullet_src = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TextboxListMarkerKey::IndentLeft => v_indent_left = Some(map.next_value()?),
                         TextboxListMarkerKey::IndentRight => v_indent_right = Some(map.next_value()?),
                         TextboxListMarkerKey::Hanging => v_hanging = Some(map.next_value()?),
                         TextboxListMarkerKey::FirstLine => v_first_line = Some(map.next_value()?),
                         TextboxListMarkerKey::SzHalfPoints => v_sz_half_points = Some(map.next_value()?),
-                        TextboxListMarkerKey::Oversized => v_oversized = Some(map.next_value()?),
+                        TextboxListMarkerKey::Oversized => v_oversized = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(TextboxListMarker { text: v_text.ok_or_else(|| A::Error::missing_field("text"))?, num_id: v_num_id, ilvl: v_ilvl, kind: v_kind, symbol: v_symbol, pic_bullet_src: v_pic_bullet_src, indent_left: v_indent_left, indent_right: v_indent_right, hanging: v_hanging, first_line: v_first_line, sz_half_points: v_sz_half_points, oversized: v_oversized })
+                Ok(TextboxListMarker { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, num_id: v_num_id, ilvl: v_ilvl, kind: v_kind, symbol: v_symbol, pic_bullet_src: v_pic_bullet_src, indent_left: v_indent_left, indent_right: v_indent_right, hanging: v_hanging, first_line: v_first_line, sz_half_points: v_sz_half_points, oversized: v_oversized })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -17680,7 +17720,7 @@ impl<'de> Deserialize<'de> for TextboxListMarker {
 pub enum TextboxListMarkerKind {
     Bullet,
     Ordered,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxListMarkerKind {
@@ -17717,7 +17757,7 @@ impl<'de> Deserialize<'de> for TextboxListMarkerKind {
 pub enum TextboxDisplayPageRelVFrom {
     Page,
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxDisplayPageRelVFrom {
@@ -17753,7 +17793,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayPageRelVFrom {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayPageRelXFrom {
     Page,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxDisplayPageRelXFrom {
@@ -17861,7 +17901,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapDistPx {
                         TextboxDisplayWrapDistPxKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(TextboxDisplayWrapDistPx { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(TextboxDisplayWrapDistPx { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -17875,7 +17915,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapDistPx {
 pub enum TextboxDisplayWrapSide {
     Left,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxDisplayWrapSide {
@@ -17912,7 +17952,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapSide {
 pub enum TextboxDisplayBorderDash {
     Dashed,
     Dotted,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TextboxDisplayBorderDash {
@@ -17949,7 +17989,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayBorderDash {
 pub enum TableCellVMerge {
     Restart,
     Continue,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCellVMerge {
@@ -17987,7 +18027,7 @@ pub enum TableCellVAlign {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCellVAlign {
@@ -18027,7 +18067,7 @@ pub enum TableCellTextDirection {
     TbRl,
     BtLr,
     LrTb,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCellTextDirection {
@@ -18066,7 +18106,7 @@ impl<'de> Deserialize<'de> for TableCellTextDirection {
 pub enum TableCellHMerge {
     Restart,
     Continue,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCellHMerge {
@@ -18188,15 +18228,15 @@ impl<'de> Deserialize<'de> for TableCellCellRevision {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableCellCellRevisionKey::Kind => v_kind = Some(map.next_value()?),
-                        TableCellCellRevisionKey::Author => v_author = Some(map.next_value()?),
-                        TableCellCellRevisionKey::Date => v_date = Some(map.next_value()?),
-                        TableCellCellRevisionKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        TableCellCellRevisionKey::Id => v_id = Some(map.next_value()?),
-                        TableCellCellRevisionKey::Move => v_move = Some(map.next_value()?),
+                        TableCellCellRevisionKey::Kind => v_kind = map.next_value::<wire::OrAbsent<TableCellCellRevisionKind>>()?.0,
+                        TableCellCellRevisionKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableCellCellRevisionKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableCellCellRevisionKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableCellCellRevisionKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableCellCellRevisionKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(TableCellCellRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
+                Ok(TableCellCellRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -18210,7 +18250,7 @@ impl<'de> Deserialize<'de> for TableCellCellRevision {
 pub enum TableCellCellRevisionKind {
     Ins,
     Del,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCellCellRevisionKind {
@@ -18332,15 +18372,15 @@ impl<'de> Deserialize<'de> for NewInkImage {
                     }
                     match key {
                         NewInkImageKey::BlockIndex => v_block_index = Some(map.next_value()?),
-                        NewInkImageKey::Base64 => v_base64 = Some(map.next_value()?),
+                        NewInkImageKey::Base64 => v_base64 = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NewInkImageKey::WidthPx => v_width_px = Some(map.next_value()?),
                         NewInkImageKey::HeightPx => v_height_px = Some(map.next_value()?),
                         NewInkImageKey::OffsetXPx => v_offset_x_px = Some(map.next_value()?),
                         NewInkImageKey::OffsetYPx => v_offset_y_px = Some(map.next_value()?),
-                        NewInkImageKey::Payload => v_payload = Some(map.next_value()?),
+                        NewInkImageKey::Payload => v_payload = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(NewInkImage { block_index: v_block_index.ok_or_else(|| A::Error::missing_field("blockIndex"))?, base64: v_base64.ok_or_else(|| A::Error::missing_field("base64"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))?, offset_x_px: v_offset_x_px.ok_or_else(|| A::Error::missing_field("offsetXPx"))?, offset_y_px: v_offset_y_px.ok_or_else(|| A::Error::missing_field("offsetYPx"))?, payload: v_payload })
+                Ok(NewInkImage { block_index: v_block_index.map_or_else(|| wire::absent("blockIndex").map(|()| JsNum(f64::NAN)), Ok)?, base64: v_base64.map_or_else(|| wire::absent("base64").map(|()| Default::default()), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, offset_x_px: v_offset_x_px.map_or_else(|| wire::absent("offsetXPx").map(|()| JsNum(f64::NAN)), Ok)?, offset_y_px: v_offset_y_px.map_or_else(|| wire::absent("offsetYPx").map(|()| JsNum(f64::NAN)), Ok)?, payload: v_payload })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -18445,7 +18485,7 @@ impl<'de> Deserialize<'de> for InkInfo {
                         InkInfoKey::Payload => v_payload = Some(map.next_value()?),
                     }
                 }
-                Ok(InkInfo { anchor_index: v_anchor_index.ok_or_else(|| A::Error::missing_field("anchorIndex"))?, offset_x_px: v_offset_x_px.ok_or_else(|| A::Error::missing_field("offsetXPx"))?, offset_y_px: v_offset_y_px.ok_or_else(|| A::Error::missing_field("offsetYPx"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, height_px: v_height_px.ok_or_else(|| A::Error::missing_field("heightPx"))?, data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, payload: v_payload.ok_or_else(|| A::Error::missing_field("payload"))? })
+                Ok(InkInfo { anchor_index: v_anchor_index.map_or_else(|| wire::absent("anchorIndex").map(|()| JsNum(f64::NAN)), Ok)?, offset_x_px: v_offset_x_px.map_or_else(|| wire::absent("offsetXPx").map(|()| JsNum(f64::NAN)), Ok)?, offset_y_px: v_offset_y_px.map_or_else(|| wire::absent("offsetYPx").map(|()| JsNum(f64::NAN)), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, data_url: v_data_url.flatten(), payload: v_payload.flatten() })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -18463,7 +18503,7 @@ pub enum BlockType {
     Table,
     Image,
     Passthrough,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockType {
@@ -18681,10 +18721,10 @@ impl<'de> Deserialize<'de> for RuleOverlay {
                         RuleOverlayKey::WidthPx => v_width_px = Some(map.next_value()?),
                         RuleOverlayKey::SpaceBeforePx => v_space_before_px = Some(map.next_value()?),
                         RuleOverlayKey::ThicknessPx => v_thickness_px = Some(map.next_value()?),
-                        RuleOverlayKey::ColorHex => v_color_hex = Some(map.next_value()?),
+                        RuleOverlayKey::ColorHex => v_color_hex = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(RuleOverlay { x_px: v_x_px.ok_or_else(|| A::Error::missing_field("xPx"))?, y_px: v_y_px.ok_or_else(|| A::Error::missing_field("yPx"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, space_before_px: v_space_before_px.ok_or_else(|| A::Error::missing_field("spaceBeforePx"))?, thickness_px: v_thickness_px, color_hex: v_color_hex })
+                Ok(RuleOverlay { x_px: v_x_px.map_or_else(|| wire::absent("xPx").map(|()| JsNum(f64::NAN)), Ok)?, y_px: v_y_px.map_or_else(|| wire::absent("yPx").map(|()| JsNum(f64::NAN)), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, space_before_px: v_space_before_px.map_or_else(|| wire::absent("spaceBeforePx").map(|()| JsNum(f64::NAN)), Ok)?, thickness_px: v_thickness_px, color_hex: v_color_hex })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19032,33 +19072,33 @@ impl<'de> Deserialize<'de> for Block {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockKey::Id => b_0.id.set(map.next_value()?),
-                        BlockKey::Type => b_0.r#type.set(map.next_value()?),
+                        BlockKey::Id => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.id.set(value) },
+                        BlockKey::Type => if let Some(value) = map.next_value::<wire::OrAbsent<BlockType>>()?.0 { b_0.r#type.set(value) },
                         BlockKey::DocxIndex => b_0.docx_index.set(map.next_value()?),
                         BlockKey::OriginalXml => b_0.original_xml.set(map.next_value()?),
-                        BlockKey::AltChunk => b_0.alt_chunk.set(map.next_value()?),
+                        BlockKey::AltChunk => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.alt_chunk.set(value) },
                         BlockKey::Level => b_0.level.set(map.next_value()?),
-                        BlockKey::OutlineOnly => b_0.outline_only.set(map.next_value()?),
-                        BlockKey::StyleId => b_0.style_id.set(map.next_value()?),
-                        BlockKey::List => b_0.list.set(map.next_value()?),
-                        BlockKey::Format => b_0.format.set(map.next_value()?),
-                        BlockKey::Bookmarks => b_0.bookmarks.set(map.next_value()?),
-                        BlockKey::HiddenBookmarks => b_0.hidden_bookmarks.set(map.next_value()?),
-                        BlockKey::CommentStarts => b_0.comment_starts.set(map.next_value()?),
-                        BlockKey::CommentEnds => b_0.comment_ends.set(map.next_value()?),
-                        BlockKey::RawPPr => b_0.raw_p_pr.set(map.next_value()?),
-                        BlockKey::Runs => b_0.runs.set(map.next_value()?),
-                        BlockKey::Label => b_0.label.set(map.next_value()?),
-                        BlockKey::PreviewText => b_0.preview_text.set(map.next_value()?),
-                        BlockKey::ImageDataUrl => b_0.image_data_url.set(map.next_value()?),
-                        BlockKey::OleProgId => b_0.ole_prog_id.set(map.next_value()?),
+                        BlockKey::OutlineOnly => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.outline_only.set(value) },
+                        BlockKey::StyleId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.style_id.set(value) },
+                        BlockKey::List => if let Some(value) = map.next_value::<wire::OrAbsent<BlockList>>()?.0 { b_0.list.set(value) },
+                        BlockKey::Format => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormat>>()?.0 { b_0.format.set(value) },
+                        BlockKey::Bookmarks => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.bookmarks.set(value) },
+                        BlockKey::HiddenBookmarks => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.hidden_bookmarks.set(value) },
+                        BlockKey::CommentStarts => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.comment_starts.set(value) },
+                        BlockKey::CommentEnds => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.comment_ends.set(value) },
+                        BlockKey::RawPPr => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.raw_p_pr.set(value) },
+                        BlockKey::Runs => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.runs.set(value) },
+                        BlockKey::Label => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.label.set(value) },
+                        BlockKey::PreviewText => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.preview_text.set(value) },
+                        BlockKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_data_url.set(value) },
+                        BlockKey::OleProgId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ole_prog_id.set(value) },
                         BlockKey::ImageWidthPx => b_0.image_width_px.set(map.next_value()?),
                         BlockKey::ImageHeightPx => b_0.image_height_px.set(map.next_value()?),
-                        BlockKey::ImageCrop => b_0.image_crop.set(map.next_value()?),
-                        BlockKey::ImageEffects => b_0.image_effects.set(map.next_value()?),
-                        BlockKey::ImageFillRect => b_0.image_fill_rect.set(map.next_value()?),
-                        BlockKey::ImageLeadingText => b_0.image_leading_text.set(map.next_value()?),
-                        BlockKey::ImageLeadingFont => b_0.image_leading_font.set(map.next_value()?),
+                        BlockKey::ImageCrop => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageCrop>>()?.0 { b_0.image_crop.set(value) },
+                        BlockKey::ImageEffects => if let Some(value) = map.next_value::<wire::OrAbsent<ImageEffects>>()?.0 { b_0.image_effects.set(value) },
+                        BlockKey::ImageFillRect => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageFillRect>>()?.0 { b_0.image_fill_rect.set(value) },
+                        BlockKey::ImageLeadingText => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_leading_text.set(value) },
+                        BlockKey::ImageLeadingFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_leading_font.set(value) },
                         BlockKey::ImageLeadingExplicitSpaceWidthPx => b_0.image_leading_explicit_space_width_px.set(map.next_value()?),
                         BlockKey::ImageLeadingImplicitSpaceCount => b_0.image_leading_implicit_space_count.set(map.next_value()?),
                         BlockKey::ImageParagraphIndentLeft => b_0.image_paragraph_indent_left.set(map.next_value()?),
@@ -19066,81 +19106,81 @@ impl<'de> Deserialize<'de> for Block {
                         BlockKey::ImageParagraphIndentFirstLine => b_0.image_paragraph_indent_first_line.set(map.next_value()?),
                         BlockKey::ImageParagraphSpaceBefore => b_0.image_paragraph_space_before.set(map.next_value()?),
                         BlockKey::ImageParagraphSpaceAfter => b_0.image_paragraph_space_after.set(map.next_value()?),
-                        BlockKey::ImageParagraphSpaceBeforeAuto => b_0.image_paragraph_space_before_auto.set(map.next_value()?),
-                        BlockKey::ImageParagraphSpaceAfterAuto => b_0.image_paragraph_space_after_auto.set(map.next_value()?),
-                        BlockKey::ImageParagraphAdditiveSpacing => b_0.image_paragraph_additive_spacing.set(map.next_value()?),
+                        BlockKey::ImageParagraphSpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_paragraph_space_before_auto.set(value) },
+                        BlockKey::ImageParagraphSpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_paragraph_space_after_auto.set(value) },
+                        BlockKey::ImageParagraphAdditiveSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_paragraph_additive_spacing.set(value) },
                         BlockKey::ImageParagraphLineTwips => b_0.image_paragraph_line_twips.set(map.next_value()?),
-                        BlockKey::ImageParagraphLineRule => b_0.image_paragraph_line_rule.set(map.next_value()?),
-                        BlockKey::ImageMarkFont => b_0.image_mark_font.set(map.next_value()?),
-                        BlockKey::ImageMarkFontEastAsia => b_0.image_mark_font_east_asia.set(map.next_value()?),
+                        BlockKey::ImageParagraphLineRule => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageParagraphLineRule>>()?.0 { b_0.image_paragraph_line_rule.set(value) },
+                        BlockKey::ImageMarkFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_mark_font.set(value) },
+                        BlockKey::ImageMarkFontEastAsia => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_mark_font_east_asia.set(value) },
                         BlockKey::ImageMarkSizeHalfPoints => b_0.image_mark_size_half_points.set(map.next_value()?),
                         BlockKey::ImageEffectExtentTopPx => b_0.image_effect_extent_top_px.set(map.next_value()?),
                         BlockKey::ImageEffectExtentBottomPx => b_0.image_effect_extent_bottom_px.set(map.next_value()?),
-                        BlockKey::AnchorLine => b_0.anchor_line.set(map.next_value()?),
-                        BlockKey::RuleOverlays => b_0.rule_overlays.set(map.next_value()?),
-                        BlockKey::ImageAlign => b_0.image_align.set(map.next_value()?),
+                        BlockKey::AnchorLine => if let Some(value) = map.next_value::<wire::OrAbsent<BlockAnchorLine>>()?.0 { b_0.anchor_line.set(value) },
+                        BlockKey::RuleOverlays => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<RuleOverlay>>>()?.0 { b_0.rule_overlays.set(value) },
+                        BlockKey::ImageAlign => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageAlign>>()?.0 { b_0.image_align.set(value) },
                         BlockKey::ImageIndentLeftTwips => b_0.image_indent_left_twips.set(map.next_value()?),
-                        BlockKey::ImageWrap => b_0.image_wrap.set(map.next_value()?),
-                        BlockKey::ImageBand => b_0.image_band.set(map.next_value()?),
+                        BlockKey::ImageWrap => if let Some(value) = map.next_value::<wire::OrAbsent<ImageWrap>>()?.0 { b_0.image_wrap.set(value) },
+                        BlockKey::ImageBand => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_band.set(value) },
                         BlockKey::ImageWrapDistTopEmu => b_0.image_wrap_dist_top_emu.set(map.next_value()?),
                         BlockKey::ImageWrapDistBottomEmu => b_0.image_wrap_dist_bottom_emu.set(map.next_value()?),
                         BlockKey::ImageWrapDistLeftEmu => b_0.image_wrap_dist_left_emu.set(map.next_value()?),
                         BlockKey::ImageWrapDistRightEmu => b_0.image_wrap_dist_right_emu.set(map.next_value()?),
                         BlockKey::ImageZOrder => b_0.image_z_order.set(map.next_value()?),
-                        BlockKey::ImageZOrderNormalized => b_0.image_z_order_normalized.set(map.next_value()?),
+                        BlockKey::ImageZOrderNormalized => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_z_order_normalized.set(value) },
                         BlockKey::ImageOffsetXEmu => b_0.image_offset_x_emu.set(map.next_value()?),
                         BlockKey::ImageOffsetYEmu => b_0.image_offset_y_emu.set(map.next_value()?),
-                        BlockKey::ImageRelV => b_0.image_rel_v.set(map.next_value()?),
-                        BlockKey::ImageRelH => b_0.image_rel_h.set(map.next_value()?),
-                        BlockKey::ImageAnchorLocked => b_0.image_anchor_locked.set(map.next_value()?),
-                        BlockKey::ImagePosH => b_0.image_pos_h.set(map.next_value()?),
-                        BlockKey::ImagePosV => b_0.image_pos_v.set(map.next_value()?),
+                        BlockKey::ImageRelV => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageRelV>>()?.0 { b_0.image_rel_v.set(value) },
+                        BlockKey::ImageRelH => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageRelH>>()?.0 { b_0.image_rel_h.set(value) },
+                        BlockKey::ImageAnchorLocked => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_anchor_locked.set(value) },
+                        BlockKey::ImagePosH => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImagePosH>>()?.0 { b_0.image_pos_h.set(value) },
+                        BlockKey::ImagePosV => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImagePosV>>()?.0 { b_0.image_pos_v.set(value) },
                         BlockKey::ImageRotDeg => b_0.image_rot_deg.set(map.next_value()?),
-                        BlockKey::ImageFlipH => b_0.image_flip_h.set(map.next_value()?),
-                        BlockKey::ImageFlipV => b_0.image_flip_v.set(map.next_value()?),
-                        BlockKey::ImageBorder => b_0.image_border.set(map.next_value()?),
-                        BlockKey::Table => b_0.table.set(map.next_value()?),
-                        BlockKey::FieldDisplay => b_0.field_display.set(map.next_value()?),
-                        BlockKey::Hidden => b_0.hidden.set(map.next_value()?),
-                        BlockKey::Decorative => b_0.decorative.set(map.next_value()?),
-                        BlockKey::RuleColorHex => b_0.rule_color_hex.set(map.next_value()?),
+                        BlockKey::ImageFlipH => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_flip_h.set(value) },
+                        BlockKey::ImageFlipV => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.image_flip_v.set(value) },
+                        BlockKey::ImageBorder => if let Some(value) = map.next_value::<wire::OrAbsent<BlockImageBorder>>()?.0 { b_0.image_border.set(value) },
+                        BlockKey::Table => if let Some(value) = map.next_value::<wire::OrAbsent<TableModel>>()?.0 { b_0.table.set(value) },
+                        BlockKey::FieldDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<FieldDisplay>>()?.0 { b_0.field_display.set(value) },
+                        BlockKey::Hidden => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.hidden.set(value) },
+                        BlockKey::Decorative => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.decorative.set(value) },
+                        BlockKey::RuleColorHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.rule_color_hex.set(value) },
                         BlockKey::RuleThicknessPx => b_0.rule_thickness_px.set(map.next_value()?),
                         BlockKey::RuleWidthPx => b_0.rule_width_px.set(map.next_value()?),
-                        BlockKey::BrokenImage => b_0.broken_image.set(map.next_value()?),
-                        BlockKey::InvisibleMarker => b_0.invisible_marker.set(map.next_value()?),
-                        BlockKey::Textboxes => b_0.textboxes.set(map.next_value()?),
-                        BlockKey::AnchorSnapToGrid => b_0.anchor_snap_to_grid.set(map.next_value()?),
-                        BlockKey::StrayRuns => b_0.stray_runs.set(map.next_value()?),
-                        BlockKey::StrayStyleId => b_0.stray_style_id.set(map.next_value()?),
-                        BlockKey::StrayIndent => b_0.stray_indent.set(map.next_value()?),
-                        BlockKey::StrayAlign => b_0.stray_align.set(map.next_value()?),
-                        BlockKey::StrayList => b_0.stray_list.set(map.next_value()?),
-                        BlockKey::FormulaDisplay => b_0.formula_display.set(map.next_value()?),
-                        BlockKey::ChartDisplay => b_0.chart_display.set(map.next_value()?),
-                        BlockKey::DiagramDisplay => b_0.diagram_display.set(map.next_value()?),
-                        BlockKey::SdtShell => b_0.sdt_shell.set(map.next_value()?),
-                        BlockKey::SdtShells => b_0.sdt_shells.set(map.next_value()?),
-                        BlockKey::InlineContentControls => b_0.inline_content_controls.set(map.next_value()?),
-                        BlockKey::MoveRevision => b_0.move_revision.set(map.next_value()?),
-                        BlockKey::PPrChangeInfo => b_0.p_pr_change_info.set(map.next_value()?),
-                        BlockKey::BlockRevision => b_0.block_revision.set(map.next_value()?),
-                        BlockKey::ParaMarkDel => b_0.para_mark_del.set(map.next_value()?),
-                        BlockKey::ParaMarkIns => b_0.para_mark_ins.set(map.next_value()?),
-                        BlockKey::ParaMarkRPrChange => b_0.para_mark_r_pr_change.set(map.next_value()?),
-                        BlockKey::NumberingChange => b_0.numbering_change.set(map.next_value()?),
-                        BlockKey::SectPrChange => b_0.sect_pr_change.set(map.next_value()?),
+                        BlockKey::BrokenImage => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.broken_image.set(value) },
+                        BlockKey::InvisibleMarker => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.invisible_marker.set(value) },
+                        BlockKey::Textboxes => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TextboxDisplay>>>()?.0 { b_0.textboxes.set(value) },
+                        BlockKey::AnchorSnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<False>>()?.0 { b_0.anchor_snap_to_grid.set(value) },
+                        BlockKey::StrayRuns => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.stray_runs.set(value) },
+                        BlockKey::StrayStyleId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.stray_style_id.set(value) },
+                        BlockKey::StrayIndent => if let Some(value) = map.next_value::<wire::OrAbsent<StrayIndent>>()?.0 { b_0.stray_indent.set(value) },
+                        BlockKey::StrayAlign => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_0.stray_align.set(value) },
+                        BlockKey::StrayList => if let Some(value) = map.next_value::<wire::OrAbsent<BlockStrayList>>()?.0 { b_0.stray_list.set(value) },
+                        BlockKey::FormulaDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<FormulaDisplay>>()?.0 { b_0.formula_display.set(value) },
+                        BlockKey::ChartDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplay>>()?.0 { b_0.chart_display.set(value) },
+                        BlockKey::DiagramDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<DiagramDisplay>>()?.0 { b_0.diagram_display.set(value) },
+                        BlockKey::SdtShell => if let Some(value) = map.next_value::<wire::OrAbsent<SdtShell>>()?.0 { b_0.sdt_shell.set(value) },
+                        BlockKey::SdtShells => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<SdtShell>>>()?.0 { b_0.sdt_shells.set(value) },
+                        BlockKey::InlineContentControls => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<InlineContentControl>>>()?.0 { b_0.inline_content_controls.set(value) },
+                        BlockKey::MoveRevision => if let Some(value) = map.next_value::<wire::OrAbsent<BlockMoveRevision>>()?.0 { b_0.move_revision.set(value) },
+                        BlockKey::PPrChangeInfo => if let Some(value) = map.next_value::<wire::OrAbsent<BlockPPrChangeInfo>>()?.0 { b_0.p_pr_change_info.set(value) },
+                        BlockKey::BlockRevision => if let Some(value) = map.next_value::<wire::OrAbsent<BlockBlockRevision>>()?.0 { b_0.block_revision.set(value) },
+                        BlockKey::ParaMarkDel => if let Some(value) = map.next_value::<wire::OrAbsent<BlockParaMarkDel>>()?.0 { b_0.para_mark_del.set(value) },
+                        BlockKey::ParaMarkIns => if let Some(value) = map.next_value::<wire::OrAbsent<BlockParaMarkIns>>()?.0 { b_0.para_mark_ins.set(value) },
+                        BlockKey::ParaMarkRPrChange => if let Some(value) = map.next_value::<wire::OrAbsent<BlockParaMarkRPrChange>>()?.0 { b_0.para_mark_r_pr_change.set(value) },
+                        BlockKey::NumberingChange => if let Some(value) = map.next_value::<wire::OrAbsent<PropChangeInfo>>()?.0 { b_0.numbering_change.set(value) },
+                        BlockKey::SectPrChange => if let Some(value) = map.next_value::<wire::OrAbsent<PropChangeInfo>>()?.0 { b_0.sect_pr_change.set(value) },
                     }
                 }
-                if !b_0.id.has_key() {
+                if !b_0.id.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("id"));
                 }
-                if !b_0.r#type.has_key() {
+                if !b_0.r#type.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("type"));
                 }
-                if !b_0.docx_index.has_key() {
+                if !b_0.docx_index.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("docxIndex"));
                 }
-                if !b_0.original_xml.has_key() {
+                if !b_0.original_xml.has_key() && !jscompat::lenient() {
                     return Err(A::Error::missing_field("originalXml"));
                 }
                 Ok(b_0)
@@ -19219,12 +19259,12 @@ impl<'de> Deserialize<'de> for BlockList {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockListKey::Kind => v_kind = Some(map.next_value()?),
-                        BlockListKey::NumId => v_num_id = Some(map.next_value()?),
+                        BlockListKey::Kind => v_kind = map.next_value::<wire::OrAbsent<BlockListKind>>()?.0,
+                        BlockListKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockListKey::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
-                Ok(BlockList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))? })
+                Ok(BlockList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19238,7 +19278,7 @@ impl<'de> Deserialize<'de> for BlockList {
 pub enum BlockListKind {
     Bullet,
     Ordered,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockListKind {
@@ -19348,7 +19388,7 @@ impl<'de> Deserialize<'de> for BlockImageCrop {
                         BlockImageCropKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(BlockImageCrop { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(BlockImageCrop { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19435,7 +19475,7 @@ impl<'de> Deserialize<'de> for BlockImageFillRect {
                         BlockImageFillRectKey::B => v_b = Some(map.next_value()?),
                     }
                 }
-                Ok(BlockImageFillRect { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+                Ok(BlockImageFillRect { l: v_l.map_or_else(|| wire::absent("l").map(|()| JsNum(f64::NAN)), Ok)?, t: v_t.map_or_else(|| wire::absent("t").map(|()| JsNum(f64::NAN)), Ok)?, r: v_r.map_or_else(|| wire::absent("r").map(|()| JsNum(f64::NAN)), Ok)?, b: v_b.map_or_else(|| wire::absent("b").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19450,7 +19490,7 @@ pub enum BlockImageParagraphLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImageParagraphLineRule {
@@ -19557,9 +19597,9 @@ impl<'de> Deserialize<'de> for BlockAnchorLine {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockAnchorLineKey::StyleId => v_style_id = Some(map.next_value()?),
-                        BlockAnchorLineKey::Format => v_format = Some(map.next_value()?),
-                        BlockAnchorLineKey::Clear => v_clear = Some(map.next_value()?),
+                        BlockAnchorLineKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockAnchorLineKey::Format => v_format = map.next_value::<wire::OrAbsent<ParaFormat>>()?.0,
+                        BlockAnchorLineKey::Clear => v_clear = map.next_value::<wire::OrAbsent<BlockAnchorLineClear>>()?.0,
                     }
                 }
                 Ok(BlockAnchorLine { style_id: v_style_id, format: v_format, clear: v_clear })
@@ -19577,7 +19617,7 @@ pub enum BlockAnchorLineClear {
     All,
     Left,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockAnchorLineClear {
@@ -19617,7 +19657,7 @@ pub enum BlockImageAlign {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImageAlign {
@@ -19657,7 +19697,7 @@ pub enum BlockImageRelV {
     Page,
     Margin,
     Line,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImageRelV {
@@ -19696,7 +19736,7 @@ impl<'de> Deserialize<'de> for BlockImageRelV {
 pub enum BlockImageRelH {
     Page,
     Margin,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImageRelH {
@@ -19734,7 +19774,7 @@ pub enum BlockImagePosH {
     Left,
     Center,
     Right,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImagePosH {
@@ -19774,7 +19814,7 @@ pub enum BlockImagePosV {
     Top,
     Center,
     Bottom,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockImagePosV {
@@ -19870,11 +19910,11 @@ impl<'de> Deserialize<'de> for BlockImageBorder {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockImageBorderKey::Color => v_color = Some(map.next_value()?),
+                        BlockImageBorderKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockImageBorderKey::WidthPt => v_width_pt = Some(map.next_value()?),
                     }
                 }
-                Ok(BlockImageBorder { color: v_color.ok_or_else(|| A::Error::missing_field("color"))?, width_pt: v_width_pt.ok_or_else(|| A::Error::missing_field("widthPt"))? })
+                Ok(BlockImageBorder { color: v_color.map_or_else(|| wire::absent("color").map(|()| Default::default()), Ok)?, width_pt: v_width_pt.map_or_else(|| wire::absent("widthPt").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19945,11 +19985,11 @@ impl<'de> Deserialize<'de> for BlockStrayList {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockStrayListKey::NumId => v_num_id = Some(map.next_value()?),
+                        BlockStrayListKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockStrayListKey::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
-                Ok(BlockStrayList { num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))? })
+                Ok(BlockStrayList { num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -19963,7 +20003,7 @@ impl<'de> Deserialize<'de> for BlockStrayList {
 pub enum BlockMoveRevision {
     From,
     To,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockMoveRevision {
@@ -20080,14 +20120,14 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockPPrChangeInfoKey::Author => v_author = Some(map.next_value()?),
-                        BlockPPrChangeInfoKey::Date => v_date = Some(map.next_value()?),
-                        BlockPPrChangeInfoKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        BlockPPrChangeInfoKey::Id => v_id = Some(map.next_value()?),
-                        BlockPPrChangeInfoKey::Old => v_old = Some(map.next_value()?),
+                        BlockPPrChangeInfoKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoKey::Old => v_old = map.next_value::<wire::OrAbsent<BlockPPrChangeInfoOld>>()?.0,
                     }
                 }
-                Ok(BlockPPrChangeInfo { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, old: v_old })
+                Ok(BlockPPrChangeInfo { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, old: v_old })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -20505,56 +20545,56 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOld {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockPPrChangeInfoOldKey::Align => v_align = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::Align => v_align = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0,
                         BlockPPrChangeInfoOldKey::LineSpacing => v_line_spacing = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0,
                         BlockPPrChangeInfoOldKey::LineRawTwips => v_line_raw_twips = Some(map.next_value()?),
                         BlockPPrChangeInfoOldKey::IndentLeft => v_indent_left = Some(map.next_value()?),
                         BlockPPrChangeInfoOldKey::IndentRight => v_indent_right = Some(map.next_value()?),
                         BlockPPrChangeInfoOldKey::IndentFirstLine => v_indent_first_line = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::CharIndents => v_char_indents = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::DirectCharIndents => v_direct_char_indents = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::CharIndents => v_char_indents = map.next_value::<wire::OrAbsent<CharIndents>>()?.0,
+                        BlockPPrChangeInfoOldKey::DirectCharIndents => v_direct_char_indents = map.next_value::<wire::OrAbsent<CharIndents>>()?.0,
                         BlockPPrChangeInfoOldKey::SpaceBefore => v_space_before = Some(map.next_value()?),
                         BlockPPrChangeInfoOldKey::SpaceAfter => v_space_after = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::SpaceBeforeAuto => v_space_before_auto = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::SpaceAfterAuto => v_space_after_auto = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::PageBreakBefore => v_page_break_before = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::KeepNext => v_keep_next = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::KeepLines => v_keep_lines = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::SuppressLineNumbers => v_suppress_line_numbers = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::WidowControl => v_widow_control = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::SnapToGrid => v_snap_to_grid = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::AutoSpace => v_auto_space = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::AutoSpaceDE => v_auto_space_d_e = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::AutoSpaceDN => v_auto_space_d_n = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::WordWrap => v_word_wrap = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::OverflowPunct => v_overflow_punct = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::EastAsiaLang => v_east_asia_lang = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::ContextualSpacing => v_contextual_spacing = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::ShadingFill => v_shading_fill = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::ShadingDisplay => v_shading_display = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::ShadingClear => v_shading_clear = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Borders => v_borders = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::BorderStyle => v_border_style = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::BorderLines => v_border_lines = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::BorderReset => v_border_reset = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::BorderPad => v_border_pad = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::TabStops => v_tab_stops = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::DropCap => v_drop_cap = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Frame => v_frame = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::FrameBox => v_frame_box = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::TextDirection => v_text_direction = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Bidi => v_bidi = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::BidiInherited => v_bidi_inherited = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::SpaceBeforeAuto => v_space_before_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::SpaceAfterAuto => v_space_after_auto = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::PageBreakBefore => v_page_break_before = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::KeepNext => v_keep_next = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::KeepLines => v_keep_lines = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::SuppressLineNumbers => v_suppress_line_numbers = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::WidowControl => v_widow_control = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::SnapToGrid => v_snap_to_grid = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::AutoSpace => v_auto_space = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0,
+                        BlockPPrChangeInfoOldKey::AutoSpaceDE => v_auto_space_d_e = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::AutoSpaceDN => v_auto_space_d_n = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::WordWrap => v_word_wrap = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::OverflowPunct => v_overflow_punct = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::EastAsiaLang => v_east_asia_lang = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoOldKey::ContextualSpacing => v_contextual_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::ShadingFill => v_shading_fill = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoOldKey::ShadingDisplay => v_shading_display = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoOldKey::ShadingClear => v_shading_clear = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::Borders => v_borders = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoOldKey::BorderStyle => v_border_style = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0,
+                        BlockPPrChangeInfoOldKey::BorderLines => v_border_lines = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0,
+                        BlockPPrChangeInfoOldKey::BorderReset => v_border_reset = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockPPrChangeInfoOldKey::BorderPad => v_border_pad = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0,
+                        BlockPPrChangeInfoOldKey::TabStops => v_tab_stops = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0,
+                        BlockPPrChangeInfoOldKey::DropCap => v_drop_cap = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0,
+                        BlockPPrChangeInfoOldKey::Frame => v_frame = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0,
+                        BlockPPrChangeInfoOldKey::FrameBox => v_frame_box = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0,
+                        BlockPPrChangeInfoOldKey::TextDirection => v_text_direction = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0,
+                        BlockPPrChangeInfoOldKey::Bidi => v_bidi = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        BlockPPrChangeInfoOldKey::BidiInherited => v_bidi_inherited = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         BlockPPrChangeInfoOldKey::EmptyRunSizeHalfPoints => v_empty_run_size_half_points = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::EmptyRunFontFamily => v_empty_run_font_family = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::EmptyRunFontFamily => v_empty_run_font_family = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockPPrChangeInfoOldKey::MarkSizeHalfPoints => v_mark_size_half_points = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Effective => v_effective = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Type => v_type = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::StyleId => v_style_id = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::Effective => v_effective = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0,
+                        BlockPPrChangeInfoOldKey::Type => v_type = map.next_value::<wire::OrAbsent<BlockPPrChangeInfoOldType>>()?.0,
+                        BlockPPrChangeInfoOldKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockPPrChangeInfoOldKey::Level => v_level = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::Kind => v_kind = Some(map.next_value()?),
-                        BlockPPrChangeInfoOldKey::NumId => v_num_id = Some(map.next_value()?),
+                        BlockPPrChangeInfoOldKey::Kind => v_kind = map.next_value::<wire::OrAbsent<BlockPPrChangeInfoOldKind>>()?.0,
+                        BlockPPrChangeInfoOldKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BlockPPrChangeInfoOldKey::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
@@ -20573,7 +20613,7 @@ pub enum BlockPPrChangeInfoOldType {
     DocParagraph,
     DocHeading,
     DocListItem,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockPPrChangeInfoOldType {
@@ -20612,7 +20652,7 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOldType {
 pub enum BlockPPrChangeInfoOldKind {
     Bullet,
     Ordered,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockPPrChangeInfoOldKind {
@@ -20734,15 +20774,15 @@ impl<'de> Deserialize<'de> for BlockBlockRevision {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockBlockRevisionKey::Kind => v_kind = Some(map.next_value()?),
-                        BlockBlockRevisionKey::Author => v_author = Some(map.next_value()?),
-                        BlockBlockRevisionKey::Date => v_date = Some(map.next_value()?),
-                        BlockBlockRevisionKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        BlockBlockRevisionKey::Id => v_id = Some(map.next_value()?),
-                        BlockBlockRevisionKey::Move => v_move = Some(map.next_value()?),
+                        BlockBlockRevisionKey::Kind => v_kind = map.next_value::<wire::OrAbsent<BlockBlockRevisionKind>>()?.0,
+                        BlockBlockRevisionKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockBlockRevisionKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockBlockRevisionKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockBlockRevisionKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockBlockRevisionKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(BlockBlockRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
+                Ok(BlockBlockRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -20756,7 +20796,7 @@ impl<'de> Deserialize<'de> for BlockBlockRevision {
 pub enum BlockBlockRevisionKind {
     Ins,
     Del,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl BlockBlockRevisionKind {
@@ -20866,13 +20906,13 @@ impl<'de> Deserialize<'de> for BlockParaMarkDel {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockParaMarkDelKey::Author => v_author = Some(map.next_value()?),
-                        BlockParaMarkDelKey::Date => v_date = Some(map.next_value()?),
-                        BlockParaMarkDelKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        BlockParaMarkDelKey::Id => v_id = Some(map.next_value()?),
+                        BlockParaMarkDelKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkDelKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkDelKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkDelKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(BlockParaMarkDel { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id })
+                Ok(BlockParaMarkDel { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -20959,13 +20999,13 @@ impl<'de> Deserialize<'de> for BlockParaMarkIns {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockParaMarkInsKey::Author => v_author = Some(map.next_value()?),
-                        BlockParaMarkInsKey::Date => v_date = Some(map.next_value()?),
-                        BlockParaMarkInsKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        BlockParaMarkInsKey::Id => v_id = Some(map.next_value()?),
+                        BlockParaMarkInsKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkInsKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkInsKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkInsKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(BlockParaMarkIns { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id })
+                Ok(BlockParaMarkIns { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21052,13 +21092,13 @@ impl<'de> Deserialize<'de> for BlockParaMarkRPrChange {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BlockParaMarkRPrChangeKey::Author => v_author = Some(map.next_value()?),
-                        BlockParaMarkRPrChangeKey::Date => v_date = Some(map.next_value()?),
-                        BlockParaMarkRPrChangeKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        BlockParaMarkRPrChangeKey::Id => v_id = Some(map.next_value()?),
+                        BlockParaMarkRPrChangeKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkRPrChangeKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkRPrChangeKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        BlockParaMarkRPrChangeKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(BlockParaMarkRPrChange { author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id })
+                Ok(BlockParaMarkRPrChange { author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21155,11 +21195,11 @@ impl<'de> Deserialize<'de> for FinalBlockV0 {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FinalBlockV0Key::Source => v_source = Some(map.next_value()?),
+                        FinalBlockV0Key::Source => v_source = map.next_value::<wire::OrAbsent<FinalBlockV0Source>>()?.0,
                         FinalBlockV0Key::DocxIndex => v_docx_index = Some(map.next_value()?),
                     }
                 }
-                Ok(FinalBlockV0 { source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, docx_index: v_docx_index.ok_or_else(|| A::Error::missing_field("docxIndex"))? })
+                Ok(FinalBlockV0 { source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, docx_index: v_docx_index.map_or_else(|| wire::absent("docxIndex").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21172,7 +21212,7 @@ impl<'de> Deserialize<'de> for FinalBlockV0 {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FinalBlockV0Source {
     Original,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FinalBlockV0Source {
@@ -21264,8 +21304,8 @@ impl<'de> Deserialize<'de> for FinalBlockV1 {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FinalBlockV1Key::Source => v_source = Some(map.next_value()?),
-                        FinalBlockV1Key::Block => v_block = Some(map.next_value()?),
+                        FinalBlockV1Key::Source => v_source = map.next_value::<wire::OrAbsent<FinalBlockV1Source>>()?.0,
+                        FinalBlockV1Key::Block => v_block = map.next_value::<wire::OrAbsent<GeneratedBlock>>()?.0,
                     }
                 }
                 Ok(FinalBlockV1 { source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, block: v_block.ok_or_else(|| A::Error::missing_field("block"))? })
@@ -21281,7 +21321,7 @@ impl<'de> Deserialize<'de> for FinalBlockV1 {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FinalBlockV1Source {
     Generated,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl FinalBlockV1Source {
@@ -21499,19 +21539,19 @@ impl<'de> Deserialize<'de> for GeneratedBlock {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        GeneratedBlockKey::Type => v_type = Some(map.next_value()?),
+                        GeneratedBlockKey::Type => v_type = map.next_value::<wire::OrAbsent<GeneratedBlockType>>()?.0,
                         GeneratedBlockKey::Level => v_level = Some(map.next_value()?),
-                        GeneratedBlockKey::OutlineOnly => v_outline_only = Some(map.next_value()?),
-                        GeneratedBlockKey::StyleId => v_style_id = Some(map.next_value()?),
-                        GeneratedBlockKey::List => v_list = Some(map.next_value()?),
-                        GeneratedBlockKey::Format => v_format = Some(map.next_value()?),
-                        GeneratedBlockKey::RawPPr => v_raw_p_pr = Some(map.next_value()?),
-                        GeneratedBlockKey::Bookmarks => v_bookmarks = Some(map.next_value()?),
-                        GeneratedBlockKey::HiddenBookmarks => v_hidden_bookmarks = Some(map.next_value()?),
-                        GeneratedBlockKey::CommentStarts => v_comment_starts = Some(map.next_value()?),
-                        GeneratedBlockKey::CommentEnds => v_comment_ends = Some(map.next_value()?),
-                        GeneratedBlockKey::Runs => v_runs = Some(map.next_value()?),
-                        GeneratedBlockKey::SdtShell => v_sdt_shell = Some(map.next_value()?),
+                        GeneratedBlockKey::OutlineOnly => v_outline_only = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        GeneratedBlockKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockKey::List => v_list = map.next_value::<wire::OrAbsent<GeneratedBlockList>>()?.0,
+                        GeneratedBlockKey::Format => v_format = map.next_value::<wire::OrAbsent<ParaFormat>>()?.0,
+                        GeneratedBlockKey::RawPPr => v_raw_p_pr = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockKey::Bookmarks => v_bookmarks = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        GeneratedBlockKey::HiddenBookmarks => v_hidden_bookmarks = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        GeneratedBlockKey::CommentStarts => v_comment_starts = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        GeneratedBlockKey::CommentEnds => v_comment_ends = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        GeneratedBlockKey::Runs => v_runs = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0,
+                        GeneratedBlockKey::SdtShell => v_sdt_shell = map.next_value::<wire::OrAbsent<SdtShell>>()?.0,
                         GeneratedBlockKey::PPrChange => v_p_pr_change = Some(map.next_value()?),
                         GeneratedBlockKey::ParaMarkDel => v_para_mark_del = Some(map.next_value()?),
                         GeneratedBlockKey::ParaMarkIns => v_para_mark_ins = Some(map.next_value()?),
@@ -21521,7 +21561,7 @@ impl<'de> Deserialize<'de> for GeneratedBlock {
                         GeneratedBlockKey::BlockRevision => v_block_revision = Some(map.next_value()?),
                     }
                 }
-                Ok(GeneratedBlock { r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, level: v_level, outline_only: v_outline_only, style_id: v_style_id, list: v_list, format: v_format, raw_p_pr: v_raw_p_pr, bookmarks: v_bookmarks, hidden_bookmarks: v_hidden_bookmarks, comment_starts: v_comment_starts, comment_ends: v_comment_ends, runs: v_runs.ok_or_else(|| A::Error::missing_field("runs"))?, sdt_shell: v_sdt_shell, p_pr_change: v_p_pr_change, para_mark_del: v_para_mark_del, para_mark_ins: v_para_mark_ins, para_mark_r_pr_change: v_para_mark_r_pr_change, numbering_change: v_numbering_change, sect_pr_change: v_sect_pr_change, block_revision: v_block_revision })
+                Ok(GeneratedBlock { r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, level: v_level, outline_only: v_outline_only, style_id: v_style_id, list: v_list, format: v_format, raw_p_pr: v_raw_p_pr, bookmarks: v_bookmarks, hidden_bookmarks: v_hidden_bookmarks, comment_starts: v_comment_starts, comment_ends: v_comment_ends, runs: v_runs.map_or_else(|| wire::absent("runs").map(|()| Default::default()), Ok)?, sdt_shell: v_sdt_shell, p_pr_change: v_p_pr_change, para_mark_del: v_para_mark_del, para_mark_ins: v_para_mark_ins, para_mark_r_pr_change: v_para_mark_r_pr_change, numbering_change: v_numbering_change, sect_pr_change: v_sect_pr_change, block_revision: v_block_revision })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21536,7 +21576,7 @@ pub enum GeneratedBlockType {
     Paragraph,
     Heading,
     ListItem,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl GeneratedBlockType {
@@ -21637,12 +21677,12 @@ impl<'de> Deserialize<'de> for GeneratedBlockList {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        GeneratedBlockListKey::Kind => v_kind = Some(map.next_value()?),
-                        GeneratedBlockListKey::NumId => v_num_id = Some(map.next_value()?),
+                        GeneratedBlockListKey::Kind => v_kind = map.next_value::<wire::OrAbsent<GeneratedBlockListKind>>()?.0,
+                        GeneratedBlockListKey::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         GeneratedBlockListKey::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
-                Ok(GeneratedBlockList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))? })
+                Ok(GeneratedBlockList { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21656,7 +21696,7 @@ impl<'de> Deserialize<'de> for GeneratedBlockList {
 pub enum GeneratedBlockListKind {
     Bullet,
     Ordered,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl GeneratedBlockListKind {
@@ -21778,15 +21818,15 @@ impl<'de> Deserialize<'de> for GeneratedBlockBlockRevision {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        GeneratedBlockBlockRevisionKey::Kind => v_kind = Some(map.next_value()?),
-                        GeneratedBlockBlockRevisionKey::Author => v_author = Some(map.next_value()?),
-                        GeneratedBlockBlockRevisionKey::Date => v_date = Some(map.next_value()?),
-                        GeneratedBlockBlockRevisionKey::DateUtc => v_date_utc = Some(map.next_value()?),
-                        GeneratedBlockBlockRevisionKey::Id => v_id = Some(map.next_value()?),
-                        GeneratedBlockBlockRevisionKey::Move => v_move = Some(map.next_value()?),
+                        GeneratedBlockBlockRevisionKey::Kind => v_kind = map.next_value::<wire::OrAbsent<GeneratedBlockBlockRevisionKind>>()?.0,
+                        GeneratedBlockBlockRevisionKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockBlockRevisionKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockBlockRevisionKey::DateUtc => v_date_utc = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockBlockRevisionKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        GeneratedBlockBlockRevisionKey::Move => v_move = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(GeneratedBlockBlockRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
+                Ok(GeneratedBlockBlockRevision { kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, date: v_date, date_utc: v_date_utc, id: v_id, r#move: v_move })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -21800,7 +21840,7 @@ impl<'de> Deserialize<'de> for GeneratedBlockBlockRevision {
 pub enum GeneratedBlockBlockRevisionKind {
     Ins,
     Del,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl GeneratedBlockBlockRevisionKind {
@@ -22032,54 +22072,54 @@ impl<'de> Deserialize<'de> for StyleDisplay {
                     match key {
                         StyleDisplayKey::SizeHalfPoints => b_0.size_half_points.set(map.next_value()?),
                         StyleDisplayKey::KernHalfPoints => b_0.kern_half_points.set(map.next_value()?),
-                        StyleDisplayKey::Color => b_0.color.set(map.next_value()?),
-                        StyleDisplayKey::Bold => b_0.bold.set(map.next_value()?),
-                        StyleDisplayKey::Italic => b_0.italic.set(map.next_value()?),
-                        StyleDisplayKey::BoldCs => b_0.bold_cs.set(map.next_value()?),
-                        StyleDisplayKey::ItalicCs => b_0.italic_cs.set(map.next_value()?),
+                        StyleDisplayKey::Color => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.color.set(value) },
+                        StyleDisplayKey::Bold => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold.set(value) },
+                        StyleDisplayKey::Italic => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.italic.set(value) },
+                        StyleDisplayKey::BoldCs => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold_cs.set(value) },
+                        StyleDisplayKey::ItalicCs => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.italic_cs.set(value) },
                         StyleDisplayKey::SizeCsHalfPoints => b_0.size_cs_half_points.set(map.next_value()?),
-                        StyleDisplayKey::Rtl => b_0.rtl.set(map.next_value()?),
-                        StyleDisplayKey::Underline => b_0.underline.set(map.next_value()?),
-                        StyleDisplayKey::Strike => b_0.strike.set(map.next_value()?),
-                        StyleDisplayKey::Bdr => b_0.bdr.set(map.next_value()?),
-                        StyleDisplayKey::EastAsiaFont => b_0.east_asia_font.set(map.next_value()?),
-                        StyleDisplayKey::Font => b_0.font.set(map.next_value()?),
-                        StyleDisplayKey::FontAscii => b_0.font_ascii.set(map.next_value()?),
-                        StyleDisplayKey::EaSlotEmpty => b_0.ea_slot_empty.set(map.next_value()?),
-                        StyleDisplayKey::CsFont => b_0.cs_font.set(map.next_value()?),
+                        StyleDisplayKey::Rtl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.rtl.set(value) },
+                        StyleDisplayKey::Underline => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.underline.set(value) },
+                        StyleDisplayKey::Strike => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.strike.set(value) },
+                        StyleDisplayKey::Bdr => if let Some(value) = map.next_value::<wire::OrAbsent<RunBdr>>()?.0 { b_0.bdr.set(value) },
+                        StyleDisplayKey::EastAsiaFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_font.set(value) },
+                        StyleDisplayKey::Font => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.font.set(value) },
+                        StyleDisplayKey::FontAscii => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.font_ascii.set(value) },
+                        StyleDisplayKey::EaSlotEmpty => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.ea_slot_empty.set(value) },
+                        StyleDisplayKey::CsFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.cs_font.set(value) },
                         StyleDisplayKey::CharSpacingTwips => b_0.char_spacing_twips.set(map.next_value()?),
-                        StyleDisplayKey::TabStops => b_0.tab_stops.set(map.next_value()?),
-                        StyleDisplayKey::Caps => b_0.caps.set(map.next_value()?),
-                        StyleDisplayKey::Shading => b_0.shading.set(map.next_value()?),
-                        StyleDisplayKey::TextOutline => b_0.text_outline.set(map.next_value()?),
+                        StyleDisplayKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_0.tab_stops.set(value) },
+                        StyleDisplayKey::Caps => if let Some(value) = map.next_value::<wire::OrAbsent<StyleDisplayCaps>>()?.0 { b_0.caps.set(value) },
+                        StyleDisplayKey::Shading => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading.set(value) },
+                        StyleDisplayKey::TextOutline => if let Some(value) = map.next_value::<wire::OrAbsent<TextOutline>>()?.0 { b_0.text_outline.set(value) },
                         StyleDisplayKey::LineSpacing => b_0.line_spacing.set(map.next_value()?),
-                        StyleDisplayKey::LineRule => b_0.line_rule.set(map.next_value()?),
+                        StyleDisplayKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<StyleDisplayLineRule>>()?.0 { b_0.line_rule.set(value) },
                         StyleDisplayKey::LineRawTwips => b_0.line_raw_twips.set(map.next_value()?),
                         StyleDisplayKey::SpaceBeforeTwips => b_0.space_before_twips.set(map.next_value()?),
                         StyleDisplayKey::SpaceAfterTwips => b_0.space_after_twips.set(map.next_value()?),
-                        StyleDisplayKey::SpaceBeforeAuto => b_0.space_before_auto.set(map.next_value()?),
-                        StyleDisplayKey::SpaceAfterAuto => b_0.space_after_auto.set(map.next_value()?),
+                        StyleDisplayKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_before_auto.set(value) },
+                        StyleDisplayKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_after_auto.set(value) },
                         StyleDisplayKey::IndentLeftTwips => b_0.indent_left_twips.set(map.next_value()?),
                         StyleDisplayKey::IndentRightTwips => b_0.indent_right_twips.set(map.next_value()?),
                         StyleDisplayKey::IndentFirstLineTwips => b_0.indent_first_line_twips.set(map.next_value()?),
-                        StyleDisplayKey::IndentChars => b_0.indent_chars.set(map.next_value()?),
-                        StyleDisplayKey::KeepNext => b_0.keep_next.set(map.next_value()?),
-                        StyleDisplayKey::KeepLines => b_0.keep_lines.set(map.next_value()?),
-                        StyleDisplayKey::SuppressLineNumbers => b_0.suppress_line_numbers.set(map.next_value()?),
-                        StyleDisplayKey::PageBreakBefore => b_0.page_break_before.set(map.next_value()?),
-                        StyleDisplayKey::WidowControl => b_0.widow_control.set(map.next_value()?),
-                        StyleDisplayKey::SuppressAutoHyphens => b_0.suppress_auto_hyphens.set(map.next_value()?),
-                        StyleDisplayKey::ContextualSpacing => b_0.contextual_spacing.set(map.next_value()?),
-                        StyleDisplayKey::Align => b_0.align.set(map.next_value()?),
-                        StyleDisplayKey::Bidi => b_0.bidi.set(map.next_value()?),
-                        StyleDisplayKey::ShadingFill => b_0.shading_fill.set(map.next_value()?),
-                        StyleDisplayKey::BorderSides => b_0.border_sides.set(map.next_value()?),
-                        StyleDisplayKey::AutoSpaceDE => b_0.auto_space_d_e.set(map.next_value()?),
-                        StyleDisplayKey::AutoSpaceDN => b_0.auto_space_d_n.set(map.next_value()?),
-                        StyleDisplayKey::WordWrap => b_0.word_wrap.set(map.next_value()?),
-                        StyleDisplayKey::OverflowPunct => b_0.overflow_punct.set(map.next_value()?),
-                        StyleDisplayKey::EastAsiaLang => b_0.east_asia_lang.set(map.next_value()?),
-                        StyleDisplayKey::Vanish => b_0.vanish.set(map.next_value()?),
+                        StyleDisplayKey::IndentChars => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.indent_chars.set(value) },
+                        StyleDisplayKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.keep_next.set(value) },
+                        StyleDisplayKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.keep_lines.set(value) },
+                        StyleDisplayKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.suppress_line_numbers.set(value) },
+                        StyleDisplayKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.page_break_before.set(value) },
+                        StyleDisplayKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.widow_control.set(value) },
+                        StyleDisplayKey::SuppressAutoHyphens => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.suppress_auto_hyphens.set(value) },
+                        StyleDisplayKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.contextual_spacing.set(value) },
+                        StyleDisplayKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<StyleDisplayAlign>>()?.0 { b_0.align.set(value) },
+                        StyleDisplayKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bidi.set(value) },
+                        StyleDisplayKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.shading_fill.set(value) },
+                        StyleDisplayKey::BorderSides => if let Some(value) = map.next_value::<wire::OrAbsent<ParaBorderSides>>()?.0 { b_0.border_sides.set(value) },
+                        StyleDisplayKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.auto_space_d_e.set(value) },
+                        StyleDisplayKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.auto_space_d_n.set(value) },
+                        StyleDisplayKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.word_wrap.set(value) },
+                        StyleDisplayKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.overflow_punct.set(value) },
+                        StyleDisplayKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_lang.set(value) },
+                        StyleDisplayKey::Vanish => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.vanish.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -22097,7 +22137,7 @@ pub enum StyleDisplayCaps {
     All,
     Small,
     None,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl StyleDisplayCaps {
@@ -22137,7 +22177,7 @@ pub enum StyleDisplayLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl StyleDisplayLineRule {
@@ -22179,7 +22219,7 @@ pub enum StyleDisplayAlign {
     Right,
     Justify,
     Distribute,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl StyleDisplayAlign {
@@ -22353,18 +22393,18 @@ impl<'de> Deserialize<'de> for TableCondFormat {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableCondFormatKey::Fill => v_fill = Some(map.next_value()?),
-                        TableCondFormatKey::Bold => v_bold = Some(map.next_value()?),
-                        TableCondFormatKey::Italic => v_italic = Some(map.next_value()?),
-                        TableCondFormatKey::Color => v_color = Some(map.next_value()?),
+                        TableCondFormatKey::Fill => v_fill = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableCondFormatKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableCondFormatKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableCondFormatKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TableCondFormatKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
-                        TableCondFormatKey::Caps => v_caps = Some(map.next_value()?),
-                        TableCondFormatKey::FontAscii => v_font_ascii = Some(map.next_value()?),
+                        TableCondFormatKey::Caps => v_caps = map.next_value::<wire::OrAbsent<TableCondFormatCaps>>()?.0,
+                        TableCondFormatKey::FontAscii => v_font_ascii = map.next_value::<wire::OrAbsent<String>>()?.0,
                         TableCondFormatKey::CharSpacingTwips => v_char_spacing_twips = Some(map.next_value()?),
-                        TableCondFormatKey::Borders => v_borders = Some(map.next_value()?),
-                        TableCondFormatKey::CellMarTwips => v_cell_mar_twips = Some(map.next_value()?),
-                        TableCondFormatKey::ParaSpacing => v_para_spacing = Some(map.next_value()?),
-                        TableCondFormatKey::ParaJc => v_para_jc = Some(map.next_value()?),
+                        TableCondFormatKey::Borders => v_borders = map.next_value::<wire::OrAbsent<CellBorders>>()?.0,
+                        TableCondFormatKey::CellMarTwips => v_cell_mar_twips = map.next_value::<wire::OrAbsent<CellMargins>>()?.0,
+                        TableCondFormatKey::ParaSpacing => v_para_spacing = map.next_value::<wire::OrAbsent<TableParaSpacing>>()?.0,
+                        TableCondFormatKey::ParaJc => v_para_jc = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(TableCondFormat { fill: v_fill, bold: v_bold, italic: v_italic, color: v_color, size_half_points: v_size_half_points, caps: v_caps, font_ascii: v_font_ascii, char_spacing_twips: v_char_spacing_twips, borders: v_borders, cell_mar_twips: v_cell_mar_twips, para_spacing: v_para_spacing, para_jc: v_para_jc })
@@ -22382,7 +22422,7 @@ pub enum TableCondFormatCaps {
     All,
     Small,
     None,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableCondFormatCaps {
@@ -22506,7 +22546,7 @@ impl<'de> Deserialize<'de> for TableParaSpacing {
                         TableParaSpacingKey::BeforeTwips => v_before_twips = Some(map.next_value()?),
                         TableParaSpacingKey::AfterTwips => v_after_twips = Some(map.next_value()?),
                         TableParaSpacingKey::LineRawTwips => v_line_raw_twips = Some(map.next_value()?),
-                        TableParaSpacingKey::LineRule => v_line_rule = Some(map.next_value()?),
+                        TableParaSpacingKey::LineRule => v_line_rule = map.next_value::<wire::OrAbsent<TableParaSpacingLineRule>>()?.0,
                         TableParaSpacingKey::LineSpacing => v_line_spacing = Some(map.next_value()?),
                     }
                 }
@@ -22525,7 +22565,7 @@ pub enum TableParaSpacingLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl TableParaSpacingLineRule {
@@ -22652,21 +22692,21 @@ impl<'de> Deserialize<'de> for TableStyleDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableStyleDisplayKey::Fill => b_0.fill.set(map.next_value()?),
-                        TableStyleDisplayKey::WholeTable => b_0.whole_table.set(map.next_value()?),
-                        TableStyleDisplayKey::FirstRow => b_0.first_row.set(map.next_value()?),
-                        TableStyleDisplayKey::FirstCol => b_0.first_col.set(map.next_value()?),
-                        TableStyleDisplayKey::LastCol => b_0.last_col.set(map.next_value()?),
-                        TableStyleDisplayKey::LastRow => b_0.last_row.set(map.next_value()?),
-                        TableStyleDisplayKey::Band1Fill => b_0.band1_fill.set(map.next_value()?),
-                        TableStyleDisplayKey::Band2Fill => b_0.band2_fill.set(map.next_value()?),
-                        TableStyleDisplayKey::Band1Horz => b_0.band1_horz.set(map.next_value()?),
-                        TableStyleDisplayKey::Band2Horz => b_0.band2_horz.set(map.next_value()?),
+                        TableStyleDisplayKey::Fill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill.set(value) },
+                        TableStyleDisplayKey::WholeTable => if let Some(value) = map.next_value::<wire::OrAbsent<TableStyleDisplayWholeTable>>()?.0 { b_0.whole_table.set(value) },
+                        TableStyleDisplayKey::FirstRow => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.first_row.set(value) },
+                        TableStyleDisplayKey::FirstCol => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.first_col.set(value) },
+                        TableStyleDisplayKey::LastCol => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.last_col.set(value) },
+                        TableStyleDisplayKey::LastRow => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.last_row.set(value) },
+                        TableStyleDisplayKey::Band1Fill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.band1_fill.set(value) },
+                        TableStyleDisplayKey::Band2Fill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.band2_fill.set(value) },
+                        TableStyleDisplayKey::Band1Horz => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.band1_horz.set(value) },
+                        TableStyleDisplayKey::Band2Horz => if let Some(value) = map.next_value::<wire::OrAbsent<TableCondFormat>>()?.0 { b_0.band2_horz.set(value) },
                         TableStyleDisplayKey::RowBandSize => b_0.row_band_size.set(map.next_value()?),
-                        TableStyleDisplayKey::Borders => b_0.borders.set(map.next_value()?),
-                        TableStyleDisplayKey::CellMarTwips => b_0.cell_mar_twips.set(map.next_value()?),
-                        TableStyleDisplayKey::ParaSpacing => b_0.para_spacing.set(map.next_value()?),
-                        TableStyleDisplayKey::ParaJc => b_0.para_jc.set(map.next_value()?),
+                        TableStyleDisplayKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<TableBorders>>()?.0 { b_0.borders.set(value) },
+                        TableStyleDisplayKey::CellMarTwips => if let Some(value) = map.next_value::<wire::OrAbsent<CellMargins>>()?.0 { b_0.cell_mar_twips.set(value) },
+                        TableStyleDisplayKey::ParaSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<TableParaSpacing>>()?.0 { b_0.para_spacing.set(value) },
+                        TableStyleDisplayKey::ParaJc => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_jc.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -22765,9 +22805,9 @@ impl<'de> Deserialize<'de> for TableStyleDisplayWholeTable {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableStyleDisplayWholeTableKey::Color => v_color = Some(map.next_value()?),
-                        TableStyleDisplayWholeTableKey::Bold => v_bold = Some(map.next_value()?),
-                        TableStyleDisplayWholeTableKey::Italic => v_italic = Some(map.next_value()?),
+                        TableStyleDisplayWholeTableKey::Color => v_color = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        TableStyleDisplayWholeTableKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        TableStyleDisplayWholeTableKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         TableStyleDisplayWholeTableKey::SizeHalfPoints => v_size_half_points = Some(map.next_value()?),
                         TableStyleDisplayWholeTableKey::KernHalfPoints => v_kern_half_points = Some(map.next_value()?),
                     }
@@ -22946,26 +22986,26 @@ impl<'de> Deserialize<'de> for StyleInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        StyleInfoKey::StyleId => v_style_id = Some(map.next_value()?),
-                        StyleInfoKey::Name => v_name = Some(map.next_value()?),
-                        StyleInfoKey::Type => v_type = Some(map.next_value()?),
+                        StyleInfoKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        StyleInfoKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        StyleInfoKey::Type => v_type = map.next_value::<wire::OrAbsent<StyleInfoType>>()?.0,
                         StyleInfoKey::HeadingLevel => v_heading_level = Some(map.next_value()?),
-                        StyleInfoKey::HeadingLevelInherited => v_heading_level_inherited = Some(map.next_value()?),
-                        StyleInfoKey::HeadingOutlineOff => v_heading_outline_off = Some(map.next_value()?),
-                        StyleInfoKey::BasedOn => v_based_on = Some(map.next_value()?),
-                        StyleInfoKey::SemiHidden => v_semi_hidden = Some(map.next_value()?),
-                        StyleInfoKey::QFormat => v_q_format = Some(map.next_value()?),
+                        StyleInfoKey::HeadingLevelInherited => v_heading_level_inherited = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        StyleInfoKey::HeadingOutlineOff => v_heading_outline_off = map.next_value::<wire::OrAbsent<True>>()?.0,
+                        StyleInfoKey::BasedOn => v_based_on = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        StyleInfoKey::SemiHidden => v_semi_hidden = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        StyleInfoKey::QFormat => v_q_format = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         StyleInfoKey::UiPriority => v_ui_priority = Some(map.next_value()?),
-                        StyleInfoKey::UnhideWhenUsed => v_unhide_when_used = Some(map.next_value()?),
-                        StyleInfoKey::Custom => v_custom = Some(map.next_value()?),
-                        StyleInfoKey::LinkedCharShell => v_linked_char_shell = Some(map.next_value()?),
-                        StyleInfoKey::Display => v_display = Some(map.next_value()?),
-                        StyleInfoKey::TableDisplay => v_table_display = Some(map.next_value()?),
-                        StyleInfoKey::NumPr => v_num_pr = Some(map.next_value()?),
-                        StyleInfoKey::IsDefault => v_is_default = Some(map.next_value()?),
+                        StyleInfoKey::UnhideWhenUsed => v_unhide_when_used = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        StyleInfoKey::Custom => v_custom = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        StyleInfoKey::LinkedCharShell => v_linked_char_shell = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        StyleInfoKey::Display => v_display = map.next_value::<wire::OrAbsent<StyleDisplay>>()?.0,
+                        StyleInfoKey::TableDisplay => v_table_display = map.next_value::<wire::OrAbsent<TableStyleDisplay>>()?.0,
+                        StyleInfoKey::NumPr => v_num_pr = map.next_value::<wire::OrAbsent<StyleInfoNumPr>>()?.0,
+                        StyleInfoKey::IsDefault => v_is_default = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(StyleInfo { style_id: v_style_id.ok_or_else(|| A::Error::missing_field("styleId"))?, name: v_name.ok_or_else(|| A::Error::missing_field("name"))?, r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, heading_level: v_heading_level, heading_level_inherited: v_heading_level_inherited, heading_outline_off: v_heading_outline_off, based_on: v_based_on, semi_hidden: v_semi_hidden, q_format: v_q_format, ui_priority: v_ui_priority, unhide_when_used: v_unhide_when_used, custom: v_custom, linked_char_shell: v_linked_char_shell, display: v_display, table_display: v_table_display, num_pr: v_num_pr, is_default: v_is_default })
+                Ok(StyleInfo { style_id: v_style_id.map_or_else(|| wire::absent("styleId").map(|()| Default::default()), Ok)?, name: v_name.map_or_else(|| wire::absent("name").map(|()| Default::default()), Ok)?, r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, heading_level: v_heading_level, heading_level_inherited: v_heading_level_inherited, heading_outline_off: v_heading_outline_off, based_on: v_based_on, semi_hidden: v_semi_hidden, q_format: v_q_format, ui_priority: v_ui_priority, unhide_when_used: v_unhide_when_used, custom: v_custom, linked_char_shell: v_linked_char_shell, display: v_display, table_display: v_table_display, num_pr: v_num_pr, is_default: v_is_default })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -22980,7 +23020,7 @@ pub enum StyleInfoType {
     Paragraph,
     Character,
     Table,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl StyleInfoType {
@@ -23102,11 +23142,11 @@ impl<'de> Deserialize<'de> for StyleInfoNumPrV0 {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        StyleInfoNumPrV0Key::NumId => v_num_id = Some(map.next_value()?),
+                        StyleInfoNumPrV0Key::NumId => v_num_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         StyleInfoNumPrV0Key::Ilvl => v_ilvl = Some(map.next_value()?),
                     }
                 }
-                Ok(StyleInfoNumPrV0 { num_id: v_num_id.ok_or_else(|| A::Error::missing_field("numId"))?, ilvl: v_ilvl.ok_or_else(|| A::Error::missing_field("ilvl"))? })
+                Ok(StyleInfoNumPrV0 { num_id: v_num_id.map_or_else(|| wire::absent("numId").map(|()| Default::default()), Ok)?, ilvl: v_ilvl.map_or_else(|| wire::absent("ilvl").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -23261,36 +23301,36 @@ impl<'de> Deserialize<'de> for DocDefaults {
                     match key {
                         DocDefaultsKey::SizeHalfPoints => b_0.size_half_points.set(map.next_value()?),
                         DocDefaultsKey::SizeCsHalfPoints => b_0.size_cs_half_points.set(map.next_value()?),
-                        DocDefaultsKey::BoldCs => b_0.bold_cs.set(map.next_value()?),
-                        DocDefaultsKey::ItalicCs => b_0.italic_cs.set(map.next_value()?),
-                        DocDefaultsKey::WidowControl => b_0.widow_control.set(map.next_value()?),
+                        DocDefaultsKey::BoldCs => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold_cs.set(value) },
+                        DocDefaultsKey::ItalicCs => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.italic_cs.set(value) },
+                        DocDefaultsKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.widow_control.set(value) },
                         DocDefaultsKey::IndentLeftTwips => b_0.indent_left_twips.set(map.next_value()?),
                         DocDefaultsKey::IndentRightTwips => b_0.indent_right_twips.set(map.next_value()?),
                         DocDefaultsKey::IndentFirstLineTwips => b_0.indent_first_line_twips.set(map.next_value()?),
-                        DocDefaultsKey::IndentChars => b_0.indent_chars.set(map.next_value()?),
+                        DocDefaultsKey::IndentChars => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.indent_chars.set(value) },
                         DocDefaultsKey::KernHalfPoints => b_0.kern_half_points.set(map.next_value()?),
-                        DocDefaultsKey::AsciiFont => b_0.ascii_font.set(map.next_value()?),
-                        DocDefaultsKey::EastAsiaFont => b_0.east_asia_font.set(map.next_value()?),
-                        DocDefaultsKey::EaSlotEmpty => b_0.ea_slot_empty.set(map.next_value()?),
-                        DocDefaultsKey::EaFromLang => b_0.ea_from_lang.set(map.next_value()?),
-                        DocDefaultsKey::EaThemeSlot => b_0.ea_theme_slot.set(map.next_value()?),
-                        DocDefaultsKey::CsFont => b_0.cs_font.set(map.next_value()?),
-                        DocDefaultsKey::Bold => b_0.bold.set(map.next_value()?),
-                        DocDefaultsKey::Italic => b_0.italic.set(map.next_value()?),
-                        DocDefaultsKey::Color => b_0.color.set(map.next_value()?),
+                        DocDefaultsKey::AsciiFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ascii_font.set(value) },
+                        DocDefaultsKey::EastAsiaFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_font.set(value) },
+                        DocDefaultsKey::EaSlotEmpty => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.ea_slot_empty.set(value) },
+                        DocDefaultsKey::EaFromLang => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.ea_from_lang.set(value) },
+                        DocDefaultsKey::EaThemeSlot => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.ea_theme_slot.set(value) },
+                        DocDefaultsKey::CsFont => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.cs_font.set(value) },
+                        DocDefaultsKey::Bold => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bold.set(value) },
+                        DocDefaultsKey::Italic => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.italic.set(value) },
+                        DocDefaultsKey::Color => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.color.set(value) },
                         DocDefaultsKey::LineSpacing => b_0.line_spacing.set(map.next_value()?),
-                        DocDefaultsKey::LineRule => b_0.line_rule.set(map.next_value()?),
+                        DocDefaultsKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<DocDefaultsLineRule>>()?.0 { b_0.line_rule.set(value) },
                         DocDefaultsKey::LineRawTwips => b_0.line_raw_twips.set(map.next_value()?),
                         DocDefaultsKey::SpaceBeforeTwips => b_0.space_before_twips.set(map.next_value()?),
                         DocDefaultsKey::SpaceAfterTwips => b_0.space_after_twips.set(map.next_value()?),
-                        DocDefaultsKey::SpaceBeforeAuto => b_0.space_before_auto.set(map.next_value()?),
-                        DocDefaultsKey::SpaceAfterAuto => b_0.space_after_auto.set(map.next_value()?),
-                        DocDefaultsKey::Lang => b_0.lang.set(map.next_value()?),
-                        DocDefaultsKey::Rtl => b_0.rtl.set(map.next_value()?),
-                        DocDefaultsKey::Bidi => b_0.bidi.set(map.next_value()?),
-                        DocDefaultsKey::EastAsiaLang => b_0.east_asia_lang.set(map.next_value()?),
-                        DocDefaultsKey::SuppressAutoHyphens => b_0.suppress_auto_hyphens.set(map.next_value()?),
-                        DocDefaultsKey::BorderSides => b_0.border_sides.set(map.next_value()?),
+                        DocDefaultsKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_before_auto.set(value) },
+                        DocDefaultsKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.space_after_auto.set(value) },
+                        DocDefaultsKey::Lang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.lang.set(value) },
+                        DocDefaultsKey::Rtl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.rtl.set(value) },
+                        DocDefaultsKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.bidi.set(value) },
+                        DocDefaultsKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.east_asia_lang.set(value) },
+                        DocDefaultsKey::SuppressAutoHyphens => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.suppress_auto_hyphens.set(value) },
+                        DocDefaultsKey::BorderSides => if let Some(value) = map.next_value::<wire::OrAbsent<ParaBorderSides>>()?.0 { b_0.border_sides.set(value) },
                     }
                 }
                 Ok(b_0)
@@ -23308,7 +23348,7 @@ pub enum DocDefaultsLineRule {
     Auto,
     AtLeast,
     Exact,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl DocDefaultsLineRule {
@@ -23432,15 +23472,15 @@ impl<'de> Deserialize<'de> for DocProtection {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DocProtectionKey::Edit => v_edit = Some(map.next_value()?),
-                        DocProtectionKey::Enforced => v_enforced = Some(map.next_value()?),
-                        DocProtectionKey::Hash => v_hash = Some(map.next_value()?),
-                        DocProtectionKey::Salt => v_salt = Some(map.next_value()?),
+                        DocProtectionKey::Edit => v_edit = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        DocProtectionKey::Enforced => v_enforced = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        DocProtectionKey::Hash => v_hash = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        DocProtectionKey::Salt => v_salt = map.next_value::<wire::OrAbsent<String>>()?.0,
                         DocProtectionKey::SpinCount => v_spin_count = Some(map.next_value()?),
                         DocProtectionKey::AlgorithmSid => v_algorithm_sid = Some(map.next_value()?),
                     }
                 }
-                Ok(DocProtection { edit: v_edit.ok_or_else(|| A::Error::missing_field("edit"))?, enforced: v_enforced.ok_or_else(|| A::Error::missing_field("enforced"))?, hash: v_hash, salt: v_salt, spin_count: v_spin_count, algorithm_sid: v_algorithm_sid })
+                Ok(DocProtection { edit: v_edit.map_or_else(|| wire::absent("edit").map(|()| Default::default()), Ok)?, enforced: v_enforced.map_or_else(|| wire::absent("enforced").map(|()| Default::default()), Ok)?, hash: v_hash, salt: v_salt, spin_count: v_spin_count, algorithm_sid: v_algorithm_sid })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -23536,9 +23576,9 @@ impl<'de> Deserialize<'de> for WriteProtection {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        WriteProtectionKey::Recommended => v_recommended = Some(map.next_value()?),
-                        WriteProtectionKey::Hash => v_hash = Some(map.next_value()?),
-                        WriteProtectionKey::Salt => v_salt = Some(map.next_value()?),
+                        WriteProtectionKey::Recommended => v_recommended = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        WriteProtectionKey::Hash => v_hash = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        WriteProtectionKey::Salt => v_salt = map.next_value::<wire::OrAbsent<String>>()?.0,
                         WriteProtectionKey::SpinCount => v_spin_count = Some(map.next_value()?),
                         WriteProtectionKey::AlgorithmSid => v_algorithm_sid = Some(map.next_value()?),
                     }
@@ -23643,16 +23683,16 @@ impl<'de> Deserialize<'de> for SourceInfo {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        SourceInfoKey::Tag => v_tag = Some(map.next_value()?),
-                        SourceInfoKey::Type => v_type = Some(map.next_value()?),
-                        SourceInfoKey::Author => v_author = Some(map.next_value()?),
-                        SourceInfoKey::Title => v_title = Some(map.next_value()?),
-                        SourceInfoKey::Year => v_year = Some(map.next_value()?),
-                        SourceInfoKey::Publisher => v_publisher = Some(map.next_value()?),
-                        SourceInfoKey::Url => v_url = Some(map.next_value()?),
+                        SourceInfoKey::Tag => v_tag = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Type => v_type = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Author => v_author = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Title => v_title = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Year => v_year = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Publisher => v_publisher = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        SourceInfoKey::Url => v_url = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(SourceInfo { tag: v_tag.ok_or_else(|| A::Error::missing_field("tag"))?, r#type: v_type.ok_or_else(|| A::Error::missing_field("type"))?, author: v_author.ok_or_else(|| A::Error::missing_field("author"))?, title: v_title.ok_or_else(|| A::Error::missing_field("title"))?, year: v_year.ok_or_else(|| A::Error::missing_field("year"))?, publisher: v_publisher, url: v_url })
+                Ok(SourceInfo { tag: v_tag.map_or_else(|| wire::absent("tag").map(|()| Default::default()), Ok)?, r#type: v_type.map_or_else(|| wire::absent("type").map(|()| Default::default()), Ok)?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, title: v_title.map_or_else(|| wire::absent("title").map(|()| Default::default()), Ok)?, year: v_year.map_or_else(|| wire::absent("year").map(|()| Default::default()), Ok)?, publisher: v_publisher, url: v_url })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -23779,19 +23819,19 @@ impl<'de> Deserialize<'de> for ThemeFonts {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ThemeFontsKey::Major => v_major = Some(map.next_value()?),
-                        ThemeFontsKey::Minor => v_minor = Some(map.next_value()?),
-                        ThemeFontsKey::EastAsia => v_east_asia = Some(map.next_value()?),
-                        ThemeFontsKey::MajorEastAsia => v_major_east_asia = Some(map.next_value()?),
-                        ThemeFontsKey::MajorCs => v_major_cs = Some(map.next_value()?),
-                        ThemeFontsKey::MinorCs => v_minor_cs = Some(map.next_value()?),
-                        ThemeFontsKey::EaLang => v_ea_lang = Some(map.next_value()?),
-                        ThemeFontsKey::BidiLang => v_bidi_lang = Some(map.next_value()?),
-                        ThemeFontsKey::MajorScripts => v_major_scripts = Some(map.next_value()?),
-                        ThemeFontsKey::MinorScripts => v_minor_scripts = Some(map.next_value()?),
+                        ThemeFontsKey::Major => v_major = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::Minor => v_minor = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::EastAsia => v_east_asia = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::MajorEastAsia => v_major_east_asia = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::MajorCs => v_major_cs = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::MinorCs => v_minor_cs = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::EaLang => v_ea_lang = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::BidiLang => v_bidi_lang = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeFontsKey::MajorScripts => v_major_scripts = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
+                        ThemeFontsKey::MinorScripts => v_minor_scripts = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
                     }
                 }
-                Ok(ThemeFonts { major: v_major.ok_or_else(|| A::Error::missing_field("major"))?, minor: v_minor.ok_or_else(|| A::Error::missing_field("minor"))?, east_asia: v_east_asia, major_east_asia: v_major_east_asia, major_cs: v_major_cs, minor_cs: v_minor_cs, ea_lang: v_ea_lang, bidi_lang: v_bidi_lang, major_scripts: v_major_scripts, minor_scripts: v_minor_scripts })
+                Ok(ThemeFonts { major: v_major.map_or_else(|| wire::absent("major").map(|()| Default::default()), Ok)?, minor: v_minor.map_or_else(|| wire::absent("minor").map(|()| Default::default()), Ok)?, east_asia: v_east_asia, major_east_asia: v_major_east_asia, major_cs: v_major_cs, minor_cs: v_minor_cs, ea_lang: v_ea_lang, bidi_lang: v_bidi_lang, major_scripts: v_major_scripts, minor_scripts: v_minor_scripts })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -23906,17 +23946,17 @@ impl<'de> Deserialize<'de> for FontTableEntry {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FontTableEntryKey::Name => v_name = Some(map.next_value()?),
-                        FontTableEntryKey::AltName => v_alt_name = Some(map.next_value()?),
-                        FontTableEntryKey::Panose => v_panose = Some(map.next_value()?),
-                        FontTableEntryKey::Family => v_family = Some(map.next_value()?),
-                        FontTableEntryKey::Charset => v_charset = Some(map.next_value()?),
-                        FontTableEntryKey::Csb0 => v_csb0 = Some(map.next_value()?),
-                        FontTableEntryKey::Pitch => v_pitch = Some(map.next_value()?),
-                        FontTableEntryKey::Embedded => v_embedded = Some(map.next_value()?),
+                        FontTableEntryKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::AltName => v_alt_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Panose => v_panose = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Family => v_family = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Charset => v_charset = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Csb0 => v_csb0 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Pitch => v_pitch = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        FontTableEntryKey::Embedded => v_embedded = map.next_value::<wire::OrAbsent<FontTableEntryEmbedded>>()?.0,
                     }
                 }
-                Ok(FontTableEntry { name: v_name.ok_or_else(|| A::Error::missing_field("name"))?, alt_name: v_alt_name, panose: v_panose, family: v_family, charset: v_charset, csb0: v_csb0, pitch: v_pitch, embedded: v_embedded })
+                Ok(FontTableEntry { name: v_name.map_or_else(|| wire::absent("name").map(|()| Default::default()), Ok)?, alt_name: v_alt_name, panose: v_panose, family: v_family, charset: v_charset, csb0: v_csb0, pitch: v_pitch, embedded: v_embedded })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -24005,10 +24045,10 @@ impl<'de> Deserialize<'de> for FontTableEntryEmbedded {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        FontTableEntryEmbeddedKey::Regular => v_regular = Some(map.next_value()?),
-                        FontTableEntryEmbeddedKey::Bold => v_bold = Some(map.next_value()?),
-                        FontTableEntryEmbeddedKey::Italic => v_italic = Some(map.next_value()?),
-                        FontTableEntryEmbeddedKey::BoldItalic => v_bold_italic = Some(map.next_value()?),
+                        FontTableEntryEmbeddedKey::Regular => v_regular = map.next_value::<wire::OrAbsent<EmbeddedFontRef>>()?.0,
+                        FontTableEntryEmbeddedKey::Bold => v_bold = map.next_value::<wire::OrAbsent<EmbeddedFontRef>>()?.0,
+                        FontTableEntryEmbeddedKey::Italic => v_italic = map.next_value::<wire::OrAbsent<EmbeddedFontRef>>()?.0,
+                        FontTableEntryEmbeddedKey::BoldItalic => v_bold_italic = map.next_value::<wire::OrAbsent<EmbeddedFontRef>>()?.0,
                     }
                 }
                 Ok(FontTableEntryEmbedded { regular: v_regular, bold: v_bold, italic: v_italic, bold_italic: v_bold_italic })
@@ -24084,11 +24124,11 @@ impl<'de> Deserialize<'de> for EmbeddedFontRef {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EmbeddedFontRefKey::RId => v_r_id = Some(map.next_value()?),
-                        EmbeddedFontRefKey::FontKey => v_font_key = Some(map.next_value()?),
+                        EmbeddedFontRefKey::RId => v_r_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EmbeddedFontRefKey::FontKey => v_font_key = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(EmbeddedFontRef { r_id: v_r_id.ok_or_else(|| A::Error::missing_field("rId"))?, font_key: v_font_key })
+                Ok(EmbeddedFontRef { r_id: v_r_id.map_or_else(|| wire::absent("rId").map(|()| Default::default()), Ok)?, font_key: v_font_key })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -24104,7 +24144,7 @@ pub enum EmbeddedFontSlot {
     Bold,
     Italic,
     BoldItalic,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl EmbeddedFontSlot {
@@ -24212,7 +24252,7 @@ impl<'de> Deserialize<'de> for EmbeddedFontLineMetrics {
                         EmbeddedFontLineMetricsKey::LineGap => v_line_gap = Some(map.next_value()?),
                     }
                 }
-                Ok(EmbeddedFontLineMetrics { ascent: v_ascent.ok_or_else(|| A::Error::missing_field("ascent"))?, descent: v_descent.ok_or_else(|| A::Error::missing_field("descent"))?, line_gap: v_line_gap.ok_or_else(|| A::Error::missing_field("lineGap"))? })
+                Ok(EmbeddedFontLineMetrics { ascent: v_ascent.map_or_else(|| wire::absent("ascent").map(|()| JsNum(f64::NAN)), Ok)?, descent: v_descent.map_or_else(|| wire::absent("descent").map(|()| JsNum(f64::NAN)), Ok)?, line_gap: v_line_gap.map_or_else(|| wire::absent("lineGap").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -24300,14 +24340,14 @@ impl<'de> Deserialize<'de> for EmbeddedFont {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        EmbeddedFontKey::Family => v_family = Some(map.next_value()?),
-                        EmbeddedFontKey::Bold => v_bold = Some(map.next_value()?),
-                        EmbeddedFontKey::Italic => v_italic = Some(map.next_value()?),
-                        EmbeddedFontKey::Data => v_data = Some(map.next_value()?),
-                        EmbeddedFontKey::LineMetrics => v_line_metrics = Some(map.next_value()?),
+                        EmbeddedFontKey::Family => v_family = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        EmbeddedFontKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EmbeddedFontKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        EmbeddedFontKey::Data => v_data = map.next_value::<wire::OrAbsent<Bytes>>()?.0,
+                        EmbeddedFontKey::LineMetrics => v_line_metrics = map.next_value::<wire::OrAbsent<EmbeddedFontLineMetrics>>()?.0,
                     }
                 }
-                Ok(EmbeddedFont { family: v_family.ok_or_else(|| A::Error::missing_field("family"))?, bold: v_bold.ok_or_else(|| A::Error::missing_field("bold"))?, italic: v_italic.ok_or_else(|| A::Error::missing_field("italic"))?, data: v_data.ok_or_else(|| A::Error::missing_field("data"))?, line_metrics: v_line_metrics })
+                Ok(EmbeddedFont { family: v_family.map_or_else(|| wire::absent("family").map(|()| Default::default()), Ok)?, bold: v_bold.map_or_else(|| wire::absent("bold").map(|()| Default::default()), Ok)?, italic: v_italic.map_or_else(|| wire::absent("italic").map(|()| Default::default()), Ok)?, data: v_data.ok_or_else(|| A::Error::missing_field("data"))?, line_metrics: v_line_metrics })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -24459,19 +24499,19 @@ impl<'de> Deserialize<'de> for ThemeColors {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ThemeColorsKey::Name => v_name = Some(map.next_value()?),
-                        ThemeColorsKey::Dk1 => v_dk1 = Some(map.next_value()?),
-                        ThemeColorsKey::Lt1 => v_lt1 = Some(map.next_value()?),
-                        ThemeColorsKey::Hlink => v_hlink = Some(map.next_value()?),
-                        ThemeColorsKey::FolHlink => v_fol_hlink = Some(map.next_value()?),
-                        ThemeColorsKey::Dk2 => v_dk2 = Some(map.next_value()?),
-                        ThemeColorsKey::Lt2 => v_lt2 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent1 => v_accent1 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent2 => v_accent2 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent3 => v_accent3 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent4 => v_accent4 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent5 => v_accent5 = Some(map.next_value()?),
-                        ThemeColorsKey::Accent6 => v_accent6 = Some(map.next_value()?),
+                        ThemeColorsKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Dk1 => v_dk1 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Lt1 => v_lt1 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Hlink => v_hlink = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::FolHlink => v_fol_hlink = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Dk2 => v_dk2 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Lt2 => v_lt2 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent1 => v_accent1 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent2 => v_accent2 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent3 => v_accent3 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent4 => v_accent4 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent5 => v_accent5 = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ThemeColorsKey::Accent6 => v_accent6 = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
                 Ok(ThemeColors { name: v_name, dk1: v_dk1, lt1: v_lt1, hlink: v_hlink, fol_hlink: v_fol_hlink, dk2: v_dk2, lt2: v_lt2, accent1: v_accent1, accent2: v_accent2, accent3: v_accent3, accent4: v_accent4, accent5: v_accent5, accent6: v_accent6 })
@@ -24883,24 +24923,24 @@ impl<'de> Deserialize<'de> for ParsedDoc {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParsedDocKey::Blocks => v_blocks = Some(map.next_value()?),
-                        ParsedDocKey::ZoteroDocumentData => v_zotero_document_data = Some(map.next_value()?),
-                        ParsedDocKey::Properties => v_properties = Some(map.next_value()?),
-                        ParsedDocKey::Comments => v_comments = Some(map.next_value()?),
-                        ParsedDocKey::Footnotes => v_footnotes = Some(map.next_value()?),
-                        ParsedDocKey::Endnotes => v_endnotes = Some(map.next_value()?),
-                        ParsedDocKey::FootnoteProps => v_footnote_props = Some(map.next_value()?),
-                        ParsedDocKey::EndnoteProps => v_endnote_props = Some(map.next_value()?),
-                        ParsedDocKey::NoteNumbers => v_note_numbers = Some(map.next_value()?),
-                        ParsedDocKey::Sources => v_sources = Some(map.next_value()?),
-                        ParsedDocKey::Inks => v_inks = Some(map.next_value()?),
+                        ParsedDocKey::Blocks => v_blocks = map.next_value::<wire::OrAbsent<Vec<Block>>>()?.0,
+                        ParsedDocKey::ZoteroDocumentData => v_zotero_document_data = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ParsedDocKey::Properties => v_properties = map.next_value::<wire::OrAbsent<DocumentProperties>>()?.0,
+                        ParsedDocKey::Comments => v_comments = map.next_value::<wire::OrAbsent<Vec<CommentInfo>>>()?.0,
+                        ParsedDocKey::Footnotes => v_footnotes = map.next_value::<wire::OrAbsent<Vec<NoteInfo>>>()?.0,
+                        ParsedDocKey::Endnotes => v_endnotes = map.next_value::<wire::OrAbsent<Vec<NoteInfo>>>()?.0,
+                        ParsedDocKey::FootnoteProps => v_footnote_props = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
+                        ParsedDocKey::EndnoteProps => v_endnote_props = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
+                        ParsedDocKey::NoteNumbers => v_note_numbers = map.next_value::<wire::OrAbsent<JsObject<JsNum>>>()?.0,
+                        ParsedDocKey::Sources => v_sources = map.next_value::<wire::OrAbsent<Vec<SourceInfo>>>()?.0,
+                        ParsedDocKey::Inks => v_inks = map.next_value::<wire::OrAbsent<Vec<InkInfo>>>()?.0,
                         ParsedDocKey::ThemeFonts => v_theme_fonts = Some(map.next_value()?),
-                        ParsedDocKey::FontTable => v_font_table = Some(map.next_value()?),
-                        ParsedDocKey::EmbeddedFonts => v_embedded_fonts = Some(map.next_value()?),
+                        ParsedDocKey::FontTable => v_font_table = map.next_value::<wire::OrAbsent<Vec<FontTableEntry>>>()?.0,
+                        ParsedDocKey::EmbeddedFonts => v_embedded_fonts = map.next_value::<wire::OrAbsent<Vec<EmbeddedFont>>>()?.0,
                         ParsedDocKey::ThemeColors => v_theme_colors = Some(map.next_value()?),
                         ParsedDocKey::Protection => v_protection = Some(map.next_value()?),
                         ParsedDocKey::WriteProtection => v_write_protection = Some(map.next_value()?),
-                        ParsedDocKey::RemovePersonalInfo => v_remove_personal_info = Some(map.next_value()?),
+                        ParsedDocKey::RemovePersonalInfo => v_remove_personal_info = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocKey::HeaderText => v_header_text = Some(map.next_value()?),
                         ParsedDocKey::HeaderParas => v_header_paras = Some(map.next_value()?),
                         ParsedDocKey::FooterParas => v_footer_paras = Some(map.next_value()?),
@@ -24909,37 +24949,37 @@ impl<'de> Deserialize<'de> for ParsedDoc {
                         ParsedDocKey::WatermarkText => v_watermark_text = Some(map.next_value()?),
                         ParsedDocKey::WatermarkPicture => v_watermark_picture = Some(map.next_value()?),
                         ParsedDocKey::FooterText => v_footer_text = Some(map.next_value()?),
-                        ParsedDocKey::FooterHasPageNumber => v_footer_has_page_number = Some(map.next_value()?),
-                        ParsedDocKey::HeaderHasPageNumber => v_header_has_page_number = Some(map.next_value()?),
-                        ParsedDocKey::TitlePg => v_title_pg = Some(map.next_value()?),
-                        ParsedDocKey::EvenAndOddHeaders => v_even_and_odd_headers = Some(map.next_value()?),
-                        ParsedDocKey::MirrorMargins => v_mirror_margins = Some(map.next_value()?),
-                        ParsedDocKey::TrackRevisions => v_track_revisions = Some(map.next_value()?),
-                        ParsedDocKey::GutterAtTop => v_gutter_at_top = Some(map.next_value()?),
+                        ParsedDocKey::FooterHasPageNumber => v_footer_has_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::HeaderHasPageNumber => v_header_has_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::TitlePg => v_title_pg = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::EvenAndOddHeaders => v_even_and_odd_headers = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::MirrorMargins => v_mirror_margins = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::TrackRevisions => v_track_revisions = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::GutterAtTop => v_gutter_at_top = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocKey::CompatibilityMode => v_compatibility_mode = Some(map.next_value()?),
-                        ParsedDocKey::AutoHyphenation => v_auto_hyphenation = Some(map.next_value()?),
-                        ParsedDocKey::BalanceDbcsSpacing => v_balance_dbcs_spacing = Some(map.next_value()?),
-                        ParsedDocKey::UseFELayout => v_use_f_e_layout = Some(map.next_value()?),
-                        ParsedDocKey::CompressPunctuation => v_compress_punctuation = Some(map.next_value()?),
-                        ParsedDocKey::AdjustLineHeightInTable => v_adjust_line_height_in_table = Some(map.next_value()?),
-                        ParsedDocKey::IndentNotNumberingTabStop => v_indent_not_numbering_tab_stop = Some(map.next_value()?),
-                        ParsedDocKey::DoNotExpandShiftReturn => v_do_not_expand_shift_return = Some(map.next_value()?),
-                        ParsedDocKey::DoNotUseHTMLParagraphAutoSpacing => v_do_not_use_h_t_m_l_paragraph_auto_spacing = Some(map.next_value()?),
+                        ParsedDocKey::AutoHyphenation => v_auto_hyphenation = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::BalanceDbcsSpacing => v_balance_dbcs_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::UseFELayout => v_use_f_e_layout = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::CompressPunctuation => v_compress_punctuation = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::AdjustLineHeightInTable => v_adjust_line_height_in_table = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::IndentNotNumberingTabStop => v_indent_not_numbering_tab_stop = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::DoNotExpandShiftReturn => v_do_not_expand_shift_return = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocKey::DoNotUseHTMLParagraphAutoSpacing => v_do_not_use_h_t_m_l_paragraph_auto_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocKey::DefaultTabStopTwips => v_default_tab_stop_twips = Some(map.next_value()?),
                         ParsedDocKey::HeaderFirst => v_header_first = Some(map.next_value()?),
                         ParsedDocKey::FooterFirst => v_footer_first = Some(map.next_value()?),
                         ParsedDocKey::HeaderEven => v_header_even = Some(map.next_value()?),
                         ParsedDocKey::FooterEven => v_footer_even = Some(map.next_value()?),
-                        ParsedDocKey::HfParts => v_hf_parts = Some(map.next_value()?),
-                        ParsedDocKey::Styles => v_styles = Some(map.next_value()?),
-                        ParsedDocKey::DocDefaults => v_doc_defaults = Some(map.next_value()?),
-                        ParsedDocKey::HeadingStyleIds => v_heading_style_ids = Some(map.next_value()?),
-                        ParsedDocKey::ListParagraphStyleId => v_list_paragraph_style_id = Some(map.next_value()?),
-                        ParsedDocKey::Numbering => v_numbering = Some(map.next_value()?),
-                        ParsedDocKey::Internal => v_internal = Some(map.next_value()?),
+                        ParsedDocKey::HfParts => v_hf_parts = map.next_value::<wire::OrAbsent<JsObject<HfPartInfo>>>()?.0,
+                        ParsedDocKey::Styles => v_styles = map.next_value::<wire::OrAbsent<MapEntries<String, StyleInfo>>>()?.0,
+                        ParsedDocKey::DocDefaults => v_doc_defaults = map.next_value::<wire::OrAbsent<DocDefaults>>()?.0,
+                        ParsedDocKey::HeadingStyleIds => v_heading_style_ids = map.next_value::<wire::OrAbsent<MapEntries<JsNum, String>>>()?.0,
+                        ParsedDocKey::ListParagraphStyleId => v_list_paragraph_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ParsedDocKey::Numbering => v_numbering = map.next_value::<wire::OrAbsent<MapEntries<String, NumberingDef>>>()?.0,
+                        ParsedDocKey::Internal => v_internal = map.next_value::<wire::OrAbsent<ParsedDocInternal>>()?.0,
                     }
                 }
-                Ok(ParsedDoc { blocks: v_blocks.ok_or_else(|| A::Error::missing_field("blocks"))?, zotero_document_data: v_zotero_document_data.ok_or_else(|| A::Error::missing_field("zoteroDocumentData"))?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.ok_or_else(|| A::Error::missing_field("comments"))?, footnotes: v_footnotes.ok_or_else(|| A::Error::missing_field("footnotes"))?, endnotes: v_endnotes.ok_or_else(|| A::Error::missing_field("endnotes"))?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.ok_or_else(|| A::Error::missing_field("sources"))?, inks: v_inks.ok_or_else(|| A::Error::missing_field("inks"))?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.ok_or_else(|| A::Error::missing_field("protection"))?, write_protection: v_write_protection.ok_or_else(|| A::Error::missing_field("writeProtection"))?, remove_personal_info: v_remove_personal_info.ok_or_else(|| A::Error::missing_field("removePersonalInfo"))?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))? })
+                Ok(ParsedDoc { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.flatten(), write_protection: v_write_protection.flatten(), remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25020,10 +25060,10 @@ impl<'de> Deserialize<'de> for DocumentProperties {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DocumentPropertiesKey::Core => v_core = Some(map.next_value()?),
-                        DocumentPropertiesKey::App => v_app = Some(map.next_value()?),
-                        DocumentPropertiesKey::Custom => v_custom = Some(map.next_value()?),
-                        DocumentPropertiesKey::CustomTypes => v_custom_types = Some(map.next_value()?),
+                        DocumentPropertiesKey::Core => v_core = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
+                        DocumentPropertiesKey::App => v_app = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
+                        DocumentPropertiesKey::Custom => v_custom = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
+                        DocumentPropertiesKey::CustomTypes => v_custom_types = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
                     }
                 }
                 Ok(DocumentProperties { core: v_core.ok_or_else(|| A::Error::missing_field("core"))?, app: v_app.ok_or_else(|| A::Error::missing_field("app"))?, custom: v_custom.ok_or_else(|| A::Error::missing_field("custom"))?, custom_types: v_custom_types.ok_or_else(|| A::Error::missing_field("customTypes"))? })
@@ -25117,15 +25157,15 @@ impl<'de> Deserialize<'de> for ParsedDocInternal {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParsedDocInternalKey::OriginalBytes => v_original_bytes = Some(map.next_value()?),
-                        ParsedDocInternalKey::DocumentXml => v_document_xml = Some(map.next_value()?),
+                        ParsedDocInternalKey::OriginalBytes => v_original_bytes = map.next_value::<wire::OrAbsent<Bytes>>()?.0,
+                        ParsedDocInternalKey::DocumentXml => v_document_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
                         ParsedDocInternalKey::BodyInnerStart => v_body_inner_start = Some(map.next_value()?),
                         ParsedDocInternalKey::BodyInnerEnd => v_body_inner_end = Some(map.next_value()?),
                         ParsedDocInternalKey::BodyContentStart => v_body_content_start = Some(map.next_value()?),
                         ParsedDocInternalKey::BodyContentEnd => v_body_content_end = Some(map.next_value()?),
                     }
                 }
-                Ok(ParsedDocInternal { original_bytes: v_original_bytes.ok_or_else(|| A::Error::missing_field("originalBytes"))?, document_xml: v_document_xml.ok_or_else(|| A::Error::missing_field("documentXml"))?, body_inner_start: v_body_inner_start.ok_or_else(|| A::Error::missing_field("bodyInnerStart"))?, body_inner_end: v_body_inner_end.ok_or_else(|| A::Error::missing_field("bodyInnerEnd"))?, body_content_start: v_body_content_start.ok_or_else(|| A::Error::missing_field("bodyContentStart"))?, body_content_end: v_body_content_end.ok_or_else(|| A::Error::missing_field("bodyContentEnd"))? })
+                Ok(ParsedDocInternal { original_bytes: v_original_bytes.ok_or_else(|| A::Error::missing_field("originalBytes"))?, document_xml: v_document_xml.map_or_else(|| wire::absent("documentXml").map(|()| Default::default()), Ok)?, body_inner_start: v_body_inner_start.map_or_else(|| wire::absent("bodyInnerStart").map(|()| JsNum(f64::NAN)), Ok)?, body_inner_end: v_body_inner_end.map_or_else(|| wire::absent("bodyInnerEnd").map(|()| JsNum(f64::NAN)), Ok)?, body_content_start: v_body_content_start.map_or_else(|| wire::absent("bodyContentStart").map(|()| JsNum(f64::NAN)), Ok)?, body_content_end: v_body_content_end.map_or_else(|| wire::absent("bodyContentEnd").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25539,24 +25579,24 @@ impl<'de> Deserialize<'de> for ParsedDocFull {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParsedDocFullKey::Blocks => v_blocks = Some(map.next_value()?),
-                        ParsedDocFullKey::ZoteroDocumentData => v_zotero_document_data = Some(map.next_value()?),
-                        ParsedDocFullKey::Properties => v_properties = Some(map.next_value()?),
-                        ParsedDocFullKey::Comments => v_comments = Some(map.next_value()?),
-                        ParsedDocFullKey::Footnotes => v_footnotes = Some(map.next_value()?),
-                        ParsedDocFullKey::Endnotes => v_endnotes = Some(map.next_value()?),
-                        ParsedDocFullKey::FootnoteProps => v_footnote_props = Some(map.next_value()?),
-                        ParsedDocFullKey::EndnoteProps => v_endnote_props = Some(map.next_value()?),
-                        ParsedDocFullKey::NoteNumbers => v_note_numbers = Some(map.next_value()?),
-                        ParsedDocFullKey::Sources => v_sources = Some(map.next_value()?),
-                        ParsedDocFullKey::Inks => v_inks = Some(map.next_value()?),
+                        ParsedDocFullKey::Blocks => v_blocks = map.next_value::<wire::OrAbsent<Vec<Block>>>()?.0,
+                        ParsedDocFullKey::ZoteroDocumentData => v_zotero_document_data = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ParsedDocFullKey::Properties => v_properties = map.next_value::<wire::OrAbsent<DocumentProperties>>()?.0,
+                        ParsedDocFullKey::Comments => v_comments = map.next_value::<wire::OrAbsent<Vec<CommentInfo>>>()?.0,
+                        ParsedDocFullKey::Footnotes => v_footnotes = map.next_value::<wire::OrAbsent<Vec<NoteInfo>>>()?.0,
+                        ParsedDocFullKey::Endnotes => v_endnotes = map.next_value::<wire::OrAbsent<Vec<NoteInfo>>>()?.0,
+                        ParsedDocFullKey::FootnoteProps => v_footnote_props = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
+                        ParsedDocFullKey::EndnoteProps => v_endnote_props = map.next_value::<wire::OrAbsent<NoteProps>>()?.0,
+                        ParsedDocFullKey::NoteNumbers => v_note_numbers = map.next_value::<wire::OrAbsent<JsObject<JsNum>>>()?.0,
+                        ParsedDocFullKey::Sources => v_sources = map.next_value::<wire::OrAbsent<Vec<SourceInfo>>>()?.0,
+                        ParsedDocFullKey::Inks => v_inks = map.next_value::<wire::OrAbsent<Vec<InkInfo>>>()?.0,
                         ParsedDocFullKey::ThemeFonts => v_theme_fonts = Some(map.next_value()?),
-                        ParsedDocFullKey::FontTable => v_font_table = Some(map.next_value()?),
-                        ParsedDocFullKey::EmbeddedFonts => v_embedded_fonts = Some(map.next_value()?),
+                        ParsedDocFullKey::FontTable => v_font_table = map.next_value::<wire::OrAbsent<Vec<FontTableEntry>>>()?.0,
+                        ParsedDocFullKey::EmbeddedFonts => v_embedded_fonts = map.next_value::<wire::OrAbsent<Vec<EmbeddedFont>>>()?.0,
                         ParsedDocFullKey::ThemeColors => v_theme_colors = Some(map.next_value()?),
                         ParsedDocFullKey::Protection => v_protection = Some(map.next_value()?),
                         ParsedDocFullKey::WriteProtection => v_write_protection = Some(map.next_value()?),
-                        ParsedDocFullKey::RemovePersonalInfo => v_remove_personal_info = Some(map.next_value()?),
+                        ParsedDocFullKey::RemovePersonalInfo => v_remove_personal_info = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocFullKey::HeaderText => v_header_text = Some(map.next_value()?),
                         ParsedDocFullKey::HeaderParas => v_header_paras = Some(map.next_value()?),
                         ParsedDocFullKey::FooterParas => v_footer_paras = Some(map.next_value()?),
@@ -25565,38 +25605,38 @@ impl<'de> Deserialize<'de> for ParsedDocFull {
                         ParsedDocFullKey::WatermarkText => v_watermark_text = Some(map.next_value()?),
                         ParsedDocFullKey::WatermarkPicture => v_watermark_picture = Some(map.next_value()?),
                         ParsedDocFullKey::FooterText => v_footer_text = Some(map.next_value()?),
-                        ParsedDocFullKey::FooterHasPageNumber => v_footer_has_page_number = Some(map.next_value()?),
-                        ParsedDocFullKey::HeaderHasPageNumber => v_header_has_page_number = Some(map.next_value()?),
-                        ParsedDocFullKey::TitlePg => v_title_pg = Some(map.next_value()?),
-                        ParsedDocFullKey::EvenAndOddHeaders => v_even_and_odd_headers = Some(map.next_value()?),
-                        ParsedDocFullKey::MirrorMargins => v_mirror_margins = Some(map.next_value()?),
-                        ParsedDocFullKey::TrackRevisions => v_track_revisions = Some(map.next_value()?),
-                        ParsedDocFullKey::GutterAtTop => v_gutter_at_top = Some(map.next_value()?),
+                        ParsedDocFullKey::FooterHasPageNumber => v_footer_has_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::HeaderHasPageNumber => v_header_has_page_number = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::TitlePg => v_title_pg = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::EvenAndOddHeaders => v_even_and_odd_headers = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::MirrorMargins => v_mirror_margins = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::TrackRevisions => v_track_revisions = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::GutterAtTop => v_gutter_at_top = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocFullKey::CompatibilityMode => v_compatibility_mode = Some(map.next_value()?),
-                        ParsedDocFullKey::AutoHyphenation => v_auto_hyphenation = Some(map.next_value()?),
-                        ParsedDocFullKey::BalanceDbcsSpacing => v_balance_dbcs_spacing = Some(map.next_value()?),
-                        ParsedDocFullKey::UseFELayout => v_use_f_e_layout = Some(map.next_value()?),
-                        ParsedDocFullKey::CompressPunctuation => v_compress_punctuation = Some(map.next_value()?),
-                        ParsedDocFullKey::AdjustLineHeightInTable => v_adjust_line_height_in_table = Some(map.next_value()?),
-                        ParsedDocFullKey::IndentNotNumberingTabStop => v_indent_not_numbering_tab_stop = Some(map.next_value()?),
-                        ParsedDocFullKey::DoNotExpandShiftReturn => v_do_not_expand_shift_return = Some(map.next_value()?),
-                        ParsedDocFullKey::DoNotUseHTMLParagraphAutoSpacing => v_do_not_use_h_t_m_l_paragraph_auto_spacing = Some(map.next_value()?),
+                        ParsedDocFullKey::AutoHyphenation => v_auto_hyphenation = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::BalanceDbcsSpacing => v_balance_dbcs_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::UseFELayout => v_use_f_e_layout = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::CompressPunctuation => v_compress_punctuation = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::AdjustLineHeightInTable => v_adjust_line_height_in_table = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::IndentNotNumberingTabStop => v_indent_not_numbering_tab_stop = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::DoNotExpandShiftReturn => v_do_not_expand_shift_return = map.next_value::<wire::OrAbsent<bool>>()?.0,
+                        ParsedDocFullKey::DoNotUseHTMLParagraphAutoSpacing => v_do_not_use_h_t_m_l_paragraph_auto_spacing = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         ParsedDocFullKey::DefaultTabStopTwips => v_default_tab_stop_twips = Some(map.next_value()?),
                         ParsedDocFullKey::HeaderFirst => v_header_first = Some(map.next_value()?),
                         ParsedDocFullKey::FooterFirst => v_footer_first = Some(map.next_value()?),
                         ParsedDocFullKey::HeaderEven => v_header_even = Some(map.next_value()?),
                         ParsedDocFullKey::FooterEven => v_footer_even = Some(map.next_value()?),
-                        ParsedDocFullKey::HfParts => v_hf_parts = Some(map.next_value()?),
-                        ParsedDocFullKey::Styles => v_styles = Some(map.next_value()?),
-                        ParsedDocFullKey::DocDefaults => v_doc_defaults = Some(map.next_value()?),
-                        ParsedDocFullKey::HeadingStyleIds => v_heading_style_ids = Some(map.next_value()?),
-                        ParsedDocFullKey::ListParagraphStyleId => v_list_paragraph_style_id = Some(map.next_value()?),
-                        ParsedDocFullKey::Numbering => v_numbering = Some(map.next_value()?),
-                        ParsedDocFullKey::Internal => v_internal = Some(map.next_value()?),
-                        ParsedDocFullKey::Extras => v_extras = Some(map.next_value()?),
+                        ParsedDocFullKey::HfParts => v_hf_parts = map.next_value::<wire::OrAbsent<JsObject<HfPartInfo>>>()?.0,
+                        ParsedDocFullKey::Styles => v_styles = map.next_value::<wire::OrAbsent<MapEntries<String, StyleInfo>>>()?.0,
+                        ParsedDocFullKey::DocDefaults => v_doc_defaults = map.next_value::<wire::OrAbsent<DocDefaults>>()?.0,
+                        ParsedDocFullKey::HeadingStyleIds => v_heading_style_ids = map.next_value::<wire::OrAbsent<MapEntries<JsNum, String>>>()?.0,
+                        ParsedDocFullKey::ListParagraphStyleId => v_list_paragraph_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ParsedDocFullKey::Numbering => v_numbering = map.next_value::<wire::OrAbsent<MapEntries<String, NumberingDef>>>()?.0,
+                        ParsedDocFullKey::Internal => v_internal = map.next_value::<wire::OrAbsent<ParsedDocInternal>>()?.0,
+                        ParsedDocFullKey::Extras => v_extras = map.next_value::<wire::OrAbsent<ParseExtras>>()?.0,
                     }
                 }
-                Ok(ParsedDocFull { blocks: v_blocks.ok_or_else(|| A::Error::missing_field("blocks"))?, zotero_document_data: v_zotero_document_data.ok_or_else(|| A::Error::missing_field("zoteroDocumentData"))?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.ok_or_else(|| A::Error::missing_field("comments"))?, footnotes: v_footnotes.ok_or_else(|| A::Error::missing_field("footnotes"))?, endnotes: v_endnotes.ok_or_else(|| A::Error::missing_field("endnotes"))?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.ok_or_else(|| A::Error::missing_field("sources"))?, inks: v_inks.ok_or_else(|| A::Error::missing_field("inks"))?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.ok_or_else(|| A::Error::missing_field("protection"))?, write_protection: v_write_protection.ok_or_else(|| A::Error::missing_field("writeProtection"))?, remove_personal_info: v_remove_personal_info.ok_or_else(|| A::Error::missing_field("removePersonalInfo"))?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))?, extras: v_extras.ok_or_else(|| A::Error::missing_field("extras"))? })
+                Ok(ParsedDocFull { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.flatten(), write_protection: v_write_protection.flatten(), remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))?, extras: v_extras.ok_or_else(|| A::Error::missing_field("extras"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25691,15 +25731,15 @@ impl<'de> Deserialize<'de> for ParseExtras {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ParseExtrasKey::Elements => v_elements = Some(map.next_value()?),
-                        ParseExtrasKey::OpaqueRegions => v_opaque_regions = Some(map.next_value()?),
-                        ParseExtrasKey::ChartParts => v_chart_parts = Some(map.next_value()?),
-                        ParseExtrasKey::LazyMediaHashes => v_lazy_media_hashes = Some(map.next_value()?),
+                        ParseExtrasKey::Elements => v_elements = map.next_value::<wire::OrAbsent<Vec<BodyElement>>>()?.0,
+                        ParseExtrasKey::OpaqueRegions => v_opaque_regions = map.next_value::<wire::OrAbsent<Vec<ParseExtrasOpaqueRegionsItem>>>()?.0,
+                        ParseExtrasKey::ChartParts => v_chart_parts = map.next_value::<wire::OrAbsent<JsObject<String>>>()?.0,
+                        ParseExtrasKey::LazyMediaHashes => v_lazy_media_hashes = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
                         ParseExtrasKey::AltChunksNeedConverter => v_alt_chunks_need_converter = Some(map.next_value()?),
-                        ParseExtrasKey::ResolveDiff => v_resolve_diff = Some(map.next_value()?),
+                        ParseExtrasKey::ResolveDiff => v_resolve_diff = map.next_value::<wire::OrAbsent<Vec<ResolveDiff>>>()?.0,
                     }
                 }
-                Ok(ParseExtras { elements: v_elements.ok_or_else(|| A::Error::missing_field("elements"))?, opaque_regions: v_opaque_regions.ok_or_else(|| A::Error::missing_field("opaqueRegions"))?, chart_parts: v_chart_parts.ok_or_else(|| A::Error::missing_field("chartParts"))?, lazy_media_hashes: v_lazy_media_hashes.ok_or_else(|| A::Error::missing_field("lazyMediaHashes"))?, alt_chunks_need_converter: v_alt_chunks_need_converter, resolve_diff: v_resolve_diff })
+                Ok(ParseExtras { elements: v_elements.map_or_else(|| wire::absent("elements").map(|()| Default::default()), Ok)?, opaque_regions: v_opaque_regions.map_or_else(|| wire::absent("opaqueRegions").map(|()| Default::default()), Ok)?, chart_parts: v_chart_parts.ok_or_else(|| A::Error::missing_field("chartParts"))?, lazy_media_hashes: v_lazy_media_hashes.map_or_else(|| wire::absent("lazyMediaHashes").map(|()| Default::default()), Ok)?, alt_chunks_need_converter: v_alt_chunks_need_converter, resolve_diff: v_resolve_diff })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25775,12 +25815,12 @@ impl<'de> Deserialize<'de> for BodyElement {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        BodyElementKey::Name => v_name = Some(map.next_value()?),
+                        BodyElementKey::Name => v_name = map.next_value::<wire::OrAbsent<String>>()?.0,
                         BodyElementKey::Start => v_start = Some(map.next_value()?),
                         BodyElementKey::End => v_end = Some(map.next_value()?),
                     }
                 }
-                Ok(BodyElement { name: v_name.ok_or_else(|| A::Error::missing_field("name"))?, start: v_start.ok_or_else(|| A::Error::missing_field("start"))?, end: v_end.ok_or_else(|| A::Error::missing_field("end"))? })
+                Ok(BodyElement { name: v_name.map_or_else(|| wire::absent("name").map(|()| Default::default()), Ok)?, start: v_start.map_or_else(|| wire::absent("start").map(|()| JsNum(f64::NAN)), Ok)?, end: v_end.map_or_else(|| wire::absent("end").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25855,7 +25895,7 @@ impl<'de> Deserialize<'de> for ParseExtrasOpaqueRegionsItem {
                         ParseExtrasOpaqueRegionsItemKey::End => v_end = Some(map.next_value()?),
                     }
                 }
-                Ok(ParseExtrasOpaqueRegionsItem { start: v_start.ok_or_else(|| A::Error::missing_field("start"))?, end: v_end.ok_or_else(|| A::Error::missing_field("end"))? })
+                Ok(ParseExtrasOpaqueRegionsItem { start: v_start.map_or_else(|| wire::absent("start").map(|()| JsNum(f64::NAN)), Ok)?, end: v_end.map_or_else(|| wire::absent("end").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25949,14 +25989,14 @@ impl<'de> Deserialize<'de> for ResolveDiff {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ResolveDiffKey::Surface => v_surface = Some(map.next_value()?),
-                        ResolveDiffKey::Key => v_key = Some(map.next_value()?),
-                        ResolveDiffKey::Old => v_old = Some(map.next_value()?),
-                        ResolveDiffKey::Eff => v_eff = Some(map.next_value()?),
-                        ResolveDiffKey::Text => v_text = Some(map.next_value()?),
+                        ResolveDiffKey::Surface => v_surface = map.next_value::<wire::OrAbsent<ResolveDiffSurface>>()?.0,
+                        ResolveDiffKey::Key => v_key = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        ResolveDiffKey::Old => v_old = map.next_value::<wire::OrAbsent<serde_json::Value>>()?.0,
+                        ResolveDiffKey::Eff => v_eff = map.next_value::<wire::OrAbsent<serde_json::Value>>()?.0,
+                        ResolveDiffKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(ResolveDiff { surface: v_surface, key: v_key.ok_or_else(|| A::Error::missing_field("key"))?, old: v_old, eff: v_eff, text: v_text })
+                Ok(ResolveDiff { surface: v_surface, key: v_key.map_or_else(|| wire::absent("key").map(|()| Default::default()), Ok)?, old: v_old, eff: v_eff, text: v_text })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25971,7 +26011,7 @@ pub enum ResolveDiffSurface {
     Body,
     Cell,
     Run,
-    Unlisted(std::sync::Arc<str>),
+    Unlisted(std::sync::Arc<String>),
 }
 
 impl ResolveDiffSurface {
