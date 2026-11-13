@@ -2,7 +2,7 @@
 name: seuoffice
 description: Create, convert, read and edit Office documents locally with SeuOffice's command line. Build a new presentation (pptx) from a brief through a checked outline, per-page spec and render pipeline, a new spreadsheet (xlsx) from CSV or JSON data with formulas, a new Word document (docx) from Markdown or HTML, a Hangul document (hwp / hwpx), a draw.io diagram (drawio) from Mermaid or ops, or a PDF; convert between pdf, docx, odt, xlsx, pptx, md, html and csv, a PDF to Markdown or EPUB, and a diagram to PDF, PNG or SVG, a Hangul document (hwp / hwpx) to PDF or docx, a Word document (docx) to hwp / hwpx, a legacy Word document (doc / dot) to docx, a legacy presentation (ppt) or an OpenDocument presentation (odp / otp) to pptx; read the structure and text of an existing file (including the user's own docx / odt / xlsx / pptx / pdf / hwp as source material) and apply structured edits to it, Hangul documents and draw.io diagrams included; read scanned PDF pages with AI and translate a whole PDF into a translated PDF, Markdown or EPUB, or an EPUB book into a translated or bilingual EPUB. Use whenever the user asks for a slide deck, presentation, spreadsheet, workbook, report, Word document or any real Office file, a format conversion, a rewrite of part of an existing document, or wants the result opened in the SeuOffice editor. Documents are processed locally; only search, image, media, read-url, pdf ai-read, pdf translate and epub translate send data off the machine (read-url sends the address it is given to that site; the rest send to the provider configured in SeuOffice).
 metadata:
-  version: 2.78.0
+  version: 2.79.0
   cli: '>=0.9.0'
 ---
 
