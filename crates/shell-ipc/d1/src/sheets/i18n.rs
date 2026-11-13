@@ -219,8 +219,8 @@ const TABLE: &[(&str, &str, &str)] = &[
     ),
     (
         "withheldExportDetail",
-        "{format} has nowhere to record which cells are hidden from the AI, so a copy would hand those cells to anyone who opens it, an AI included.\n\nSave as .xlsx keeps the marks. Export {format} without the marks writes the real values, and the marks are gone from that file. Nothing has been written yet.",
-        "{format}에는 AI에서 숨긴 셀을 기록할 곳이 없어, 사본을 여는 누구에게나(AI 포함) 그 셀이 그대로 보입니다.\n\n.xlsx로 저장하면 숨김 표시가 유지됩니다. 표시 없이 {format} 내보내기는 실제 값을 그대로 저장하며, 그 파일에서는 숨김 표시가 사라집니다. 아직 아무것도 저장하지 않았습니다.",
+        "{format} has nowhere to record which cells are hidden from the AI, so a copy would hand those cells to anyone who opens it, an AI included.\n\nSave as .xlsx keeps the marks. Export {format} without the marks writes the real values. The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Nothing has been written yet.",
+        "{format}에는 AI에서 숨긴 셀을 기록할 곳이 없어, 사본을 여는 누구에게나(AI 포함) 그 셀이 그대로 보입니다.\n\n.xlsx로 저장하면 숨김 표시가 유지됩니다. 표시 없이 {format} 내보내기는 실제 값을 그대로 저장합니다. 내보낸 파일에는 AI 숨김 표시가 없습니다. 그 파일을 읽는 모든 것(AI 포함)이 숨긴 내용을 그대로 봅니다. 아직 아무것도 저장하지 않았습니다.",
     ),
     (
         "withheldExportWithoutMarksBtn",

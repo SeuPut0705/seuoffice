@@ -306,8 +306,8 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     ));
     routes.push(worker(
         &env,
-        "workbook:csv-withheld-choice",
-        |env, view, _args| Ok(save::csv_withheld_choice(env, view)),
+        "workbook:withheld-export-choice",
+        |env, view, args| save::withheld_export_choice(env, view, args.get(0)),
     ));
     routes.push(worker(
         &env,

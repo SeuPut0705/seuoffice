@@ -185,13 +185,15 @@ const cases: Case[] = [
   ]),
 
   // ---- CSV ----
-  sheetsCase('the CSV questions', { messages: [0, 1, 2, 1, 0] }, [
+  sheetsCase('the CSV questions', { messages: [0, 1, 2, 1, 0, 2] }, [
     call('workbook:csv-save-confirm'),
     call('workbook:csv-save-confirm'),
     call('workbook:csv-save-confirm'),
-    call('workbook:csv-withheld-choice'),
-    call('workbook:csv-withheld-choice'),
-    call('workbook:csv-withheld-choice'),
+    call('workbook:withheld-export-choice', ['CSV']),
+    call('workbook:withheld-export-choice', ['PDF']),
+    call('workbook:withheld-export-choice', ['CSV']),
+    call('workbook:withheld-export-choice', ['ODS']),
+    call('workbook:withheld-export-choice', []),
   ]),
   sheetsCase(
     'a CSV export: the formula warning, the dialog, a given path, a bad request',

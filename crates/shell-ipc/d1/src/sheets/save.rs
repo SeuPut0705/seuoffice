@@ -44,7 +44,7 @@ use super::recovery::{io_err, node_err, ok_answer, write_session_copy};
 use super::recovery_policy::session_recovery_identity;
 use super::schema;
 use super::session::{OpenOptions, SessionInfo, Staged, file_identity};
-use crate::value::{field, obj, string, thrown};
+use crate::value::{as_str, field, obj, string, thrown};
 
 const BOM: [u8; 3] = [0xef, 0xbb, 0xbf];
 /// a save's output opens as part of that save (`SAVE_REOPEN_TIMEOUT_MS`)
@@ -1344,16 +1344,25 @@ pub fn csv_save_confirm(env: &Env, view: ViewId) -> IpcValue {
     })
 }
 
-/// `csvWithheldChoice`
-pub fn csv_withheld_choice(env: &Env, view: ViewId) -> IpcValue {
+/// `withheldExportChoice`: the copy format the renderer is about to write
+/// (CSV, or PDF of a sheet with marked cells)
+pub fn withheld_export_choice(
+    env: &Env,
+    view: ViewId,
+    format: &IpcValue,
+) -> Result<IpcValue, IpcError> {
     env.core(move |core| core.ensure_tab(view));
-    string(
-        match ask_withheld_export(env, dialog_parent(env, view), "CSV") {
+    let format = match as_str(format) {
+        Some(format @ ("CSV" | "PDF")) => format,
+        _ => return Err(thrown("Invalid export format.")),
+    };
+    Ok(string(
+        match ask_withheld_export(env, dialog_parent(env, view), format) {
             Withheld::Xlsx => "xlsx",
             Withheld::Export => "export",
             Withheld::Cancel => "cancel",
         },
-    )
+    ))
 }
 
 // ---- PDF ----

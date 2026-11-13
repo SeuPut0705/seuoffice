@@ -502,8 +502,15 @@ fn csv_questions_and_exports() {
     assert_eq!(ask(None), string("cancel"));
     w.kit.dialogs.messages.lock().unwrap().push_back(1);
     assert_eq!(
-        w.call(one, "workbook:csv-withheld-choice", vec![]).unwrap(),
+        w.call(one, "workbook:withheld-export-choice", vec![string("PDF")])
+            .unwrap(),
         string("export")
+    );
+    assert_eq!(
+        w.call(one, "workbook:withheld-export-choice", vec![string("ODS")])
+            .unwrap_err()
+            .message,
+        "Invalid export format."
     );
 
     let export = |formulas: bool, target: Option<&str>| {
