@@ -180,14 +180,18 @@ const cases: Case[] = [
     ],
   },
   {
-    note: 'the marked-ODT box answers the button pressed',
+    // docs:confirm-marked-export replaced docs:confirm-marked-odt (97b6f3419);
+    // until the channel table lists it both sides answer "No handler"
+    note: 'the marked-content box: ODT and export words, the button pressed, an unknown format cancels',
     hosts: {
       shared: { dialogs: { message: [{ response: 0 }, { response: 1 }, { response: 2 }] } },
     },
     calls: [
-      { channel: 'docs:confirm-marked-odt', args: [] },
-      { channel: 'docs:confirm-marked-odt', args: [] },
-      { channel: 'docs:confirm-marked-odt', args: [] },
+      { channel: 'docs:confirm-marked-export', args: ['odt'] },
+      { channel: 'docs:confirm-marked-export', args: ['pdf'] },
+      { channel: 'docs:confirm-marked-export', args: ['png'] },
+      { channel: 'docs:confirm-marked-export', args: ['docx'] },
+      { channel: 'docs:confirm-marked-export', args: [] },
     ],
   },
   {

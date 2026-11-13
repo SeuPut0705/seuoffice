@@ -28,7 +28,9 @@ export function docsCase(cx: LoadContext): Record<string, unknown> {
   return (d2.docs ?? {}) as Record<string, unknown>
 }
 
-interface DocsMain {
+type Fn = (...args: unknown[]) => unknown
+
+interface DocsMain extends Record<string, unknown> {
   setDocsShellHooks(hooks: unknown): void
   setDocsFileSavedHook(hook: unknown): void
   setDocsFileOpenedHook(hook: unknown): void
@@ -100,4 +102,37 @@ export async function loadDocs(cx: LoadContext): Promise<DocsMain> {
   main.registerAiIpc()
   main.registerDocsIpc()
   return main
+}
+
+/**
+ * The shell's calls of the Word editor by trigger name (`d2/docs:<what>`),
+ * each the exported function crates/shell-ipc/d2/src/docs/trigger.rs calls
+ * through `DocsEditors`: `(view, args) => outcome`
+ */
+export type DocsTriggers = Record<string, (view: number, args: unknown[]) => unknown>
+
+export function docsTriggers(main: DocsMain, cx: LoadContext): DocsTriggers {
+  const fn = (name: string) => main[name] as Fn
+  const contents = (view: number) => cx.electron.contents(view)
+  const editor = () =>
+    (require('@seuoffice/electron-utils').recoveryEditor('docs') ?? {}) as Record<string, Fn>
+  return {
+    'request-close': (view, [parent]) =>
+      fn('requestDocsClose')(
+        contents(view),
+        typeof parent === 'number' ? { id: parent, isDestroyed: () => false } : undefined,
+      ),
+    'file-renamed': (view, [from, to]) => fn('docsFileRenamed')(contents(view), from, to),
+    'mark-new-blank': (view) => fn('markDocsNewBlank')(view),
+    'queue-copy': (view, [copy]) => fn('queueDocsCopy')(view, copy),
+    'authorize-mcp-doc-write': (view, [path]) => fn('authorizeMcpDocWrite')(view, path),
+    teardown: (view) => fn('teardownDocsRenderer')(contents(view)),
+    'discard-recovery': (view) => fn('discardDocsRecovery')(contents(view)),
+    'recovery-identity': (view) => fn('docsRecoveryIdentity')(view),
+    'write-copies-now': () => editor().writeCopiesNow(),
+    'open-file-with-decision': (view, [request]) =>
+      editor().openFileWithDecision(contents(view), request),
+    'open-untitled-copy': (view, [request]) => editor().openUntitledCopy(contents(view), request),
+    'create-ai-document': (view, [request]) => fn('createAiDocument')(request, view),
+  }
 }
