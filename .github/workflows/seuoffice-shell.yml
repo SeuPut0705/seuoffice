@@ -369,6 +369,18 @@ jobs:
             else
               npx tauri build --config bundle/macos.conf.json --config "{\"version\":\"$v\"}" --bundles app --verbose
               app=$(find target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
+              # the app must report the version it was built as, not Cargo's:
+              # an updating installer compares its start mark with its own
+              # version and rolls back on a mismatch (bundle/hooks.nsh)
+              check="$RUNNER_TEMP/version-check-$v"
+              rm -rf "$check" && mkdir -p "$check"
+              SEUOFFICE_USER_DATA="$check" "$app/Contents/MacOS/SeuOffice" --measure-dialog "$check/dialog.json" > "$check/shell.log" 2>&1 &
+              pid=$!
+              for _ in $(seq 1 120); do [ -s "$check/shell-started.txt" ] && break; sleep 1; done
+              kill "$pid" 2>/dev/null || true
+              mark=$(tr -d '\r\n' < "$check/shell-started.txt" 2>/dev/null || true)
+              echo "start mark of $v: '$mark'"
+              if [ "$mark" != "$v" ]; then tail -40 "$check/shell.log"; exit 1; fi
               ditto -c -k --sequesterRsrc --keepParent "$app" "$out/SeuOffice-$v-arm64-mac.zip"
               node bundle/release-feed.mjs feed --version "$v" --platform darwin "$out/SeuOffice-$v-arm64-mac.zip"
             fi
