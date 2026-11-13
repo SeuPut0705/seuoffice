@@ -127,6 +127,10 @@ fn echo_case() -> serde_json::Value {
 fn registered(case: &serde_json::Value) -> Checked {
     let mut hosts = Hosts::default();
     shell_ipc_a::fake_ports(&mut hosts, case);
+    // the one driver of the AI runtime the batch builds before its ports
+    let net: shell_ipc_a::NetHost =
+        shell_ipc_a::runtime::testing::FakeNet::new(&serde_json::Value::Null, None);
+    hosts.insert(net);
     let mut registry = Checked::default();
     shell_ipc_a::register(&mut registry, &services(hosts)).expect("batch A registers");
     registry
