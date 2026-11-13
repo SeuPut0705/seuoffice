@@ -6,6 +6,7 @@
 //! a shell built without one refuses to start, naming it.
 
 pub mod integrations;
+pub mod knowledge_base;
 pub mod outbound;
 mod port;
 pub mod ports;
