@@ -2399,6 +2399,45 @@ const watchdogCases: Case[] = [
     ],
     note: 'a renderer that left and came back starts over',
   },
+]
+
+const reportFiles = (stamps: number[]): Record<string, string> =>
+  Object.fromEntries(
+    stamps.flatMap((s) => [
+      [`renderer-watchdog-${s}.json`, '{}'],
+      [`renderer-watchdog-${s}.cpuprofile`, '{}'],
+    ]),
+  )
+
+const pruneCases: Case[] = [
+  {
+    args: [
+      dog({
+        options: { hotSamplesBeforeReport: 1, profileMs: 1 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
+      }),
+    ],
+    files: {
+      ...reportFiles([1, 2, 3, 4, 5, 6, 7]),
+      'renderer-watchdog-x.json': 'not a stamp',
+      'other.json': '{}',
+    },
+    note: 'only the newest five stamps stay (the report just written is one)',
+  },
+  {
+    args: [
+      dog({
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
+      }),
+    ],
+    files: reportFiles([T0 + 1, T0 + 2]),
+    note: 'newer stamps than the clock count as newer',
+  },
+]
+
+// appended after the prune cases: the cases above keep their places
+pruneCases.push(
   {
     args: [
       dog({
@@ -2462,42 +2501,27 @@ const watchdogCases: Case[] = [
     ],
     note: 'the renderer is torn down while its report is written: the diagnostics stay, nobody is asked',
   },
-]
-
-const reportFiles = (stamps: number[]): Record<string, string> =>
-  Object.fromEntries(
-    stamps.flatMap((s) => [
-      [`renderer-watchdog-${s}.json`, '{}'],
-      [`renderer-watchdog-${s}.cpuprofile`, '{}'],
-    ]),
-  )
-
-const pruneCases: Case[] = [
   {
     args: [
       dog({
+        wcs: { a: dogWc(1, { destroyedAfter: 2 }) },
+        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
+        steps: [sampleAt(T0, [hot(101)]), { answer: 1 }],
+      }),
+    ],
+    note: 'the renderer is gone when "close" is answered: the document is not closed',
+  },
+  {
+    args: [
+      dog({
+        wcs: { a: dogWc(1, { destroyedAfter: 2 }) },
         options: { hotSamplesBeforeReport: 1, profileMs: 1 },
         steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
       }),
     ],
-    files: {
-      ...reportFiles([1, 2, 3, 4, 5, 6, 7]),
-      'renderer-watchdog-x.json': 'not a stamp',
-      'other.json': '{}',
-    },
-    note: 'only the newest five stamps stay (the report just written is one)',
+    note: 'the renderer is torn down while it is profiled: nothing to detach, nobody is asked',
   },
-  {
-    args: [
-      dog({
-        options: { hotSamplesBeforeReport: 1, profileMs: 0 },
-        steps: [sampleAt(T0, [hot(101)]), { answer: 0 }],
-      }),
-    ],
-    files: reportFiles([T0 + 1, T0 + 2]),
-    note: 'newer stamps than the clock count as newer',
-  },
-]
+)
 
 // ---------------------------------------------------------------------------
 // recovery-shell

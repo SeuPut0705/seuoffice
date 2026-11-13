@@ -4346,6 +4346,33 @@ const launchRecoveryGroup: Group = {
   },
 }
 
+// appended: the step-driven handlers answer in the same order across several requests
+convertCases.push(
+  convertCase(
+    { ...OWNED, tabs: { '/o/a.md': 'tab1', '/o/b.md': 'tab2' }, exists: ['/o/a.md', '/o/b.md'] },
+    [
+      ['releaseTarget', 7, req('/o/a.md')],
+      ['releaseTarget', 7, req('/o/b.md')],
+      ['releaseTarget', 7, req('/o/a.md')],
+      ['openResult', 7, req('/o/b.md')],
+    ],
+    'releaseTarget: two tabs close one after the other, each brings the view back',
+  ),
+)
+controlHandlerGroup['control-handlers.controlHandler'].cases.push(
+  controlCase(
+    {
+      tabs: [DOCS, SHEETS],
+      contents: {
+        c2: { loading: [true, false], replies: [{ $reject: true }, { $undefined: true }, OK_JS] },
+        c3: { replies: [{ status: 'not_ready' }, { status: 'error', error: { reason: 'x' } }] },
+      },
+    },
+    [selection('$DIR/a.docx'), selection('$DIR/a.xlsx'), selection('$DIR/a.docx')],
+    'a renderer that rejects, answers nothing, then answers; another that reports an error; the first again',
+  ),
+)
+
 export const group: Group = {
   ...commonGroup,
   ...controlGroup,
