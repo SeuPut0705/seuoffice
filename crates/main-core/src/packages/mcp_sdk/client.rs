@@ -68,7 +68,10 @@ pub mod net {
 
     use std::collections::BTreeMap;
 
-    use jscompat::{JsRegex, js_regex, json_parse, slice_utf16, text_decoder_decode, trim};
+    use jscompat::{
+        JsRegex, TryJsRegex, js_regex, json_parse, slice_utf16, text_decoder_decode, trim,
+        try_js_regex,
+    };
     use url::Url;
 
     use super::{ClientError, JsonValue};
@@ -410,8 +413,10 @@ pub mod net {
         js_regex!(r"^[!#$%&'*+.^_`|~0-9A-Za-z-]+\/[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
     }
 
-    fn param_regex() -> &'static JsRegex {
-        js_regex!(
+    /// a quoted value's loop keeps backtrack entries per character, so a long
+    /// header could pass the bound: a search that stops is the parse's throw
+    fn param_regex() -> &'static TryJsRegex {
+        try_js_regex!(
             r##"^; *([!#$%&'*+.^_`|~0-9A-Za-z-]+) *= *("(?:[\u000b\u0020\u0021\u0023-\u005b\u005d-\u007e\u0080-\u00ff]|\\[\u000b\u0020-\u00ff])*"|[!#$%&'*+.^_`|~0-9A-Za-z-]+) *"##
         )
     }
@@ -431,7 +436,7 @@ pub mod net {
         }
         let kind = kind.to_lowercase();
         if let Some(mut index) = semicolon {
-            while let Some(found) = param_regex().exec(&header[index..]) {
+            while let Some(found) = param_regex().try_exec(&header[index..]).map_err(|_| ())? {
                 index += found.as_str().len();
             }
             if index != header.len() {

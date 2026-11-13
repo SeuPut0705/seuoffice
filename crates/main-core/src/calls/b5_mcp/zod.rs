@@ -144,11 +144,22 @@ fn object(entries: Vec<(&str, Value)>) -> Value {
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     let _ = cx;
+    if !matches!(name, "zod.toJsonSchema" | "zod.safeParse") {
+        return None;
+    }
+    // a panic of the port is an answer the comparison can read, not a crash of the driver
+    Some(
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_call(name, args)))
+            .unwrap_or_else(|_| Err(CallError::plain("the Rust port panicked"))),
+    )
+}
+
+fn run_call(name: &str, args: &[Value]) -> Answer {
     let shape_arg = |index: usize| {
         args.get(index)
             .ok_or_else(|| CallError::plain(format!("argument {index} is missing")))
     };
-    Some(match name {
+    match name {
         "zod.toJsonSchema" => shape_arg(0).map(|shape| {
             let schema = to_json_schema(&shape_of(shape));
             Some(json_value_to_serde(&schema))
@@ -184,6 +195,6 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             };
             Ok(Some(answer))
         }),
-        _ => return None,
-    })
+        other => Err(CallError::plain(format!("no such function: {other}"))),
+    }
 }
