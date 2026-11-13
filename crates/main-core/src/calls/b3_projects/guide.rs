@@ -25,10 +25,10 @@ use crate::packages::project_store::{
 };
 use crate::shell::projects::memory::LocalDateParts;
 use crate::shell::projects::project_guide::{
-    ContextFiles, ContextFilesProvider, ContextFilesRequest, EnvLookup, GuideError,
+    ContextFiles, ContextFilesProvider, ContextFilesRequest, EnvLookup, GuideError, GuideStep,
     INSTRUCTIONS_LIMIT_CHARS, MEMORY_BACKUPS_KEPT, MEMORY_SOFT_LIMIT_CHARS, MemoryEditor,
     NewProjectRequest, PROJECT_TOUCH_WRITE_MS, ProjectGuide, ProjectGuideDeps,
-    ProjectSettingsPatch, SelectionTarget, TrustAsk,
+    ProjectSettingsPatch, SelectionTarget,
 };
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
@@ -149,10 +149,26 @@ struct FakeAsk {
     log: Log,
 }
 
-impl TrustAsk for FakeAsk {
+impl FakeAsk {
     fn ask(&mut self, prompt: &ProjectTrustPrompt) -> ProjectTrustAnswer {
         note(&self.log, vec![Value::from("trust"), to_json(prompt)]);
         self.answers.borrow_mut().pop_front().flatten()
+    }
+
+    /// a guide call as the host drives it: the answer, or the prompt shown and
+    /// the call resumed with what the person answers
+    fn drive<T, P>(
+        &mut self,
+        step: GuideStep<T, P>,
+        resume: impl FnOnce(P, ProjectTrustAnswer) -> Result<T, GuideError>,
+    ) -> Result<T, GuideError> {
+        match step {
+            GuideStep::Done(result) => Ok(result),
+            GuideStep::AskTrust { prompt, pending } => {
+                let answer = self.ask(&prompt);
+                resume(pending, answer)
+            }
+        }
     }
 }
 
@@ -400,14 +416,22 @@ fn run_op(
             Value::Null
         }
         "addFolder" => match op.get("path") {
-            Some(Value::String(path)) => to_json(&guide.add_folder(path, ask)?),
+            Some(Value::String(path)) => {
+                to_json(&ask.drive(guide.add_folder(path)?, |pending, answer| {
+                    guide.resume_add_folder(pending, answer)
+                })?)
+            }
             // `typeof folderPath !== 'string'`
             _ => json!({ "status": "refused", "reason": "not-a-folder" }),
         },
         "relocate" => {
             let id = id()?;
             match op.get("path") {
-                Some(Value::String(path)) => to_json(&guide.relocate_project(id, path, ask)?),
+                Some(Value::String(path)) => to_json(
+                    &ask.drive(guide.relocate_project(id, path)?, |pending, answer| {
+                        guide.resume_add_folder(pending, answer)
+                    })?,
+                ),
                 _ => {
                     // the project is looked up before the path is read
                     if guide.project_root(id).is_none() {
@@ -431,7 +455,11 @@ fn run_op(
                     .map(str::to_owned),
                 use_existing: args.get("useExisting").and_then(Value::as_bool),
             };
-            to_json(&guide.create_project(&request, ask)?)
+            to_json(
+                &ask.drive(guide.create_project(&request)?, |pending, answer| {
+                    guide.resume_create_project(pending, answer)
+                })?,
+            )
         }
         "renameProject" => to_json(&guide.rename_project(id()?, text_of(op, "name")?)?),
         "retryUnwritable" => to_json(&guide.retry_unwritable(id()?)?),
@@ -536,7 +564,11 @@ fn run_op(
                 "without" => ProjectTrustDecision::Without,
                 _ => return Err(bad("decision").into()),
             };
-            to_json(&guide.decide_trust(id()?, decision, ask)?)
+            to_json(
+                &ask.drive(guide.decide_trust(id()?, decision)?, |pending, answer| {
+                    guide.resume_decide_trust(pending, answer)
+                })?,
+            )
         }
         "saveInstructions" => to_json(&guide.save_instructions(id()?, text_of(op, "text")?)?),
         "addIgnore" => to_json(&guide.add_ignore(id()?, rel()?)?),
@@ -601,7 +633,10 @@ fn run_op(
             )?;
             Value::Null
         }
-        "adoptHint" => to_json(&guide.adopt_folder_hint(text_of(op, "doc")?, ask)?),
+        "adoptHint" => to_json(&ask.drive(
+            guide.adopt_folder_hint(text_of(op, "doc")?)?,
+            |pending, answer| guide.resume_adopt_folder_hint(pending, answer),
+        )?),
         "flushTouches" => {
             guide.flush_touches()?;
             Value::Null

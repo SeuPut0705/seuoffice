@@ -2,14 +2,26 @@
 //! (decision 0088): the one place in the shell main process that knows the
 //! project list, reads a project folder's instructions and memory, decides
 //! identity and trust, and writes into the folder (through the write guard).
-//! It holds no Electron objects: dialogs arrive as callbacks (`TrustAsk`) and
-//! the IPC layer passes the calling window's document path.
+//! It holds no Electron objects: the first-time trust prompt is a step the
+//! caller shows (see below), and the IPC layer passes the calling window's
+//! document path.
 //!
 //! This file holds the exported types and constants of the TypeScript file,
 //! then the `ProjectGuide` class.
 //!
 //! What the TypeScript awaits is a plain synchronous call here, and the
-//! optional callbacks of `ProjectGuideDeps` are optional boxed closures.
+//! optional callbacks of `ProjectGuideDeps` are optional boxed closures, with
+//! one exception: the `await askTrust(prompt)` of `addFolder`,
+//! `relocateProject`, `createProject`, `adoptFolderHint` and `decideTrust`.
+//! Showing that prompt can wait for a window's events (the person comes back
+//! to the page after [view all]), and those arrive on the thread the guide
+//! runs on. So a method that may ask returns a [`GuideStep`]: `Done(result)`,
+//! or `AskTrust { prompt, pending }`, where the caller shows the prompt and
+//! calls the `resume_*` method of that operation with `pending` and the
+//! [`ProjectTrustAnswer`] (`None`: closed). The resume continues exactly where
+//! the `await` returned: what the TypeScript reads after the await (the
+//! settings, the clock) is read at the resume. A call asks at most once, so a
+//! resume answers a final result, never another step.
 //!
 //! The guide is a struct the caller owns. Its state (the unwritable projects,
 //! the pending use times, the install id) and the callbacks of the host sit
@@ -97,10 +109,57 @@ use crate::shell::rename_validation::is_valid_rename_name;
 pub use super::context::INSTRUCTIONS_LIMIT_CHARS;
 pub use super::memory::MEMORY_SOFT_LIMIT_CHARS;
 
-/// `TrustAsk`: shows the first-time trust prompt; answers the person's
-/// choice, or `None` (`null`) when it was closed
-pub trait TrustAsk {
-    fn ask(&mut self, prompt: &ProjectTrustPrompt) -> ProjectTrustAnswer;
+/// What a guide method that may show the first-time trust prompt (spec 5.10)
+/// answers: the result, or the prompt to show and the state to resume with
+#[derive(Debug, Clone, PartialEq)]
+pub enum GuideStep<T, P> {
+    Done(T),
+    /// `await askTrust(prompt)`: the caller shows `prompt`, then calls the
+    /// `resume_*` method of the operation with `pending` and the person's
+    /// answer (`None` when the prompt was closed). The prompt is boxed to keep
+    /// the two variants of a step near in size.
+    AskTrust {
+        prompt: Box<ProjectTrustPrompt>,
+        pending: P,
+    },
+}
+
+/// What `adopt` has settled before it asks: the folder and its identity
+#[derive(Debug, Clone, PartialEq)]
+struct Adoption {
+    root: String,
+    id: ProjectId,
+    name: String,
+    identity: FolderIdentity,
+    previous: Option<ListEntry>,
+    copied_from: Option<ProjectId>,
+    stale_at_path: Option<ProjectId>,
+}
+
+/// `addFolder`, `relocateProject` or `createProject` waiting for the trust
+/// answer: [`ProjectGuide::resume_add_folder`] or
+/// [`ProjectGuide::resume_create_project`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingAdopt {
+    adoption: Box<Adoption>,
+    /// the hashes of the texts the prompt shows, recorded with the answer
+    hashes: JsObject<String>,
+}
+
+/// `adoptFolderHint` waiting for the trust answer:
+/// [`ProjectGuide::resume_adopt_folder_hint`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingAdoptFolderHint {
+    doc_path: String,
+    adopt: PendingAdopt,
+}
+
+/// `decideTrust` waiting for the trust answer:
+/// [`ProjectGuide::resume_decide_trust`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingDecideTrust {
+    id: ProjectId,
+    hashes: JsObject<String>,
 }
 
 /// `NewProjectRequest`: "New project" as main decides it (spec 5.1).
@@ -953,43 +1012,64 @@ impl ProjectGuide {
         Ok(())
     }
 
-    /// "Add folder" (spec 5.1): refusal rules, identity (5.11), trust (5.10)
+    /// "Add folder" (spec 5.1): refusal rules, identity (5.11), trust (5.10).
+    /// A folder with something to confirm asks first: resume with
+    /// [`ProjectGuide::resume_add_folder`].
     pub fn add_folder(
         &self,
         folder_path: &str,
-        ask_trust: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, GuideError> {
-        self.adopt(folder_path, ask_trust, None)
+    ) -> Result<GuideStep<AddFolderResult, PendingAdopt>, GuideError> {
+        self.adopt(folder_path, None)
     }
 
-    /// Re-pick a "folder missing" project (spec 5.11)
+    /// Re-pick a "folder missing" project (spec 5.11); resumes like
+    /// [`ProjectGuide::add_folder`]
     pub fn relocate_project(
         &self,
         id: &str,
         folder_path: &str,
-        ask_trust: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, GuideError> {
+    ) -> Result<GuideStep<AddFolderResult, PendingAdopt>, GuideError> {
         if self.entry(id).is_none() {
             return Err(unknown_project(id));
         }
-        self.adopt(folder_path, ask_trust, Some(id))
+        self.adopt(folder_path, Some(id))
+    }
+
+    /// The answer of the trust prompt `add_folder` or `relocate_project` asked
+    pub fn resume_add_folder(
+        &self,
+        pending: PendingAdopt,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, GuideError> {
+        let PendingAdopt { adoption, hashes } = pending;
+        let Some(decision) = answer else {
+            return Ok(AddFolderResult::Cancelled {
+                stage: AddFolderStage::Trust,
+            });
+        };
+        self.finish_adopt(
+            *adoption,
+            Some(StoredTrustRecord {
+                decision: decision.as_str().to_owned(),
+                hashes,
+            }),
+        )
     }
 
     fn adopt(
         &self,
         folder_path: &str,
-        ask_trust: &mut dyn TrustAsk,
         relocate_id: Option<&str>,
-    ) -> Result<AddFolderResult, GuideError> {
+    ) -> Result<GuideStep<AddFolderResult, PendingAdopt>, GuideError> {
         let platform = self.platform.as_str();
         if !is_absolute(folder_path) {
-            return Ok(AddFolderResult::Refused {
+            return Ok(GuideStep::Done(AddFolderResult::Refused {
                 reason: FolderRefusalReason::NotAFolder,
-            });
+            }));
         }
         let root = canonical_path(folder_path);
         if let Some(reason) = folder_refusal(&root, &self.refusal_context()) {
-            return Ok(AddFolderResult::Refused { reason });
+            return Ok(GuideStep::Done(AddFolderResult::Refused { reason }));
         }
 
         let file = read_project_file(&root, None);
@@ -1009,9 +1089,9 @@ impl ProjectGuide {
             stale_at_path,
         } = verdict
         else {
-            return Ok(AddFolderResult::Refused {
+            return Ok(GuideStep::Done(AddFolderResult::Refused {
                 reason: FolderRefusalReason::DifferentProject,
-            });
+            }));
         };
         let id = match id {
             Some(id) => id,
@@ -1025,30 +1105,70 @@ impl ProjectGuide {
         let mut trust_to_record: Option<StoredTrustRecord> = None;
         let inherited = copied_from
             .as_deref()
-            .and_then(|source| settings.trust.get(source));
-        if settings.trust.get(&id).is_none() && inherited.is_none() {
+            .and_then(|source| settings.trust.get(source))
+            .is_some();
+        if settings.trust.get(&id).is_none() && !inherited {
             let scan = scan_for_trust(&TrustScanInput {
                 root: root.clone(),
                 project_id: id.clone(),
                 name: name.clone(),
                 install_id: self.install_id()?,
             });
-            let mut decision = ProjectTrustDecision::Use;
             if scan.foreign {
-                match ask_trust.ask(&scan.prompt) {
-                    Some(answer) => decision = answer,
-                    None => {
-                        return Ok(AddFolderResult::Cancelled {
-                            stage: AddFolderStage::Trust,
-                        });
-                    }
-                }
+                // `await askTrust(scan.prompt)`: the rest runs at the resume
+                return Ok(GuideStep::AskTrust {
+                    prompt: Box::new(scan.prompt),
+                    pending: PendingAdopt {
+                        adoption: Box::new(Adoption {
+                            root,
+                            id,
+                            name,
+                            identity,
+                            previous,
+                            copied_from,
+                            stale_at_path,
+                        }),
+                        hashes: scan.hashes,
+                    },
+                });
             }
             trust_to_record = Some(StoredTrustRecord {
-                decision: decision.as_str().to_owned(),
+                decision: ProjectTrustDecision::Use.as_str().to_owned(),
                 hashes: scan.hashes,
             });
         }
+
+        let adoption = Adoption {
+            root,
+            id,
+            name,
+            identity,
+            previous,
+            copied_from,
+            stale_at_path,
+        };
+        Ok(GuideStep::Done(
+            self.finish_adopt(adoption, trust_to_record)?,
+        ))
+    }
+
+    /// What `adopt` does after the trust decision: the copy's `project.json`,
+    /// the list entry, the trust record
+    fn finish_adopt(
+        &self,
+        adoption: Adoption,
+        mut trust_to_record: Option<StoredTrustRecord>,
+    ) -> Result<AddFolderResult, GuideError> {
+        let platform = self.platform.as_str();
+        let Adoption {
+            root,
+            id,
+            name,
+            identity,
+            previous,
+            copied_from,
+            stale_at_path,
+        } = adoption;
 
         if identity == FolderIdentity::Copied {
             let copy_file = ProjectFolderFile {
@@ -1159,27 +1279,27 @@ impl ProjectGuide {
     /// "New project" (spec 5.1): a new folder named `name` under the default save
     /// folder (or `parentDir`) with `.seuoffice/project.json`, trusted without asking.
     /// An existing folder of that name is never written to unless `useExisting` asks
-    /// to add it as a project (identity and trust as for "add folder").
+    /// to add it as a project (identity and trust as for "add folder"; that path can
+    /// ask, and resumes with [`ProjectGuide::resume_create_project`]).
     pub fn create_project(
         &self,
         args: &NewProjectRequest,
-        ask_trust: &mut dyn TrustAsk,
-    ) -> Result<CreateProjectResult, GuideError> {
+    ) -> Result<GuideStep<CreateProjectResult, PendingAdopt>, GuideError> {
         let name = trim(&args.name);
         if !is_valid_rename_name(name) || name.chars().count() > PROJECT_NAME_MAX_CHARS {
-            return Ok(CreateProjectResult::InvalidName);
+            return Ok(GuideStep::Done(CreateProjectResult::InvalidName));
         }
         let chosen = match &args.parent_dir {
             Some(parent_dir) => parent_dir.clone(),
             None => self.get_default_parent_folder(),
         };
         if !is_absolute(&chosen) {
-            return Ok(CreateProjectResult::Unwritable);
+            return Ok(GuideStep::Done(CreateProjectResult::Unwritable));
         }
         let parent = canonical_path(&chosen);
         let target = join(&[&parent, name]);
         if let Some(reason) = location_refusal(&target, &self.refusal_context()) {
-            return Ok(CreateProjectResult::Refused { reason });
+            return Ok(GuideStep::Done(CreateProjectResult::Refused { reason }));
         }
         if exists(&target) {
             // A folder of that name that is already a listed project just opens:
@@ -1190,11 +1310,16 @@ impl ProjectGuide {
                 .iter()
                 .any(|item| same_path(&item.path, &target, &self.platform));
             return if args.use_existing == Some(true) || listed {
-                Ok(self.adopt(&target, ask_trust, None)?.into())
-            } else {
-                Ok(CreateProjectResult::Exists {
-                    folder_path: target,
+                Ok(match self.adopt(&target, None)? {
+                    GuideStep::Done(result) => GuideStep::Done(result.into()),
+                    GuideStep::AskTrust { prompt, pending } => {
+                        GuideStep::AskTrust { prompt, pending }
+                    }
                 })
+            } else {
+                Ok(GuideStep::Done(CreateProjectResult::Exists {
+                    folder_path: target,
+                }))
             };
         }
 
@@ -1203,11 +1328,11 @@ impl ProjectGuide {
             Err(WriteGuardError::Refused(refused))
                 if refused.reason == ProjectWriteRefusal::Exists =>
             {
-                return Ok(CreateProjectResult::Exists {
+                return Ok(GuideStep::Done(CreateProjectResult::Exists {
                     folder_path: target,
-                });
+                }));
             }
-            Err(_) => return Ok(CreateProjectResult::Unwritable),
+            Err(_) => return Ok(GuideStep::Done(CreateProjectResult::Unwritable)),
         };
         let id = self.unique_new_id(&self.read())?;
         let file = ProjectFolderFile {
@@ -1227,7 +1352,7 @@ impl ProjectGuide {
             .is_err()
         {
             self.remove_empty_new_folder(&root);
-            return Ok(CreateProjectResult::Unwritable);
+            return Ok(GuideStep::Done(CreateProjectResult::Unwritable));
         }
         let at = self.now_iso()?;
         self.update(|settings| {
@@ -1248,9 +1373,18 @@ impl ProjectGuide {
         let Some(entry) = self.entry(&id) else {
             return Err(GuideError::plain(format!("project {id} was not listed")));
         };
-        Ok(CreateProjectResult::Created {
+        Ok(GuideStep::Done(CreateProjectResult::Created {
             project: self.to_item(&entry),
-        })
+        }))
+    }
+
+    /// The answer of the trust prompt `create_project` asked
+    pub fn resume_create_project(
+        &self,
+        pending: PendingAdopt,
+        answer: ProjectTrustAnswer,
+    ) -> Result<CreateProjectResult, GuideError> {
+        Ok(self.resume_add_folder(pending, answer)?.into())
     }
 
     /// Undo a just-made project folder whose `project.json` could not be written
@@ -1746,14 +1880,14 @@ impl ProjectGuide {
     }
 
     /// Change trust from the project screen. `without` applies at once; `use` shows the
-    /// trust prompt again when the folder holds anything to confirm, and a closed prompt
-    /// leaves the project as it was.
+    /// trust prompt again when the folder holds anything to confirm (resume with
+    /// [`ProjectGuide::resume_decide_trust`]), and a closed prompt leaves the project
+    /// as it was.
     pub fn decide_trust(
         &self,
         id: &str,
         decision: ProjectTrustDecision,
-        ask_trust: &mut dyn TrustAsk,
-    ) -> Result<DecideTrustResult, GuideError> {
+    ) -> Result<GuideStep<DecideTrustResult, PendingDecideTrust>, GuideError> {
         let Some(entry) = self.entry(id) else {
             return Err(unknown_project(id));
         };
@@ -1772,14 +1906,14 @@ impl ProjectGuide {
                     },
                 );
             })?;
-            return Ok(DecideTrustResult::Ok {
+            return Ok(GuideStep::Done(DecideTrustResult::Ok {
                 trust: ProjectTrustDecision::Without,
-            });
+            }));
         }
         if self.trust_state(id) == ProjectTrustState::Use {
-            return Ok(DecideTrustResult::Ok {
+            return Ok(GuideStep::Done(DecideTrustResult::Ok {
                 trust: ProjectTrustDecision::Use,
-            });
+            }));
         }
         let file = read_project_file(&entry.path, None);
         let scan = scan_for_trust(&TrustScanInput {
@@ -1791,10 +1925,40 @@ impl ProjectGuide {
             },
             install_id: self.install_id()?,
         });
-        let mut answer: ProjectTrustAnswer = Some(ProjectTrustDecision::Use);
         if scan.foreign {
-            answer = ask_trust.ask(&scan.prompt);
+            // `await askTrust(scan.prompt)`: the rest runs at the resume
+            return Ok(GuideStep::AskTrust {
+                prompt: Box::new(scan.prompt),
+                pending: PendingDecideTrust {
+                    id: id.to_owned(),
+                    hashes: scan.hashes,
+                },
+            });
         }
+        Ok(GuideStep::Done(self.finish_decide_trust(
+            id,
+            Some(ProjectTrustDecision::Use),
+            scan.hashes,
+        )?))
+    }
+
+    /// The answer of the trust prompt `decide_trust` asked
+    pub fn resume_decide_trust(
+        &self,
+        pending: PendingDecideTrust,
+        answer: ProjectTrustAnswer,
+    ) -> Result<DecideTrustResult, GuideError> {
+        let PendingDecideTrust { id, hashes } = pending;
+        self.finish_decide_trust(&id, answer, hashes)
+    }
+
+    /// What `decideTrust` does with the answer
+    fn finish_decide_trust(
+        &self,
+        id: &str,
+        answer: ProjectTrustAnswer,
+        hashes: JsObject<String>,
+    ) -> Result<DecideTrustResult, GuideError> {
         match answer {
             None => return Ok(DecideTrustResult::Cancelled),
             Some(ProjectTrustDecision::Without) => {
@@ -1809,7 +1973,7 @@ impl ProjectGuide {
                 id,
                 StoredTrustRecord {
                     decision: "use".to_owned(),
-                    hashes: scan.hashes,
+                    hashes,
                 },
             );
         })?;
@@ -2198,22 +2362,55 @@ impl ProjectGuide {
         Ok(())
     }
 
-    /// "[use]" on the hint: the add-folder path for the hinted folder, then the document uses it
+    /// "[use]" on the hint: the add-folder path for the hinted folder, then the document
+    /// uses it. The add-folder path can ask: resume with
+    /// [`ProjectGuide::resume_adopt_folder_hint`].
     pub fn adopt_folder_hint(
         &self,
         doc_path: &str,
-        ask_trust: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, GuideError> {
+    ) -> Result<GuideStep<AddFolderResult, PendingAdoptFolderHint>, GuideError> {
         let target = SelectionTarget::Document {
             path: doc_path.to_owned(),
         };
         let selection = self.get_selection(&target)?;
         let Some(hint) = selection.unregistered_project_hint else {
-            return Ok(AddFolderResult::Refused {
+            return Ok(GuideStep::Done(AddFolderResult::Refused {
                 reason: FolderRefusalReason::NotAFolder,
-            });
+            }));
         };
-        let result = self.adopt(&hint.folder_path, ask_trust, None)?;
+        Ok(match self.adopt(&hint.folder_path, None)? {
+            GuideStep::Done(result) => GuideStep::Done(self.use_hinted_folder(doc_path, result)?),
+            GuideStep::AskTrust { prompt, pending } => GuideStep::AskTrust {
+                prompt,
+                pending: PendingAdoptFolderHint {
+                    doc_path: doc_path.to_owned(),
+                    adopt: pending,
+                },
+            },
+        })
+    }
+
+    /// The answer of the trust prompt `adopt_folder_hint` asked
+    pub fn resume_adopt_folder_hint(
+        &self,
+        pending: PendingAdoptFolderHint,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, GuideError> {
+        let PendingAdoptFolderHint { doc_path, adopt } = pending;
+        let result = self.resume_add_folder(adopt, answer)?;
+        self.use_hinted_folder(&doc_path, result)
+    }
+
+    /// What `adoptFolderHint` does with the result of the add-folder path: the
+    /// document uses the folder that was added
+    fn use_hinted_folder(
+        &self,
+        doc_path: &str,
+        result: AddFolderResult,
+    ) -> Result<AddFolderResult, GuideError> {
+        let target = SelectionTarget::Document {
+            path: doc_path.to_owned(),
+        };
         if let AddFolderResult::Added { project, .. } = &result {
             self.set_selection(&target, Some(&project.id))?;
         }

@@ -289,8 +289,8 @@
   {
     "name": "project-ipc: the without decision is another word",
     "file": "main-core/src/shell/projects/project_ipc.rs",
-    "find": "Some(JsonValue::String(text)) if text == \"without\" => {",
-    "replace": "Some(JsonValue::String(text)) if text == \"withou\" => {",
+    "find": "Some(JsonValue::String(text)) if text == \"without\" =>",
+    "replace": "Some(JsonValue::String(text)) if text == \"withou\" =>",
     "fn": ["project-ipc.decideTrust"]
   },
   {
@@ -359,15 +359,22 @@
   {
     "name": "project-ipc: the trust prompt is cancelled when the files opened and the person came back",
     "file": "main-core/src/shell/projects/project_ipc.rs",
-    "find": "if self.show_trust_files(prompt) && !self.dialogs.wait_for_return(self.sender) {",
-    "replace": "if self.show_trust_files(prompt) || !self.dialogs.wait_for_return(self.sender) {",
+    "find": "if back {",
+    "replace": "if !back {",
+    "fn": ["project-ipc.addFolder"]
+  },
+  {
+    "name": "project-ipc: [view all] with nothing opened in the app waits for the person",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "if show_trust_files(&mut *deps.host, &waiting.prompt) {",
+    "replace": "if !show_trust_files(&mut *deps.host, &waiting.prompt) {",
     "fn": ["project-ipc.addFolder"]
   },
   {
     "name": "project-ipc: an empty text of the prompt is opened and a missing one is not",
     "file": "main-core/src/shell/projects/project_ipc.rs",
-    "find": "            if text.is_none() {",
-    "replace": "            if text.is_some() {",
+    "find": "if text.is_none() {",
+    "replace": "if text.is_some() {",
     "fn": ["project-ipc.addFolder"]
   },
   {

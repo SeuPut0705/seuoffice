@@ -23,18 +23,18 @@ use crate::packages::project_store::{
     LegacyDocumentChat, PROJECT_FOLDER_CHANNELS, ProjectChatListItem, ProjectChatRef,
     ProjectContextResult, ProjectDetail, ProjectEditor, ProjectId, ProjectListFilesResult,
     ProjectListItem, ProjectMemoryEditResult, ProjectMemoryOp, ProjectReadResult,
-    ProjectSearchResult, ProjectSelection, ProjectSettings, ProjectTrustDecision,
-    ProjectTrustPrompt, ProjectWriteResult, UndoMemoryConsolidationResult,
+    ProjectSearchResult, ProjectSelection, ProjectSettings, ProjectTrustAnswer,
+    ProjectTrustDecision, ProjectTrustPrompt, ProjectWriteResult, UndoMemoryConsolidationResult,
 };
 use crate::shell::projects::chat_store::{ChatAppendedEvent, ChatSender};
 use crate::shell::projects::ignore::{IgnoreOptions, compile_ignore};
 use crate::shell::projects::project_dialog_text::{ProjectFolderPickPurpose, ProjectTrustChoice};
 use crate::shell::projects::project_files::{CloudOnlyResolver, ResolveFailure};
 use crate::shell::projects::project_guide::{
-    NewProjectRequest, ProjectAiVisibility, SelectionTarget, TrustAsk,
+    GuideStep, NewProjectRequest, ProjectAiVisibility, SelectionTarget,
 };
 use crate::shell::projects::project_ipc::{
-    AppendedNotice, ChatDocuments, MemoryAuthor, PROJECT_IPC_BAD_REQUEST,
+    AppendedNotice, ChatDocuments, IpcStep, MemoryAuthor, PROJECT_IPC_BAD_REQUEST,
     PROJECT_IPC_UNKNOWN_WINDOW, PageReturnWatch, ProjectIpc, ProjectIpcChats, ProjectIpcDeps,
     ProjectIpcDialogs, ProjectIpcGuide, ProjectIpcHost, ProjectIpcScopes, ProjectIpcTools,
     ProjectSettingsPatch, ProjectWindow, TRUST_RETURN_ARM_MS,
@@ -96,22 +96,27 @@ fn js_string(value: Option<&Value>) -> String {
     }
 }
 
-/// the answer an entry of `answers` gives for a call of `key`, its markers
-/// taken apart (`$seq`, `$throw`, `$on`, `$events`, `$ask`); `Ok(None)` where
-/// the world has no entry
-fn resolve(
+/// where an entry of `answers` ends: a value, or the trust question it asks
+enum Resolved {
+    Value(Value),
+    /// the `{ $ask: prompt, null, use, without }` entry, whose branch the
+    /// answer to the question picks
+    Ask(Value),
+}
+
+/// the answer an entry gives for a call of `key`, its markers taken apart
+/// (`$seq`, `$throw`, `$on`, `$events`), up to an `$ask`; `first` is the entry
+/// the walk starts at
+fn resolve_from(
     shared: &Shared,
     key: &str,
     args: &[Value],
-    mut ask: Option<&mut dyn TrustAsk>,
-) -> Result<Option<Value>, Thrown> {
-    let Some(first) = shared.borrow().answers.get(key).cloned() else {
-        return Ok(None);
-    };
+    first: Value,
+) -> Result<Resolved, Thrown> {
     let mut entry = first;
     loop {
         let Value::Object(object) = &entry else {
-            return Ok(Some(entry));
+            return Ok(Resolved::Value(entry));
         };
         if let Some(list) = object.get("$seq") {
             let list = list.as_array().cloned().unwrap_or_default();
@@ -182,29 +187,28 @@ fn resolve(
             entry = object.get("then").cloned().unwrap_or(Value::Null);
             continue;
         }
-        if let Some(prompt) = object.get("$ask") {
-            let Some(ask) = ask.as_mut() else {
-                return Err(Thrown(format!("{key} cannot ask")));
-            };
-            let prompt: ProjectTrustPrompt = serde_json::from_value(prompt.clone())
-                .map_err(|error| Thrown(format!("bad prompt of {key}: {error}")))?;
-            let name = match ask.ask(&prompt) {
-                None => "null",
-                Some(ProjectTrustDecision::Use) => "use",
-                Some(ProjectTrustDecision::Without) => "without",
-            };
-            note(
-                shared,
-                vec![Value::from("ask"), Value::from(key), Value::from(name)],
-            );
-            let Some(next) = object.get(name) else {
-                return Err(Thrown(format!("no branch {name} of {key}")));
-            };
-            entry = next.clone();
-            continue;
+        if object.contains_key("$ask") {
+            return Ok(Resolved::Ask(entry));
         }
-        return Ok(Some(entry));
+        return Ok(Resolved::Value(entry));
     }
+}
+
+/// the answer an entry of `answers` gives for a call of `key` that cannot ask;
+/// `Ok(None)` where the world has no entry
+fn resolve(shared: &Shared, key: &str, args: &[Value]) -> Result<Option<Value>, Thrown> {
+    let Some(first) = shared.borrow().answers.get(key).cloned() else {
+        return Ok(None);
+    };
+    match resolve_from(shared, key, args, first)? {
+        Resolved::Value(value) => Ok(Some(value)),
+        Resolved::Ask(_) => Err(Thrown(format!("{key} cannot ask"))),
+    }
+}
+
+/// an answer of the world as the `T` a method returns
+fn from_answer<T: DeserializeOwned>(key: &str, value: Value) -> Result<T, Thrown> {
+    serde_json::from_value(value).map_err(|error| Thrown(format!("bad answer for {key}: {error}")))
 }
 
 /// One of the fakes: its kind (`guide`, `chats`, ...) and the world
@@ -222,23 +226,76 @@ impl Fake {
     }
 
     /// the entry as a `T`; a world with no entry is an error
-    fn answer<T: DeserializeOwned>(
-        &self,
-        name: &str,
-        args: &[Value],
-        ask: Option<&mut dyn TrustAsk>,
-    ) -> Result<T, Thrown> {
+    fn answer<T: DeserializeOwned>(&self, name: &str, args: &[Value]) -> Result<T, Thrown> {
         let key = format!("{}.{name}", self.kind);
-        let Some(value) = resolve(&self.shared, &key, args, ask)? else {
+        let Some(value) = resolve(&self.shared, &key, args)? else {
             return Err(Thrown(format!("no answer for {key}")));
         };
-        serde_json::from_value(value)
-            .map_err(|error| Thrown(format!("bad answer for {key}: {error}")))
+        from_answer(&key, value)
     }
 
     /// a method that answers nothing; an entry is read only to throw
     fn void(&self, name: &str, args: &[Value]) -> Result<(), Thrown> {
-        resolve(&self.shared, &format!("{}.{name}", self.kind), args, None).map(|_| ())
+        resolve(&self.shared, &format!("{}.{name}", self.kind), args).map(|_| ())
+    }
+
+    /// a method that may ask the trust question: its answer, or the question
+    /// and the entry the call goes on at
+    fn asking<T: DeserializeOwned>(
+        &self,
+        name: &str,
+        args: &[Value],
+    ) -> Result<GuideStep<T, FakePending>, Thrown> {
+        let key = format!("{}.{name}", self.kind);
+        let Some(first) = self.shared.borrow().answers.get(&key).cloned() else {
+            return Err(Thrown(format!("no answer for {key}")));
+        };
+        match resolve_from(&self.shared, &key, args, first)? {
+            Resolved::Value(value) => Ok(GuideStep::Done(from_answer(&key, value)?)),
+            Resolved::Ask(entry) => {
+                let prompt: ProjectTrustPrompt =
+                    serde_json::from_value(entry.get("$ask").cloned().unwrap_or(Value::Null))
+                        .map_err(|error| Thrown(format!("bad prompt of {key}: {error}")))?;
+                Ok(GuideStep::AskTrust {
+                    prompt: Box::new(prompt),
+                    pending: FakePending {
+                        key,
+                        args: args.to_vec(),
+                        entry,
+                    },
+                })
+            }
+        }
+    }
+
+    /// the call of `asking` goes on with the person's answer: it is logged and
+    /// picks the branch of the entry
+    fn resumed<T: DeserializeOwned>(
+        &self,
+        pending: FakePending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<T, Thrown> {
+        let FakePending { key, args, entry } = pending;
+        let name = match answer {
+            None => "null",
+            Some(ProjectTrustDecision::Use) => "use",
+            Some(ProjectTrustDecision::Without) => "without",
+        };
+        note(
+            &self.shared,
+            vec![
+                Value::from("ask"),
+                Value::from(key.as_str()),
+                Value::from(name),
+            ],
+        );
+        let Some(next) = entry.get(name) else {
+            return Err(Thrown(format!("no branch {name} of {key}")));
+        };
+        match resolve_from(&self.shared, &key, &args, next.clone())? {
+            Resolved::Value(value) => from_answer(&key, value),
+            Resolved::Ask(_) => Err(Thrown(format!("{key} asked twice"))),
+        }
     }
 }
 
@@ -264,47 +321,53 @@ fn target_json(target: &SelectionTarget) -> Value {
 // the fakes
 // ---------------------------------------------------------------------------
 
+/// a guide call that asked the trust question, and the entry it goes on at
+struct FakePending {
+    key: String,
+    args: Vec<Value>,
+    entry: Value,
+}
+
 struct FakeGuide(Fake);
 
 impl ProjectIpcGuide for FakeGuide {
+    type Pending = FakePending;
+
     fn list_projects(&mut self) -> Result<Vec<ProjectListItem>, Thrown> {
         self.0.log("listProjects", vec![]);
-        self.0.answer("listProjects", &[], None)
+        self.0.answer("listProjects", &[])
     }
 
     fn add_folder(
         &mut self,
         folder_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown> {
+    ) -> Result<GuideStep<AddFolderResult, FakePending>, Thrown> {
         self.0.log("addFolder", vec![text(folder_path)]);
-        self.0.answer("addFolder", &[text(folder_path)], Some(ask))
+        self.0.asking("addFolder", &[text(folder_path)])
     }
 
     fn relocate_project(
         &mut self,
         id: &str,
         folder_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown> {
+    ) -> Result<GuideStep<AddFolderResult, FakePending>, Thrown> {
         let args = [text(id), text(folder_path)];
         self.0.log("relocateProject", args.to_vec());
-        self.0.answer("relocateProject", &args, Some(ask))
+        self.0.asking("relocateProject", &args)
     }
 
     fn get_default_parent_folder(&mut self) -> Result<String, Thrown> {
         self.0.log("getDefaultParentFolder", vec![]);
-        self.0.answer("getDefaultParentFolder", &[], None)
+        self.0.answer("getDefaultParentFolder", &[])
     }
 
     fn create_project(
         &mut self,
         request: &NewProjectRequest,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<CreateProjectResult, Thrown> {
+    ) -> Result<GuideStep<CreateProjectResult, FakePending>, Thrown> {
         let args = [to_json(request)];
         self.0.log("createProject", args.to_vec());
-        self.0.answer("createProject", &args, Some(ask))
+        self.0.asking("createProject", &args)
     }
 
     fn remove_from_list(&mut self, id: &str) -> Result<(), Thrown> {
@@ -321,19 +384,19 @@ impl ProjectIpcGuide for FakeGuide {
     fn rename_project(&mut self, id: &str, name: &str) -> Result<ProjectWriteResult, Thrown> {
         let args = [text(id), text(name)];
         self.0.log("renameProject", args.to_vec());
-        self.0.answer("renameProject", &args, None)
+        self.0.answer("renameProject", &args)
     }
 
     fn retry_unwritable(&mut self, id: &str) -> Result<ProjectWriteResult, Thrown> {
         self.0.log("retryUnwritable", vec![text(id)]);
-        self.0.answer("retryUnwritable", &[text(id)], None)
+        self.0.answer("retryUnwritable", &[text(id)])
     }
 
     /// no case makes the lookup throw: the trait has no error to carry
     fn project_root(&mut self, id: &str) -> Option<String> {
         self.0.log("projectRoot", vec![text(id)]);
         self.0
-            .answer::<Option<String>>("projectRoot", &[text(id)], None)
+            .answer::<Option<String>>("projectRoot", &[text(id)])
             .ok()
             .flatten()
     }
@@ -341,7 +404,7 @@ impl ProjectIpcGuide for FakeGuide {
     fn get_selection(&mut self, target: &SelectionTarget) -> Result<ProjectSelection, Thrown> {
         let args = [target_json(target)];
         self.0.log("getSelection", args.to_vec());
-        self.0.answer("getSelection", &args, None)
+        self.0.answer("getSelection", &args)
     }
 
     fn set_selection(
@@ -351,22 +414,20 @@ impl ProjectIpcGuide for FakeGuide {
     ) -> Result<ProjectSelection, Thrown> {
         let args = [target_json(target), json!(project_id)];
         self.0.log("setSelection", args.to_vec());
-        self.0.answer("setSelection", &args, None)
+        self.0.answer("setSelection", &args)
     }
 
     fn adopt_folder_hint(
         &mut self,
         doc_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown> {
+    ) -> Result<GuideStep<AddFolderResult, FakePending>, Thrown> {
         self.0.log("adoptFolderHint", vec![text(doc_path)]);
-        self.0
-            .answer("adoptFolderHint", &[text(doc_path)], Some(ask))
+        self.0.asking("adoptFolderHint", &[text(doc_path)])
     }
 
     fn read_context(&mut self, id: &str) -> Result<ProjectContextResult, Thrown> {
         self.0.log("readContext", vec![text(id)]);
-        self.0.answer("readContext", &[text(id)], None)
+        self.0.answer("readContext", &[text(id)])
     }
 
     fn edit_memory(
@@ -377,13 +438,13 @@ impl ProjectIpcGuide for FakeGuide {
     ) -> Result<ProjectMemoryEditResult, Thrown> {
         let args = [text(id), to_json(change), text(by.as_str())];
         self.0.log("editMemory", args.to_vec());
-        self.0.answer("editMemory", &args, None)
+        self.0.answer("editMemory", &args)
     }
 
     fn save_memory(&mut self, id: &str, text_: &str) -> Result<ProjectWriteResult, Thrown> {
         let args = [text(id), text(text_)];
         self.0.log("saveMemory", args.to_vec());
-        self.0.answer("saveMemory", &args, None)
+        self.0.answer("saveMemory", &args)
     }
 
     fn apply_memory_consolidation(
@@ -394,7 +455,7 @@ impl ProjectIpcGuide for FakeGuide {
         let entries: Vec<Value> = entries.iter().map(json_value_to_serde).collect();
         let args = [json!({ "projectId": project_id, "entries": entries })];
         self.0.log("applyMemoryConsolidation", args.to_vec());
-        self.0.answer("applyMemoryConsolidation", &args, None)
+        self.0.answer("applyMemoryConsolidation", &args)
     }
 
     fn undo_memory_consolidation(
@@ -404,17 +465,17 @@ impl ProjectIpcGuide for FakeGuide {
     ) -> Result<UndoMemoryConsolidationResult, Thrown> {
         let args = [json!({ "projectId": project_id, "backupName": backup_name })];
         self.0.log("undoMemoryConsolidation", args.to_vec());
-        self.0.answer("undoMemoryConsolidation", &args, None)
+        self.0.answer("undoMemoryConsolidation", &args)
     }
 
     fn get_project_detail(&mut self, id: &str) -> Result<ProjectDetail, Thrown> {
         self.0.log("getProjectDetail", vec![text(id)]);
-        self.0.answer("getProjectDetail", &[text(id)], None)
+        self.0.answer("getProjectDetail", &[text(id)])
     }
 
     fn get_settings(&mut self, id: &str) -> Result<ProjectSettings, Thrown> {
         self.0.log("getSettings", vec![text(id)]);
-        self.0.answer("getSettings", &[text(id)], None)
+        self.0.answer("getSettings", &[text(id)])
     }
 
     fn set_settings(
@@ -424,41 +485,40 @@ impl ProjectIpcGuide for FakeGuide {
     ) -> Result<ProjectSettings, Thrown> {
         let args = [text(id), to_json(patch)];
         self.0.log("setSettings", args.to_vec());
-        self.0.answer("setSettings", &args, None)
+        self.0.answer("setSettings", &args)
     }
 
     fn decide_trust(
         &mut self,
         id: &str,
         decision: ProjectTrustDecision,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<DecideTrustResult, Thrown> {
+    ) -> Result<GuideStep<DecideTrustResult, FakePending>, Thrown> {
         let args = [text(id), text(decision.as_str())];
         self.0.log("decideTrust", args.to_vec());
-        self.0.answer("decideTrust", &args, Some(ask))
+        self.0.asking("decideTrust", &args)
     }
 
     fn save_instructions(&mut self, id: &str, text_: &str) -> Result<ProjectWriteResult, Thrown> {
         let args = [text(id), text(text_)];
         self.0.log("saveInstructions", args.to_vec());
-        self.0.answer("saveInstructions", &args, None)
+        self.0.answer("saveInstructions", &args)
     }
 
     fn add_ignore(&mut self, id: &str, rel_path: &str) -> Result<ProjectWriteResult, Thrown> {
         let args = [text(id), text(rel_path)];
         self.0.log("addIgnore", args.to_vec());
-        self.0.answer("addIgnore", &args, None)
+        self.0.answer("addIgnore", &args)
     }
 
     fn remove_ignore(&mut self, id: &str, rel_path: &str) -> Result<ProjectWriteResult, Thrown> {
         let args = [text(id), text(rel_path)];
         self.0.log("removeIgnore", args.to_vec());
-        self.0.answer("removeIgnore", &args, None)
+        self.0.answer("removeIgnore", &args)
     }
 
     fn ai_visibility(&mut self, id: &str) -> Result<Option<ProjectAiVisibility>, Thrown> {
         self.0.log("aiVisibility", vec![text(id)]);
-        let cfg: Option<Value> = self.0.answer("aiVisibility", &[text(id)], None)?;
+        let cfg: Option<Value> = self.0.answer("aiVisibility", &[text(id)])?;
         let Some(cfg) = cfg else {
             return Ok(None);
         };
@@ -479,6 +539,38 @@ impl ProjectIpcGuide for FakeGuide {
             rule_key: None,
         }))
     }
+
+    fn resume_add_folder(
+        &mut self,
+        pending: FakePending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, Thrown> {
+        self.0.resumed(pending, answer)
+    }
+
+    fn resume_create_project(
+        &mut self,
+        pending: FakePending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<CreateProjectResult, Thrown> {
+        self.0.resumed(pending, answer)
+    }
+
+    fn resume_adopt_folder_hint(
+        &mut self,
+        pending: FakePending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, Thrown> {
+        self.0.resumed(pending, answer)
+    }
+
+    fn resume_decide_trust(
+        &mut self,
+        pending: FakePending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<DecideTrustResult, Thrown> {
+        self.0.resumed(pending, answer)
+    }
 }
 
 struct FakeChats(Fake);
@@ -486,7 +578,7 @@ struct FakeChats(Fake);
 impl ProjectIpcChats for FakeChats {
     fn new_chat(&mut self, project_id: &str) -> Result<ProjectId, Thrown> {
         self.0.log("newChat", vec![text(project_id)]);
-        let made: Value = self.0.answer("newChat", &[text(project_id)], None)?;
+        let made: Value = self.0.answer("newChat", &[text(project_id)])?;
         made.get("chatId")
             .and_then(Value::as_str)
             .map(str::to_owned)
@@ -495,31 +587,31 @@ impl ProjectIpcChats for FakeChats {
 
     fn list_chats(&mut self, project_id: &str) -> Result<Vec<ProjectChatListItem>, Thrown> {
         self.0.log("listChats", vec![text(project_id)]);
-        self.0.answer("listChats", &[text(project_id)], None)
+        self.0.answer("listChats", &[text(project_id)])
     }
 
     fn open_chat(&mut self, args: &JsonValue) -> Result<Value, Thrown> {
         let args = [json_value_to_serde(args)];
         self.0.log("openChat", args.to_vec());
-        self.0.answer("openChat", &args, None)
+        self.0.answer("openChat", &args)
     }
 
     fn append(&mut self, args: &JsonValue, sender: &ChatSender) -> Result<Value, Thrown> {
         let args = [json_value_to_serde(args), to_json(sender)];
         self.0.log("append", args.to_vec());
-        self.0.answer("append", &args, None)
+        self.0.answer("append", &args)
     }
 
     fn rename_chat(&mut self, args: &JsonValue) -> Result<ProjectWriteResult, Thrown> {
         let args = [json_value_to_serde(args)];
         self.0.log("renameChat", args.to_vec());
-        self.0.answer("renameChat", &args, None)
+        self.0.answer("renameChat", &args)
     }
 
     fn delete_chat(&mut self, chat_ref: &ProjectChatRef) -> Result<ProjectWriteResult, Thrown> {
         let args = [to_json(chat_ref)];
         self.0.log("deleteChat", args.to_vec());
-        self.0.answer("deleteChat", &args, None)
+        self.0.answer("deleteChat", &args)
     }
 
     fn attach_document(
@@ -529,7 +621,7 @@ impl ProjectIpcChats for FakeChats {
     ) -> Result<ProjectWriteResult, Thrown> {
         let args = [to_json(chat_ref), text(doc_path)];
         self.0.log("attachDocument", args.to_vec());
-        self.0.answer("attachDocument", &args, None)
+        self.0.answer("attachDocument", &args)
     }
 
     fn chat_for_document(
@@ -539,13 +631,13 @@ impl ProjectIpcChats for FakeChats {
     ) -> Result<Option<ProjectId>, Thrown> {
         let args = [text(project_id), text(doc_path)];
         self.0.log("chatForDocument", args.to_vec());
-        self.0.answer("chatForDocument", &args, None)
+        self.0.answer("chatForDocument", &args)
     }
 
     fn chat_info(&mut self, chat_ref: &ProjectChatRef) -> Result<Option<ChatDocuments>, Thrown> {
         let args = [to_json(chat_ref)];
         self.0.log("chatInfo", args.to_vec());
-        let info: Option<Value> = self.0.answer("chatInfo", &args, None)?;
+        let info: Option<Value> = self.0.answer("chatInfo", &args)?;
         let Some(info) = info else {
             return Ok(None);
         };
@@ -576,7 +668,7 @@ impl ProjectIpcTools for FakeTools {
     fn open_scope(&mut self, owner: i64, raw: &JsonValue) -> Result<String, Thrown> {
         let args = [Value::from(owner), json_value_to_serde(raw)];
         self.0.log("openScope", args.to_vec());
-        self.0.answer("openScope", &args, None)
+        self.0.answer("openScope", &args)
     }
 
     fn close_scope(&mut self, owner: i64, raw: &JsonValue) {
@@ -591,19 +683,19 @@ impl ProjectIpcTools for FakeTools {
     ) -> Result<ProjectListFilesResult, Thrown> {
         let args = [Value::from(owner), json_value_to_serde(raw)];
         self.0.log("listFiles", args.to_vec());
-        self.0.answer("listFiles", &args, None)
+        self.0.answer("listFiles", &args)
     }
 
     fn search(&mut self, owner: i64, raw: &JsonValue) -> Result<ProjectSearchResult, Thrown> {
         let args = [Value::from(owner), json_value_to_serde(raw)];
         self.0.log("search", args.to_vec());
-        self.0.answer("search", &args, None)
+        self.0.answer("search", &args)
     }
 
     fn read(&mut self, owner: i64, raw: &JsonValue) -> Result<ProjectReadResult, Thrown> {
         let args = [Value::from(owner), json_value_to_serde(raw)];
         self.0.log("read", args.to_vec());
-        self.0.answer("read", &args, None)
+        self.0.answer("read", &args)
     }
 }
 
@@ -613,7 +705,7 @@ impl ProjectIpcScopes for FakeScopes {
     fn project_of(&mut self, owner: i64, raw: &JsonValue) -> Result<Option<ProjectId>, Thrown> {
         let args = [Value::from(owner), json_value_to_serde(raw)];
         self.0.log("projectOf", args.to_vec());
-        self.0.answer("projectOf", &args, None)
+        self.0.answer("projectOf", &args)
     }
 }
 
@@ -632,20 +724,26 @@ impl ProjectIpcDialogs for FakeDialogs {
         };
         let args = [Value::from(owner), text(purpose)];
         self.0.log("pickFolder", args.to_vec());
-        self.0.answer("pickFolder", &args, None)
+        self.0.answer("pickFolder", &args)
     }
 
     fn confirm_use_existing(&mut self, owner: i64, folder_path: &str) -> Result<bool, Thrown> {
         let args = [Value::from(owner), text(folder_path)];
         self.0.log("confirmUseExisting", args.to_vec());
-        self.0.answer("confirmUseExisting", &args, None)
+        self.0.answer("confirmUseExisting", &args)
     }
+}
 
-    /// no case makes the question throw: the trait has no error to carry
-    fn ask_trust(&mut self, owner: i64, prompt: &ProjectTrustPrompt) -> Option<ProjectTrustChoice> {
+/// the person at the trust prompt: what the world's dialogs answer. The
+/// caller of the layer asks them at the steps, as the shell would.
+struct FakePerson(Fake);
+
+impl FakePerson {
+    /// no case makes the question throw: the person's answer has no error
+    fn ask_trust(&self, owner: i64, prompt: &ProjectTrustPrompt) -> Option<ProjectTrustChoice> {
         let args = [Value::from(owner), to_json(prompt)];
         self.0.log("askTrust", args.to_vec());
-        let choice: Option<String> = self.0.answer("askTrust", &args, None).ok().flatten();
+        let choice: Option<String> = self.0.answer("askTrust", &args).ok().flatten();
         match choice.as_deref() {
             Some("use") => Some(ProjectTrustChoice::Answer(ProjectTrustDecision::Use)),
             Some("without") => Some(ProjectTrustChoice::Answer(ProjectTrustDecision::Without)),
@@ -654,11 +752,11 @@ impl ProjectIpcDialogs for FakeDialogs {
         }
     }
 
-    /// no case makes the wait throw: the trait has no error to carry
-    fn wait_for_return(&mut self, owner: i64) -> bool {
+    /// no case makes the wait throw: the person's answer has no error
+    fn wait_for_return(&self, owner: i64) -> bool {
         let args = [Value::from(owner)];
         self.0.log("waitForReturn", args.to_vec());
-        self.0.answer("waitForReturn", &args, None).unwrap_or(false)
+        self.0.answer("waitForReturn", &args).unwrap_or(false)
     }
 }
 
@@ -732,7 +830,7 @@ impl ProjectIpcHost for FakeHost {
 
     fn legacy_chat_for(&mut self, doc_path: &str) -> Result<Option<LegacyDocumentChat>, Thrown> {
         self.fake.log("legacyChatFor", vec![text(doc_path)]);
-        self.fake.answer("legacyChatFor", &[text(doc_path)], None)
+        self.fake.answer("legacyChatFor", &[text(doc_path)])
     }
 
     fn open_folder(&mut self, path: &str) -> Result<(), Thrown> {
@@ -744,7 +842,7 @@ impl ProjectIpcHost for FakeHost {
     fn open_document(&mut self, path: &str) -> Option<i64> {
         self.fake.log("openDocument", vec![text(path)]);
         self.fake
-            .answer::<Option<i64>>("openDocument", &[text(path)], None)
+            .answer::<Option<i64>>("openDocument", &[text(path)])
             .ok()
             .flatten()
     }
@@ -753,7 +851,7 @@ impl ProjectIpcHost for FakeHost {
     fn show_home(&mut self) -> Option<i64> {
         self.fake.log("showHome", vec![]);
         self.fake
-            .answer::<Option<i64>>("showHome", &[], None)
+            .answer::<Option<i64>>("showHome", &[])
             .ok()
             .flatten()
     }
@@ -773,8 +871,7 @@ impl ProjectIpcHost for FakeHost {
             return Ok(None);
         }
         self.fake.log("presetProjectOf", vec![Value::from(sender)]);
-        self.fake
-            .answer("presetProjectOf", &[Value::from(sender)], None)
+        self.fake.answer("presetProjectOf", &[Value::from(sender)])
     }
 }
 
@@ -860,6 +957,7 @@ fn run_scenario(spec: &Value, ops: &[Value], cx: &mut Context) -> Answer {
     let mut tools = FakeTools(fake("tools"));
     let mut scopes = FakeScopes(fake("scopes"));
     let mut dialogs = FakeDialogs(fake("dialogs"));
+    let person = FakePerson(fake("dialogs"));
     let mut host = FakeHost {
         fake: fake("host"),
         resolver: cloud.map(|_| FakeResolver(shared.clone())),
@@ -897,7 +995,26 @@ fn run_scenario(spec: &Value, ops: &[Value], cx: &mut Context) -> Answer {
                     .iter()
                     .any(|(known, _)| *known == handler)
                 {
-                    ipc.handle(&mut deps, handler, sender_of()?, raw.as_ref())
+                    let sender = sender_of()?;
+                    let mut step = ipc.handle(&mut deps, handler, sender, raw.as_ref());
+                    loop {
+                        match step {
+                            Ok(IpcStep::Done(reply)) => break Ok(reply),
+                            Ok(IpcStep::AskTrust {
+                                owner,
+                                prompt,
+                                pending,
+                            }) => {
+                                let choice = person.ask_trust(owner, &prompt);
+                                step = ipc.resume_trust(&mut deps, pending, choice);
+                            }
+                            Ok(IpcStep::WaitForReturn { owner, pending }) => {
+                                let back = person.wait_for_return(owner);
+                                step = ipc.resume_return(&mut deps, pending, back);
+                            }
+                            Err(error) => break Err(error),
+                        }
+                    }
                 } else {
                     Err(Thrown(format!("no handler {handler}")))
                 };

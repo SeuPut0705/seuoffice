@@ -282,8 +282,8 @@
   {
     "name": "project-guide: a re-picked folder is added as a new project",
     "file": "main-core/src/shell/projects/project_guide.rs",
-    "find": "self.adopt(folder_path, ask_trust, Some(id))",
-    "replace": "self.adopt(folder_path, ask_trust, None)",
+    "find": "self.adopt(folder_path, Some(id))",
+    "replace": "self.adopt(folder_path, None)",
     "fn": ["project-guide.scenario"]
   },
   {

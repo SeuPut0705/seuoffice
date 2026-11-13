@@ -25,9 +25,32 @@
 //! and the `webContents` events that call [`ProjectIpc::forget`] and
 //! [`ProjectIpc::reset`]. All of them reach this file as the traits below.
 //!
-//! Every handler body is a plain synchronous call here. The one thing an
-//! interleaving of two requests could change (the TypeScript awaits between
-//! its steps) is not modelled: a request runs to its answer.
+//! Every handler body is a plain synchronous call here, except where it waits
+//! for the person. The one thing an interleaving of two requests could change
+//! (the TypeScript awaits between its steps) is not modelled: a request runs
+//! to its answer, or to the next step below.
+//!
+//! Five handlers reach the trust prompt, the `await askTrustFor(sender)` in
+//! the middle of the guide's call: `addFolder`, `relocateProject`,
+//! `createProject`, `adoptFolderHint` and `decideTrust`. The prompt's
+//! [view all] waits for the person to come back to the page, an event of a
+//! window that the thread running this layer has to keep serving, so neither
+//! the guide nor this layer blocks on it. [`ProjectIpc::handle`] answers an
+//! [`IpcStep`], and the caller drives it:
+//!
+//! - `Done(reply)`: the handler's answer.
+//! - `AskTrust { owner, prompt, pending }`: show the first-time trust prompt
+//!   over `owner`'s window (`ProjectDialogs.askTrust`: a modal message box,
+//!   which may block), then call [`ProjectIpc::resume_trust`] with `pending`
+//!   and the person's choice (`None`: closed). It answers the next step.
+//! - `WaitForReturn { owner, pending }`: [view all] opened files in the app.
+//!   Start a [`PageReturnWatch`] on `owner`'s page (`PageReturnWatch::new(true)`
+//!   when the page is gone already), arm it after [`TRUST_RETURN_ARM_MS`],
+//!   feed it the page's `blur`, `focus` and `destroyed`, and go on serving
+//!   other requests meanwhile (the opened documents load through IPC on this
+//!   thread). When the watch answers, call
+//!   [`ProjectIpc::resume_return`] with `pending` and its outcome. It answers
+//!   the next step: the prompt again, or the end of the request.
 //!
 //! The renderer's argument is a [`JsonValue`] (`unknown`); `record(raw)` of
 //! it is [`field`]. A handler answers `Ok(None)` where the TypeScript
@@ -45,7 +68,7 @@ use super::project_dialog_text::{ProjectFolderPickPurpose, ProjectTrustChoice};
 use super::project_files::{
     CloudOnlyResolver, list_ignored_files, thrown_limit, to_entry, with_cloud_flags,
 };
-use super::project_guide::{NewProjectRequest, ProjectAiVisibility, SelectionTarget, TrustAsk};
+use super::project_guide::{GuideStep, NewProjectRequest, ProjectAiVisibility, SelectionTarget};
 use super::project_tools::PROJECT_SCOPE_UNKNOWN;
 use super::stand_ins::process_platform;
 use crate::packages::electron_utils::default_save_dir::Thrown;
@@ -56,9 +79,9 @@ use crate::packages::project_store::{
     ProjectChatListResult, ProjectChatRef, ProjectContextResult, ProjectDetail, ProjectEditor,
     ProjectFileEntry, ProjectFolderEventMethod, ProjectId, ProjectListFilesResult, ProjectListItem,
     ProjectMemoryEditResult, ProjectMemoryOp, ProjectReadResult, ProjectScreenSection,
-    ProjectSearchResult, ProjectSelection, ProjectSettings, ProjectTrustDecision,
-    ProjectTrustPrompt, ProjectWriteResult, UndoMemoryConsolidationResult, is_valid_project_id,
-    project_folder_name,
+    ProjectSearchResult, ProjectSelection, ProjectSettings, ProjectTrustAnswer,
+    ProjectTrustDecision, ProjectTrustPrompt, ProjectWriteResult, UndoMemoryConsolidationResult,
+    is_valid_project_id, project_folder_name,
 };
 
 /// a request that names no usable project or chat id
@@ -134,24 +157,24 @@ pub struct AppendedNotice {
 /// `ProjectFolderServices.guide`: the `Pick<ProjectGuide, ...>` the handlers
 /// call. An `Err` is what the guide throws (`error.message`).
 pub trait ProjectIpcGuide {
+    /// What a call that asked the person keeps until the answer comes: the
+    /// guide's own pending state of that call
+    type Pending;
     fn list_projects(&mut self) -> Result<Vec<ProjectListItem>, Thrown>;
     fn add_folder(
         &mut self,
         folder_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown>;
+    ) -> Result<GuideStep<AddFolderResult, Self::Pending>, Thrown>;
     fn relocate_project(
         &mut self,
         id: &str,
         folder_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown>;
+    ) -> Result<GuideStep<AddFolderResult, Self::Pending>, Thrown>;
     fn get_default_parent_folder(&mut self) -> Result<String, Thrown>;
     fn create_project(
         &mut self,
         request: &NewProjectRequest,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<CreateProjectResult, Thrown>;
+    ) -> Result<GuideStep<CreateProjectResult, Self::Pending>, Thrown>;
     fn remove_from_list(&mut self, id: &str) -> Result<(), Thrown>;
     fn set_pinned(&mut self, id: &str, pinned: bool) -> Result<(), Thrown>;
     fn rename_project(&mut self, id: &str, name: &str) -> Result<ProjectWriteResult, Thrown>;
@@ -167,8 +190,7 @@ pub trait ProjectIpcGuide {
     fn adopt_folder_hint(
         &mut self,
         doc_path: &str,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<AddFolderResult, Thrown>;
+    ) -> Result<GuideStep<AddFolderResult, Self::Pending>, Thrown>;
     fn read_context(&mut self, id: &str) -> Result<ProjectContextResult, Thrown>;
     fn edit_memory(
         &mut self,
@@ -201,13 +223,36 @@ pub trait ProjectIpcGuide {
         &mut self,
         id: &str,
         decision: ProjectTrustDecision,
-        ask: &mut dyn TrustAsk,
-    ) -> Result<DecideTrustResult, Thrown>;
+    ) -> Result<GuideStep<DecideTrustResult, Self::Pending>, Thrown>;
     fn save_instructions(&mut self, id: &str, text: &str) -> Result<ProjectWriteResult, Thrown>;
     fn add_ignore(&mut self, id: &str, rel_path: &str) -> Result<ProjectWriteResult, Thrown>;
     fn remove_ignore(&mut self, id: &str, rel_path: &str) -> Result<ProjectWriteResult, Thrown>;
     /// `aiVisibility(id)`: `None` (`null`) when not listed
     fn ai_visibility(&mut self, id: &str) -> Result<Option<ProjectAiVisibility>, Thrown>;
+    /// The answer of the prompt `add_folder` or `relocate_project` asked
+    fn resume_add_folder(
+        &mut self,
+        pending: Self::Pending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, Thrown>;
+    /// The answer of the prompt `create_project` asked
+    fn resume_create_project(
+        &mut self,
+        pending: Self::Pending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<CreateProjectResult, Thrown>;
+    /// The answer of the prompt `adopt_folder_hint` asked
+    fn resume_adopt_folder_hint(
+        &mut self,
+        pending: Self::Pending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<AddFolderResult, Thrown>;
+    /// The answer of the prompt `decide_trust` asked
+    fn resume_decide_trust(
+        &mut self,
+        pending: Self::Pending,
+        answer: ProjectTrustAnswer,
+    ) -> Result<DecideTrustResult, Thrown>;
 }
 
 /// `ProjectFolderServices.chats`: the `Pick<ProjectChatStore, ...>` the
@@ -263,10 +308,8 @@ pub trait ProjectIpcScopes {
     fn project_of(&mut self, owner: i64, raw: &JsonValue) -> Result<Option<ProjectId>, Thrown>;
 }
 
-/// `ProjectDialogs`. `ask_trust` and `wait_for_return` have no error: the
-/// guide's `TrustAsk` has none, and a rejection of either in the TypeScript
-/// would abort the guide's call; the plumbing answers a closed dialog (`None`,
-/// `false`) instead.
+/// `ProjectDialogs`, less the trust prompt and the wait of [view all]: those
+/// two are steps the caller drives ([`IpcStep`]), not calls of this layer.
 pub trait ProjectIpcDialogs {
     /// OS folder picker parented to `owner`'s window; `None` when closed
     fn pick_folder(
@@ -276,14 +319,6 @@ pub trait ProjectIpcDialogs {
     ) -> Result<Option<String>, Thrown>;
     /// "Use this folder as the project?"; `true` only on the person's yes
     fn confirm_use_existing(&mut self, owner: i64, folder_path: &str) -> Result<bool, Thrown>;
-    /// The first-time trust prompt (spec 5.10) over `owner`'s window; `None`
-    /// when closed
-    fn ask_trust(&mut self, owner: i64, prompt: &ProjectTrustPrompt) -> Option<ProjectTrustChoice>;
-    /// After [view all] opened the files in the app: `true` when the person
-    /// comes back to `owner`'s page (the prompt then shows again), `false`
-    /// when that page is gone (the addition is cancelled). See
-    /// [`PageReturnWatch`].
-    fn wait_for_return(&mut self, owner: i64) -> bool;
 }
 
 /// The rest of `ProjectIpcDeps`
@@ -314,13 +349,90 @@ pub trait ProjectIpcHost {
 
 /// What a request is served with: `services()`, `dialogs` and the rest of
 /// `deps`
-pub struct ProjectIpcDeps<'a> {
-    pub guide: &'a mut dyn ProjectIpcGuide,
+pub struct ProjectIpcDeps<'a, P> {
+    pub guide: &'a mut dyn ProjectIpcGuide<Pending = P>,
     pub chats: &'a mut dyn ProjectIpcChats,
     pub tools: &'a mut dyn ProjectIpcTools,
     pub scopes: &'a mut dyn ProjectIpcScopes,
     pub dialogs: &'a mut dyn ProjectIpcDialogs,
     pub host: &'a mut dyn ProjectIpcHost,
+}
+
+/// What a request that reaches the trust prompt does with the person's answer
+/// once the guide's call goes on
+#[derive(Debug, Clone, PartialEq)]
+enum Resume<P> {
+    /// `addFolder` and `relocateProject`
+    AddFolder(P),
+    AdoptFolderHint(P),
+    /// `second`: the call after the person confirmed an existing folder
+    CreateProject {
+        request: NewProjectRequest,
+        second: bool,
+        pending: P,
+    },
+    DecideTrust {
+        project_id: ProjectId,
+        pending: P,
+    },
+}
+
+/// A request that waits for the person: the prompt it asked, and where the
+/// guide's call goes on
+#[derive(Debug, Clone, PartialEq)]
+struct Waiting<P> {
+    owner: i64,
+    prompt: Box<ProjectTrustPrompt>,
+    resume: Resume<P>,
+}
+
+impl<P> Waiting<P> {
+    /// the trust prompt, over `owner`'s window
+    fn ask(self) -> IpcStep<P> {
+        IpcStep::AskTrust {
+            owner: self.owner,
+            prompt: self.prompt.clone(),
+            pending: AwaitingTrust(Box::new(self)),
+        }
+    }
+
+    /// [view all] opened files in the app: the wait for the person
+    fn wait(self) -> IpcStep<P> {
+        IpcStep::WaitForReturn {
+            owner: self.owner,
+            pending: AwaitingReturn(Box::new(self)),
+        }
+    }
+}
+
+/// A request waiting for the choice in the trust prompt it asked:
+/// [`ProjectIpc::resume_trust`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct AwaitingTrust<P>(Box<Waiting<P>>);
+
+/// A request waiting for the person to come back to the page after [view
+/// all]: [`ProjectIpc::resume_return`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct AwaitingReturn<P>(Box<Waiting<P>>);
+
+/// What the caller does next (see the module doc)
+#[derive(Debug, Clone, PartialEq)]
+pub enum IpcStep<P> {
+    /// the handler's answer
+    Done(Reply),
+    /// show the trust prompt over `owner`'s window; the choice goes to
+    /// [`ProjectIpc::resume_trust`]
+    AskTrust {
+        owner: i64,
+        prompt: Box<ProjectTrustPrompt>,
+        pending: AwaitingTrust<P>,
+    },
+    /// wait for the person to come back to `owner`'s page; the outcome of the
+    /// [`PageReturnWatch`] goes to [`ProjectIpc::resume_return`]
+    WaitForReturn {
+        owner: i64,
+        pending: AwaitingReturn<P>,
+    },
 }
 
 // ── the request ──
@@ -535,74 +647,46 @@ impl<K: PartialEq, V> Ordered<K, V> {
     }
 }
 
-/// `askTrustFor(sender)`: the trust prompt over the asking window, again after
-/// each [view all], until an answer
-struct ShellTrustAsk<'a> {
-    sender: i64,
-    dialogs: &'a mut dyn ProjectIpcDialogs,
-    host: &'a mut dyn ProjectIpcHost,
-}
-
-impl ShellTrustAsk<'_> {
-    /// `showTrustFiles(prompt)`: [view all] in the trust prompt: the quoted
-    /// files open in the app and the chats folder in the file manager. The
-    /// paths are built here from the prompt main made, never from a request.
-    /// `true` when something opened in the app, so the prompt waits for the
-    /// person.
-    fn show_trust_files(&mut self, prompt: &ProjectTrustPrompt) -> bool {
-        let root = prompt.folder_path.as_str();
-        let data_dir = join(&[root, data_dir_name(root).as_str()]);
-        let data_dir = data_dir.as_str();
-        let files: [(&Option<String>, String); 4] = [
-            (
-                &prompt.instructions,
-                join(&[data_dir, project_folder_name("instructionsFile")]),
-            ),
-            (
-                &prompt.memory,
-                join(&[data_dir, project_folder_name("memoryFile")]),
-            ),
-            (
-                &prompt.agents,
-                join(&[root, project_folder_name("rootAgentsFile")]),
-            ),
-            (
-                &prompt.claude,
-                join(&[root, project_folder_name("rootClaudeFile")]),
-            ),
-        ];
-        let mut opened = false;
-        for (text, path) in files {
-            if text.is_none() {
-                continue;
-            }
-            if self.host.open_document(&path).is_some() {
-                opened = true;
-            }
+/// `showTrustFiles(prompt)`: [view all] in the trust prompt: the quoted files
+/// open in the app and the chats folder in the file manager. The paths are
+/// built here from the prompt main made, never from a request. `true` when
+/// something opened in the app, so the prompt waits for the person.
+fn show_trust_files(host: &mut dyn ProjectIpcHost, prompt: &ProjectTrustPrompt) -> bool {
+    let root = prompt.folder_path.as_str();
+    let data_dir = join(&[root, data_dir_name(root).as_str()]);
+    let data_dir = data_dir.as_str();
+    let files: [(&Option<String>, String); 4] = [
+        (
+            &prompt.instructions,
+            join(&[data_dir, project_folder_name("instructionsFile")]),
+        ),
+        (
+            &prompt.memory,
+            join(&[data_dir, project_folder_name("memoryFile")]),
+        ),
+        (
+            &prompt.agents,
+            join(&[root, project_folder_name("rootAgentsFile")]),
+        ),
+        (
+            &prompt.claude,
+            join(&[root, project_folder_name("rootClaudeFile")]),
+        ),
+    ];
+    let mut opened = false;
+    for (text, path) in files {
+        if text.is_none() {
+            continue;
         }
-        if !prompt.foreign_chats.is_empty() {
-            // The prompt still lists the chats by title.
-            let _ = self
-                .host
-                .open_folder(&join(&[data_dir, project_folder_name("chatsDir")]));
-        }
-        opened
-    }
-}
-
-impl TrustAsk for ShellTrustAsk<'_> {
-    fn ask(&mut self, prompt: &ProjectTrustPrompt) -> Option<ProjectTrustDecision> {
-        loop {
-            match self.dialogs.ask_trust(self.sender, prompt)? {
-                ProjectTrustChoice::Answer(decision) => return Some(decision),
-                ProjectTrustChoice::View => {
-                    if self.show_trust_files(prompt) && !self.dialogs.wait_for_return(self.sender) {
-                        return None;
-                    }
-                }
-            }
+        if host.open_document(&path).is_some() {
+            opened = true;
         }
     }
+    if !prompt.foreign_chats.is_empty() {
+        // The prompt still lists the chats by title.
+        let _ = host.open_folder(&join(&[data_dir, project_folder_name("chatsDir")]));
+    }
+    opened
 }
 
 /// `registerProjectFolderIpc`'s state: which window shows which chat, which
@@ -711,7 +795,7 @@ impl ProjectIpc {
 
     /// the events the chat store's listener saw during the call that just
     /// ended
-    fn forward_appended(&mut self, deps: &mut ProjectIpcDeps<'_>) {
+    fn forward_appended<P>(&mut self, deps: &mut ProjectIpcDeps<'_, P>) {
         for notice in deps.chats.take_appended() {
             self.forward(&mut *deps.host, &notice.event, notice.from.as_ref());
         }
@@ -869,9 +953,9 @@ impl ProjectIpc {
     /// has chosen now (spec 6): the panel's last answer when it has asked,
     /// else the starting selection main would give it. `None` for "no project"
     /// and for anything that is not an AI window.
-    pub fn window_project(
+    pub fn window_project<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
         sender: i64,
     ) -> Option<ProjectId> {
         let win = deps.host.window_of(sender)?;
@@ -910,10 +994,109 @@ impl ProjectIpc {
     /// One request of the bridge: `handlers[name](sender, raw)`. `name` is a
     /// key of `PROJECT_FOLDER_CHANNELS`, `sender` the calling webContents id,
     /// `raw` the argument as the renderer sent it (`None` for none). An `Err`
-    /// is what the handler throws.
-    pub fn handle(
+    /// is what the handler throws. A handler that reaches the trust prompt
+    /// answers a step the caller drives (see the module doc).
+    pub fn handle<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        name: &str,
+        sender: i64,
+        raw: Option<&JsonValue>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        match name {
+            "addFolder" => self.add_folder(deps, sender),
+            "createProject" => self.create_project(deps, sender, raw),
+            "relocateProject" => self.relocate_project(deps, sender, raw),
+            "adoptFolderHint" => self.adopt_folder_hint(deps, sender),
+            "decideTrust" => self.decide_trust(deps, sender, raw),
+            other => self
+                .handle_answered(deps, other, sender, raw)
+                .map(IpcStep::Done),
+        }
+    }
+
+    /// What the person chose in the trust prompt an `AskTrust` step asked for
+    /// (`None`: it was closed). [view all] opens the files and goes on to the
+    /// wait for the person, or, when nothing opened in the app, straight to
+    /// the prompt again.
+    pub fn resume_trust<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        pending: AwaitingTrust<P>,
+        choice: Option<ProjectTrustChoice>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let waiting = *pending.0;
+        match choice {
+            None => self.answered(deps, waiting, None),
+            Some(ProjectTrustChoice::Answer(decision)) => {
+                self.answered(deps, waiting, Some(decision))
+            }
+            Some(ProjectTrustChoice::View) => {
+                if show_trust_files(&mut *deps.host, &waiting.prompt) {
+                    return Ok(waiting.wait());
+                }
+                Ok(waiting.ask())
+            }
+        }
+    }
+
+    /// The outcome of the [`PageReturnWatch`] a `WaitForReturn` step asked
+    /// for: `true` when the person came back to the page (the prompt shows
+    /// again), `false` when the page is gone (the request is cancelled).
+    pub fn resume_return<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        pending: AwaitingReturn<P>,
+        back: bool,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let waiting = *pending.0;
+        if back {
+            Ok(waiting.ask())
+        } else {
+            self.answered(deps, waiting, None)
+        }
+    }
+
+    /// `askTrustFor(sender)` has its answer: the guide's call goes on, and the
+    /// handler with its result
+    fn answered<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        waiting: Waiting<P>,
+        answer: ProjectTrustAnswer,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let owner = waiting.owner;
+        match waiting.resume {
+            Resume::AddFolder(pending) => {
+                let result = deps.guide.resume_add_folder(pending, answer)?;
+                reply(&after_add_folder(&mut *deps.host, result)).map(IpcStep::Done)
+            }
+            Resume::AdoptFolderHint(pending) => {
+                let result = deps.guide.resume_adopt_folder_hint(pending, answer)?;
+                reply(&after_add_folder(&mut *deps.host, result)).map(IpcStep::Done)
+            }
+            Resume::CreateProject {
+                request,
+                second,
+                pending,
+            } => {
+                let created = deps.guide.resume_create_project(pending, answer)?;
+                Self::created(deps, owner, request, second, created)
+            }
+            Resume::DecideTrust {
+                project_id,
+                pending,
+            } => {
+                let write = deps.guide.resume_decide_trust(pending, answer);
+                self.decided(&mut *deps.host, &project_id, write)
+            }
+        }
+    }
+
+    /// The handlers that answer at once
+    fn handle_answered<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
         name: &str,
         sender: i64,
         raw: Option<&JsonValue>,
@@ -921,9 +1104,7 @@ impl ProjectIpc {
         match name {
             // ---- list ----
             "listProjects" => reply(&deps.guide.list_projects()?),
-            "addFolder" => self.add_folder(deps, sender),
             "getDefaultParentFolder" => reply(&deps.guide.get_default_parent_folder()?),
-            "createProject" => self.create_project(deps, sender, raw),
             "removeFromList" => {
                 let project_id = project_id_of(raw)?;
                 deps.guide.remove_from_list(&project_id)?;
@@ -951,22 +1132,6 @@ impl ProjectIpc {
                     write,
                 )?;
                 reply(&result)
-            }
-            "relocateProject" => {
-                let project_id = project_id_of(raw)?;
-                let folder = deps
-                    .dialogs
-                    .pick_folder(sender, ProjectFolderPickPurpose::Relocate)?;
-                let Some(folder) = truthy(folder.as_deref()) else {
-                    return reply(&cancelled_add());
-                };
-                let mut ask = ShellTrustAsk {
-                    sender,
-                    dialogs: &mut *deps.dialogs,
-                    host: &mut *deps.host,
-                };
-                let result = deps.guide.relocate_project(&project_id, folder, &mut ask)?;
-                reply(&after_add_folder(&mut *deps.host, result))
             }
             "openInFileManager" => {
                 let root = deps.guide.project_root(&project_id_of(raw)?);
@@ -1002,21 +1167,6 @@ impl ProjectIpc {
                     self.unwatch(sender);
                 }
                 reply(&Self::with_initial_chat(&mut *deps.chats, &win, selection)?)
-            }
-            "adoptFolderHint" => {
-                let win = Self::window_of(&mut *deps.host, sender)?;
-                let Some(doc_path) = truthy(doc_path_of(&win)) else {
-                    return reply(&AddFolderResult::Refused {
-                        reason: FolderRefusalReason::NotAFolder,
-                    });
-                };
-                let mut ask = ShellTrustAsk {
-                    sender,
-                    dialogs: &mut *deps.dialogs,
-                    host: &mut *deps.host,
-                };
-                let result = deps.guide.adopt_folder_hint(doc_path, &mut ask)?;
-                reply(&after_add_folder(&mut *deps.host, result))
             }
 
             // ---- one send ----
@@ -1200,29 +1350,6 @@ impl ProjectIpc {
                 self.announce(&mut *deps.host, &project_id, ProjectChangedPart::Settings);
                 reply(&result)
             }
-            "decideTrust" => {
-                let decision = match field(raw, "decision") {
-                    Some(JsonValue::String(text)) if text == "use" => ProjectTrustDecision::Use,
-                    Some(JsonValue::String(text)) if text == "without" => {
-                        ProjectTrustDecision::Without
-                    }
-                    _ => return Err(bad_request()),
-                };
-                let project_id = project_id_of(raw)?;
-                let mut ask = ShellTrustAsk {
-                    sender,
-                    dialogs: &mut *deps.dialogs,
-                    host: &mut *deps.host,
-                };
-                let write = deps.guide.decide_trust(&project_id, decision, &mut ask);
-                let result = self.announced(
-                    &mut *deps.host,
-                    &project_id,
-                    ProjectChangedPart::Settings,
-                    write,
-                )?;
-                reply(&result)
-            }
             "saveInstructions" => {
                 let project_id = project_id_of(raw)?;
                 let write = text_of(raw, "text")
@@ -1293,34 +1420,126 @@ impl ProjectIpc {
         }
     }
 
-    fn add_folder(&mut self, deps: &mut ProjectIpcDeps<'_>, sender: i64) -> Result<Reply, Thrown> {
+    fn add_folder<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        sender: i64,
+    ) -> Result<IpcStep<P>, Thrown> {
         let folder = deps
             .dialogs
             .pick_folder(sender, ProjectFolderPickPurpose::Add)?;
         let Some(folder) = truthy(folder.as_deref()) else {
-            return reply(&cancelled_add());
+            return reply(&cancelled_add()).map(IpcStep::Done);
         };
-        let mut ask = ShellTrustAsk {
-            sender,
-            dialogs: &mut *deps.dialogs,
-            host: &mut *deps.host,
-        };
-        let result = deps.guide.add_folder(folder, &mut ask)?;
-        reply(&after_add_folder(&mut *deps.host, result))
+        let step = deps.guide.add_folder(folder)?;
+        Self::folder_step(deps, sender, step, Resume::AddFolder)
     }
 
-    fn create_project(
+    fn relocate_project<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
         sender: i64,
         raw: Option<&JsonValue>,
-    ) -> Result<Reply, Thrown> {
+    ) -> Result<IpcStep<P>, Thrown> {
+        let project_id = project_id_of(raw)?;
+        let folder = deps
+            .dialogs
+            .pick_folder(sender, ProjectFolderPickPurpose::Relocate)?;
+        let Some(folder) = truthy(folder.as_deref()) else {
+            return reply(&cancelled_add()).map(IpcStep::Done);
+        };
+        let step = deps.guide.relocate_project(&project_id, folder)?;
+        Self::folder_step(deps, sender, step, Resume::AddFolder)
+    }
+
+    fn adopt_folder_hint<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        sender: i64,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let win = Self::window_of(&mut *deps.host, sender)?;
+        let Some(doc_path) = truthy(doc_path_of(&win)) else {
+            return reply(&AddFolderResult::Refused {
+                reason: FolderRefusalReason::NotAFolder,
+            })
+            .map(IpcStep::Done);
+        };
+        let step = deps.guide.adopt_folder_hint(doc_path)?;
+        Self::folder_step(deps, sender, step, Resume::AdoptFolderHint)
+    }
+
+    /// `afterAdd(await guide.<addFolder>(...))`: the answer of the guide's
+    /// call, or the trust prompt it stopped at
+    fn folder_step<P>(
+        deps: &mut ProjectIpcDeps<'_, P>,
+        owner: i64,
+        step: GuideStep<AddFolderResult, P>,
+        resume: impl FnOnce(P) -> Resume<P>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        match step {
+            GuideStep::Done(result) => {
+                reply(&after_add_folder(&mut *deps.host, result)).map(IpcStep::Done)
+            }
+            GuideStep::AskTrust { prompt, pending } => Ok(Waiting {
+                owner,
+                prompt,
+                resume: resume(pending),
+            }
+            .ask()),
+        }
+    }
+
+    fn decide_trust<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        sender: i64,
+        raw: Option<&JsonValue>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let decision = match field(raw, "decision") {
+            Some(JsonValue::String(text)) if text == "use" => ProjectTrustDecision::Use,
+            Some(JsonValue::String(text)) if text == "without" => ProjectTrustDecision::Without,
+            _ => return Err(bad_request()),
+        };
+        let project_id = project_id_of(raw)?;
+        let step = deps.guide.decide_trust(&project_id, decision);
+        match step {
+            Ok(GuideStep::AskTrust { prompt, pending }) => Ok(Waiting {
+                owner: sender,
+                prompt,
+                resume: Resume::DecideTrust {
+                    project_id,
+                    pending,
+                },
+            }
+            .ask()),
+            Ok(GuideStep::Done(result)) => self.decided(&mut *deps.host, &project_id, Ok(result)),
+            Err(error) => self.decided(&mut *deps.host, &project_id, Err(error)),
+        }
+    }
+
+    /// `announced(projectId, 'settings', guide.decideTrust(...))`
+    fn decided<P>(
+        &mut self,
+        host: &mut dyn ProjectIpcHost,
+        project_id: &str,
+        write: Result<DecideTrustResult, Thrown>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        let result = self.announced(host, project_id, ProjectChangedPart::Settings, write)?;
+        reply(&result).map(IpcStep::Done)
+    }
+
+    fn create_project<P>(
+        &mut self,
+        deps: &mut ProjectIpcDeps<'_, P>,
+        sender: i64,
+        raw: Option<&JsonValue>,
+    ) -> Result<IpcStep<P>, Thrown> {
         let name = match field(raw, "name") {
             Some(JsonValue::String(name)) => trim(name).to_owned(),
             _ => String::new(),
         };
         if name.is_empty() {
-            return reply(&CreateProjectResult::InvalidName);
+            return reply(&CreateProjectResult::InvalidName).map(IpcStep::Done);
         }
         // The place is main's to decide (spec 5.1): the default save folder, or a
         // parent the person picks in main's own folder picker. A path in the
@@ -1335,35 +1554,62 @@ impl ProjectIpc {
                 .dialogs
                 .pick_folder(sender, ProjectFolderPickPurpose::Parent)?;
             let Some(parent) = truthy(parent.as_deref()) else {
-                return reply(&cancelled_create());
+                return reply(&cancelled_create()).map(IpcStep::Done);
             };
             request.parent_dir = Some(parent.to_owned());
         }
-        let mut ask = ShellTrustAsk {
-            sender,
-            dialogs: &mut *deps.dialogs,
-            host: &mut *deps.host,
-        };
-        let created = deps.guide.create_project(&request, &mut ask)?;
-        let CreateProjectResult::Exists { folder_path } = created else {
-            return reply(&after_add_created(&mut *deps.host, created));
-        };
-        if !deps.dialogs.confirm_use_existing(sender, &folder_path)? {
-            return reply(&cancelled_create());
-        }
-        request.use_existing = Some(true);
-        let mut ask = ShellTrustAsk {
-            sender,
-            dialogs: &mut *deps.dialogs,
-            host: &mut *deps.host,
-        };
-        let created = deps.guide.create_project(&request, &mut ask)?;
-        reply(&after_add_created(&mut *deps.host, created))
+        let step = deps.guide.create_project(&request)?;
+        Self::create_step(deps, sender, request, false, step)
     }
 
-    fn remember(
+    /// The answer of `guide.createProject(...)`, or the trust prompt it
+    /// stopped at
+    fn create_step<P>(
+        deps: &mut ProjectIpcDeps<'_, P>,
+        owner: i64,
+        request: NewProjectRequest,
+        second: bool,
+        step: GuideStep<CreateProjectResult, P>,
+    ) -> Result<IpcStep<P>, Thrown> {
+        match step {
+            GuideStep::Done(created) => Self::created(deps, owner, request, second, created),
+            GuideStep::AskTrust { prompt, pending } => Ok(Waiting {
+                owner,
+                prompt,
+                resume: Resume::CreateProject {
+                    request,
+                    second,
+                    pending,
+                },
+            }
+            .ask()),
+        }
+    }
+
+    /// What `createProject` does with an answer of `guide.createProject(...)`:
+    /// a folder that exists is added after the person confirmed it (the call
+    /// again with `useExisting`), anything else is the answer.
+    fn created<P>(
+        deps: &mut ProjectIpcDeps<'_, P>,
+        owner: i64,
+        mut request: NewProjectRequest,
+        second: bool,
+        created: CreateProjectResult,
+    ) -> Result<IpcStep<P>, Thrown> {
+        if !second && let CreateProjectResult::Exists { folder_path } = &created {
+            if !deps.dialogs.confirm_use_existing(owner, folder_path)? {
+                return reply(&cancelled_create()).map(IpcStep::Done);
+            }
+            request.use_existing = Some(true);
+            let step = deps.guide.create_project(&request)?;
+            return Self::create_step(deps, owner, request, true, step);
+        }
+        reply(&after_add_created(&mut *deps.host, created)).map(IpcStep::Done)
+    }
+
+    fn remember<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
         sender: i64,
         raw: Option<&JsonValue>,
     ) -> Result<Reply, Thrown> {
@@ -1392,9 +1638,9 @@ impl ProjectIpc {
         reply(&result)
     }
 
-    fn append_chat(
+    fn append_chat<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
         sender: i64,
         raw: Option<&JsonValue>,
     ) -> Result<Reply, Thrown> {
@@ -1430,9 +1676,9 @@ impl ProjectIpc {
         Ok(Some(result))
     }
 
-    fn open_document_chat(
+    fn open_document_chat<P>(
         &mut self,
-        deps: &mut ProjectIpcDeps<'_>,
+        deps: &mut ProjectIpcDeps<'_, P>,
         raw: Option<&JsonValue>,
     ) -> Result<Reply, Thrown> {
         let chat_ref = chat_ref_of(raw)?;
