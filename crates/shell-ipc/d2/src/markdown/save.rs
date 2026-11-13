@@ -38,7 +38,9 @@ use main_core::packages::electron_utils::recovery_store::RecoveryIdentity;
 use main_core::packages::electron_utils::remote_image::{
     MAX_REMOTE_IMAGE_BYTES, fetch_remote_image, read_body_capped,
 };
-use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
+use main_core::packages::electron_utils::save_image::{
+    SaveImageOptions, SaveImageResult, fetch_image_for_save, save_fetched_image,
+};
 use shell_contract::hosts::OsShellHost;
 use shell_contract::ipc::{RegisterError, Responder};
 use shell_contract::runtime::{PathName, Services};
@@ -949,27 +951,43 @@ pub(super) fn entries(
             };
             let title = tr(&m.lang(), "Save Image", "이미지 저장");
             let parent = m.e.docs.window_of(cx.sender.view).map(Parent);
-            let (memory, dialogs, engine) =
-                (m.e.docs.memory(), m.e.docs.dialogs(), m.engine.clone());
+            let engine = m.engine.clone();
+            let fetched = src.clone();
+            let m = Rc::clone(&m);
+            // the fetch runs on a worker; the dialog and the write run on the
+            // core thread, so the process-wide dialog memory is held only for
+            // the dialog
             kit::on_worker(
-                &m.services,
+                &m.services.clone(),
                 move || {
-                    let mut memory = memory.lock().unwrap_or_else(|e| e.into_inner());
                     let mut fetch = |url: &str| engine.net_fetch(url);
-                    let saved = save_image_from_url(
-                        &mut memory,
-                        &mut Files(dialogs),
-                        &mut fetch,
-                        parent.as_ref(),
-                        &src,
-                        &SaveImageOptions {
-                            title: &title,
-                            fallback_dir: Some(&fallback),
-                        },
-                    );
-                    to_ipc(&saved)
+                    fetch_image_for_save(&fetched, &mut fetch)
                 },
-                move |saved| responder.reply(Ok(saved)),
+                move |image| {
+                    let saved = match image {
+                        Ok(image) => {
+                            let memory = m.e.docs.memory();
+                            let mut memory = memory.lock().unwrap_or_else(|e| e.into_inner());
+                            save_fetched_image(
+                                &mut memory,
+                                &mut Files(m.e.docs.dialogs()),
+                                parent.as_ref(),
+                                &src,
+                                image,
+                                &SaveImageOptions {
+                                    title: &title,
+                                    fallback_dir: Some(&fallback),
+                                },
+                            )
+                        }
+                        Err(error) => SaveImageResult {
+                            ok: false,
+                            path: None,
+                            error: Some(error),
+                        },
+                    };
+                    responder.reply(Ok(to_ipc(&saved)))
+                },
             );
         },
     ));

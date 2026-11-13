@@ -19,7 +19,9 @@ use main_core::packages::electron_utils::hwp_default_format::{
     HwpDefaultFormat, read_hwp_default_format,
 };
 use main_core::packages::electron_utils::safe_remote_url::Response;
-use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
+use main_core::packages::electron_utils::save_image::{
+    SaveImageOptions, SaveImageResult, fetch_image_for_save, save_fetched_image,
+};
 use shell_contract::hosts::MessageBox;
 use shell_contract::ipc::{Reply, Responder};
 use shell_contract::{IpcValue, ViewId};
@@ -733,32 +735,44 @@ impl Docs {
 }
 
 /// `saveImageFromUrl(dialogParent(event), src, { title, fallbackDir })`: the
-/// fetch, the dialog and the write run on a worker (the dialog through the
-/// shared host, the memory behind its lock)
+/// fetch runs on a worker; the dialog and the write run back on the core
+/// thread, so the process-wide dialog memory is held only for the dialog
 fn save_image_as(d: &Rc<Docs>, view: ViewId, url: String, responder: Responder) {
-    let (dialogs, shell, memory) = (d.dialogs.clone(), d.shell.clone(), d.memory.clone());
+    let shell = d.shell.clone();
     let parent = d.parent(view);
     let title = d.tm("dlgSaveAs");
     let fallback = d.default_save_dir().ok();
+    let fetched_url = url.clone();
+    let d = Rc::clone(d);
     kit::on_worker(
-        &d.services,
+        &d.services.clone(),
         move || {
-            let mut memory = memory.lock().unwrap_or_else(|e| e.into_inner());
-            let memory: &mut DialogMemory = &mut memory;
             let mut fetch = |u: &str| shell.net_fetch(u).map(|r| r as Box<dyn Response>);
-            save_image_from_url(
-                memory,
-                &mut HostDialog(&dialogs),
-                &mut fetch,
-                parent.as_ref(),
-                &url,
-                &SaveImageOptions {
-                    title: &title,
-                    fallback_dir: fallback.as_deref(),
-                },
-            )
+            fetch_image_for_save(&fetched_url, &mut fetch)
         },
-        move |result| {
+        move |image| {
+            let result = match image {
+                Ok(image) => {
+                    let mut memory = d.memory.lock().unwrap_or_else(|e| e.into_inner());
+                    let memory: &mut DialogMemory = &mut memory;
+                    save_fetched_image(
+                        memory,
+                        &mut HostDialog(&d.dialogs),
+                        parent.as_ref(),
+                        &url,
+                        image,
+                        &SaveImageOptions {
+                            title: &title,
+                            fallback_dir: fallback.as_deref(),
+                        },
+                    )
+                }
+                Err(error) => SaveImageResult {
+                    ok: false,
+                    path: None,
+                    error: Some(error),
+                },
+            };
             let mut reply = Obj::new().set("ok", result.ok);
             if let Some(path) = result.path {
                 reply = reply.set("path", path);
