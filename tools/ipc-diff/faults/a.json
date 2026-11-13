@@ -964,5 +964,54 @@
     "find": ".join(\"ai-settings.json\")",
     "replace": ".join(\"ai-settings.jsn\")",
     "groups": ["a/subscription"]
+  },
+  {
+    "name": "generate-make-outsider-true",
+    "file": "shell-ipc/a/src/generate.rs",
+    "find": "return reply.reply(Ok(IpcValue::Bool(false)));",
+    "replace": "return reply.reply(Ok(IpcValue::Bool(true)));",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-darwin-flipped",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "crate::secrets::PLATFORM == \"darwin\"",
+    "replace": "crate::secrets::PLATFORM != \"darwin\"",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-state-to-all-views",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": ".emit(Target::View(view), channels::STATE, vec![ipc_of(&value)]);",
+    "replace": ".emit(Target::All, channels::STATE, vec![ipc_of(&value)]);",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-window-contents-id-zero",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": ".map_or(f64::NAN, |ViewId(id)| f64::from(id))",
+    "replace": ".map_or(0.0, |ViewId(id)| f64::from(id))",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-conversions-offered",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "self.shell().can_open_converted()",
+    "replace": "true",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-picker-parent-zero",
+    "file": "shell-ipc/a/src/generate.rs",
+    "find": "let parent = WindowId(window as u32);",
+    "replace": "let parent = WindowId(0);",
+    "groups": ["a/generate"]
+  },
+  {
+    "name": "generate-size-zero",
+    "file": "shell-ipc/a/src/generate/bridge.rs",
+    "find": "size: meta.len() as f64,",
+    "replace": "size: 0.0,",
+    "groups": ["a/generate"]
   }
 ]
