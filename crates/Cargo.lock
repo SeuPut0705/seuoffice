@@ -576,6 +576,7 @@ dependencies = [
  "jscompat",
  "libc",
  "markup5ever_rcdom",
+ "ooxml-pkg",
  "serde",
  "serde_json",
  "sha2",

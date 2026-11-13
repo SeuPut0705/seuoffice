@@ -11,8 +11,8 @@
 //! [`is_blocked_address`].
 
 use std::net::Ipv6Addr;
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use jscompat::{JsRegex, js_regex};
 use url::Url;
@@ -363,7 +363,9 @@ pub trait Response {
 }
 
 /// For one request URL: does the dispatcher hand it to a forward proxy?
-pub type ProxyRouting = Rc<dyn Fn(&Url) -> bool>;
+/// Shared and `Send + Sync`, so a fetcher that keeps its dispatcher can move to
+/// a worker thread.
+pub type ProxyRouting = Arc<dyn Fn(&Url) -> bool + Send + Sync>;
 
 /// The global dispatcher as `hopRidesProxy` finds it.
 #[derive(Clone)]
@@ -376,6 +378,12 @@ pub enum GlobalDispatcher {
     /// (`None` for a symbol without one)
     Plain(Vec<Option<String>>),
 }
+
+// a fetcher holding its dispatcher moves to a worker thread only if this does
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<GlobalDispatcher>();
+};
 
 /// Own symbols that only undici's ProxyAgent carries.
 const PROXY_DISPATCHER_SYMBOLS: [&str; 5] = [

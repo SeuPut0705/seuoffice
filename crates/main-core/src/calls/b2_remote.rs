@@ -8,6 +8,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use jscompat::{JsObject, js_regex};
 use serde_json::{Map, Value};
@@ -391,12 +392,12 @@ fn parse_world(value: Option<&Value>) -> Result<World, CallError> {
     };
     let mock = value.get("mock").and_then(Value::as_bool) == Some(true);
     let dispatcher = if mock {
-        GlobalDispatcher::Declared(Rc::new(|_: &Url| true))
+        GlobalDispatcher::Declared(Arc::new(|_: &Url| true))
     } else {
         match value.get("dispatcher") {
             Some(Value::Object(d)) if d.contains_key("proxyHosts") => {
                 let hosts = string_list(d.get("proxyHosts"));
-                GlobalDispatcher::Declared(Rc::new(move |url: &Url| {
+                GlobalDispatcher::Declared(Arc::new(move |url: &Url| {
                     hosts.iter().any(|h| Some(h.as_str()) == url.host_str())
                 }))
             }

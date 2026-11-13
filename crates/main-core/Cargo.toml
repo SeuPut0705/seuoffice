@@ -8,6 +8,8 @@ publish.workspace = true
 
 [dependencies]
 jscompat.workspace = true
+# JSZip's zip writer, for the skill zip of packages/cli_agent_skills
+ooxml-pkg.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

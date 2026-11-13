@@ -2280,6 +2280,8 @@ struct GateRun {
     waiting: Vec<usize>,
     apply: Option<GateApply>,
     pending: Option<PendingApply>,
+    /// the answer of the apply's own `reenter` is being sent
+    reentering: bool,
     log: Log,
 }
 
@@ -2318,10 +2320,16 @@ impl GateRun {
                 Value::Bool(self.gate.blocking()),
             ]);
         }
-        if let Some(raw) = &apply.reenter {
+        // an answer sent from inside the apply; a gate that lets it start another
+        // apply would send it again from inside that one, so it is sent once
+        if let Some(raw) = &apply.reenter
+            && !self.reentering
+        {
+            self.reentering = true;
             let again = self.slots.len();
             self.slots.push(text("pending"));
             self.submit(&json_value_from_serde(raw), again);
+            self.reentering = false;
         }
         match apply.mode.as_str() {
             "throws" => {
@@ -2379,6 +2387,7 @@ fn launch_gate_call(args: &[Value], cx: &mut Context) -> Answer {
         waiting: Vec::new(),
         apply: None,
         pending: None,
+        reentering: false,
         log: Log::default(),
     };
     for step in field_list(spec, "steps") {

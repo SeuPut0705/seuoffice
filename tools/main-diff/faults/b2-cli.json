@@ -1,0 +1,1288 @@
+[
+  {
+    "name": "agent-skills: the label of Claude Code (first, surely shows)",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "label: \"Claude Code\",",
+    "replace": "label: \"Claude Cod\",",
+    "fn": ["agent-skills.agentLabel", "agent-skills.agentTarget", "agent-skills.detectAgents"]
+  },
+  {
+    "name": "agent-skills: the shared row label",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "label: \"Shared folder (~/.agents): Codex, Cursor, Gemini CLI, Copilot, OpenCode\",",
+    "replace": "label: \"Shared folder\",",
+    "fn": ["agent-skills.agentLabel", "agent-skills.agentTarget", "agent-skills.detectAgents"]
+  },
+  {
+    "name": "agent-skills: an unknown id is its own label",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "find(id).map_or(id, |agent| agent.label).to_owned()",
+    "replace": "find(id).map_or(\"\", |agent| agent.label).to_owned()",
+    "fn": ["agent-skills.agentLabel"]
+  },
+  {
+    "name": "agent-skills: CLAUDE_CONFIG_DIR is read",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "env_or(env, \"CLAUDE_CONFIG_DIR\"",
+    "replace": "env_or(env, \"CLAUDE_CONFIG\"",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: an empty override is no override",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "match truthy(value.as_deref()) {",
+    "replace": "match value.as_deref() {",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the default Claude folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[home, \".claude\"])",
+    "replace": "join(&[home, \".claudes\"])",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the shared folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "\"agents\" => join(&[home, \".agents\"]),",
+    "replace": "\"agents\" => join(&[home, \".agent\"]),",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: CODEX_HOME is read",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "env_or(env, \"CODEX_HOME\"",
+    "replace": "env_or(env, \"CODEX_DIR\"",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the default Codex folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[home, \".codex\"])",
+    "replace": "join(&[home, \".codexs\"])",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the Cursor folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "\"cursor\" => join(&[home, \".cursor\"]),",
+    "replace": "\"cursor\" => join(&[home, \".cursors\"]),",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the Gemini folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "\"gemini\" => join(&[home, \".gemini\"]),",
+    "replace": "\"gemini\" => join(&[home, \".geminis\"]),",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the Copilot folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "\"copilot\" => join(&[home, \".copilot\"]),",
+    "replace": "\"copilot\" => join(&[home, \".copilots\"]),",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: XDG_CONFIG_HOME is read",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "env_or(env, \"XDG_CONFIG_HOME\"",
+    "replace": "env_or(env, \"XDG_CONFIG\"",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the default OpenCode parent",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[home, \".config\"])",
+    "replace": "join(&[home, \".configs\"])",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the OpenCode folder name",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "                \"opencode\",\n",
+    "replace": "                \"opencodes\",\n",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: DSH_HOME is read",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "env_or(env, \"DSH_HOME\"",
+    "replace": "env_or(env, \"DSH_DIR\"",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the default dsh folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[home, \".dsh\"])",
+    "replace": "join(&[home, \".dshs\"])",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the Windsurf folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "_ => join(&[home, \".codeium\", \"windsurf\"]),",
+    "replace": "_ => join(&[home, \".codeium\", \"windsurfs\"]),",
+    "fn": [
+      "agent-skills.agentPresent",
+      "agent-skills.detectAgents",
+      "agent-skills.agentConfigDir",
+      "agent-skills.agentTarget",
+      "agent-skills.skillRows"
+    ]
+  },
+  {
+    "name": "agent-skills: the skills folder inside a probe",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[probe, \"skills\"])",
+    "replace": "join(&[probe, \"skill\"])",
+    "fn": [
+      "agent-skills.agentTarget",
+      "agent-skills.detectAgents",
+      "agent-skills.skillRows",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: the shared row is a row of its own",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "label: \"Shared folder (~/.agents): Codex, Cursor, Gemini CLI, Copilot, OpenCode\",\n        role: AgentRole::Shared,",
+    "replace": "label: \"Shared folder (~/.agents): Codex, Cursor, Gemini CLI, Copilot, OpenCode\",\n        role: AgentRole::Own,",
+    "fn": ["agent-skills.agentPresent", "agent-skills.detectAgents", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: Codex is a reader",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "label: \"Codex\",\n        role: AgentRole::Reader,",
+    "replace": "label: \"Codex\",\n        role: AgentRole::Own,",
+    "fn": [
+      "agent-skills.isSharedReader",
+      "agent-skills.installRowFor",
+      "agent-skills.skillTargetIds",
+      "agent-skills.detectAgents",
+      "agent-skills.agentTarget",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: Windsurf has a row of its own",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "label: \"Windsurf\",\n        role: AgentRole::Own,",
+    "replace": "label: \"Windsurf\",\n        role: AgentRole::Reader,",
+    "fn": [
+      "agent-skills.isSharedReader",
+      "agent-skills.installRowFor",
+      "agent-skills.skillTargetIds",
+      "agent-skills.detectAgents",
+      "agent-skills.agentTarget",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: a reader is a reader",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".map(|agent| agent.role) == Some(AgentRole::Reader)",
+    "replace": ".map(|agent| agent.role) != Some(AgentRole::Reader)",
+    "fn": [
+      "agent-skills.isSharedReader",
+      "agent-skills.installRowFor",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: a reader installs into the shared row",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "        SHARED_AGENT_ID.to_owned()\n",
+    "replace": "        \"agents-x\".to_owned()\n",
+    "fn": ["agent-skills.installRowFor"]
+  },
+  {
+    "name": "agent-skills: the readers are no install target",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".filter(|agent| agent.role != AgentRole::Reader)",
+    "replace": ".filter(|agent| agent.role == AgentRole::Own)",
+    "fn": ["agent-skills.skillTargetIds"]
+  },
+  {
+    "name": "agent-skills: the shared row counts a present reader",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "agent.role == AgentRole::Shared\n",
+    "replace": "agent.role == AgentRole::Reader\n",
+    "fn": ["agent-skills.agentPresent", "agent-skills.detectAgents", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: a present reader counts for the shared row",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".any(|reader| reader.role == AgentRole::Reader && is_dir(&reader.probe(env, home)))",
+    "replace": ".any(|reader| reader.role == AgentRole::Shared && is_dir(&reader.probe(env, home)))",
+    "fn": ["agent-skills.agentPresent", "agent-skills.detectAgents", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: an unknown id is not present",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "let Some(agent) = find(id) else {\n        return false;\n    };",
+    "replace": "let Some(agent) = find(id) else {\n        return true;\n    };",
+    "fn": ["agent-skills.agentPresent"]
+  },
+  {
+    "name": "agent-skills: a probe that is a file is not a folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "fs::metadata(namespaced(path)).is_ok_and(|meta| meta.is_dir())",
+    "replace": "fs::metadata(namespaced(path)).is_ok()",
+    "fn": ["agent-skills.agentPresent", "agent-skills.detectAgents"]
+  },
+  {
+    "name": "agent-skills: detected rows leave out the readers",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if agent.role != AgentRole::Reader && agent_present(agent.id, env, home) {",
+    "replace": "if agent_present(agent.id, env, home) {",
+    "fn": ["agent-skills.detectAgents", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: an unknown id has no config dir",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "find(id).map(|agent| agent.probe(env, home))",
+    "replace": "Some(find(id).map_or_else(|| home.to_owned(), |agent| agent.probe(env, home)))",
+    "fn": ["agent-skills.agentConfigDir"]
+  },
+  {
+    "name": "agent-skills: the shared id lists every reader",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "            && only != SHARED_AGENT_ID\n            && only != agent.id",
+    "replace": "            && only != agent.id",
+    "fn": ["agent-skills.legacySkillCopies"]
+  },
+  {
+    "name": "agent-skills: only the readers have legacy copies",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "        if agent.role != AgentRole::Reader {\n            continue;\n        }\n        if let Some(only)",
+    "replace": "        if agent.role == AgentRole::Shared {\n            continue;\n        }\n        if let Some(only)",
+    "fn": ["agent-skills.legacySkillCopies", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: a legacy copy needs its folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".any(|file| exists_sync(&dirname(file)))",
+    "replace": ".any(|_| true)",
+    "fn": ["agent-skills.legacySkillCopies", "agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: rows are in table order",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "rows.sort_by_key(|row| order.iter().position(|id| *id == row.id));",
+    "replace": "let _ = &order;",
+    "fn": ["agent-skills.skillRows"]
+  },
+  {
+    "name": "agent-skills: legacy rows are marked",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".then_some(true)",
+    "replace": ".then_some(false)",
+    "fn": [
+      "agent-skills.agentTarget",
+      "agent-skills.detectAgents",
+      "agent-skills.skillRows",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: a front matter with CRLF",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "r\"^---\\r?\\n([\\s\\S]*?)\\r?\\n---\"",
+    "replace": "r\"^---\\n([\\s\\S]*?)\\r?\\n---\"",
+    "fn": [
+      "agent-skills.parseSkillFrontmatter",
+      "agent-skills.bundledSkillFrom",
+      "agent-skills.readInstallState"
+    ]
+  },
+  {
+    "name": "agent-skills: the name is on any line",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "r\"^name:\\s*(\\S+)\\s*$\", \"m\"",
+    "replace": "r\"^name:\\s*(\\S+)\\s*$\", \"\"",
+    "fn": ["agent-skills.parseSkillFrontmatter"]
+  },
+  {
+    "name": "agent-skills: the version is indented",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "r#\"^\\s+version:",
+    "replace": "r#\"^version:",
+    "fn": [
+      "agent-skills.parseSkillFrontmatter",
+      "agent-skills.bundledSkillFrom",
+      "agent-skills.readInstallState"
+    ]
+  },
+  {
+    "name": "agent-skills: no version is an empty one",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".and_then(|m| m.get(1).map(str::to_owned))\n        .unwrap_or_default();",
+    "replace": ".and_then(|m| m.get(1).map(str::to_owned))\n        .unwrap_or_else(|| \"0.0.0\".to_owned());",
+    "fn": ["agent-skills.parseSkillFrontmatter", "agent-skills.bundledSkillFrom"]
+  },
+  {
+    "name": "agent-skills: the sha-256 hex digits are padded",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".map(|byte| format!(\"{byte:02x}\"))",
+    "replace": ".map(|byte| format!(\"{byte:x}\"))",
+    "fn": ["agent-skills.sha256", "agent-skills.bundledSkillFrom"]
+  },
+  {
+    "name": "agent-skills: an unparsable version sorts lowest",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "return [-1.0, -1.0, -1.0];",
+    "replace": "return [0.0, 0.0, 0.0];",
+    "fn": ["agent-skills.compareVersions"]
+  },
+  {
+    "name": "agent-skills: a version is trimmed",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".exec(trim(version))",
+    "replace": ".exec(version)",
+    "fn": ["agent-skills.compareVersions"]
+  },
+  {
+    "name": "agent-skills: the lower version sorts first",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if pa[i] < pb[i] {\n            return -1;",
+    "replace": "if pa[i] < pb[i] {\n            return 1;",
+    "fn": ["agent-skills.compareVersions"]
+  },
+  {
+    "name": "agent-skills: the higher version sorts last",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if pa[i] > pb[i] {\n            return 1;",
+    "replace": "if pa[i] > pb[i] {\n            return -1;",
+    "fn": ["agent-skills.compareVersions"]
+  },
+  {
+    "name": "agent-skills: the ledger of the settings",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "Some(JsonValue::Object(raw)) => raw.clone(),",
+    "replace": "Some(JsonValue::Object(_)) => JsObject::new(),",
+    "fn": ["agent-skills.ledgerFromSettings"]
+  },
+  {
+    "name": "agent-skills: a bundled skill without a version",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "frontmatter.map_or_else(|| \"0.0.0\".to_owned(), |fm| fm.version)",
+    "replace": "frontmatter.map_or_else(|| \"0.0.1\".to_owned(), |fm| fm.version)",
+    "fn": ["agent-skills.bundledSkillFrom"]
+  },
+  {
+    "name": "agent-skills: the skill file path",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "join(&[skills_dir, SKILL_NAME, \"SKILL.md\"])",
+    "replace": "join(&[skills_dir, SKILL_NAME, \"skill.md\"])",
+    "fn": ["agent-skills.skillFilePath", "agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an entry that is not true is no record",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "ledger.get(file).is_some_and(JsonValue::truthy)",
+    "replace": "ledger.get(file).is_some()",
+    "fn": [
+      "agent-skills.skillFilesWritten",
+      "agent-skills.legacySkillCopies",
+      "agent-skills.readInstallState"
+    ]
+  },
+  {
+    "name": "agent-skills: the folder names of earlier names",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    names.extend(OLD_SKILL_NAMES);\n",
+    "replace": "",
+    "fn": [
+      "agent-skills.skillFilesWritten",
+      "agent-skills.readInstallState",
+      "agent-skills.installSkill",
+      "agent-skills.uninstallSkill",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: files written are in the ledger",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".filter(|file| ledger_has(ledger, file))",
+    "replace": ".filter(|_| true)",
+    "fn": [
+      "agent-skills.skillFilesWritten",
+      "agent-skills.installSkill",
+      "agent-skills.uninstallSkill"
+    ]
+  },
+  {
+    "name": "agent-skills: files written are named SKILL.md",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".map(|name| join(&[skills_dir, name, \"SKILL.md\"]))",
+    "replace": ".map(|name| join(&[skills_dir, name, \"skill.md\"]))",
+    "fn": [
+      "agent-skills.skillFilesWritten",
+      "agent-skills.installSkill",
+      "agent-skills.uninstallSkill",
+      "agent-skills.legacySkillCopies"
+    ]
+  },
+  {
+    "name": "agent-skills: a recorded hash is compared",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "Some(JsonValue::String(hash)) => Some(hash),",
+    "replace": "Some(JsonValue::String(_)) => None,",
+    "fn": ["agent-skills.readInstallState", "agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an entry of the ledger is deleted by its key",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": ".filter(|(key, _)| *key != file)",
+    "replace": ".filter(|(key, _)| *key == file)",
+    "fn": ["agent-skills.installSkill", "agent-skills.uninstallSkill"]
+  },
+  {
+    "name": "agent-skills: the current folder decides",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if current.status != SkillInstallStatus::Missing {",
+    "replace": "if current.status == SkillInstallStatus::Installed {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an occupied earlier folder is skipped",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "old.status == SkillInstallStatus::Missing || old.status == SkillInstallStatus::Occupied",
+    "replace": "old.status == SkillInstallStatus::Missing",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a newer earlier copy is returned as it is",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if old.status == SkillInstallStatus::Newer {",
+    "replace": "if false {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an installed earlier copy is outdated",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "let status = if old.status == SkillInstallStatus::Installed {",
+    "replace": "let status = if false {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an earlier copy reads as older",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "            older: Some(true),\n            ..old",
+    "replace": "            older: None,\n            ..old",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: the state path of a folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "let path = join(&[skills_dir, folder, \"SKILL.md\"]);",
+    "replace": "let path = join(&[skills_dir, folder, \"skill.md\"]);",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a missing folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if !exists_sync(&join(&[skills_dir, folder])) {",
+    "replace": "if exists_sync(&join(&[skills_dir, folder])) {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an unreadable SKILL.md is occupied",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "let Ok(text) = read_file_utf8(&path) else {\n        return state(SkillInstallStatus::Occupied, None, None);",
+    "replace": "let Ok(text) = read_file_utf8(&path) else {\n        return state(SkillInstallStatus::Missing, None, None);",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a file without front matter is occupied",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "let Some(frontmatter) = parse_skill_frontmatter(&text) else {\n        return state(SkillInstallStatus::Occupied, None, None);",
+    "replace": "let Some(frontmatter) = parse_skill_frontmatter(&text) else {\n        return state(SkillInstallStatus::Foreign, None, None);",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a skill of another name is occupied",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if !skill_folder_names().contains(&frontmatter.name.as_str()) {",
+    "replace": "if frontmatter.name != SKILL_NAME {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a newer version is newer",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    if cmp > 0 {\n",
+    "replace": "    if cmp >= 0 {\n",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a copy nobody recorded is foreign",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if !ledger_has(ledger, &path) {",
+    "replace": "if ledger_has(ledger, &path) {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: a foreign older copy",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "SkillInstallStatus::Foreign,\n            Some(installed_version),\n            Some(cmp < 0),",
+    "replace": "SkillInstallStatus::Foreign,\n            Some(installed_version),\n            Some(false),",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an edited copy is modified",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if recorded_sha256(ledger, &path) != Some(sha256(text.as_bytes()).as_str()) {",
+    "replace": "if recorded_sha256(ledger, &path) == Some(sha256(text.as_bytes()).as_str()) {",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an edited older copy",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "SkillInstallStatus::Modified,\n            Some(installed_version),\n            Some(cmp < 0),",
+    "replace": "SkillInstallStatus::Modified,\n            Some(installed_version),\n            Some(false),",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: an older copy is outdated",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    if cmp < 0 {\n",
+    "replace": "    if cmp < -5 {\n",
+    "fn": ["agent-skills.readInstallState"]
+  },
+  {
+    "name": "agent-skills: the default channel",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "channel.unwrap_or(\"app\")",
+    "replace": "channel.unwrap_or(\"cli\")",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: a symlink is refused",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if existing.is_some_and(|meta| meta.file_type().is_symlink()) {",
+    "replace": "if false {",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the refusal says what happened",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "is a symlink; refusing to overwrite whatever it points at",
+    "replace": "is a symlink",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the skill folder is made",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "fs::create_dir_all(namespaced(&folder))",
+    "replace": "fs::create_dir(namespaced(&folder))",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the version of an install is remembered",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "entry.set(\"version\", JsonValue::String(bundled.version.clone()));",
+    "replace": "entry.set(\"version\", JsonValue::String(String::new()));",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the hash of an install is remembered",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "entry.set(\"sha256\", JsonValue::String(bundled.sha256.clone()));",
+    "replace": "entry.set(\"sha256\", JsonValue::String(String::new()));",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the time of an install is remembered",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "to_iso_string(now_ms)",
+    "replace": "to_iso_string(0.0)",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the keys of an entry are in order",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    entry.set(\"version\", JsonValue::String(bundled.version.clone()));\n",
+    "replace": "",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an earlier copy goes once the new one is written",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if old != path && unchanged_since(&old, ledger) {",
+    "replace": "if old != path && false {",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the new copy is never removed",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if old != path && unchanged_since(&old, ledger) {",
+    "replace": "if unchanged_since(&old, ledger) {",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an earlier copy that changed stays",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "if old != path && unchanged_since(&old, ledger) {",
+    "replace": "if old != path {",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: a symlink is not unchanged",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    if meta.file_type().is_symlink() {\n        return false;\n    }\n    match read_file_bytes(file) {",
+    "replace": "    match read_file_bytes(file) {",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an unchanged copy has its recorded hash",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "Ok(bytes) => recorded_sha256(ledger, file) == Some(sha256(&bytes).as_str()),",
+    "replace": "Ok(bytes) => recorded_sha256(ledger, file) != Some(sha256(&bytes).as_str()),",
+    "fn": ["agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: uninstall says whether it removed",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "Ok(!written.is_empty())",
+    "replace": "Ok(true)",
+    "fn": ["agent-skills.uninstallSkill"]
+  },
+  {
+    "name": "agent-skills: a file that is gone is no error",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "rm_file(file, true)?;",
+    "replace": "rm_file(file, false)?;",
+    "fn": ["agent-skills.uninstallSkill", "agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: an empty folder goes with its file",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "entries.next().is_none()",
+    "replace": "entries.next().is_some()",
+    "fn": ["agent-skills.uninstallSkill", "agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: a removed file leaves the ledger",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "    ledger_delete(ledger, file);\n    Ok(())",
+    "replace": "    let _ = &*ledger;\n    Ok(())",
+    "fn": ["agent-skills.uninstallSkill", "agent-skills.installSkill"]
+  },
+  {
+    "name": "agent-skills: the zip holds the skill folder",
+    "file": "main-core/src/packages/cli_agent_skills.rs",
+    "find": "format!(\"{SKILL_NAME}/SKILL.md\")",
+    "replace": "format!(\"{SKILL_NAME}/skill.md\")",
+    "fn": ["agent-skills.buildSkillZip"]
+  },
+  {
+    "name": "install: the launcher of Windows",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if platform == \"win32\" {\n        format!(\"{CLI_COMMAND}.cmd\")",
+    "replace": "    if platform == \"linux\" {\n        format!(\"{CLI_COMMAND}.cmd\")",
+    "fn": ["install.launcherFileName"]
+  },
+  {
+    "name": "install: the Windows launcher extension",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "format!(\"{CLI_COMMAND}.cmd\")\n    } else {",
+    "replace": "format!(\"{CLI_COMMAND}.bat\")\n    } else {",
+    "fn": ["install.launcherFileName"]
+  },
+  {
+    "name": "install: the command name",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "pub const CLI_COMMAND: &str = \"seuoffice\";",
+    "replace": "pub const CLI_COMMAND: &str = \"seuoffice2\";",
+    "fn": ["install.CLI_COMMAND", "install.launcherFileName", "install.installCliLink"]
+  },
+  {
+    "name": "install: the home folder name",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "pub const HOME_DIR_NAME: &str = \".seuoffice\";",
+    "replace": "pub const HOME_DIR_NAME: &str = \".seuoffice2\";",
+    "fn": ["install.HOME_DIR_NAME"]
+  },
+  {
+    "name": "install: the bundle name",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "pub const CLI_BUNDLE_FILE: &str = \"seuoffice.cjs\";",
+    "replace": "pub const CLI_BUNDLE_FILE: &str = \"seuoffice2.cjs\";",
+    "fn": ["install.isOurLauncher", "install.installCliLink"]
+  },
+  {
+    "name": "install: a link to nothing does not exist",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "fs::metadata(namespaced(path)).is_ok()",
+    "replace": "fs::symlink_metadata(namespaced(path)).is_ok()",
+    "fn": ["install.installCliLink", "install.inspectCliLink", "install.isOurLauncher"]
+  },
+  {
+    "name": "install: only macOS and Linux have candidate dirs",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if platform != \"darwin\" && platform != \"linux\" {\n        return Vec::new();",
+    "replace": "    if platform != \"darwin\" {\n        return Vec::new();",
+    "fn": ["install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the first candidate is /usr/local/bin",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "let mut dirs = vec![\"/usr/local/bin\".to_owned()];",
+    "replace": "let mut dirs = vec![\"/usr/bin\".to_owned()];",
+    "fn": ["install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: a Homebrew dir is no candidate",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "dirs.retain(|dir| !brew.contains(dir));",
+    "replace": "dirs.retain(|dir| brew.contains(dir));",
+    "fn": ["install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the Homebrew roots of macOS",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "\"darwin\" => &[\"/opt/homebrew\", \"/usr/local\"],",
+    "replace": "\"darwin\" => &[\"/opt/homebrew\"],",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the Homebrew root of Linux",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "\"linux\" => &[\"/home/linuxbrew/.linuxbrew\"],",
+    "replace": "\"linux\" => &[\"/home/linuxbrew\"],",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: trailing slashes of a path",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "js_regex!(r\"\\/+$\")",
+    "replace": "js_regex!(r\"\\/$\")",
+    "fn": ["install.homebrewBinDirs", "install.pathHint", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the Homebrew prefix is absolute",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "        && is_absolute(prefix)\n",
+    "replace": "",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: a root already the prefix is not added twice",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "&& !roots.iter().any(|seen| seen == root)",
+    "replace": "&& true",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: a root needs bin/brew",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if exists(&join(&[root, \"bin\", \"brew\"]))",
+    "replace": "if exists(&join(&[root, \"bin\"]))",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: HOMEBREW_PREFIX is read",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "env(\"HOMEBREW_PREFIX\")",
+    "replace": "env(\"HOMEBREW_ROOT\")",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the bin dir of a root",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "roots.iter().map(|root| join(&[root, \"bin\"])).collect()",
+    "replace": "roots.iter().map(|root| join(&[root, \"sbin\"])).collect()",
+    "fn": ["install.homebrewBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: XDG_BIN_HOME is absolute",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "        && is_absolute(dir)\n",
+    "replace": "",
+    "fn": ["install.userBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: the user bin dir",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "join(&[home, \".local\", \"bin\"])",
+    "replace": "join(&[home, \".local\", \"sbin\"])",
+    "fn": ["install.userBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: a user bin dir is listed once",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if !unique.contains(&dir) {",
+    "replace": "if true {",
+    "fn": ["install.userBinDirs", "install.defaultCandidateDirs"]
+  },
+  {
+    "name": "install: a dir already on PATH needs no hint",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if entries.contains(&without_trailing_slashes(dir)) {",
+    "replace": "if entries.contains(&dir.to_owned()) {",
+    "fn": ["install.pathHint", "install.installCliLink"]
+  },
+  {
+    "name": "install: the home folder is shown as $HOME",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "Some(home) if dir.starts_with(&format!(\"{home}/\")) => {",
+    "replace": "Some(home) if dir.starts_with(home) => {",
+    "fn": ["install.pathHint"]
+  },
+  {
+    "name": "install: the shown path of the hint",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "format!(\"$HOME{}\", &dir[home.len()..])",
+    "replace": "format!(\"$HOME/{}\", &dir[home.len()..])",
+    "fn": ["install.pathHint", "install.installCliLink"]
+  },
+  {
+    "name": "install: the hint line",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "Some(format!(\"export PATH=\\\"{shown}:$PATH\\\"\"))",
+    "replace": "Some(format!(\"export PATH=\\\"$PATH:{shown}\\\"\"))",
+    "fn": ["install.pathHint", "install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: no hint for a system dir",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if user_dirs.iter().any(|user| user == dir) {",
+    "replace": "if true {",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: a platform without a way (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "return Ok(install_windows_path(opts));\n    }\n    if platform != \"darwin\" && platform != \"linux\" {",
+    "replace": "return Ok(install_windows_path(opts));\n    }\n    if platform != \"darwin\" {",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a platform without a way (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "return Ok(inspect_windows_path(opts));\n    }\n    if platform != \"darwin\" && platform != \"linux\" {",
+    "replace": "return Ok(inspect_windows_path(opts));\n    }\n    if platform != \"darwin\" {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: Windows goes through PowerShell (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if platform == \"win32\" {\n        return Ok(install_windows_path(opts));",
+    "replace": "    if platform == \"win32x\" {\n        return Ok(install_windows_path(opts));",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: Windows goes through PowerShell (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if platform == \"win32\" {\n        return Ok(inspect_windows_path(opts));",
+    "replace": "    if platform == \"win32x\" {\n        return Ok(inspect_windows_path(opts));",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a link that is ours with this launcher is present",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "let mut occupied: Option<String> = None;\n    for dir in &dirs {\n        let link = join(&[dir, CLI_COMMAND]);\n        let state = link_state(&link, opts.launcher);\n        if state == LinkState::Ours && read_link(&link)? == opts.launcher {",
+    "replace": "let mut occupied: Option<String> = None;\n    for dir in &dirs {\n        let link = join(&[dir, CLI_COMMAND]);\n        let state = link_state(&link, opts.launcher);\n        if state == LinkState::Ours {",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a link that is ours with this launcher is present (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "wins\n    for dir in &dirs {\n        let link = join(&[dir, CLI_COMMAND]);\n        let state = link_state(&link, opts.launcher);\n        if state == LinkState::Ours && read_link(&link)? == opts.launcher {",
+    "replace": "wins\n    for dir in &dirs {\n        let link = join(&[dir, CLI_COMMAND]);\n        let state = link_state(&link, opts.launcher);\n        if state == LinkState::Ours {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a foreign link is never clobbered (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if state == LinkState::File || state == LinkState::Foreign {\n            // somebody",
+    "replace": "if state == LinkState::File {\n            // somebody",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a foreign link is never clobbered (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if state == LinkState::File || state == LinkState::Foreign {\n            if occupied.is_none() {",
+    "replace": "if state == LinkState::File {\n            if occupied.is_none() {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a file is never clobbered (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if state == LinkState::File || state == LinkState::Foreign {\n            // somebody",
+    "replace": "if state == LinkState::Foreign {\n            // somebody",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the last occupied name is kept (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "occupied = Some(link);\n            continue;",
+    "replace": "continue;",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the first occupied name is kept (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if occupied.is_none() {",
+    "replace": "if true {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: only a per-user dir is made",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if user_dirs.contains(dir)\n            && !exists_sync(dir)\n            && fs::create_dir_all",
+    "replace": "if !exists_sync(dir)\n            && fs::create_dir_all",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the link is made with the launcher as target",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if symlink(opts.launcher, &link).is_err() {",
+    "replace": "if symlink(&link, &link).is_err() {",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: an existing link is replaced",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if state != LinkState::Missing && fs::remove_file(namespaced(&link)).is_err() {",
+    "replace": "if fs::remove_file(namespaced(&link)).is_err() {",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a dir that can be made is missing",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if writable(dir) || (user_dirs.contains(dir) && creatable(dir)) {",
+    "replace": "if writable(dir) {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a dir that cannot be written is unwritable",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if writable(dir) || (user_dirs.contains(dir) && creatable(dir)) {",
+    "replace": "if true {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: nothing to try names /usr/local/bin",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "dirs.first().map_or(\"/usr/local/bin\", String::as_str)",
+    "replace": "dirs.first().map_or(\"/usr/bin\", String::as_str)",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: the occupied outcome",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "return InstallOutcome::of(InstallStatus::Occupied, Some(link), Some(manual));",
+    "replace": "return InstallOutcome::of(InstallStatus::Occupied, Some(link), None);",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: the manual command",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "sudo mkdir -p /usr/local/bin && sudo ln -sf",
+    "replace": "sudo mkdir -p /usr/local/bin && sudo ln -s",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: a regular file is never replaced",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if !meta.file_type().is_symlink() {\n        return LinkState::File;",
+    "replace": "if !meta.file_type().is_symlink() {\n        return LinkState::Missing;",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: a relative link resolves against its folder",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "resolve(&[&dirname(path), &target])",
+    "replace": "resolve(&[&target])",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: a dangling link is dangling",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if !exists_sync(&resolved) {\n        return LinkState::Dangling;",
+    "replace": "    if exists_sync(&resolved) {\n        return LinkState::Dangling;",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: another install of the app is ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    if is_our_launcher(&resolved, launcher) {\n        LinkState::Ours",
+    "replace": "    if false {\n        LinkState::Ours",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: the launcher itself is ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "        && real == launcher_real\n",
+    "replace": "        && real != launcher_real\n",
+    "fn": ["install.isOurLauncher"]
+  },
+  {
+    "name": "install: a launcher under another name is not ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if !commands.contains(&basename(&real, None).as_str()) {",
+    "replace": "if false {",
+    "fn": ["install.isOurLauncher"]
+  },
+  {
+    "name": "install: a bundle beside it makes it ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": ".any(|bundle| exists_sync(&join(&[&dir, bundle])))",
+    "replace": ".any(|bundle| exists_sync(&join(&[&dir, \"x\", bundle])))",
+    "fn": ["install.isOurLauncher"]
+  },
+  {
+    "name": "install: a Windows twin beside it makes it ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "exists_sync(&join(&[&dir, &format!(\"{command}.cmd\")]))",
+    "replace": "exists_sync(&join(&[&dir, &format!(\"{command}.bat\")]))",
+    "fn": ["install.isOurLauncher"]
+  },
+  {
+    "name": "install: the earlier command names are ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    commands.extend(OLD_CLI_COMMANDS);\n",
+    "replace": "",
+    "fn": ["install.isOurLauncher", "install.installCliLink"]
+  },
+  {
+    "name": "install: the earlier bundles are ours",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "    bundles.extend(OLD_CLI_BUNDLE_FILES);\n",
+    "replace": "",
+    "fn": ["install.isOurLauncher", "install.installCliLink"]
+  },
+  {
+    "name": "install: a dir is writable by W_OK",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "libc::access(path.as_ptr(), libc::W_OK) == 0",
+    "replace": "libc::access(path.as_ptr(), libc::R_OK) == 0",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: the nearest existing ancestor",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "while !exists_sync(&probe) {",
+    "replace": "while false {",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: the Windows dir is the launcher's (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "fn install_windows_path(opts: &InstallOptions) -> InstallOutcome {\n    let dir = win32::dirname(opts.launcher);",
+    "replace": "fn install_windows_path(opts: &InstallOptions) -> InstallOutcome {\n    let dir = dirname(opts.launcher);",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the Windows dir is the launcher's (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "fn inspect_windows_path(opts: &InstallOptions) -> InstallOutcome {\n    let dir = win32::dirname(opts.launcher);",
+    "replace": "fn inspect_windows_path(opts: &InstallOptions) -> InstallOutcome {\n    let dir = dirname(opts.launcher);",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: the registry is opened for writing",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "OpenSubKey('Environment', $true); \",",
+    "replace": "OpenSubKey('Environment', $false); \",",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the registry value is read unexpanded",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "'DoNotExpandEnvironmentNames'); \"\n);",
+    "replace": "'ExpandEnvironmentNames'); \"\n);",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the broadcast message",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "[UIntPtr]::Zero, 'Environment', 2, 5000,",
+    "replace": "[UIntPtr]::Zero, 'Environment', 2, 4000,",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a PowerShell quote is doubled",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "text.replace('\\'', \"''\")",
+    "replace": "text.replace('\\'', \"\\\\'\")",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: the manual command of Windows",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "+ ';{dir}', 'User')",
+    "replace": "+ '; {dir}', 'User')",
+    "fn": ["install.installCliLink", "install.inspectCliLink"]
+  },
+  {
+    "name": "install: a path that is on the PATH is present",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "\"if (($p -split ';') -contains $dir) { 'present'; exit 0 }; \".to_owned(),",
+    "replace": "\"if (($p -split ';') -contains $dir) { 'present'; exit 1 }; \".to_owned(),",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the new PATH",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "\"$next = (@($p, $dir) | Where-Object { $_ }) -join ';'; \".to_owned(),",
+    "replace": "\"$next = (@($dir, $p) | Where-Object { $_ }) -join ';'; \".to_owned(),",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the PATH is stored expandable",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "[Microsoft.Win32.RegistryValueKind]::ExpandString",
+    "replace": "[Microsoft.Win32.RegistryValueKind]::String",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the script ends with linked",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "\"'linked'\".to_owned(),",
+    "replace": "\"'done'\".to_owned(),",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the inspect script reads the registry read-only",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "OpenSubKey('Environment'); \"",
+    "replace": "OpenSubKey('Environment', $true); \"",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: the inspect script says missing",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "else { 'missing' }",
+    "replace": "else { 'absent' }",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a failed PowerShell run is unwritable (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if !run.ok {\n        return InstallOutcome::of(InstallStatus::Unwritable, Some(dir), Some(manual));\n    }\n    let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Linked",
+    "replace": "if false {\n        return InstallOutcome::of(InstallStatus::Unwritable, Some(dir), Some(manual));\n    }\n    let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Linked",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a failed PowerShell run is unwritable (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "if !run.ok {\n        return InstallOutcome::of(InstallStatus::Unwritable, Some(dir), Some(manual));\n    }\n    let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Missing",
+    "replace": "if false {\n        return InstallOutcome::of(InstallStatus::Unwritable, Some(dir), Some(manual));\n    }\n    let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Missing",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: the output of PowerShell is trimmed (install)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Linked",
+    "replace": "let status = if run.stdout == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Linked",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: the output of PowerShell is trimmed (inspect)",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "let status = if trim(&run.stdout) == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Missing",
+    "replace": "let status = if run.stdout == \"present\" {\n        InstallStatus::Present\n    } else {\n        InstallStatus::Missing",
+    "fn": ["install.inspectCliLink"]
+  },
+  {
+    "name": "install: a Windows install has no manual line",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "InstallOutcome::of(status, Some(dir), None)",
+    "replace": "InstallOutcome::of(status, Some(dir), Some(manual))",
+    "fn": ["install.installCliLink"]
+  },
+  {
+    "name": "install: a Windows inspect has the manual line",
+    "file": "main-core/src/packages/cli_install.rs",
+    "find": "InstallOutcome::of(status, Some(dir), Some(manual))\n}\n\n/// `runPowerShell`",
+    "replace": "InstallOutcome::of(status, Some(dir), None)\n}\n\n/// `runPowerShell`",
+    "fn": ["install.inspectCliLink"]
+  }
+]

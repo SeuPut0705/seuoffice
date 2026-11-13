@@ -1630,23 +1630,23 @@
   },
   {
     "name": "highlight-key",
-    "file": "main-core/src/packages/pdf_structure.rs",
-    "find": "(kind == \"highlight\").then_some(\"runId\")",
-    "replace": "(kind == \"highlight\").then_some(\"lang\")",
+    "file": "main-core/src/packages/pdf_structure/mod.rs",
+    "find": "(kind == JobKind::Highlight).then_some(KeyField::RunId)",
+    "replace": "(kind == JobKind::Highlight).then_some(KeyField::Lang)",
     "fn": ["pdf-structure/job-keys.jobKeyOf"]
   },
   {
     "name": "empty-errno",
-    "file": "main-core/src/packages/pdf_structure.rs",
+    "file": "main-core/src/packages/pdf_structure/mod.rs",
     "find": "let errno = cause_code.unwrap_or(\"unknown\");",
     "replace": "let errno = cause_code.filter(|c| !c.is_empty()).unwrap_or(\"unknown\");",
     "fn": ["pdf-structure/files.StoreWriteError"]
   },
   {
     "name": "summary-keyed",
-    "file": "main-core/src/packages/pdf_structure.rs",
-    "find": "[\"translate\", \"translate-page\", \"summary\"];",
-    "replace": "[\"translate\", \"translate-page\", \"highlight\"];",
+    "file": "main-core/src/packages/pdf_structure/mod.rs",
+    "find": "[JobKind::Translate, JobKind::TranslatePage, JobKind::Summary];",
+    "replace": "[JobKind::Translate, JobKind::TranslatePage, JobKind::Highlight];",
     "fn": ["pdf-structure/job-keys.jobKeyOf"]
   },
   {
