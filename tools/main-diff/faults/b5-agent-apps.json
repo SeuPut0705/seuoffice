@@ -9,8 +9,8 @@
   {
     "name": "off-status: metered accepted",
     "file": "main-core/src/packages/ai_provider/subscription_contract.rs",
-    "find": "(\"meteredAccepted\", JsonValue::Bool(false)),",
-    "replace": "(\"meteredAccepted\", JsonValue::Bool(true)),",
+    "find": "(\"state\", text(\"off\")),\n        (\"meteredAccepted\", JsonValue::Bool(false)),",
+    "replace": "(\"state\", text(\"off\")),\n        (\"meteredAccepted\", JsonValue::Bool(true)),",
     "fn": ["ai-provider/subscription/contract.offSubscriptionStatus"]
   },
   {

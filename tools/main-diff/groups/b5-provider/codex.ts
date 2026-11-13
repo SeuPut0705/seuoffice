@@ -1739,14 +1739,6 @@ const started = note('turn/started', { threadId: 'thread-1', turn: { id: 'turn-1
 const moreStreamCases: Case[] = [
   // a byte order mark at the start of stdout is part of the first line
   c(w([ok('bom').spec({ stdout: [{ hex: 'efbbbf' }] })]), steps(stream())),
-  // two streams in flight at once on one process, both through folder, config/read, thread/start
-  // and turn/start: the second starts once the first waits for its turn's end
-  c(
-    w([twoTurns()]),
-    steps({
-      all: [stream({ sessionId: 'a' }), { seq: [{ sleep: 1 }, stream({ sessionId: 'b' })] }],
-    }),
-  ),
   // two runs started together share one process. Both are signed out: a run that goes on makes a
   // folder, and a real file system call is slower than the answers of a scripted child, so the
   // order of two runs that go on would depend on the file system
@@ -1828,6 +1820,14 @@ const moreStreamCases: Case[] = [
       stream({ config: { cliPath: 'C:\\Tools\\Codex.EXE' }, sessionId: 'a' }),
       stream({ config: { cliPath: 'c:\\tools\\codex.exe' }, sessionId: 'b' }),
     ),
+  ),
+  // two streams in flight at once on one process, both through folder, config/read, thread/start
+  // and turn/start: the second starts once the first waits for its turn's end
+  c(
+    w([twoTurns()]),
+    steps({
+      all: [stream({ sessionId: 'a' }), { seq: [{ sleep: 1 }, stream({ sessionId: 'b' })] }],
+    }),
   ),
 ]
 streams['codex.streamCodexAppServer']!.cases.push(...moreStreamCases)
