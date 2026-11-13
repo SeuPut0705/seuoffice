@@ -60,11 +60,11 @@
   "callsTablestyleMutated": 900,
   "callsTablestyleFunctions": 8,
   "callsChartCorpus": 107,
-  "callsChartBuilt": 683,
+  "callsChartBuilt": 756,
   "callsChartMutated": 599,
   "callsChartFunctions": 2,
   "callsParseCorpus": 219,
-  "callsParseBuilt": 1867,
+  "callsParseBuilt": 1887,
   "callsParseMutated": 2100,
   "callsParseFunctions": 7,
   "callsDeckcoreCorpus": 0,
@@ -111,5 +111,9 @@
   "callsLayoutsFunctions": 16,
   "callsMediaFunctions": 20,
   "callsPackagepartsFunctions": 22,
-  "callsGenerateArgMutated": 3000
+  "callsGenerateArgMutated": 3000,
+  "callsRoundtripCorpus": 0,
+  "callsRoundtripBuilt": 74,
+  "callsRoundtripMutated": 0,
+  "callsRoundtripFunctions": 3
 }
