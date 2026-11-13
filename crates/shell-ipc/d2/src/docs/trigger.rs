@@ -61,8 +61,7 @@ pub(crate) fn probe_trigger(
         return false;
     };
     match what {
-        // requestDocsSave has no TypeScript twin: the tab menu's save is the
-        // renderer's own; this is DocumentEditors::request_save
+        // the tab menu's save: `contents.send('menu:command', 'save' | 'save-as')`
         "request-save" => {
             let mode = if args[0] == "saveAs" {
                 SaveMode::SaveAs
@@ -270,11 +269,11 @@ mod tests {
     #[test]
     fn a_waiting_shell_call_answers_when_the_renderer_does() {
         let (mut rt, a) = rt();
-        let saved = run(&mut rt, "request-save", json!(["save"]));
-        assert_eq!(*saved.borrow(), None);
-        rt.send("docs:close-save-result", a, vec![true.into_ipc()]);
-        assert_eq!(*saved.borrow(), Some(Ok(true.into_ipc())));
+        let closed = run(&mut rt, "request-close", json!([1]));
+        assert_eq!(*closed.borrow(), None);
+        rt.send("docs:close-check-result", a, vec![false.into_ipc()]);
+        assert_eq!(*closed.borrow(), Some(Ok(true.into_ipc())));
         let events: Vec<_> = rt.events().into_iter().map(|e| e.channel).collect();
-        assert_eq!(events, vec!["docs:close-save-request"]);
+        assert_eq!(events, vec!["docs:close-check"]);
     }
 }

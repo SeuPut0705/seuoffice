@@ -471,7 +471,7 @@ export function fakeNet(): unknown {
       if (v === undefined) throw new TypeError('fetch failed')
       const e = errorOf(v)
       if (e !== undefined) throw new Error(e)
-      return new Response(bytesOf(v.body), {
+      return new Response(new Uint8Array(bytesOf(v.body)), {
         status: v.status ?? 200,
         headers: v.type ? { 'content-type': v.type } : {},
       })
