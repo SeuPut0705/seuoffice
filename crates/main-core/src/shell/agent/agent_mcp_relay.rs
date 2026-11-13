@@ -47,7 +47,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use jscompat::{JsObject, JsonValue, json_stringify, trim};
+use jscompat::{JsObject, JsonValue, json_quote_slice, trim};
 
 use super::agent_mcp::{AgentMcpHost, ServiceHost, session_token};
 use crate::packages::agent_core::user_mcp_names::{MCP_SERVER_NAME_MAX, is_valid_server_name};
@@ -216,27 +216,9 @@ pub fn agent_relay_plans(list: &[JsonValue]) -> Vec<AgentRelayPlan> {
     plans
 }
 
-/// `quoted(text)`: `JSON.stringify(text.slice(0, 80))`. The slice counts
-/// UTF-16 units and may end inside a pair; `JSON.stringify` then writes the
-/// lone half as a `\udXXX` escape (well-formed JSON.stringify, ES2019), so the
-/// text holds those six ASCII characters, which a Rust string can hold too.
+/// `quoted(text)`: `JSON.stringify(text.slice(0, 80))`
 fn quoted(text: &str) -> String {
-    let units: Vec<u16> = text.encode_utf16().take(80).collect();
-    let mut out = String::from("\"");
-    let mut whole = String::new();
-    for unit in char::decode_utf16(units) {
-        match unit {
-            Ok(c) => whole.push(c),
-            Err(lone) => {
-                let escaped = json_stringify(&JsonValue::String(std::mem::take(&mut whole)));
-                out.push_str(&escaped[1..escaped.len() - 1]);
-                out.push_str(&format!("\\u{:04x}", lone.unpaired_surrogate()));
-            }
-        }
-    }
-    let escaped = json_stringify(&JsonValue::String(whole));
-    out.push_str(&escaped[1..]);
-    out
+    json_quote_slice(text, 0.0, Some(80.0))
 }
 
 /// `RELAY_TEXT`: the texts the program reads (English, no secret, no address)

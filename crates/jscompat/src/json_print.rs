@@ -41,6 +41,31 @@ pub fn json_quote(text: &str) -> String {
     out
 }
 
+/// `JSON.stringify(text.slice(start, end))`, the indexes counted in UTF-16
+/// code units as [`crate::slice_utf16`] counts them. Where the slice cuts a
+/// surrogate pair, the lone half is written as the well-formed
+/// `JSON.stringify` writes it, a `\udXXX` escape: those six ASCII characters
+/// are what JavaScript's text holds, so the answer is exact where
+/// `json_quote(&slice_utf16(..))` would hold U+FFFD.
+pub fn json_quote_slice(text: &str, start: f64, end: Option<f64>) -> String {
+    let units: Vec<u16> = text.encode_utf16().collect();
+    let range = crate::replace::slice_range(units.len(), start, end);
+    let mut out = String::from("\"");
+    let mut whole = String::new();
+    for unit in char::decode_utf16(units[range].iter().copied()) {
+        match unit {
+            Ok(c) => whole.push(c),
+            Err(lone) => {
+                let quoted = json_quote(&std::mem::take(&mut whole));
+                out.push_str(&quoted[1..quoted.len() - 1]);
+                out.push_str(&format!("\\u{:04x}", lone.unpaired_surrogate()));
+            }
+        }
+    }
+    out.push_str(&json_quote(&whole)[1..]);
+    out
+}
+
 fn newline(indent: usize, depth: usize, out: &mut String) {
     if indent > 0 {
         out.push('\n');

@@ -9,7 +9,12 @@ use crate::JsRegex;
 /// half, which a Rust string cannot hold.
 pub fn slice_utf16(text: &str, start: f64, end: Option<f64>) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
-    let length = units.len() as f64;
+    String::from_utf16_lossy(&units[slice_range(units.len(), start, end)])
+}
+
+/// The units `slice(start, end)` keeps of a string of `length` units
+pub(crate) fn slice_range(length: usize, start: f64, end: Option<f64>) -> std::ops::Range<usize> {
+    let length = length as f64;
     let clamp = |index: f64| {
         let index = if index.is_nan() { 0.0 } else { index.trunc() };
         if index < 0.0 {
@@ -21,9 +26,9 @@ pub fn slice_utf16(text: &str, start: f64, end: Option<f64>) -> String {
     let from = clamp(start);
     let to = end.map_or(length, clamp);
     if to <= from {
-        return String::new();
+        return 0..0;
     }
-    String::from_utf16_lossy(&units[from as usize..to as usize])
+    from as usize..to as usize
 }
 
 /// `a < b` on strings: UTF-16 code units compared in order, a prefix first.

@@ -38,7 +38,8 @@ pub use date_iso::to_iso_string;
 pub use date_parse::date_parse;
 pub use json::{JsNum, json_to_string};
 pub use json_print::{
-    json_quote, json_stringify, json_stringify_pretty, json_value_from_serde, json_value_to_serde,
+    json_quote, json_quote_slice, json_stringify, json_stringify_pretty, json_value_from_serde,
+    json_value_to_serde,
 };
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,
