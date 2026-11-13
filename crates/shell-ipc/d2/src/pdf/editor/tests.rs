@@ -34,6 +34,8 @@ fn rt_with(case: Value) -> (Rt, Arc<FakeShell>) {
         h.insert::<PdfEngineHost>(engine(&case));
         h.insert::<PdfShellHost>(s);
         h.insert(Arc::new(Mutex::new(SharedRecoveryState::new("test"))));
+        // crate::pdf::entries registers the tools beside the editor
+        crate::pdf::tools::fakes(h, &Value::Null);
     });
     rt.register(crate::pdf::entries).unwrap();
     (rt, fake_shell)
