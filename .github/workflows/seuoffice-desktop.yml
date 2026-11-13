@@ -667,14 +667,15 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       # nothing is published for a commit the test workflows reject; a re-run of
-      # this job after a CI re-run waits again
+      # this job after a CI re-run waits again. A run started by hand counts too:
+      # CI skips a Markdown-only push, and `gh workflow run CI --ref main` covers it
       - name: Wait for CI and seuoffice on this commit
         run: |
           set -euo pipefail
           start=$SECONDS
           for workflow in ci.yml seuoffice.yml; do
             while :; do
-              run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --event push --limit 1 \
+              run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --limit 1 \
                 --json status,conclusion,url --jq '.[0] // empty | [.status, .conclusion, .url] | @tsv')
               if [ -z "$run" ]; then
                 if [ $((SECONDS - start)) -gt 900 ]; then

@@ -702,19 +702,19 @@ export function computeLineHeight(
 export const BUNDLED_FONTS = new Set([
   'Noto Sans CJK SC',
   'Noto Serif CJK SC',
-  'GenOffice Sans KR',
-  'GenOffice Serif KR',
-  'GenOffice Gothic KR',
-  'GenOffice Poppins',
-  'GenOffice DM Sans',
-  'GenOffice Tamil',
-  'GenOffice Cordia',
-  'GenOffice Sarabun',
-  'GenOffice Bengali',
-  'GenOffice Fullwidth TC',
-  'GenOffice Songti SC',
-  'GenOffice Songti TC',
-  'Carlito GO',
+  'SeuOffice Sans KR',
+  'SeuOffice Serif KR',
+  'SeuOffice Gothic KR',
+  'SeuOffice Poppins',
+  'SeuOffice DM Sans',
+  'SeuOffice Tamil',
+  'SeuOffice Cordia',
+  'SeuOffice Sarabun',
+  'SeuOffice Bengali',
+  'SeuOffice Fullwidth TC',
+  'SeuOffice Songti SC',
+  'SeuOffice Songti TC',
+  'SeuOffice Sans GO',
   'Aptos GO',
   'Aptos Display GO',
   'Aptos Narrow GO',
@@ -785,7 +785,7 @@ const GENERIC_FAMILIES = new Set([
  * Bundled web face that leads a chain but has not loaded yet: canvas measures
  * the next installed family instead (an unloaded font-display:block face is
  * skipped), so the strut would carry e.g. Apple SD Gothic Neo's 0.90/0.30
- * under GenOffice Sans KR spans (1.16/0.29) and every hangul line unions
+ * under SeuOffice Sans KR spans (1.16/0.29) and every hangul line unions
  * ~1.5px past its line-height (+1pt per Korean table row vs Word).
  */
 export function unloadedBundledPrimary(chain: string): string | null {
@@ -813,7 +813,7 @@ export function unloadedBundledPrimary(chain: string): string | null {
  * while layout later resolves the loaded alias (0.69/0.25em) as primary.
  */
 function isWebFace(family: string): boolean {
-  return isBundledFont(family) || / GO$/.test(family) || /^GenOffice /.test(family)
+  return isBundledFont(family) || / GO$/.test(family) || /^SeuOffice /.test(family)
 }
 
 /** bundled web face a chain resolves to before any installed family or generic */
@@ -1080,9 +1080,9 @@ type Generic = 'serif' | 'sans-serif' | 'monospace'
  * spellings of a Word face are separate store entries, hence separate keys.
  */
 const STAND_IN_CHAINS: Record<string, [string[], Generic]> = {
-  calibri: [['Carlito GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
+  calibri: [['SeuOffice Sans GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
   'calibri light': [
-    ['Calibri Light GO', 'Carlito GO', 'Calibri Arabic GO', CJK_SANS],
+    ['Calibri Light GO', 'SeuOffice Sans GO', 'Calibri Arabic GO', CJK_SANS],
     'sans-serif',
   ],
   cambria: [['Caladea', BOX, CJK_SERIF], 'serif'],
@@ -1092,7 +1092,7 @@ const STAND_IN_CHAINS: Record<string, [string[], Generic]> = {
   // M365 cloud face Word paces at its real (condensed) advances; Chromium has no narrow stand-in
   'barlow condensed': [['Barlow Condensed GO', CJK_SANS], 'sans-serif'],
   consolas: [['Consolas GO', CJK_SANS], 'monospace'],
-  'segoe ui': [['Segoe UI GO', 'Noto Sans CJK GO', 'GenOffice PUA Blank'], 'sans-serif'],
+  'segoe ui': [['Segoe UI GO', 'Noto Sans CJK GO', 'SeuOffice PUA Blank'], 'sans-serif'],
   david: [['David GO', BOX, CJK_SERIF], 'serif'],
   'ms gothic': [['MS Gothic GO', ...JA_SANS], 'sans-serif'],
   'ms \u30b4\u30b7\u30c3\u30af': [['MS Gothic GO', ...JA_SANS], 'sans-serif'],
@@ -1126,22 +1126,22 @@ const STAND_IN_CHAINS: Record<string, [string[], Generic]> = {
   dotum: [KO_SANS, 'sans-serif'],
   '\ub3cb\uc6c0': [KO_SANS, 'sans-serif'],
   // the OS asset Chromium cannot see; the bundled real-metric subset leads
-  nanumgothic: [['GenOffice Gothic KR', ...KO_SANS], 'sans-serif'],
-  'nanum gothic': [['GenOffice Gothic KR', ...KO_SANS], 'sans-serif'],
-  '\ub098\ub214\uace0\ub515': [['GenOffice Gothic KR', ...KO_SANS], 'sans-serif'],
-  'nanumgothic extrabold': [['GenOffice Gothic KR', ...KO_SANS], 'sans-serif'],
-  '\ub098\ub214\uace0\ub515 extrabold': [['GenOffice Gothic KR', ...KO_SANS], 'sans-serif'],
+  nanumgothic: [['SeuOffice Gothic KR', ...KO_SANS], 'sans-serif'],
+  'nanum gothic': [['SeuOffice Gothic KR', ...KO_SANS], 'sans-serif'],
+  '\ub098\ub214\uace0\ub515': [['SeuOffice Gothic KR', ...KO_SANS], 'sans-serif'],
+  'nanumgothic extrabold': [['SeuOffice Gothic KR', ...KO_SANS], 'sans-serif'],
+  '\ub098\ub214\uace0\ub515 extrabold': [['SeuOffice Gothic KR', ...KO_SANS], 'sans-serif'],
   nanummyeongjo: [KO_SERIF, 'serif'],
   'nanum myeongjo': [KO_SERIF, 'serif'],
   '\ub098\ub214\uba85\uc870': [KO_SERIF, 'serif'],
   nanummyeongjoextrabold: [KO_SERIF, 'serif'],
   '\ub098\ub214\uba85\uc870 extrabold': [KO_SERIF, 'serif'],
   simsun: [
-    ['GenOffice SimSun Latin', 'GenOffice Songti SC', 'STSong', 'SimSun', CJK_SERIF],
+    ['SeuOffice SimSun Latin', 'SeuOffice Songti SC', 'STSong', 'SimSun', CJK_SERIF],
     'serif',
   ],
   '\u5b8b\u4f53': [
-    ['GenOffice SimSun Latin', 'GenOffice Songti SC', 'STSong', 'SimSun', CJK_SERIF],
+    ['SeuOffice SimSun Latin', 'SeuOffice Songti SC', 'STSong', 'SimSun', CJK_SERIF],
     'serif',
   ],
   simhei: [['Heiti SC', 'STHeiti', 'SimHei', 'PingFang SC', CJK_SANS], 'sans-serif'],
@@ -1209,9 +1209,9 @@ const HAN_REGIONAL_NAME_RE =
  */
 function latinSlotHead(sub: string): string[] {
   const k = sub.normalize('NFKC').toLowerCase()
-  if (k === 'calibri') return ['Carlito GO']
+  if (k === 'calibri') return ['SeuOffice Sans GO']
   if (k === 'cambria') return ['KR Theme Latin GO']
-  if (k === 'simsun' || k === '\u5b8b\u4f53') return ['GenOffice SimSun Latin']
+  if (k === 'simsun' || k === '\u5b8b\u4f53') return ['SeuOffice SimSun Latin']
   return latinChainHead(sub)
 }
 
@@ -1263,7 +1263,7 @@ function substituteFontFamily(font: string): string | null {
   // SimSun chain carries none, so the 1em hangul faces close it
   const hangulTail =
     /^(simsun|\u5b8b\u4f53)$/i.test(face.family.normalize('NFKC')) && !/[\uac00-\ud7a3]/.test(nfkc)
-      ? `,'GenOffice Batang','GenOffice Serif KR'`
+      ? `,'SeuOffice Batang','SeuOffice Serif KR'`
       : ''
   const generic = target.lastIndexOf(',')
   const chain = `${target.slice(0, generic)}${hangulTail}${target.slice(generic)}`
@@ -1308,8 +1308,8 @@ export function cssFontFamily(font: string): string {
   // (tools/build-thai-font.py) lead. On Windows the declared name resolves first.
   if (THAI_FONT_RE.test(font.normalize('NFKC').toLowerCase())) {
     const face = /^th sarabunpsk$/i.test(font.normalize('NFKC'))
-      ? 'GenOffice Sarabun'
-      : 'GenOffice Cordia'
+      ? 'SeuOffice Sarabun'
+      : 'SeuOffice Cordia'
     return `${cssChain(font, face, 'Thonburi')},sans-serif`
   }
   // a registered template face draws itself: no stand-in or substitute leads it
@@ -1346,7 +1346,7 @@ export function cssFontFamily(font: string): string {
       : CJK_SANS
   // the GO aliases exclude PUA, so the blank face keeps those codepoints
   // invisible (the full subsets' blank .notdef used to catch them)
-  const pua = latinNamed ? ['GenOffice PUA Blank'] : []
+  const pua = latinNamed ? ['SeuOffice PUA Blank'] : []
   return `${chain(font, tail, ...pua)},${serifLike ? 'serif' : 'sans-serif'}`
 }
 

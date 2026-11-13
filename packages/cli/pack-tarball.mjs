@@ -104,9 +104,12 @@ export function packTarball({ from, out, platform, arch, notices, env = process.
     throw new Error(`resources are missing: ${missing.join(', ')} (run npm run build:all first)`)
   }
   const noticeFiles = notices
-    ? ['LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt'].map((name) => join(resolve(notices), name))
+    ? ['LICENSE', 'LICENSE-APACHE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt'].map((name) =>
+        join(resolve(notices), name),
+      )
     : [
         join(REPO, 'LICENSE'),
+        join(REPO, 'LICENSE-APACHE'),
         join(REPO, 'NOTICE'),
         join(REPO, 'apps/shell/build/THIRD-PARTY-NOTICES.txt'),
       ]

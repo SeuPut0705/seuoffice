@@ -145,7 +145,7 @@ export {
   type AnimTrigger,
   type SlideAnimation,
 } from './animation'
-export { PackageArchive, PPTX_ZIP_LIMITS, assertZipWithinLimits } from './zip'
+export { PackageArchive, PPTX_ZIP_LIMITS, assertZipWithinLimits, resolveTarget } from './zip'
 export {
   listEmbeddedFonts,
   eotToSfnt,

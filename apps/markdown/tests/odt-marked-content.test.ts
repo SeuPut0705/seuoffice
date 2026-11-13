@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { JSONContent } from '@tiptap/core'
 import { markedOdtChoice } from '@seuoffice/electron-utils/marked-odt'
-import { askMarkedOdt, markedOdtRefusal } from '../src/main/odt-export'
+import { askMarkedExport } from '../src/main/odt-export'
 import { clearRedaction, holdsRedaction } from '../src/renderer/editor/redact'
 import { MARKDOWN_CHANNELS } from '../src/shared/ipc'
 
@@ -80,15 +80,18 @@ describe('a document with content hidden from AI', () => {
 describe('the choice box', () => {
   it.each(['en', 'ko'] as const)('has three buttons in %s, cancel last', async (lang) => {
     const shown: Array<{ buttons: string[]; cancelId: number }> = []
-    const choice = await askMarkedOdt(async (options) => {
-      shown.push(options)
-      return { response: 0 }
-    }, lang)
+    const choice = await askMarkedExport(
+      'odt',
+      async (options) => {
+        shown.push(options)
+        return { response: 0 }
+      },
+      lang,
+    )
     expect(choice).toBe('docx')
     expect(shown[0]!.buttons).toHaveLength(3)
     expect(new Set(shown[0]!.buttons).size).toBe(3)
     expect(shown[0]!.cancelId).toBe(2)
-    expect(markedOdtRefusal(lang).length).toBeGreaterThan(10)
   })
 
   it('answers cancel for a closed box', () => {
@@ -103,7 +106,7 @@ describe('the choice box', () => {
   it('speaks Korean and English differently', async () => {
     const title = async (lang: 'en' | 'ko') => {
       let out = ''
-      await askMarkedOdt(async (o) => ((out = o.title), { response: 2 }), lang)
+      await askMarkedExport('odt', async (o) => ((out = o.title), { response: 2 }), lang)
       return out
     }
     expect(await title('ko')).not.toBe(await title('en'))
@@ -113,26 +116,31 @@ describe('the choice box', () => {
 const source = (relative: string) =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
 
-describe('where the document is exported as ODT', () => {
-  it('asks before the Word export is built, and clears or turns away as chosen', () => {
+describe('where the document is exported', () => {
+  it('asks before anything is built, for every format that cannot keep the mark', () => {
     const app = source('../src/renderer/App.tsx')
-    const flow = app.slice(app.indexOf("if (format === 'odt' && holdsRedaction(json))"))
-    expect(flow.indexOf('confirmMarkedOdt()')).toBeGreaterThan(-1)
-    expect(flow.indexOf('confirmMarkedOdt()')).toBeLessThan(flow.indexOf('exportDocxBytes(json,'))
-    expect(flow).toContain("if (choice === 'cancel') return false")
-    expect(flow).toContain("runExportRef.current('docx')")
-    expect(flow).toContain('json = clearRedaction(json)')
+    const run = app.slice(app.indexOf('async (format: ExportFormat, outPath?: string'))
+    const gate = run.indexOf('planMarkedExport(')
+    expect(gate).toBeGreaterThan(-1)
+    // before the page images, the PDF and the Word bytes the ODT is made from
+    expect(gate).toBeLessThan(run.indexOf("if (format === 'png')"))
+    expect(gate).toBeLessThan(run.indexOf('markdownApi.exportPdf('))
+    expect(gate).toBeLessThan(run.indexOf('exportDocxBytes(plan.json,'))
+    expect(run).toContain("if (plan.kind === 'declined') return false")
+    expect(run).toContain("runExportRef.current('docx')")
+    // the command-line export has no one to ask
+    expect(run).toContain('outPath ? null :')
     // every ODT export, the export menu's and Save As ›, goes through runExport
     expect(app.match(/markdownApi\.exportOdt\(/g)).toHaveLength(1)
   })
 
   it('routes the question through preload to the main handler', () => {
-    expect(MARKDOWN_CHANNELS.confirmMarkedOdt).toBe('markdown:confirm-marked-odt')
+    expect(MARKDOWN_CHANNELS.confirmMarkedExport).toBe('markdown:confirm-marked-export')
     expect(source('../src/preload/index.ts')).toMatch(
-      /confirmMarkedOdt:.*MARKDOWN_CHANNELS\.confirmMarkedOdt/,
+      /confirmMarkedExport:[^]*MARKDOWN_CHANNELS\.confirmMarkedExport/,
     )
     expect(source('../src/main/markdown-main.ts')).toMatch(
-      /ipcMain\.handle\(MARKDOWN_CHANNELS\.confirmMarkedOdt,/,
+      /ipcMain\.handle\(MARKDOWN_CHANNELS\.confirmMarkedExport,/,
     )
   })
 })

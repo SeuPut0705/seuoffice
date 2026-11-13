@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform AI-native spreadsheet compatibility prototype",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

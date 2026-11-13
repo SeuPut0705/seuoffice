@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/epub-engine",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "EPUB engine: open books behind the zip gate, map editable blocks with their source ranges, save by range replacement only, and build translated or bilingual books",
