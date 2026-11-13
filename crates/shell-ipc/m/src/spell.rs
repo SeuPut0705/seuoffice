@@ -165,9 +165,7 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
                 })
                 .collect(),
         ),
-        Some(JsonValue::String(text)) => {
-            Some(text.chars().map(|c| Some(c.to_string())).collect())
-        }
+        Some(JsonValue::String(text)) => Some(text.chars().map(|c| Some(c.to_string())).collect()),
         _ => None,
     };
     if let Some(words) = words {

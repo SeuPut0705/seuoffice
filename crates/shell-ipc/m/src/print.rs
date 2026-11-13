@@ -1682,7 +1682,11 @@ mod tests {
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
         assert_eq!(calls[0], "new BrowserWindow scripted");
-        assert_eq!(calls[1], "win.loadFile print.html");
+        assert!(
+            calls[1].starts_with("win.loadFile print.html "),
+            "{}",
+            calls[1]
+        );
         assert_eq!(calls[2], "win.webContents.executeJavaScript");
         assert_eq!(
             logged(&calls, "win.webContents.print "),
@@ -2251,7 +2255,11 @@ mod tests {
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
         assert_eq!(calls[0], "new BrowserWindow mindmap-export");
-        assert_eq!(calls[1], "win.loadFile map.html");
+        assert!(
+            calls[1].starts_with("win.loadFile map.html "),
+            "{}",
+            calls[1]
+        );
         assert_eq!(
             logged(&calls, "win.webContents.print "),
             json!({
@@ -2305,7 +2313,11 @@ mod tests {
         let calls = probe.take_calls();
         assert_eq!(calls[0], "new BrowserWindow diagram");
         // the token after the last slash is random
-        assert_eq!(calls[1], "win.loadURL drawio-app://editor/__ieum/print");
+        assert!(
+            calls[1].starts_with("win.loadURL drawio-app://editor/__ieum/print "),
+            "{}",
+            calls[1]
+        );
         assert_eq!(
             logged(&calls, "win.webContents.print "),
             json!({ "silent": false, "printBackground": true })
@@ -2684,7 +2696,11 @@ mod tests {
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
         assert_eq!(calls[0], "new BrowserWindow static");
-        assert_eq!(calls[1], "win.loadFile print.html");
+        assert!(
+            calls[1].starts_with("win.loadFile print.html "),
+            "{}",
+            calls[1]
+        );
         assert_eq!(
             logged(&calls, "win.webContents.print "),
             json!({
