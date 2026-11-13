@@ -52,7 +52,8 @@ const REPLACED = new Map<string, { fake: string; parents?: string[] }>([
   ],
   [url('apps/pdf/src/main/wasm-path.ts'), { fake: fake('wasm-path.cts') }],
   [url('apps/shell/src/main/pdf-tools/tools.ts'), { fake: fake('tools.cts') }],
-  // the shell entry's active pdf tab and its converter (group d2/pdf-tools-office)
+  // the shell entry's active pdf tab, its converter and the Hangul editor's
+  // Import PDF (group d2/pdf-tools-office)
   [
     url('apps/shell/src/main/detached-windows.ts'),
     { fake: fake('detached-windows.cts'), parents: [INDEX_URL] },
@@ -61,6 +62,7 @@ const REPLACED = new Map<string, { fake: string; parents?: string[] }>([
     url('apps/shell/src/main/pdf2docx-local.ts'),
     { fake: fake('pdf2docx-local.cts'), parents: [INDEX_URL] },
   ],
+  [url('apps/hwp/src/main/hwp-main.ts'), { fake: fake('hwp-main.cts'), parents: [INDEX_URL] }],
 ])
 
 registerHooks({

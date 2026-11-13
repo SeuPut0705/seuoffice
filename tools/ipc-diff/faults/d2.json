@@ -705,5 +705,19 @@
     "find": "if !self.ctx.shell.has_tab_manager() {",
     "replace": "if false {",
     "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "the menu exports PowerPoint as Word",
+    "file": "shell-ipc/d2/src/pdf/tools/mod.rs",
+    "find": "Some(\"pptx\") => PdfExport::Pptx,",
+    "replace": "Some(\"pptx\") => PdfExport::Docx,",
+    "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "Import PDF asks before the shell has a tab manager",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "            return;\n        };\n        if !self.ctx.shell.has_tab_manager() {\n            return;\n        }",
+    "replace": "            return;\n        };\n        if false {\n            return;\n        }",
+    "groups": ["d2/pdf-tools-office"]
   }
 ]
