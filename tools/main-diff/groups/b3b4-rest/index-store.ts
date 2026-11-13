@@ -32,28 +32,51 @@
 import { registerHooks } from 'node:module'
 import { rmSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
+import { Worker as RealWorker, type WorkerOptions } from 'node:worker_threads'
 import type { Case, FnSpec, Group, TsContext } from '../../types.ts'
 
 // the worker the indexer starts is a fake while a scenario runs; the hook
 // answers for the indexer's own import only, and the stub is the real module
-// behind a proxy so that every other use of it is untouched
+// behind a proxy so that every other use of it is untouched.
+//
+// indexer.ts and extract-worker.ts share a folder, and Node's CommonJS
+// resolve cache (keyed by folder and request) hands both the first fake of
+// `node:worker_threads` that loads. So each fake answers `Worker` from
+// WORKER_CLASS and `parentPort` from index-core's box, whichever one loaded.
 const WORLD = Symbol.for('main-diff.indexer')
+const WORKER_CLASS = Symbol.for('main-diff.indexer-worker')
+/** the indexer's worker while a scenario runs; the real one otherwise */
+class IndexerWorker {
+  handlers: Record<string, (message?: unknown) => void> = {}
+  constructor(path: string | URL, options?: WorkerOptions) {
+    const world = (globalThis as Record<symbol, unknown>)[WORLD] as
+      { spawn: (worker: IndexerWorker, options: unknown) => void } | undefined
+    if (!world) return new RealWorker(path, options) as unknown as IndexerWorker
+    world.spawn(this, options)
+  }
+  postMessage(message: unknown): void {
+    ;(globalThis as Record<symbol, { post: (w: IndexerWorker, m: unknown) => void }>)[WORLD].post(
+      this,
+      message,
+    )
+  }
+  terminate(): unknown {
+    return (globalThis as Record<symbol, { terminate: (w: IndexerWorker) => unknown }>)[
+      WORLD
+    ].terminate(this)
+  }
+  on(event: string, handler: (message?: unknown) => void): this {
+    this.handlers[event] = handler
+    return this
+  }
+}
+;(globalThis as Record<symbol, unknown>)[WORKER_CLASS] = IndexerWorker
 const STUB_URL = 'main-diff:worker-threads'
 const stubSource = [
   `const real = require('node:worker_threads')`,
-  `const WORLD = Symbol.for('main-diff.indexer')`,
-  `class Worker {`,
-  `  constructor(path, options) {`,
-  `    const world = globalThis[WORLD]`,
-  `    if (!world) return new real.Worker(path, options)`,
-  `    this.handlers = {}`,
-  `    world.spawn(this, options)`,
-  `  }`,
-  `  postMessage(message) { globalThis[WORLD].post(this, message) }`,
-  `  terminate() { return globalThis[WORLD].terminate(this) }`,
-  `  on(event, handler) { this.handlers[event] = handler; return this }`,
-  `}`,
-  `module.exports = new Proxy(real, { get: (target, key) => (key === 'Worker' ? Worker : target[key]) })`,
+  `const port = () => globalThis[Symbol.for('main-diff.index-core')]?.port ?? real.parentPort`,
+  `const worker = () => globalThis[Symbol.for('main-diff.indexer-worker')] ?? real.Worker`,
+  `module.exports = new Proxy(real, { get: (target, key) => (key === 'Worker' ? worker() : key === 'parentPort' ? port() : target[key]) })`,
 ].join('\n')
 registerHooks({
   resolve(specifier, context, next) {

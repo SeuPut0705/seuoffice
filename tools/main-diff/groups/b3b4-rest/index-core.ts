@@ -60,12 +60,14 @@ const SOURCES: Record<string, string> = {
     `const box = globalThis[Symbol.for('main-diff.index-core')]`,
     `module.exports = { redactHtmlSource: (s) => box.redact(s), parseFileToText: async (p) => box.parse(p) }`,
   ].join('\n'),
-  // the real module with its `parentPort` replaced: indexer.ts asks the same
-  // folder for the same specifier and gets the real `Worker`
+  // the real module with `parentPort` replaced. indexer.ts asks the same
+  // folder for the same specifier, and Node's CommonJS resolve cache may hand
+  // it this module: `Worker` is index-store's fake when that part has set it
   [WORKER_URL]: [
     `const real = require('node:worker_threads')`,
     `const box = globalThis[Symbol.for('main-diff.index-core')]`,
-    `module.exports = Object.create(real, { parentPort: { value: box.port, enumerable: true } })`,
+    `const worker = () => globalThis[Symbol.for('main-diff.indexer-worker')] ?? real.Worker`,
+    `module.exports = new Proxy(real, { get: (target, key) => (key === 'parentPort' ? box.port : key === 'Worker' ? worker() : target[key]) })`,
   ].join('\n'),
 }
 
