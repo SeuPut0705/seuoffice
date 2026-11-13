@@ -34,6 +34,7 @@ use main_core::packages::project_store::{
     UndoMemoryConsolidationResult,
 };
 use main_core::shell::app_settings::read_app_settings;
+use main_core::shell::knowledge_base::KbReadPage;
 use main_core::shell::projects::chat_store::{
     AppendOutcome, ChatAppendedEvent, ChatAppendedListener, ChatSender, ChatStoreHost,
     ChatStoreOptions, OpenChatOutcome, ProjectChatStore, default_new_id,
@@ -64,7 +65,7 @@ use main_core::shell::projects::project_ipc::{
     ProjectWindow,
 };
 use main_core::shell::projects::project_tools::{
-    DownloadAsk, IndexSearchOptions, IndexSearchResult, IndexStore, KbReadPage, KnowledgePages,
+    DownloadAsk, IndexSearchOptions, IndexSearchResult, IndexStore, KnowledgePages,
     ProjectFolderTools, ProjectToolsDeps, ProjectToolsScopes, ProjectToolsStore,
 };
 use serde_json::Value;

@@ -19,11 +19,13 @@ use crate::views::ViewTable;
 pub mod clipboard;
 pub mod contents;
 pub mod dialog;
+pub mod message_box;
 pub mod os_shell;
 pub(crate) mod shell_tabs;
 pub mod unbuilt;
 pub mod w;
 pub mod window;
+pub(crate) mod window_open;
 
 // one file per other batch's hosts; each is `install` and nothing else until its batch fills it
 pub mod crash; // U
