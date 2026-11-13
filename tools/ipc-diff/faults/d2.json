@@ -702,8 +702,8 @@
   {
     "name": "the Hangul copy is made without a tab manager",
     "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
-    "find": "if !self.ctx.shell.has_tab_manager() {",
-    "replace": "if false {",
+    "find": "            return then(Ok(()));\n        };\n        if !self.ctx.shell.has_tab_manager() {",
+    "replace": "            return then(Ok(()));\n        };\n        if false {",
     "groups": ["d2/pdf-tools-office"]
   },
   {
