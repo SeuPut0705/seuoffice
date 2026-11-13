@@ -13,8 +13,8 @@ use super::{
     list_of, log_line, number_of, str_of, string_list, thrown_error, unreal,
 };
 use crate::packages::ai_provider::user_skills_import::{
-    GitHubSkillUpdateCheck, InstallImportedSkillsResult, InstalledSkill, SkillImport,
-    SkillImportError, SkillImportSource, Thrown, remove_quietly,
+    DiscardFailed, GitHubSkillUpdateCheck, InstallImportedSkillsResult, InstalledSkill,
+    SkillImport, SkillImportError, SkillImportSource, Thrown, remove_quietly,
 };
 use crate::shell::user_skills::user_skills_service::{
     Aborted, ApplyUpdateOptions, CheckUpdateOptions, Discard, Failure, InstallOptions, PrepareEnv,
@@ -63,7 +63,7 @@ impl UserSkillsHost for SvcHost {
         join(&[&self.root, "tmp"])
     }
 
-    fn trash(&mut self, path: &str) -> Result<(), ()> {
+    fn trash(&mut self, path: &str) -> Result<(), DiscardFailed> {
         // the staging folder of an install is named by chance
         let shown = js_regex!(r"\.ieum-staging-[0-9a-f]{12}")
             .replace_all(path, |_| ".ieum-staging-RND".to_owned());
@@ -73,7 +73,7 @@ impl UserSkillsHost for SvcHost {
             .iter()
             .any(|suffix| path.ends_with(suffix.as_str()))
         {
-            return Err(());
+            return Err(DiscardFailed);
         }
         remove_quietly(path);
         Ok(())

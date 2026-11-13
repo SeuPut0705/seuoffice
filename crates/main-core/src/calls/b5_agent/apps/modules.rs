@@ -27,7 +27,7 @@ use crate::packages::ai_provider::free_connect::{
     FreeConnectFailure, FreeConnectPage, FreeConnectResult,
 };
 use crate::packages::ai_search::media_call_abort::{MediaCallId, MediaCalls};
-use crate::packages::ai_search::search_tools::{SearchBackend, SearchOptions};
+use crate::packages::ai_search::search_tools::{SearchAnswer, SearchBackend, SearchOptions};
 use crate::packages::i18n::Lang;
 use crate::shell::ai_naming_service::{
     AI_NAMING_SUGGEST_CHANNEL, ChatOutcome, NamingHost, suggest_file_name,
@@ -452,7 +452,7 @@ impl SearchBackend for HtmlFake {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String> {
+    ) -> SearchAnswer {
         self.search.web_search(query, max_results, options)
     }
 
@@ -461,7 +461,7 @@ impl SearchBackend for HtmlFake {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String> {
+    ) -> SearchAnswer {
         self.search.image_search(query, max_results, options)
     }
 }
@@ -507,6 +507,7 @@ fn html_call(args: &[Value], cx: &mut Context) -> Answer {
         } else {
             image_search(&mut host, &lookup, query.as_ref(), max.as_ref())
         };
+        let answer = answer.map_err(|error| CallError::plain(error.to_string()))?;
         answers.push(js(&answer));
     }
     cx.logs.extend(host.search.log);

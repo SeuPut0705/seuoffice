@@ -217,7 +217,7 @@ pub struct SkillProposal {
 /// `AgentSkillProposalResult`: the card, or why not (words for the model)
 #[derive(Debug, Clone, PartialEq)]
 pub enum AgentSkillProposalResult {
-    Ok(SkillProposal),
+    Ok(Box<SkillProposal>),
     Refused(String),
 }
 
@@ -313,7 +313,7 @@ pub fn agent_skill_proposal_of(
             editors: skill_editors_of(entry.editors.as_ref().unwrap_or(&JsonValue::Null)),
         });
     }
-    AgentSkillProposalResult::Ok(SkillProposal {
+    AgentSkillProposalResult::Ok(Box::new(SkillProposal {
         key: key.to_owned(),
         title: input.title.clone(),
         name: input.name.clone(),
@@ -321,7 +321,7 @@ pub fn agent_skill_proposal_of(
         body: input.body.clone(),
         wants_template: input.wants_template,
         target,
-    })
+    }))
 }
 
 // ---- template candidates -----------------------------------------------

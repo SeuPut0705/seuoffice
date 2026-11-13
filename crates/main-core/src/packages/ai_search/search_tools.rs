@@ -128,6 +128,11 @@ pub fn search_options_from_settings(
     }
 }
 
+/// What a backend call settles with: the answer, or the value the backend
+/// threw (an `Error` is a `{ $class: 'Error', message }` object, see
+/// `jsval::error_class`), so `String(err)` of it stays the caller's.
+pub type SearchAnswer = Result<JsonValue, JsonValue>;
+
 /// The search backends: engine-waiting. `Err` is a rejection; the answer is
 /// the backend's own object (`{ results, method, error? }` or
 /// `{ images, method, error? }`).
@@ -138,14 +143,14 @@ pub trait SearchBackend {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String>;
+    ) -> SearchAnswer;
     /// `imageSearch(query, maxResults, options)`
     fn image_search(
         &mut self,
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String>;
+    ) -> SearchAnswer;
 }
 
 /// `webSearchTool(settingsPath, query, maxResults = 6)`; `settings_file` is
@@ -157,7 +162,7 @@ pub fn web_search_tool(
     query: &str,
     max_results: Option<f64>,
     env: &dyn Fn(&str) -> Option<String>,
-) -> Result<JsonValue, String> {
+) -> SearchAnswer {
     let options = search_options_from_settings(&read_ai_settings_file(settings_file), env);
     backend.web_search(query, max_results.unwrap_or(6.0), &options)
 }
@@ -169,7 +174,7 @@ pub fn image_search_tool(
     query: &str,
     max_results: Option<f64>,
     env: &dyn Fn(&str) -> Option<String>,
-) -> Result<JsonValue, String> {
+) -> SearchAnswer {
     let options = search_options_from_settings(&read_ai_settings_file(settings_file), env);
     backend.image_search(query, max_results.unwrap_or(8.0), &options)
 }
@@ -185,7 +190,7 @@ pub fn test_search_provider(
     backend: &mut dyn SearchBackend,
     provider: &str,
     api_key: &str,
-) -> Result<JsonValue, String> {
+) -> SearchAnswer {
     let api_key = trim(api_key);
     if api_key.is_empty() && provider != "parallel" && provider != "keenable" {
         return Ok(object(vec![

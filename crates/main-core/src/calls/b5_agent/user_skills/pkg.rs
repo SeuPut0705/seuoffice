@@ -24,9 +24,9 @@ use crate::packages::ai_provider::user_skills_folder::{
     read_listed_skill_md, read_user_skill_folder, skill_bundle_file_name, skill_export_info,
 };
 use crate::packages::ai_provider::user_skills_import::{
-    CommitSkillInstallOptions, IeumSourceRecord, SkillImportCandidate, SkillInstallPlan,
-    SkillInstallSource, commit_skill_install, iso_seconds, read_ieum_source_record,
-    render_ieum_source_record, skill_content_hash,
+    CommitSkillInstallOptions, DiscardFailed, IeumSourceRecord, SkillImportCandidate,
+    SkillInstallPlan, SkillInstallSource, commit_skill_install, iso_seconds,
+    read_ieum_source_record, render_ieum_source_record, skill_content_hash,
 };
 use crate::packages::ai_provider::user_skills_states::{
     ResolvedUserSkill, SKILL_EDITORS, SkillEditorsChoice, UserSkill, initial_user_skill_state,
@@ -216,7 +216,7 @@ fn commit(args: &[Value], cx: &mut Context) -> Answer {
     let mut discard = |dir: &str| {
         logs.push(vec![Value::from("discard"), Value::from(dir)]);
         if fails.iter().any(|suffix| dir.ends_with(suffix.as_str())) {
-            Err(())
+            Err(DiscardFailed)
         } else {
             Ok(())
         }

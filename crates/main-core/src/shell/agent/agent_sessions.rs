@@ -151,13 +151,13 @@ pub enum StartError {
     /// `AgentPrepareError`: a step before the program started failed with `thrown`
     Prepare {
         step: AgentPrepareStep,
-        thrown: Thrown,
+        thrown: Box<Thrown>,
     },
     Program(AgentProgramError),
     /// anything else; `kind` is its `kind` property, when it has one
     Other {
         kind: Option<JsonValue>,
-        thrown: Thrown,
+        thrown: Box<Thrown>,
     },
 }
 
@@ -167,7 +167,7 @@ pub enum RunnerError {
     Program(AgentProgramError),
     Other {
         kind: Option<JsonValue>,
-        thrown: Thrown,
+        thrown: Box<Thrown>,
     },
 }
 
@@ -194,7 +194,7 @@ fn thrown_of(error: &NodeError) -> Thrown {
 }
 
 /// `prepared(step, run)`: a failure of the step is an `AgentPrepareError`
-fn prepared<T>(step: AgentPrepareStep, result: Result<T, Thrown>) -> Result<T, StartError> {
+fn prepared<T>(step: AgentPrepareStep, result: Result<T, Box<Thrown>>) -> Result<T, StartError> {
     result.map_err(|thrown| StartError::Prepare { step, thrown })
 }
 
@@ -498,16 +498,17 @@ pub trait AgentHost: FolderHost {
         &mut self,
         project_root: &str,
         session: &AgentMcpSession,
-    ) -> Result<AppMcp, Thrown>;
+    ) -> Result<AppMcp, Box<Thrown>>;
     /// whether `deps.startRelays` is given
     fn has_relays(&self) -> bool;
     /// `deps.startRelays(session, ask)`; the questions of the relays go to
     /// [`AgentManager::relay_ask`]
-    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Thrown>;
+    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Box<Thrown>>;
     /// whether `deps.buildSkills` is given
     fn has_build_skills(&self) -> bool;
     /// `deps.buildSkills(projectRoot)`
-    fn build_skills(&mut self, project_root: &str) -> Result<Option<AgentSkillBundle>, Thrown>;
+    fn build_skills(&mut self, project_root: &str)
+    -> Result<Option<AgentSkillBundle>, Box<Thrown>>;
     /// `deps.runners.claude(options, onEvent)`: `session` is what `onEvent` closes over; the
     /// program's events go to [`AgentManager::on_event`] with it
     fn run_claude(
@@ -1126,7 +1127,8 @@ impl AgentManager {
         // live while it is prepared: its window closing or the app quitting stops it here too
         self.live.push(entry.clone());
         let result = (|| -> Result<AgentStartResult, StartError> {
-            let made = make_agent_session_folder(host, None).map_err(|error| thrown_of(&error));
+            let made =
+                make_agent_session_folder(host, None).map_err(|error| Box::new(thrown_of(&error)));
             self.meanwhile(host, "session-folder");
             let session_dir = prepared(AgentPrepareStep::SessionFolder, made)?;
             entry.borrow_mut().session_dir = Some(session_dir.clone());

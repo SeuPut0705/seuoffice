@@ -978,7 +978,7 @@ impl<H: UserSkillsHost, L: SkillLibrary> UserSkillsIpc<H, L> {
                         Pending {
                             value: UpdateEntry {
                                 id: skill_id.to_owned(),
-                                check,
+                                check: *check,
                             },
                             owner: run.owner,
                         },

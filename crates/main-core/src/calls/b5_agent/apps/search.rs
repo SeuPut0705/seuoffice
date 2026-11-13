@@ -12,7 +12,7 @@ use serde_json::Value;
 use super::{
     Answer, CallError, Context, arg, jv, jv_exact, out, out_bool, out_opt, out_str, text_arg,
 };
-use crate::packages::ai_provider::jsval::{number, object, text};
+use crate::packages::ai_provider::jsval::{number, object, text, thrown_message};
 use crate::packages::ai_search::index::{
     MIN_USABLE_IMAGE_PX, filter_usable_images, search_env_key,
 };
@@ -22,7 +22,7 @@ use crate::packages::ai_search::media_tools::{
     read_ai_settings_file,
 };
 use crate::packages::ai_search::search_tools::{
-    SearchBackend, SearchOptions, image_search_tool, keyless_search_backend,
+    SearchAnswer, SearchBackend, SearchOptions, image_search_tool, keyless_search_backend,
     search_options_from_settings, selected_search_key, test_search_provider, web_search_tool,
 };
 use crate::packages::ai_search::tool_capabilities::ai_tool_capabilities;
@@ -112,7 +112,7 @@ impl FakeSearch {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String> {
+    ) -> SearchAnswer {
         self.log.push(vec![
             Value::from(kind),
             Value::from(query),
@@ -124,7 +124,10 @@ impl FakeSearch {
             .pop_front()
             .unwrap_or_else(|| serde_json::json!({ "ok": { "results": [], "method": "none" } }));
         if let Some(message) = answer.get("throw").and_then(Value::as_str) {
-            return Err(message.to_owned());
+            return Err(object(vec![
+                ("$class", text("Error")),
+                ("message", text(message)),
+            ]));
         }
         Ok(answer
             .get("ok")
@@ -138,7 +141,7 @@ impl SearchBackend for FakeSearch {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String> {
+    ) -> SearchAnswer {
         self.call("web", query, max_results, options)
     }
 
@@ -147,8 +150,16 @@ impl SearchBackend for FakeSearch {
         query: &str,
         max_results: f64,
         options: &SearchOptions,
-    ) -> Result<JsonValue, String> {
+    ) -> SearchAnswer {
         self.call("image", query, max_results, options)
+    }
+}
+
+/// A backend that threw: the comparison reads the `message` of the error.
+fn rejection(thrown: JsonValue) -> CallError {
+    match thrown_message(&thrown) {
+        Some(JsonValue::String(message)) => CallError::plain(message),
+        _ => CallError::plain(String::new()),
     }
 }
 
@@ -316,7 +327,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             cx.logs.extend(backend.log);
             result
                 .map(|v| Some(jscompat::json_value_to_serde(&v)))
-                .map_err(CallError::plain)
+                .map_err(rejection)
         }
         "ai-search/search-tools.testSearchProvider" => {
             let mut backend = FakeSearch::of(arg(args, 2));
@@ -324,7 +335,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             cx.logs.extend(backend.log);
             result
                 .map(|v| Some(jscompat::json_value_to_serde(&v)))
-                .map_err(CallError::plain)
+                .map_err(rejection)
         }
 
         // ai-search/tool-routing

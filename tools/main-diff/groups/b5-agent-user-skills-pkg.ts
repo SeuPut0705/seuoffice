@@ -571,7 +571,7 @@ add('folder.skillContentHash', {
 
 add('sources.codexHomeDir', {
   ts: (args) => codexHomeDir(args[0] as string),
-  cases: cases(['/home/u'], ['/home/u/']),
+  cases: cases(['/home/u'], ['/home/u/'], ['/home/other'], ['/a/b/../c'], ['rel'], ['']),
 })
 
 add('sources.isInsideCodexHome', {
@@ -612,8 +612,12 @@ add('skill-editors.skillEditorScope', {
 const skillOf = (
   over: Partial<UserSkill> & { id: string; source: UserSkill['source'] },
 ): UserSkill => {
-  const name = over.name ?? over.id.split(':').pop()!
+  const { id, source, ...rest } = over
+  const name = over.name ?? id.split(':').pop()!
   return {
+    // the key order of `readUserSkillFolder`'s literal: `id` and `source` first
+    id,
+    source,
     plugin: undefined,
     name,
     folderName: name,
@@ -630,7 +634,7 @@ const skillOf = (
     files: 1,
     bytes: 10,
     unreadable: undefined,
-    ...over,
+    ...rest,
   }
 }
 

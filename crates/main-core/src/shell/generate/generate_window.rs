@@ -22,9 +22,11 @@
 //! [`GenerateWindow`] the caller owns, and `deps` is the [`GenerateWindowHost`].
 //!
 //! Promises are plain calls. A session call the TypeScript leaves floating
-//! (`void session.reset(...)`, `void current.refresh()`) runs to its end
-//! before the next line, so the window calls and the session's calls are not
-//! interleaved as they are there.
+//! (`void current.refresh()`, last in its function) runs to its end. Where
+//! lines follow it (`void session.reset(...)` before `win.restore()`,
+//! `show()` and `focus()`), the call is split at its first await
+//! ([`GenerateSession::reset_begin`]) and goes on after those lines
+//! ([`GenerateSession::reset_finish`]), as the event loop orders them there.
 //!
 //! The shell gathers the open files and open tabs the TypeScript reads from
 //! `tabManager.openDocuments()` and hands them to every call that reads them
@@ -525,7 +527,7 @@ impl GenerateWindow {
     }
 
     /// `fromHome(event)`: only the shell window's own page (Home) may ask
-    fn from_home<H: GenerateWindowHost>(&self, host: &mut H, sender_id: f64) -> bool {
+    fn is_from_home<H: GenerateWindowHost>(&self, host: &mut H, sender_id: f64) -> bool {
         if !self.configured {
             return false;
         }
@@ -735,7 +737,7 @@ impl GenerateWindow {
         sender_id: f64,
         paths: Option<&Value>,
     ) -> Result<(), Failure> {
-        if !self.from_home(host, sender_id) {
+        if !self.is_from_home(host, sender_id) {
             return Ok(());
         }
         self.open_generate_window_with_paths(host, snap, string_list(paths), None)
@@ -749,7 +751,7 @@ impl GenerateWindow {
         sender_id: f64,
         group: Option<&Value>,
     ) -> Result<(), Failure> {
-        if !self.from_home(host, sender_id) {
+        if !self.is_from_home(host, sender_id) {
             return Ok(());
         }
         let Some(group) = group.and_then(Value::as_str).filter(|g| !g.is_empty()) else {
@@ -775,17 +777,23 @@ impl GenerateWindow {
             && !host.window_is_destroyed(win)
             && self.current_session().is_some_and(|s| !s.is_closed())
         {
-            // `void session.reset(...)`
+            // `void session.reset(...)`: its first push goes out now, the
+            // reads land after the window calls below
             let refs = init.refs.clone();
             let kind = init.kind;
-            let _ = self.with_session(host, |session, bridge| {
-                session.reset(bridge, snap, &refs, kind)
+            let rows = self.with_session(host, |session, bridge| {
+                session.reset_begin(bridge, &refs, kind)
             });
             if host.window_is_minimized(win) {
                 host.window_restore(win);
             }
             host.window_show(win);
             host.window_focus(win);
+            if let Some(rows) = rows {
+                let _ = self.with_session(host, |session, bridge| {
+                    session.reset_finish(bridge, snap, &rows)
+                });
+            }
             return Ok(());
         }
 

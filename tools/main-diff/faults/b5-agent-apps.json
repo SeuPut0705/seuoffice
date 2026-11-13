@@ -2145,8 +2145,15 @@
   {
     "name": "html-search: the web error is a null",
     "file": "main-core/src/html/ai_search_ipc.rs",
-    "find": "            (\"method\", text(\"error\")),\n            (\"error\", text(err)),\n        ]),\n    }\n}\n\n/// the handler of `ai:image-search`",
-    "replace": "            (\"method\", text(\"error\")),\n            (\"error\", JsonValue::Null),\n        ]),\n    }\n}\n\n/// the handler of `ai:image-search`",
+    "find": "            (\"method\", text(\"error\")),\n            (\"error\", text(thrown_to_string(&thrown)?)),\n        ])),\n    }\n}\n\n/// the handler of `ai:image-search`",
+    "replace": "            (\"method\", text(\"error\")),\n            (\"error\", JsonValue::Null),\n        ])),\n    }\n}\n\n/// the handler of `ai:image-search`",
+    "fn": ["html/ai-search-ipc.registerHtmlAiSearchIpc"]
+  },
+  {
+    "name": "html-search: the web error is the bare message",
+    "file": "main-core/src/html/ai_search_ipc.rs",
+    "find": "            (\"method\", text(\"error\")),\n            (\"error\", text(thrown_to_string(&thrown)?)),\n        ])),\n    }\n}\n\n/// the handler of `ai:image-search`",
+    "replace": "            (\"method\", text(\"error\")),\n            (\"error\", crate::packages::ai_provider::jsval::thrown_message(&thrown).unwrap_or(JsonValue::Null)),\n        ])),\n    }\n}\n\n/// the handler of `ai:image-search`",
     "fn": ["html/ai-search-ipc.registerHtmlAiSearchIpc"]
   },
   {

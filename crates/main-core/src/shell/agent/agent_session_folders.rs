@@ -97,6 +97,9 @@ pub fn make_agent_session_folder<H: FolderHost + ?Sized>(
     Ok(dir)
 }
 
+/// the lookup of when processes started: process numbers in, pairs of number and time out
+pub type StartTimes<'a> = dyn Fn(&[f64]) -> Vec<(f64, f64)> + 'a;
+
 /// `AgentFolderSweepOptions`: what is `None` is the default of the TypeScript
 #[derive(Default)]
 pub struct SweepOptions<'a> {
@@ -107,7 +110,7 @@ pub struct SweepOptions<'a> {
     pub alive: Option<&'a dyn Fn(f64) -> bool>,
     /// when running processes started, in milliseconds since 1970, as pairs of a process number
     /// and a time; a process left out is unknown
-    pub start_times: Option<&'a dyn Fn(&[f64]) -> Vec<(f64, f64)>>,
+    pub start_times: Option<&'a StartTimes<'a>>,
 }
 
 /// What a session folder holds, as listed without following a link

@@ -214,7 +214,10 @@ const toHex = (bytes: Uint8Array): string => Buffer.from(bytes).toString('hex')
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g
 
-/** an answer with the case folder as it was written */
+/** a name made from the six random characters of `suggestName`, a whole JSON string */
+const RANDOM_NAME = /"skill-[a-z0-9]{6}"/g
+
+/** an answer with the case folder as it was written and a random name as `skill-<random>` */
 function unreal(value: unknown, root: string): any {
   let real = root
   try {
@@ -225,7 +228,8 @@ function unreal(value: unknown, root: string): any {
   return JSON.parse(
     JSON.stringify(value ?? null)
       .split(real)
-      .join(root),
+      .join(root)
+      .replace(RANDOM_NAME, '"skill-<random>"'),
   )
 }
 
@@ -1685,9 +1689,10 @@ async function runIpc(args: unknown[], cx: TsContext): Promise<any> {
       const handler = handlers.get(step.ch)
       if (!handler) throw new Error(`no handler ${step.ch}`)
       const event = { sender: senderOf(step.s ?? 1) }
+      // the gate closes before the call starts: the library may be reached with no wait
+      if (step.hold) gate.hold = true
       const call = Promise.resolve(handler(event, ...(step.a ?? []).map(fill).map(hexBytes)))
       if (step.hold) {
-        gate.hold = true
         held = call
         out.push({ held: true })
         await new Promise((resolve) => setImmediate(resolve))

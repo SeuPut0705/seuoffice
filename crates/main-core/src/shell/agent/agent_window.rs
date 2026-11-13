@@ -576,7 +576,7 @@ impl AgentSkillTools<'_> {
         let session_skills = d.session_skills();
         let made = agent_skill_proposal_of(input, &list, &key, &session_skills);
         let proposal = match made {
-            AgentSkillProposalResult::Ok(proposal) => proposal,
+            AgentSkillProposalResult::Ok(proposal) => *proposal,
             AgentSkillProposalResult::Refused(message) => return Err(message),
         };
         let (candidates, selected) = agent_template_candidates(&TemplateCandidateOptions {

@@ -139,7 +139,9 @@ fn allowed_tools(value: Option<&Value>) -> Option<Vec<String>> {
 }
 
 /// `isUsable` of a case: the names it answers true for, and the names it throws on
-fn usable_of(spec: Option<&Value>) -> Option<Box<dyn Fn(&str) -> Result<bool, UsableThrew>>> {
+type Usable = Box<dyn Fn(&str) -> Result<bool, UsableThrew>>;
+
+fn usable_of(spec: Option<&Value>) -> Option<Usable> {
     let spec = spec.filter(|spec| !spec.is_null())?;
     let usable = str_list(spec.get("usable"));
     let throws = str_list(spec.get("throws"));
@@ -602,8 +604,8 @@ impl Scenario<'_> {
     }
 
     /// the throwable a descriptor says
-    fn thrown(descriptor: &Value) -> Thrown {
-        match descriptor.get("class").and_then(Value::as_str) {
+    fn thrown(descriptor: &Value) -> Box<Thrown> {
+        Box::new(match descriptor.get("class").and_then(Value::as_str) {
             Some("program") => Thrown::Error {
                 name: Some(JsonValue::String(AgentProgramError::NAME.to_owned())),
                 code: None,
@@ -617,7 +619,7 @@ impl Scenario<'_> {
                 )),
                 code: field_opt_str(descriptor, "code").map(JsonValue::String),
             },
-        }
+        })
     }
 
     fn runner_error(descriptor: &Value) -> RunnerError {
@@ -778,7 +780,7 @@ impl AgentHost for Scenario<'_> {
         &mut self,
         project_root: &str,
         session: &AgentMcpSession,
-    ) -> Result<AppMcp, Thrown> {
+    ) -> Result<AppMcp, Box<Thrown>> {
         let spec = self.o.get("appMcp").cloned().unwrap_or(Value::Null);
         self.line(vec![
             text("startAppMcp"),
@@ -802,7 +804,7 @@ impl AgentHost for Scenario<'_> {
         matches!(self.o.get("relays"), Some(spec) if !spec.is_null())
     }
 
-    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Thrown> {
+    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Box<Thrown>> {
         let spec = self.o.get("relays").cloned().unwrap_or(Value::Null);
         self.line(vec![text("startRelays"), session_json(session)]);
         if let Some(descriptor) = spec.get("throw") {
@@ -830,7 +832,10 @@ impl AgentHost for Scenario<'_> {
         matches!(self.o.get("buildSkills"), Some(spec) if !spec.is_null())
     }
 
-    fn build_skills(&mut self, project_root: &str) -> Result<Option<AgentSkillBundle>, Thrown> {
+    fn build_skills(
+        &mut self,
+        project_root: &str,
+    ) -> Result<Option<AgentSkillBundle>, Box<Thrown>> {
         let spec = self.o.get("buildSkills").cloned().unwrap_or(Value::Null);
         self.line(vec![text("buildSkills"), text(project_root)]);
         if let Some(descriptor) = spec.get("throw") {
@@ -1118,7 +1123,7 @@ fn agent_error_call(args: &[Value]) -> Answer {
             let value = descriptor.get("value").unwrap_or(&Value::Null);
             StartError::Other {
                 kind: value.get("kind").map(jsv),
-                thrown: Thrown::Other(typeof_of(value)),
+                thrown: Box::new(Thrown::Other(typeof_of(value))),
             }
         }
         _ => StartError::Other {
