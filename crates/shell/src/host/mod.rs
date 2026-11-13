@@ -19,6 +19,7 @@ use crate::views::ViewTable;
 pub mod clipboard;
 pub mod contents;
 pub mod dialog;
+pub mod message_box;
 pub mod os_shell;
 pub(crate) mod shell_tabs;
 pub mod unbuilt;
