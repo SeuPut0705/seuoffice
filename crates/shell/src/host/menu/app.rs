@@ -22,16 +22,17 @@
 //!
 //! What Electron's menus had and this one does not:
 //!
-//! - the document-link entries of File (`documentLinkFileMenuItems`): stage 2
-//!   ports `main_core::shell::document_links_shell`; the shell wires it later.
-//! - the Dock menu (`installDockMenu`): `host/menu/dock.rs`.
 //! - the icons of the New entries (`menuIcons()`): Tauri's menu items take an
 //!   icon, but the shell has no icon set for them yet.
+//! - the full path under a document-link entry's name off macOS (`sublabel`)
+//!   and its tooltip: Tauri's menu items have neither.
 //!
 //! Items whose action another batch provides are built from what `Provided`
 //! holds at the time ([`Seams`]) and left out when nobody provides it: Check
 //! for Updates and the About box's check (U's `UpdateCheck`), Export as Word /
-//! PowerPoint / Excel and Import PDF (D2's `DocumentConversions`).
+//! PowerPoint / Excel and Import PDF (D2's `DocumentConversions`). The
+//! document-link entries (`documentLinkFileMenuItems`, `host/menu/doc_links.rs`)
+//! appear once batch A attached the hand-off store.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -3391,5 +3392,86 @@ mod tests {
         assert!(!find("Insert", "Equation\u{2026}").enabled);
         assert!(find("Insert", "Comment").enabled);
         assert!(find("View", "Dark Mode").checked);
+    }
+
+    /// The document-link entries sit after Back to Home in docs, sheets and
+    /// slides, and after Save As in the shell-built File menus; a click acts
+    /// on the view the entries were built for
+    #[test]
+    fn document_link_entries_follow_their_file_menu_place() {
+        use main_core::shell::document_links::{DocumentLinkMenuModel, LinkMenuEntry};
+        use main_core::shell::document_links_menu::{
+            DocumentLinkMenuLabels, document_link_menu_items,
+        };
+        let model = DocumentLinkMenuModel {
+            sources: vec![LinkMenuEntry {
+                path: "/a/src.pdf".into(),
+                name: "src.pdf".into(),
+                missing: true,
+            }],
+            derived: Vec::new(),
+        };
+        let labels = DocumentLinkMenuLabels {
+            make: "Make".into(),
+            sources: "Sources".into(),
+            derived: "Derived".into(),
+        };
+        let view = ViewId(7);
+        let nodes = doc_link_nodes(&document_link_menu_items(&model, &labels, false), view);
+        assert_eq!(nodes.first(), Some(&Node::Separator));
+        let file_of = |kind| {
+            let mut c = ctx(Os::Windows, Lang::En);
+            c.doc_links = nodes.clone();
+            let menus = menu_for(kind, &c);
+            let Some(Node::Menu { items, .. }) = menus
+                .into_iter()
+                .find(|m| matches!(m, Node::Menu { label, .. } if label == "File"))
+            else {
+                panic!("{kind:?}: no File menu");
+            };
+            items
+        };
+        for (kind, before) in [
+            (TabKind::Docs, Act::BackToHome),
+            (TabKind::Sheets, Act::BackToHome),
+            (TabKind::Slides, Act::BackToHome),
+            (TabKind::Pdf, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Markdown, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Html, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Mindmap, Act::Save(SaveMode::SaveAs)),
+        ] {
+            let items = file_of(kind);
+            let at = items
+                .iter()
+                .position(|n| matches!(n, Node::Item(Item { act: Some(Act::DocLink(DocLinkClick::Make, v)), .. }) if *v == view))
+                .unwrap_or_else(|| panic!("{kind:?}: no Make entry"));
+            let anchor = items[..at]
+                .iter()
+                .rposition(|n| matches!(n, Node::Item(i) if i.act.as_ref() == Some(&before)))
+                .unwrap_or_else(|| panic!("{kind:?}: Make is not after {before:?}"));
+            assert!(
+                items[anchor + 1..at].iter().all(|n| *n == Node::Separator),
+                "{kind:?}: something between {before:?} and the entries"
+            );
+            let sources = items[at..]
+                .iter()
+                .find_map(|n| match n {
+                    Node::Menu { label, items, .. } if label == "Sources" => Some(items.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{kind:?}: no Sources submenu"));
+            assert!(matches!(
+                &sources[..],
+                [Node::Item(Item { enabled: false, .. })]
+            ));
+        }
+        for kind in [TabKind::Home, TabKind::Hwp, TabKind::Epub, TabKind::Diagram] {
+            let mut c = ctx(Os::Windows, Lang::En);
+            c.doc_links = nodes.clone();
+            let has = describe(&menu_for(kind, &c))
+                .iter()
+                .any(|l| l.contains("Make"));
+            assert!(!has, "{kind:?} lists document links");
+        }
     }
 }
