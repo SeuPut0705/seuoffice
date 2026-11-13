@@ -2247,6 +2247,13 @@ const faults = [
     '|| (skip_withheld && r.redact',
     '|| (!skip_withheld && r.redact',
   ],
+  [
+    'deckcore-image-rel-empty-id-used',
+    'pptxDeckcore.index.setSlideBackgroundImage',
+    leaf + 'deck/background.rs',
+    'return Ok((!rel.id.is_empty()).then(|| rel.id.clone()));',
+    'return Ok(Some(rel.id.clone()));',
+  ],
 ]
 
 const out = resolve(here, 'out/faults')
