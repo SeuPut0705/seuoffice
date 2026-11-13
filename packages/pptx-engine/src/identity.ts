@@ -14,14 +14,62 @@
  * after ungroup that same id would suddenly mean the child.
  */
 import type { Slide, SlideElement } from './types'
+import { attributeOf, elementRange } from './xml-utils'
 import { call } from './engine'
 
+/** The uri of the a:ext that holds a shape's a16:creationId. */
+const CREATION_ID_URI = '{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}'
+const EXT_OPEN = /<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
+/** A creationId element under whatever prefix the part binds its namespace to. */
+const CREATION_ID_TAG = /<(?:[^\s/>:]+:)?creationId\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
+const GUID = /^\{?([0-9A-Fa-f-]{36})\}?$/
+/**
+ * The GUID of the creation id in `own` (a <p:cNvPr> and what it holds): the creationId inside
+ * an a:ext whose uri is the creation id's. Both are read as XML reads them (`attributeOf`: any
+ * quotes, white space around `=`, decoded once), so another producer's spelling is the same id.
+ */
+function creationGuidOf(own: string): string | undefined {
+  for (const open of own.matchAll(EXT_OPEN)) {
+    if (attributeOf(open[0], 'uri') !== CREATION_ID_URI) continue
+    const ext = elementRange(own, 'a:ext', open.index)
+    if (!ext) continue
+    for (const tag of own.slice(ext.contentStart, ext.contentEnd).matchAll(CREATION_ID_TAG)) {
+      const guid = GUID.exec(attributeOf(tag[0], 'id') ?? '')?.[1]
+      if (guid) return guid
+    }
+  }
+  return undefined
+}
 /** `xml` with every creation id given a new GUID, however the id is written. */
 export function withFreshCreationIds(xml: string): string {
   return call('withFreshCreationIds', [xml]) as never
 }
+/** The own <p:cNvPr> block of `xml`: its first cNvPr, from the open tag through its end tag. */
+function ownCNvPr(xml: string, from = 0) {
+  return elementRange(xml, 'p:cNvPr', from)
+}
+/** The numeric id a <p:cNvPr> open tag gives, however it is quoted. */
+function cNvPrNumber(openTag: string): string | undefined {
+  const id = attributeOf(openTag, 'id')
+  return id !== undefined && /^\d+$/.test(id) ? id : undefined
+}
 export function elementDurableId(el: SlideElement): string | null {
-  return call('elementDurableId', [el]) as never
+  const xml = el.anchor?.originalXml
+  if (!xml) {
+    // Group children carry no byte slice of their own (it lives inside the parent
+    // group's XML); their persisted <p:cNvPr id> — parsed as nvId, unique within
+    // the slide part — still identifies them durably. (creationId continuity
+    // while grouped is a known follow-up: the GUID sits in the parent's bytes.)
+    const nvId = (el as { nvId?: number | string }).nvId
+    return nvId != null ? `e_${nvId}` : null
+  }
+  const own = ownCNvPr(xml)
+  if (!own) return null
+  const block = xml.slice(own.start, own.end)
+  const guid = creationGuidOf(block)
+  if (guid) return `e_${guid.slice(0, 8).toLowerCase()}`
+  const n = cNvPrNumber(block)
+  return n !== undefined ? `e_${n}` : null
 }
 export function slideDurableId(slide: Slide): string {
   return call('slideDurableId', [slide]) as never

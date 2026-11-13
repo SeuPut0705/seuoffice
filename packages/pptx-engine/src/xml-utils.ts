@@ -17,6 +17,9 @@ import { call } from './engine'
  * the narrowing helpers below instead of `any`.
  */
 export type XmlNode = Record<string, unknown>
+const ATTRIBUTE = /\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+const REFERENCE = /&(?:#x([0-9a-fA-F]+)|#(\d+)|(amp|lt|gt|quot|apos));/g
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 /**
  * A value as XML reads it: the five predefined entities and the numeric references decoded, in
  * ONE pass. `r&amp;1`, `r&#38;1` and `r&#x26;1` are one value and `rId&#49;` is `rId1`; and
@@ -31,7 +34,22 @@ export type XmlNode = Record<string, unknown>
  * scalar value (a surrogate, or beyond U+10FFFF) stays as written.
  */
 export function decodeXml(raw: string): string {
-  return call('decodeXml', [raw]) as never
+  if (!raw.includes('&')) return raw
+  return raw.replace(
+    REFERENCE,
+    (
+      reference,
+      hex: string | undefined,
+      decimal: string | undefined,
+      named: string | undefined,
+    ) => {
+      if (named !== undefined) return NAMED_ENTITIES[named]!
+      const code = hex === undefined ? Number(decimal) : Number.parseInt(hex, 16)
+      if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return reference
+      if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) return ''
+      return String.fromCodePoint(code)
+    },
+  )
 }
 /**
  * What an element's open tag gives the attribute `name`, whatever its quotes and spacing: the
@@ -42,7 +60,45 @@ export function decodeXml(raw: string): string {
  * differently. A value written back into XML goes through `escapeXmlAttr`, once.
  */
 export function attributeOf(element: string, name: string): string | undefined {
-  return call('attributeOf', [element, name], { undef: true }) as never
+  const openTag = element.slice(0, element.indexOf('>') + 1)
+  for (const attr of openTag.matchAll(ATTRIBUTE)) {
+    if (attr[1] === name) return decodeXml(attr[2] ?? attr[3]!)
+  }
+  return undefined
+}
+/** An open, close or empty tag: its slash, its name, and whether it closes itself. */
+const TAG = /<(\/?)([^\s/>!?]+)(?:[^>"']|"[^"]*"|'[^']*')*?(\/?)>/g
+/**
+ * Where the first element named `name` (a qualified name, compared as text) at or after `from`
+ * lies in `xml`: from its open tag through its close tag, or its empty tag; with where its
+ * content starts and ends (equal for an empty tag). Null when there is none, or it is not closed.
+ */
+export function elementRange(
+  xml: string,
+  name: string,
+  from = 0,
+): { start: number; end: number; contentStart: number; contentEnd: number } | null {
+  const tags = new RegExp(TAG)
+  tags.lastIndex = from
+  let start = -1
+  let contentStart = -1
+  let depth = 0
+  for (let tag = tags.exec(xml); tag; tag = tags.exec(xml)) {
+    if (tag[2] !== name) continue
+    const end = tag.index + tag[0].length
+    if (tag[1]) {
+      if (start >= 0 && --depth === 0) return { start, end, contentStart, contentEnd: tag.index }
+    } else if (tag[3]) {
+      if (start < 0) return { start: tag.index, end, contentStart: end, contentEnd: end }
+    } else {
+      if (start < 0) {
+        start = tag.index
+        contentStart = end
+      }
+      depth++
+    }
+  }
+  return null
 }
 /**
  * `xml` with each `r:<name>` reference (for the `names` given) whose id is a key of `ids`

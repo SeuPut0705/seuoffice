@@ -147,7 +147,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "applyParagraphFormat" => r_apply_paragraph_format(env, args),
         "applyThemeToArchive" => r_apply_theme_to_archive(env, args),
         "assertZipWithinLimits" => r_assert_zip_within_limits(env, args),
-        "attributeOf" => r_attribute_of(env, args),
         "autofitGeneratedTextBoxes" => r_autofit_generated_text_boxes(env, args),
         "buildChartSpaceXml" => r_build_chart_space_xml(env, args),
         "buildColorMap" => r_build_color_map(env, args),
@@ -178,7 +177,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "createBlankPptx" => r_create_blank_pptx(env, args),
         "custGeomXml" => r_cust_geom_xml(env, args),
         "decodeRunLink" => r_decode_run_link(env, args),
-        "decodeXml" => r_decode_xml(env, args),
         "defaultContentTypeFor" => r_default_content_type_for(env, args),
         "deleteElement" => r_delete_element(env, args),
         "deleteSlide" => r_delete_slide(env, args),
@@ -195,7 +193,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "editTableStructure" => r_edit_table_structure(env, args),
         "editTableStyle" => r_edit_table_style(env, args),
         "elementCNvPrId" => r_element_c_nv_pr_id(env, args),
-        "elementDurableId" => r_element_durable_id(env, args),
         "elementSpid" => r_element_spid(env, args),
         "encodeRunLink" => r_encode_run_link(env, args),
         "ensureBuiltinLayout" => r_ensure_builtin_layout(env, args),
@@ -680,14 +677,6 @@ fn r_assert_zip_within_limits(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(pptx::answer(None, vec![])))
 }
 
-fn r_attribute_of(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let p1 = rstr(args, 1)?;
-    let r = pptx_engine::xml_utils::attribute_of(p0, p1);
-    let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![])))
-}
-
 fn r_autofit_generated_text_boxes(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let r = pptx_engine::deck::shape::autofit_generated_text_boxes(&mut p0);
@@ -951,13 +940,6 @@ fn r_decode_run_link(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
 
-fn r_decode_xml(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let r = pptx_engine::xml_utils::decode_xml(p0);
-    let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![])))
-}
-
 fn r_default_content_type_for(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = rstr(args, 1)?;
@@ -1126,13 +1108,6 @@ fn r_edit_table_style(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_element_c_nv_pr_id(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0: pptx_engine::types::SlideElement = req(args, 0)?;
     let r = pptx_engine::identity::element_cnvpr_id(&p0).map_err(|error| error.to_string())?;
-    let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![])))
-}
-
-fn r_element_durable_id(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: pptx_engine::types::SlideElement = req(args, 0)?;
-    let r = pptx_engine::identity::element_durable_id(&p0).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }

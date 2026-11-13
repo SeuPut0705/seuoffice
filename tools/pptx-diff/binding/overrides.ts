@@ -36,6 +36,9 @@ export interface PptxOverride extends DocxOverride {
 export type Override = PptxOverride
 
 /** The exports that stay TypeScript: no engine call, the module keeps them as they are. */
+const HOT_RENDER_PATH =
+  'the render path reads every element through it: through the wasm binding the render benchmark was over 5% slower'
+
 export const PPTX_TS_ONLY: Readonly<Record<string, string>> = {
   savePptxToFile:
     'the engine has no file system: savePptx gives the bytes and the host writes them to the file (hand-written piece, PPTX_REPLACE)',
@@ -45,6 +48,15 @@ export const PPTX_TS_ONLY: Readonly<Record<string, string>> = {
   xmlParser:
     'answers a fast-xml-parser instance the host parses with; the engine parses inside each call',
   sfntCmapLookup: 'answers a function (cp) => boolean, which cannot cross; only tests call it',
+  // the 5% rule of C2 (crates/pptx-engine/README.md): two 100-round runner benchmarks put
+  // its wasm route at 7.0% and 5.9% of the TypeScript total; the engine keeps its Rust
+  // copy for its own lookups (matches_element_ref, group_child_durable_id)
+  elementDurableId: HOT_RENDER_PATH,
+  // what it reads an element's bytes with: as wasm calls they would cost it more than the one
+  // call it replaces (the benchmark measured it with these in TypeScript)
+  attributeOf: HOT_RENDER_PATH,
+  elementRange: HOT_RENDER_PATH,
+  decodeXml: HOT_RENDER_PATH,
 }
 
 const slideOf = (opened: string): string =>

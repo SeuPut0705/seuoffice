@@ -4672,7 +4672,8 @@
         "ret": "Result<Option<String>, String>",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "the render path reads every element through it: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "identity",
@@ -16743,7 +16744,8 @@
         "ret": "String",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "the render path reads every element through it: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "xml-utils",
@@ -16783,7 +16785,8 @@
         "ret": "Option<String>",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "the render path reads every element through it: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "xml-utils",
@@ -16871,8 +16874,8 @@
         "ret": "Result<Option<ElementRange>, String>",
         "reachable": true
       },
-      "route": "table",
-      "note": "nothing outside the package uses it: the module drops it unless a kept piece names it"
+      "route": "ts",
+      "reason": "the render path reads every element through it: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "xml-utils",
