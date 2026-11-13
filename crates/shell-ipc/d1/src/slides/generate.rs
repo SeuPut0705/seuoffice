@@ -258,7 +258,6 @@ fn land(
                 SlideSession::new("", DeckHandle::new(deck, app.engine.clone()), fit);
             let mut state = app.state.borrow_mut();
             let old_slot = state.slot_of(view);
-            let old_path = state.session(view).map(|s| s.path().to_owned());
             if let Some(old) = state.session_mut(view) {
                 Session::carry_history_for_replacement(Some(&mut old.core), &mut replacement.core);
                 // the same tab's document: an untitled deck keeps its recovery slot
@@ -266,8 +265,8 @@ fn land(
                     replacement.recovery_id = old.recovery_id.clone();
                 }
             }
-            app.shell
-                .inherit_template_selection(view, old_path.as_deref());
+            let previous = state.session(view).map(|s| app.document_of_session(s));
+            app.inherit_template(previous.as_ref(), &replacement);
             let new_slot = state.set_session(view, replacement);
             // re-point windows that shared the old session
             if let Some(old_slot) = old_slot {

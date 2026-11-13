@@ -161,6 +161,22 @@ const STRINGS: &[(&str, &str, &str)] = &[
     ("schemeColorful", "Colorful", "색상형"),
     ("schemeColorful2", "Colorful 2", "색상형 2"),
     ("schemeMono", "Monochromatic {n}", "단색 {n}"),
+    (
+        "mediaUnsupportedTitle",
+        "This video may not play inside the app",
+        "이 비디오는 앱 내에서 재생되지 않을 수 있습니다",
+    ),
+    (
+        "mediaNoAudioBody",
+        "The video’s audio codec ({codec}) is not supported by the built-in player, so in-app playback will have no sound. The file is embedded as-is and plays normally in PowerPoint after export.",
+        "이 비디오의 오디오 코덱({codec})은 내장 플레이어에서 지원되지 않아 앱 내 재생 시 소리가 나지 않습니다. 파일은 원본 그대로 삽입되며 내보낸 후 PowerPoint에서는 정상적으로 재생됩니다.",
+    ),
+    (
+        "mediaAviBody",
+        "The AVI format is not supported by the built-in player, so it cannot be played inside the app. The file is embedded as-is and still plays in PowerPoint after export.",
+        "AVI 형식은 내장 플레이어에서 지원되지 않아 앱 내에서 재생할 수 없습니다. 파일은 원본 그대로 삽입되며 내보낸 후 PowerPoint에서는 재생할 수 있습니다.",
+    ),
+    ("legacyPptOk", "OK", "확인"),
 ];
 
 /// `tMain(lang, key, params)`: the text of `lang`, else English, else the

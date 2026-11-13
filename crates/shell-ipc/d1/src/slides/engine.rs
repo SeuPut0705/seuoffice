@@ -277,6 +277,61 @@ pub trait SlidesEngine: Send + Sync {
     /// `ensureBuiltinLayout(archive, size, key)`: the path of the layout
     /// part for a `builtin:<key>`; `None` when the key is unknown
     fn ensure_builtin_layout(&self, deck: DeckId, key: &str) -> Option<String>;
+    /// `getSlideNotes(archive, slidePath)` of an existing slide
+    fn slide_notes(&self, deck: DeckId, slide: usize) -> String;
+    /// `getSlideComments(archive, slidePath)` of an existing slide
+    fn slide_comments(&self, deck: DeckId, slide: usize) -> IpcValue;
+    /// `getElementLink(opened, slideIndex, sourceId)`; the arguments are the
+    /// renderer's, whatever they are
+    fn element_link(&self, deck: DeckId, slide: &IpcValue, source_id: &IpcValue) -> IpcValue;
+    /// `getSlideLinks(opened, slideIndex)`: `{ elementId, target }` items
+    fn slide_links(&self, deck: DeckId, slide: &IpcValue) -> IpcValue;
+    /// `getRunLinks(opened, slideIndex)`: `{ elementId, ...rest }` items
+    fn run_links(&self, deck: DeckId, slide: &IpcValue) -> IpcValue;
+    /// `readHeaderFooter(slide)` of an existing slide
+    fn header_footer(&self, deck: DeckId, slide: usize) -> IpcValue;
+    /// `getSlideTransition(slide)` of an existing slide
+    fn slide_transition(&self, deck: DeckId, slide: usize) -> IpcValue;
+    /// `{ advanceMs: getSlideAdvanceTime(slide), narrationIds }` of an existing slide
+    fn show_timing(&self, deck: DeckId, slide: usize) -> IpcValue;
+    /// the `AnimationItem[]` of an existing slide; `labels` are the localized
+    /// names by element type (`text`, `shape`, `picture`, `group`, `table`,
+    /// `chart`, `passthrough`, `object` for the fallback)
+    fn animations(&self, deck: DeckId, slide: usize, labels: &[(String, String)]) -> IpcValue;
+    /// the Morph pairing keys of an existing slide's elements
+    fn shape_keys(&self, deck: DeckId, slide: usize) -> IpcValue;
+    /// `narrationSpids(slide).length > 0`
+    fn has_narration(&self, deck: DeckId, slide: usize) -> bool;
+    /// the slides of a section, `normalizeSections` applied: `id` null or
+    /// undefined is the lead (sectionless) slides; `None` for an unknown id
+    fn section_slide_indices(&self, deck: DeckId, id: &IpcValue) -> Option<Vec<usize>>;
+    /// `listMasterParts(archive)`
+    fn master_parts(&self, deck: DeckId) -> Vec<MasterPart>;
+    /// `parseMasterPart(archive, partPath)` then `buildRenderSlide`: the part
+    /// becomes the live master slide the master ops are seeded with; `None`
+    /// when it does not parse
+    fn master_parse(&self, deck: DeckId, part_path: &str, fit_width_px: f64) -> Option<IpcValue>;
+    /// `buildRenderSlide` of the live master slide of `part_path`
+    fn master_render(&self, deck: DeckId, part_path: &str, fit_width_px: f64) -> Option<IpcValue>;
+    /// the live master slide has an element with this id
+    fn master_has_element(&self, deck: DeckId, part_path: &str, source_id: &str) -> bool;
+    /// a transform preview: the live master slide's element moves, nothing
+    /// is persisted (`el.transform = { ...el.transform, offset, rot }`)
+    fn master_preview_transform(
+        &self,
+        deck: DeckId,
+        part_path: &str,
+        source_id: &str,
+        offset: [f64; 4],
+        rot: f64,
+    );
+    /// the picture's natural size and dpi: `nativeImage` (`tiffToPng` for a
+    /// tiff) and `imageDpiFromBytes(bytes)`; `path` when the image is a file
+    fn image_info(&self, bytes: &[u8], ext: &str, path: Option<&str>) -> ImageInfo;
+    /// `nativeImage.createThumbnailFromPath(path)` as PNG: a video's poster
+    fn video_poster(&self, path: &str) -> Option<Vec<u8>>;
+    /// `slide.background.mediaRef` when the slide's background is an image
+    fn background_image(&self, deck: DeckId, slide: usize) -> Option<String>;
     /// `buildPagePptx` of a page spec the renderer's LLM wrote (`parsePageSpec`
     /// first): the one-slide pptx and the images that failed to load. Runs on
     /// a worker (it fetches images); `Err` is the message the handler
@@ -299,6 +354,23 @@ pub trait SlidesEngine: Send + Sync {
 }
 
 pub type SlidesEngineHost = Arc<dyn SlidesEngine>;
+
+/// `listMasterParts` item: `{ partPath, kind, name }`
+#[derive(Clone, Debug, PartialEq)]
+pub struct MasterPart {
+    pub part_path: String,
+    pub kind: IpcValue,
+    pub name: IpcValue,
+}
+
+/// What the shell knows of a picture's pixels
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ImageInfo {
+    /// width and height in px
+    pub natural: Option<(f64, f64)>,
+    /// horizontal and vertical dpi the file carries
+    pub dpi: Option<(f64, f64)>,
+}
 
 /// `findGroupChild`'s frame of a child inside a group: the group's offset
 /// and, when it has one, the child offset space (`chOff`/`chExt`)
@@ -432,11 +504,6 @@ pub trait SlidesShell: Send + Sync {
     fn move_presenter_window(&self, window: WindowId, display: Display);
     /// the window title of a detached editor window (`win.setTitle`)
     fn set_window_title(&self, view: ViewId, title: &str);
-    /// `followTemplateSelection(session, fromPath, toPath)`
-    fn follow_template_selection(&self, view: ViewId, from_path: &str, to_path: &str);
-    /// `inheritTemplateSelection(previous, replacement)` for the view's
-    /// session being replaced by a new deck
-    fn inherit_template_selection(&self, view: ViewId, previous_path: Option<&str>);
     /// `takeGenerateHandoff('slides', view)`
     fn take_generate_handoff(&self, view: ViewId) -> Option<TakenHandoff>;
     /// `reportGenerateRunStarted('slides', view, paths)`: recorded

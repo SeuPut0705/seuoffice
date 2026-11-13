@@ -20,6 +20,9 @@ use super::engine::{
 };
 use crate::value::{as_num, as_str, field, num, obj, string};
 
+/// the one master part of a fake deck
+const MASTER_PART: &str = "ppt/slideMasters/slideMaster1.xml";
+
 /// the probe's call log
 pub type CallLog = Arc<Mutex<Vec<Value>>>;
 
@@ -34,6 +37,7 @@ struct FakeSlide {
     path: String,
     elements: Vec<FakeElement>,
     hidden: bool,
+    comments: Vec<(String, String)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +48,7 @@ struct FakeDeck {
     next_id: u32,
     dirty: bool,
     meta_dirty: bool,
+    master: Vec<FakeElement>,
 }
 
 impl FakeDeck {
@@ -54,6 +59,7 @@ impl FakeDeck {
                     path: format!("ppt/slides/slide{n}.xml"),
                     elements: Vec::new(),
                     hidden: false,
+                    comments: Vec::new(),
                 })
                 .collect(),
             cx: 9_144_000.0,
@@ -61,6 +67,10 @@ impl FakeDeck {
             next_id: 1,
             dirty: false,
             meta_dirty: false,
+            master: vec![FakeElement {
+                id: "m0".into(),
+                text: "Title".into(),
+            }],
         }
     }
 
@@ -112,6 +122,7 @@ impl FakeDeck {
                 path,
                 elements,
                 hidden,
+                comments: Vec::new(),
             });
         }
         Some(FakeDeck {
@@ -121,6 +132,10 @@ impl FakeDeck {
             next_id,
             dirty: false,
             meta_dirty: false,
+            master: vec![FakeElement {
+                id: "m0".into(),
+                text: "Title".into(),
+            }],
         })
     }
 }
@@ -184,11 +199,28 @@ impl FakeEngine {
     fn check(d: &FakeDeck, op: &IpcValue) -> Option<String> {
         let name = as_str(field(op, "op")).unwrap_or("");
         let target = field(op, "target");
+        if let Some(part) = as_str(field(target, "part")) {
+            if part != MASTER_PART {
+                return Some("part not found".into());
+            }
+            return match name {
+                "addElement" => None,
+                "setText" | "deleteElement" => {
+                    let id = as_str(field(target, "el")).unwrap_or("");
+                    (!d.master.iter().any(|e| e.id == id))
+                        .then(|| format!("element {id} not found"))
+                }
+                other => Some(format!("unsupported op {other}")),
+            };
+        }
         let slide = as_num(field(target, "slide"));
         let slide_ok =
             slide.is_some_and(|s| s.fract() == 0.0 && s >= 0.0 && (s as usize) < d.slides.len());
         match name {
-            "addElement" | "setHidden" | "deleteSlide" | "duplicateSlide" if !slide_ok => {
+            "addElement" | "setHidden" | "deleteSlide" | "duplicateSlide" | "addComment"
+            | "addPicture"
+                if !slide_ok =>
+            {
                 Some("slide not found".into())
             }
             "setText" | "deleteElement" => {
@@ -202,7 +234,16 @@ impl FakeEngine {
                     .any(|e| e.id == id);
                 (!found).then(|| format!("element {id} not found"))
             }
-            "addElement" | "setHidden" | "deleteSlide" | "duplicateSlide" => None,
+            "deleteComment" => {
+                if !slide_ok {
+                    return Some("slide not found".into());
+                }
+                let idx = as_num(field(op, "idx")).unwrap_or(-1.0);
+                let count = d.slides[slide.unwrap() as usize].comments.len() as f64;
+                (!(idx >= 0.0 && idx < count)).then(|| "no such comment".to_owned())
+            }
+            "addElement" | "setHidden" | "deleteSlide" | "duplicateSlide" | "addComment"
+            | "addPicture" => None,
             other => Some(format!("unsupported op {other}")),
         }
     }
@@ -210,6 +251,9 @@ impl FakeEngine {
     fn apply(d: &mut FakeDeck, op: &IpcValue) -> TxnRecord {
         let name = as_str(field(op, "op")).unwrap_or("");
         let target = field(op, "target");
+        if as_str(field(target, "part")).is_some() {
+            return Self::apply_master(d, op);
+        }
         let slide = as_num(field(target, "slide")).unwrap_or(0.0) as usize;
         let mut created = None;
         match name {
@@ -246,12 +290,68 @@ impl FakeEngine {
                 d.next_id += 1;
                 d.slides.insert(slide + 1, copy);
             }
+            "addComment" => {
+                let author = as_str(field(op, "author")).unwrap_or("").to_owned();
+                let text = as_str(field(op, "text")).unwrap_or("").to_owned();
+                d.slides[slide].comments.push((author, text));
+            }
+            "deleteComment" => {
+                let idx = as_num(field(op, "idx")).unwrap_or(0.0) as usize;
+                d.slides[slide].comments.remove(idx);
+            }
+            "addPicture" => {
+                let id = format!("e{}", d.next_id);
+                d.next_id += 1;
+                let ext = as_str(field(op, "ext")).unwrap_or("");
+                d.slides[slide].elements.push(FakeElement {
+                    id: id.clone(),
+                    text: format!("picture:{ext}"),
+                });
+                created = Some(vec![id]);
+            }
             _ => {}
         }
         d.dirty = true;
         TxnRecord {
             op: op.clone(),
             slide_id: Some(format!("slide-{slide}")),
+            created,
+            after: IpcValue::Undefined,
+        }
+    }
+
+    /// ops addressed to the master part (`target.part`)
+    fn apply_master(d: &mut FakeDeck, op: &IpcValue) -> TxnRecord {
+        let name = as_str(field(op, "op")).unwrap_or("");
+        let target = field(op, "target");
+        let mut created = None;
+        match name {
+            "addElement" => {
+                let id = format!("m{}", d.next_id);
+                d.next_id += 1;
+                d.master.push(FakeElement {
+                    id: id.clone(),
+                    text: paragraphs_text(field(op, "paragraphs")),
+                });
+                created = Some(vec![id]);
+            }
+            "setText" => {
+                let id = as_str(field(target, "el")).unwrap_or("");
+                let text = paragraphs_text(field(op, "paragraphs"));
+                if let Some(e) = d.master.iter_mut().find(|e| e.id == id) {
+                    e.text = text;
+                }
+            }
+            "deleteElement" => {
+                let id = as_str(field(target, "el")).unwrap_or("").to_owned();
+                d.master.retain(|e| e.id != id);
+            }
+            _ => {}
+        }
+        d.dirty = true;
+        TxnRecord {
+            op: op.clone(),
+            slide_id: None,
             created,
             after: IpcValue::Undefined,
         }
@@ -526,6 +626,162 @@ impl SlidesEngine for FakeEngine {
         IpcValue::Array(Vec::new())
     }
 
+    fn slide_notes(&self, _deck: DeckId, _slide: usize) -> String {
+        String::new()
+    }
+
+    fn slide_comments(&self, deck: DeckId, slide: usize) -> IpcValue {
+        self.with(deck, |d| {
+            IpcValue::Array(
+                d.slides[slide]
+                    .comments
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, (author, text))| {
+                        obj([
+                            ("author", string(author.as_str())),
+                            ("text", string(text.as_str())),
+                            ("idx", num(idx as f64)),
+                        ])
+                    })
+                    .collect(),
+            )
+        })
+    }
+
+    fn element_link(&self, _deck: DeckId, _slide: &IpcValue, _id: &IpcValue) -> IpcValue {
+        IpcValue::Null
+    }
+
+    fn slide_links(&self, _deck: DeckId, _slide: &IpcValue) -> IpcValue {
+        IpcValue::Array(Vec::new())
+    }
+
+    fn run_links(&self, _deck: DeckId, _slide: &IpcValue) -> IpcValue {
+        IpcValue::Array(Vec::new())
+    }
+
+    fn header_footer(&self, _deck: DeckId, _slide: usize) -> IpcValue {
+        obj([
+            ("footer", IpcValue::Null),
+            ("slideNum", IpcValue::Bool(false)),
+            ("date", IpcValue::Null),
+        ])
+    }
+
+    fn slide_transition(&self, _deck: DeckId, _slide: usize) -> IpcValue {
+        string("none")
+    }
+
+    fn show_timing(&self, _deck: DeckId, _slide: usize) -> IpcValue {
+        obj([
+            ("advanceMs", IpcValue::Null),
+            ("narrationIds", IpcValue::Array(Vec::new())),
+        ])
+    }
+
+    fn animations(&self, _deck: DeckId, _slide: usize, _labels: &[(String, String)]) -> IpcValue {
+        IpcValue::Array(Vec::new())
+    }
+
+    fn shape_keys(&self, deck: DeckId, slide: usize) -> IpcValue {
+        self.with(deck, |d| {
+            IpcValue::Array(
+                d.slides[slide]
+                    .elements
+                    .iter()
+                    .map(|e| {
+                        obj([
+                            ("sourceId", string(e.id.as_str())),
+                            ("spid", IpcValue::Undefined),
+                            ("name", string("")),
+                        ])
+                    })
+                    .collect(),
+            )
+        })
+    }
+
+    fn has_narration(&self, _deck: DeckId, _slide: usize) -> bool {
+        false
+    }
+
+    fn section_slide_indices(&self, deck: DeckId, id: &IpcValue) -> Option<Vec<usize>> {
+        match id {
+            IpcValue::Undefined | IpcValue::Null => {
+                Some((0..self.with(deck, |d| d.slides.len())).collect())
+            }
+            _ => None,
+        }
+    }
+
+    fn master_parts(&self, _deck: DeckId) -> Vec<super::engine::MasterPart> {
+        vec![super::engine::MasterPart {
+            part_path: MASTER_PART.into(),
+            kind: string("master"),
+            name: string("Office Theme"),
+        }]
+    }
+
+    fn master_parse(&self, deck: DeckId, part: &str, fit: f64) -> Option<IpcValue> {
+        self.master_render(deck, part, fit)
+    }
+
+    fn master_render(&self, deck: DeckId, part: &str, _fit: f64) -> Option<IpcValue> {
+        (part == MASTER_PART).then(|| {
+            self.with(deck, |d| {
+                obj([
+                    ("partPath", string(MASTER_PART)),
+                    (
+                        "elements",
+                        IpcValue::Array(
+                            d.master
+                                .iter()
+                                .map(|e| {
+                                    obj([
+                                        ("id", string(e.id.as_str())),
+                                        ("text", string(e.text.as_str())),
+                                    ])
+                                })
+                                .collect(),
+                        ),
+                    ),
+                ])
+            })
+        })
+    }
+
+    fn master_has_element(&self, deck: DeckId, part: &str, id: &str) -> bool {
+        part == MASTER_PART && self.with(deck, |d| d.master.iter().any(|e| e.id == id))
+    }
+
+    fn master_preview_transform(
+        &self,
+        _deck: DeckId,
+        _part: &str,
+        id: &str,
+        offset: [f64; 4],
+        rot: f64,
+    ) {
+        self.record(json!(["master.previewTransform", id, offset, rot]));
+    }
+
+    fn image_info(&self, bytes: &[u8], ext: &str, _path: Option<&str>) -> super::engine::ImageInfo {
+        self.record(json!(["nativeImage.info", bytes.len(), ext]));
+        super::engine::ImageInfo {
+            natural: (!bytes.is_empty()).then_some((640.0, 480.0)),
+            dpi: None,
+        }
+    }
+
+    fn video_poster(&self, _path: &str) -> Option<Vec<u8>> {
+        None
+    }
+
+    fn background_image(&self, _deck: DeckId, _slide: usize) -> Option<String> {
+        None
+    }
+
     fn slide_index_of_id(&self, deck: DeckId, slide_id: &str) -> Option<usize> {
         let n: usize = slide_id.strip_prefix("slide-")?.parse().ok()?;
         self.with(deck, |d| (n < d.slides.len()).then_some(n))
@@ -768,12 +1024,6 @@ impl SlidesShell for FakeShell {
     }
     fn set_window_title(&self, view: ViewId, title: &str) {
         self.record(json!(["win.setTitle", view.0, title]));
-    }
-    fn follow_template_selection(&self, view: ViewId, from: &str, to: &str) {
-        self.record(json!(["followTemplateSelection", view.0, from, to]));
-    }
-    fn inherit_template_selection(&self, view: ViewId, previous: Option<&str>) {
-        self.record(json!(["inheritTemplateSelection", view.0, previous]));
     }
     fn take_generate_handoff(&self, _view: ViewId) -> Option<TakenHandoff> {
         None

@@ -28,6 +28,8 @@ use crate::value::{Args, as_bool, as_num, field, num, obj, or_null, string, thro
 type Reply = Result<IpcValue, IpcError>;
 
 pub const AI_REVIEW_SAVE_REASON: &str = "ai-review";
+/// how long `requestRendererSave` waits for the renderer's answer
+const CLOSE_SAVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 const AI_RUN_OPEN: &str = "An AI request is editing this deck; saving waits for your review";
 
 /// `'Error: ' + message`: `String(err)` of a thrown `Error`
@@ -473,7 +475,12 @@ pub fn autosave_pref(app: &App, cx: &CallContext, args: Args) -> Result<(), IpcE
 }
 
 pub fn close_save_result(app: &App, cx: &CallContext, args: Args) -> Result<(), IpcError> {
-    let waiter = app.state.borrow_mut().close_waiters.remove(&cx.sender.view);
+    let waiter = {
+        let mut state = app.state.borrow_mut();
+        let view = cx.sender.view;
+        let at = state.close_waiters.iter().rposition(|w| w.0 == view);
+        at.map(|at| state.close_waiters.remove(at).2)
+    };
     if let Some(waiter) = waiter {
         waiter(as_bool(args.get(0)) == Some(true));
     }
@@ -501,8 +508,36 @@ impl App {
     /// `requestRendererSave(contents)`: asks the renderer to run the full
     /// save flow; `done` runs when it answers (or the view is gone: false)
     pub fn request_renderer_save(&self, view: ViewId, done: Box<dyn FnOnce(bool)>) {
-        self.state.borrow_mut().close_waiters.insert(view, done);
+        let ticket = {
+            let mut state = self.state.borrow_mut();
+            state.next_ticket += 1;
+            let ticket = state.next_ticket;
+            state.close_waiters.push((view, ticket, done));
+            ticket
+        };
         self.emit(view, "slides:close-save-request", Vec::new());
+        // failure/timeout = false: the renderer gets two minutes
+        self.after(CLOSE_SAVE_TIMEOUT, move |app| {
+            let (own, current) = {
+                let mut state = app.state.borrow_mut();
+                let own = state
+                    .close_waiters
+                    .iter()
+                    .position(|w| w.1 == ticket)
+                    .map(|at| state.close_waiters.remove(at).2);
+                // `closeSaveWaiters.delete(contents.id)`: the view's current waiter goes too
+                let current = state
+                    .close_waiters
+                    .iter()
+                    .rposition(|w| w.0 == view)
+                    .map(|at| state.close_waiters.remove(at));
+                (own, current)
+            };
+            drop(current);
+            if let Some(own) = own {
+                own(false);
+            }
+        });
     }
 
     /// `requestSlidesClose(contents, parent)`
@@ -598,8 +633,7 @@ impl App {
         let meta_rev_at_save = s.core.meta_rev.unwrap_or(0);
         let previous_path = s.path().to_owned();
         self.write_deck_file(s, file_path).map_err(thrown_text)?;
-        self.shell
-            .follow_template_selection(view, s.path(), file_path);
+        self.follow_template(s, s.path(), file_path);
         s.core.path = file_path.to_owned();
         s.disk_state = record_disk_state(file_path);
         self.push_recent(file_path);
@@ -692,7 +726,7 @@ pub fn save(app: &App, cx: &CallContext, args: Args) -> Reply {
         };
         s.core.path = picked.clone();
         s.ask_path_on_first_save = false;
-        app.shell.follow_template_selection(view, "", &picked);
+        app.follow_template(s, "", &picked);
         app.push_recent(&picked);
         app.shell.opened(view, &picked);
     }
@@ -782,7 +816,7 @@ pub fn save_into_project(app: &App, cx: &CallContext, _args: Args) -> Reply {
     };
     s.core.path = written.clone();
     s.ask_path_on_first_save = false;
-    app.shell.follow_template_selection(view, "", &written);
+    app.follow_template(s, "", &written);
     app.push_recent(&written);
     app.shell.opened(view, &written);
     s.disk_state = record_disk_state(&written);
@@ -870,7 +904,7 @@ pub fn save_as(app: &App, cx: &CallContext, args: Args) -> Reply {
             fail(text)
         };
     }
-    app.shell.follow_template_selection(view, s.path(), &target);
+    app.follow_template(s, s.path(), &target);
     s.core.path = target.clone();
     s.disk_state = record_disk_state(&target);
     app.push_recent(&target);

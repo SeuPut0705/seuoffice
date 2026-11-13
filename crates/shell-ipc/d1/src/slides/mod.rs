@@ -27,8 +27,11 @@ pub mod fake;
 pub mod files;
 pub mod generate;
 pub mod i18n;
+pub mod inserts;
 pub mod lifecycle;
+pub mod master;
 pub mod presenter;
+pub mod reads;
 pub mod recovery;
 pub mod session;
 pub mod state;
@@ -45,6 +48,7 @@ use shell_contract::hosts::{ClipboardHost, ContentsHost, DialogsHost, OsShellHos
 use shell_contract::ipc::{CallContext, RegisterError, Responder};
 use shell_contract::provided::Provided;
 use shell_contract::runtime::Services;
+use shell_contract::slides::{SlidesDocument, SlidesDocuments, SlidesTemplateSelectionHooks};
 use shell_contract::{Batch, IpcError, IpcValue, ViewId, WindowId};
 
 use crate::host::{LocaleHost, RecoveryStateHost, Shared, on_view_gone};
@@ -193,6 +197,49 @@ impl DocumentEditors for SlidesEditors {
     }
 }
 
+/// `sessions.get(view)` for the batches that ask which deck a view shows
+struct SlidesDocs {
+    app: App,
+}
+
+impl SlidesDocuments for SlidesDocs {
+    fn document(&self, view: ViewId) -> Option<SlidesDocument> {
+        let state = self.app.state.borrow();
+        state.session(view).map(|s| self.app.document_of_session(s))
+    }
+}
+
+impl App {
+    /// The session as the other batches name it
+    pub fn document_of_session(&self, s: &state::SlideSession) -> SlidesDocument {
+        SlidesDocument {
+            id: s.id,
+            path: s.path().to_owned(),
+        }
+    }
+
+    /// `followTemplateSelection(session, fromPath, toPath)`: every hook
+    /// provided, none when absent
+    pub fn follow_template(&self, s: &state::SlideSession, from: &str, to: &str) {
+        let doc = self.document_of_session(s);
+        for hooks in self.provided.all::<dyn SlidesTemplateSelectionHooks>() {
+            hooks.follow(&doc, from, to);
+        }
+    }
+
+    /// `inheritTemplateSelection(previous, replacement)`
+    pub fn inherit_template(
+        &self,
+        previous: Option<&SlidesDocument>,
+        replacement: &state::SlideSession,
+    ) {
+        let doc = self.document_of_session(replacement);
+        for hooks in self.provided.all::<dyn SlidesTemplateSelectionHooks>() {
+            hooks.inherit(previous, &doc);
+        }
+    }
+}
+
 impl App {
     /// A view is gone: the work of `trackSlidesWebContents`'s
     /// `once('destroyed')` and of the presenter show
@@ -209,7 +256,8 @@ impl App {
             state.auto_save_pref.remove(&view);
             state.save_as_image_targets.forget(f64::from(view.0));
             state.seeds.forget(f64::from(view.0));
-            state.close_waiters.remove(&view)
+            let at = state.close_waiters.iter().rposition(|w| w.0 == view);
+            at.map(|at| state.close_waiters.remove(at).2)
         };
         if let Some(waiter) = waiter {
             waiter(false);
@@ -252,11 +300,15 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
         shared,
         recovery_state,
         text_cache: Arc::new(Mutex::default()),
+        provided: provided.clone(),
+        backoff: Rc::default(),
     };
     APPS.with(|apps| apps.borrow_mut().push(app.clone()));
     provided.add::<dyn DocumentEditors>(Rc::new(SlidesEditors { app: app.clone() }));
+    provided.add::<dyn SlidesDocuments>(Rc::new(SlidesDocs { app: app.clone() }));
     let gone = app.clone();
     on_view_gone(services, move |view| gone.view_gone(view));
+    app.schedule_recovery_tick();
 
     let mut routes = vec![
         // lifecycle
@@ -412,6 +464,9 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     ];
     routes.extend(edits::routes(&app));
     routes.extend(edit_ops::routes(&app));
+    routes.extend(reads::routes(&app));
+    routes.extend(master::routes(&app));
+    routes.extend(inserts::routes(&app));
     Ok(routes)
 }
 

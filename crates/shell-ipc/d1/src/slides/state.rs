@@ -7,7 +7,7 @@
 //! and a view names its slot. Slots are never reused within a run, so a
 //! deferred flush that finds its slot empty or replaced simply does nothing.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -78,8 +78,27 @@ pub struct MasterEdit {
     pub part_path: String,
 }
 
+/// `contentMark(session)`: what a recovery copy was taken of. Equal marks
+/// mean the copy on disk already holds the deck.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CopyMark {
+    pub op_seq: u64,
+    pub meta_rev: u64,
+    pub meta_dirty: bool,
+    pub undo_len: usize,
+    pub undo_top: usize,
+    pub redo_len: usize,
+    pub redo_top: usize,
+    pub slide_count: usize,
+}
+
+/// A close waiting on the renderer: the view, the ticket its timeout finds it
+/// by, and what to do with the answer
+pub type CloseWaiter = (ViewId, u64, Box<dyn FnOnce(bool)>);
 /// `Session` of `session-state.ts`
 pub struct SlideSession {
+    /// fixed for the life of this session object (`SlidesDocument::id`)
+    pub id: u64,
     pub core: CoreSession,
     pub fit_width_px: f64,
     /// the disk snapshot of `path` this deck last read or wrote
@@ -95,11 +114,15 @@ pub struct SlideSession {
     pub transform_preview: bool,
     pub preview_redo: Option<Vec<Snapshot>>,
     pub master_edit: Option<MasterEdit>,
+    /// what the last recovery copy of this deck was taken of (`copyMarks`)
+    pub copy_mark: Cell<Option<CopyMark>>,
 }
 
 impl SlideSession {
     pub fn new(path: &str, deck: DeckHandle, fit_width_px: f64) -> Self {
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         SlideSession {
+            id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             core: Session::new(path, deck),
             fit_width_px,
             disk_state: None,
@@ -110,6 +133,7 @@ impl SlideSession {
             transform_preview: false,
             preview_redo: None,
             master_edit: None,
+            copy_mark: Cell::new(None),
         }
     }
 
@@ -184,9 +208,10 @@ pub struct AppState {
     pub element_clipboard: Option<ElementClipboard>,
     /// `issuedCloudPages`
     pub issued_cloud_pages: HashSet<String>,
-    /// `closeSaveWaiters`: the continuation of a close that waits for the
-    /// renderer's `slides:close-save-result`
-    pub close_waiters: HashMap<ViewId, Box<dyn FnOnce(bool)>>,
+    /// `closeSaveWaiters`: the continuations of closes that wait for the
+    /// renderer's `slides:close-save-result`, with the ticket their timeout
+    /// finds them by; the last of a view is the one the map would hold
+    pub close_waiters: Vec<CloseWaiter>,
     /// `autoSavePrefByWc`
     pub auto_save_pref: HashMap<ViewId, bool>,
     pub save_as_image_targets: SaveAsImageTargets,
@@ -345,6 +370,10 @@ pub struct App {
     pub recovery_state: RecoveryStateHost,
     /// the attachment text cache, read on workers
     pub text_cache: super::files::SharedTextCache,
+    /// what the batches provide to each other; read at call time
+    pub provided: Rc<shell_contract::provided::Provided>,
+    /// `autosaveBackoff`: ticks to skip after a failed recovery copy, per copy slot
+    pub backoff: Rc<RefCell<HashMap<String, u32>>>,
 }
 
 /// A JSON number, for `tm` parameters
