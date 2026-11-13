@@ -14,17 +14,21 @@
  *
  * What the entry and that module reach beyond them is replaced by the world
  * the Rust `FakeKb` (crates/shell-ipc/a/src/probe/knowledge_base.rs) answers
- * from, `hosts.a.kb` (the table there): the file index, the unsaved-files
- * list, the parser, the project folder tools, the new-document placer, the
- * bundled CLI and the recent list. Each call is a line of the host log, named
- * as the Rust fake names it. The starred list is read from
- * userData/starred.json by the real `readStarredItems`.
+ * from, `hosts.a.kb` (the table there): the file index, the open-files list,
+ * the parser, the project folder tools, the new-document placer, the bundled
+ * CLI and the recent list. Each call is a line of the host log, named as the
+ * Rust fake names it. The starred list is read from userData/starred.json by
+ * the real `readStarredItems`.
  *
  * Two modules `knowledge-base.ts` imports are answered by a resolve hook
  * (`@seuoffice/electron-utils/unsaved-files`, `@seuoffice/file-parse`): stubs
- * whose functions forward to the world the group sets for each case. The
- * scopes are named `scope-1`, `scope-2`, ... as the probe's Rust side names
- * them (the real ones are random).
+ * whose functions forward to the world the group sets for each case. The Rust
+ * side asks `main-core` for both the unsaved question (over the host's list of
+ * open documents, one `openFiles` line per question) and the size caps (the
+ * real `attachableMaxBytes`, which makes no host call), so the stub logs the
+ * list the same way and forwards the caps to the real function. The scopes are
+ * named `scope-1`, `scope-2`, ... as the probe's Rust side names them (the
+ * real ones are random).
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import * as nodeModule from 'node:module'
@@ -78,6 +82,9 @@ interface Resolving {
 /** `module.registerHooks` is Node 22.15 and later; its types may be older than the runtime */
 const { registerHooks } = nodeModule as unknown as { registerHooks(hooks: Resolving): unknown }
 
+const attachableFile = new URL('../../../../packages/file-parse/src/attachable.ts', import.meta.url)
+  .href
+
 const stubs: Record<string, string> = {
   '@seuoffice/electron-utils/unsaved-files': [
     `const world = () => globalThis[Symbol.for('ipc-diff.a.knowledge-base')]`,
@@ -87,7 +94,7 @@ const stubs: Record<string, string> = {
   ].join('\n'),
   '@seuoffice/file-parse': [
     `const world = () => globalThis[Symbol.for('ipc-diff.a.knowledge-base')]`,
-    `export const attachableMaxBytes = (...args) => world().attachableMaxBytes(...args)`,
+    `export { attachableMaxBytes } from ${JSON.stringify(attachableFile)}`,
     `export const parseFileToText = (...args) => world().parseFileToText(...args)`,
   ].join('\n'),
 }
@@ -121,7 +128,6 @@ interface Config {
     stale?: string[]
   } | null
   unsaved?: string[]
-  maxBytes?: Record<string, number | null>
   parsed?: ({ path: string } & Record<string, unknown>)[]
   projects?: Record<
     string,
@@ -285,7 +291,7 @@ const projectWorld: KbInput = {
         [`${PROJ}/unsaved.txt`]: { status: 'refused', reason: 'unsaved' },
         [`${PROJ}/large.txt`]: { status: 'refused', reason: 'too-large' },
         [`${PROJ}/large.big`]: { status: 'refused', reason: 'too-large' },
-        [`${PROJ}/large.zip`]: { status: 'refused', reason: 'too-large' },
+        [`${PROJ}/large.pdf`]: { status: 'refused', reason: 'too-large' },
         [`${PROJ}/broken.txt`]: { status: 'refused', reason: 'unreadable' },
         [`${PROJ}/odd.txt`]: { status: 'refused', reason: 'a reason nobody lists' },
         [LEASE]: { status: 'ok', text: 'read as a project file', totalChars: 22, offset: 5 },
@@ -294,7 +300,6 @@ const projectWorld: KbInput = {
     },
     p2: { available: true, read: {} },
   },
-  maxBytes: { big: 80 * 1024 * 1024, zip: null },
   parsed: {
     [LEASE]: { ok: true, kind: 'text', text: 'the lease, read from the starred file' },
     [TODO]: { ok: true, kind: 'text', text: 'todo' },
@@ -471,6 +476,7 @@ const cases: Case[] = [
       list(inScope('scope-9')),
       list(inScope(null)),
       list(inScope(5)),
+      list(inScope(date(0))),
       list(inScope('')),
       list(inScope(['scope-1'])),
       list(inScope({ id: 'scope-1' })),
@@ -807,7 +813,7 @@ const cases: Case[] = [
         (name) => read({ path: `${PROJ}/${name}.txt`, scope: 'scope-1' }),
       ),
       read({ path: `${PROJ}/large.big`, scope: 'scope-1' }),
-      read({ path: `${PROJ}/large.zip`, scope: 'scope-1' }),
+      read({ path: `${PROJ}/large.pdf`, scope: 'scope-1' }),
     ],
   },
   // ---- create-document ----
@@ -974,19 +980,12 @@ export const group: Group = {
 
     ;(globalThis as Record<symbol, unknown>)[WORLD] = {
       async assertFileSaved(path: string): Promise<void> {
-        log('withoutUnsavedFiles', [path])
+        log('openFiles')
         if (unsaved.includes(path)) throw new Error(UNSAVED_CHANGES_MESSAGE)
       },
       async withoutUnsavedFiles<T>(items: readonly T[], pathOf: (item: T) => string): Promise<T[]> {
-        log('withoutUnsavedFiles', items.map(pathOf))
+        log('openFiles')
         return items.filter((item) => !unsaved.includes(pathOf(item)))
-      },
-      attachableMaxBytes(ext: string): number {
-        log('attachableMaxBytes', ext)
-        const key = ext.replace(/^\./, '').toLowerCase()
-        const caps = config.maxBytes ?? {}
-        if (Object.hasOwn(caps, key)) return caps[key] ?? Number.POSITIVE_INFINITY
-        return 20 * 1024 * 1024
       },
       async parseFileToText(path: string): Promise<unknown> {
         log('parseFileToText', path)

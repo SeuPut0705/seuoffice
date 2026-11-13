@@ -11,8 +11,7 @@
 //! | key              | shape                                                                                              |
 //! | ---------------- | -------------------------------------------------------------------------------------------------- |
 //! | `index`          | `{hits: [{path, name, ext, snippet?: [text]}], stale: [path]}`; absent: no file index                |
-//! | `unsaved`        | paths open with unsaved changes                                                                    |
-//! | `maxBytes`       | `{"<ext>": bytes or null}` (`null`: no cap); other formats 20 MB                                    |
+//! | `unsaved`        | paths open with unsaved changes (the open-files list holds them, dirty)                            |
 //! | `parsed`         | `[{path, ok, kind, text, error}]` the parser's answer; a path left out is `{ok: false}`             |
 //! | `projects`       | `{"<id>": {available, visible: [path prefix] or absent (null), read: [{path, ...ProjectReadResult}]}}` |
 //! | `placement`      | `{projectId, root, dir}`, `{error}` for a throw, or absent (no project)                             |
@@ -25,15 +24,19 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use jscompat::JsNum;
 use jscompat::node_path::host::{dirname, join};
+use main_core::packages::electron_utils::default_save_dir::Thrown;
+use main_core::packages::electron_utils::unsaved_files::{OpenFileState, OpenFilesSourceFailed};
+use main_core::packages::project_store::{ProjectReadRefusal, ProjectReadResult};
+use main_core::shell::generate::materials::ParsedFile;
+use main_core::shell::knowledge_base::{IndexedHit, KbWithin};
+use main_core::shell::renderer_disposal::Failure;
 use serde_json::{Value, json};
 use shell_contract::ViewId;
 
 use super::{Log, push};
-use crate::knowledge_base::{
-    IndexHit, KbScopeIds, KbServices, KbServicesHost, Placement, ProjectRead, ProjectReadRefusal,
-    VisibleTest,
-};
+use crate::knowledge_base::{KbScopeIds, KbServices, KbServicesHost, Placement, VisibleTest};
 
 /// Inserts this port's factory and the fakes of its hosts, answering from
 /// the case's `hosts.a` value; `log` is the case's host log
@@ -74,11 +77,6 @@ fn number(value: f64) -> Value {
     } else {
         json!(value)
     }
-}
-
-/// `ext` as `attachableMaxBytes` reads it: without the dot, lower case
-fn clean_ext(ext: &str) -> String {
-    ext.strip_prefix('.').unwrap_or(ext).to_lowercase()
 }
 
 /// The conversion's temporary folder is named at random
@@ -137,60 +135,60 @@ impl KbServices for FakeKb {
     fn index_search(
         &self,
         q: &str,
-        limit: usize,
-        within: Option<&dyn Fn(&str) -> bool>,
-    ) -> Vec<IndexHit> {
-        self.log(json!(["fileIndexStore.search", q, limit, within.is_some()]));
-        self.index()["hits"]
-            .as_array()
-            .map(|hits| {
-                hits.iter()
-                    .filter_map(|hit| {
-                        let path = hit["path"].as_str()?;
-                        within.is_none_or(|test| test(path)).then(|| IndexHit {
-                            path: path.to_owned(),
-                            name: hit["name"].as_str().unwrap_or_default().to_owned(),
-                            ext: hit["ext"].as_str().unwrap_or_default().to_owned(),
-                            snippet_text: strings(&hit["snippet"]).concat(),
-                        })
-                    })
-                    .take(limit)
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
-    fn without_unsaved_files(&self, paths: &[String]) -> Vec<String> {
-        self.log(json!(["withoutUnsavedFiles", paths]));
-        let unsaved = strings(&self.case["unsaved"]);
-        paths
-            .iter()
-            .filter(|path| !unsaved.contains(path))
-            .cloned()
-            .collect()
-    }
-
-    fn attachable_max_bytes(&self, ext: &str) -> f64 {
-        self.log(json!(["attachableMaxBytes", ext]));
-        match self.case["maxBytes"].get(clean_ext(ext).as_str()) {
-            Some(Value::Null) => f64::INFINITY,
-            Some(bytes) => bytes.as_f64().unwrap_or(f64::NAN),
-            None => 20.0 * 1024.0 * 1024.0,
+        limit: f64,
+        mut within: KbWithin<'_>,
+    ) -> Result<Vec<IndexedHit>, Thrown> {
+        self.log(json!([
+            "fileIndexStore.search",
+            q,
+            number(limit),
+            within.is_some()
+        ]));
+        let mut found = Vec::new();
+        let hits = self.index()["hits"].as_array().cloned().unwrap_or_default();
+        for hit in &hits {
+            let Some(path) = hit["path"].as_str() else {
+                continue;
+            };
+            let inside = match within.as_mut() {
+                Some(within) => within(path)?,
+                None => true,
+            };
+            if inside && (found.len() as f64) < limit {
+                found.push(IndexedHit {
+                    path: path.to_owned(),
+                    name: hit["name"].as_str().unwrap_or_default().to_owned(),
+                    ext: hit["ext"].as_str().unwrap_or_default().to_owned(),
+                    snippet_text: hit["snippet"]
+                        .is_array()
+                        .then(|| strings(&hit["snippet"]).concat()),
+                });
+            }
         }
+        Ok(found)
     }
 
-    fn parse_file_to_text(&self, path: &str) -> Result<String, Option<String>> {
+    fn open_files(&self) -> Result<Vec<OpenFileState>, OpenFilesSourceFailed> {
+        self.log(json!(["openFiles"]));
+        Ok(strings(&self.case["unsaved"])
+            .into_iter()
+            .map(|path| OpenFileState {
+                file_path: Some(path),
+                dirty: true,
+            })
+            .collect())
+    }
+
+    fn parse_file_to_text(&self, path: &str) -> Result<ParsedFile, Failure> {
         self.log(json!(["parseFileToText", path]));
         let none = Value::Null;
         let parsed = self.entry(&self.case["parsed"], path).unwrap_or(&none);
-        let text = parsed["text"].as_str();
-        if parsed["ok"].as_bool() == Some(true)
-            && parsed["kind"].as_str() == Some("text")
-            && let Some(text) = text
-        {
-            return Ok(text.to_owned());
-        }
-        Err(parsed["error"].as_str().map(str::to_owned))
+        Ok(ParsedFile {
+            ok: parsed["ok"].as_bool() == Some(true),
+            error: parsed["error"].as_str().map(str::to_owned),
+            kind: parsed["kind"].as_str().map(str::to_owned),
+            text: parsed["text"].as_str().map(str::to_owned),
+        })
     }
 
     fn project_available(&self, project_id: &str) -> bool {
@@ -214,7 +212,7 @@ impl KbServices for FakeKb {
         project_id: &str,
         path: &str,
         offset: f64,
-    ) -> ProjectRead {
+    ) -> ProjectReadResult {
         self.log(json!([
             "projectFolderTools.readPath",
             owner.0,
@@ -226,14 +224,15 @@ impl KbServices for FakeKb {
         let read = self
             .entry(&self.project(project_id)["read"], path)
             .unwrap_or(&none);
+        let refused = |reason| ProjectReadResult::Refused { reason };
         match read["status"].as_str() {
-            Some("ok") => ProjectRead::Ok {
+            Some("ok") => ProjectReadResult::Ok {
                 text: read["text"].as_str().unwrap_or_default().to_owned(),
-                total_chars: read["totalChars"].as_f64().unwrap_or(f64::NAN),
-                offset: read["offset"].as_f64().unwrap_or(f64::NAN),
+                total_chars: read["totalChars"].as_u64().unwrap_or_default(),
+                offset: JsNum(read["offset"].as_f64().unwrap_or(f64::NAN)),
             },
-            Some("declined") => ProjectRead::Declined,
-            Some("refused") => ProjectRead::Refused(match read["reason"].as_str() {
+            Some("declined") => ProjectReadResult::Declined,
+            Some("refused") => refused(match read["reason"].as_str() {
                 Some("hidden") => ProjectReadRefusal::Hidden,
                 Some("ignored") => ProjectReadRefusal::Ignored,
                 Some("not-found") => ProjectReadRefusal::NotFound,
@@ -242,7 +241,7 @@ impl KbServices for FakeKb {
                 Some("unreadable") => ProjectReadRefusal::Unreadable,
                 _ => ProjectReadRefusal::Outside,
             }),
-            _ => ProjectRead::Refused(ProjectReadRefusal::Outside),
+            _ => refused(ProjectReadRefusal::Outside),
         }
     }
 
