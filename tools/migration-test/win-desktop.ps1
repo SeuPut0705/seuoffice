@@ -230,6 +230,26 @@ try {
     Start-Sleep 5
     Stop-Process -Id $installer.Id -Force
     Step 'installer-killed' @{ }
+    # A killed CEF installer leaves its recovery for the next sign-in
+    # (crates/shell/bundle/hooks.nsh): a RunOnce value that runs a script.
+    # Do what that sign-in does: Windows deletes the value, then runs it.
+    # No value means the installer was killed before it set the old version
+    # aside (or an Electron installer, which has no recovery).
+    $runOnce = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce'
+    $command = (Get-ItemProperty $runOnce -ErrorAction SilentlyContinue).SeuOfficeRestorePrevious
+    $script = Join-Path $env:LOCALAPPDATA 'seuoffice-restore-previous.cmd'
+    $recovery = [ordered]@{ registered = [bool]$command; command = $command; script = (Test-Path $script) }
+    if ($command) {
+      Remove-ItemProperty $runOnce -Name SeuOfficeRestorePrevious
+      & cmd.exe /c $script
+      $recovery.exit = $LASTEXITCODE
+      $recovery.scriptLeft = Test-Path $script
+      $recovery.previousLeft = Test-Path "$(InstallDir).previous"
+    }
+    Step 'sign-in-recovery' $recovery
+    if ($command -and ($recovery.scriptLeft -or $recovery.previousLeft)) {
+      Fail 'the sign-in recovery did not put the previous version back'
+    }
   } elseif ($installer) {
     # an update waits up to 90 s for the new app's start mark; 10 min is a hang
     for ($i = 0; $i -lt 1200 -and -not $installer.HasExited; $i++) {
