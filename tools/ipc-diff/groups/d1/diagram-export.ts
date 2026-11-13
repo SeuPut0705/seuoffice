@@ -3,7 +3,7 @@
  * The PDF is made by the shell's hidden window: the host log has the print
  * document it was asked to render (`diagram.renderPdf`).
  */
-import { loadDiagram } from '../../d1/diagram-host.ts'
+import { diagramTriggers, loadDiagram } from '../../d1/diagram-host.ts'
 import { bin, call, diagramCase, opened } from '../../d1/diagram-cases.ts'
 import type { Case, Group } from '../../types.ts'
 
@@ -120,5 +120,6 @@ const cases: Case[] = [
 export const group: Group = {
   batch: 'D1',
   load: loadDiagram,
+  triggers: diagramTriggers,
   cases,
 }

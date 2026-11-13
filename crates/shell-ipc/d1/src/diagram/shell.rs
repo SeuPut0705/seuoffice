@@ -58,6 +58,9 @@ pub trait DiagramShell: Send + Sync {
     /// token, 32 lower-case hex digits
     fn save_token(&self) -> String;
 
+    /// `randomUUID()` of `node:crypto`: the id of a question to the renderer
+    fn random_uuid(&self) -> String;
+
     /// `renderPdf(pages, title)` of `export-main.ts`: the hidden window of
     /// the diagram's session showing the print document, `printToPDF`. Called
     /// on a worker thread.

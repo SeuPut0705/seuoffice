@@ -5,7 +5,7 @@
  * A picture pasted without a file is written under a name that has the clock
  * in it, so only the answers that write nothing are compared.
  */
-import { loadDiagram } from '../../d1/diagram-host.ts'
+import { diagramTriggers, loadDiagram } from '../../d1/diagram-host.ts'
 import { UNDEFINED, bin, call, diagramCase } from '../../d1/diagram-cases.ts'
 import type { Case, FileSpec, Group } from '../../types.ts'
 
@@ -140,5 +140,6 @@ const cases: Case[] = [
 export const group: Group = {
   batch: 'D1',
   load: loadDiagram,
+  triggers: diagramTriggers,
   cases,
 }

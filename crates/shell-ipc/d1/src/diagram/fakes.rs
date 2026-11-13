@@ -99,11 +99,13 @@ pub(super) fn insert(hosts: &mut Hosts, case: &Value) {
         case: case.get("diagram").cloned().unwrap_or(Value::Null),
         log: hosts.get::<CaseLog>().cloned(),
         tokens: AtomicU64::new(0),
+        uuids: AtomicU64::new(0),
     };
     hosts.insert::<DiagramEngineHost>(Arc::new(Fake {
         case: fake.case.clone(),
         log: fake.log.clone(),
         tokens: AtomicU64::new(0),
+        uuids: AtomicU64::new(0),
     }));
     hosts.insert::<DiagramShellHost>(Arc::new(fake));
 }
@@ -113,6 +115,8 @@ struct Fake {
     log: Option<CaseLog>,
     /// the save tokens handed out so far: they count up, 1, 2, ...
     tokens: AtomicU64,
+    /// the question ids handed out so far: `00000000-0000-4000-8000-000000000001`, ...
+    uuids: AtomicU64,
 }
 
 impl Fake {
@@ -300,6 +304,13 @@ impl DiagramShell for Fake {
 
     fn is_headless(&self) -> bool {
         self.answer("headless").as_bool().unwrap_or(false)
+    }
+
+    fn random_uuid(&self) -> String {
+        format!(
+            "00000000-0000-4000-8000-{:012x}",
+            self.uuids.fetch_add(1, Ordering::Relaxed) + 1
+        )
     }
 
     fn save_token(&self) -> String {

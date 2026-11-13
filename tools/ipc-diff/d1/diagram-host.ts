@@ -30,9 +30,10 @@ import type * as DiagramMain from '../../../apps/diagram/src/main/diagram-main.t
 import type * as AiAttachments from '../../../apps/diagram/src/main/ai-attachments.ts'
 import type * as Recovery from '../../../apps/diagram/src/main/recovery-main.ts'
 import type * as PrintDocument from '../../../apps/diagram/src/main/print-document.ts'
+import type * as McpQueries from '../../../apps/diagram/src/main/mcp-queries.ts'
 import type * as Headless from '../../../apps/diagram/src/main/headless-main.ts'
 import type { FakeContents } from '../fakes.ts'
-import type { LoadContext } from '../types.ts'
+import type { Group, LoadContext } from '../types.ts'
 
 const root = resolve(import.meta.dirname, '../../..')
 // the diagram's main files are CommonJS: `require` gives the instances they use
@@ -55,6 +56,10 @@ interface Box {
   /** the view the next `WebContentsView` or hidden window is made for */
   nextView?: number
   tokens: number
+  uuids: number
+  /** the case's loaded entry modules, for the triggers */
+  main?: typeof DiagramMain
+  mcp?: typeof McpQueries
   [name: string]: unknown
 }
 const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
@@ -62,6 +67,7 @@ const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
   d1: {},
   log: () => {},
   tokens: 0,
+  uuids: 0,
 }) as Box
 
 const asObject = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json) : {})
@@ -129,6 +135,11 @@ box.assertFileSaved = async (path: string) => {
   if (typeof message === 'string') throw new Error(message)
 }
 
+box.randomUUID = () => {
+  box.uuids++
+  return `00000000-0000-4000-8000-${box.uuids.toString(16).padStart(12, '0')}`
+}
+
 box.randomBytes = (size: number) => {
   box.tokens++
   return Buffer.from(box.tokens.toString(16).padStart(size * 2, '0'), 'hex')
@@ -141,7 +152,7 @@ const FAKES: Record<string, string> = {
   '@seuoffice/drawio-model': `openDiagram: (name, bytes) => ${box_}.openDiagram(name, bytes)`,
   '@seuoffice/file-parse': `parseFileToText: (path) => ${box_}.parseFileToText(path), diagramPictureExtOf: (path) => ${box_}.diagramPictureExtOf(path)`,
   '@seuoffice/electron-utils': `assertFileSaved: (path) => ${box_}.assertFileSaved(path)`,
-  'node:crypto': `randomBytes: (size) => ${box_}.randomBytes(size)`,
+  'node:crypto': `randomBytes: (size) => ${box_}.randomBytes(size), randomUUID: () => ${box_}.randomUUID()`,
 }
 const wrapper = (name: string, real: string): string =>
   [
@@ -195,6 +206,7 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
   box.d1 = asObject(d1.diagram)
   box.log = (line) => e.log.push(line)
   box.tokens = 0
+  box.uuids = 0
   box.nextView = undefined
 
   // what the shell's views and hidden windows are
@@ -279,6 +291,8 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
   const ai = load<typeof AiAttachments>('ai-attachments.ts')
   const recovery = load<typeof Recovery>('recovery-main.ts')
   const headless = load<typeof Headless>('headless-main.ts')
+  box.main = main
+  box.mcp = load<typeof McpQueries>('mcp-queries.ts')
 
   const writer = box.d1.writeNewDocument
   main.configureDiagramRuntime({
@@ -341,4 +355,47 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
       .exportDiagramHeadless(job.path, resolve(cx.dir, 'headless-out.png'), 'png', {} as never)
       .catch(() => {})
   }
+}
+
+const FIVE_SECONDS_AND_A_MARGIN = 5200
+
+/**
+ * The shell's calls into the diagram editor, each the exported function of
+ * `diagram-main.ts` / `mcp-queries.ts` its name says; the Rust side
+ * (`diagram::probe_trigger`) runs the same through its editors.
+ */
+export const diagramTriggers: NonNullable<Group['triggers']> = {
+  'd1/diagram:requestDiagramSave': (cx, view, args) =>
+    box.main!.requestDiagramSave(
+      cx.contents(view) as never,
+      args[0] === 'saveAs' ? 'saveAs' : 'save',
+    ),
+  'd1/diagram:requestDiagramClose': (cx, view, args) =>
+    box.main!.requestDiagramClose(
+      cx.contents(view) as never,
+      args[0] === true
+        ? (cx.electron.BrowserWindow as { fromId(id: number): never }).fromId(view)
+        : undefined,
+    ),
+  'd1/diagram:diagramSaveToPath': (cx, view, args) =>
+    box.main!.diagramSaveToPath(cx.contents(view) as never, String(args[0])),
+  'd1/diagram:diagramFileRenamed': (cx, view, args) =>
+    box.main!.diagramFileRenamed(cx.contents(view) as never, String(args[0]), String(args[1])),
+  'd1/diagram:sendDiagramMenuCommand': (cx, view, args) =>
+    box.main!.sendDiagramMenuCommand(cx.contents(view) as never, args[0] as never),
+  'd1/diagram:sendDiagramExportRequest': (cx, view, args) =>
+    box.main!.sendDiagramExportRequest(cx.contents(view) as never, args[0] as never),
+  'd1/diagram:diagramReadText': (cx, view) => box.mcp!.diagramReadText(cx.contents(view) as never),
+  'd1/diagram:diagramReadPage': (cx, view, args) =>
+    box.mcp!.diagramReadPage(cx.contents(view) as never, String(args[0] ?? '') || undefined),
+  'd1/diagram:diagramApplyOps': (cx, view, args) =>
+    box.mcp!.diagramApplyOps(cx.contents(view) as never, args[0] as unknown[]),
+  'd1/diagram:writeDiagramCopiesNow': (_cx, _view, args) =>
+    box.main!.writeDiagramCopiesNow(typeof args[0] === 'number' ? args[0] : 5000),
+  // the "Don't Save" hold ends, and the tab that stayed open is asked for a copy again
+  'd1/diagram:discardDiagramRecovery': async (cx, view) => {
+    box.main!.discardDiagramRecovery(cx.contents(view) as never)
+    await new Promise((resolve) => setTimeout(resolve, FIVE_SECONDS_AND_A_MARGIN))
+  },
+  'd1/diagram:diagramTabIdentity': (_cx, view) => box.main!.diagramTabIdentity(view),
 }

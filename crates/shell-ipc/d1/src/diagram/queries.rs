@@ -11,7 +11,6 @@
 
 use std::time::Duration;
 
-use jscompat::random_uuid;
 use shell_contract::ipc::CallContext;
 use shell_contract::{IpcError, IpcValue, ViewId};
 
@@ -91,7 +90,7 @@ impl DiagramViews {
         if !self.alive(view) {
             return done(Err(GONE.into()));
         }
-        let id = random_uuid();
+        let id = self.0.shell.random_uuid();
         let query = match &scope {
             ReadScope::All => obj([("id", string(&id))]),
             ReadScope::Page(page) => obj([("id", string(&id)), ("page", string(page))]),
@@ -220,7 +219,7 @@ impl DiagramViews {
         if !self.alive(view) {
             return done(Err(GONE.into()));
         }
-        let id = random_uuid();
+        let id = self.0.shell.random_uuid();
         self.with_state(|state| state.applies.insert(id.clone(), ApplyWaiter { view, done }));
         self.emit(
             view,

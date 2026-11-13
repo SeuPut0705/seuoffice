@@ -14,7 +14,7 @@
  * file that fails to write names its temporary file at random, so neither is
  * compared.
  */
-import { loadDiagram } from '../../d1/diagram-host.ts'
+import { diagramTriggers, loadDiagram } from '../../d1/diagram-host.ts'
 import {
   CHANGED,
   DIAGRAM,
@@ -359,6 +359,7 @@ function diagramHost(name: string) {
 export const group: Group = {
   batch: 'D1',
   load: loadDiagram,
+  triggers: diagramTriggers,
   cases,
   single: {
     'diagram:open-help': 'a send: the shell hook it calls is in the host log',

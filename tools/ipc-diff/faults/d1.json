@@ -84,6 +84,34 @@
     "groups": ["d1/diagram-attach"]
   },
   {
+    "name": "a tool's save to a new path asks the renderer to save, not to retarget",
+    "file": "shell-ipc/d1/src/diagram/lifecycle.rs",
+    "find": "string(if retarget { \"retarget\" } else { \"save\" })",
+    "replace": "string(\"save\")",
+    "groups": ["d1/diagram-triggers"]
+  },
+  {
+    "name": "a renamed file's event carries the old path",
+    "file": "shell-ipc/d1/src/diagram/lifecycle.rs",
+    "find": "vec![string(new_path)]);",
+    "replace": "vec![string(old_path)]);",
+    "groups": ["d1/diagram-triggers"]
+  },
+  {
+    "name": "the page on screen is asked for as every page",
+    "file": "shell-ipc/d1/src/diagram/queries.rs",
+    "find": "ReadScope::Current => obj([(\"id\", string(&id)), (\"current\", IpcValue::Bool(true))]),",
+    "replace": "ReadScope::Current => obj([(\"id\", string(&id))]),",
+    "groups": ["d1/diagram-triggers"]
+  },
+  {
+    "name": "the Don't Save hold never asks for a copy again",
+    "file": "shell-ipc/d1/src/diagram/recovery.rs",
+    "find": "views.emit(view, \"diagram:recovery-reset\", vec![]);",
+    "replace": "let _ = view;",
+    "groups": ["d1/diagram-triggers"]
+  },
+  {
     "name": "a stopped split-pane save answers another text",
     "file": "shell-ipc/d1/src/mindmap/handlers.rs",
     "find": "failure(\"external-modified\")",

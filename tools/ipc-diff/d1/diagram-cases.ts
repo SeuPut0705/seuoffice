@@ -109,3 +109,23 @@ export const opened = (...names: (string | { name: string; decision?: string })[
     }
   }),
 })
+
+/** a shell call into the editor (a `trigger`, named after the exported function it runs) */
+export function trigger(
+  what: string,
+  args: unknown[] = [],
+  options: { view?: number; defer?: true } = {},
+): Call {
+  const name = `d1/diagram:${what}`
+  return {
+    channel: name,
+    kind: 'trigger',
+    name,
+    args,
+    ...(options.view ? { view: options.view } : {}),
+    ...(options.defer ? { defer: true } : {}),
+  }
+}
+
+/** takes the answer of the deferred call at `index` */
+export const answerOf = (index: number): Call => ({ channel: '', args: [], await: index })

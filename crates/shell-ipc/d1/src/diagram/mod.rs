@@ -312,16 +312,187 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
     fakes::insert(hosts, case);
 }
 
+#[cfg(feature = "probe")]
+thread_local! {
+    /// continuations of triggers that answer after a timer
+    static PENDING: RefCell<Vec<Option<shell_contract::editors::Then<IpcValue>>>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A JSON argument of a trigger as the renderer's value
+#[cfg(feature = "probe")]
+fn ipc_of(value: &serde_json::Value) -> IpcValue {
+    use serde_json::Value;
+    match value {
+        Value::Null => IpcValue::Null,
+        Value::Bool(flag) => IpcValue::Bool(*flag),
+        Value::Number(n) => IpcValue::Number(n.as_f64().unwrap_or(f64::NAN)),
+        Value::String(text) => IpcValue::String(text.clone()),
+        Value::Array(items) => IpcValue::Array(items.iter().map(ipc_of).collect()),
+        Value::Object(entries) => IpcValue::Object(
+            entries
+                .iter()
+                .map(|(key, item)| (key.clone(), ipc_of(item)))
+                .collect(),
+        ),
+    }
+}
+
+/// The page read as the object `diagramReadPage` resolves with
+#[cfg(feature = "probe")]
+fn page_read_value(read: PageRead) -> IpcValue {
+    let mut entries = vec![("text".to_owned(), IpcValue::String(read.text))];
+    if let (Some(pages), Some(page)) = (read.pages, read.page) {
+        entries.push(("pages".to_owned(), pages));
+        entries.push(("page".to_owned(), page));
+    }
+    IpcValue::Object(entries)
+}
+
 /// This app's triggers for [`crate::probe_trigger`]: `name` without its
-/// `d1/` prefix; false when it is not one of them
+/// `d1/` prefix, each named after the exported function of `diagram-main.ts`
+/// or `mcp-queries.ts` it runs; false when it is not one of them
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
-    _name: &str,
-    _view: shell_contract::ViewId,
-    _args: &serde_json::Value,
+    name: &str,
+    view: ViewId,
+    args: &serde_json::Value,
     _services: &Services,
-    _provided: &std::rc::Rc<shell_contract::provided::Provided>,
-    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<IpcValue>,
 ) -> bool {
-    false
+    use shell_contract::editors::{SaveMode, editor_for};
+
+    let Some(what) = name.strip_prefix("diagram:") else {
+        return false;
+    };
+    let Some(handle) = views() else {
+        return false;
+    };
+    let text = |i: usize| {
+        args.get(i)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("")
+            .to_owned()
+    };
+    let gone = |message: String| crate::value::thrown(message);
+    let editor = editor_for(provided, view);
+    match what {
+        "requestDiagramSave" => {
+            let mode = if text(0) == "saveAs" {
+                SaveMode::SaveAs
+            } else {
+                SaveMode::Save
+            };
+            handle.request_save(
+                view,
+                mode,
+                Box::new(move |saved| then(Ok(IpcValue::Bool(saved)))),
+            );
+        }
+        "requestDiagramClose" => {
+            let parent = args
+                .get(0)
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+                .then(|| handle.window_of(view))
+                .flatten();
+            handle.request_close(
+                view,
+                parent,
+                Box::new(move |close| then(Ok(IpcValue::Bool(close)))),
+            );
+        }
+        "diagramSaveToPath" => handle.save_to_path(
+            view,
+            &text(0),
+            Box::new(move |saved| then(saved.map(|()| IpcValue::Undefined).map_err(gone))),
+        ),
+        "diagramFileRenamed" => {
+            handle.file_renamed(view, &text(0), &text(1));
+            then(Ok(IpcValue::Undefined));
+        }
+        "sendDiagramMenuCommand" => {
+            handle.send_menu_command(view, &text(0));
+            then(Ok(IpcValue::Undefined));
+        }
+        "sendDiagramExportRequest" => {
+            match editor {
+                Some(editor) => editor.export_request(view, &text(0)),
+                None => handle.send_export_request(view, &text(0)),
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        "diagramReadText" => handle.read_text(
+            view,
+            Box::new(move |read| then(read.map(IpcValue::String).map_err(gone))),
+        ),
+        "diagramReadPage" => {
+            let page = text(0);
+            handle.read_page(
+                view,
+                Some(page.as_str()),
+                Box::new(move |read| then(read.map(page_read_value).map_err(gone))),
+            );
+        }
+        "diagramApplyOps" => {
+            let ops = match args.get(0).map(ipc_of) {
+                Some(IpcValue::Array(ops)) => ops,
+                _ => Vec::new(),
+            };
+            handle.apply_ops(
+                view,
+                ops,
+                Box::new(move |result| then(result.map_err(gone))),
+            );
+        }
+        "writeDiagramCopiesNow" => {
+            let timeout = args
+                .get(0)
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(5000);
+            handle.write_copies_now(
+                Duration::from_millis(timeout),
+                Box::new(move || then(Ok(IpcValue::Undefined))),
+            );
+        }
+        // the "Don't Save" hold ends, and the tab that stayed open is asked
+        // for a copy again: answers once the hold and a margin have passed
+        "discardDiagramRecovery" => {
+            handle.discard_recovery(view);
+            // `then` is not `Send`: it waits in a core-thread slot the timer takes it from
+            let slot = PENDING.with(|p| {
+                p.borrow_mut().push(Some(then));
+                p.borrow().len() - 1
+            });
+            handle.after(
+                recovery::DONT_SAVE_HOLD + Duration::from_millis(200),
+                move |_| {
+                    if let Some(then) = PENDING.with(|p| p.borrow_mut()[slot].take()) {
+                        then(Ok(IpcValue::Undefined));
+                    }
+                },
+            );
+        }
+        "diagramTabIdentity" => then(Ok(match handle.tab_identity(view) {
+            None => IpcValue::Null,
+            Some(identity) => {
+                let mut entries = vec![
+                    (
+                        "sourcePath".to_owned(),
+                        identity
+                            .source_path
+                            .map_or(IpcValue::Null, IpcValue::String),
+                    ),
+                    ("untitled".to_owned(), IpcValue::Bool(identity.untitled)),
+                    ("title".to_owned(), IpcValue::String(identity.title)),
+                ];
+                if let Some(imported) = identity.imported {
+                    entries.push(("imported".to_owned(), IpcValue::String(imported.to_owned())));
+                }
+                IpcValue::Object(entries)
+            }
+        })),
+        _ => return false,
+    }
+    true
 }
