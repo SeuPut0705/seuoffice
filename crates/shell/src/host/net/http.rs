@@ -233,9 +233,15 @@ impl Inner {
             }
             let waiting = std::mem::take(&mut source.waiting);
             let mut answers = Vec::new();
+            let mut over = Vec::new();
             for (read, body, sink) in waiting {
                 match take_next(&mut st, body) {
-                    Some(answer) => answers.push((sink, read, answer)),
+                    Some(answer) => {
+                        if !matches!(answer, Ok(Answer::Chunk(_))) {
+                            over.push(body);
+                        }
+                        answers.push((sink, read, answer));
+                    }
                     None => st
                         .sources
                         .get_mut(&source_id)
@@ -243,6 +249,11 @@ impl Inner {
                         .waiting
                         .push((read, body, sink)),
                 }
+            }
+            // after the whole batch: every read waiting on a branch is handed
+            // its end or its failure before the branch goes
+            for body in over {
+                reclaim(&mut st, body);
             }
             trim(&mut st, source_id);
             drop(st);
@@ -258,10 +269,7 @@ impl Inner {
 }
 
 /// What a read of the branch `body` answers now: its next chunk, the end, the
-/// failure, or `None` while the next chunk is still to come. A branch that is
-/// handed its end or its failure is over: the runtime reads it no more and
-/// sends no cancel for it, so it is dropped here, and its stream with the
-/// last branch (a clone not yet read keeps the stream and its chunks).
+/// failure, or `None` while the next chunk is still to come
 fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
     let Some(branch) = st.bodies.get(&body) else {
         return Some(Ok(Answer::End));
@@ -275,16 +283,24 @@ fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
         st.bodies.get_mut(&body).expect("the branch").next += 1;
         return Some(Ok(Answer::Chunk(chunk)));
     }
-    let last = match &source.end {
-        Some(Ok(())) => Ok(Answer::End),
-        Some(Err(error)) => Err(error.clone()),
-        None => return None,
-    };
-    st.bodies.remove(&body);
-    if !st.bodies.values().any(|b| b.source == source_id) {
-        st.sources.remove(&source_id);
+    match &source.end {
+        Some(Ok(())) => Some(Ok(Answer::End)),
+        Some(Err(error)) => Some(Err(error.clone())),
+        None => None,
     }
-    Some(last)
+}
+
+/// A branch handed its end or its failure is over: the runtime reads it no
+/// more and sends no cancel for it, so it goes, and its stream with the last
+/// branch (a clone not yet read keeps the stream and its chunks). Called once
+/// every read waiting on it has its answer.
+fn reclaim(st: &mut State, body: Id) {
+    let Some(branch) = st.bodies.remove(&body) else {
+        return;
+    };
+    if !st.bodies.values().any(|b| b.source == branch.source) {
+        st.sources.remove(&branch.source);
+    }
 }
 
 // ---- fetch ----
@@ -497,9 +513,13 @@ impl Net for HttpNet {
         let mut st = Inner::lock(&self.0.state);
         match take_next(&mut st, body) {
             Some(answer) => {
-                let source = st.bodies.get(&body).map(|b| b.source);
-                if let Some(source) = source {
-                    trim(&mut st, source);
+                if matches!(answer, Ok(Answer::Chunk(_))) {
+                    let source = st.bodies.get(&body).map(|b| b.source);
+                    if let Some(source) = source {
+                        trim(&mut st, source);
+                    }
+                } else {
+                    reclaim(&mut st, body);
                 }
                 drop(st);
                 match answer {
@@ -719,7 +739,18 @@ mod tests {
     }
 
     /// A raw HTTP/1.1 server answering every request with a chunked body
+    /// A raw HTTP/1.1 server answering every request with a chunked body
     fn server() -> String {
+        serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
+            Duration::ZERO,
+        )
+    }
+
+    /// A raw HTTP/1.1 server writing `answer` to every request, then closing
+    /// the connection after `linger`
+    fn serve(answer: &'static [u8], linger: Duration) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = format!("http://{}", listener.local_addr().unwrap());
         std::thread::spawn(move || {
@@ -730,10 +761,8 @@ mod tests {
                 while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
                     head.push(byte[0]);
                 }
-                let _ = stream.write_all(
-                    b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
-                      transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
-                );
+                let _ = stream.write_all(answer);
+                std::thread::sleep(linger);
             }
         });
         address
@@ -899,5 +928,49 @@ mod tests {
             (0, 0, 0),
             "(sources, bodies, ops) the host still holds"
         );
+    }
+
+    /// what a `reader.read()` came to, its failure as its message
+    type ReadOutcome = Result<Option<Vec<u8>>, String>;
+
+    /// A stream cut short while two reads of one body wait: both reject with
+    /// its failure, the second too, though the first already ended the branch
+    #[test]
+    fn every_read_waiting_on_a_failed_stream_rejects() {
+        let w = World::new();
+        let url = serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+            Duration::from_millis(300),
+        );
+        let (first, waits) = w.run(move |rt| async move {
+            let response = std::rc::Rc::new(
+                rt.fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap(),
+            );
+            let first = response.read().await.map_err(|e| e.message);
+            let other: std::rc::Rc<std::cell::RefCell<Option<ReadOutcome>>> =
+                std::rc::Rc::default();
+            let (reader, slot) = (response.clone(), other.clone());
+            rt.spawn_local(async move {
+                let read = reader.read().await.map_err(|e| e.message);
+                *slot.borrow_mut() = Some(read);
+            });
+            let mine = response.read().await.map_err(|e| e.message);
+            while other.borrow().is_none() {
+                rt.sleep(5.0).await;
+            }
+            let theirs = other.take().unwrap();
+            (first, vec![mine, theirs])
+        });
+        assert_eq!(first, Ok(Some(b"hello".to_vec())));
+        for read in waits {
+            assert!(
+                read.is_err(),
+                "a read waiting on the failed stream ended: {read:?}"
+            );
+        }
+        assert_eq!(w.held_after_settling((0, 0, 0)), (0, 0, 0));
     }
 }
