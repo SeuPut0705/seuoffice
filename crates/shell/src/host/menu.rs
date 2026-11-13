@@ -17,7 +17,7 @@ mod cef_ops;
 pub(crate) use cef_ops::{host_of, print_preview};
 
 use std::path::Path;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex, OnceLock, mpsc};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use main_core::packages::electron_utils::default_save_dir::{
@@ -70,7 +70,12 @@ struct ShellM {
     save_dir: Mutex<SaveDirState>,
 }
 
+/// The app the menus are set on, for callers that have no handle (the tab
+/// hooks on the core thread)
+static APP: OnceLock<AppHandle> = OnceLock::new();
+
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
+    let _ = APP.set(cx.app.clone());
     let host: MHostRef = Arc::new(ShellM {
         app: cx.app.clone(),
         ui: cx.ui.clone(),
@@ -83,6 +88,13 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     hosts.insert(host);
     hosts.insert::<MStateRef>(Arc::new(MState::new()));
     hosts.insert::<FontQueriesRef>(Arc::new(FontsNotPorted));
+}
+
+/// [`apply_menu_for`] on the shell's app; nothing before the hosts are installed
+pub(crate) fn apply_menu(kind: TabKind) {
+    if let Some(app) = APP.get() {
+        apply_menu_for(app, kind);
+    }
 }
 
 /// `applyMenuFor(kind)`: the application menu of the active editor. Callable
