@@ -26,8 +26,10 @@ pub const UI_SCALE_MAX: f64 = UI_SCALE_STEPS[UI_SCALE_STEPS.len() - 1];
 /// The part of a `WebContents` the style calls use.
 pub trait StyleTarget {
     fn is_destroyed(&self) -> bool;
-    /// `contents.executeJavaScript(script)`: an `Err` is a rejection
-    fn execute_javascript(&self, script: &str) -> Result<(), String>;
+    /// `void contents.executeJavaScript(script).catch(() => {})`: started and
+    /// left alone, so a host must not wait for the page's answer (it arrives
+    /// on the thread that called this); a rejection is swallowed
+    fn execute_javascript(&self, script: &str);
 }
 
 /// `readUiScale`: the stored value, clamped into range; anything unreadable,
@@ -71,7 +73,7 @@ pub fn apply_ui_scale_to(contents: &dyn StyleTarget, scale: f64) {
         return;
     }
     // a renderer torn down mid-call has nothing left to style
-    let _ = contents.execute_javascript(&ui_scale_script(scale));
+    contents.execute_javascript(&ui_scale_script(scale));
 }
 
 /// `applyUiScaleToAll`; `all` is `webContents.getAllWebContents()`

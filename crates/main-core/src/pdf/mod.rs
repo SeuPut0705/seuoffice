@@ -7,6 +7,7 @@ pub mod atomic_write;
 pub mod blank_pages;
 pub mod child;
 pub mod disk_watch;
+pub mod edit_fonts;
 pub mod export_images;
 pub mod font_classes;
 pub mod font_cmap;

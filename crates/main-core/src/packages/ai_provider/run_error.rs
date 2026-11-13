@@ -10,6 +10,29 @@ use super::protocols_shared::is_ai_credits_error;
 use super::watchdog::is_ai_timeout_error;
 use jscompat::JsonValue;
 
+/// `new AiRunError(kind, message, { provider, resetsAt })`: `None` leaves the
+/// detail out.
+pub fn ai_run_error(
+    kind: &str,
+    message: impl Into<String>,
+    provider: Option<&str>,
+    resets_at: Option<f64>,
+) -> super::task::JsError {
+    let mut e = super::task::JsError::new("AiRunError", message).with("kind", text(kind));
+    if let Some(provider) = provider {
+        e = e.with("provider", text(provider));
+    }
+    if let Some(resets_at) = resets_at {
+        e = e.with("resetsAt", number(resets_at));
+    }
+    e
+}
+
+/// `aiStreamErrorFields(err)` of a thrown [`super::task::JsError`].
+pub fn ai_stream_error_fields_of(err: &super::task::JsError, now_ms: f64) -> Obj {
+    ai_stream_error_fields(&err.to_json(), now_ms)
+}
+
 /// `aiStreamErrorFields(err)`: the error fields of an 'error' stream chunk
 /// for a thrown value: the kind and values of an `AiRunError`, or the code
 /// the existing error classes map to. Empty when the error has no

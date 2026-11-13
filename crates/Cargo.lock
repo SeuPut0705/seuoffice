@@ -629,6 +629,7 @@ dependencies = [
  "jscompat",
  "libc",
  "markup5ever_rcdom",
+ "ooxml-pkg",
  "rusqlite",
  "serde",
  "serde_json",

@@ -1,0 +1,912 @@
+[
+  {
+    "name": "ai-proposal: a deck in master view can start a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if review.master_edit {\n        return false;\n    }",
+    "replace": "    if false {\n        return false;\n    }",
+    "fn": ["slides/ai-proposal.beginAiRun"]
+  },
+  {
+    "name": "ai-proposal: another window's open run does not block a begin",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        if run.owner != owner {\n            return false;\n        }",
+    "replace": "        if false {\n            return false;\n        }",
+    "fn": ["slides/ai-proposal.beginAiRun", "slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a begin keeps the proposal of an earlier request",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        hold_ai_run(session, review, owner);\n    }\n    review.proposal = None;",
+    "replace": "        hold_ai_run(session, review, owner);\n    }",
+    "fn": ["slides/ai-proposal.beginAiRun"]
+  },
+  {
+    "name": "ai-proposal: a begin does not queue the history notice",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.ai_run = true;\n    session.schedule_history_notify();\n    true",
+    "replace": "    session.ai_run = true;\n    true",
+    "fn": ["slides/ai-proposal.beginAiRun"]
+  },
+  {
+    "name": "ai-proposal: a begin does not copy the redo stack",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        redo: session.redo_stack.clone(),",
+    "replace": "        redo: Vec::new(),",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: rollback points before the run are not remembered",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "            .map(|(snapshot_id, _)| *snapshot_id)",
+    "replace": "            .map(|(snapshot_id, _)| *snapshot_id + 1000)",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: any window may hold a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        Some(run) if run.owner == owner => run,",
+    "replace": "        Some(run) => run,",
+    "fn": ["slides/ai-proposal.holdAiRun", "slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a hold leaves the history batch open",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.history_batch = None;",
+    "replace": "    session.history_batch = session.history_batch.take();",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: a run that only journaled ops is no change",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        || session.op_seq.unwrap_or(0) != run.op_seq",
+    "replace": "        || false",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: a run that only edited the notes is no change",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        || session.meta_rev.unwrap_or(0) != run.meta_rev;",
+    "replace": "        || false;",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: a changed undo stack alone is no change",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    let changed = !same_stack(&session.undo_stack, &run.undo)",
+    "replace": "    let changed = false",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: two stacks of the same length are the same stack",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x.same_snapshot(y))",
+    "replace": "    a.len() == b.len()",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: the proposal's result is the pre-run deck",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    let after = session.take_snapshot();",
+    "replace": "    let after = run.before.clone();",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: the redo stack is not put back",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.redo_stack = run.redo;",
+    "replace": "    session.redo_stack = Vec::new();",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: the undo stack is not put back",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.undo_stack = run.undo.clone();",
+    "replace": "    session.undo_stack = Vec::new();",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: rollback points made by the run stay",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        snapshots.retain(|(id, _)| run.known_snapshots.contains(id));",
+    "replace": "        snapshots.retain(|_| true);",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: the deck is not reverted",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.restore_snapshot(&run.before);",
+    "replace": "    let _ = &run.before;",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: a hold does not queue the deck broadcast",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.schedule_deck_broadcast();\n    true",
+    "replace": "    true",
+    "fn": ["slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: an accept in master view goes on",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if session.history_batch.is_some() || review.master_edit || review.run.is_some() {",
+    "replace": "    if session.history_batch.is_some() || review.run.is_some() {",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: an accept with a history batch open goes on",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if session.history_batch.is_some() || review.master_edit || review.run.is_some() {",
+    "replace": "    if review.master_edit || review.run.is_some() {",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: an accept never notices a change",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if !same_marker(&proposal.marker, &marker_of(session)) {",
+    "replace": "    if false {",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: the marker ignores the length of the undo stack",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        && a.undo_len == b.undo_len",
+    "replace": "        && true",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: the marker ignores the length of the redo stack",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        && a.redo_len == b.redo_len",
+    "replace": "        && true",
+    "fn": ["slides/ai-proposal.acceptAiProposal", "slides/ai-proposal.markerOf"]
+  },
+  {
+    "name": "ai-proposal: the marker ignores the journal",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        && a.op_seq == b.op_seq",
+    "replace": "        && true",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: the marker ignores the notes counter",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        && a.meta_rev == b.meta_rev",
+    "replace": "        && true",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: two empty stacks never match",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        (None, None) => true,",
+    "replace": "        (None, None) => false,",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: a step is the same as any step",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        Rc::ptr_eq(self, other)",
+    "replace": "        true",
+    "fn": ["slides/ai-proposal.acceptAiProposal", "slides/ai-proposal.holdAiRun"]
+  },
+  {
+    "name": "ai-proposal: the marker leaves out the undo length",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        undo_len: session.undo_stack.len(),",
+    "replace": "        undo_len: 0,",
+    "fn": ["slides/ai-proposal.markerOf"]
+  },
+  {
+    "name": "ai-proposal: the marker leaves out the journal counter",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        op_seq: session.op_seq.unwrap_or(0),\n        meta_rev: session.meta_rev.unwrap_or(0),\n    }\n}\n\n/// `sameMarker",
+    "replace": "        op_seq: 0,\n        meta_rev: session.meta_rev.unwrap_or(0),\n    }\n}\n\n/// `sameMarker",
+    "fn": ["slides/ai-proposal.markerOf"]
+  },
+  {
+    "name": "ai-proposal: an accept applies the pre-run deck",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.restore_snapshot(&proposal.after);\n    session.schedule_deck_broadcast();",
+    "replace": "    session.restore_snapshot(&proposal.before);\n    session.schedule_deck_broadcast();",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: an accept is no undo step",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    session.push_history();\n    session.restore_snapshot(&proposal.after);",
+    "replace": "    session.restore_snapshot(&proposal.after);",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: the rollback point is the run's result",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    Some(session.register_ai_snapshot(ids, &proposal.before))",
+    "replace": "    Some(session.register_ai_snapshot(ids, &proposal.after))",
+    "fn": ["slides/ai-proposal.acceptAiProposal"]
+  },
+  {
+    "name": "ai-proposal: dropping a window does not count its lives",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    lives.bump(owner);",
+    "replace": "    let _ = &lives;",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: dropping a window does not revert its run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if review.run.as_ref().is_some_and(|run| run.owner == owner) {",
+    "replace": "    if false {",
+    "fn": ["slides/ai-proposal.dropAiRunOf"]
+  },
+  {
+    "name": "ai-proposal: dropping a window drops any proposal",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        .is_some_and(|proposal| proposal.owner == owner)",
+    "replace": "        .is_some()",
+    "fn": ["slides/ai-proposal.dropAiRunOf"]
+  },
+  {
+    "name": "ai-proposal: a reject without a proposal answers true",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if review.proposal.is_none() {\n        return false;\n    }",
+    "replace": "    if false {\n        return false;\n    }",
+    "fn": ["slides/ai-proposal.rejectAiProposal", "slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a write may start while a run is open",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    assert_no_ai_run(review)?;",
+    "replace": "    let _ = review.run.is_some();",
+    "fn": ["slides/ai-proposal.trackWrite"]
+  },
+  {
+    "name": "ai-proposal: writes are waited for ten seconds, not thirty",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "pub const WRITE_SETTLE_MS: f64 = 30_000.0;",
+    "replace": "pub const WRITE_SETTLE_MS: f64 = 10_000.0;",
+    "fn": ["slides/ai-proposal.settleWrites"]
+  },
+  {
+    "name": "ai-proposal: a wait that ran out answers quiet",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "        return SettleStep::TimedOut;",
+    "replace": "        return SettleStep::Quiet;",
+    "fn": ["slides/ai-proposal.settleWrites", "slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a window without a session waits for writes",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if !has_session {\n        return None;\n    }",
+    "replace": "    if false {\n        return None;\n    }",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a begin that waited too long starts a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if !wake.settled {\n        return false;\n    }",
+    "replace": "    if false {\n        return false;\n    }",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a begin for a window that went away starts a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if wake.sender_destroyed || !wake.same_session {",
+    "replace": "    if !wake.same_session {",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a begin for a window with another session starts a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if wake.sender_destroyed || !wake.same_session {",
+    "replace": "    if wake.sender_destroyed {",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-proposal: a begin for a dropped window starts a run",
+    "file": "main-core/src/slides/ai_proposal.rs",
+    "find": "    if lives.get(sender_id) != ticket.life {",
+    "replace": "    if false {",
+    "fn": ["slides/ai-proposal.registerAiProposalIpc"]
+  },
+  {
+    "name": "ai-ipc: the quit hook is not registered",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    host.shutdown_codex_on_quit();\n",
+    "replace": "",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the rescue fetch is not set",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    host.set_rescue_fetch();",
+    "replace": "    let _ = 0;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the user agent names the version first",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "format!(\"{}/{}\", host.product_name(), host.app_version())",
+    "replace": "format!(\"{}/{}\", host.app_version(), host.product_name())",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a metered answer is not broadcast",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    write_ai_settings_file(host, &settings)?;\n    broadcast_to_windows(host, \"ai:settings-changed\", None);",
+    "replace": "    write_ai_settings_file(host, &settings)?;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a metered answer is always true",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    metered.set(provider, JsonValue::Bool(accepted));",
+    "replace": "    metered.set(provider, JsonValue::Bool(true));",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: any address opens in the browser",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let Some(target) = safe_external_url(url, None) else {",
+    "replace": "    let Some(target) = url.map(str::to_owned) else {",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a renderer's settings keep no stored fields",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let next = with_stored_main_fields(&sanitized, &read_ai_settings(host));",
+    "replace": "    let next = sanitized;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a write loses the fields a newer build wrote",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        &with_stored_unknown_fields(settings, &stored),",
+    "replace": "        settings,",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an invalid payload warns with another text",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "host.warn(\"[ai] rejected invalid ai:set-settings payload\");",
+    "replace": "host.warn(\"[ai] rejected\");",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a broadcast reaches windows that are gone",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        if host.web_contents_destroyed(index) {\n            continue;\n        }",
+    "replace": "        if host.web_contents_destroyed(index) && false {\n            continue;\n        }",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the run failure log keeps a little more text",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "pub const RUN_FAILURE_TEXT_MAX: usize = 20_000;",
+    "replace": "pub const RUN_FAILURE_TEXT_MAX: usize = 20_001;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the run failure log rotates at three megabytes",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "pub const RUN_FAILURES_MAX_BYTES: u64 = 2_000_000;",
+    "replace": "pub const RUN_FAILURES_MAX_BYTES: u64 = 3_000_000;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the run failure log rotates at the limit itself",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "fs::metadata(path).ok()?.len() > RUN_FAILURES_MAX_BYTES",
+    "replace": "fs::metadata(path).ok()?.len() >= RUN_FAILURES_MAX_BYTES",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a full run failure log is not rotated",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        fs::rename(path, format!(\"{path}.1\")).ok()?;",
+    "replace": "        let _ = format!(\"{path}.1\");",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the run failure log counts no characters",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    record.set(\"streamedChars\", JsonValue::Number(streamed_chars));",
+    "replace": "    record.set(\"streamedChars\", JsonValue::Number(0.0));",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a numeric request id is the text of it",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Some(JsonValue::Number(x)) => format!(\"n:{}\", number_to_string(*x)),",
+    "replace": "        Some(JsonValue::Number(x)) => format!(\"s:{}\", number_to_string(*x)),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the error chunk says another thing",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    chunk.set(\"type\", text(\"error\"));",
+    "replace": "    chunk.set(\"type\", text(\"fail\"));",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: invalid settings are worded differently",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "&error_chunk(request_id, \"invalid AI settings payload\"),",
+    "replace": "&error_chunk(request_id, \"invalid settings\"),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the run guard is asked about the key, not the model",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            .and_then(|config| prop(config, \"model\")),",
+    "replace": "            .and_then(|config| prop(config, \"apiKey\")),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a refusal reaches a window that is gone",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        send_chunk(sender, &error_chunk(request_id, &refusal));",
+    "replace": "        sender.send(\"ai:stream-chunk\", &error_chunk(request_id, &refusal));",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a stream is not remembered",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    streams.set(&key, controller.clone());",
+    "replace": "    let _ = &key;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a window that goes away does not stop its stream",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let unwatch = abort_on_destroyed(sender, &mut || to_abort.abort());",
+    "replace": "    let unwatch = abort_on_destroyed(sender, &mut || {\n        let _ = &to_abort;\n    });",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the stream's listeners stay",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    run.unwatch.dispose(sender);",
+    "replace": "    let _ = &run.unwatch;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a cancel does not abort the stream",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if let Some(controller) = streams.get(&stream_key(request_id)) {\n        controller.abort();\n    }",
+    "replace": "    if let Some(controller) = streams.get(&stream_key(request_id)) {\n        let _ = &controller;\n    }",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a web search asks for seven results",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "\"results\", 6.0,",
+    "replace": "\"results\", 7.0,",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an image search asks for nine results",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "\"images\", 8.0,",
+    "replace": "\"images\", 9.0,",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a failed search says another method",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        (\"method\", text(\"error\")),",
+    "replace": "        (\"method\", text(\"failed\")),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a page is read from its second character",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "number_or(offset, 0.0)",
+    "replace": "number_or(offset, 1.0)",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a failed read says another thing",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            (\"error\", text(\"The read failed.\")),",
+    "replace": "            (\"error\", text(\"Read failed.\")),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a failed read has no network code",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            (\"errorCode\", text(\"network\")),",
+    "replace": "            (\"errorCode\", text(\"io\")),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media call keeps its listener",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    sender.remove_destroyed_listener(MEDIA_DESTROYED_LISTENER);",
+    "replace": "    let _ = &sender;",
+    "fn": ["slides/ai-ipc.registerAiIpc", "slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media call of a gone window still listens",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if !destroyed {\n        sender.once_destroyed(MEDIA_DESTROYED_LISTENER);\n    }",
+    "replace": "    if true {\n        sender.once_destroyed(MEDIA_DESTROYED_LISTENER);\n    }",
+    "fn": ["slides/ai-ipc.registerAiIpc", "slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an image request is always transparent",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            Some(JsonValue::Bool(true))\n        )),",
+    "replace": "            Some(JsonValue::Bool(_))\n        )),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the model of an image request keeps an empty text",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if let Some(model) = prop_of(op, \"model\").filter(|value| value.truthy()) {",
+    "replace": "    if let Some(model) = prop_of(op, \"model\") {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: urls that are no list are taken for none",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Some(_) => {\n            return Err(IpcError::type_error(\n                \"(op.mediaUrls ?? []).map is not a function\",\n            ));\n        }",
+    "replace": "        Some(_) => JsonValue::Array(Vec::new()),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the media roots of a deck ignore the paste folder",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "pub const PASTED_IMAGES_DIR: &str = \"seuoffice-pasted\";",
+    "replace": "pub const PASTED_IMAGES_DIR: &str = \"pasted\";",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a capital .PPTX is no pptx",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if !js_regex!(r\"\\.pptx$\", \"i\").test(draft_path) {",
+    "replace": "    if !js_regex!(r\"\\.pptx$\").test(draft_path) {",
+    "fn": ["slides/ai-ipc.styleSkillSidecarPath", "slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the sidecar is written without indentation",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        let json = json_stringify_pretty(data?, 2);",
+    "replace": "        let json = json_stringify(data?);",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a blank basedOn is kept as it is",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Some(JsonValue::String(id)) if !trim(id).is_empty() => Some(trim(id).to_owned()),",
+    "replace": "        Some(JsonValue::String(id)) => Some(id.clone()),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a style name is cut to 63",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    Ok(slice_utf16(&replaced, 0.0, Some(64.0)))",
+    "replace": "    Ok(slice_utf16(&replaced, 0.0, Some(63.0)))",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a pipe stays in a style name",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "js_regex!(r#\"[/\\\\:*?\"<>|]\"#, \"g\")",
+    "replace": "js_regex!(r#\"[/\\\\:*?\"<>]\"#, \"g\")",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an empty style name is written",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        if safe_name.is_empty() {",
+    "replace": "        if false {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the style list shows every file",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        .filter(|file| file.ends_with(\".json\"))",
+    "replace": "        .filter(|_| true)",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the style list is in reverse order",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    names.sort();",
+    "replace": "    names.sort_by(|a, b| b.cmp(a));",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a style that is not there is looked for anyway",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        if !Path::new(&file_path).exists() {",
+    "replace": "        if false {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an empty skill is a skill",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        let Some(style_skill) = prop(&raw, \"styleSkill\").filter(|skill| skill.truthy()) else {",
+    "replace": "        let Some(style_skill) = prop(&raw, \"styleSkill\") else {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a null layout is answered",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "prop(&raw, \"layout\").filter(|layout| **layout != JsonValue::Null)",
+    "replace": "prop(&raw, \"layout\")",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an attachment's empty bytes are a picture",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if buf.is_empty() {\n        return Ok(None);\n    }",
+    "replace": "    if false {\n        return Ok(None);\n    }",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: an attachment the image library cannot read is a picture",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if image.is_empty() {",
+    "replace": "    if false {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a jpg attachment is converted",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if norm == \"png\" || norm == \"gif\" || norm == \"jpg\" {",
+    "replace": "    if norm == \"png\" || norm == \"gif\" {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: jpeg stays jpeg",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "|_| \"jpg\".to_owned()",
+    "replace": "|_| \"jpeg\".to_owned()",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a download that is no picture is inserted as a jpg",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            let kind = raster_image_ext(&buf)?;",
+    "replace": "            let kind = raster_image_ext(&buf).unwrap_or(\"jpg\");",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a run that was expected but is not open goes on",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let expected = read_prop(op, \"aiRunExpected\")?.is_some_and(JsonValue::truthy);",
+    "replace": "    let expected = read_prop(op, \"aiRunExpected\")?.is_some();",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a picture is written after its run ended (insert)",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let run = ticket.run;\n    let (buf, ext) = picture_bytes(ticket.source, downloaded)?;\n    if review.run.as_ref().map(|current| current.id) != run {",
+    "replace": "    let run = ticket.run;\n    let (buf, ext) = picture_bytes(ticket.source, downloaded)?;\n    if false && review.run.as_ref().map(|current| current.id) != run {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a picture is written after its run ended (replace)",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let target_id = ticket.target_id;\n    let (buf, ext) = picture_bytes(ticket.source, downloaded)?;\n    if review.run.as_ref().map(|current| current.id) != run {",
+    "replace": "    let target_id = ticket.target_id;\n    let (buf, ext) = picture_bytes(ticket.source, downloaded)?;\n    if false && review.run.as_ref().map(|current| current.id) != run {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the frame is scaled the wrong way round",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let to_emu = |px: f64| math_round((px / scale) * EMU_PER_PX_96);",
+    "replace": "    let to_emu = |px: f64| math_round((px * scale) * EMU_PER_PX_96);",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a frame can be zero EMU wide",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "            cx: math_max(1.0, to_emu(w_px)),",
+    "replace": "            cx: to_emu(w_px),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the engine's no-picture answer leaves its history step (insert)",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        let Some(id) = session.deck.add_picture(slide_index, &buf, &ext, offset)? else {\n            session.undo_stack.pop();",
+    "replace": "        let Some(id) = session.deck.add_picture(slide_index, &buf, &ext, offset)? else {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the fit width is not kept",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        session.deck.set_fit_width_px(fit_width_px);",
+    "replace": "        let _ = fit_width_px;",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: the durable id is not translated",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let target_id = session\n        .deck\n        .find_element_id(slide_index, &reference)\n        .unwrap_or(reference);",
+    "replace": "    let target_id = reference;",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a replacement that was refused leaves its history step",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        if !ok {\n            session.undo_stack.pop();",
+    "replace": "        if !ok {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a replacement keeps no crop rectangle",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let keep_src_rect = prop(op, \"keepSrcRect\").is_some_and(JsonValue::truthy);",
+    "replace": "    let keep_src_rect = false;",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a kept crop rectangle is cropped anyway",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        if !keep_src_rect\n            && let Some((frame_cx, frame_cy)) = session.deck.picture_frame(slide_index, &target_id)\n        {",
+    "replace": "        if let Some((frame_cx, frame_cy)) = session.deck.picture_frame(slide_index, &target_id) {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "stored-settings: unknown stored keys are all kept",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "            || inherited_string(&key).is_some()\n",
+    "replace": "",
+    "fn": ["ai-provider/providers.withStoredUnknownFields"]
+  },
+  {
+    "name": "stored-settings: a key next carries is overwritten by the file",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "            || next.get(&key).is_some()\n",
+    "replace": "",
+    "fn": ["ai-provider/providers.withStoredUnknownFields"]
+  },
+  {
+    "name": "stored-settings: known keys are put back from the file",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "        if known.contains(&key.as_str())",
+    "replace": "        if false",
+    "fn": ["ai-provider/providers.withStoredUnknownFields"]
+  },
+  {
+    "name": "stored-settings: provider configs lose their unknown fields",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "                    with_unknown.assign(&unknown_fields_of(",
+    "replace": "                    let _ = (&unknown_fields_of(",
+    "fn": ["ai-provider/providers.withStoredUnknownFields"]
+  },
+  {
+    "name": "stored-settings: a CLI turned off in the window is kept",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "    let settings = without(&spread(Some(next)), &[\"subscriptionOff\"]);",
+    "replace": "    let settings = spread(Some(next));",
+    "fn": ["ai-provider/providers.withStoredSubscriptionOff"]
+  },
+  {
+    "name": "stored-settings: an empty subscriptionOff of the file is put back",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "    match prop(stored, \"subscriptionOff\").filter(|off| off.truthy()) {",
+    "replace": "    match prop(stored, \"subscriptionOff\") {",
+    "fn": ["ai-provider/providers.withStoredSubscriptionOff"]
+  },
+  {
+    "name": "stored-settings: the custom slot takes the stored effort table",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "        let efforts = if id == \"custom\" {",
+    "replace": "        let efforts = if false {",
+    "fn": ["ai-provider/key-model-refresh.withStoredKeyModels"]
+  },
+  {
+    "name": "stored-settings: a provider that is null is rebuilt",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "        if !config.truthy() {\n            continue;\n        }",
+    "replace": "        if false {\n            continue;\n        }",
+    "fn": ["ai-provider/key-model-refresh.withStoredKeyModels"]
+  },
+  {
+    "name": "stored-settings: the sent effort table stays",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "without(&spread(Some(&config)), &[\"models\", \"modelEfforts\"])",
+    "replace": "without(&spread(Some(&config)), &[\"models\"])",
+    "fn": ["ai-provider/key-model-refresh.withStoredKeyModels"]
+  },
+  {
+    "name": "stored-settings: the stored subscriptionOff is not applied",
+    "file": "main-core/src/packages/ai_provider/stored_settings.rs",
+    "find": "    with_stored_subscription_off(&with_stored_key_models(next, stored), stored)",
+    "replace": "    with_stored_key_models(next, stored)",
+    "fn": ["ai-provider/key-model-refresh.withStoredMainFields"]
+  },
+  {
+    "name": "cover-crop: a one percent difference is cropped",
+    "file": "main-core/src/packages/pipelines/slides_cover_crop.rs",
+    "find": "< 0.01 {",
+    "replace": "< 0.02 {",
+    "fn": ["pipelines/slides/cover-crop.coverCropFractions"]
+  },
+  {
+    "name": "cover-crop: a wide image is cropped as a tall one",
+    "file": "main-core/src/packages/pipelines/slides_cover_crop.rs",
+    "find": "    if image_aspect > frame_aspect {",
+    "replace": "    if image_aspect < frame_aspect {",
+    "fn": ["pipelines/slides/cover-crop.coverCropFractions"]
+  },
+  {
+    "name": "cover-crop: a zero-width image is cropped",
+    "file": "main-core/src/packages/pipelines/slides_cover_crop.rs",
+    "find": "    if unusable(image_w) || unusable(image_h) ||",
+    "replace": "    if unusable(image_h) ||",
+    "fn": ["pipelines/slides/cover-crop.coverCropFractions"]
+  },
+  {
+    "name": "ai-ipc: a chunk is sent to a window that is gone",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    if !sender.is_destroyed() {\n        sender.send(\"ai:stream-chunk\", chunk);",
+    "replace": "    if true {\n        sender.send(\"ai:stream-chunk\", chunk);",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a run that threw does not fail the handler",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    outcome.map_err(|thrown| thrown_error(&thrown))",
+    "replace": "    let _ = outcome;\n    Ok(())",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a read does not end its media call",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    media_call_end(media_calls, sender, start.call);\n    match outcome {",
+    "replace": "    match outcome {",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media tool does not end its media call",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    media_call_end(media_calls, sender, start.call);\n    match (outcome, start.prep_error) {",
+    "replace": "    match (outcome, start.prep_error) {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a read that answered is reported as failed",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Some(Ok(answer)) => answer,",
+    "replace": "        Some(Ok(_)) if false => JsonValue::Null,",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media tool's thrown error loses its message",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        (Some(Err(thrown)), _) => Err(thrown_error(&thrown)),",
+    "replace": "        (Some(Err(_)), _) => Err(IpcError::type_error(\"tool failed\")),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a request that could not be prepared loses its error",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        (None, Some(error)) => Err(error),",
+    "replace": "        (None, Some(_)) => Err(IpcError::type_error(\"not prepared\")),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a search tool that threw answers the tool's own error",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Err(thrown) => Ok(search_failure(list, thrown_text(&thrown)?)),",
+    "replace": "        Err(_) => Ok(search_failure(list, String::new())),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a query that is no text answers without the error class",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "format!(\"TypeError: {}\", error.0)",
+    "replace": "error.0",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media call is registered after its request is prepared",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let call = media_call_begin(media_calls, sender);\n    match prepare() {",
+    "replace": "    let prepared = prepare();\n    let call = media_call_begin(media_calls, sender);\n    match prepared {",
+    "fn": ["slides/ai-ipc.registerAiIpc", "slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  }
+]

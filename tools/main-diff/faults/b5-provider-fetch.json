@@ -1,0 +1,100 @@
+[
+  {
+    "name": "fetch: the user agent header goes under another name (control)",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "headers.push((\"User-Agent\".into(), fx.borrow().user_agent.clone()));",
+    "replace": "headers.push((\"X-Agent\".into(), fx.borrow().user_agent.clone()));",
+    "fn": ["fetch.withUserAgent", "fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: 529 is not a transient refusal",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "if status == 503.0 || status == 529.0 {",
+    "replace": "if status == 503.0 {",
+    "fn": ["fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: 429 is not looked at",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "if status != 429.0 {",
+    "replace": "if status != 428.0 {",
+    "fn": ["fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: a long retry-after is waited out",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "const MAX_RETRY_AFTER_MS: f64 = 20_000.0;",
+    "replace": "const MAX_RETRY_AFTER_MS: f64 = 40_000.0;",
+    "fn": ["fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: a streamed body is resent",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "matches!(init.request.body, None | Some(RequestBody::Text(_)))",
+    "replace": "!matches!(init.request.body, None)",
+    "fn": ["fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: an html 403 is no block page",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "            .contains(\"text/html\")",
+    "replace": "            .contains(\"text/xhtml\")",
+    "fn": ["fetch.aiFetch"]
+  },
+  {
+    "name": "fetch: 307 is no redirect",
+    "file": "main-core/src/packages/ai_provider/fetch.rs",
+    "find": "[301.0, 302.0, 303.0, 307.0, 308.0].contains(&status)",
+    "replace": "[301.0, 302.0, 303.0, 308.0].contains(&status)",
+    "fn": ["fetch.keyedFetch"]
+  },
+  {
+    "name": "shared: the size cap lets the exact limit through as an overflow",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "            if total > max_bytes {",
+    "replace": "            if total >= max_bytes {",
+    "fn": ["shared.readCappedResponseText"]
+  },
+  {
+    "name": "shared: a declared length over the cap is read anyway",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "if !truncate && declared_bytes.is_finite() && declared_bytes > max_bytes {",
+    "replace": "if !truncate && declared_bytes.is_finite() && declared_bytes > max_bytes * 100.0 {",
+    "fn": ["shared.readCappedResponseText"]
+  },
+  {
+    "name": "shared: tool json budget off by one",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "    if json_length > MAX_TOOL_JSON_CHARS {",
+    "replace": "    if json_length >= MAX_TOOL_JSON_CHARS {",
+    "fn": ["shared.throwIfToolJsonOverBudget"]
+  },
+  {
+    "name": "shared: tool count budget off by one",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "    if count > MAX_STREAM_TOOL_CALLS {",
+    "replace": "    if count >= MAX_STREAM_TOOL_CALLS {",
+    "fn": ["shared.throwIfToolCountOverBudget"]
+  },
+  {
+    "name": "shared: [DONE] is a fragment",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "if raw == \"[DONE]\" || json.is_some() {",
+    "replace": "if json.is_some() {",
+    "fn": ["shared.sseDataEvents"]
+  },
+  {
+    "name": "shared: a zero usage count is dropped",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "(n.is_finite() && n >= 0.0).then_some(n)",
+    "replace": "(n.is_finite() && n > 0.0).then_some(n)",
+    "fn": ["shared.usageCount"]
+  },
+  {
+    "name": "shared: blank tool input is parsed",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "    if trim(json).is_empty() {\n        return (Obj::new(), None);",
+    "replace": "    if json.is_empty() {\n        return (Obj::new(), None);",
+    "fn": ["shared.parseToolInput"]
+  }
+]

@@ -1,6 +1,7 @@
 //! `apps/html/src/main`: the modules that hold no Electron object (decision 0029),
 //! one file per TypeScript file.
 
+pub mod ai_search_ipc;
 pub mod asset_lifecycle;
 pub mod asset_mime;
 pub mod atomic_write;
