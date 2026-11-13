@@ -94,22 +94,55 @@ pub fn system_now_ms() -> f64 {
 
 /// `process.kill(pid, 0)`: Node throws for a `pid` that is not a 32-bit
 /// integer, and then it is not alive; `EPERM` means it runs under another
-/// account. Elsewhere than Unix every pid counts as alive (a lock then goes
-/// stale by its age only).
+/// account.
 fn process_alive(pid: f64) -> bool {
+    if pid.trunc() != pid || pid.abs() > f64::from(i32::MAX) {
+        return false;
+    }
     #[cfg(unix)]
     {
-        if pid.trunc() != pid || pid.abs() > f64::from(i32::MAX) {
-            return false;
-        }
         // SAFETY: signal 0 only checks that the process can be signalled
         let sent = unsafe { libc::kill(pid as libc::pid_t, 0) };
         sent == 0 || io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
     {
-        let _ = pid;
+        windows_process_alive(pid as i32)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
         true
+    }
+}
+
+/// libuv's `uv_kill(pid, 0)` on Windows: `OpenProcess` refused with
+/// `ERROR_INVALID_PARAMETER` is `ESRCH` (no such process), any other refusal
+/// (access denied) is an error that is not `ESRCH`, so the process counts as
+/// alive; an opened process is alive while its exit code is `STILL_ACTIVE`.
+#[cfg(windows)]
+fn windows_process_alive(pid: i32) -> bool {
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, ERROR_INVALID_PARAMETER, GetLastError, STILL_ACTIVE,
+    };
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_SYNCHRONIZE,
+        PROCESS_TERMINATE,
+    };
+    // SAFETY: plain Win32 calls; the handle is closed before returning
+    unsafe {
+        let handle = OpenProcess(
+            PROCESS_TERMINATE | PROCESS_QUERY_INFORMATION | PROCESS_SYNCHRONIZE,
+            0,
+            pid as u32,
+        );
+        if handle.is_null() {
+            return GetLastError() != ERROR_INVALID_PARAMETER;
+        }
+        let mut status = 0u32;
+        let read = GetExitCodeProcess(handle, &mut status);
+        CloseHandle(handle);
+        // a failed read is an error that is not ESRCH, as in libuv
+        read == 0 || status == STILL_ACTIVE as u32
     }
 }
 
