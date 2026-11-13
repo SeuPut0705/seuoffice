@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::channels::{Batch, Surface};
 use crate::error::IpcError;
 use crate::ids::{RequestId, ViewId, WindowId};
+use crate::provided::Provided;
 use crate::runtime::{CancelToken, Services};
 use crate::value::IpcValue;
 
@@ -136,6 +137,10 @@ pub trait Registry {
         kind: ChannelKind,
         handler: Rc<dyn Handler>,
     ) -> Result<(), RegisterError>;
+
+    /// What the batches provide to each other ([`crate::provided`]): add to
+    /// it while registering, keep the `Rc` and read it when a handler runs
+    fn provided(&self) -> Rc<Provided>;
 }
 
 /// A batch's entry point: `crates/shell/src/ipc/<batch>/mod.rs` exports one
