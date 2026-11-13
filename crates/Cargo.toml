@@ -15,7 +15,9 @@ members = [
   # one crate per stage 3 area batch: shell-ipc/u, a, m, w, d1, d2
   "shell-ipc/*",
   # the shell's IPC core without Tauri (wire form, channel table, dispatch)
+  # and the Rust side of tools/ipc-diff (stage 3, batch W)
   "shell-core",
+  "ipc-probe",
 ]
 # vendor: third-party source carried with patches, outside fmt, clippy and the
 # workspace tests; spike-main-bridge: an experiment with its own lock

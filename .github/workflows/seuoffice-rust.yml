@@ -32,6 +32,10 @@ on:
         description: A faults file for tools/main-diff/faults.mjs (the central process), run beside the gates
         required: false
         default: ''
+      ipc_faults:
+        description: A faults file for tools/ipc-diff/faults.mjs (the stage 3 IPC handlers), run beside the gates
+        required: false
+        default: ''
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -160,6 +164,71 @@ jobs:
         with:
           name: main-diff-out
           path: tools/main-diff/out
+          if-no-files-found: ignore
+
+      # stage 3: each IPC channel's Rust handler (crates/shell-ipc through
+      # crates/ipc-probe) against its TypeScript ipcMain handler. A batch that
+      # is done adds `--require <batch>` here (its coverage then fails the step).
+      - name: IPC comparison
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          npm --prefix tools/ipc-diff run typecheck
+          npm --prefix tools/ipc-diff run test
+          mkdir -p tools/ipc-diff/out
+          npm --prefix tools/ipc-diff run gate -- --show 40 2>&1 | tee tools/ipc-diff/out/gate.txt
+
+      - name: Keep the IPC comparison
+        if: ${{ always() && steps.has.outputs.crates == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipc-diff-out
+          path: tools/ipc-diff/out
+          if-no-files-found: ignore
+
+  # Fault injection for the stage 3 IPC handlers: each fault rebuilds
+  # ipc-probe and runs its groups, which must then differ.
+  ipc-faults:
+    if: ${{ inputs.ipc_faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Faults
+        shell: bash
+        env:
+          FAULTS: ${{ inputs.ipc_faults }}
+          FAULT_SHARD: ${{ matrix.shard }}/4
+        run: |
+          mkdir -p tools/ipc-diff/out
+          node tools/ipc-diff/faults.mjs "$FAULTS" 2>&1 | tee tools/ipc-diff/out/faults.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Keep the result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipc-diff-faults-${{ matrix.shard }}
+          path: tools/ipc-diff/out
           if-no-files-found: ignore
 
   # The central process on Windows (decision 0030): the functions whose Rust
