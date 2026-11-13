@@ -200,7 +200,7 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
 async function side(c: Case, run: (c: Case, dir: string) => Promise<unknown>): Promise<string> {
   const dir = mkdtempSync(join(tmpdir(), 'ipc-diff-'))
   try {
-    setUp(dir, c.files)
+    setUp(dir, substitute(c.files, dir))
     const record = await run(substitute(c, dir), dir)
     const text = unsubstitute(JSON.stringify({ record, files: snapshot(dir) }), dir)
     // the temporary file of an atomic write is named after the process and a
