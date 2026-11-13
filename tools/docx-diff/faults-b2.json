@@ -72,7 +72,7 @@
   },
   {
    "name": "porter: parseDocx reports bodyInnerEnd as a byte offset, not a UTF-16 one",
-   "group": "parse",
+   "group": "model",
    "file": "crates/docx-engine/src/parse/entry.rs",
    "old": "internal.insert(\"bodyInnerEnd\".to_owned(), at(scan.inner_end));",
    "new": "internal.insert(\"bodyInnerEnd\".to_owned(), num(scan.inner_end as f64));"
@@ -149,7 +149,7 @@
   },
   {
    "name": "independent: parseDocx takes the first page break boundary from the last sectPr",
-   "group": "parse",
+   "group": "model",
    "file": "crates/docx-engine/src/parse/entry.rs",
    "old": "let sect = document_xml.find(\"</w:sectPr>\");",
    "new": "let sect = document_xml.rfind(\"</w:sectPr>\");"

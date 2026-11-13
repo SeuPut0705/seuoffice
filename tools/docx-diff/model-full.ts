@@ -10,10 +10,14 @@ import { parseOnDocument, reportParse } from './model-parse'
 import { reportSave, saveAfterCorpus, saveOnDocument } from './model-save'
 
 requireModelNode()
+// `--bodies`: the built documents through the whole Rust parser and nothing
+// else, for a fault the corpus would take too long to show (faults.py group
+// `model`); the corpus floors do not hold then
+const BODIES_ONLY = process.argv.includes('--bodies')
 const OLE_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
 const encrypted: string[] = []
 const refused: Array<{ where: string; error: string }> = []
-for (const path of corpusDocuments()) {
+for (const path of BODIES_ONLY ? [] : corpusDocuments()) {
   const bytes = readFileSync(resolve(repoRoot, path))
   // an encrypted docx is an OLE compound file, not a zip: the parser has no model to give
   if (OLE_MAGIC.equals(bytes.subarray(0, 8))) {
@@ -21,8 +25,12 @@ for (const path of corpusDocuments()) {
     continue
   }
   let doc: unknown
-  try { doc = await parseDocx(new Uint8Array(bytes)) }
-  catch (error) { refused.push({ where: path, error: String(error) }); continue }
+  try {
+    doc = await parseDocx(new Uint8Array(bytes))
+  } catch (error) {
+    refused.push({ where: path, error: String(error) })
+    continue
+  }
   modelOnDocument(path, doc)
   parseOnDocument(path, new Uint8Array(bytes), doc)
   await saveOnDocument(path, new Uint8Array(bytes), doc as ParsedDocFull)
@@ -32,7 +40,14 @@ for (const { name, ...options } of MODEL_BODIES) {
   const bytes = await buildModelBody(options)
   parseOnDocument(`model body ${name}`, bytes, await parseDocx(bytes))
 }
-console.log(`Model corpus: ${corpusDocuments().length} documents, ${encrypted.length} encrypted skipped, ${refused.length} parser refusals`)
+if (BODIES_ONLY) {
+  reportComparisons()
+  reportParse()
+  process.exit(0)
+}
+console.log(
+  `Model corpus: ${corpusDocuments().length} documents, ${encrypted.length} encrypted skipped, ${refused.length} parser refusals`,
+)
 for (const refusal of refused) console.log(`  ${refusal.where}: ${refusal.error}`)
 if (refused.length > 0) failGate()
 await modelAfterCorpus()
