@@ -28,7 +28,7 @@ on:
         required: false
         default: ''
       next_run:
-        description: Run id of the build the candidate updates to next (a bundle=true run with a higher version); empty uses the latest release when to_run is empty, else skips
+        description: Run id of the build the candidate updates to next (a bundle=true run with a higher version, or the to_run run when it was given next_version); empty uses the latest release when to_run is empty, else skips
         required: false
         default: ''
 
@@ -84,14 +84,17 @@ jobs:
         id: builds
         shell: bash
         run: |
-          get() { # <dir> <run id> <release tag>
+          # <dir> <run id> <release tag> <head|tail>: a bundle run of
+          # "seuoffice shell" may hold two versions (version, next_version);
+          # the candidate is the lower, the next build the higher
+          get() {
             mkdir -p "$1"
             if [ -n "$2" ]; then gh run download "$2" --dir "$1"
             elif [ -n "$3" ]; then gh release download "$3" --dir "$1" --pattern 'SeuOffice-Setup-*.exe'; fi
-            find "$1" -name 'SeuOffice-Setup-*.exe' ! -name '*stable*' | head -1
+            find "$1" -name 'SeuOffice-Setup-*.exe' ! -name '*stable*' | sort -V | "$4" -1
           }
-          to=$(get "$RUNNER_TEMP/to" "${{ inputs.to_run }}" "${{ needs.resolve.outputs.to }}")
-          next=$(get "$RUNNER_TEMP/next" "${{ inputs.next_run }}" "${{ needs.resolve.outputs.next }}")
+          to=$(get "$RUNNER_TEMP/to" "${{ inputs.to_run }}" "${{ needs.resolve.outputs.to }}" head)
+          next=$(get "$RUNNER_TEMP/next" "${{ inputs.next_run }}" "${{ needs.resolve.outputs.next }}" tail)
           ver() { basename "$1" | sed -E 's/^SeuOffice-Setup-(.+)\.exe$/\1/'; }
           echo "to=$(cygpath -w "$to")" >> "$GITHUB_OUTPUT"
           echo "to_version=$(ver "$to")" >> "$GITHUB_OUTPUT"
@@ -132,7 +135,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/to"
           if [ -n "${{ inputs.to_run }}" ]; then gh run download "${{ inputs.to_run }}" --dir "$RUNNER_TEMP/to"
           else gh release download "${{ needs.resolve.outputs.to }}" --dir "$RUNNER_TEMP/to" --pattern 'SeuOffice-*-arm64-mac.zip'; fi
-          zip=$(find "$RUNNER_TEMP/to" -name 'SeuOffice-*-arm64-mac.zip' ! -name '*stable*' | head -1)
+          zip=$(find "$RUNNER_TEMP/to" -name 'SeuOffice-*-arm64-mac.zip' ! -name '*stable*' | sort -V | head -1)
           version=$(basename "$zip" | sed -E 's/^SeuOffice-(.+)-arm64-mac\.zip$/\1/')
           tools/migration-test/mac-runner.sh "${{ matrix.from }}" "$zip" "$version" "$RUNNER_TEMP/migration"
       - if: always()

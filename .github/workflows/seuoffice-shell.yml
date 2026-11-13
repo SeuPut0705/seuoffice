@@ -24,7 +24,10 @@ on:
         type: boolean
         default: false
       version:
-        description: Version of the installers (empty is tauri.conf.json's); the migration test's next_run needs a higher one
+        description: Version of the installers (empty is tauri.conf.json's)
+        default: ''
+      next_version:
+        description: A higher version built too, in the same run, for the migration test's second update (to_run = next_run = this run)
         default: ''
 
 permissions:
@@ -306,15 +309,16 @@ jobs:
         if: matrix.platform == 'win'
         run: ninja --version || choco install ninja -y
 
-      - name: version
+      - name: versions
         id: version
         env:
           VERSION: ${{ inputs.version }}
+          NEXT_VERSION: ${{ inputs.next_version }}
         run: |
           v="$VERSION"
           [ -n "$v" ] || v=$(node -p "require('./crates/shell/tauri.conf.json').version")
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "version $v"
+          echo "versions=$v $NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "versions $v $NEXT_VERSION"
 
       - name: npm ci
         run: npm ci
@@ -339,47 +343,42 @@ jobs:
       - name: Tauri CLI
         working-directory: crates/shell
         run: npm install --no-audit --no-fund
-      - name: build the installer
-        id: build
+      # Each version into a folder of its own (release/<version>), with the
+      # names the Electron releases used, its .blockmap and its channel files,
+      # so the updater and the migration test find them the same way
+      - name: build the installers and their feed
         working-directory: crates/shell
+        env:
+          VERSIONS: ${{ steps.version.outputs.versions }}
         run: |
           # the CDN's index.json is past the 10 MB body limit of the cef crate's build script
           python3 ci/cef-index-mirror.py 8099 "$CEF_VERSION" > "$RUNNER_TEMP/cef-mirror.log" 2>&1 &
           mirror=$!
           trap 'kill $mirror 2>/dev/null || true' EXIT
-          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
+          for _ in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
           export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
-          version='{"version":"${{ steps.version.outputs.version }}"}'
-          start=$(date +%s)
-          if [ "${{ matrix.platform }}" = win ]; then
-            npx tauri build --config bundle/windows.conf.json --config "$version" --bundles nsis --verbose
-          else
-            npx tauri build --config bundle/macos.conf.json --config "$version" --bundles app --verbose
-          fi
-          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
-          find target/release/bundle -maxdepth 2 | head -40
-
-      # the names the Electron releases used, so the updater and the
-      # migration test find them the same way
-      - name: the release files and their feed
-        run: |
-          v=${{ steps.version.outputs.version }}
-          out="$RUNNER_TEMP/release"
-          mkdir -p "$out"
-          if [ "${{ matrix.platform }}" = win ]; then
-            cp "$(find crates/shell/target/release/bundle/nsis -name '*.exe' | head -1)" "$out/SeuOffice-Setup-$v.exe"
-            node crates/shell/bundle/release-feed.mjs feed --version "$v" --platform win32 "$out/SeuOffice-Setup-$v.exe"
-          else
-            app=$(find crates/shell/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
-            ditto -c -k --sequesterRsrc --keepParent "$app" "$out/SeuOffice-$v-arm64-mac.zip"
-            node crates/shell/bundle/release-feed.mjs feed --version "$v" --platform darwin "$out/SeuOffice-$v-arm64-mac.zip"
-          fi
-          {
-            echo "### ${{ matrix.platform }} $v (build ${{ steps.build.outputs.seconds }} s)"
-            echo '```'
-            ls -l "$out"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          for v in $VERSIONS; do
+            out="$RUNNER_TEMP/release/$v"
+            mkdir -p "$out"
+            rm -rf target/release/bundle
+            start=$(date +%s)
+            if [ "${{ matrix.platform }}" = win ]; then
+              npx tauri build --config bundle/windows.conf.json --config "{\"version\":\"$v\"}" --bundles nsis --verbose
+              cp "$(find target/release/bundle/nsis -name '*.exe' | head -1)" "$out/SeuOffice-Setup-$v.exe"
+              node bundle/release-feed.mjs feed --version "$v" --platform win32 "$out/SeuOffice-Setup-$v.exe"
+            else
+              npx tauri build --config bundle/macos.conf.json --config "{\"version\":\"$v\"}" --bundles app --verbose
+              app=$(find target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
+              ditto -c -k --sequesterRsrc --keepParent "$app" "$out/SeuOffice-$v-arm64-mac.zip"
+              node bundle/release-feed.mjs feed --version "$v" --platform darwin "$out/SeuOffice-$v-arm64-mac.zip"
+            fi
+            {
+              echo "### ${{ matrix.platform }} $v (build $(( $(date +%s) - start )) s)"
+              echo '```'
+              ls -l "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
 
       - name: upload shell-bundle-${{ matrix.platform }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
