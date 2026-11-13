@@ -60,6 +60,7 @@ use shell_contract::slides::SlidesTemplateSelectionHooks;
 use shell_contract::{Batch, DialogsHost, IpcValue, MainWindowHost, OsShellHost, WindowId};
 
 use crate::handle;
+use crate::shared_dialog::with_shared_memory;
 
 // ---- hosts -----------------------------------------------------------------
 
@@ -980,15 +981,12 @@ impl Home {
         parent: Option<WindowId>,
         options: &JsObject<JsonValue>,
     ) -> (bool, Vec<String>) {
-        let result = show_open_dialog_with_memory(
-            &mut self.dialog_memory.lock().unwrap(),
-            &mut OpenDialog {
-                dialogs: &self.dialogs,
-            },
-            parent.as_ref(),
-            options,
-            None,
-        );
+        let mut dialog = OpenDialog {
+            dialogs: &self.dialogs,
+        };
+        let result = with_shared_memory(&self.dialog_memory, &mut dialog, |memory, dialog| {
+            show_open_dialog_with_memory(memory, dialog, parent.as_ref(), options, None)
+        });
         let canceled = matches!(
             result.get("canceled").as_deref(),
             Some(JsonValue::Bool(true))

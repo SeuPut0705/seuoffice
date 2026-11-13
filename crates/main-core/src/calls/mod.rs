@@ -115,7 +115,6 @@ const GROUPS: &[Group] = &[
     b6_shell::call,
     b6_apps::call,
     b6_tabs::call,
-    w_shell::call,
     b2_cli::call,
     b4_fonts::call,
     b4_pdf_store::call,
@@ -123,6 +122,7 @@ const GROUPS: &[Group] = &[
     b3_projects::call,
     b5_mcp::call,
     b5_provider::call,
+    w_shell::call,
     b5_kb::call,
 ];
 

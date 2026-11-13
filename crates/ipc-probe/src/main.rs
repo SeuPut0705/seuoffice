@@ -329,6 +329,22 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                             provided,
                             then,
                         ),
+                        Some("a") => shell_ipc_a::probe_trigger(
+                            &name,
+                            ViewId(view),
+                            &args,
+                            &services,
+                            provided,
+                            then,
+                        ),
+                        Some("m") => shell_ipc_m::probe_trigger(
+                            &name,
+                            ViewId(view),
+                            &args,
+                            &services,
+                            provided,
+                            then,
+                        ),
                         Some("w") => shell_ipc_w::projects::probe_trigger(
                             &name,
                             ViewId(view),

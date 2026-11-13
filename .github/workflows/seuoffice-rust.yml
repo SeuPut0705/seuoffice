@@ -177,7 +177,7 @@ jobs:
           npm --prefix tools/ipc-diff run typecheck
           npm --prefix tools/ipc-diff run test
           mkdir -p tools/ipc-diff/out
-          npm --prefix tools/ipc-diff run gate -- --show 40 --require D1 2>&1 | tee tools/ipc-diff/out/gate.txt
+          npm --prefix tools/ipc-diff run gate -- --show 40 --require D1 --require W 2>&1 | tee tools/ipc-diff/out/gate.txt
 
       - name: Keep the IPC comparison
         if: ${{ always() && steps.has.outputs.crates == 'true' }}

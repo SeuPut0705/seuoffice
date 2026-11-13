@@ -1,0 +1,177 @@
+[
+  {
+    "name": "zoom 75% is not in the zoom list",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "[500, 200, 150, 125, 100, 75, 50, 25, 10];",
+    "replace": "[500, 200, 150, 125, 100, 70, 50, 25, 10];",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "markdown File > Print sends another channel",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "(\"markdown\", \"markdown:print-request\"),",
+    "replace": "(\"markdown\", \"markdown:print-requested\"),",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "hwp Export as PDF sends no mode",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "event(\"hwp:print-request\", vec![text(\"pdf\")]),",
+    "replace": "event(\"hwp:print-request\", vec![]),",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "labels ignore the Korean table",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "if lang == Lang::Ko { *ko } else { *en }",
+    "replace": "*en",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "a sheets action goes out as a docs command",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "event(MENU_ACTION, vec![text(action)]),",
+    "replace": "event(MENU_COMMAND, vec![text(action)]),",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "a docs command drops its undefined payload",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "event(MENU_COMMAND, vec![text(command), IpcValue::Undefined]),",
+    "replace": "event(MENU_COMMAND, vec![text(command)]),",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "the docs interceptor is never asked",
+    "file": "shell-ipc/m/src/menu.rs",
+    "find": "    if intercept_context_menu(services, provided, view, params) {",
+    "replace": "    if false && intercept_context_menu(services, provided, view, params) {",
+    "groups": ["m/menus"]
+  },
+  {
+    "name": "spell-diag cap doubled",
+    "file": "shell-ipc/m/src/spell.rs",
+    "find": "const DIAG_MAX_BYTES: u64 = 256 * 1024;",
+    "replace": "const DIAG_MAX_BYTES: u64 = 512 * 1024;",
+    "groups": ["m/spell"]
+  },
+  {
+    "name": "spell-diag line cap 501",
+    "file": "shell-ipc/m/src/spell.rs",
+    "find": "const DIAG_MAX_LINE_UNITS: usize = 500;",
+    "replace": "const DIAG_MAX_LINE_UNITS: usize = 501;",
+    "groups": ["m/spell"]
+  },
+  {
+    "name": "respell-kick key order",
+    "file": "shell-ipc/m/src/spell.rs",
+    "find": "[KeyInput::KeyDown, KeyInput::Char, KeyInput::KeyUp]",
+    "replace": "[KeyInput::Char, KeyInput::KeyDown, KeyInput::KeyUp]",
+    "groups": ["m/spell"]
+  },
+  {
+    "name": "add-word keeps the ignore journal",
+    "file": "shell-ipc/m/src/spell.rs",
+    "find": "if cx.state.spell_unignore(word) {",
+    "replace": "if false && cx.state.spell_unignore(word) {",
+    "groups": ["m/spell"]
+  },
+  {
+    "name": "start-up scrub removes nothing",
+    "file": "shell-ipc/m/src/spell.rs",
+    "find": "Some(word) => cx.host.spell_remove_word(word),",
+    "replace": "Some(_) => {}",
+    "groups": ["m/spell"]
+  },
+  {
+    "name": "set-language ignores the unchanged check",
+    "file": "shell-ipc/m/src/settings.rs",
+    "find": "    if lang == lang_of(cx) {",
+    "replace": "    if false {",
+    "groups": ["m/settings"]
+  },
+  {
+    "name": "set-theme no longer moves the cache before the write",
+    "file": "shell-ipc/m/src/settings.rs",
+    "find": "    cx.state.set_theme(theme);",
+    "replace": "",
+    "groups": ["m/settings"]
+  },
+  {
+    "name": "quick-look theme event carries the wrong value",
+    "file": "shell-ipc/m/src/settings.rs",
+    "find": "vec![string(cx.state.theme(&cx.settings_path()))]",
+    "replace": "vec![string(\"system\")]",
+    "groups": ["m/settings"]
+  },
+  {
+    "name": "set-document-theme skips the unchanged check",
+    "file": "shell-ipc/m/src/settings.rs",
+    "find": "    if theme == cx.state.doc_theme(&path) {",
+    "replace": "    if false {",
+    "groups": ["m/settings"]
+  },
+  {
+    "name": "author-name change always falls back to the account",
+    "file": "shell-ipc/m/src/settings.rs",
+    "find": "        let effective = if value.is_empty() {",
+    "replace": "        let effective = if true {",
+    "groups": ["m/settings"]
+  },
+  {
+    "name": "font aliases lose the 512-name cap",
+    "file": "shell-ipc/m/src/fonts.rs",
+    "find": ".take(ALIAS_NAMES_MAX)",
+    "replace": ".take(usize::MAX)",
+    "groups": ["m/fonts"]
+  },
+  {
+    "name": "font aliases keep __proto__",
+    "file": "shell-ipc/m/src/fonts.rs",
+    "find": "if aliases.is_empty() || name == \"__proto__\" {",
+    "replace": "if aliases.is_empty() {",
+    "groups": ["m/fonts"]
+  },
+  {
+    "name": "silent print route on the wrong platform",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": "if e.platform == \"darwin\" && opts.silent {",
+    "replace": "if e.platform == \"linux\" && opts.silent {",
+    "groups": ["m/print-docs"]
+  },
+  {
+    "name": "docs:print dialog margins",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": "print_opts.insert(\"margins\".into(), json!({ \"marginType\": \"none\" }));",
+    "replace": "print_opts.insert(\"margins\".into(), json!({ \"marginType\": \"default\" }));",
+    "groups": ["m/print-docs"]
+  },
+  {
+    "name": "slides cancel forwarded as canceled",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": "PrintDialogOutcome::Canceled => json!({ \"ok\": false }),",
+    "replace": "PrintDialogOutcome::Canceled => json!({ \"ok\": true, \"canceled\": true }),",
+    "groups": ["m/print-slides"]
+  },
+  {
+    "name": "hwp headless export still opens the PDF",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": "if !env.host.headless() && !env.host.open_generated_path(&target) {",
+    "replace": "if !env.host.open_generated_path(&target) {",
+    "groups": ["m/print-hwp"]
+  },
+  {
+    "name": "printer-options keeps every driver group",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": ".filter(|g| DRIVER_OPTION_NAMES.contains(&g.name.as_str()))",
+    "replace": ".filter(|_| true)",
+    "groups": ["m/print-slides"]
+  },
+  {
+    "name": "markdown print margin",
+    "file": "shell-ipc/m/src/print.rs",
+    "find": "margin_in: 0.6,",
+    "replace": "margin_in: 0.5,",
+    "groups": ["m/print-markdown"]
+  }
+]

@@ -1,0 +1,3565 @@
+//! The application menu (`applyMenuFor` of `apps/shell/src/main/index.ts`,
+//! `buildDocsMenu`, Sheets' `installApplicationMenu`, `buildSlidesMenu`): one
+//! menu per kind of tab, rebuilt whenever the active tab changes.
+//!
+//! The menus are built in three steps so that nearly all of it is a pure
+//! function of the tab's kind and the language:
+//!
+//! 1. [`menu_for`] makes a tree of [`Node`]s on the core thread. The shared
+//!    pieces (the application, Edit, Window, View and Help menus, Settings,
+//!    About) come from `main-core`'s `app_menu` templates, never re-typed
+//!    here. The items that send batch M's events are written once with no
+//!    action; [`bind_events`] finds each one's channel and arguments by its
+//!    label path in `shell_ipc_m::app_menu_items`, so the labels the events
+//!    are found by and the labels shown are one string.
+//! 2. [`number`] gives each clickable item the id `m-app-<n>` and returns what
+//!    each id does.
+//! 3. [`build_menu`], on the UI thread, makes the Tauri menu and sets it.
+//!
+//! One global `on_menu_event` listener ([`install`]) takes the ids that start
+//! with `m-app-` and runs their [`Act`] on the core thread, where the tab
+//! state lives.
+//!
+//! What Electron's menus had and this one does not:
+//!
+//! - the icons of the New entries (`menuIcons()`): Tauri's menu items take an
+//!   icon, but the shell has no icon set for them yet.
+//! - the full path under a document-link entry's name off macOS (`sublabel`)
+//!   and its tooltip: Tauri's menu items have neither.
+//!
+//! Items whose action another batch provides are built from what `Provided`
+//! holds at the time ([`Seams`]) and left out when nobody provides it: Check
+//! for Updates and the About box's check (U's `UpdateCheck`), Export as Word /
+//! PowerPoint / Excel and Import PDF (D2's `DocumentConversions`). The
+//! document-link entries (`documentLinkFileMenuItems`, `host/menu/doc_links.rs`)
+//! appear once batch A attached the hand-off store.
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Mutex, MutexGuard, OnceLock};
+
+use main_core::packages::electron_utils::app_menu::{
+    AboutAnswer, AppMenuLabels, MenuClick, MenuItem, ViewMenuOptions, about_answer, about_box,
+    about_menu_item, app_menu_labels, app_menu_template, edit_menu_template,
+    help_check_updates_items, help_menu_template, settings_menu_item, toggle_dev_tools_item,
+    view_menu_template, window_menu_template,
+};
+use main_core::packages::i18n::Lang;
+use main_core::shell::document_links_menu::{MenuClick as DocLinkClick, MenuItem as DocLinkItem};
+use main_core::shell::feedback::{
+    FEEDBACK_SURVEY_URL, FeedbackEnvironment, feedback_details, feedback_text, platform_label,
+};
+use main_core::shell::tab_manager::TabKind;
+use shell_contract::app_actions::{PdfExport, document_conversions, update_check};
+use shell_contract::editors::{SaveMode, editor_for};
+use shell_contract::hosts::MessageBox;
+use shell_contract::ipc::Target;
+use shell_contract::provided::Provided;
+use shell_contract::runtime::{PathName, Services};
+use shell_contract::{ClipboardHost, DialogsHost, IpcValue, MainWindowHost, OsShellHost, ViewId};
+use shell_ipc_m::{AppMenuItems, MenuAction, MenuDict, app_menu_items, current_lang, menu_label};
+use shell_ipc_w::home_settings::HomeAppHost;
+use shell_ipc_w::tabs::{MenuEntry, MenuEntryKind};
+use tauri::menu::{
+    CheckMenuItem, IsMenuItem, Menu, MenuItem as TauriItem, PredefinedMenuItem, Submenu,
+};
+use tauri::{AppHandle, DynRuntime, Manager};
+use tauri_runtime_cef::WebviewCefExt;
+
+use super::super::HostContext;
+use super::super::shell_tabs::shell_tabs;
+use super::super::w::post_core;
+use super::super::window::Windows;
+
+use std::sync::Arc;
+
+/// The id prefix of this menu's items; the one global listener takes these only
+const ID_PREFIX: &str = "m-app-";
+
+// Docs' template ids, which the docs host patches through `getMenuItemById`
+const AI_SIDEBAR: &str = "docs-menu-ai-sidebar";
+const DARK_MODE: &str = "docs-menu-dark-mode";
+const INSERT_EQUATION: &str = "docs-menu-insert-equation";
+const INSERT_COMMENT: &str = "docs-menu-insert-comment";
+
+/// DevTools exist in a debug build or with the `devtools` feature (Tauri's own gate)
+const DEV_TOOLS: bool = cfg!(any(debug_assertions, feature = "devtools"));
+
+// ---- what a click does ----
+
+/// An edit command of the page that has no predefined Tauri menu item
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FrameEdit {
+    /// `role: 'delete'`
+    Delete,
+    /// `role: 'pasteAndMatchStyle'`
+    PasteAndMatchStyle,
+    // the edit roles as the ☰ popup runs them: a popup entry has no native item
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum Act {
+    /// An item of batch M's table: [`bind_events`] replaces it with an
+    /// [`Act::Emit`] found by the item's label path
+    Unbound,
+    /// `webContents.send(channel, ...args)` on the active editor of the menu's kind
+    Emit {
+        channel: &'static str,
+        args: Vec<IpcValue>,
+    },
+    /// File > Open: `openFileViaDialog`
+    Open,
+    /// File > Open Recent: `openDocumentPath(path)`
+    OpenRecent(String),
+    /// A new document of this home kind (`docx`, `xlsx`, ...): `newDocTab` and its kin
+    NewDocument(String),
+    /// Docs' New Window and Slides' Open in New Window
+    OpenInNewWindow(TabKind),
+    /// `changeUiScale(.., direction)`: 1 bigger, -1 smaller, 0 reset
+    UiScale(i32),
+    /// Help > Check for Updates (`checkForUpdatesNow`)
+    CheckUpdates,
+    /// PDF > Export as Word / PowerPoint / Excel (`exportPdfAs*Local`)
+    ExportPdfAs(PdfExport),
+    /// Hangul > Import PDF
+    ImportPdf,
+    /// `tabManager.openHomeTab()`
+    BackToHome,
+    /// `closeFocusedEditor`
+    Close,
+    /// `request<App>Save(contents, 'save' | 'saveAs')` of the active editor
+    Save(SaveMode),
+    /// `send<App>ExportRequest(contents, format)` of the active editor
+    Export(&'static str),
+    /// `openSettingsView`
+    Settings,
+    About,
+    /// Help > User Guide: `tabManager.openHelpTab()`
+    UserGuide,
+    /// `openThirdPartyNotices`
+    ThirdPartyNotices,
+    /// `openFeedbackSurvey`
+    Feedback,
+    /// `role: 'toggleDevTools'`
+    ToggleDevTools,
+    /// `role: 'reload'` and `'forceReload'`
+    Reload {
+        ignore_cache: bool,
+    },
+    /// `win?.minimize()` of the focused window
+    MinimizeWindow,
+    /// `win?.close()` of the focused window
+    CloseWindow,
+    /// a document-link entry: make from, or open a listed file, for this view
+    DocLink(DocLinkClick, ViewId),
+    /// `role: 'zoom'` of the focused window, from the ☰ popup
+    MaximizeWindow,
+    /// `role: 'togglefullscreen'` of the focused window, from the ☰ popup
+    FullscreenWindow,
+    Frame(FrameEdit),
+}
+
+// ---- the menu as a value ----
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Role {
+    About,
+    Services,
+    Hide,
+    HideOthers,
+    Unhide,
+    Quit,
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
+    Minimize,
+    /// macOS "Zoom": maximize
+    Zoom,
+    /// macOS "Bring All to Front"
+    Front,
+    Fullscreen,
+    CloseWindow,
+}
+
+/// Menus the system treats specially on macOS
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MenuRole {
+    Plain,
+    Window,
+    Help,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Item {
+    /// `m-app-<n>` once [`number`] ran; items with no action have none
+    id: Option<String>,
+    /// Electron's `id` of the template, what `getMenuItemById` finds
+    name: Option<&'static str>,
+    label: String,
+    accelerator: Option<String>,
+    enabled: bool,
+    /// a checkbox's state
+    checked: Option<bool>,
+    act: Option<Act>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum Node {
+    Separator,
+    Role {
+        role: Role,
+        label: Option<String>,
+    },
+    Item(Item),
+    Menu {
+        label: String,
+        role: MenuRole,
+        items: Vec<Node>,
+    },
+}
+
+fn item(label: &str, accelerator: Option<&str>, act: Act) -> Node {
+    Node::Item(Item {
+        id: None,
+        name: None,
+        label: label.to_owned(),
+        accelerator: accelerator.map(str::to_owned),
+        enabled: true,
+        checked: None,
+        act: Some(act),
+    })
+}
+
+/// An item of batch M's table
+fn unbound(label: &str, accelerator: Option<&str>) -> Node {
+    item(label, accelerator, Act::Unbound)
+}
+
+fn emit(
+    label: &str,
+    accelerator: Option<&str>,
+    channel: &'static str,
+    args: Vec<IpcValue>,
+) -> Node {
+    item(label, accelerator, Act::Emit { channel, args })
+}
+
+fn text(value: &str) -> IpcValue {
+    IpcValue::String(value.to_owned())
+}
+
+fn submenu(label: &str, items: Vec<Node>) -> Node {
+    Node::Menu {
+        label: label.to_owned(),
+        role: MenuRole::Plain,
+        items,
+    }
+}
+
+fn role(role: Role, label: &str) -> Node {
+    Node::Role {
+        role,
+        label: Some(label.to_owned()),
+    }
+}
+
+// ---- what the menu is built from ----
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Os {
+    Mac,
+    Windows,
+    Linux,
+}
+
+impl Os {
+    fn current() -> Os {
+        if cfg!(target_os = "macos") {
+            Os::Mac
+        } else if cfg!(windows) {
+            Os::Windows
+        } else {
+            Os::Linux
+        }
+    }
+
+    /// `process.platform`
+    fn node(self) -> &'static str {
+        match self {
+            Os::Mac => "darwin",
+            Os::Windows => "win32",
+            Os::Linux => "linux",
+        }
+    }
+}
+
+/// What the Docs View menu's checkboxes and Insert menu show for a docs view
+/// (`ViewMenuState`): the renderer reports it, the defaults are its initial state
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct DocsViewState {
+    pub ai_sidebar: bool,
+    pub dark_canvas: bool,
+    /// the tab shows an ODT document: equations and comments are off
+    pub odt: bool,
+}
+
+impl Default for DocsViewState {
+    fn default() -> Self {
+        DocsViewState {
+            ai_sidebar: true,
+            dark_canvas: false,
+            odt: false,
+        }
+    }
+}
+
+/// The titles `role: 'edit'` and the View menu's page-zoom roles carry in
+/// the templates, which are the only way to read them
+struct RoleLabels {
+    undo: String,
+    redo: String,
+    cut: String,
+    copy: String,
+    paste: String,
+    delete: String,
+    select_all: String,
+    actual_size: String,
+    zoom_in: String,
+    zoom_out: String,
+    fullscreen: String,
+}
+
+impl RoleLabels {
+    fn of(labels: &AppMenuLabels) -> RoleLabels {
+        let edit = edit_menu_template::<Act>("linux", labels);
+        let view = view_menu_template::<Act>(
+            "linux",
+            labels,
+            ViewMenuOptions {
+                dev_items: false,
+                page_zoom: true,
+            },
+        );
+        let label = |menu: &MenuItem<Act>, role: &str| {
+            menu.submenu
+                .iter()
+                .flatten()
+                .find(|entry| entry.role == Some(role))
+                .and_then(|entry| entry.label.clone())
+                .unwrap_or_default()
+        };
+        RoleLabels {
+            undo: label(&edit, "undo"),
+            redo: label(&edit, "redo"),
+            cut: label(&edit, "cut"),
+            copy: label(&edit, "copy"),
+            paste: label(&edit, "paste"),
+            delete: label(&edit, "delete"),
+            select_all: label(&edit, "selectAll"),
+            actual_size: label(&view, "resetZoom"),
+            zoom_in: label(&view, "zoomIn"),
+            zoom_out: label(&view, "zoomOut"),
+            fullscreen: label(&view, "togglefullscreen"),
+        }
+    }
+}
+
+/// What other batches provide, read from `Provided` on the core thread each
+/// time a menu is built: an item whose action nobody provides is left out
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct Seams {
+    /// `visibleHomeKinds(readHomeKinds())` without `pdfTools`, in home's order
+    new_kinds: Vec<String>,
+    /// `UpdateCheck::available`
+    can_check_updates: bool,
+    /// `DocumentConversions` is provided
+    conversions: bool,
+}
+
+struct Ctx {
+    os: Os,
+    lang: Lang,
+    /// `app.name`
+    app_name: String,
+    dev_tools: bool,
+    /// Docs' File > Open Recent (`recent.json`, the first ten)
+    recent: Vec<String>,
+    docs_view: DocsViewState,
+    seams: Seams,
+    /// the document-link entries of this kind's File menu, led by a separator
+    doc_links: Vec<Node>,
+    labels: AppMenuLabels,
+    roles: RoleLabels,
+}
+
+impl Ctx {
+    fn new(
+        os: Os,
+        lang: Lang,
+        app_name: String,
+        dev_tools: bool,
+        recent: Vec<String>,
+        docs_view: DocsViewState,
+        seams: Seams,
+    ) -> Ctx {
+        let labels = app_menu_labels(lang.as_str());
+        Ctx {
+            os,
+            lang,
+            app_name,
+            dev_tools,
+            recent,
+            docs_view,
+            seams,
+            doc_links: Vec::new(),
+            roles: RoleLabels::of(&labels),
+            labels,
+        }
+    }
+
+    fn mac(&self) -> bool {
+        self.os == Os::Mac
+    }
+
+    /// the shell's `tm(key)`
+    fn tm(&self, key: &str) -> String {
+        menu_label(MenuDict::Shell, self.lang, key)
+    }
+
+    fn docs(&self, key: &str) -> String {
+        menu_label(MenuDict::Docs, self.lang, key)
+    }
+
+    fn sheets(&self, key: &str) -> String {
+        menu_label(MenuDict::Sheets, self.lang, key)
+    }
+
+    fn slides(&self, key: &str) -> String {
+        menu_label(MenuDict::Slides, self.lang, key)
+    }
+
+    /// `registerAccelerator: false`: the key is shown but not registered, so a
+    /// press reaches the editor, which takes it itself. Only Windows and Linux
+    /// honored it, and a Tauri menu cannot show a key it does not register, so
+    /// there the key is left off.
+    fn shown_only(&self, accelerator: &'static str) -> Option<&'static str> {
+        self.mac().then_some(accelerator)
+    }
+
+    /// The Redo key of the apps that take Undo and Redo themselves
+    fn redo_key(&self) -> &'static str {
+        if self.mac() { "Shift+Cmd+Z" } else { "Ctrl+Y" }
+    }
+
+    fn settings(&self) -> Node {
+        self.node(&settings_menu_item(&self.labels, None))
+            .unwrap_or(Node::Separator)
+    }
+
+    /// A template of `main-core` as nodes; `None` for what this shell leaves out
+    fn node(&self, template: &MenuItem<Act>) -> Option<Node> {
+        if template.separator {
+            return Some(Node::Separator);
+        }
+        let label = template.label.clone();
+        if let Some(items) = &template.submenu {
+            let items = items.iter().filter_map(|i| self.node(i)).collect();
+            return Some(Node::Menu {
+                label: label?,
+                role: if template.role == Some("help") {
+                    MenuRole::Help
+                } else {
+                    MenuRole::Plain
+                },
+                items,
+            });
+        }
+        if let Some(name) = template.role {
+            return self.role_node(name, label);
+        }
+        let act = match template.click.clone()? {
+            MenuClick::MinimizeWindow => Act::MinimizeWindow,
+            MenuClick::CloseWindow => Act::CloseWindow,
+            MenuClick::ToggleDevTools if self.dev_tools => Act::ToggleDevTools,
+            MenuClick::ToggleDevTools => return None,
+            MenuClick::CheckUpdates if self.seams.can_check_updates => Act::CheckUpdates,
+            MenuClick::CheckUpdates => return None,
+            MenuClick::About => Act::About,
+            MenuClick::Settings(_) => Act::Settings,
+            MenuClick::App(act) => act,
+        };
+        Some(item(&label?, template.accelerator, act))
+    }
+
+    /// `role: name` of a template: a predefined item, or what the role did
+    /// where Tauri has no predefined item
+    fn role_node(&self, name: &str, label: Option<String>) -> Option<Node> {
+        let predefined = |role| {
+            Some(Node::Role {
+                role,
+                label: label.clone(),
+            })
+        };
+        match name {
+            "undo" => predefined(Role::Undo),
+            "redo" => predefined(Role::Redo),
+            "cut" => predefined(Role::Cut),
+            "copy" => predefined(Role::Copy),
+            "paste" => predefined(Role::Paste),
+            "selectAll" => predefined(Role::SelectAll),
+            "togglefullscreen" => predefined(Role::Fullscreen),
+            "about" => predefined(Role::About),
+            "delete" => Some(item(&label?, None, Act::Frame(FrameEdit::Delete))),
+            "reload" => Some(item(
+                &label?,
+                Some("CmdOrCtrl+R"),
+                Act::Reload {
+                    ignore_cache: false,
+                },
+            )),
+            "forceReload" => Some(item(
+                &label?,
+                Some("CmdOrCtrl+Shift+R"),
+                Act::Reload { ignore_cache: true },
+            )),
+            "services" => Some(role(Role::Services, &self.tm("roleServices"))),
+            "hide" => Some(role(Role::Hide, &self.app_title("roleHide"))),
+            "hideOthers" => Some(role(Role::HideOthers, &self.tm("roleHideOthers"))),
+            "unhide" => Some(role(Role::Unhide, &self.tm("roleUnhide"))),
+            "quit" => Some(role(Role::Quit, &self.app_title("roleQuit"))),
+            // `role: 'editMenu'` and `'windowMenu'` of macOS, which Tauri has no
+            // role for: the items the role holds
+            "editMenu" => Some(Node::Menu {
+                label: label?,
+                role: MenuRole::Plain,
+                items: edit_menu_template::<Act>("linux", &self.labels)
+                    .submenu
+                    .iter()
+                    .flatten()
+                    .filter_map(|entry| self.node(entry))
+                    .collect(),
+            }),
+            "windowMenu" => Some(Node::Menu {
+                label: label?,
+                role: MenuRole::Window,
+                items: vec![
+                    role(Role::Minimize, self.labels.minimize()),
+                    role(Role::Zoom, &self.tm("roleZoom")),
+                    Node::Separator,
+                    role(Role::Front, &self.tm("roleFront")),
+                ],
+            }),
+            // the page-zoom roles: no menu of this app asks for them
+            // (`ViewMenuOptions::page_zoom` is false), the apps zoom their documents
+            _ => None,
+        }
+    }
+
+    fn app_title(&self, key: &str) -> String {
+        self.tm(key).replace("{app}", &self.app_name)
+    }
+
+    /// The macOS application menu, with Settings in it; no other system has one
+    fn app_menu(&self) -> Option<Node> {
+        let template = app_menu_template(
+            self.os.node(),
+            &self.labels,
+            vec![settings_menu_item(&self.labels, None)],
+            Some(&self.app_name),
+        )?;
+        self.node(&template)
+    }
+
+    fn edit_menu(&self) -> Node {
+        self.node(&edit_menu_template(self.os.node(), &self.labels))
+            .unwrap_or(Node::Separator)
+    }
+
+    fn window_menu(&self) -> Node {
+        self.node(&window_menu_template(self.os.node(), &self.labels))
+            .unwrap_or(Node::Separator)
+    }
+
+    fn dev_tools_item(&self) -> Option<Node> {
+        self.node(&toggle_dev_tools_item(self.os.node(), &self.labels))
+    }
+
+    /// File > Back to Home (`installBackToHomeItems`, and each shell-built menu's own)
+    fn back_to_home(&self) -> Node {
+        item(
+            &self.tm("backToHome"),
+            Some("Shift+CmdOrCtrl+H"),
+            Act::BackToHome,
+        )
+    }
+
+    fn about(&self) -> Node {
+        self.node(&about_menu_item(&self.labels))
+            .unwrap_or(Node::Separator)
+    }
+
+    /// Help > Check for Updates, in Help on macOS only (`helpCheckUpdatesItems`)
+    fn check_updates_items(&self) -> Vec<Node> {
+        help_check_updates_items::<Act>(&self.labels, self.os.node())
+            .iter()
+            .filter_map(|template| self.node(template))
+            .collect()
+    }
+
+    /// `uiScaleMenuItems`: the interface zoom of View, which every tab kind has
+    fn ui_scale_items(&self) -> Vec<Node> {
+        vec![
+            item(
+                &self.tm("menuUiZoomIn"),
+                Some("CmdOrCtrl+Alt+="),
+                Act::UiScale(1),
+            ),
+            item(
+                &self.tm("menuUiZoomOut"),
+                Some("CmdOrCtrl+Alt+-"),
+                Act::UiScale(-1),
+            ),
+            Node::Separator,
+            item(
+                &self.tm("menuUiZoomReset"),
+                Some("CmdOrCtrl+Alt+0"),
+                Act::UiScale(0),
+            ),
+        ]
+    }
+
+    /// `newDocumentMenuItems({ section: true, accelerator })`: the New header,
+    /// an entry for each kind Settings shows in home's order (the first with
+    /// `accelerator`), and a separator; nothing when every kind is hidden. The
+    /// header is a disabled item, as where a platform has no `header`. The
+    /// icons are left out (module docs).
+    fn new_document_items(&self, accelerator: Option<&str>) -> Vec<Node> {
+        let entries: Vec<(&str, &str)> = self
+            .seams
+            .new_kinds
+            .iter()
+            .filter_map(|kind| Some((kind.as_str(), new_kind_label_key(kind)?)))
+            .collect();
+        if entries.is_empty() {
+            return Vec::new();
+        }
+        let mut items = vec![Node::Item(Item {
+            id: None,
+            name: None,
+            label: self.tm("menuSectionNew"),
+            accelerator: None,
+            enabled: false,
+            checked: None,
+            act: None,
+        })];
+        for (index, (kind, key)) in entries.into_iter().enumerate() {
+            items.push(item(
+                &self.tm(key),
+                accelerator.filter(|_| index == 0),
+                Act::NewDocument(kind.to_owned()),
+            ));
+        }
+        items.push(Node::Separator);
+        items
+    }
+}
+
+// ---- the menus of the shell's own kinds ----
+
+fn shell_open(ctx: &Ctx) -> Node {
+    item(&ctx.tm("menuOpen"), Some("CmdOrCtrl+O"), Act::Open)
+}
+
+/// Save and Save As. Hangul's have no key: its embedded editor takes Ctrl+S
+/// before the menu sees it
+fn shell_save(ctx: &Ctx, keys: bool) -> [Node; 2] {
+    [
+        item(
+            &ctx.tm("menuSave"),
+            keys.then_some("CmdOrCtrl+S"),
+            Act::Save(SaveMode::Save),
+        ),
+        item(
+            &ctx.tm("menuSaveAs"),
+            keys.then_some("CmdOrCtrl+Shift+S"),
+            Act::Save(SaveMode::SaveAs),
+        ),
+    ]
+}
+
+fn shell_export(ctx: &Ctx, key: &str, format: &'static str) -> Node {
+    item(&ctx.tm(key), None, Act::Export(format))
+}
+
+fn shell_print(ctx: &Ctx) -> Node {
+    unbound(&ctx.tm("menuPrint"), Some("CmdOrCtrl+P"))
+}
+
+/// Close and Settings, which end every shell-built File menu but Home's
+fn shell_file_end(ctx: &Ctx) -> Vec<Node> {
+    vec![
+        Node::Separator,
+        item(&ctx.tm("menuClose"), Some("CmdOrCtrl+W"), Act::Close),
+        Node::Separator,
+        ctx.settings(),
+    ]
+}
+
+/// A File menu of the entries in `parts`, then Close and Settings
+fn shell_file(ctx: &Ctx, parts: Vec<Vec<Node>>) -> Node {
+    let mut items: Vec<Node> = parts.into_iter().flatten().collect();
+    items.extend(shell_file_end(ctx));
+    submenu(&ctx.tm("menuFile"), items)
+}
+
+/// `NEW_KIND_MENU`'s label key of a home kind
+fn new_kind_label_key(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "docx" => "menuNewDoc",
+        "xlsx" => "menuNewSheet",
+        "pptx" => "menuNewSlide",
+        "md" => "menuNewMarkdown",
+        "html" => "menuNewHtml",
+        "xmind" => "menuNewMindmap",
+        "drawio" => "menuNewDiagram",
+        "hwp" => "menuNewHwp",
+        "pdf" => "menuNewPdf",
+        _ => return None,
+    })
+}
+
+fn shell_help(ctx: &Ctx, user_guide: bool) -> Node {
+    let mut items = Vec::new();
+    if user_guide {
+        items.push(item(&ctx.tm("menuUserGuide"), Some("F1"), Act::UserGuide));
+        items.push(Node::Separator);
+    }
+    items.push(item(
+        &ctx.tm("thirdPartyNotices"),
+        None,
+        Act::ThirdPartyNotices,
+    ));
+    items.push(Node::Separator);
+    items.extend(ctx.check_updates_items());
+    items.push(ctx.about());
+    Node::Menu {
+        label: ctx.tm("menuHelp"),
+        role: MenuRole::Help,
+        items,
+    }
+}
+
+/// `[application menu], File, [the rest], Window, Help` of a shell-built kind
+fn shell_menus(ctx: &Ctx, file: Node, middle: Vec<Node>, user_guide: bool) -> Vec<Node> {
+    let mut menus: Vec<Node> = ctx.app_menu().into_iter().collect();
+    menus.push(file);
+    menus.extend(middle);
+    menus.push(ctx.window_menu());
+    menus.push(shell_help(ctx, user_guide));
+    menus
+}
+
+/// Home's File menu closes the window (`role: 'close'`), not an editor, and
+/// starts with the New entries (Ctrl+N makes the first one); View holds only
+/// the interface zoom
+fn home_menus(ctx: &Ctx) -> Vec<Node> {
+    let mut file = ctx.new_document_items(Some("CmdOrCtrl+N"));
+    file.extend([
+        shell_open(ctx),
+        Node::Separator,
+        role(Role::CloseWindow, &ctx.tm("menuClose")),
+        Node::Separator,
+        ctx.settings(),
+    ]);
+    let file = submenu(&ctx.tm("menuFile"), file);
+    let view = submenu(&ctx.tm("menuView"), ctx.ui_scale_items());
+    shell_menus(ctx, file, vec![view, ctx.edit_menu()], true)
+}
+
+fn pdf_menus(ctx: &Ctx) -> Vec<Node> {
+    let convert = |format: &str, key| {
+        emit(
+            &ctx.tm(key),
+            None,
+            "pdf:convert-dialog-request",
+            vec![IpcValue::Object(vec![("format".into(), text(format))])],
+        )
+    };
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
+            {
+                let mut export = vec![Node::Separator];
+                // PDF > Word / PowerPoint / Excel: D2's local conversions
+                if ctx.seams.conversions {
+                    for (key, format) in [
+                        ("menuExportDocx", PdfExport::Docx),
+                        ("menuExportPptx", PdfExport::Pptx),
+                        ("menuExportXlsx", PdfExport::Xlsx),
+                    ] {
+                        export.push(item(&ctx.tm(key), None, Act::ExportPdfAs(format)));
+                    }
+                }
+                export.extend([
+                    convert("md", "menuExportMd"),
+                    convert("epub", "menuExportEpub"),
+                    Node::Separator,
+                    shell_print(ctx),
+                ]);
+                export
+            },
+        ],
+    );
+    shell_menus(ctx, file, vec![ctx.edit_menu()], false)
+}
+
+fn markdown_menus(ctx: &Ctx) -> Vec<Node> {
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
+            vec![
+                Node::Separator,
+                shell_export(ctx, "menuExportDocx", "docx"),
+                shell_export(ctx, "menuExportOdt", "odt"),
+                shell_export(ctx, "menuExportPdf", "pdf"),
+                shell_export(ctx, "menuExportImages", "png"),
+                shell_export(ctx, "menuOpenInDocs", "docs"),
+                Node::Separator,
+                shell_print(ctx),
+            ],
+        ],
+    );
+    shell_menus(ctx, file, vec![ctx.edit_menu()], false)
+}
+
+fn hwp_menus(ctx: &Ctx) -> Vec<Node> {
+    let preview = |key, action| {
+        emit(
+            &ctx.tm(key),
+            None,
+            "hwp:preview-request",
+            vec![text(action)],
+        )
+    };
+    let file = shell_file(
+        ctx,
+        vec![
+            {
+                let mut start = vec![shell_open(ctx)];
+                if ctx.seams.conversions {
+                    start.push(item(&ctx.tm("menuImportPdf"), None, Act::ImportPdf));
+                }
+                start.extend([Node::Separator, ctx.back_to_home(), Node::Separator]);
+                start
+            },
+            shell_save(ctx, false).into(),
+            vec![
+                Node::Separator,
+                unbound(&ctx.tm("menuExportPdf"), None),
+                preview("menuPreview", "open"),
+                preview("menuPrint", "print"),
+            ],
+        ],
+    );
+    shell_menus(ctx, file, vec![ctx.edit_menu()], false)
+}
+
+fn html_menus(ctx: &Ctx) -> Vec<Node> {
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
+            vec![
+                Node::Separator,
+                shell_export(ctx, "menuExportDocx", "docx"),
+                shell_export(ctx, "menuExportOdt", "odt"),
+                shell_export(ctx, "menuExportPdf", "pdf"),
+                shell_export(ctx, "menuExportHtml", "html"),
+                Node::Separator,
+                shell_print(ctx),
+            ],
+        ],
+    );
+    shell_menus(ctx, file, vec![ctx.edit_menu()], false)
+}
+
+/// The Edit menu of the apps whose history and find are their own: Undo,
+/// Redo and the finds go to the editor as events, the clipboard keeps the
+/// page's roles
+fn own_history_edit(
+    ctx: &Ctx,
+    channel: &'static str,
+    finds: Vec<(String, &'static str, &'static str)>,
+) -> Node {
+    let key = |label: &str, accelerator: Option<&str>, command: &str| {
+        emit(label, accelerator, channel, vec![text(command)])
+    };
+    let r = &ctx.roles;
+    let mut items = vec![
+        key(&r.undo, ctx.shown_only("CmdOrCtrl+Z"), "undo"),
+        key(&r.redo, ctx.shown_only(ctx.redo_key()), "redo"),
+        Node::Separator,
+        role(Role::Cut, &r.cut),
+        role(Role::Copy, &r.copy),
+        role(Role::Paste, &r.paste),
+        item(&r.delete, None, Act::Frame(FrameEdit::Delete)),
+        Node::Separator,
+        role(Role::SelectAll, &r.select_all),
+    ];
+    if !finds.is_empty() {
+        items.push(Node::Separator);
+    }
+    for (label, accelerator, command) in finds {
+        items.push(key(&label, ctx.shown_only(accelerator), command));
+    }
+    submenu(ctx.labels.edit(), items)
+}
+
+fn epub_menus(ctx: &Ctx) -> Vec<Node> {
+    let channel = "epub:menu-command";
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            vec![
+                Node::Separator,
+                emit(
+                    &ctx.tm("menuTranslateBook"),
+                    None,
+                    channel,
+                    vec![text("translate-book")],
+                ),
+            ],
+        ],
+    );
+    let replace = if ctx.mac() { "Alt+Cmd+F" } else { "Ctrl+H" };
+    let edit = own_history_edit(
+        ctx,
+        channel,
+        vec![
+            (ctx.tm("menuFind"), "CmdOrCtrl+F", "find"),
+            (ctx.tm("menuReplace"), replace, "replace"),
+        ],
+    );
+    let r = &ctx.roles;
+    let zoom = |label: &str, accelerator, command| {
+        emit(
+            label,
+            ctx.shown_only(accelerator),
+            channel,
+            vec![text(command)],
+        )
+    };
+    let view = submenu(
+        ctx.labels.view(),
+        vec![
+            zoom(&r.actual_size, "CmdOrCtrl+0", "zoom-reset"),
+            zoom(&r.zoom_in, "CmdOrCtrl+=", "zoom-in"),
+            zoom(&r.zoom_out, "CmdOrCtrl+-", "zoom-out"),
+            Node::Separator,
+            role(Role::Fullscreen, &r.fullscreen),
+        ],
+    );
+    shell_menus(ctx, file, vec![edit, view], false)
+}
+
+fn diagram_menus(ctx: &Ctx) -> Vec<Node> {
+    let channel = "diagram:menu-command";
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                // File > New (`newDiagramTab`)
+                item(
+                    &ctx.tm("menuSectionNew"),
+                    Some("CmdOrCtrl+N"),
+                    Act::NewDocument("drawio".into()),
+                ),
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            vec![
+                Node::Separator,
+                shell_export(ctx, "menuExportMapImage", "png"),
+                shell_export(ctx, "menuExportSvg", "svg"),
+                shell_export(ctx, "menuExportPdf", "pdf"),
+                Node::Separator,
+                shell_print(ctx),
+            ],
+        ],
+    );
+    let edit = own_history_edit(
+        ctx,
+        channel,
+        vec![(ctx.tm("menuFind"), "CmdOrCtrl+F", "find")],
+    );
+    let r = &ctx.roles;
+    let view = submenu(
+        ctx.labels.view(),
+        vec![
+            emit(&r.actual_size, None, channel, vec![text("zoom-reset")]),
+            emit(
+                &r.zoom_in,
+                ctx.shown_only("CmdOrCtrl+="),
+                channel,
+                vec![text("zoom-in")],
+            ),
+            emit(
+                &r.zoom_out,
+                ctx.shown_only("CmdOrCtrl+-"),
+                channel,
+                vec![text("zoom-out")],
+            ),
+            emit(
+                &ctx.tm("menuZoomFit"),
+                None,
+                channel,
+                vec![text("zoom-fit")],
+            ),
+            Node::Separator,
+            role(Role::Fullscreen, &r.fullscreen),
+        ],
+    );
+    shell_menus(ctx, file, vec![edit, view], false)
+}
+
+fn mindmap_menus(ctx: &Ctx) -> Vec<Node> {
+    let file = shell_file(
+        ctx,
+        vec![
+            vec![
+                // File > New (`newMindmapTab`)
+                item(
+                    &ctx.tm("menuSectionNew"),
+                    Some("CmdOrCtrl+N"),
+                    Act::NewDocument("xmind".into()),
+                ),
+                shell_open(ctx),
+                Node::Separator,
+                ctx.back_to_home(),
+                Node::Separator,
+            ],
+            shell_save(ctx, true).into(),
+            ctx.doc_links.clone(),
+            vec![
+                Node::Separator,
+                shell_export(ctx, "menuExportMapImage", "png"),
+                shell_export(ctx, "menuExportMapSvg", "svg"),
+                shell_export(ctx, "menuExportPdf", "pdf"),
+                shell_export(ctx, "menuExportMapOutline", "markdown"),
+                Node::Separator,
+                shell_print(ctx),
+            ],
+        ],
+    );
+    let edit = own_history_edit(ctx, "mindmap:menu-command", Vec::new());
+    shell_menus(ctx, file, vec![edit], false)
+}
+
+// ---- Docs ----
+
+fn docs_menus(ctx: &Ctx) -> Vec<Node> {
+    let d = |key: &str| ctx.docs(key);
+    let recent = if ctx.recent.is_empty() {
+        vec![Node::Item(Item {
+            id: None,
+            name: None,
+            label: d("menuNoRecent"),
+            accelerator: None,
+            enabled: false,
+            checked: None,
+            act: None,
+        })]
+    } else {
+        ctx.recent
+            .iter()
+            .map(|path| {
+                let name = std::path::Path::new(path)
+                    .file_name()
+                    .map_or_else(|| path.clone(), |n| n.to_string_lossy().into_owned());
+                item(&name, None, Act::OpenRecent(path.clone()))
+            })
+            .collect()
+    };
+    let name_with_ai = ctx.labels.name_with_ai();
+    let file = submenu(
+        &d("menuFile"),
+        vec![
+            unbound(&d("menuNewDoc"), Some("CmdOrCtrl+N")),
+            // `shellHooks.openTab(undefined, { newBlank: true })`: a blank docs tab
+            item(
+                &d("menuNewWindow"),
+                Some("Shift+CmdOrCtrl+N"),
+                Act::NewDocument("docx".into()),
+            ),
+            unbound(&d("menuOpen"), Some("CmdOrCtrl+O")),
+            submenu(&d("menuOpenRecent"), recent),
+            Node::Separator,
+            ctx.back_to_home(),
+            Node::Separator,
+            item(&d("menuClose"), Some("CmdOrCtrl+W"), Act::Close),
+            unbound(&d("menuSave"), Some("CmdOrCtrl+S")),
+            unbound(&d("menuSaveAs"), Some("Shift+CmdOrCtrl+S")),
+            unbound(name_with_ai, None),
+            Node::Separator,
+            unbound(&d("menuPageSetup"), None),
+            unbound(&d("menuExportPdf"), None),
+            unbound(&d("menuExportHwp"), None),
+            unbound(&d("menuExportHtml"), None),
+            unbound(&d("menuExportMarkdown"), None),
+            unbound(&d("menuExportImages"), None),
+            unbound(&d("menuPrint"), Some("CmdOrCtrl+P")),
+        ],
+    );
+    let goto = if ctx.mac() { "Alt+Cmd+G" } else { "Ctrl+G" };
+    let edit = submenu(
+        &d("menuEdit"),
+        vec![
+            unbound(&d("menuUndo"), Some("CmdOrCtrl+Z")),
+            unbound(&d("menuRedo"), Some("Shift+CmdOrCtrl+Z")),
+            Node::Separator,
+            role(Role::Cut, &d("menuCut")),
+            role(Role::Copy, &d("menuCopy")),
+            role(Role::Paste, &d("menuPaste")),
+            item(
+                &d("menuPasteMatch"),
+                Some("Shift+CmdOrCtrl+V"),
+                Act::Frame(FrameEdit::PasteAndMatchStyle),
+            ),
+            Node::Separator,
+            unbound(&d("menuFindReplace"), Some("CmdOrCtrl+F")),
+            unbound(&d("menuGoTo"), Some(goto)),
+            Node::Separator,
+            role(Role::SelectAll, &d("menuSelectAll")),
+        ],
+    );
+    let checkbox = |name: &'static str, label: String, checked: bool| {
+        Node::Item(Item {
+            id: None,
+            name: Some(name),
+            label,
+            accelerator: None,
+            enabled: true,
+            checked: Some(checked),
+            act: Some(Act::Unbound),
+        })
+    };
+    let mut zoom: Vec<Node> = [500, 200, 150, 125, 100, 75, 50, 25, 10]
+        .iter()
+        .map(|pct| unbound(&format!("{pct}%"), None))
+        .collect();
+    zoom.extend([
+        unbound(&d("menuPageWidth"), None),
+        unbound(&d("menuWholePage"), None),
+        unbound(&d("menuMultiPage"), None),
+    ]);
+    let mut view = vec![
+        unbound(&d("menuZoomIn"), Some("CmdOrCtrl+=")),
+        unbound(&d("menuZoomOut"), Some("CmdOrCtrl+-")),
+        unbound(&d("menuZoom100"), Some("CmdOrCtrl+0")),
+        submenu(&d("menuZoom"), zoom),
+        Node::Separator,
+        checkbox(AI_SIDEBAR, d("menuAiSidebar"), ctx.docs_view.ai_sidebar),
+        checkbox(DARK_MODE, d("menuDarkMode"), ctx.docs_view.dark_canvas),
+        Node::Separator,
+        role(Role::Fullscreen, &d("menuFullscreen")),
+    ];
+    view.extend(ctx.dev_tools_item());
+    let view = submenu(&d("menuView"), view);
+    // an ODT document switches off what it cannot hold
+    let odt_off = |name: &'static str, label: String, act: Act| {
+        Node::Item(Item {
+            id: None,
+            name: Some(name),
+            label,
+            accelerator: None,
+            enabled: !ctx.docs_view.odt,
+            checked: None,
+            act: Some(act),
+        })
+    };
+    let insert = submenu(
+        &d("menuInsert"),
+        vec![
+            unbound(&d("menuInsertTable"), None),
+            unbound(&d("menuInsertImage"), None),
+            unbound(&d("menuInsertPageBreak"), None),
+            unbound(&d("menuInsertLink"), Some("CmdOrCtrl+K")),
+            odt_off(INSERT_EQUATION, d("menuInsertEquation"), Act::Unbound),
+            Node::Separator,
+            odt_off(INSERT_COMMENT, d("menuComment"), Act::Unbound),
+        ],
+    );
+    let format = submenu(
+        &d("menuFormat"),
+        vec![
+            unbound(&d("menuBold"), Some("CmdOrCtrl+B")),
+            unbound(&d("menuItalic"), Some("CmdOrCtrl+I")),
+            unbound(&d("menuUnderline"), Some("CmdOrCtrl+U")),
+            Node::Separator,
+            submenu(
+                &d("menuAlign"),
+                vec![
+                    unbound(&d("menuAlignLeft"), None),
+                    unbound(&d("menuAlignCenter"), None),
+                    unbound(&d("menuAlignRight"), None),
+                    unbound(&d("menuAlignJustify"), None),
+                ],
+            ),
+            Node::Separator,
+            unbound(&d("menuFont"), Some("CmdOrCtrl+D")),
+            unbound(&d("menuParagraph"), Some("Alt+CmdOrCtrl+M")),
+        ],
+    );
+    let plain = |key: &str| unbound(&d(key), None);
+    let table = submenu(
+        &d("menuTable"),
+        vec![
+            submenu(
+                &d("menuTableInsert"),
+                vec![
+                    plain("menuTableInsertTable"),
+                    plain("menuTableColsLeft"),
+                    plain("menuTableColsRight"),
+                    plain("menuTableRowsAbove"),
+                    plain("menuTableRowsBelow"),
+                    plain("menuTableCells"),
+                ],
+            ),
+            submenu(
+                &d("menuTableDelete"),
+                vec![
+                    plain("menuTableDeleteTable"),
+                    plain("menuTableDeleteColumns"),
+                    plain("menuTableDeleteRows"),
+                    plain("menuTableCells"),
+                ],
+            ),
+            submenu(
+                &d("menuTableSelect"),
+                vec![
+                    plain("menuTableSelectTable"),
+                    plain("menuTableSelectColumn"),
+                    plain("menuTableSelectRow"),
+                    plain("menuTableSelectCell"),
+                ],
+            ),
+            Node::Separator,
+            plain("menuTableMergeCells"),
+            plain("menuTableSplitCells"),
+            plain("menuTableSplitTable"),
+            Node::Separator,
+            submenu(
+                &d("menuTableAutoFit"),
+                vec![
+                    plain("menuTableAutoFitContents"),
+                    plain("menuTableAutoFitWindow"),
+                    plain("menuTableFixedWidth"),
+                    Node::Separator,
+                    plain("menuTableDistributeRows"),
+                    plain("menuTableDistributeColumns"),
+                ],
+            ),
+            plain("menuTableRepeatHeader"),
+            Node::Separator,
+            plain("menuTableGridlines"),
+            plain("menuTableProperties"),
+        ],
+    );
+    let mut tools = vec![plain("menuWordCount"), plain("menuAutoCorrect")];
+    // Word for Mac keeps Settings in the application menu
+    if !ctx.mac() {
+        tools.push(ctx.settings());
+    }
+    tools.push(Node::Separator);
+    tools.push(plain("menuAiProofread"));
+    let tools = submenu(&d("menuTools"), tools);
+    let mut help_items = vec![
+        unbound(&d("menuShortcuts"), Some("CmdOrCtrl+/")),
+        Node::Separator,
+    ];
+    help_items.extend(ctx.check_updates_items());
+    help_items.push(ctx.about());
+    let help = Node::Menu {
+        label: d("menuHelp"),
+        role: MenuRole::Help,
+        items: help_items,
+    };
+    let mut menus: Vec<Node> = ctx.app_menu().into_iter().collect();
+    menus.extend([file, edit, view, insert, format, table, tools]);
+    menus.push(ctx.window_menu());
+    menus.push(help);
+    menus
+}
+
+// ---- Sheets and Slides ----
+
+fn sheets_menus(ctx: &Ctx) -> Vec<Node> {
+    let s = |key: &str| ctx.sheets(key);
+    let file = submenu(
+        &s("menuFile"),
+        vec![
+            unbound(&s("menuOpenWorkbook"), Some("CmdOrCtrl+O")),
+            Node::Separator,
+            ctx.back_to_home(),
+            Node::Separator,
+            unbound(&s("menuSave"), Some("CmdOrCtrl+S")),
+            unbound(&s("menuSaveAs"), Some("Shift+CmdOrCtrl+S")),
+            Node::Separator,
+            unbound(&s("menuPrint"), Some("CmdOrCtrl+P")),
+            Node::Separator,
+            unbound(&s("menuExportPdf"), None),
+            unbound(&s("menuExportCsv"), None),
+            unbound(&s("menuExportOds"), None),
+            Node::Separator,
+            item(&s("menuClose"), Some("CmdOrCtrl+W"), Act::Close),
+            Node::Separator,
+            ctx.settings(),
+        ],
+    );
+    // Undo and Redo go to the sheet: the page's roles would bind them to a
+    // text-editing no-op that starves Univer of the shortcut
+    let r = &ctx.roles;
+    let edit = submenu(
+        &s("menuEdit"),
+        vec![
+            unbound(&s("menuUndo"), Some("CmdOrCtrl+Z")),
+            unbound(&s("menuRedo"), Some("Shift+CmdOrCtrl+Z")),
+            Node::Separator,
+            role(Role::Cut, &r.cut),
+            role(Role::Copy, &r.copy),
+            role(Role::Paste, &r.paste),
+            Node::Separator,
+            role(Role::SelectAll, &r.select_all),
+        ],
+    );
+    // Ctrl+R is Fill Right and Ctrl+0/+/- hide columns or zoom the sheet: a
+    // menu accelerator would swallow them
+    let view = ctx.node(&view_menu_template(
+        ctx.os.node(),
+        &ctx.labels,
+        ViewMenuOptions {
+            dev_items: ctx.dev_tools,
+            page_zoom: false,
+        },
+    ));
+    let mut menus: Vec<Node> = ctx.app_menu().into_iter().collect();
+    menus.extend([file, edit]);
+    menus.extend(view);
+    menus.push(ctx.window_menu());
+    menus.extend(ctx.node(&help_menu_template(&ctx.labels, Vec::new(), ctx.os.node())));
+    menus
+}
+
+fn slides_menus(ctx: &Ctx) -> Vec<Node> {
+    let s = |key: &str| ctx.slides(key);
+    let menu = |key: &str, accelerator: Option<&str>, command: &str| {
+        emit(&s(key), accelerator, "slides:menu", vec![text(command)])
+    };
+    let file = submenu(
+        &s("menuFile"),
+        vec![
+            menu("menuOpen", Some("CmdOrCtrl+O"), "open"),
+            // a second window on the saved file (`createSlidesWindow(path)`)
+            item(
+                &s("menuOpenNewWindow"),
+                None,
+                Act::OpenInNewWindow(TabKind::Slides),
+            ),
+            Node::Separator,
+            ctx.back_to_home(),
+            Node::Separator,
+            menu("menuSave", Some("CmdOrCtrl+S"), "save"),
+            menu("menuSaveAs", Some("CmdOrCtrl+Shift+S"), "save-as"),
+            // macOS has no File ribbon tab: this is its only AI naming entry
+            emit(
+                ctx.labels.name_with_ai(),
+                None,
+                "slides:menu",
+                vec![text("name-with-ai")],
+            ),
+            Node::Separator,
+            menu("menuExportPdf", None, "export-pdf"),
+            menu("menuExportImages", None, "export-images"),
+            menu("menuExportImagesJpg", None, "export-images-jpg"),
+            menu("menuPrint", Some("CmdOrCtrl+P"), "print"),
+            Node::Separator,
+            item(&s("menuClose"), Some("CmdOrCtrl+W"), Act::Close),
+            Node::Separator,
+            ctx.settings(),
+        ],
+    );
+    // the clipboard goes to the renderer too: in text state it calls back to the
+    // native clipboard, in canvas state it uses the element clipboard
+    let edit = submenu(
+        &s("menuEdit"),
+        vec![
+            menu("menuUndo", Some("CmdOrCtrl+Z"), "undo"),
+            menu("menuRedo", Some("Shift+CmdOrCtrl+Z"), "redo"),
+            Node::Separator,
+            menu("menuCut", Some("CmdOrCtrl+X"), "cut"),
+            menu("menuCopy", Some("CmdOrCtrl+C"), "copy"),
+            menu("menuPaste", Some("CmdOrCtrl+V"), "paste"),
+            role(Role::SelectAll, &ctx.roles.select_all),
+        ],
+    );
+    let mut view = vec![
+        menu("menuZoomIn", Some("CmdOrCtrl+="), "zoom-in"),
+        menu("menuZoomOut", Some("CmdOrCtrl+-"), "zoom-out"),
+        menu("menuActualSize", Some("CmdOrCtrl+0"), "zoom-reset"),
+    ];
+    if let Some(dev_tools) = ctx.dev_tools_item() {
+        view.push(Node::Separator);
+        view.push(dev_tools);
+    }
+    let view = submenu(&s("menuView"), view);
+    let mut menus: Vec<Node> = ctx.app_menu().into_iter().collect();
+    menus.extend([file, edit, view]);
+    menus.extend(ctx.node(&help_menu_template(&ctx.labels, Vec::new(), ctx.os.node())));
+    menus
+}
+
+// ---- all of it ----
+
+/// `withHelpItems`: the user guide and the feedback survey in whatever Help
+/// menu the kind built, the guide only where the menu has none of its own
+fn with_help_items(ctx: &Ctx, menus: &mut [Node]) {
+    let Some(Node::Menu { items, .. }) = menus.iter_mut().find(|menu| {
+        matches!(
+            menu,
+            Node::Menu {
+                role: MenuRole::Help,
+                ..
+            }
+        )
+    }) else {
+        return;
+    };
+    let feedback = item(
+        &feedback_text(ctx.lang, "menuLabel", None),
+        None,
+        Act::Feedback,
+    );
+    let has_guide = items
+        .iter()
+        .any(|entry| matches!(entry, Node::Item(i) if i.accelerator.as_deref() == Some("F1")));
+    let mut head = if has_guide {
+        vec![feedback, Node::Separator]
+    } else {
+        vec![
+            item(&ctx.tm("menuUserGuide"), Some("F1"), Act::UserGuide),
+            Node::Separator,
+            feedback,
+            Node::Separator,
+        ]
+    };
+    head.append(items);
+    *items = head;
+}
+
+/// Where batch M's table found each item of `menus`, by label path
+#[derive(Debug, Default, PartialEq)]
+struct Bound {
+    found: Vec<Vec<String>>,
+    /// items that wait for an event and the table has none for
+    missing: Vec<Vec<String>>,
+}
+
+/// Replaces each [`Act::Unbound`] with the event the table names for its label path
+fn bind_events(menus: &mut [Node], table: &AppMenuItems) -> Bound {
+    fn walk(nodes: &mut [Node], path: &mut Vec<String>, table: &AppMenuItems, bound: &mut Bound) {
+        for node in nodes {
+            match node {
+                Node::Menu { label, items, .. } => {
+                    path.push(label.clone());
+                    walk(items, path, table, bound);
+                    path.pop();
+                }
+                Node::Item(item) if item.act == Some(Act::Unbound) => {
+                    path.push(item.label.clone());
+                    match table.iter().find(|(known, _)| known == path) {
+                        Some((_, MenuAction::Event { channel, args })) => {
+                            item.act = Some(Act::Emit {
+                                channel,
+                                args: args.clone(),
+                            });
+                            bound.found.push(path.clone());
+                        }
+                        None => bound.missing.push(path.clone()),
+                    }
+                    path.pop();
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut bound = Bound::default();
+    walk(menus, &mut Vec::new(), table, &mut bound);
+    bound
+}
+
+/// Electron dropped a separator at either end of a menu and ran of them
+/// together; so does this, which also covers an item left out
+fn tidy(nodes: Vec<Node>) -> Vec<Node> {
+    let mut out: Vec<Node> = Vec::new();
+    for node in nodes {
+        match node {
+            Node::Separator => {
+                if !matches!(out.last(), None | Some(Node::Separator)) {
+                    out.push(Node::Separator);
+                }
+            }
+            Node::Menu { label, role, items } => out.push(Node::Menu {
+                label,
+                role,
+                items: tidy(items),
+            }),
+            other => out.push(other),
+        }
+    }
+    while matches!(out.last(), Some(Node::Separator)) {
+        out.pop();
+    }
+    out
+}
+
+/// `withViewMenu`: the interface zoom in the View menu of every kind: after a
+/// separator in the one it has, else in a View menu before Help
+fn with_view_menu(ctx: &Ctx, menus: &mut Vec<Node>) {
+    let scale = |entry: &Node| {
+        matches!(
+            entry,
+            Node::Item(Item {
+                act: Some(Act::UiScale(_)),
+                ..
+            })
+        )
+    };
+    let has_scale = menus
+        .iter()
+        .any(|menu| matches!(menu, Node::Menu { items, .. } if items.iter().any(scale)));
+    if has_scale {
+        return;
+    }
+    let label = ctx.tm("menuView");
+    if let Some(Node::Menu { items, .. }) = menus
+        .iter_mut()
+        .find(|menu| matches!(menu, Node::Menu { label: found, .. } if *found == label))
+    {
+        items.push(Node::Separator);
+        items.extend(ctx.ui_scale_items());
+        return;
+    }
+    let view = submenu(&label, ctx.ui_scale_items());
+    match menus.iter().position(|menu| {
+        matches!(
+            menu,
+            Node::Menu {
+                role: MenuRole::Help,
+                ..
+            }
+        )
+    }) {
+        Some(help) => menus.insert(help, view),
+        None => menus.push(view),
+    }
+}
+
+/// `applyMenuFor(kind)`'s menus: what the kind shows, in `ctx`'s language
+fn menu_for(kind: TabKind, ctx: &Ctx) -> Vec<Node> {
+    let mut menus = match kind {
+        TabKind::Docs => docs_menus(ctx),
+        TabKind::Sheets => sheets_menus(ctx),
+        TabKind::Slides => slides_menus(ctx),
+        TabKind::Pdf => pdf_menus(ctx),
+        TabKind::Markdown => markdown_menus(ctx),
+        TabKind::Html => html_menus(ctx),
+        TabKind::Mindmap => mindmap_menus(ctx),
+        TabKind::Hwp => hwp_menus(ctx),
+        TabKind::Epub => epub_menus(ctx),
+        TabKind::Diagram => diagram_menus(ctx),
+        // the Help tab shows the home menu too
+        TabKind::Home | TabKind::Help => home_menus(ctx),
+    };
+    // the menus of docs, sheets and slides take them after their extra File
+    // items (`installBackToHomeItems`); the shell-built ones place them themselves
+    if matches!(kind, TabKind::Docs | TabKind::Sheets | TabKind::Slides) {
+        after_back_to_home(&mut menus, &ctx.doc_links);
+    }
+    with_help_items(ctx, &mut menus);
+    with_view_menu(ctx, &mut menus);
+    let bound = bind_events(&mut menus, &app_menu_items(kind.as_str(), ctx.lang));
+    for path in &bound.missing {
+        eprintln!("shell: the {kind:?} menu item {path:?} has no event in batch M's table");
+    }
+    // an item with no event cannot do anything: it is not shown
+    drop_unbound(tidy(menus))
+}
+
+/// The entries of `documentLinkFileMenuItems` as menu nodes. Tauri menus
+/// have no sublabel or tooltip: the path Electron showed under a listed
+/// file's name off macOS is left out.
+fn doc_link_nodes(items: &[DocLinkItem], view: ViewId) -> Vec<Node> {
+    items
+        .iter()
+        .filter_map(|entry| {
+            if entry.item_type == Some("separator") {
+                return Some(Node::Separator);
+            }
+            let label = entry.label.clone()?;
+            if let Some(submenu) = &entry.submenu {
+                return Some(Node::Menu {
+                    label,
+                    role: MenuRole::Plain,
+                    items: doc_link_nodes(submenu, view),
+                });
+            }
+            Some(Node::Item(Item {
+                id: None,
+                name: None,
+                label,
+                accelerator: None,
+                enabled: entry.enabled.unwrap_or(true),
+                checked: None,
+                act: entry.click.clone().map(|click| Act::DocLink(click, view)),
+            }))
+        })
+        .collect()
+}
+
+fn after_back_to_home(nodes: &mut [Node], extra: &[Node]) {
+    for node in nodes {
+        if let Node::Menu { items, .. } = node {
+            let at = items.iter().position(|item| {
+                matches!(
+                    item,
+                    Node::Item(Item {
+                        act: Some(Act::BackToHome),
+                        ..
+                    })
+                )
+            });
+            if let Some(at) = at {
+                items.splice(at + 1..at + 1, extra.iter().cloned());
+                return;
+            }
+        }
+    }
+}
+
+fn drop_unbound(nodes: Vec<Node>) -> Vec<Node> {
+    tidy(
+        nodes
+            .into_iter()
+            .filter_map(|node| match node {
+                Node::Item(Item {
+                    act: Some(Act::Unbound),
+                    ..
+                }) => None,
+                Node::Menu { label, role, items } => Some(Node::Menu {
+                    label,
+                    role,
+                    items: drop_unbound(items),
+                }),
+                other => Some(other),
+            })
+            .collect(),
+    )
+}
+
+// ---- ids ----
+
+static NEXT_ID: AtomicU32 = AtomicU32::new(1);
+
+/// Gives each item with an action the id `m-app-<n>`; the ids never repeat,
+/// so a click on a menu that was replaced meanwhile finds nothing
+fn number(menus: &mut [Node], next: &AtomicU32) -> HashMap<String, Act> {
+    fn walk(nodes: &mut [Node], next: &AtomicU32, clicks: &mut HashMap<String, Act>) {
+        for node in nodes {
+            match node {
+                Node::Menu { items, .. } => walk(items, next, clicks),
+                Node::Item(item) => {
+                    if let Some(act) = &item.act {
+                        let id = format!("{ID_PREFIX}{}", next.fetch_add(1, Ordering::Relaxed));
+                        clicks.insert(id.clone(), act.clone());
+                        item.id = Some(id);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut clicks = HashMap::new();
+    walk(menus, next, &mut clicks);
+    clicks
+}
+
+/// What each id of the menu now set does, and for which kind of tab
+static CLICKS: Mutex<Option<(TabKind, HashMap<String, Act>)>> = Mutex::new(None);
+
+/// The menu now set, as the ☰ popup lists it, with the popup's own Check for
+/// Updates label (`appMenuPopupTemplate`)
+static SHOWN: Mutex<Option<Shown>> = Mutex::new(None);
+
+struct Shown {
+    kind: TabKind,
+    menus: Vec<Node>,
+    check_updates: String,
+}
+
+/// What the entries of the ☰ popups listed lately do
+static POPUPS: Mutex<Popups> = Mutex::new(Popups::new());
+
+/// The tab strip keeps each popup it opened until that one closes, and a
+/// selection reaches [`app_menu_activate`] by entry id only. The ids never
+/// repeat across popups, so a selection that arrives after another popup was
+/// listed still runs its own entry, or nothing once it is too old.
+struct Popups {
+    next: u32,
+    /// the latest last; what each listed id does, and on which kind's menu
+    listed: std::collections::VecDeque<(TabKind, HashMap<u32, Act>)>,
+}
+
+impl Popups {
+    /// Popups kept: a native popup is modal, so more than one outstanding
+    /// is a selection racing a new ☰ click
+    const KEPT: usize = 4;
+
+    const fn new() -> Popups {
+        Popups {
+            next: 0,
+            listed: std::collections::VecDeque::new(),
+        }
+    }
+
+    fn list(&mut self, kind: TabKind, menus: &[Node], check_updates: &str) -> Vec<MenuEntry> {
+        let (entries, acts) = popup_entries(menus, check_updates, &mut self.next);
+        if self.listed.len() == Self::KEPT {
+            self.listed.pop_front();
+        }
+        self.listed.push_back((kind, acts));
+        entries
+    }
+
+    fn chosen(&self, id: u32) -> Option<(TabKind, Act)> {
+        self.listed
+            .iter()
+            .rev()
+            .find_map(|(kind, acts)| acts.get(&id).map(|act| (*kind, act.clone())))
+    }
+}
+
+/// The kind of the menu last asked for, for a rebuild in another language
+static KIND: Mutex<Option<TabKind>> = Mutex::new(None);
+
+/// The items of the menu now set that carry a template id, for `getMenuItemById`
+static NAMED: Mutex<Option<HashMap<&'static str, NamedItem>>> = Mutex::new(None);
+
+#[derive(Clone)]
+enum NamedItem {
+    Check(CheckMenuItem<DynRuntime>),
+    Plain(TauriItem<DynRuntime>),
+}
+
+/// The docs host's `activeViewMenuState()`: what a docs view last reported for
+/// its View and Insert menus (`docs:view-menu-state`); the docs host keeps it
+static DOCS_VIEW_STATE: OnceLock<fn(&Provided, ViewId) -> Option<DocsViewState>> = OnceLock::new();
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+// ---- Tauri ----
+
+enum Built {
+    Item(TauriItem<DynRuntime>),
+    Check(CheckMenuItem<DynRuntime>),
+    Predefined(PredefinedMenuItem<DynRuntime>),
+    Submenu(Submenu<DynRuntime>),
+}
+
+impl Built {
+    fn as_item(&self) -> &dyn IsMenuItem<DynRuntime> {
+        match self {
+            Built::Item(i) => i,
+            Built::Check(i) => i,
+            Built::Predefined(i) => i,
+            Built::Submenu(i) => i,
+        }
+    }
+}
+
+fn predefined(
+    app: &AppHandle,
+    role: Role,
+    label: Option<&str>,
+) -> tauri::Result<PredefinedMenuItem<DynRuntime>> {
+    match role {
+        Role::About => PredefinedMenuItem::about(app, label, None),
+        Role::Services => PredefinedMenuItem::services(app, label),
+        Role::Hide => PredefinedMenuItem::hide(app, label),
+        Role::HideOthers => PredefinedMenuItem::hide_others(app, label),
+        Role::Unhide => PredefinedMenuItem::show_all(app, label),
+        Role::Quit => PredefinedMenuItem::quit(app, label),
+        Role::Undo => PredefinedMenuItem::undo(app, label),
+        Role::Redo => PredefinedMenuItem::redo(app, label),
+        Role::Cut => PredefinedMenuItem::cut(app, label),
+        Role::Copy => PredefinedMenuItem::copy(app, label),
+        Role::Paste => PredefinedMenuItem::paste(app, label),
+        Role::SelectAll => PredefinedMenuItem::select_all(app, label),
+        Role::Minimize => PredefinedMenuItem::minimize(app, label),
+        Role::Zoom => PredefinedMenuItem::maximize(app, label),
+        Role::Front => PredefinedMenuItem::bring_all_to_front(app, label),
+        Role::Fullscreen => PredefinedMenuItem::fullscreen(app, label),
+        Role::CloseWindow => PredefinedMenuItem::close_window(app, label),
+    }
+}
+
+/// The items with a template id go to `named` as well
+type Named = HashMap<&'static str, NamedItem>;
+
+fn build_node(app: &AppHandle, node: &Node, named: &mut Named) -> tauri::Result<Built> {
+    Ok(match node {
+        Node::Separator => Built::Predefined(PredefinedMenuItem::separator(app)?),
+        Node::Role { role, label } => Built::Predefined(predefined(app, *role, label.as_deref())?),
+        Node::Item(item) => {
+            let id = item.id.clone().unwrap_or_default();
+            let accelerator = item.accelerator.as_deref();
+            let handle = match item.checked {
+                Some(checked) => NamedItem::Check(CheckMenuItem::with_id(
+                    app,
+                    id,
+                    &item.label,
+                    item.enabled,
+                    checked,
+                    accelerator,
+                )?),
+                None => NamedItem::Plain(TauriItem::with_id(
+                    app,
+                    id,
+                    &item.label,
+                    item.enabled,
+                    accelerator,
+                )?),
+            };
+            if let Some(name) = item.name {
+                named.insert(name, handle.clone());
+            }
+            match handle {
+                NamedItem::Check(check) => Built::Check(check),
+                NamedItem::Plain(plain) => Built::Item(plain),
+            }
+        }
+        Node::Menu { label, role, items } => {
+            let built = build_nodes(app, items, named)?;
+            let refs: Vec<&dyn IsMenuItem<DynRuntime>> = built.iter().map(Built::as_item).collect();
+            let menu = Submenu::with_items(app, label, true, &refs)?;
+            // the NSApp roles exist only in the macOS build of muda
+            #[cfg(target_os = "macos")]
+            match role {
+                MenuRole::Window => menu.set_as_windows_menu_for_nsapp()?,
+                MenuRole::Help => menu.set_as_help_menu_for_nsapp()?,
+                MenuRole::Plain => {}
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = role;
+            Built::Submenu(menu)
+        }
+    })
+}
+
+fn build_nodes(app: &AppHandle, nodes: &[Node], named: &mut Named) -> tauri::Result<Vec<Built>> {
+    nodes
+        .iter()
+        .map(|node| build_node(app, node, named))
+        .collect()
+}
+
+fn build_menu(
+    app: &AppHandle,
+    menus: &[Node],
+    named: &mut Named,
+) -> tauri::Result<Menu<DynRuntime>> {
+    let built = build_nodes(app, menus, named)?;
+    let refs: Vec<&dyn IsMenuItem<DynRuntime>> = built.iter().map(Built::as_item).collect();
+    Menu::with_items(app, &refs)
+}
+
+/// On the UI thread: numbers the items, makes the Tauri menu and sets it
+fn set_menu(app: &AppHandle, kind: TabKind, mut menus: Vec<Node>, check_updates: String) {
+    let clicks = number(&mut menus, &NEXT_ID);
+    let mut named = Named::new();
+    match build_menu(app, &menus, &mut named).and_then(|menu| app.set_menu(menu)) {
+        Ok(_) => {
+            *lock(&CLICKS) = Some((kind, clicks));
+            *lock(&NAMED) = Some(named);
+            *lock(&SHOWN) = Some(Shown {
+                kind,
+                menus,
+                check_updates,
+            });
+        }
+        Err(error) => eprintln!("shell: setting the {kind:?} menu: {error}"),
+    }
+}
+
+// ---- the entry points ----
+
+struct Shell {
+    app: AppHandle,
+    windows: Arc<Windows>,
+}
+
+static SHELL: OnceLock<Shell> = OnceLock::new();
+
+/// Registers the one listener for this menu's clicks; `host/menu.rs`'s `install` calls it
+pub(crate) fn install(cx: &HostContext) {
+    let _ = SHELL.set(Shell {
+        app: cx.app.clone(),
+        windows: cx.windows.clone(),
+    });
+    cx.app
+        .on_menu_event(|app, event| dispatch(app, event.id().as_ref()));
+}
+
+/// `applyMenuFor(kind)`: sets the application menu of the active editor of
+/// `kind`. Callable from any thread, never blocks: the menu is made from the
+/// core thread's state and set on the UI thread.
+pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
+    *lock(&KIND) = Some(kind);
+    let app = app.clone();
+    post_core(move |provided, services| {
+        let lang = match current_lang(services) {
+            Ok(lang) => lang,
+            Err(error) => return eprintln!("shell: the {kind:?} menu: {error}"),
+        };
+        let docs_view = if kind == TabKind::Docs {
+            shell_tabs(provided)
+                .and_then(|tabs| tabs.active_editor(TabKind::Docs))
+                .and_then(|view| DOCS_VIEW_STATE.get()?(provided, view))
+                .unwrap_or_default()
+        } else {
+            DocsViewState::default()
+        };
+        let mut ctx = Ctx::new(
+            Os::current(),
+            lang,
+            app.package_info().name.clone(),
+            DEV_TOOLS,
+            if kind == TabKind::Docs {
+                recent_documents(services)
+            } else {
+                Vec::new()
+            },
+            docs_view,
+            seams_of(provided),
+        );
+        if let Some((items, view)) = super::doc_links::file_menu(kind) {
+            ctx.doc_links = doc_link_nodes(&items, view);
+        }
+        let menus = menu_for(kind, &ctx);
+        let check_updates = ctx.labels.check_updates().to_owned();
+        let on_ui = app.clone();
+        let set = move || set_menu(&on_ui, kind, menus, check_updates);
+        if let Err(error) = app.run_on_main_thread(set) {
+            eprintln!("shell: the {kind:?} menu: {error}");
+        }
+    });
+}
+
+/// What the batches provide now: the New kinds (`ShellTabs`), the update
+/// check (U) and the document conversions (D2)
+fn seams_of(provided: &Provided) -> Seams {
+    Seams {
+        new_kinds: shell_tabs(provided).map_or_else(Vec::new, |tabs| tabs.new_document_kinds()),
+        can_check_updates: update_check(provided).is_some_and(|check| check.available()),
+        conversions: document_conversions(provided).is_some(),
+    }
+}
+
+/// Where the Docs menu reads the active docs view's View and Insert state;
+/// the docs host sets it once
+#[allow(dead_code)] // set by D2's docs host
+pub(crate) fn set_docs_view_state_source(source: fn(&Provided, ViewId) -> Option<DocsViewState>) {
+    let _ = DOCS_VIEW_STATE.set(source);
+}
+
+/// `Menu.getApplicationMenu()?.getMenuItemById(id).checked = checked`: the
+/// item of the menu now set, nothing when it has no such item. Any thread.
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn set_menu_item_checked(id: &str, checked: bool) {
+    patch_named(
+        id,
+        |node| node.checked = Some(checked),
+        |named| match named {
+            NamedItem::Check(item) => item.set_checked(checked),
+            NamedItem::Plain(_) => Ok(()),
+        },
+    );
+}
+
+/// `...getMenuItemById(id).enabled = enabled`. Any thread.
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn set_menu_item_enabled(id: &str, enabled: bool) {
+    patch_named(
+        id,
+        |node| node.enabled = enabled,
+        |named| match named {
+            NamedItem::Check(item) => item.set_enabled(enabled),
+            NamedItem::Plain(item) => item.set_enabled(enabled),
+        },
+    );
+}
+
+/// `buildDocsMenu()`: the Docs menu again (Open Recent follows recent.json)
+/// when it is the one set; a Docs menu set later is built fresh anyway
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn rebuild_docs_menu() {
+    if *lock(&KIND) != Some(TabKind::Docs) {
+        return;
+    }
+    if let Some(shell) = SHELL.get() {
+        apply_menu_for(&shell.app, TabKind::Docs);
+    }
+}
+
+/// Changes the named item in the live menu and in the tree the ☰ popup lists
+fn patch_named(
+    id: &str,
+    tree: impl Fn(&mut Item),
+    live: impl FnOnce(&NamedItem) -> tauri::Result<()>,
+) {
+    fn walk(nodes: &mut [Node], id: &str, tree: &impl Fn(&mut Item)) {
+        for node in nodes {
+            match node {
+                Node::Item(item) if item.name == Some(id) => tree(item),
+                Node::Menu { items, .. } => walk(items, id, tree),
+                _ => {}
+            }
+        }
+    }
+    if let Some(shown) = lock(&SHOWN).as_mut() {
+        walk(&mut shown.menus, id, &tree);
+    }
+    let named = lock(&NAMED)
+        .as_ref()
+        .and_then(|named| named.get(id).cloned());
+    if let Some(Err(error)) = named.as_ref().map(live) {
+        eprintln!("shell: the menu item {id}: {error}");
+    }
+}
+
+/// `readJson<string[]>(RECENT_PATH(), []).slice(0, 10)`: Docs' own list
+fn recent_documents(services: &Services) -> Vec<String> {
+    let path = services.paths.path(PathName::UserData).join("recent.json");
+    std::fs::read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Vec<String>>(&bytes).ok())
+        .map(|mut paths| {
+            paths.truncate(10);
+            paths
+        })
+        .unwrap_or_default()
+}
+
+// ---- clicks ----
+
+fn dispatch(app: &AppHandle, id: &str) {
+    if !id.starts_with(ID_PREFIX) {
+        return;
+    }
+    let Some((kind, act)) = lock(&CLICKS)
+        .as_ref()
+        .and_then(|(kind, clicks)| clicks.get(id).map(|act| (*kind, act.clone())))
+    else {
+        return;
+    };
+    perform(app, kind, act);
+}
+
+/// A click on an entry of `kind`'s menu, from the menu bar or the ☰ popup.
+/// Any thread: the window's own commands go to the UI thread, the rest to the core.
+fn perform(app: &AppHandle, kind: TabKind, act: Act) {
+    let on_window = |job: fn(&tauri::Window) -> tauri::Result<()>| {
+        let on_ui = app.clone();
+        if let Err(error) = app.run_on_main_thread(move || with_focused_window(&on_ui, job)) {
+            eprintln!("shell: a menu click on the focused window: {error}");
+        }
+    };
+    match act {
+        Act::MinimizeWindow => on_window(|window| window.minimize()),
+        Act::CloseWindow => on_window(|window| window.close()),
+        Act::MaximizeWindow => on_window(|window| {
+            if window.is_maximized()? {
+                window.unmaximize()
+            } else {
+                window.maximize()
+            }
+        }),
+        Act::FullscreenWindow => {
+            on_window(|window| window.set_fullscreen(!window.is_fullscreen()?))
+        }
+        act => post_core(move |provided, services| run(act, kind, provided, services)),
+    }
+}
+
+// ---- the ☰ popup ----
+
+/// `appMenuPopupTemplate(menus)`: the menus now set as the ☰ button lists them
+/// on Windows and Linux, `None` before the first menu is set. On the core thread.
+pub(crate) fn app_menu_popup() -> Option<Vec<MenuEntry>> {
+    let shown = lock(&SHOWN);
+    let shown = shown.as_ref()?;
+    Some(lock(&POPUPS).list(shown.kind, &shown.menus, &shown.check_updates))
+}
+
+/// A click on an entry [`app_menu_popup`] listed: the item's own click
+pub(crate) fn app_menu_activate(id: u32) {
+    let Some(shell) = SHELL.get() else { return };
+    let Some((kind, act)) = lock(&POPUPS).chosen(id) else {
+        return;
+    };
+    perform(&shell.app, kind, act);
+}
+
+/// The popup's entries and what each id does: the menus, a separator, then
+/// Check for Updates as an item of its own (the update check is in Help only
+/// on macOS). The ids continue from `next`.
+fn popup_entries(
+    menus: &[Node],
+    check_updates: &str,
+    next: &mut u32,
+) -> (Vec<MenuEntry>, HashMap<u32, Act>) {
+    fn entry(id: u32, kind: MenuEntryKind, label: &str, enabled: bool) -> MenuEntry {
+        MenuEntry {
+            id,
+            kind,
+            label: label.to_owned(),
+            enabled,
+            checked: false,
+            icon: None,
+            submenu: Vec::new(),
+        }
+    }
+    fn walk(nodes: &[Node], next: &mut u32, acts: &mut HashMap<u32, Act>) -> Vec<MenuEntry> {
+        let mut out = Vec::new();
+        for node in nodes {
+            *next = next.wrapping_add(1);
+            let id = *next;
+            match node {
+                Node::Separator => out.push(entry(id, MenuEntryKind::Separator, "", true)),
+                Node::Menu { label, items, .. } => {
+                    let mut menu = entry(id, MenuEntryKind::Normal, label, true);
+                    menu.submenu = walk(items, next, acts);
+                    out.push(menu);
+                }
+                Node::Item(item) => {
+                    let kind = if item.checked.is_some() {
+                        MenuEntryKind::Checkbox
+                    } else {
+                        MenuEntryKind::Normal
+                    };
+                    let mut shown = entry(id, kind, &item.label, item.enabled);
+                    shown.checked = item.checked.unwrap_or(false);
+                    if let Some(act) = &item.act {
+                        acts.insert(id, act.clone());
+                    }
+                    out.push(shown);
+                }
+                Node::Role { role, label } => {
+                    // the macOS application menu's roles never reach a popup
+                    let Some(act) = popup_role(*role) else {
+                        continue;
+                    };
+                    let label = label.clone().unwrap_or_else(|| format!("{role:?}"));
+                    out.push(entry(id, MenuEntryKind::Normal, &label, true));
+                    acts.insert(id, act);
+                }
+            }
+        }
+        out
+    }
+    let mut acts = HashMap::new();
+    let mut entries = walk(menus, next, &mut acts);
+    *next = next.wrapping_add(2);
+    entries.push(entry(*next - 1, MenuEntryKind::Separator, "", true));
+    entries.push(entry(*next, MenuEntryKind::Normal, check_updates, true));
+    acts.insert(*next, Act::CheckUpdates);
+    (entries, acts)
+}
+
+/// What a predefined item does when the ☰ popup, which has none, runs it
+fn popup_role(role: Role) -> Option<Act> {
+    Some(match role {
+        Role::Undo => Act::Frame(FrameEdit::Undo),
+        Role::Redo => Act::Frame(FrameEdit::Redo),
+        Role::Cut => Act::Frame(FrameEdit::Cut),
+        Role::Copy => Act::Frame(FrameEdit::Copy),
+        Role::Paste => Act::Frame(FrameEdit::Paste),
+        Role::SelectAll => Act::Frame(FrameEdit::SelectAll),
+        Role::Minimize => Act::MinimizeWindow,
+        Role::CloseWindow => Act::CloseWindow,
+        Role::Zoom => Act::MaximizeWindow,
+        Role::Fullscreen => Act::FullscreenWindow,
+        Role::About
+        | Role::Services
+        | Role::Hide
+        | Role::HideOthers
+        | Role::Unhide
+        | Role::Quit
+        | Role::Front => return None,
+    })
+}
+
+/// `BrowserWindow.getFocusedWindow()`; the menu event runs on the UI thread
+fn with_focused_window(app: &AppHandle, act: impl FnOnce(&tauri::Window) -> tauri::Result<()>) {
+    let focused = app
+        .windows()
+        .into_values()
+        .find(|window| window.is_focused().unwrap_or(false));
+    if let Some(Err(error)) = focused.as_ref().map(act) {
+        eprintln!("shell: a menu click on the focused window: {error}");
+    }
+}
+
+/// The view a click on `kind`'s menu is about: its active editor, else the
+/// shell window's own view (Home and Help have no editor)
+fn target_view(provided: &Provided, services: &Services, kind: TabKind) -> Option<ViewId> {
+    shell_tabs(provided)
+        .and_then(|tabs| tabs.active_editor(kind))
+        .or_else(|| services.hosts.get::<MainWindowHost>()?.view())
+}
+
+/// On the core thread
+fn run(act: Act, kind: TabKind, provided: &Provided, services: &Services) {
+    let Some(tabs) = shell_tabs(provided) else {
+        return;
+    };
+    let editor = || tabs.active_editor(kind);
+    match act {
+        Act::Unbound
+        | Act::MinimizeWindow
+        | Act::CloseWindow
+        | Act::MaximizeWindow
+        | Act::FullscreenWindow => {}
+        Act::Emit { channel, args } => {
+            if let Some(view) = editor() {
+                services.events.emit(Target::View(view), channel, args);
+            }
+        }
+        Act::Open => tabs.open_file_via_dialog(),
+        Act::OpenRecent(path) => {
+            tabs.open_path(&path);
+        }
+        Act::BackToHome => tabs.open_home_tab(),
+        Act::Close => tabs.close_focused_editor(),
+        Act::Save(mode) => {
+            let Some(view) = editor() else { return };
+            if let Some(app) = editor_for(provided, view) {
+                app.request_save(
+                    view,
+                    mode,
+                    Box::new(move |done| {
+                        if let Err(error) = done {
+                            eprintln!("shell: menu {mode:?} of view {}: {}", view.0, error.message);
+                        }
+                    }),
+                );
+            }
+        }
+        Act::Export(format) => {
+            let Some(view) = editor() else { return };
+            if let Some(app) = editor_for(provided, view) {
+                app.export_request(view, format);
+            }
+        }
+        Act::Settings => {
+            // the Settings view lives in the Home tab: the window comes back
+            // first if it was hidden or minimized
+            tabs.reveal_shell_window();
+            tabs.open_home_tab();
+            if let Some(view) = services
+                .hosts
+                .get::<MainWindowHost>()
+                .and_then(|m| m.view())
+            {
+                services.events.emit(
+                    Target::View(view),
+                    "home:open-settings",
+                    vec![IpcValue::Object(vec![("section".into(), text("general"))])],
+                );
+            }
+        }
+        Act::About => {
+            let can_check = update_check(provided).is_some_and(|check| check.available());
+            let services = services.clone();
+            services
+                .workers
+                .clone()
+                .spawn(Box::new(move || show_about(&services, can_check)));
+        }
+        Act::NewDocument(kind) => {
+            tabs.new_document(&kind);
+        }
+        Act::OpenInNewWindow(of) => tabs.open_in_new_window(of),
+        Act::UiScale(direction) => tabs.change_ui_scale(direction),
+        Act::CheckUpdates => check_for_updates(provided),
+        Act::ExportPdfAs(format) => {
+            let Some(view) = editor() else { return };
+            if let Some(conversions) = document_conversions(provided) {
+                conversions.export_pdf_as(view, format);
+            }
+        }
+        Act::ImportPdf => {
+            let Some(view) = editor() else { return };
+            if let Some(conversions) = document_conversions(provided) {
+                conversions.import_pdf_into_hwp(view);
+            }
+        }
+        Act::Feedback => {
+            let services = services.clone();
+            services
+                .workers
+                .clone()
+                .spawn(Box::new(move || open_feedback_survey(&services)));
+        }
+        Act::UserGuide => {
+            if let Some(home) = services.hosts.get::<HomeAppHost>() {
+                home.open_help(None);
+            }
+        }
+        Act::ThirdPartyNotices => {
+            if let (Some(home), Some(os)) = (
+                services.hosts.get::<HomeAppHost>(),
+                services.hosts.get::<OsShellHost>(),
+            ) {
+                let failure = os.open_path(&home.third_party_notices_path());
+                if !failure.is_empty() {
+                    eprintln!("shell: opening the third-party notices: {failure}");
+                }
+            }
+        }
+        Act::ToggleDevTools => on_webview(provided, services, kind, |webview| {
+            #[cfg(any(debug_assertions, feature = "devtools"))]
+            if webview.is_devtools_open() {
+                webview.close_devtools();
+            } else {
+                webview.open_devtools();
+            }
+            #[cfg(not(any(debug_assertions, feature = "devtools")))]
+            let _ = webview;
+        }),
+        Act::Reload { ignore_cache } => on_webview(provided, services, kind, move |webview| {
+            let reloaded = webview.with_cef_webview(move |cef| {
+                use cef::ImplBrowser;
+                let browser = cef.browser();
+                if ignore_cache {
+                    browser.reload_ignore_cache();
+                } else {
+                    browser.reload();
+                }
+            });
+            if let Err(error) = reloaded {
+                eprintln!("shell: reload: {error}");
+            }
+        }),
+        Act::DocLink(click, view) => super::doc_links::run_click(&click, view),
+        Act::Frame(edit) => on_webview(provided, services, kind, move |webview| {
+            let edited = webview.with_cef_webview(move |cef| {
+                use cef::{ImplBrowser, ImplFrame};
+                if let Some(frame) = cef.browser().focused_frame() {
+                    match edit {
+                        FrameEdit::Delete => frame.del(),
+                        FrameEdit::PasteAndMatchStyle => frame.paste_and_match_style(),
+                        FrameEdit::Undo => frame.undo(),
+                        FrameEdit::Redo => frame.redo(),
+                        FrameEdit::Cut => frame.cut(),
+                        FrameEdit::Copy => frame.copy(),
+                        FrameEdit::Paste => frame.paste(),
+                        FrameEdit::SelectAll => frame.select_all(),
+                    }
+                }
+            });
+            if let Err(error) = edited {
+                eprintln!("shell: {edit:?}: {error}");
+            }
+        }),
+    }
+}
+
+/// Runs `job` on the UI thread with the webview of `kind`'s active view
+fn on_webview(
+    provided: &Provided,
+    services: &Services,
+    kind: TabKind,
+    job: impl FnOnce(&tauri::Webview) + Send + 'static,
+) {
+    let (Some(shell), Some(view)) = (SHELL.get(), target_view(provided, services, kind)) else {
+        return;
+    };
+    let windows = shell.windows.clone();
+    let _ = shell.app.run_on_main_thread(move || {
+        if let Some(webview) = windows.webview(view) {
+            job(&webview);
+        }
+    });
+}
+
+/// `checkForUpdatesNow`, when U provides it. On the core thread.
+fn check_for_updates(provided: &Provided) {
+    if let Some(check) = update_check(provided) {
+        check.check_now();
+    }
+}
+
+/// Help > About. Runs on a worker: the box waits for the answer. `can_check`:
+/// the box offers the update check as its third button.
+fn show_about(services: &Services, can_check: bool) {
+    let (Some(shell), Ok(lang)) = (SHELL.get(), current_lang(services)) else {
+        return;
+    };
+    let hosts = &services.hosts;
+    let (Some(dialogs), Some(clipboard)) =
+        (hosts.get::<DialogsHost>(), hosts.get::<ClipboardHost>())
+    else {
+        return;
+    };
+    let version = shell.app.package_info().version.to_string();
+    let labels = app_menu_labels(lang.as_str());
+    let options = about_box(&labels, &version, lang.as_str(), can_check);
+    let answer = dialogs.message(
+        None,
+        &MessageBox {
+            kind: Some(options.kind.to_owned()),
+            title: options.title,
+            message: options.message,
+            detail: options.detail,
+            buttons: options.buttons,
+            default_id: Some(options.default_id as usize),
+            cancel_id: options.cancel_id.map(|id| id as usize),
+            checkbox_label: None,
+        },
+    );
+    match about_answer(answer.response as f64, &version) {
+        AboutAnswer::Nothing => {}
+        AboutAnswer::CopyText(copied) => clipboard.write_text(&copied),
+        AboutAnswer::CheckUpdates => post_core(|provided, _| check_for_updates(provided)),
+    }
+}
+
+/// `openFeedbackSurvey`: shows the details that go into the survey, copies
+/// them and opens the survey; the app sends nothing itself. Runs on a worker.
+fn open_feedback_survey(services: &Services) {
+    let (Some(shell), Ok(lang)) = (SHELL.get(), current_lang(services)) else {
+        return;
+    };
+    let hosts = &services.hosts;
+    let (Some(dialogs), Some(clipboard), Some(os), Some(home)) = (
+        hosts.get::<DialogsHost>(),
+        hosts.get::<ClipboardHost>(),
+        hosts.get::<OsShellHost>(),
+        hosts.get::<HomeAppHost>(),
+    ) else {
+        return;
+    };
+    let detail = feedback_details(
+        lang,
+        &FeedbackEnvironment {
+            version: shell.app.package_info().version.to_string(),
+            os: format!(
+                "{} {}",
+                platform_label(Os::current().node()),
+                home.os_release()
+            ),
+            language: lang.as_str().to_owned(),
+        },
+    );
+    let text = |key: &str| feedback_text(lang, key, None);
+    let answer = dialogs.message(
+        hosts.get::<MainWindowHost>().and_then(|main| main.window()),
+        &MessageBox {
+            kind: Some("info".into()),
+            title: Some(text("dialogTitle")),
+            message: text("dialogTitle"),
+            detail: Some(format!("{}\n\n{detail}", text("dialogBody"))),
+            buttons: vec![text("btnOpen"), text("btnCancel")],
+            default_id: Some(0),
+            cancel_id: Some(1),
+            checkbox_label: None,
+        },
+    );
+    if answer.response == 0 {
+        clipboard.write_text(&detail);
+        // the survey is only offered: a missing browser handler is not reported
+        let _ = os.open_external(FEEDBACK_SURVEY_URL);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use super::*;
+
+    fn ctx(os: Os, lang: Lang) -> Ctx {
+        Ctx::new(
+            os,
+            lang,
+            "SeuOffice".into(),
+            true,
+            Vec::new(),
+            DocsViewState::default(),
+            Seams {
+                new_kinds: [
+                    "docx", "xlsx", "pptx", "md", "html", "xmind", "drawio", "hwp", "pdf",
+                ]
+                .map(String::from)
+                .to_vec(),
+                can_check_updates: true,
+                conversions: true,
+            },
+        )
+    }
+
+    const KINDS: [TabKind; 12] = [
+        TabKind::Home,
+        TabKind::Docs,
+        TabKind::Sheets,
+        TabKind::Slides,
+        TabKind::Pdf,
+        TabKind::Markdown,
+        TabKind::Html,
+        TabKind::Mindmap,
+        TabKind::Hwp,
+        TabKind::Epub,
+        TabKind::Diagram,
+        TabKind::Help,
+    ];
+
+    /// The menu without Tauri: one line per node, a submenu's items indented
+    fn describe(nodes: &[Node]) -> Vec<String> {
+        fn walk(nodes: &[Node], depth: usize, out: &mut Vec<String>) {
+            let pad = "  ".repeat(depth);
+            for node in nodes {
+                match node {
+                    Node::Separator => out.push(format!("{pad}---")),
+                    Node::Role { role, label } => {
+                        out.push(format!(
+                            "{pad}<{role:?}> {}",
+                            label.as_deref().unwrap_or("")
+                        ));
+                    }
+                    Node::Item(item) => {
+                        let mut line = format!("{pad}{}", item.label);
+                        if let Some(accelerator) = &item.accelerator {
+                            line += &format!(" [{accelerator}]");
+                        }
+                        if !item.enabled {
+                            line += " (disabled)";
+                        }
+                        if let Some(checked) = item.checked {
+                            line += if checked {
+                                " (checked)"
+                            } else {
+                                " (unchecked)"
+                            };
+                        }
+                        out.push(line);
+                    }
+                    Node::Menu { label, items, .. } => {
+                        out.push(format!("{pad}{label} >"));
+                        walk(items, depth + 1, out);
+                    }
+                }
+            }
+        }
+        let mut out = Vec::new();
+        walk(nodes, 0, &mut out);
+        out
+    }
+
+    fn items(nodes: &[Node]) -> Vec<&Item> {
+        let mut out = Vec::new();
+        for node in nodes {
+            match node {
+                Node::Item(item) => out.push(item),
+                Node::Menu { items: inner, .. } => out.extend(items(inner)),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    fn top_labels(nodes: &[Node]) -> Vec<String> {
+        nodes
+            .iter()
+            .filter_map(|node| match node {
+                Node::Menu { label, .. } => Some(label.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn lines_of(kind: TabKind, os: Os, lang: Lang) -> Vec<String> {
+        describe(&menu_for(kind, &ctx(os, lang)))
+    }
+
+    #[test]
+    fn every_event_of_batch_m_has_its_item_and_every_item_its_action() {
+        for lang in [Lang::En, Lang::Ko] {
+            for os in [Os::Mac, Os::Windows, Os::Linux] {
+                for kind in KINDS {
+                    let c = ctx(os, lang);
+                    let mut menus = match kind {
+                        TabKind::Docs => docs_menus(&c),
+                        TabKind::Sheets => sheets_menus(&c),
+                        TabKind::Pdf => pdf_menus(&c),
+                        TabKind::Markdown => markdown_menus(&c),
+                        TabKind::Html => html_menus(&c),
+                        TabKind::Mindmap => mindmap_menus(&c),
+                        TabKind::Hwp => hwp_menus(&c),
+                        TabKind::Diagram => diagram_menus(&c),
+                        _ => continue,
+                    };
+                    let table = app_menu_items(kind.as_str(), lang);
+                    let bound = bind_events(&mut menus, &table);
+                    assert_eq!(
+                        bound.missing,
+                        Vec::<Vec<String>>::new(),
+                        "{kind:?} {lang:?}"
+                    );
+                    let mut found = bound.found.clone();
+                    found.sort();
+                    let mut known: Vec<_> = table.iter().map(|(path, _)| path.clone()).collect();
+                    known.sort();
+                    assert_eq!(found, known, "{kind:?} {os:?} {lang:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_built_menu_has_no_unbound_item_and_no_stray_separator() {
+        fn check(nodes: &[Node]) {
+            assert!(!matches!(nodes.first(), Some(Node::Separator)), "{nodes:?}");
+            assert!(!matches!(nodes.last(), Some(Node::Separator)), "{nodes:?}");
+            for pair in nodes.windows(2) {
+                assert!(
+                    !matches!(pair, [Node::Separator, Node::Separator]),
+                    "{nodes:?}"
+                );
+            }
+            for node in nodes {
+                if let Node::Menu { items, .. } = node {
+                    assert!(!items.is_empty());
+                    check(items);
+                }
+            }
+        }
+        for kind in KINDS {
+            for os in [Os::Mac, Os::Windows, Os::Linux] {
+                let menus = menu_for(kind, &ctx(os, Lang::En));
+                check(&menus);
+                assert!(
+                    items(&menus).iter().all(|i| i.act != Some(Act::Unbound)),
+                    "{kind:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_application_menu_is_the_macs_alone() {
+        let mac = lines_of(TabKind::Pdf, Os::Mac, Lang::En);
+        assert_eq!(mac[0], "SeuOffice >");
+        assert_eq!(mac[1], "  <About> About SeuOffice");
+        let linux = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
+        assert_eq!(
+            top_labels(&linux),
+            ["File", "Edit", "Window", "View", "Help"]
+        );
+        // Settings is in File where the application menu is not
+        assert!(items(&linux).iter().any(|i| i.act == Some(Act::Settings)));
+    }
+
+    #[test]
+    fn the_kinds_have_the_menus_their_typescript_builders_have() {
+        let tops = |kind, os| top_labels(&menu_for(kind, &ctx(os, Lang::En)));
+        assert_eq!(
+            tops(TabKind::Docs, Os::Linux),
+            [
+                "File", "Edit", "View", "Insert", "Format", "Table", "Tools", "Window", "Help"
+            ]
+        );
+        assert_eq!(
+            tops(TabKind::Sheets, Os::Linux),
+            ["File", "Edit", "View", "Window", "Help"]
+        );
+        assert_eq!(
+            tops(TabKind::Slides, Os::Linux),
+            ["File", "Edit", "View", "Help"]
+        );
+        assert_eq!(
+            tops(TabKind::Epub, Os::Linux),
+            ["File", "Edit", "View", "Window", "Help"]
+        );
+        assert_eq!(
+            tops(TabKind::Mindmap, Os::Linux),
+            ["File", "Edit", "Window", "View", "Help"]
+        );
+        assert_eq!(
+            tops(TabKind::Home, Os::Linux),
+            ["File", "View", "Edit", "Window", "Help"]
+        );
+        assert_eq!(tops(TabKind::Help, Os::Mac)[0], "SeuOffice");
+        assert_eq!(
+            tops(TabKind::Help, Os::Linux),
+            tops(TabKind::Home, Os::Linux)
+        );
+    }
+
+    #[test]
+    fn the_pdf_file_menu_in_english_and_korean() {
+        let en = lines_of(TabKind::Pdf, Os::Linux, Lang::En);
+        assert_eq!(
+            &en[..19],
+            [
+                "File >",
+                "  Open\u{2026} [CmdOrCtrl+O]",
+                "  ---",
+                "  Back to Home [Shift+CmdOrCtrl+H]",
+                "  ---",
+                "  Save [CmdOrCtrl+S]",
+                "  Save As\u{2026} [CmdOrCtrl+Shift+S]",
+                "  ---",
+                "  Export as Word\u{2026}",
+                "  Export as PowerPoint\u{2026}",
+                "  Export as Excel\u{2026}",
+                "  Export as Markdown\u{2026}",
+                "  Export as EPUB\u{2026}",
+                "  ---",
+                "  Print\u{2026} [CmdOrCtrl+P]",
+                "  ---",
+                "  Close [CmdOrCtrl+W]",
+                "  ---",
+                "  Settings\u{2026} [CmdOrCtrl+,]",
+            ]
+        );
+        let ko = lines_of(TabKind::Pdf, Os::Linux, Lang::Ko);
+        assert_eq!(ko[0], "\u{D30C}\u{C77C} >");
+        assert_eq!(ko[1], "  \u{C5F4}\u{AE30}\u{2026} [CmdOrCtrl+O]");
+    }
+
+    #[test]
+    fn help_gets_the_guide_and_the_survey_once() {
+        let help = |kind| {
+            let lines = lines_of(kind, Os::Linux, Lang::En);
+            let at = lines.iter().position(|l| l == "Help >").unwrap();
+            lines[at..].to_vec()
+        };
+        // Home has its own guide: the survey goes before it
+        assert_eq!(
+            help(TabKind::Home),
+            [
+                "Help >",
+                "  Send feedback",
+                "  ---",
+                "  User Guide [F1]",
+                "  ---",
+                "  Third-Party Notices",
+                "  ---",
+                "  About SeuOffice",
+            ]
+        );
+        for kind in [
+            TabKind::Docs,
+            TabKind::Sheets,
+            TabKind::Slides,
+            TabKind::Pdf,
+        ] {
+            let lines = help(kind);
+            assert_eq!(
+                lines.iter().filter(|l| l.contains("[F1]")).count(),
+                1,
+                "{kind:?}"
+            );
+            assert_eq!(lines[1], "  User Guide [F1]", "{kind:?}");
+        }
+    }
+
+    /// `ctx` with the seams `seams` leaves open
+    fn ctx_with(os: Os, seams: Seams) -> Ctx {
+        Ctx {
+            seams,
+            ..ctx(os, Lang::En)
+        }
+    }
+
+    fn lines_with(kind: TabKind, os: Os, seams: Seams) -> Vec<String> {
+        describe(&menu_for(kind, &ctx_with(os, seams)))
+    }
+
+    #[test]
+    fn check_for_updates_is_in_help_on_the_mac_only_and_only_when_it_is_provided() {
+        let label = |lang| app_menu_labels(lang).check_updates();
+        for kind in KINDS {
+            for lang in [Lang::En, Lang::Ko] {
+                let has = |os, can_check_updates| {
+                    let c = Ctx {
+                        seams: Seams {
+                            can_check_updates,
+                            ..ctx(os, lang).seams
+                        },
+                        ..ctx(os, lang)
+                    };
+                    let menus = menu_for(kind, &c);
+                    let found: Vec<_> = items(&menus)
+                        .into_iter()
+                        .filter(|i| i.label == label(lang.as_str()))
+                        .collect();
+                    assert!(found.iter().all(|i| i.act == Some(Act::CheckUpdates)));
+                    // it is inside Help
+                    let help = menus
+                        .iter()
+                        .find_map(|m| match m {
+                            Node::Menu {
+                                role: MenuRole::Help,
+                                items: inner,
+                                ..
+                            } => Some(inner),
+                            _ => None,
+                        })
+                        .unwrap();
+                    assert!(self::items(help).len() > found.len() || found.is_empty());
+                    found.len()
+                };
+                assert_eq!(has(Os::Mac, true), 1, "{kind:?}");
+                assert_eq!(has(Os::Mac, false), 0, "{kind:?}");
+                assert_eq!(has(Os::Linux, true), 0, "{kind:?}");
+                assert_eq!(has(Os::Windows, true), 0, "{kind:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_help_menu_puts_check_for_updates_before_about_on_the_mac() {
+        let lines = lines_with(TabKind::Pdf, Os::Mac, ctx(Os::Mac, Lang::En).seams);
+        let at = lines.iter().position(|l| l == "Help >").unwrap();
+        assert_eq!(
+            lines[at..],
+            [
+                "Help >",
+                "  User Guide [F1]",
+                "  ---",
+                "  Send feedback",
+                "  ---",
+                "  Third-Party Notices",
+                "  ---",
+                "  Check for Updates\u{2026}",
+                "  About SeuOffice",
+            ]
+        );
+    }
+
+    #[test]
+    fn the_new_entries_of_home_follow_the_kinds_settings_show() {
+        let all = lines_with(TabKind::Home, Os::Linux, ctx(Os::Linux, Lang::En).seams);
+        assert_eq!(
+            &all[..13],
+            [
+                "File >",
+                "  New (disabled)",
+                "  AI Docs [CmdOrCtrl+N]",
+                "  AI Sheets",
+                "  AI Slides",
+                "  AI Markdown",
+                "  AI HTML",
+                "  Mind Map",
+                "  Diagram",
+                "  AI HWP",
+                "  AI PDF",
+                "  ---",
+                "  Open\u{2026} [CmdOrCtrl+O]",
+            ]
+        );
+        // a hidden kind is not listed, and Ctrl+N goes to the first one left
+        let some = lines_with(
+            TabKind::Home,
+            Os::Linux,
+            Seams {
+                new_kinds: vec!["pdf".into(), "md".into(), "pdfTools".into()],
+                ..Seams::default()
+            },
+        );
+        assert_eq!(
+            &some[..6],
+            [
+                "File >",
+                "  New (disabled)",
+                "  AI PDF [CmdOrCtrl+N]",
+                "  AI Markdown",
+                "  ---",
+                "  Open\u{2026} [CmdOrCtrl+O]",
+            ]
+        );
+        // every kind hidden: no header and no separator either
+        let none = lines_with(TabKind::Home, Os::Linux, Seams::default());
+        assert_eq!(&none[..2], ["File >", "  Open\u{2026} [CmdOrCtrl+O]"]);
+        // a click makes the kind's document
+        let menus = menu_for(TabKind::Home, &ctx(Os::Linux, Lang::En));
+        let made: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match &i.act {
+                Some(Act::NewDocument(kind)) => Some(kind.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            made,
+            [
+                "docx", "xlsx", "pptx", "md", "html", "xmind", "drawio", "hwp", "pdf"
+            ]
+        );
+    }
+
+    #[test]
+    fn new_in_diagram_and_mindmap_and_the_new_windows_of_docs_and_slides() {
+        let act_of = |kind, os, label: &str| {
+            let menus = menu_for(kind, &ctx(os, Lang::En));
+            items(&menus)
+                .into_iter()
+                .find(|i| i.label == label)
+                .map(|i| (i.act.clone(), i.accelerator.clone()))
+        };
+        assert_eq!(
+            act_of(TabKind::Diagram, Os::Linux, "New"),
+            Some((
+                Some(Act::NewDocument("drawio".into())),
+                Some("CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Mindmap, Os::Linux, "New"),
+            Some((
+                Some(Act::NewDocument("xmind".into())),
+                Some("CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Docs, Os::Linux, "New Window"),
+            Some((
+                Some(Act::NewDocument("docx".into())),
+                Some("Shift+CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Slides, Os::Linux, "Open in New Window"),
+            Some((Some(Act::OpenInNewWindow(TabKind::Slides)), None))
+        );
+        // the other kinds have none of these
+        assert_eq!(act_of(TabKind::Pdf, Os::Linux, "New"), None);
+        assert_eq!(act_of(TabKind::Docs, Os::Linux, "Open in New Window"), None);
+    }
+
+    #[test]
+    fn the_interface_zoom_is_in_the_view_menu_of_every_kind() {
+        for kind in KINDS {
+            for os in [Os::Mac, Os::Linux] {
+                let menus = menu_for(kind, &ctx(os, Lang::En));
+                let zoom: Vec<_> = items(&menus)
+                    .into_iter()
+                    .filter_map(|i| match i.act {
+                        Some(Act::UiScale(direction)) => {
+                            Some((direction, i.label.as_str(), i.accelerator.as_deref()))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(
+                    zoom,
+                    [
+                        (1, "Interface Zoom In", Some("CmdOrCtrl+Alt+=")),
+                        (-1, "Interface Zoom Out", Some("CmdOrCtrl+Alt+-")),
+                        (0, "Reset Interface Zoom", Some("CmdOrCtrl+Alt+0")),
+                    ],
+                    "{kind:?}"
+                );
+                // all three sit in one menu, called View
+                let holders: Vec<_> = menus
+                    .iter()
+                    .filter_map(|m| match m {
+                        Node::Menu {
+                            label,
+                            items: inner,
+                            ..
+                        } if self::items(inner)
+                            .iter()
+                            .any(|i| matches!(i.act, Some(Act::UiScale(_)))) =>
+                        {
+                            Some(label.as_str())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(holders, ["View"], "{kind:?}");
+            }
+        }
+        // after the menu's own entries and a separator, before Help in a menu made for it
+        let docs = lines_of(TabKind::Docs, Os::Linux, Lang::En);
+        let at = docs
+            .iter()
+            .position(|l| l == "  Interface Zoom In [CmdOrCtrl+Alt+=]");
+        assert!(at.is_some_and(|at| docs[at - 1] == "  ---"));
+        let pdf = lines_of(TabKind::Pdf, Os::Linux, Lang::En);
+        let view = pdf.iter().position(|l| l == "View >").unwrap();
+        assert_eq!(pdf[view + 5], "Help >");
+    }
+
+    #[test]
+    fn conversions_are_in_the_menus_only_when_d2_provides_them() {
+        let with = ctx(Os::Linux, Lang::En).seams;
+        let without = Seams {
+            conversions: false,
+            ..with.clone()
+        };
+        let pdf = |seams| lines_with(TabKind::Pdf, Os::Linux, seams);
+        for label in [
+            "  Export as Word\u{2026}",
+            "  Export as PowerPoint\u{2026}",
+            "  Export as Excel\u{2026}",
+        ] {
+            assert!(pdf(with.clone()).contains(&label.to_owned()), "{label}");
+            assert!(!pdf(without.clone()).contains(&label.to_owned()), "{label}");
+        }
+        let hwp = |seams| lines_with(TabKind::Hwp, Os::Linux, seams);
+        assert_eq!(hwp(with.clone())[2], "  Import PDF\u{2026}");
+        assert!(!hwp(without).contains(&"  Import PDF\u{2026}".to_owned()));
+        // each is the conversion the label names
+        let menus = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
+        let formats: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match i.act {
+                Some(Act::ExportPdfAs(format)) => Some(format),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(formats, [PdfExport::Docx, PdfExport::Pptx, PdfExport::Xlsx]);
+    }
+
+    #[test]
+    fn what_the_batches_provide_is_read_each_time() {
+        use shell_contract::app_actions::{DocumentConversions, UpdateCheck};
+
+        struct Update(bool);
+        impl UpdateCheck for Update {
+            fn available(&self) -> bool {
+                self.0
+            }
+            fn check_now(&self) {}
+        }
+        struct Conversions;
+        impl DocumentConversions for Conversions {
+            fn export_pdf_as(&self, _: ViewId, _: PdfExport) {}
+            fn import_pdf_into_hwp(&self, _: ViewId) {}
+        }
+
+        let provided = Provided::default();
+        assert_eq!(seams_of(&provided), Seams::default());
+
+        provided.add::<dyn UpdateCheck>(Rc::new(Update(false)));
+        assert_eq!(seams_of(&provided), Seams::default());
+
+        let provided = Provided::default();
+        provided.add::<dyn UpdateCheck>(Rc::new(Update(true)));
+        provided.add::<dyn DocumentConversions>(Rc::new(Conversions));
+        let seams = seams_of(&provided);
+        assert!(seams.can_check_updates && seams.conversions);
+        // and the menu follows
+        let menus = menu_for(
+            TabKind::Hwp,
+            &Ctx {
+                seams,
+                ..ctx(Os::Linux, Lang::En)
+            },
+        );
+        assert!(items(&menus).iter().any(|i| i.act == Some(Act::ImportPdf)));
+    }
+
+    #[test]
+    fn the_docs_menu_follows_the_recent_list_and_the_view_state() {
+        let mut c = ctx(Os::Linux, Lang::En);
+        let none = describe(&menu_for(TabKind::Docs, &c));
+        let at = none.iter().position(|l| l.contains("Open Recent")).unwrap();
+        assert_eq!(none[at + 1], "    No Recent Documents (disabled)");
+        assert!(none.contains(&"  AI Sidebar (checked)".to_owned()));
+        assert!(none.contains(&"  Dark Mode (unchecked)".to_owned()));
+
+        c.recent = vec!["/home/a/one.docx".into(), "/home/a/two.docx".into()];
+        c.docs_view = DocsViewState {
+            ai_sidebar: false,
+            dark_canvas: true,
+            odt: true,
+        };
+        let menus = menu_for(TabKind::Docs, &c);
+        let lines = describe(&menus);
+        assert!(lines.contains(&"    one.docx".to_owned()));
+        assert!(lines.contains(&"    two.docx".to_owned()));
+        assert!(lines.contains(&"  AI Sidebar (unchecked)".to_owned()));
+        assert!(lines.contains(&"  Dark Mode (checked)".to_owned()));
+        assert!(lines.contains(&"  Equation\u{2026} (disabled)".to_owned()));
+        assert!(lines.contains(&"  Comment (disabled)".to_owned()));
+        let recent: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match &i.act {
+                Some(Act::OpenRecent(path)) => Some(path.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(recent, ["/home/a/one.docx", "/home/a/two.docx"]);
+    }
+
+    #[test]
+    fn settings_lives_in_tools_off_the_mac_and_in_the_application_menu_on_it() {
+        let settings_in = |os| {
+            let menus = menu_for(TabKind::Docs, &ctx(os, Lang::En));
+            menus
+                .iter()
+                .filter_map(|menu| match menu {
+                    Node::Menu {
+                        label,
+                        items: inner,
+                        ..
+                    } if !self::items(inner)
+                        .iter()
+                        .all(|i| i.act != Some(Act::Settings)) =>
+                    {
+                        Some(label.clone())
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(settings_in(Os::Mac), ["SeuOffice"]);
+        assert_eq!(settings_in(Os::Linux), ["Tools"]);
+    }
+
+    #[test]
+    fn keys_the_editor_takes_itself_are_shown_on_the_mac_only() {
+        let key = |os| {
+            lines_of(TabKind::Epub, os, Lang::En)
+                .into_iter()
+                .find(|l| l.starts_with("  Find"))
+                .unwrap()
+        };
+        assert_eq!(key(Os::Mac), "  Find\u{2026} [CmdOrCtrl+F]");
+        assert_eq!(key(Os::Windows), "  Find\u{2026}");
+        let redo = |os| {
+            lines_of(TabKind::Diagram, os, Lang::En)
+                .into_iter()
+                .find(|l| l.starts_with("  Redo"))
+                .unwrap()
+        };
+        assert_eq!(redo(Os::Mac), "  Redo [Shift+Cmd+Z]");
+        assert_eq!(redo(Os::Linux), "  Redo");
+    }
+
+    #[test]
+    fn dev_tools_follow_the_build() {
+        let mut c = ctx(Os::Linux, Lang::En);
+        let toggles = |c: &Ctx, kind| {
+            items(&menu_for(kind, c))
+                .iter()
+                .filter(|i| i.act == Some(Act::ToggleDevTools))
+                .count()
+        };
+        assert_eq!(toggles(&c, TabKind::Docs), 1);
+        assert_eq!(toggles(&c, TabKind::Slides), 1);
+        assert_eq!(toggles(&c, TabKind::Sheets), 1);
+        c.dev_tools = false;
+        for kind in [TabKind::Docs, TabKind::Slides, TabKind::Sheets] {
+            assert_eq!(toggles(&c, kind), 0, "{kind:?}");
+        }
+        // the Sheets View menu keeps Full Screen, and gains no Reload
+        let lines = describe(&menu_for(TabKind::Sheets, &c));
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("Fullscreen") || l.contains("Full Screen"))
+        );
+        assert!(!lines.iter().any(|l| l.contains("Reload")));
+    }
+
+    #[test]
+    fn slides_clicks_are_events_of_the_slides_view() {
+        let menus = menu_for(TabKind::Slides, &ctx(Os::Linux, Lang::En));
+        let events: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match &i.act {
+                Some(Act::Emit { channel, args }) => Some((*channel, args.clone())),
+                _ => None,
+            })
+            .collect();
+        assert!(events.iter().all(|(channel, _)| *channel == "slides:menu"));
+        assert!(events.contains(&("slides:menu", vec![text("export-images-jpg")])));
+        assert_eq!(events.len(), 16);
+    }
+
+    #[test]
+    fn ids_map_to_their_clicks_and_never_repeat() {
+        let next = AtomicU32::new(7);
+        let mut first = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
+        let clicks = number(&mut first, &next);
+        let numbered = items(&first);
+        let ids: Vec<_> = numbered.iter().filter_map(|i| i.id.clone()).collect();
+        assert_eq!(ids.len(), clicks.len());
+        assert_eq!(ids[0], "m-app-7");
+        assert!(ids.iter().all(|id| id.starts_with(ID_PREFIX)));
+        for item in numbered {
+            assert_eq!(item.id.as_ref().map(|id| &clicks[id]), item.act.as_ref());
+        }
+        let save = items(&first)
+            .into_iter()
+            .find(|i| i.act == Some(Act::Save(SaveMode::SaveAs)))
+            .and_then(|i| i.id.clone())
+            .unwrap();
+        assert_eq!(clicks[&save], Act::Save(SaveMode::SaveAs));
+
+        // a rebuild's ids start where the last ones ended
+        let mut second = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
+        let again = number(&mut second, &next);
+        assert!(clicks.keys().all(|id| !again.contains_key(id)));
+    }
+
+    /// Every key of every menu must be one muda (Tauri's menu) parses:
+    /// modifiers `CmdOrCtrl`, `Cmd`, `Command`, `Ctrl`, `Alt`, `Shift`, and one
+    /// key from its table. Electron's strings are valid as they stand, so the
+    /// translation to Tauri is the identity; this keeps a typo from becoming
+    /// a silently missing shortcut (Tauri drops a key it cannot parse).
+    #[test]
+    fn every_accelerator_is_one_tauris_menu_parses() {
+        let modifiers = [
+            "cmdorctrl",
+            "cmd",
+            "command",
+            "ctrl",
+            "control",
+            "alt",
+            "option",
+            "shift",
+        ];
+        let key_ok = |key: &str| {
+            matches!(key.len(), 1 if key.chars().all(|c| c.is_ascii_alphanumeric() || "=-/,".contains(c)))
+                || (key.starts_with('F')
+                    && key[1..].parse::<u8>().is_ok_and(|n| (1..=12).contains(&n)))
+        };
+        let mut seen = 0;
+        for kind in KINDS {
+            for os in [Os::Mac, Os::Windows, Os::Linux] {
+                let menus = menu_for(kind, &ctx(os, Lang::En));
+                for item in items(&menus) {
+                    let Some(accelerator) = &item.accelerator else {
+                        continue;
+                    };
+                    seen += 1;
+                    let (key, mods) = accelerator
+                        .rsplit_once('+')
+                        .map_or((accelerator.as_str(), ""), |(mods, key)| (key, mods));
+                    assert!(key_ok(key), "{accelerator}");
+                    for modifier in mods.split('+').filter(|m| !m.is_empty()) {
+                        assert!(
+                            modifiers.contains(&modifier.to_lowercase().as_str()),
+                            "{accelerator}"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(seen > 200);
+    }
+
+    #[test]
+    fn the_macos_window_menu_holds_what_the_role_did() {
+        let mac = lines_of(TabKind::Pdf, Os::Mac, Lang::En);
+        let at = mac.iter().position(|l| l == "Window >").unwrap();
+        assert_eq!(
+            &mac[at..at + 5],
+            [
+                "Window >",
+                "  <Minimize> Minimize",
+                "  <Zoom> Zoom",
+                "  ---",
+                "  <Front> Bring All to Front",
+            ]
+        );
+        let windows = lines_of(TabKind::Pdf, Os::Windows, Lang::En);
+        let at = windows.iter().position(|l| l == "Window >").unwrap();
+        assert_eq!(
+            &windows[at..at + 4],
+            ["Window >", "  Minimize", "  ---", "  Close Window"]
+        );
+    }
+
+    #[test]
+    fn only_this_menus_ids_are_this_menus() {
+        assert!(ID_PREFIX.starts_with("m-"));
+        // a click on an id nobody numbered finds no action
+        assert!(
+            lock(&CLICKS)
+                .as_ref()
+                .is_none_or(|(_, clicks)| !clicks.contains_key("other-1"))
+        );
+    }
+
+    /// The ☰ popup lists every menu of the Windows/Linux bar and can run each
+    /// entry it shows, roles included, then the update check of its own
+    #[test]
+    fn the_popup_runs_every_entry_it_lists() {
+        fn leaves(entries: &[MenuEntry], ids: &mut Vec<u32>, out: &mut Vec<MenuEntry>) {
+            for entry in entries {
+                ids.push(entry.id);
+                if entry.submenu.is_empty() {
+                    out.push(entry.clone());
+                } else {
+                    leaves(&entry.submenu, ids, out);
+                }
+            }
+        }
+        for os in [Os::Windows, Os::Linux] {
+            for kind in KINDS {
+                let mut menus = menu_for(kind, &ctx(os, Lang::En));
+                number(&mut menus, &AtomicU32::new(1));
+                let (entries, acts) = popup_entries(&menus, "Check for Updates\u{2026}", &mut 0);
+                assert_eq!(entries.len(), menus.len() + 2, "{os:?} {kind:?}");
+                let last = &entries[entries.len() - 1];
+                assert_eq!(entries[entries.len() - 2].kind, MenuEntryKind::Separator);
+                assert_eq!(last.label, "Check for Updates\u{2026}");
+                assert_eq!(acts.get(&last.id), Some(&Act::CheckUpdates));
+                let (mut ids, mut shown) = (Vec::new(), Vec::new());
+                leaves(&entries, &mut ids, &mut shown);
+                let count = ids.len();
+                ids.sort_unstable();
+                ids.dedup();
+                assert_eq!(ids.len(), count, "{os:?} {kind:?}: ids repeat");
+                for entry in shown {
+                    if entry.kind == MenuEntryKind::Separator || !entry.enabled {
+                        continue;
+                    }
+                    assert!(
+                        acts.contains_key(&entry.id),
+                        "{os:?} {kind:?}: {} does nothing",
+                        entry.label
+                    );
+                }
+            }
+        }
+        // Home's Edit menu is made of roles, which the popup runs on the page
+        let menus = menu_for(TabKind::Home, &ctx(Os::Windows, Lang::En));
+        let (entries, acts) = popup_entries(&menus, "", &mut 0);
+        let edit = entries.iter().find(|e| e.label == "Edit").expect("Edit");
+        let undo = edit
+            .submenu
+            .iter()
+            .find(|e| e.label == "Undo")
+            .expect("Undo");
+        assert_eq!(acts.get(&undo.id), Some(&Act::Frame(FrameEdit::Undo)));
+    }
+
+    /// The docs host's `getMenuItemById` patches reach the ☰ popup's entries too
+    #[test]
+    fn named_items_patch_the_menu_the_popup_lists() {
+        let mut menus = menu_for(TabKind::Docs, &ctx(Os::Windows, Lang::En));
+        number(&mut menus, &AtomicU32::new(1));
+        *lock(&SHOWN) = Some(Shown {
+            kind: TabKind::Docs,
+            menus,
+            check_updates: String::new(),
+        });
+        set_menu_item_enabled(INSERT_EQUATION, false);
+        set_menu_item_checked(DARK_MODE, true);
+        set_menu_item_checked("no-such-item", true);
+        let (entries, _) = popup_entries(&lock(&SHOWN).as_ref().expect("shown").menus, "", &mut 0);
+        let find = |menu: &str, label: &str| {
+            entries
+                .iter()
+                .find(|e| e.label == menu)
+                .and_then(|m| m.submenu.iter().find(|e| e.label == label).cloned())
+                .unwrap_or_else(|| panic!("{menu} > {label}"))
+        };
+        assert!(!find("Insert", "Equation\u{2026}").enabled);
+        assert!(find("Insert", "Comment").enabled);
+        assert!(find("View", "Dark Mode").checked);
+    }
+
+    /// The document-link entries sit after Back to Home in docs, sheets and
+    /// slides, and after Save As in the shell-built File menus; a click acts
+    /// on the view the entries were built for
+    #[test]
+    fn document_link_entries_follow_their_file_menu_place() {
+        use main_core::shell::document_links::{DocumentLinkMenuModel, LinkMenuEntry};
+        use main_core::shell::document_links_menu::{
+            DocumentLinkMenuLabels, document_link_menu_items,
+        };
+        let model = DocumentLinkMenuModel {
+            sources: vec![LinkMenuEntry {
+                path: "/a/src.pdf".into(),
+                name: "src.pdf".into(),
+                missing: true,
+            }],
+            derived: Vec::new(),
+        };
+        let labels = DocumentLinkMenuLabels {
+            make: "Make".into(),
+            sources: "Sources".into(),
+            derived: "Derived".into(),
+        };
+        let view = ViewId(7);
+        let nodes = doc_link_nodes(&document_link_menu_items(&model, &labels, false), view);
+        assert_eq!(nodes.first(), Some(&Node::Separator));
+        let file_of = |kind| {
+            let mut c = ctx(Os::Windows, Lang::En);
+            c.doc_links = nodes.clone();
+            let menus = menu_for(kind, &c);
+            let Some(Node::Menu { items, .. }) = menus
+                .into_iter()
+                .find(|m| matches!(m, Node::Menu { label, .. } if label == "File"))
+            else {
+                panic!("{kind:?}: no File menu");
+            };
+            items
+        };
+        for (kind, before) in [
+            (TabKind::Docs, Act::BackToHome),
+            (TabKind::Sheets, Act::BackToHome),
+            (TabKind::Slides, Act::BackToHome),
+            (TabKind::Pdf, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Markdown, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Html, Act::Save(SaveMode::SaveAs)),
+            (TabKind::Mindmap, Act::Save(SaveMode::SaveAs)),
+        ] {
+            let items = file_of(kind);
+            let at = items
+                .iter()
+                .position(|n| matches!(n, Node::Item(Item { act: Some(Act::DocLink(DocLinkClick::Make, v)), .. }) if *v == view))
+                .unwrap_or_else(|| panic!("{kind:?}: no Make entry"));
+            let anchor = items[..at]
+                .iter()
+                .rposition(|n| matches!(n, Node::Item(i) if i.act.as_ref() == Some(&before)))
+                .unwrap_or_else(|| panic!("{kind:?}: Make is not after {before:?}"));
+            assert!(
+                items[anchor + 1..at].iter().all(|n| *n == Node::Separator),
+                "{kind:?}: something between {before:?} and the entries"
+            );
+            let sources = items[at..]
+                .iter()
+                .find_map(|n| match n {
+                    Node::Menu { label, items, .. } if label == "Sources" => Some(items.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{kind:?}: no Sources submenu"));
+            assert!(matches!(
+                &sources[..],
+                [Node::Item(Item { enabled: false, .. })]
+            ));
+        }
+        for kind in [TabKind::Home, TabKind::Hwp, TabKind::Epub, TabKind::Diagram] {
+            let mut c = ctx(Os::Windows, Lang::En);
+            c.doc_links = nodes.clone();
+            let has = describe(&menu_for(kind, &c))
+                .iter()
+                .any(|l| l.contains("Make"));
+            assert!(!has, "{kind:?} lists document links");
+        }
+    }
+
+    /// A selection from a popup that arrives after another popup was listed
+    /// runs its own popup's entry, not the newer popup's entry of that place
+    #[test]
+    fn a_late_selection_runs_its_own_popup() {
+        let entry_of = |entries: &[MenuEntry], menu: &str, label: &str| {
+            entries
+                .iter()
+                .find(|e| e.label == menu)
+                .and_then(|m| m.submenu.iter().find(|e| e.label == label))
+                .map(|e| e.id)
+                .unwrap_or_else(|| panic!("{menu} > {label}"))
+        };
+        let c = ctx(Os::Windows, Lang::En);
+        let mut home = menu_for(TabKind::Home, &c);
+        number(&mut home, &AtomicU32::new(1));
+        let mut pdf = menu_for(TabKind::Pdf, &c);
+        number(&mut pdf, &AtomicU32::new(1));
+        let mut popups = Popups::new();
+        let first = popups.list(TabKind::Pdf, &pdf, "Check");
+        let second = popups.list(TabKind::Home, &home, "Check");
+        // the first popup's Save As, chosen after the second was listed
+        let save_as = entry_of(&first, "File", "Save As\u{2026}");
+        assert_eq!(
+            popups.chosen(save_as),
+            Some((TabKind::Pdf, Act::Save(SaveMode::SaveAs)))
+        );
+        let open = entry_of(&second, "File", "Open\u{2026}");
+        assert_eq!(popups.chosen(open), Some((TabKind::Home, Act::Open)));
+        // ids never repeat across popups
+        let ids = |entries: &[MenuEntry]| {
+            fn walk(entries: &[MenuEntry], out: &mut Vec<u32>) {
+                for e in entries {
+                    out.push(e.id);
+                    walk(&e.submenu, out);
+                }
+            }
+            let mut out = Vec::new();
+            walk(entries, &mut out);
+            out
+        };
+        let older = ids(&first);
+        assert!(ids(&second).iter().all(|id| !older.contains(id)));
+        // a popup older than the kept ones runs nothing
+        for _ in 0..Popups::KEPT {
+            popups.list(TabKind::Home, &home, "Check");
+        }
+        assert_eq!(popups.chosen(save_as), None);
+    }
+}
