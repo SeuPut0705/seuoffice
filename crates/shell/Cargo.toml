@@ -61,6 +61,14 @@ trash = "5"
 
 # regress 0.12.0 with a bounded backtrack stack (see crates/vendor/regress/VENDORED.md):
 # the workspace patch does not reach a crate outside it
+[target.'cfg(windows)'.dependencies]
+# the silent print loop (host/print/windows.rs): Windows.Data.Pdf pages into a GDI printer DC
+windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT"] }
+
+[dev-dependencies]
+# the fakes of M's hosts for the_batches_register_over_the_stubs
+shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
+
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
 

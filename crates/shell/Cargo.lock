@@ -4299,6 +4299,7 @@ dependencies = [
  "tauri-build",
  "tauri-runtime-cef",
  "trash",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -4372,6 +4373,7 @@ dependencies = [
 name = "shell-ipc-m"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 

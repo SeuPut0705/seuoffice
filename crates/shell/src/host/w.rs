@@ -238,6 +238,8 @@ mod tests {
         hosts.insert(contents);
         crate::host::window::install_main_window(&mut hosts, &views);
         install_hosts(&mut hosts);
+        // M's own hosts come from host::menu with an AppHandle; its fakes stand in here
+        shell_ipc_m::probe_hosts(&mut hosts, &serde_json::Value::Null);
         let ui: Arc<dyn Thread> = CoreThread::spawn("w-test-ui");
         let services = Services {
             ui,
