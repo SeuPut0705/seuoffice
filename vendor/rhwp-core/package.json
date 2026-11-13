@@ -54,6 +54,6 @@
       "0045-memo-date-local-offset-hook.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "70372a6dba41ee8c350256b559986e0489042f1e0d91025e3f0b580ed177a5db"
+    "wasmSha256": "110aa4a365d1bd8f27f42ad679f66fe351f744a77a79db0ebfb67944041aa977"
   }
 }

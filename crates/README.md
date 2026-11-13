@@ -597,11 +597,6 @@ fxp`); the two should share one module.
   (`unparseable-response`) in Rust and a translation in TypeScript
   (`epub-engine/src/translate/call.rs`). A model reply has never been seen
   to carry one.
-- `vendor/rhwp-core/rhwp_bg.wasm` (the desktop's wasm-bindgen build) was
-  built before patch 0045 and not rebuilt: the patch changes nothing there
-  (the hook is never set), and the machine that wrote it has no wasm-pack.
-  The next `node tools/build-rhwp-core.mjs` run brings the file and
-  `rhwp.wasmSha256` level with the patch list.
 - fast-xml-parser reads a DOCTYPE; `ooxml_xml::parse_ordered` refuses `<!D`,
   so a workbook part with one is refused in Rust and read in TypeScript (two
   ledger entries, `withheld: spelled mirror, a doctype before the root`). Excel
