@@ -433,18 +433,22 @@ pub(crate) fn probe_trigger(
             tools.request_convert_dialog(Some(view), s(0).unwrap_or(""), s(1));
             IpcValue::Undefined
         }
-        // the attempt's password goes to the log when the prompt settles
+        // the attempt's password goes to the log when the prompt settles, after
+        // the call that settled it, as the TypeScript promise's `then` runs
         "prompt-password" => {
             let log = services.hosts.get::<hosts::fake::ProbeLog>().cloned();
+            let core = services.core.clone();
             let state = crate::kit::from_json(args.get(0).unwrap_or(&serde_json::Value::Null));
             tools.prompt_password(
                 tools.ctx.window_of(view),
                 state,
                 Box::new(move |password| {
                     if let Some(log) = log {
-                        log.lock()
-                            .unwrap()
-                            .push(serde_json::json!(["promptPdfPassword.settled", password]));
+                        core.post(Box::new(move || {
+                            log.lock()
+                                .unwrap()
+                                .push(serde_json::json!(["promptPdfPassword.settled", password]))
+                        }));
                     }
                 }),
             );
