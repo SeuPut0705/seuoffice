@@ -43,6 +43,7 @@ const probe =
 const messages = await import('../../../../packages/ai-provider/src/agent-session/messages.ts')
 const types = await import('../../../../packages/ai-provider/src/agent-session/types.ts')
 const locate = await import('../../../../packages/ai-provider/src/subscription/locate.ts')
+const claude = await import('../../../../packages/ai-provider/src/agent-session/claude.ts')
 
 type Any = any // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -327,6 +328,36 @@ const pure: Group = {
         [relay('bad__name')],
       ),
       c({}),
+    ],
+  },
+  'agent-session/claude.isAgentAppMcpTool': {
+    ts: ([name]) => claude.isAgentAppMcpTool(name as string),
+    cases: [
+      c('read_document'),
+      c('mcp__seuoffice-editor__read_document'),
+      c('mcp__seuoffice-editor__delete_everything'),
+      c('delete_everything'),
+      c('mcp__other__read_document'),
+      c('mcp__seuoffice-editor__mcp__seuoffice-editor__read_pdf'),
+      c('MCP__seuoffice-editor__read_document'),
+      c('propose_skill_install'),
+      c('mcp__seuoffice-editor__'),
+      c(''),
+      c('read_document '),
+    ],
+  },
+  'agent-session/claude.agentUsableRelays': {
+    ts: ([relays]) => claude.agentUsableRelays(relays as Any),
+    cases: [
+      c([relay('notes'), relay('docs')]),
+      c([relay('Notes'), relay('notes'), relay('NOTES')]),
+      c([relay('seuoffice-editor'), relay('SeuOffice-Editor'), relay('ok')]),
+      c([relay('_lead'), relay('trail_'), relay('a__b'), relay('mid_dle'), relay('-dash-')]),
+      c([relay(''), relay(' '), relay('has space'), relay('dot.name'), relay('a/b')]),
+      c([relay('caf\u00e9'), relay('\u65e5\u672c'), relay('ok_1'), relay('ok-2')]),
+      c([relay('a\nb'), relay('x\n'), relay('_'), relay('__'), relay('a_')]),
+      c([relay('a_b_c'), relay('A_b_C')]),
+      c([]),
     ],
   },
   'agent-session/codex.THREAD_START_TIMEOUT_MS': {

@@ -354,5 +354,54 @@
     "find": "[\"cached\", \"live\", \"disabled\"];",
     "replace": "[\"live\", \"cached\", \"disabled\"];",
     "fn": ["agent-session/types.AGENT_CODEX_WEB_SEARCH"]
+  },
+  {
+    "name": "claude: the server prefix of a tool name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "let bare = name.strip_prefix(prefix.as_str()).unwrap_or(name);",
+    "replace": "let bare = name;",
+    "fn": ["agent-session/claude.isAgentAppMcpTool"]
+  },
+  {
+    "name": "claude: the app's own name is taken",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "seen.insert(APP_MCP_SERVER_NAME.to_lowercase());",
+    "replace": "let _ = APP_MCP_SERVER_NAME;",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: relay names are compared without case",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "let key = relay.name.to_lowercase();",
+    "replace": "let key = relay.name.clone();",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no underscore at the start of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "^(?!_)(?!.*__)",
+    "replace": "^(?!.*__)",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no double underscore in a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "(?!.*__)[A-Za-z0-9_-]+(?<!_)$",
+    "replace": "[A-Za-z0-9_-]+(?<!_)$",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no underscore at the end of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "[A-Za-z0-9_-]+(?<!_)$",
+    "replace": "[A-Za-z0-9_-]+$",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: the characters of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "[A-Za-z0-9_-]+",
+    "replace": "[A-Za-z0-9_.-]+",
+    "fn": ["agent-session/claude.agentUsableRelays"]
   }
 ]

@@ -15,6 +15,9 @@ use serde_json::{Value, json};
 
 use super::super::{Answer, CallError, Context, arg};
 use super::world::{call_error, drive};
+use crate::packages::ai_provider::agent_session_claude::{
+    agent_usable_relays, is_agent_app_mcp_tool,
+};
 use crate::packages::ai_provider::agent_session_codex::{
     CODEX_AGENT_PROFILE, CodexAgentDeps, CodexAgentSessionOptions, ProbeSandbox,
     THREAD_START_TIMEOUT_MS, agent_sandbox_unavailable_error, codex_agent_action,
@@ -425,6 +428,25 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             out(codex_elicitation_answer(
                 &record_or_empty(&jv(args, 0)),
                 &relays,
+            ))
+        }
+        "agent-session/claude.isAgentAppMcpTool" => Ok(Some(Value::Bool(is_agent_app_mcp_tool(
+            arg(args, 0).and_then(Value::as_str).unwrap_or(""),
+        )))),
+        "agent-session/claude.agentUsableRelays" => {
+            let relays = relays_of(Some(&jv(args, 0)));
+            out(JsonValue::Array(
+                agent_usable_relays(Some(&relays))
+                    .iter()
+                    .map(|relay| {
+                        object(vec![
+                            ("name", text(&relay.name)),
+                            ("url", text(&relay.url)),
+                            ("token", text(&relay.token)),
+                            ("tools", string_list(&relay.tools)),
+                        ])
+                    })
+                    .collect(),
             ))
         }
         "agent-session/codex.THREAD_START_TIMEOUT_MS" => out(number(THREAD_START_TIMEOUT_MS)),
