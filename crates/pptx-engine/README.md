@@ -123,6 +123,32 @@ ported in batches, not unit by unit:
 Units 1 to 4 below were ported and proven one unit at a time before this
 change; their faults are run with C2.
 
+C2 is on `feat/rust-pptx-c2` (crates/pptx-engine/C2-PLAN.md has its shape).
+The TypeScript engine is frozen in `tools/pptx-diff/reference/`, which the
+gate compares against; `packages/pptx-engine/src` is the binding the
+generator writes (`npx tsx tools/docx-diff/binding/gen.ts --engine pptx`).
+
+Render benchmark (`tools/pptx-diff/bench-render.ts`, 100 rounds after 3
+warm-up rounds, the five largest decks the gate has, open plus
+`buildRenderSlide` of every slide, Node 22 on an M-series MacBook, medians):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 56.7    | 2.5       | 59.3     | 0.0%          |             |
+| wasm                                          | 30.6    | 8.6       | 39.2     | -33.9%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 30.6    | 7.4       | 37.9     | -36.0%        | 2.1%        |
+| wasm, `elementDurableId` in TypeScript        | 30.6    | 6.1       | 36.7     | -38.1%        | 4.2%        |
+| wasm, `groupChildDurableId` in TypeScript     | 32.5    | 8.3       | 40.8     | -31.2%        | -2.7%       |
+| wasm, `isBackgroundLikeElement` in TypeScript | 29.5    | 7.9       | 37.4     | -36.9%        | 3.0%        |
+
+The rule (main, 2026-11-12): an export whose wasm route makes the benchmark
+more than 5% slower stays TypeScript. None does: the largest cost is
+`elementDurableId`, 4.2% of the TypeScript total, so all four cross to Rust.
+The wasm path renders slower (8.6 ms against 2.5 ms: every render-path call
+serializes an element) and opens faster; the opening dominates. Two runs of
+20 rounds gave costs from -11% to +4% for the same exports: the per-export
+column is noise near its size, and the 100-round run is the one recorded.
+
 ## Unit order
 
 Leaves first, the read side before the save side, as in the Word port.
@@ -636,11 +662,11 @@ names. Element ids are rebased to a counter from 0, a fixed uuid stands in for
 `crypto.randomUUID()`, and every zip the gate writes carries one fixed date
 (`stable-zip.ts`), so an input is the same bytes on every run.
 
-| Comparison            | Checks  | Different | Note                                                   |
-| --------------------- | ------- | --------- | ------------------------------------------------------ |
-| First (all groups)    | 137,770 | 11,622    | `evidence/c1-first.*`, kept unedited                   |
-| First, new groups     | 59,128  | 9,949     | 11 groups, 210 functions                               |
-| Last (all groups)     | 144,314 | 0         | but the 2 ledger classes and `generate`'s null numbers |
+| Comparison         | Checks  | Different | Note                                                   |
+| ------------------ | ------- | --------- | ------------------------------------------------------ |
+| First (all groups) | 137,770 | 11,622    | `evidence/c1-first.*`, kept unedited                   |
+| First, new groups  | 59,128  | 9,949     | 11 groups, 210 functions                               |
+| Last (all groups)  | 144,314 | 0         | but the 2 ledger classes and `generate`'s null numbers |
 
 Most of the first differences were the harness, not the port: three groups
 named wrong (never compared), `null` against an absent key in dispatches, a
