@@ -1005,10 +1005,12 @@ dependencies = [
 name = "shell-ipc-d1"
 version = "0.1.0"
 dependencies = [
+ "encoding_rs",
  "jscompat",
  "main-core",
  "serde_json",
  "shell-contract",
+ "url",
 ]
 
 [[package]]
