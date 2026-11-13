@@ -258,7 +258,10 @@ impl Inner {
 }
 
 /// What a read of the branch `body` answers now: its next chunk, the end, the
-/// failure, or `None` while the next chunk is still to come
+/// failure, or `None` while the next chunk is still to come. A branch that is
+/// handed its end or its failure is over: the runtime reads it no more and
+/// sends no cancel for it, so it is dropped here, and its stream with the
+/// last branch (a clone not yet read keeps the stream and its chunks).
 fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
     let Some(branch) = st.bodies.get(&body) else {
         return Some(Ok(Answer::End));
@@ -272,11 +275,16 @@ fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
         st.bodies.get_mut(&body).expect("the branch").next += 1;
         return Some(Ok(Answer::Chunk(chunk)));
     }
-    match &source.end {
-        Some(Ok(())) => Some(Ok(Answer::End)),
-        Some(Err(error)) => Some(Err(error.clone())),
-        None => None,
+    let last = match &source.end {
+        Some(Ok(())) => Ok(Answer::End),
+        Some(Err(error)) => Err(error.clone()),
+        None => return None,
+    };
+    st.bodies.remove(&body);
+    if !st.bodies.values().any(|b| b.source == source_id) {
+        st.sources.remove(&source_id);
     }
+    Some(last)
 }
 
 // ---- fetch ----
@@ -659,4 +667,147 @@ fn trim(st: &mut State, source: Id) {
     let gone = slowest.saturating_sub(source.base).min(source.chunks.len());
     source.chunks.drain(..gone);
     source.base += gone;
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    use main_core::packages::ai_provider::task::{Fetcher, Request};
+    use shell_contract::Hosts;
+    use shell_contract::ipc::{EventSink, Target};
+    use shell_contract::runtime::{Services, Thread, Views, Workers, run_on};
+    use shell_contract::value::IpcValue;
+    use shell_core::core_thread::{CoreThread, ThreadWorkers};
+    use shell_ipc_a::runtime::Driver;
+
+    use super::*;
+    use crate::ipc::outlet::TauriOutlet;
+    use crate::paths::ShellPaths;
+    use crate::views::ViewTable;
+
+    struct NoEvents;
+
+    impl EventSink for NoEvents {
+        fn emit(&self, _: Target, _: &'static str, _: Vec<IpcValue>) {}
+    }
+
+    /// A raw HTTP/1.1 server answering every request with a chunked body
+    fn server() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let _ = stream.write_all(
+                    b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+                      transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
+                );
+            }
+        });
+        address
+    }
+
+    fn held(net: &HttpNet) -> (usize, usize, usize) {
+        let st = Inner::lock(&net.0.state);
+        (st.sources.len(), st.bodies.len(), st.ops.len())
+    }
+
+    /// Bodies read to their end, a clone read after its original, and a
+    /// clone read first: none of it stays with the host afterwards
+    #[test]
+    fn a_body_read_to_its_end_leaves_nothing_behind() {
+        let tokio_rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let handle = tokio_rt.handle().clone();
+        let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
+        let runner = std::thread::spawn(move || {
+            tokio_rt.block_on(async {
+                let _ = stop_rx.await;
+            })
+        });
+        let spawn: Spawn = Arc::new(move |future| {
+            handle.spawn(future);
+        });
+        let net = Arc::new(HttpNet::new(spawn));
+        let core = CoreThread::spawn("http-test-core");
+        let core_thread: Arc<dyn Thread> = core.clone();
+        let views = Arc::new(ViewTable::new(
+            Arc::new(TauriOutlet::default()),
+            core_thread.clone(),
+        ));
+        let services = Services {
+            ui: CoreThread::spawn("http-test-ui"),
+            core: core_thread,
+            workers: Arc::new(ThreadWorkers) as Arc<dyn Workers>,
+            events: Arc::new(NoEvents),
+            views: views as Arc<dyn Views>,
+            paths: Arc::new(ShellPaths::new()),
+            hosts: Arc::new(Hosts::default()),
+        };
+        let url = server();
+        let (tx, rx) = mpsc::channel::<Vec<String>>();
+        let host: shell_ipc_a::NetHost = net.clone();
+        run_on(core.as_ref(), move || {
+            let driver = Driver::new(&services, host);
+            let rt = driver.rt();
+            driver.run(
+                async move {
+                    let mut texts = Vec::new();
+                    for _ in 0..3 {
+                        let response = rt
+                            .fetch(Fetcher::Node, &url, Request::default(), None)
+                            .await
+                            .unwrap();
+                        texts.push(response.text().await.unwrap());
+                    }
+                    let response = rt
+                        .fetch(Fetcher::Node, &url, Request::default(), None)
+                        .await
+                        .unwrap();
+                    let clone = response.clone_response();
+                    texts.push(response.text().await.unwrap());
+                    texts.push(clone.text().await.unwrap());
+                    let response = rt
+                        .fetch(Fetcher::Node, &url, Request::default(), None)
+                        .await
+                        .unwrap();
+                    let clone = response.clone_response();
+                    texts.push(clone.text().await.unwrap());
+                    texts.push(response.text().await.unwrap());
+                    texts
+                },
+                move |texts| {
+                    let _ = tx.send(texts);
+                },
+            );
+            // the driver lives on for the rest of the test process
+            std::mem::forget(driver);
+        });
+        let texts = rx
+            .recv_timeout(Duration::from_secs(20))
+            .expect("the reads ended");
+        assert_eq!(texts, vec!["hello world"; 7]);
+        let end = std::time::Instant::now() + Duration::from_secs(5);
+        while held(&net) != (0, 0, 0) && std::time::Instant::now() < end {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(
+            held(&net),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
+        let _ = stop_tx.send(());
+        let _ = runner.join();
+    }
 }
