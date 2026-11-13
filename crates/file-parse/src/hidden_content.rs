@@ -180,14 +180,24 @@ pub fn file_holds_hidden_content(bytes: &[u8], ext: &str) -> Result<bool, String
         }
         _ => {}
     }
+    /// JSZip's `lastIndexOfSignature` for the end of central directory record,
+    /// with room after it for the record's 22 bytes.
+    fn has_whole_end_record(bytes: &[u8]) -> bool {
+        const END_RECORD: usize = 22;
+        bytes
+            .windows(4)
+            .rposition(|window| window == b"PK\x05\x06")
+            .is_some_and(|at| bytes.len() - at >= END_RECORD)
+    }
     // `JSZip.loadAsync(bytes).catch(() => null)`: a zip JSZip cannot load holds
-    // no mark. JSZip looks for the end record over the whole file, the gate over
-    // its last 64 KiB: only bytes with no end record anywhere fail both. Any
-    // other refusal of the gate stays an error, the closed side.
+    // no mark. JSZip reads the end record at the last signature in the file and
+    // fails when there is none or when fewer than its 22 bytes follow it; the
+    // gate fails on those too. Any other refusal of the gate stays an error,
+    // the closed side.
     let package = match load_zip_package_staged(bytes, &DEFAULT_ZIP_LIMITS, false) {
         Ok(package) => package,
         Err(LoadFailure::Archive(_)) => return Ok(false),
-        Err(_) if !bytes.windows(4).any(|window| window == b"PK\x05\x06") => return Ok(false),
+        Err(_) if !has_whole_end_record(bytes) => return Ok(false),
         Err(failure) => return Err(failure.into_message()),
     };
     let prefix = if kind == "docx" { "word/" } else { "ppt/" };
