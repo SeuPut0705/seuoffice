@@ -102,59 +102,112 @@ const CHANGES: Record<string, unknown[]> = {
     { op: 'replace_blocks', startBlockIndex: 1, endBlockIndex: 1, html: '<p>Replaced.</p>' },
   ],
   'edit the header': [{ op: 'set_header_footer', kind: 'header', text: 'Head 2 {{client phone}}' }],
+  'edit the footer': [{ op: 'set_header_footer', kind: 'footer', text: 'Foot 2 {{client phone}}' }],
+  'add a first-page header': [
+    { op: 'set_header_footer', kind: 'header', view: 'first', text: 'Cover' },
+  ],
+  'set a watermark': [{ op: 'set_watermark', text: 'DRAFT' }],
+  'insert a section break': [{ op: 'insert_section_break', afterBlockIndex: 0 }],
+  'change the page setup': [{ op: 'set_page_setup', orientation: 'landscape' }],
 }
 
-describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s, then saved', (mutation) => {
-  it.each(Object.keys(CHANGES))('%s keeps every hidden run hidden', async (change) => {
-    const { writeFileSync } = await import('node:fs')
-    const { join } = await import('node:path')
-    const JSZip = (await import('jszip')).default
-    const dir = tempDir()
-    const file = await mutatedStoriesDocx(dir, mutation)
-    const ops = join(dir, 'ops.json')
-    writeFileSync(ops, JSON.stringify(CHANGES[change]))
-    const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
-    expect(applied.stdout).not.toContain(SECRET)
-    expect(applied.code).toBe(0)
+const MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
 
-    // the words are kept in the file
-    const zip = await JSZip.loadAsync(readFileSync(file))
-    const parts = await Promise.all(
-      Object.keys(zip.files)
-        .filter((path) => /^word\/[^/]+\.xml$/.test(path))
-        .map((path) => zip.file(path)!.async('string')),
-    )
-    for (const tag of ['B', 'H', 'F', 'C', 'N', 'S']) {
-      expect(parts.some((xml) => xml.includes(`${SECRET}${tag}`))).toBe(true)
-    }
-    // and still withheld from every reader
-    const read = await run([
-      'docs',
-      'read',
-      file,
-      '--full',
-      '--html',
-      '--header-footer',
-      '--comments',
-      '--notes',
-      '--json',
-    ])
-    expect(read.code).toBe(0)
-    expect(read.stdout).not.toContain(SECRET)
-    const detail = read.json().detail
-    expect(detail.items[0].text).toContain('{{client phone}}')
-    if (change === 'edit another paragraph') expect(detail.items[1].text).toBe('Edited please')
-    if (change === 'replace another paragraph') expect(detail.items[1].text).toBe('Replaced.')
-    expect(detail.headerFooter.header).toContain('{{client phone}}')
-    expect(detail.headerFooter.footer).toContain('{{client phone}}')
-    expect(detail.comments.find((c: { id: string }) => c.id === '1').text).toContain('{{')
-    expect(detail.notes.find((n: { id: string }) => n.id === '1').text).toContain('{{')
-    const attachment = await docxToText(new Uint8Array(readFileSync(file))).catch(
-      (err: unknown) => {
-        if (err instanceof RedactionMarkError) return ''
-        throw err
-      },
-    )
-    expect(attachment).not.toContain(SECRET)
-  })
-})
+/** a written story part's root declares the mark, lists it as ignorable and as preserved */
+function expectMarkDirective(path: string, xml: string) {
+  const root = /<(?!\?|!)[\w.:-]+(?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>/.exec(
+    xml.replace(/<!--[\s\S]*?-->/g, ''),
+  )![0]
+  const attrs = new Map(
+    [...root.matchAll(/([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map((m) => [
+      m[1]!,
+      m[2] ?? m[3] ?? '',
+    ]),
+  )
+  const mc = [...attrs].find(([name, value]) => name.startsWith('xmlns:') && value === MC)
+  expect(mc, `${path}: markup compatibility declared`).toBeDefined()
+  const prefix = mc![0].slice('xmlns:'.length)
+  expect(attrs.get('xmlns:go'), `${path}: the mark's namespace`).toBeDefined()
+  expect(attrs.get(`${prefix}:Ignorable`)?.split(/\s+/), `${path}: ignorable`).toContain('go')
+  expect(attrs.get(`${prefix}:PreserveElements`)?.split(/\s+/), `${path}: preserved`).toContain(
+    'go:redact',
+  )
+}
+
+const SAVED = TAG_MUTATION_NAMES.flatMap((mutation) => [
+  { mutation, rels: false },
+  { mutation, rels: true },
+])
+
+describe.each(SAVED)(
+  'tags rewritten: $mutation (.rels too: $rels), then saved',
+  ({ mutation, rels }) => {
+    it.each(Object.keys(CHANGES))('%s keeps every hidden run hidden', async (change) => {
+      const { writeFileSync } = await import('node:fs')
+      const { join } = await import('node:path')
+      const JSZip = (await import('jszip')).default
+      const dir = tempDir()
+      const file = await mutatedStoriesDocx(dir, mutation, { rels })
+      const before = await JSZip.loadAsync(readFileSync(file))
+      const original = new Map(
+        await Promise.all(
+          Object.values(before.files)
+            .filter((entry) => !entry.dir)
+            .map(async (entry) => [entry.name, await entry.async('string')] as const),
+        ),
+      )
+      const ops = join(dir, 'ops.json')
+      writeFileSync(ops, JSON.stringify(CHANGES[change]))
+      const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
+      expect(applied.stdout).not.toContain(SECRET)
+      expect(applied.code).toBe(0)
+
+      // the words are kept in the file
+      const zip = await JSZip.loadAsync(readFileSync(file))
+      const parts = await Promise.all(
+        Object.keys(zip.files)
+          .filter((path) => /^word\/[^/]+\.xml$/.test(path))
+          .map((path) => zip.file(path)!.async('string')),
+      )
+      for (const tag of ['B', 'H', 'F', 'C', 'N', 'S']) {
+        expect(parts.some((xml) => xml.includes(`${SECRET}${tag}`))).toBe(true)
+      }
+      // and every story part the save wrote keeps the mark for the next consumer
+      for (const path of Object.keys(zip.files)) {
+        if (!/^word\/[^/]+\.xml$/.test(path)) continue
+        const xml = await zip.file(path)!.async('string')
+        if (xml === original.get(path) || !xml.includes('<go:redact')) continue
+        expectMarkDirective(path, xml)
+      }
+      // and still withheld from every reader
+      const read = await run([
+        'docs',
+        'read',
+        file,
+        '--full',
+        '--html',
+        '--header-footer',
+        '--comments',
+        '--notes',
+        '--json',
+      ])
+      expect(read.code).toBe(0)
+      expect(read.stdout).not.toContain(SECRET)
+      const detail = read.json().detail
+      expect(detail.items[0].text).toContain('{{client phone}}')
+      if (change === 'edit another paragraph') expect(detail.items[1].text).toBe('Edited please')
+      if (change === 'replace another paragraph') expect(detail.items[1].text).toBe('Replaced.')
+      expect(detail.headerFooter.header).toContain('{{client phone}}')
+      expect(detail.headerFooter.footer).toContain('{{client phone}}')
+      expect(detail.comments.find((c: { id: string }) => c.id === '1').text).toContain('{{')
+      expect(detail.notes.find((n: { id: string }) => n.id === '1').text).toContain('{{')
+      const attachment = await docxToText(new Uint8Array(readFileSync(file))).catch(
+        (err: unknown) => {
+          if (err instanceof RedactionMarkError) return ''
+          throw err
+        },
+      )
+      expect(attachment).not.toContain(SECRET)
+    })
+  },
+)
