@@ -46,7 +46,8 @@ const sha = (text: string): string => createHash('sha256').update(text).digest('
 // save-conflict
 // ---------------------------------------------------------------------------
 
-const MTIME = 1_700_000_000_123
+/** whole seconds: a file's time set from it reads back exactly, so equal times are equal */
+const MTIME = 1_700_000_000_000
 const at = (text: string, mtimeMs = MTIME): FileSpec => ({ text, mtimeMs })
 const state = (text: string, mtimeMs = MTIME): DiskState => ({
   mtimeMs,
@@ -352,6 +353,7 @@ const suggestCases: Case[] = cases(
   ['https://example.com/a.png.txt', 'image/bmp'],
   ['https://example.com/.png', null],
   ['https://example.com/a.webp#frag', null],
+  ['https://example.com/dir/photo', 'image/jpeg'],
 )
 
 const PNG = '89504e470d0a1a0a'
@@ -1060,6 +1062,20 @@ const clickCases: Case[] = [
       },
     ],
     note: 'an app on its own',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        contents: DEV_CONTENTS,
+        steps: [
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 11 },
+        ],
+      },
+    ],
+    note: 'closed from its own window, then the DevTools window has the focus',
   },
 ]
 
