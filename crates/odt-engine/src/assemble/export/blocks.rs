@@ -463,7 +463,7 @@ impl<'a> BlockNormaliser<'a> {
             let mut run = Run::default();
             run.text.set(String::new());
             run.image.set(docx_engine::model::RunImage {
-                data_url: data_url.to_owned(),
+                data_url: data_url.into(),
                 xml: drawing.unwrap_or_else(|| {
                     format!(
                         "<w:drawing><wp:inline><wp:extent cx=\"{}\" cy=\"{}\"/></wp:inline></w:drawing>",

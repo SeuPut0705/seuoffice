@@ -223,7 +223,7 @@ pub fn picture_run(bytes: &[u8], cx: f64, cy: f64, name: &str) -> Run {
     let mut run = Run::default();
     run.text.set(String::new());
     run.image.set(RunImage {
-        data_url: data_url_of(bytes),
+        data_url: data_url_of(bytes).into(),
         xml: drawing_xml(cx, cy, name),
         ..RunImage::default()
     });
@@ -236,7 +236,7 @@ pub fn label_run(kind: ExportObjectKind, cx: f64, cy: f64) -> Run {
     let mut run = Run::default();
     run.text.set(String::new());
     run.image.set(RunImage {
-        data_url: String::new(),
+        data_url: String::new().into(),
         xml: drawing_xml(cx, cy, &format!("{LABEL_PREFIX}{}", kind.as_str())),
         ..RunImage::default()
     });

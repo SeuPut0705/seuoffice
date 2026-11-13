@@ -385,7 +385,7 @@ fn write_image_item(
     let data_url: Option<String> = item
         .blocks
         .first()
-        .and_then(|b| b.image_data_url.as_ref().cloned());
+        .and_then(|b| b.image_data_url.as_deref().map(str::to_owned));
     if let Some(host) = &host {
         st.borrow_mut().claimed_hosts.insert(host.paragraph.id);
     }
@@ -420,9 +420,9 @@ fn write_image_item(
             run.text.set(String::new());
             run.image.set(RunImage {
                 data_url: if i == 0 {
-                    data_url.clone().unwrap_or_default()
+                    data_url.clone().unwrap_or_default().into()
                 } else {
-                    String::new()
+                    String::new().into()
                 },
                 xml: d.clone(),
                 ..Default::default()
