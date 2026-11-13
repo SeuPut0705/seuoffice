@@ -23,17 +23,31 @@ use main_core::shell::generate::open_materials::{OpenDocumentTab, SaveAnswer, Sa
 use main_core::shell::renderer_disposal::Failure;
 use main_core::shell::title_bar_overlay::TitleBarOverlay;
 use shell_contract::{Hosts, ViewId, WindowId};
-use shell_ipc_a::generate::GenerateWindowEvents;
+use shell_ipc_a::Factory;
 use shell_ipc_a::generate::host::{GenerateShell, GenerateShellHost, TabContents};
+use shell_ipc_a::generate::{GenerateWindowEvents, GenerateWindowPort};
+use shell_ipc_a::ports::GenerateWindow as GenerateWindowChannels;
 
 use super::{NOT_BUILT, current_lang, now_ms, unbuilt};
 use crate::host::HostContext;
+use crate::host::menu::attach_make_window;
 use crate::paths::ShellPaths;
 
 pub(super) fn install(hosts: &mut Hosts, _cx: &HostContext) {
     let shell: GenerateShellHost = Arc::new(ShellGenerate);
     hosts.insert(shell);
-    hosts.insert(shell_ipc_a::generate::factory());
+    // the port, then, on the same core thread, its hand-off store and make
+    // window handed to the menus' document links (M)
+    let build = shell_ipc_a::generate::factory().0;
+    hosts.insert(Factory::<dyn GenerateWindowChannels>::new(
+        move |services, provided| {
+            let port = build(services, provided)?;
+            if let Some(window) = provided.all::<GenerateWindowPort>().into_iter().next() {
+                attach_make_window(window.handoff_store(), window.make_window_opener());
+            }
+            Ok(port)
+        },
+    ));
 }
 
 struct ShellGenerate;
