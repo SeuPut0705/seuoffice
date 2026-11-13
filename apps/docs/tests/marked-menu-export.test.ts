@@ -410,3 +410,24 @@ describe('the Hangul copy', () => {
     expect(await docxHoldsHiddenContent(hwpDocx[0])).toBe(false)
   })
 })
+
+describe('Markdown exported without the marks', () => {
+  beforeEach(() => {
+    ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
+    installDesktop()
+  })
+  afterEach(() => {
+    while (editors.length) editors.pop()!.destroy()
+    vi.restoreAllMocks()
+  })
+
+  it('holds the person’s own words, no placeholder, and the document keeps its marks', async () => {
+    const ctx = await openDoc(true)
+    desktop.confirmMarkedExport.mockResolvedValue('clear')
+    expect(await exportMarkdown(ctx)).toBe(true)
+    const markdown = String(desktop.exportMarkdown.mock.calls.at(-1)?.[1] ?? '')
+    expect(markdown).toContain(`Call ${SECRET}`)
+    expect(markdown).not.toContain('{{')
+    expect(JSON.stringify(ctx.editor!.state.doc.toJSON())).toContain('redaction')
+  })
+})
