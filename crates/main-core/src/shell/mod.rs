@@ -35,6 +35,7 @@ pub mod pdf_save_as_formats;
 pub mod permission_guard;
 pub mod pointer_size;
 pub mod quick_look;
+pub mod projects;
 pub mod recent_files;
 pub mod recovery_shell;
 pub mod rename_validation;

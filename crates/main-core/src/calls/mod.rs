@@ -14,6 +14,7 @@ mod b2_misc;
 mod b2_print;
 mod b2_recovery;
 mod b2_remote;
+mod b3_projects;
 mod b3_session;
 mod b3_shell;
 mod b3_update;
@@ -106,6 +107,7 @@ const GROUPS: &[Group] = &[
     b6_apps::call,
     b6_tabs::call,
     w_shell::call,
+    b3_projects::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

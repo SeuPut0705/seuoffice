@@ -1,0 +1,385 @@
+[
+  {
+    "name": "cloud-files: the offline attribute bit is the wrong one",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "pub const FILE_ATTRIBUTE_OFFLINE: i32 = 0x1000;",
+    "replace": "pub const FILE_ATTRIBUTE_OFFLINE: i32 = 0x2000;",
+    "fn": [
+      "cloud-files.FILE_ATTRIBUTE_OFFLINE",
+      "cloud-files.CLOUD_ONLY_ATTRIBUTES",
+      "cloud-files.isCloudOnlyAttributes",
+      "cloud-files.detectCloudOnlyFiles"
+    ]
+  },
+  {
+    "name": "cloud-files: the data access recall bit is the wrong one",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "pub const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: i32 = 0x400000;",
+    "replace": "pub const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: i32 = 0x800000;",
+    "fn": [
+      "cloud-files.FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS",
+      "cloud-files.CLOUD_ONLY_ATTRIBUTES",
+      "cloud-files.isCloudOnlyAttributes",
+      "cloud-files.detectCloudOnlyFiles"
+    ]
+  },
+  {
+    "name": "cloud-files: a negative attribute word counts",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "|| attributes < 0.0",
+    "replace": "|| false",
+    "fn": ["cloud-files.isCloudOnlyAttributes", "cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: a fractional attribute word counts",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "attributes.trunc() != attributes",
+    "replace": "false",
+    "fn": ["cloud-files.isCloudOnlyAttributes"]
+  },
+  {
+    "name": "cloud-files: an attribute word saturates instead of wrapping",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "to_int32(attributes)",
+    "replace": "attributes as i32",
+    "fn": ["cloud-files.isCloudOnlyAttributes", "cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: the default listing timeout",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "pub const DEFAULT_LISTING_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "pub const DEFAULT_LISTING_TIMEOUT_MS: f64 = 10_000.0;",
+    "fn": [
+      "cloud-files.DEFAULT_LISTING_TIMEOUT_MS",
+      "cloud-files.detectCloudOnlyFiles",
+      "cloud-files.resolveCloudOnly"
+    ]
+  },
+  {
+    "name": "cloud-files: the biggest safe integer is refused",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "<= 9_007_199_254_740_991.0",
+    "replace": "< 9_007_199_254_740_991.0",
+    "fn": ["cloud-files.parseAttributeListing"]
+  },
+  {
+    "name": "cloud-files: output after END is accepted",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if finished {",
+    "replace": "if false {",
+    "fn": ["cloud-files.parseAttributeListing", "cloud-files.createPowerShellAttributeReader"]
+  },
+  {
+    "name": "cloud-files: an entry line may have more fields",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "fields.len() != 3",
+    "replace": "fields.len() < 3",
+    "fn": ["cloud-files.parseAttributeListing"]
+  },
+  {
+    "name": "cloud-files: a folder that could not be listed keeps taking entries",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "current = None;",
+    "replace": "current = current.take();",
+    "fn": ["cloud-files.parseAttributeListing"]
+  },
+  {
+    "name": "cloud-files: a negative directory index is read as the first",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if index < 0.0 ||",
+    "replace": "if index < -1.0 ||",
+    "fn": ["cloud-files.parseAttributeListing"]
+  },
+  {
+    "name": "cloud-files: an ambiguous case-folded name is taken",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if matches == 1 {",
+    "replace": "if matches >= 1 {",
+    "fn": ["cloud-files.detectCloudOnlyFiles", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: the exact name no longer wins over the case-folded ones",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if let Some(exact) = entries.get(name) {",
+    "replace": "if let Some(exact) = entries.get(name).filter(|_| false) {",
+    "fn": ["cloud-files.detectCloudOnlyFiles", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: folders that differ in case are listed twice",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "let key = parent.to_lowercase();",
+    "replace": "let key = parent.clone();",
+    "fn": ["cloud-files.detectCloudOnlyFiles", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: a path without a name is listed",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if name.is_empty() {",
+    "replace": "if false {",
+    "fn": ["cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: a lone carriage return is not a line break",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "[\\r\\n]",
+    "replace": "[\\n]",
+    "fn": ["cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: a root-relative path is absolute",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "[\\\\/]{2}",
+    "replace": "[\\\\/]{1}",
+    "fn": ["cloud-files.detectCloudOnlyFiles", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: case is kept on macOS",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "platform == \"win32\" || platform == \"darwin\"",
+    "replace": "platform == \"win32\"",
+    "fn": [
+      "cloud-files.knownSyncFolders",
+      "cloud-files.isUnderKnownSyncFolder",
+      "cloud-files.resolveCloudOnly"
+    ]
+  },
+  {
+    "name": "cloud-files: a sibling folder with the same prefix is inside",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "p.starts_with(&format!(\"{r}{sep}\"))",
+    "replace": "p.starts_with(&r)",
+    "fn": ["cloud-files.isUnderKnownSyncFolder", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: the root itself is not inside it",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if p == r {",
+    "replace": "if false {",
+    "fn": ["cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the Windows home reads HOME",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "env.get(\"USERPROFILE\")",
+    "replace": "env.get(\"HOME\")",
+    "fn": ["cloud-files.knownSyncFolders", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the Backup and Sync folder is not a root",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "candidates.push(win32::join(&[&home, \"Google Drive\"]));",
+    "replace": "",
+    "fn": ["cloud-files.knownSyncFolders", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the consumer OneDrive variable is misspelled",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "\"OneDriveConsumer\"",
+    "replace": "\"OneDriveConsumr\"",
+    "fn": ["cloud-files.knownSyncFolders", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the same root twice is listed twice",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if seen.has(&key) {",
+    "replace": "if false {",
+    "fn": ["cloud-files.knownSyncFolders"]
+  },
+  {
+    "name": "cloud-files: a relative root is kept",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if !is_absolute_for(platform, &candidate) {",
+    "replace": "if false {",
+    "fn": ["cloud-files.knownSyncFolders"]
+  },
+  {
+    "name": "cloud-files: Shared drives is not a streaming top folder",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "\"shared drives\",",
+    "replace": "\"shared drivez\",",
+    "fn": ["cloud-files.isOnGoogleDriveStream", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the Korean My Drive is not a streaming top folder",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "\"내 드라이브\",",
+    "replace": "\"내 드라이브x\",",
+    "fn": ["cloud-files.isOnGoogleDriveStream", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: shortcut targets are not a streaming top folder",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "\".shortcut-targets-by-id\",",
+    "replace": "\".shortcut-targets-by-idx\",",
+    "fn": ["cloud-files.isOnGoogleDriveStream"]
+  },
+  {
+    "name": "cloud-files: the streaming drive folder is compared with its case",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "top.to_lowercase()",
+    "replace": "top.to_string()",
+    "fn": ["cloud-files.isOnGoogleDriveStream", "cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: a bare GoogleDrive- mount is taken",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "(-[^/]+)?",
+    "replace": "(-[^/]*)?",
+    "fn": ["cloud-files.isUnderKnownSyncFolder", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: OneDrive under CloudStorage is not taken",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "top.starts_with(\"onedrive\")",
+    "replace": "top.starts_with(\"onedriv_\")",
+    "fn": ["cloud-files.isUnderKnownSyncFolder", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: a GoogleDrive folder without a dash under CloudStorage is taken",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "top.starts_with(\"googledrive-\")",
+    "replace": "top.starts_with(\"googledrive\")",
+    "fn": ["cloud-files.isUnderKnownSyncFolder"]
+  },
+  {
+    "name": "cloud-files: the streaming drive is not checked on Windows",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "return is_on_google_drive_stream(path, platform);",
+    "replace": "return false;",
+    "fn": ["cloud-files.isUnderKnownSyncFolder", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: a local answer on the streaming drive is trusted",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "|| is_on_google_drive_stream(path, platform)",
+    "replace": "|| false",
+    "fn": ["cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: a local file counts as not on this PC",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "out.set(path, false);",
+    "replace": "out.set(path, true);",
+    "fn": ["cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "cloud-files: the PowerShell program is asked for interaction",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "\"-NonInteractive\"",
+    "replace": "\"-Interactive\"",
+    "fn": [
+      "cloud-files.createPowerShellAttributeReader",
+      "cloud-files.detectCloudOnlyFiles",
+      "cloud-files.resolveCloudOnly"
+    ]
+  },
+  {
+    "name": "cloud-files: the script is encoded big endian",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "u16::to_le_bytes",
+    "replace": "u16::to_be_bytes",
+    "fn": ["cloud-files.createPowerShellAttributeReader", "cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: the last directory has no line end",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "format!(\"{}\\n\", dirs.join(\"\\n\"))",
+    "replace": "dirs.join(\"\\n\")",
+    "fn": ["cloud-files.createPowerShellAttributeReader", "cloud-files.detectCloudOnlyFiles"]
+  },
+  {
+    "name": "cloud-files: a non-Windows platform reaches the reader",
+    "file": "main-core/src/shell/projects/cloud_files.rs",
+    "find": "if options.platform != \"win32\" {",
+    "replace": "if false {",
+    "fn": ["cloud-files.detectCloudOnlyFiles", "cloud-files.resolveCloudOnly"]
+  },
+  {
+    "name": "process: SYSTEMROOT is not read",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "\"SYSTEMROOT\"",
+    "replace": "\"SYSTEMROOX\"",
+    "fn": ["cloud-files.createPowerShellAttributeReader"]
+  },
+  {
+    "name": "process: a percent sign is allowed in the system folder",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "|%\\r\\n]",
+    "replace": "|\\r\\n]",
+    "fn": ["cloud-files.createPowerShellAttributeReader"]
+  },
+  {
+    "name": "process: a trailing separator is refused",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "\\\\?$",
+    "replace": "$",
+    "fn": ["cloud-files.createPowerShellAttributeReader"]
+  },
+  {
+    "name": "process: only one folder level is allowed",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "+)+",
+    "replace": "+)",
+    "fn": ["cloud-files.createPowerShellAttributeReader"]
+  },
+  {
+    "name": "process: the default system folder",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "\"C:\\\\Windows\"",
+    "replace": "\"C:\\\\WinNT\"",
+    "fn": [
+      "cloud-files.createPowerShellAttributeReader",
+      "cloud-files.detectCloudOnlyFiles",
+      "cloud-files.resolveCloudOnly"
+    ]
+  },
+  {
+    "name": "cloud-cache: a verdict lives one millisecond longer",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "at - entry.at >= ttl",
+    "replace": "at - entry.at > ttl",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: a verdict is dated when the call began",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "at: done_at,",
+    "replace": "at,",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: the default time",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "unwrap_or(CONTEXT_CLOUD_CACHE_MS)",
+    "replace": "unwrap_or(0.0)",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: the time of the context list",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "pub const CONTEXT_CLOUD_CACHE_MS: f64 = 60_000.0;",
+    "replace": "pub const CONTEXT_CLOUD_CACHE_MS: f64 = 30_000.0;",
+    "fn": ["cloud-cache.CONTEXT_CLOUD_CACHE_MS", "cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: a failed run is swallowed",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "self.resolve.resolve(&asked)?",
+    "replace": "self.resolve.resolve(&asked).unwrap_or_default()",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: a remembered verdict is answered upside down",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "Some(entry) => out.set(path.clone(), entry.cloud_only),",
+    "replace": "Some(entry) => out.set(path.clone(), !entry.cloud_only),",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  },
+  {
+    "name": "cloud-cache: expired verdicts are never dropped",
+    "file": "main-core/src/shell/projects/cloud_cache.rs",
+    "find": "if self.known.iter().any(|(_, entry)| expired(entry)) {",
+    "replace": "if false {",
+    "fn": ["cloud-cache.createCachedCloudResolver"]
+  }
+]
