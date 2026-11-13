@@ -4282,6 +4282,7 @@ dependencies = [
  "cef",
  "clipboard-rs",
  "dirs 6.0.0",
+ "jscompat",
  "main-core",
  "open",
  "percent-encoding",

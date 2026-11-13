@@ -13,6 +13,7 @@
 //! the submodules.
 
 mod cef_ops;
+mod context;
 
 pub(crate) use cef_ops::{host_of, print_preview};
 
@@ -76,6 +77,7 @@ static APP: OnceLock<AppHandle> = OnceLock::new();
 
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let _ = APP.set(cx.app.clone());
+    context::install(&cx.app, cx.views.clone(), cx.windows.clone());
     let host: MHostRef = Arc::new(ShellM {
         app: cx.app.clone(),
         ui: cx.ui.clone(),
