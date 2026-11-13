@@ -4,8 +4,8 @@
  * producer), so a start tag read with `<name[^>]*>` stops inside the value: a
  * part rewritten from that cut tag is not well-formed.
  */
-
 import { maskOpaque } from './xml-utils'
+import { invoke } from './engine'
 
 export interface StartTag {
   start: number
@@ -14,9 +14,7 @@ export interface StartTag {
   text: string
   selfClosing: boolean
 }
-
 const NAME_CHAR = /[\w.:-]/
-
 /**
  * The first start tag at or after `from` whose qualified name is `name` (or
  * matches it, a RegExp tested against the whole name; no name = any element),
@@ -46,7 +44,6 @@ export function findStartTag(xml: string, name?: string | RegExp, from = 0): Sta
   }
   return null
 }
-
 /**
  * `xml` without the elements named `name`: a self-closing one is one element,
  * a paired one runs to its own close tag (the element must not nest itself,
@@ -54,25 +51,8 @@ export function findStartTag(xml: string, name?: string | RegExp, from = 0): Sta
  * its > (`</w:pPrChange >`), as XML allows. `limit` stops after that many.
  */
 export function removeElements(xml: string, name: string, limit = Infinity): string {
-  const close = new RegExp(`</${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*>`, 'g')
-  let out = xml
-  let from = 0
-  for (let n = 0; n < limit; n++) {
-    const tag = findStartTag(out, name, from)
-    if (!tag) break
-    let end = tag.end
-    if (!tag.selfClosing) {
-      close.lastIndex = tag.end
-      const found = close.exec(out)
-      if (!found) break
-      end = found.index + found[0].length
-    }
-    out = out.slice(0, tag.start) + out.slice(end)
-    from = tag.start
-  }
-  return out
+  return invoke('removeElements', [xml, name, Number.isFinite(limit) ? limit : null]) as never
 }
-
 /** the index of the `>` that ends the start tag whose name ends at `from`, read through quoted attribute values; -1 when it never ends */
 function startTagEnd(xml: string, from: number): number {
   for (let quote = '', i = from; i < xml.length; i++) {
@@ -84,19 +64,13 @@ function startTagEnd(xml: string, from: number): number {
   }
   return -1
 }
-
 /**
  * What an element holds: its XML between its start tag and its end tag (the
  * last one in `xml`, which is the element's own). '' for a self-closing element.
  */
 export function elementInner(xml: string): string {
-  const masked = maskOpaque(xml)
-  const open = findStartTag(masked)
-  if (!open || open.selfClosing) return ''
-  const close = masked.lastIndexOf('</')
-  return close < open.end ? '' : xml.slice(open.end, close)
+  return invoke('elementInner', [xml]) as never
 }
-
 /**
  * Top-level segments of `tag` between [from, to), depth-aware for nesting.
  * Tags are read the way an XML parser reads them: markup inside a comment, a
@@ -138,7 +112,6 @@ export function xmlSegments(
   }
   return segs
 }
-
 /**
  * `xml` with each top-level `tag` element (to its own end tag, nested ones
  * inside it) replaced by `replace(element)`; `replace` returns '' to drop it.
@@ -157,8 +130,7 @@ export function replaceSegments(
   }
   return cursor === 0 ? xml : out + xml.slice(cursor)
 }
-
 /** `xml` without its top-level `tag` elements */
 export function removeSegments(xml: string, tag: string): string {
-  return replaceSegments(xml, tag, () => '')
+  return invoke('removeSegments', [xml, tag]) as never
 }

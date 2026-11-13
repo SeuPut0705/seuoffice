@@ -1,0 +1,73 @@
+[workspace]
+members = [
+  "jscompat",
+  "ooxml-xml",
+  "ooxml-pkg",
+  "docx-engine",
+  "pptx-engine",
+  "mtx",
+  "omml",
+  "office-wasm",
+  "spike-one-run-save",
+]
+# third-party source carried with patches, outside fmt, clippy and the workspace tests
+exclude = ["vendor"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+jscompat = { path = "jscompat" }
+ooxml-xml = { path = "ooxml-xml" }
+ooxml-pkg = { path = "ooxml-pkg" }
+# without icu-collation: each member names it, so the wasm build can leave it out
+docx-engine = { path = "docx-engine", default-features = false }
+pptx-engine = { path = "pptx-engine" }
+mtx = { path = "mtx" }
+omml = { path = "omml" }
+# the decoders of the Encoding Standard, which TextDecoder follows
+encoding_rs = "0.8"
+# the inflater the zip crate already uses; entries are read without its CRC check
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+# the platform's random source (WASI random_get on wasm32): Math.random and
+# crypto.randomUUID
+getrandom = "0.4"
+# fdlibm in Rust: Math.pow as V8 computes it, whatever libm the platform has
+libm = "0.2"
+# ECMAScript regular expressions: patterns are ported by copying them;
+# utf16: a text outside the BMP is searched as UTF-16 units, as JavaScript does
+regress = { version = "0.12", features = ["utf16"] }
+# shortest float digits with the tie rule of JavaScript
+ryu = "1"
+serde = { version = "1", features = ["derive"] }
+# preserve_order: a value keeps its keys in the order they were written, as a
+# JavaScript object does; without it serde_json::Value sorts them
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+# SHA-512 of the document protection hash
+sha2 = "0.10"
+zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+# regress 0.12.0 with a bounded backtrack stack and lazy loops that do not walk
+# ahead: see vendor/regress/VENDORED.md
+[patch.crates-io]
+regress = { path = "vendor/regress" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# The fault probes of tools/pptx-diff: the release semantics (no overflow
+# checks, panic = abort) with builds that take seconds after one edit
+[profile.probe]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
+incremental = true

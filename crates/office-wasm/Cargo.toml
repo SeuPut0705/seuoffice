@@ -1,0 +1,29 @@
+[package]
+name = "office-wasm"
+description = "The document engines for JavaScript hosts, built for wasm32-wasip1 as a reactor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+docx-engine.workspace = true
+pptx-engine.workspace = true
+mtx.workspace = true
+jscompat.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+omml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+# the wasm build sorts with the host's Intl.Collator; a native build of the tests has none
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+docx-engine = { workspace = true, features = ["icu-collation"] }
+
+[dev-dependencies]
+zip.workspace = true

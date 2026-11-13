@@ -1,0 +1,95 @@
+{
+  "faults": [
+    {
+      "name": "B4: withheldLabelOf reads a mark without a label as having none instead of 'private'",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "        .unwrap_or(\"private\");\n    Some(decode_entities(label))",
+      "new": "        .unwrap_or(\"\");\n    Some(decode_entities(label))"
+    },
+    {
+      "name": "B4: hasWithheldTrace answers false for every part",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "    js_regex!(MARK_RE).test(xml)\n}",
+      "new": "    js_regex!(MARK_RE).test(xml) && xml.is_empty()\n}"
+    },
+    {
+      "name": "B4: withheldBlockLabel of an unparsable block finds no mark",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "        None => has_withheld_trace(block_xml).then(|| \"private\".to_owned()),",
+      "new": "        None => None,"
+    },
+    {
+      "name": "B4: runsText reads w:delText as shown text",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "                Some(\"w:instrText\" | \"w:delInstrText\" | \"w:delText\") => {}",
+      "new": "                Some(\"w:instrText\" | \"w:delInstrText\") => {}"
+    },
+    {
+      "name": "B4: firstMarkLabel keeps an empty label instead of 'private'",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": ".and_then(|mark| mark.attr(\"w:label\").filter(|label| !label.is_empty()))",
+      "new": ".and_then(|mark| mark.attr(\"w:label\"))"
+    },
+    {
+      "name": "B4: overWithheld leaves runs holding a drawing unmarked",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "<w:t(?:\\s[^>]*)?>[^<]*\\S[^<]*<\\/w:t>|<w:(?:drawing|pict|object|sym)[\\s>/]|<mc:AlternateContent[\\s>]",
+      "new": "<w:t(?:\\s[^>]*)?>[^<]*\\S[^<]*<\\/w:t>|<w:(?:pict|object|sym)[\\s>/]|<mc:AlternateContent[\\s>]"
+    },
+    {
+      "name": "B4: cutLabel keeps half of a surrogate pair at the label's end",
+      "group": "withheld",
+      "file": "crates/docx-engine/src/withheld.rs",
+      "old": "    if (0xD800..=0xDBFF).contains(&units[end - 1]) {",
+      "new": "    if (0xD800..=0xDBFF).contains(&units[end - 1]) && end == 0 {"
+    },
+    {
+      "name": "B4: clearHiddenMarks cuts marks inside CDATA too",
+      "group": "hiddenContent",
+      "file": "crates/docx-engine/src/hidden_content.rs",
+      "old": "        out.push_str(&cut(&xml[at..section.start()])?);\n        out.push_str(section.as_str());",
+      "new": "        out.push_str(&cut(&xml[at..section.start()])?);\n        out.push_str(&cut(section.as_str())?);"
+    },
+    {
+      "name": "B4: holdsMark ignores a mark element without a prefix",
+      "group": "hiddenContent",
+      "file": "crates/docx-engine/src/hidden_content.rs",
+      "old": "        || js_regex!(r\"<(?:[\\w.-]+:)?redact[\\s/>]\").test(&text)",
+      "new": "        || js_regex!(r\"<(?:[\\w.-]+:)redact[\\s/>]\").test(&text)"
+    },
+    {
+      "name": "B4: noteModelText counts a deleted hidden run",
+      "group": "section",
+      "file": "crates/docx-engine/src/notes.rs",
+      "old": "            .any(|run| run.redact.is_some() && run.del.is_none())",
+      "new": "            .any(|run| run.redact.is_some())"
+    },
+    {
+      "name": "B4: a hidden field instruction no longer hides the result",
+      "group": "parse",
+      "file": "crates/docx-engine/src/parse/text/extract_runs.rs",
+      "old": "            mark.insert(\"rawRPr\".to_owned(), Value::from(raw.as_str()));",
+      "new": "            let _ = raw;"
+    },
+    {
+      "name": "B4: the last hidden instruction run wins over the first",
+      "group": "parse",
+      "file": "crates/docx-engine/src/parse/text/extract_runs.rs",
+      "old": "                if self.field_instr_hidden.is_none()\n                    && let Some(r_pr) = node.find_child(\"w:rPr\")",
+      "new": "                if let Some(r_pr) = node.find_child(\"w:rPr\")"
+    },
+    {
+      "name": "B4: a marked chart part gives its display no redact",
+      "group": "parse",
+      "file": "crates/docx-engine/src/parse/drawings/media.rs",
+      "old": "            display.redact.set(redact);",
+      "new": "            let _ = redact;"
+    }
+  ]
+}

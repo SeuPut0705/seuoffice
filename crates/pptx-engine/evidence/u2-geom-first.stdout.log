@@ -1,0 +1,46 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(f) geom on the corpus, checks                 compared      3  floor missing  BELOW FLOOR  differences 0
+(f) geom on built inputs, checks               compared    695  floor missing  BELOW FLOOR  differences 11  (TypeScript threw in 2: Rust must refuse those too)
+    - built 142: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"x","fmla":"val constructor"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 143: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"x","fmla":"val toString"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 144: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"x","fmla":"val __proto__"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 145: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"x","fmla":"*/ hasOwnProperty 2 1"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 146: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"g0","fmla":"val valueOf"},{"name":"g1","fmla":"+- g0 1 0"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 147: pptxGeom.custgeom.evalGuides: pptxGeom.custgeom.evalGuides("", {"gds":[{"name":"__proto__","fmla":"val 5"},{"name":"x","fmla":"val 1"}],"w":200,"h":100})
+      typescript {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+      rust       {"value":{"w":200,"h":100,"ss":100,"ls":200,"hc":100,"vc":50,"l":0,"t":0,"r":200,"b":100,"wd2":100,"wd3":66.66666666666667,"wd4":50,"wd5":40,"wd6":33.333333333333336,"wd8":25,"wd10":20,"wd12":16.666666666666668,"wd32":6.25,"hd2":50,"hd3":33.333333333333336,"hd4":25,"hd5":20,"hd6":16.666666666666668,
+    - built 65: pptxGeom.custgeom.parseCustGeom: pptxGeom.custgeom.parseCustGeom("<a:custGeom><a:pathLst><a:path w=\"100\" h=\"100\"><a:moveTo><a:pt x=\"constructor\" y=\"0\"/></a:moveTo><a:lnTo><a:pt x=\"10\" y=\"10\"/></a:lnTo></a:path></a:pathLst></a:custGeom>", {"shapeW":100,"shapeH":100})
+      typescript {"value":{"path":"M NaN 0 L 0.1 0.1"}}
+      rust       {"value":{"path":"M 0 0 L 0.1 0.1"}}
+    - built 66: pptxGeom.custgeom.parseCustGeom: pptxGeom.custgeom.parseCustGeom("<a:custGeom><a:pathLst><a:path w=\"100\" h=\"100\"><a:moveTo><a:pt x=\"__proto__\" y=\"toString\"/></a:moveTo><a:lnTo><a:pt x=\"10\" y=\"10\"/></a:lnTo></a:path></a:pathLst></a:custGeom>", {"shapeW":100,"shapeH":100})
+      typescript {"value":{"path":"M NaN NaN L 0.1 0.1"}}
+      rust       {"value":{"path":"M 0 0 L 0.1 0.1"}}
+    - built 67: pptxGeom.custgeom.parseCustGeom: pptxGeom.custgeom.parseCustGeom("<a:custGeom><a:gdLst><a:gd name=\"g\" fmla=\"val toString\"/></a:gdLst><a:pathLst><a:path w=\"100\" h=\"100\"><a:moveTo><a:pt x=\"g\" y=\"0\"/></a:moveTo><a:lnTo><a:pt x=\"10\" y=\"10\"/></a:lnTo></a:path></a:pathLst></a:custGeom>", {"shapeW":100,"shapeH":100})
+      typescript {"value":{"path":"M NaN 0 L 0.1 0.1"}}
+      rust       {"value":{"path":"M 0 0 L 0.1 0.1"}}
+    - built 68: pptxGeom.custgeom.parseCustGeom: pptxGeom.custgeom.parseCustGeom("<a:custGeom><a:gdLst><a:gd name=\"__proto__\" fmla=\"val 50\"/></a:gdLst><a:pathLst><a:path w=\"100\" h=\"100\"><a:moveTo><a:pt x=\"__proto__\" y=\"0\"/></a:moveTo><a:lnTo><a:pt x=\"10\" y=\"10\"/></a:lnTo></a:path></a:pathLst></a:custGeom>", {"shapeW":100,"shapeH":100})
+      typescript {"value":{"path":"M NaN 0 L 0.1 0.1"}}
+      rust       {"value":{"path":"M 0.5 0 L 0.1 0.1"}}
+    - built 69: pptxGeom.custgeom.parseCustGeom: pptxGeom.custgeom.parseCustGeom("<a:custGeom><a:pathLst><a:path w=\"100\" h=\"100\"><a:moveTo><a:pt x=\"0\" y=\"0\"/></a:moveTo><a:arcTo wR=\"hasOwnProperty\" hR=\"50\" stAng=\"0\" swAng=\"5400000\"/></a:path></a:pathLst></a:custGeom>", {"shapeW":100,"shapeH":100})
+      typescript {"value":{"path":"M 0 0"}}
+      rust       {"value":{"path":"M 0 0 C 0 0.27614 0 0.5 0 0.5"}}
+(f+) geom on mutated texts, checks             compared    600  floor missing  BELOW FLOOR  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) geom: 7 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 7
+    pptxGeom.custgeom.evalGuides             checks     148  differences      6  key order only      0  distinct results    75  TypeScript threw 0
+    pptxGeom.custgeom.parseCustGeom          checks     370  differences      5  key order only      0  distinct results   117  TypeScript threw 0
+    pptxGeom.custgeom.CUST_GEOM_PT_COUNT     checks      11  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxGeom.custgeom.validCustGeomPath      checks      65  differences      0  key order only      0  distinct results     3  TypeScript threw 2
+    pptxGeom.custgeom.custGeomXml            checks      10  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxGeom.preset-shape-types.PRESET_SHAPE_TYPES checks     191  differences      0  key order only      0  distinct results   188  TypeScript threw 0
+    pptxGeom.preset-shape-types.isPresetShapeType checks     503  differences      0  key order only      0  distinct results     2  TypeScript threw 0

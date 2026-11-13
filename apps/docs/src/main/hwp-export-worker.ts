@@ -4,6 +4,10 @@
  */
 // first: variables set under the old prefix are taken over before anything reads its own
 import '@seuoffice/i18n/old-names-env'
+// the Hangul export reads a docx through @seuoffice/docx-engine: this thread starts its own
+// engine from the file the main process names in SEUOFFICE_WASM (engine-init.ts); a worker
+// chunk cannot carry a ?asset import of its own
+import '@seuoffice/engine-wasm/node'
 import { readFileSync } from 'node:fs'
 import { parentPort } from 'node:worker_threads'
 import { Docx2HwpError, HwpEngine, docxToHwp } from '@seuoffice/docx2hwp'

@@ -1,0 +1,538 @@
+[
+  {
+    "id": "doctype-refused",
+    "reason": "DOCTYPE is refused by policy; the TypeScript XML parser accepts this declaration.",
+    "cases": [
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "c:ser",
+            "c:pt",
+            "c:lvl",
+            "c:dPt"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "cx:data",
+            "cx:lvl",
+            "cx:pt",
+            "cx:series",
+            "cx:dataPt"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "p:embeddedFont"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "a:p",
+            "a:r",
+            "a:br",
+            "a:fld",
+            "p:sp",
+            "p:pic",
+            "p:graphicFrame",
+            "p:grpSp",
+            "p:cxnSp",
+            "a:tr",
+            "a:tc",
+            "a:gridCol"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "p:sp",
+            "p:graphicFrame",
+            "p:pic"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "a:tblStyle"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "Relationship",
+            "sldId",
+            "Override"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "trimValues": false,
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "parseTagValue": false,
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "a",
+            "b",
+            "r",
+            "1",
+            "@_b",
+            "?xml",
+            "#text",
+            ":@",
+            "isPrototypeOf"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": [
+              ""
+            ]
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "trimValues": false,
+          "parseTagValue": false,
+          "arrayNames": [
+            "a",
+            "@_b",
+            "1"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": [
+              ""
+            ]
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<!DOCTYPE a><a/>",
+        "args": {
+          "arrayNames": [
+            "p:sldId",
+            "sldId"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": ""
+          }
+        },
+        "rust": {
+          "error": "document type declarations are not supported"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cdata-opener-splits-surrogate",
+    "reason": "Malformed CDATA opener splits a UTF-16 surrogate pair in TypeScript; Rust strings cannot represent a lone surrogate and refuse it.",
+    "cases": [
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "c:ser",
+            "c:pt",
+            "c:lvl",
+            "c:dPt"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "cx:data",
+            "cx:lvl",
+            "cx:pt",
+            "cx:series",
+            "cx:dataPt"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "p:embeddedFont"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "a:p",
+            "a:r",
+            "a:br",
+            "a:fld",
+            "p:sp",
+            "p:pic",
+            "p:graphicFrame",
+            "p:grpSp",
+            "p:cxnSp",
+            "a:tr",
+            "a:tc",
+            "a:gridCol"
+          ],
+          "trimValues": false,
+          "parseTagValue": false
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "p:sp",
+            "p:graphicFrame",
+            "p:pic"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "a:tblStyle"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "Relationship",
+            "sldId",
+            "Override"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "trimValues": false,
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "parseTagValue": false,
+          "arrayNames": []
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "a",
+            "b",
+            "r",
+            "1",
+            "@_b",
+            "?xml",
+            "#text",
+            ":@",
+            "isPrototypeOf"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": [
+              "\ude00"
+            ]
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "trimValues": false,
+          "parseTagValue": false,
+          "arrayNames": [
+            "a",
+            "@_b",
+            "1"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": [
+              "\ude00"
+            ]
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      },
+      {
+        "fn": "pptxXml.parseObject",
+        "text": "<a><![CDATA😀]]></a>",
+        "args": {
+          "arrayNames": [
+            "p:sldId",
+            "sldId"
+          ]
+        },
+        "typescript": {
+          "value": {
+            "a": "\ude00"
+          }
+        },
+        "rust": {
+          "error": "a surrogate pair would be split"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,104 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(f) theme on the corpus, checks                compared   2432  floor missing  BELOW FLOOR  differences 2
+    - packages/pptx-engine/tests/fixtures/01_standard_business.pptx: pptxTheme.color.applyColorMods: pptxTheme.color.applyColorMods("<a:schemeClr val=\"phClr\"><a:tint val=\"100000\"/><a:shade val=\"100000\"/><a:satMod val=\"130000\"/></a:schemeClr>", {"hex":"#4F81BD","name":"a:schemeClr"})
+      typescript {"value":"#3E7FCE"}
+      rust       {"value":"#3F7FCE"}
+    - packages/pptx-engine/tests/fixtures/05_unicode_cjk_emoji.pptx: pptxTheme.color.applyColorMods: pptxTheme.color.applyColorMods("<a:schemeClr val=\"phClr\"><a:tint val=\"100000\"/><a:shade val=\"100000\"/><a:satMod val=\"130000\"/></a:schemeClr>", {"hex":"#4F81BD","name":"a:schemeClr"})
+      typescript {"value":"#3E7FCE"}
+      rust       {"value":"#3F7FCE"}
+(f) theme on built inputs, checks              compared   1500  floor missing  BELOW FLOOR  differences 27  (TypeScript threw in 20: Rust must refuse those too)
+    - built 34: pptxTheme.theme.parseTheme: pptxTheme.theme.parseTheme("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window, {})
+      typescript {"value":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"M","minorFont":"m","minorScriptFonts":{"Jpa
+      rust       {"value":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"M","minorFont":"m","majorScriptFonts":{"__p
+    - built 137: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("bg1", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":"[function]"}
+      rust       {}
+    - built 138: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("tx1", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":"[function]"}
+      rust       {}
+    - built 139: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("bg2", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":{}}
+      rust       {}
+    - built 140: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("tx2", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":"[function]"}
+      rust       {}
+    - built 141: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("accent1", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":"[function]"}
+      rust       {}
+    - built 142: pptxTheme.theme.resolveSchemeColor: pptxTheme.theme.resolveSchemeColor("accent2", {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":"[function]"}
+      rust       {}
+    - built 571: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"bg1\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 572: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"tx1\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 573: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"bg2\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 574: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"tx2\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 575: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"accent1\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 576: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:schemeClr val=\"accent2\"><a:lumMod val=\"50000\"/></a:schemeClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 577: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"constructor\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 578: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"toString\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 579: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"__proto__\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 580: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"hasOwnProperty\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 581: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"valueOf\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 582: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"isPrototypeOf\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 583: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"propertyIsEnumerable\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 584: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"toLocaleString\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 585: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"__defineGetter__\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 586: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"Constructor\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 587: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"ToString\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 588: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"HasOwnProperty\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 589: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"ValueOf\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+    - built 590: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"IsPrototypeOf\"/></a:solidFill>", {"name":"a:solidFill"})
+      typescript {"error":"TypeError: hex.replace is not a function"}
+      rust       {}
+(f+) theme on mutated texts, checks            compared   3300  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 228: Rust must refuse those too)
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) theme: 11 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 7 of 11
+    pptxTheme.theme.sysColorHex              checks     370  differences      0  key order only      0  distinct results    73  TypeScript threw 0
+    pptxTheme.theme.parseTheme               checks     342  differences      1  key order only      0  distinct results   170  TypeScript threw 71
+    pptxTheme.theme.themeWithOverride        checks     405  differences      0  key order only      0  distinct results   122  TypeScript threw 35
+    pptxTheme.theme.eaScriptOfLang           checks     338  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxTheme.theme.resolveFontRef           checks    2083  differences      0  key order only      0  distinct results   185  TypeScript threw 0
+    pptxTheme.theme.resolveSchemeColor       checks     605  differences      6  key order only      0  distinct results    34  TypeScript threw 0
+    pptxTheme.theme.parseClrMap              checks     402  differences      0  key order only      0  distinct results    30  TypeScript threw 0
+    pptxTheme.color.resolveColorNode         checks     964  differences     20  key order only      0  distinct results   195  TypeScript threw 75
+    pptxTheme.color.applyColorMods           checks     659  differences      2  key order only      0  distinct results   131  TypeScript threw 67
+    pptxTheme.color.hexToRgb                 checks     440  differences      0  key order only      0  distinct results   173  TypeScript threw 0
+    pptxTheme.color.scaleLuminance           checks     624  differences      0  key order only      0  distinct results   195  TypeScript threw 0

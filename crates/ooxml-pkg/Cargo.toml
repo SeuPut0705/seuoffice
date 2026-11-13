@@ -1,0 +1,17 @@
+[package]
+name = "ooxml-pkg"
+description = "The OOXML package: zip entries and their text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+flate2.workspace = true
+jscompat.workspace = true
+ooxml-xml.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

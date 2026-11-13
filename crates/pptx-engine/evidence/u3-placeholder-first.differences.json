@@ -1,0 +1,1581 @@
+[
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": "[function]"
+          },
+          {
+            "type": "title",
+            "idx": "",
+            "transform": {
+              "offset": {
+                "x": 10,
+                "y": 20,
+                "cx": 300,
+                "cy": 400
+              },
+              "rot": 0,
+              "flipH": false,
+              "flipV": false
+            },
+            "anchor": {}
+          },
+          {
+            "type": "obj",
+            "idx": "3",
+            "transform": null,
+            "anchor": "[function]"
+          },
+          {
+            "type": "subTitle",
+            "idx": "4",
+            "transform": null,
+            "anchor": "[function]"
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": [
+          {
+            "type": "title",
+            "idx": "",
+            "transform": {
+              "offset": {
+                "x": 10,
+                "y": 20,
+                "cx": 300,
+                "cy": 400
+              },
+              "rot": 0,
+              "flipH": false,
+              "flipV": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "title",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": {}
+    },
+    "rust": {
+      "value": "middle"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "ctrTitle",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": {}
+    },
+    "rust": {
+      "value": "middle"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "body",
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "obj",
+      "idx": "3",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "subTitle",
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "body",
+      "idx": "2",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {
+      "value": "top"
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "title"
+    },
+    "typescript": {
+      "value": {}
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "ctrTitle"
+    },
+    "typescript": {
+      "value": {}
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "body",
+      "idx": "1"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "idx": "1"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "obj",
+      "idx": "3"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "subTitle",
+      "idx": "1"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderAnchor",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "body",
+      "idx": "2"
+    },
+    "typescript": {
+      "value": "[function]"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {},
+    "rust": {
+      "value": {
+        "prst": "snipRect"
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "body",
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {},
+    "rust": {
+      "value": {
+        "prst": "snipRect"
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {},
+    "rust": {
+      "value": {
+        "prst": "snipRect"
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"10\" y=\"20\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"subTitle\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "type": "subTitle",
+      "idx": "1",
+      "masterXml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"title\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"1000\" y=\"1000\"/><a:ext cx=\"1000\" cy=\"1000\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"ctr\" tIns=\"7\"/><a:lstStyle><a:lvl1pPr algn=\"r\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"2000\" y=\"2000\"/><a:ext cx=\"2000\" cy=\"2000\"/></a:xfrm><a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill><a:prstGeom prst=\"snipRect\"/></p:spPr><p:txBody><a:bodyPr lIns=\"0\" tIns=\"0\" anchorCtr=\"1\" anchor=\"t\"/><a:lstStyle><a:lvl1pPr><a:defRPr sz=\"3200\" b=\"1\"/></a:lvl1pPr><a:lvl2pPr indent=\"5\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"dt\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor=\"b\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"4000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"ctr\"/></a:lstStyle><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"sldNum\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"5000\" y=\"1\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr><p:txBody><a:bodyPr rIns=\"3\" bIns=\"4\"/><a:p/></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"obj\" idx=\"7\"/></p:nvPr></p:nvSpPr><p:spPr><a:noFill/></p:spPr></p:sp></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:titleStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"4400\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL=\"228600\" indent=\"-228600\"><a:buFont typeface=\"Arial\"/><a:buChar char=\"•\"/><a:defRPr sz=\"2800\"/></a:lvl1pPr><a:lvl2pPr marL=\"685800\"><a:buBlip><a:blip r:embed=\"rId2\"/></a:buBlip></a:lvl2pPr></p:bodyStyle><p:otherStyle><a:lvl1pPr><a:defRPr sz=\"1800\"/></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>"
+    },
+    "typescript": {},
+    "rust": {
+      "value": {
+        "prst": "snipRect"
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"constructor\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": "[function]"
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"toString\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": "[function]"
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"__proto__\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": {}
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"hasOwnProperty\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": "[function]"
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr anchor=\"valueOf\"/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {},
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "anchor": "[function]"
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"constructor\"/></a:lstStyle><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "textStyle": {
+              "levels": [
+                {
+                  "align": "[function]"
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"toString\"/></a:lstStyle><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "textStyle": {
+              "levels": [
+                {
+                  "align": "[function]"
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"__proto__\"/></a:lstStyle><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "textStyle": {
+              "levels": [
+                {
+                  "align": {}
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"hasOwnProperty\"/></a:lstStyle><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "textStyle": {
+              "levels": [
+                {
+                  "align": "[function]"
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parsePlaceholderMap",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"s\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr algn=\"valueOf\"/></a:lstStyle><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "entries": [
+          {
+            "type": "body",
+            "idx": "1",
+            "transform": null,
+            "textStyle": {
+              "levels": [
+                {
+                  "align": "[function]"
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "entries": []
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"constructor\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"constructor\" marL=\"5\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle"
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]",
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "levels": [
+          {
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"toString\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"toString\" marL=\"5\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle"
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]",
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "levels": [
+          {
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"__proto__\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": {}
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"__proto__\" marL=\"5\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle"
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": {},
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "levels": [
+          {
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"hasOwnProperty\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"hasOwnProperty\" marL=\"5\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle"
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]",
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "levels": [
+          {
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"valueOf\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseLstStyleLevels",
+    "text": "<a:lstStyle><a:lvl1pPr algn=\"valueOf\" marL=\"5\"/></a:lstStyle>",
+    "args": {
+      "name": "a:lstStyle"
+    },
+    "typescript": {
+      "value": {
+        "levels": [
+          {
+            "align": "[function]",
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "levels": [
+          {
+            "marL": 5
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseMasterTextStyles",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:bodyStyle><a:lvl1pPr algn=\"constructor\"/></p:bodyStyle></p:txStyles></p:sldMaster>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "body": {
+          "levels": [
+            {
+              "align": "[function]"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "rust": {
+      "value": {}
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseMasterTextStyles",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:bodyStyle><a:lvl1pPr algn=\"toString\"/></p:bodyStyle></p:txStyles></p:sldMaster>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "body": {
+          "levels": [
+            {
+              "align": "[function]"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "rust": {
+      "value": {}
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseMasterTextStyles",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:bodyStyle><a:lvl1pPr algn=\"__proto__\"/></p:bodyStyle></p:txStyles></p:sldMaster>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "body": {
+          "levels": [
+            {
+              "align": {}
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "rust": {
+      "value": {}
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseMasterTextStyles",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:bodyStyle><a:lvl1pPr algn=\"hasOwnProperty\"/></p:bodyStyle></p:txStyles></p:sldMaster>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "body": {
+          "levels": [
+            {
+              "align": "[function]"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "rust": {
+      "value": {}
+    }
+  },
+  {
+    "fn": "pptxPlaceholder.placeholder.parseMasterTextStyles",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:txStyles><p:bodyStyle><a:lvl1pPr algn=\"valueOf\"/></p:bodyStyle></p:txStyles></p:sldMaster>",
+    "args": {
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "majorFont": "Calibri Light",
+        "minorFont": "Calibri",
+        "majorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        },
+        "minorScriptFonts": {
+          "Jpan": "游ゴシック",
+          "Hang": "맑은 고딕",
+          "Hans": "等线",
+          "Hant": "新細明體"
+        }
+      }
+    },
+    "typescript": {
+      "value": {
+        "body": {
+          "levels": [
+            {
+              "align": "[function]"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "rust": {
+      "value": {}
+    }
+  }
+]
