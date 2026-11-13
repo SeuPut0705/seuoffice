@@ -574,6 +574,8 @@ impl TabHooks for Unbuilt {
         unbuilt("TabHooks::set_active_slides_web_contents");
     }
     fn apply_menu_for(&self, _: TabKind) {
+        // M: when host/menu.rs exports `apply_menu_for(&AppHandle, TabKind)`, call it here
+        // (the stand-in has no AppHandle yet: keep one in `Unbuilt` when it does)
         unbuilt("TabHooks::apply_menu_for");
     }
     fn teardown_docs_renderer(&self, _: ViewId) {
