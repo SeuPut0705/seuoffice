@@ -6,6 +6,7 @@ import {
   ATTACHABLE_MAX_BYTES,
 } from '../src/attachable'
 import { callEngine } from '../src/engine'
+import { HIDDEN_CONTENT_EXTENSIONS } from '../src/hidden-content'
 import { WHOLE_ZIP_READ_MAX_BYTES } from '../src/parse'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
 import { UNKNOWN_CELL_MARKER } from '../src/xlsx'
@@ -27,6 +28,7 @@ describe('the exported constants and the Rust readers', () => {
       WHOLE_ZIP_READ_MAX_BYTES,
       PPTX_REDACT_EXT_URI,
       UNKNOWN_CELL_MARKER,
+      HIDDEN_CONTENT_EXTENSIONS,
     }).toEqual({
       ...rust,
       ATTACHABLE_EXTS: [...(rust.ATTACHABLE_EXTS as string[])].sort(),

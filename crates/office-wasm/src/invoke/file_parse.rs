@@ -212,6 +212,20 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "redactPptxPartXml" => string_out(file_parse::pptx_redaction::redact_pptx_part_xml(text(
             args, 0,
         )?)),
+        "fileHoldsHiddenContent" => {
+            file_parse::hidden_content::file_holds_hidden_content(blob(0)?, text(args, 1)?)
+                .map(|holds| Some(Value::Bool(holds)))
+                .map_err(thrown)
+        }
+        "xmlHoldsMark" => Ok(Some(Value::Bool(
+            file_parse::hidden_content::xml_holds_mark(text(args, 0)?),
+        ))),
+        "markdownHoldsMark" => file_parse::hidden_content::markdown_holds_mark(text(args, 0)?)
+            .map(|holds| Some(Value::Bool(holds)))
+            .map_err(thrown),
+        "htmlHoldsMark" => Ok(Some(Value::Bool(
+            file_parse::hidden_content::html_holds_mark(text(args, 0)?),
+        ))),
         // xlsxWithheldCells: a handle on the workbook's record, or null when it withholds nothing
         "xlsxWithheldOpen" => {
             let Some(cells) = file_parse::xlsx::xlsx_withheld_cells(blob(0)?).map_err(thrown)?
@@ -254,6 +268,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
             "WHOLE_ZIP_READ_MAX_BYTES": file_parse::parse::WHOLE_ZIP_READ_MAX_BYTES,
             "PPTX_REDACT_EXT_URI": file_parse::pptx_redaction::PPTX_REDACT_EXT_URI,
             "UNKNOWN_CELL_MARKER": file_parse::xlsx::unknown_cell_marker(),
+            "HIDDEN_CONTENT_EXTENSIONS": file_parse::hidden_content::HIDDEN_CONTENT_EXTENSIONS,
         }))),
         _ => Err(format!("no function fileParse.{name}")),
     }

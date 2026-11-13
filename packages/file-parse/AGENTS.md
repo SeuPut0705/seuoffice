@@ -24,7 +24,8 @@
 - 파일 시스템: 파일 읽기, 큰 zip의 글 파트만 디스크에서 옮기기(`readZipTextParts`, 파일 전체를 wasm 메모리에 올리지 않으려고. wasm 메모리는 줄지 않는다), `diagramPictureExtOf`의 파일 읽기.
 - 기다리는 읽기 셋: PDF(pdfjs), 지도(`xmind-engine`), ODT(`odt-engine`). wasm에서 기다릴 수 없어 `parseFileToText`가 호출 전에 확장자로 골라 읽고 결과를 `hosted`로 넘긴다. 확장자·매직 바이트 검사는 Rust가 먼저 하므로 이름이 틀린 파일은 그 결과를 쓰지 않는다.
 - 호스트 단계(`src/host-steps.ts`): parse5의 HTML 트리(HTML 가리기, EPUB 장), draw.io 읽기, `epub-engine`의 `parseHtml`. 엔진이 호출마다 콜백 칸 0(`seu_host.host_callback`)으로 부른다.
-- 상수(`ATTACHABLE_*`, `WHOLE_ZIP_READ_MAX_BYTES`, `PPTX_REDACT_EXT_URI`)는 TypeScript 글자로 두고 `tests/engine-constants.test.ts`가 Rust 쪽과 견준다.
+- `packageHoldsMark(zip, pattern)`: 부르는 쪽이 이미 연 JSZip과 정규식을 받으므로 파트를 도는 일만 TypeScript에 두고, 파트마다의 판정은 엔진의 `xmlHoldsMark`가 한다.
+- 상수(`ATTACHABLE_*`, `WHOLE_ZIP_READ_MAX_BYTES`, `PPTX_REDACT_EXT_URI`, `HIDDEN_CONTENT_EXTENSIONS`)는 TypeScript 글자로 두고 `tests/engine-constants.test.ts`가 Rust 쪽과 견준다.
 
 엔진 시작: `node` 내보내기 조건에서는 패키지가 스스로 시작한다(`@seuoffice/engine-wasm/node`). 패키지를 번들하는 Electron 메인과 색인 작업자 스레드는 `@seuoffice/file-parse/init`의 `initFileParseEngineSync`로 묶음에 든 wasm에서 시작한다(`apps/*/src/main/engine-init.ts`). 대조 관문(`tools/fileparse-diff`)은 TypeScript 구현을 얼린 사본(`tools/fileparse-diff/reference/`)과 엔진을 견준다.
 
