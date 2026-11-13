@@ -1,3 +1,4 @@
+// Keep the sheets `electron` stub below (ELECTRON_SOURCE): the shared fake cannot script a permission sequence or non-empty thumbnails.
 /**
  * The TypeScript half of crates/shell-ipc/d1/src/sheets/fakes.rs: loads the
  * sheets editor's main process (`apps/sheets/src/main/sheets-main.ts`) on the
@@ -410,8 +411,9 @@ function wrapperSource(name: string, real: string): string {
 }
 const FAKE = 'ipc-diff-d1-sheets:'
 const CLIENT = `${FAKE}client`
-// `electron` of the sheets files: the shared fake's names, and two it does not
-// carry (the screen capturer and the permission check), kept in the box
+// `electron` of the sheets files: the shared fake's names, with the screen
+// capturer and the permission check answered from the box, so a case can
+// script the permission per call and give thumbnails
 const ELECTRON = `${FAKE}electron`
 const ELECTRON_SOURCE = [
   `const box = ${SELF}`,
