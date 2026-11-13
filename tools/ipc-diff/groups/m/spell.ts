@@ -217,7 +217,9 @@ export const group: Group = {
     const log = electron.log
     const config = ((cx.case.hosts ?? {}).m ?? {}) as Record<string, unknown>
     const strings = (key: string, fallback: string[]): string[] =>
-      Array.isArray(config[key]) ? (config[key] as unknown[]).filter((v) => typeof v === 'string') as string[] : fallback
+      Array.isArray(config[key])
+        ? ((config[key] as unknown[]).filter((v) => typeof v === 'string') as string[])
+        : fallback
 
     // the clock of the case, as probe.rs's `now`
     const now = typeof config.now === 'number' ? config.now : 1_700_000_000_000
@@ -400,6 +402,8 @@ export const group: Group = {
   },
   cases,
   single: {
+    'docs:spell-diag':
+      'a send answers nothing; what it does is the log file the cases compare',
     'docs:context-menu-claim':
       'answers true whatever the argument; the claim only matters to the native context-menu hook, which no channel call reaches',
   },

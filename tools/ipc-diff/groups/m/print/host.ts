@@ -13,10 +13,11 @@
  */
 import childProcess from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { syncBuiltinESMExports } from 'node:module'
 import os from 'node:os'
 import { basename, join } from 'node:path'
+import { takePrintDocument } from '../../../../../apps/diagram/src/main/print-document.ts'
 import { useElectron } from '../../../../main-diff/electron-fake.ts'
 import type { LoadContext } from '../../../types.ts'
 
@@ -176,13 +177,15 @@ export function installPrintHosts(cx: LoadContext): void {
     }
 
     loadFile(path: string): Promise<void> {
-      log.push(['win.loadFile', basename(path)])
+      log.push(['win.loadFile', basename(path), existsSync(path) ? readFileSync(path, 'utf8') : ''])
       return this.loaded()
     }
 
     // the token at the end of the address is random
     loadURL(url: string): Promise<void> {
-      log.push(['win.loadURL', url.includes('/') ? url.slice(0, url.lastIndexOf('/')) : url])
+      const cut = url.lastIndexOf('/')
+      const token = cut >= 0 ? url.slice(cut + 1) : ''
+      log.push(['win.loadURL', cut >= 0 ? url.slice(0, cut) : url, takePrintDocument(token)])
       return this.loaded()
     }
 

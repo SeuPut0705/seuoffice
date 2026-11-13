@@ -270,14 +270,18 @@ impl PrintSurface for FakeSurface {
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        self.log(json!(["win.loadFile", name]));
+        // the document the window prints, as the app wrote it
+        let content = std::fs::read_to_string(path).unwrap_or_default();
+        self.log(json!(["win.loadFile", name, content]));
         self.loaded()
     }
 
     fn load_url(&mut self, url: &str) -> Result<(), String> {
         // the token at the end is random
-        let base = url.rsplit_once('/').map_or(url, |(base, _)| base);
-        self.log(json!(["win.loadURL", base]));
+        let (base, token) = url.rsplit_once('/').unwrap_or((url, ""));
+        // what the diagram protocol would serve for the token, once
+        let content = crate::print::take_diagram_print_document(token);
+        self.log(json!(["win.loadURL", base, content]));
         self.loaded()
     }
 
