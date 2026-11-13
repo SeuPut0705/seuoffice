@@ -119,10 +119,6 @@ struct State {
     in_flight: HashMap<String, u32>,
     /// page-clipboard.ts `held`: the copied pages' PDF and their count
     held: Option<(Arc<Vec<u8>>, f64)>,
-    /// `lastUsedDirectoryByDialog` of `showOpenDialogWithMemory`
-    memory: DialogMemory,
-    /// `configuredDefaultSaveDir`'s cache of unusable folders
-    save_dir: SaveDirState,
 }
 
 type DestroyedHook = Rc<dyn Fn(ViewId)>;
@@ -137,6 +133,10 @@ pub(super) struct Editor {
     engine: PdfEngineHost,
     shell: PdfShellHost,
     st: RefCell<State>,
+    /// `lastUsedDirectoryByDialog` of `showOpenDialogWithMemory`: the shell's one
+    memory: Arc<Mutex<DialogMemory>>,
+    /// `configuredDefaultSaveDir`'s cache of unusable folders: the shell's one
+    save_dir: Arc<Mutex<SaveDirState>>,
     rec: RefCell<Recovery>,
     /// `noteLinks`
     notes: NoteLinkService,
@@ -206,6 +206,8 @@ impl Editor {
         let engine = hosts.need::<PdfEngineHost>(Batch::D2)?;
         let shell = hosts.need::<PdfShellHost>(Batch::D2)?;
         let shared = hosts.need::<Arc<Mutex<SharedRecoveryState>>>(Batch::D2)?;
+        let memory = hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?;
+        let save_dir = hosts.need::<Arc<Mutex<SaveDirState>>>(Batch::D2)?;
         let store = Store {
             shared,
             user_data: services.paths.path(PathName::UserData),
@@ -225,6 +227,8 @@ impl Editor {
             engine,
             shell,
             st: RefCell::default(),
+            memory,
+            save_dir,
             rec: RefCell::new(Recovery::new(store, work_dir)),
             notes: NoteLinkService::new(platform),
             ocr: Arc::new(Mutex::new(OcrBridge::new())),
@@ -310,9 +314,8 @@ impl Editor {
     /// `configuredDefaultSaveDir(app)`
     fn default_save_dir(&self) -> Result<String, String> {
         let now = now_ms();
-        let mut st = self.st.borrow_mut();
-        configured_default_save_dir(&AppPaths(&self.services), &mut st.save_dir, now)
-            .map_err(|e| e.0)
+        let mut save_dir = self.save_dir.lock().unwrap_or_else(|e| e.into_inner());
+        configured_default_save_dir(&AppPaths(&self.services), &mut save_dir, now).map_err(|e| e.0)
     }
 
     /// `openGeneratedPdf(path)`: a new tab, else the file in its folder

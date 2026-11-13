@@ -307,7 +307,7 @@ impl Epub {
         ]);
         let parent = self.parent(view);
         let result = show_open_dialog_with_memory(
-            &mut self.state.borrow_mut().dialog_memory,
+            &mut self.dialog_memory.lock().unwrap_or_else(|e| e.into_inner()),
             &mut DialogAdapter(&*self.dialogs),
             parent.as_ref(),
             &options,

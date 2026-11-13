@@ -17,8 +17,8 @@ mod runner;
 mod structure;
 mod window;
 
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use jscompat::{JsObject, JsonValue};
 use main_core::packages::electron_utils::dialog_memory::{
@@ -49,7 +49,7 @@ pub(crate) struct Ctx {
     pub main_window: MainWindowHost,
     pub grants: Grants,
     /// `showOpenDialogWithMemory` keys its memory by Electron's one `dialog`
-    memory: RefCell<DialogMemory>,
+    memory: Arc<Mutex<DialogMemory>>,
     pub runner: runner::Runner,
 }
 
@@ -63,7 +63,7 @@ impl Ctx {
         fallback: Option<&str>,
     ) -> Option<Vec<String>> {
         let result = show_open_dialog_with_memory(
-            &mut self.memory.borrow_mut(),
+            &mut self.memory.lock().unwrap_or_else(|e| e.into_inner()),
             &mut HostDialog(&*self.dialogs),
             parent.as_ref(),
             &options,
@@ -92,7 +92,7 @@ impl Ctx {
         options: JsObject<JsonValue>,
     ) -> Option<String> {
         let result = show_save_dialog_with_memory(
-            &mut self.memory.borrow_mut(),
+            &mut self.memory.lock().unwrap_or_else(|e| e.into_inner()),
             &mut HostDialog(&*self.dialogs),
             parent.as_ref(),
             &options,
@@ -393,7 +393,7 @@ pub(crate) fn entries(
         os: hosts.need::<OsShellHost>(Batch::D2)?,
         main_window: hosts.need::<MainWindowHost>(Batch::D2)?,
         grants: grants.clone(),
-        memory: RefCell::default(),
+        memory: hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?,
         runner: runner::Runner::new(services),
     });
     let password = password::Password::new(&ctx);
@@ -535,6 +535,7 @@ pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
 #[cfg(test)]
 pub(crate) mod test_support {
     //! A shell with the tools registered and a handle on their fake
+    use std::cell::RefCell;
     use std::sync::Arc;
 
     use serde_json::Value;

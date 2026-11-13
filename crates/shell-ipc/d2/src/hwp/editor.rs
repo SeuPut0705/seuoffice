@@ -189,9 +189,9 @@ pub(crate) struct Hwp {
     pub(super) recovery: RefCell<HwpRecovery>,
     pub(super) recovery_state: Arc<Mutex<SharedRecoveryState>>,
     pub(super) recovery_timers: RefCell<HashMap<RecoveryTimer, Timer>>,
-    /// the folder memory of Electron's one `dialog`, shared with the attachments' picker
-    pub(super) dialog_memory: Rc<RefCell<DialogMemory>>,
-    save_dir: RefCell<SaveDirState>,
+    /// the shell's one folder memory of Electron's `dialog`
+    dialog_memory: Arc<Mutex<DialogMemory>>,
+    save_dir: Arc<Mutex<SaveDirState>>,
     _destroyed: Rc<dyn Fn(ViewId)>,
 }
 
@@ -284,6 +284,8 @@ impl Hwp {
         let contents = hosts.need::<ContentsHost>(Batch::D2)?;
         let os = hosts.need::<OsShellHost>(Batch::D2)?;
         let recovery_state = hosts.need::<Arc<Mutex<SharedRecoveryState>>>(Batch::D2)?;
+        let dialog_memory = hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?;
+        let save_dir = hosts.need::<Arc<Mutex<SaveDirState>>>(Batch::D2)?;
         let hwp = Rc::new_cyclic(|weak: &Weak<Hwp>| {
             let gone = weak.clone();
             let destroyed = kit::on_view_destroyed(services, move |view| {
@@ -310,8 +312,8 @@ impl Hwp {
                 recovery: RefCell::new(recovery),
                 recovery_state,
                 recovery_timers: RefCell::default(),
-                dialog_memory: Rc::default(),
-                save_dir: RefCell::default(),
+                dialog_memory,
+                save_dir,
                 _destroyed: destroyed,
             }
         });
@@ -1141,7 +1143,7 @@ impl Hwp {
                                 Some(dir) => dir,
                                 None => configured_default_save_dir(
                                     &AppPaths(self.services.paths.clone()),
-                                    &mut self.save_dir.borrow_mut(),
+                                    &mut self.save_dir.lock().unwrap_or_else(|e| e.into_inner()),
                                     self.shell.now_ms(),
                                 )
                                 .map_err(|e| e.0)?,
@@ -1192,7 +1194,7 @@ impl Hwp {
                     ),
                 );
                 let picked = show_save_dialog_with_memory(
-                    &mut self.dialog_memory.borrow_mut(),
+                    &mut self.dialog_memory.lock().unwrap_or_else(|e| e.into_inner()),
                     &mut FileDialogs(self.dialogs.clone()),
                     win.as_ref(),
                     &options,

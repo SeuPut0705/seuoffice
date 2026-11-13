@@ -11,6 +11,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::ThreadId;
 use std::time::Duration;
 
+use main_core::packages::electron_utils::default_save_dir::SaveDirState;
+use main_core::packages::electron_utils::dialog_memory::DialogMemory;
 use shell_contract::hosts::{
     Clipboard, ClipboardHost, Contents, ContentsHost, Dialogs, DialogsHost, FileDialog, MainWindow,
     MainWindowHost, MessageBox, MessageBoxAnswer, OsShell, OsShellHost,
@@ -370,6 +372,9 @@ impl Rt {
         map.insert::<ClipboardHost>(Arc::new(shared.clone()));
         map.insert::<ContentsHost>(Arc::new(shared.clone()));
         map.insert::<MainWindowHost>(Arc::new(shared.clone()));
+        // the shell's one dialog memory and default-save-folder state
+        map.insert::<Arc<Mutex<DialogMemory>>>(Arc::default());
+        map.insert::<Arc<Mutex<SaveDirState>>>(Arc::default());
         hosts(&mut map);
         let dir = std::env::temp_dir().join(format!(
             "shell-ipc-d2-{}-{}",

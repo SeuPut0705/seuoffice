@@ -11,7 +11,7 @@ use std::cell::{Cell, RefCell};
 use std::fs;
 use std::io::Read;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::UNIX_EPOCH;
 
 use jscompat::node_path::host::{basename, extname};
@@ -571,18 +571,11 @@ fn picked_paths(result: &JsonValue) -> Option<Vec<String>> {
 
 // ---- registration ----
 
-#[cfg(test)]
+/// The open dialog uses the shell's one dialog memory: the TypeScript keeps one
+/// memory per `dialog` object, so every file dialog starts in the directory of
+/// the last confirmed pick.
 pub(super) fn entries(services: &Services) -> Result<Vec<Entry>, RegisterError> {
-    entries_with(services, Rc::default())
-}
-
-/// `entries` with the dialog memory the editor's other file dialogs share: the
-/// TypeScript keeps one memory per `dialog` object, so the save dialogs and
-/// this open dialog start in the directory of the last confirmed pick.
-pub(super) fn entries_with(
-    services: &Services,
-    dialog_memory: Rc<RefCell<DialogMemory>>,
-) -> Result<Vec<Entry>, RegisterError> {
+    let dialog_memory = services.hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D2)?;
     let engine = services.hosts.need::<HwpEngineHost>(Batch::D2)?;
     let dialogs = services.hosts.need::<DialogsHost>(Batch::D2)?;
     let contents = services.hosts.need::<ContentsHost>(Batch::D2)?;
@@ -601,7 +594,7 @@ pub(super) fn entries_with(
                 .window_of(cx.sender.view)
                 .or_else(|| shell.focused_window());
             let picked = show_open_dialog_with_memory(
-                &mut dialog_memory.borrow_mut(),
+                &mut dialog_memory.lock().unwrap_or_else(|e| e.into_inner()),
                 &mut FileDialogs(Arc::clone(&dialogs)),
                 parent.as_ref(),
                 &pick_options(lang),
