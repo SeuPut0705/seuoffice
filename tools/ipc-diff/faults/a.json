@@ -908,5 +908,26 @@
     "find": "IpcValue::String(file_name)",
     "replace": "IpcValue::String(String::new())",
     "groups": ["a/user-skills"]
+  },
+  {
+    "name": "the naming asks in Korean whatever the UI language",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": ".get_or_insert_with(|| ctx.ui_lang())",
+    "replace": ".get_or_insert_with(|| \"ko\".to_owned())",
+    "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "the settings file is read under another name",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": "user_data.join(\"ai-settings.json\")",
+    "replace": "user_data.join(\"ai-settings.jsonx\")",
+    "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "a failed chat is a name",
+    "file": "shell-ipc/a/src/ai_naming.rs",
+    "find": "self.timed_out = result.timed_out;\n                result.outcome",
+    "replace": "self.timed_out = result.timed_out;\n                ChatOutcome::Reply { content: Some(\"Fixed\".into()) }",
+    "groups": ["a/ai-naming"]
   }
 ]
