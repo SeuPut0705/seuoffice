@@ -71,6 +71,8 @@ shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
 
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
+# the context-menu hook batch M needs (crates/vendor/tauri-runtime-cef/VENDORED.md)
+tauri-runtime-cef = { path = "../vendor/tauri-runtime-cef" }
 
 [profile.release]
 opt-level = 3
