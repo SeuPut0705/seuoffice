@@ -555,6 +555,11 @@ const PASTE_TEXTS: [string, string[]?, string?][] = [
   ],
   ['[mcp_servers."\uc548\ub155"]\ncommand = "node"\nargs = ["a.js"]\n', [], 'a quoted Korean key'],
   [
+    '[mcp_servers.a]\ncommand = "x"\nargs = [inf, -inf, +inf, nan, -nan, 0x10, -0x10, 1e400, -1e400]\n',
+    [],
+    'non-finite and radix numbers read as text keep their sign',
+  ],
+  [
     '[mcp_servers.a]\ncommand = "x"\nargs = [1, 2.5, true, "s", [1], {a = 1}]\n',
     [],
     'args of several kinds',

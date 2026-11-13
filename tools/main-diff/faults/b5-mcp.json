@@ -1076,7 +1076,7 @@
     "file": "main-core/src/shell/mcp_client/toml.rs",
     "find": "return sign * f64::INFINITY;",
     "replace": "return f64::INFINITY;",
-    "fn": ["toml.parseToml"]
+    "fn": ["toml.parseToml", "paste.parseMcpPaste"]
   },
   {
     "name": "toml a radix number loses its sign",
@@ -1411,7 +1411,7 @@
     "name": "extract set-id bits are kept",
     "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
     "find": "(m as u64 & 0o777) as u32",
-    "replace": "(m as u64 & 0o7777) as u32",
+    "replace": "(m as u64 & 0o077) as u32",
     "fn": ["runtime-archive.extractRuntimeArchive"]
   },
   {
@@ -1831,7 +1831,7 @@
     "name": "server empty session id kept",
     "file": "main-core/src/shell/mcp/mcp_server.rs",
     "find": "                    Some(id) => id,\n",
-    "replace": "                    Some(id) if !id.is_empty() => id,\n",
+    "replace": "                    Some(id) if !id.is_empty() => id,\n                    Some(_) => self.io.random_uuid(),\n",
     "fn": ["mcp-server.scenario"]
   },
   {
@@ -3494,8 +3494,8 @@
   {
     "name": "session require text",
     "file": "main-core/src/shell/mcp/tools/session_tools.rs",
-    "find": "\"the active session is a {} — call create_session with family \\\"{}\\\" first\"",
-    "replace": "\"the active session is a {} — call create_session with family {} first\"",
+    "find": "\"the active session is a {} \u2014 call create_session with family \\\"{}\\\" first\"",
+    "replace": "\"the active session is a {} \u2014 call create_session with family {} first\"",
     "fn": ["session-tools.createSessionHost", "session-tools.contentTarget", "document-tools.call"]
   },
   {
@@ -3803,7 +3803,7 @@
   {
     "name": "pdf probe failure text",
     "file": "main-core/src/shell/mcp/tools/pdf_tools.rs",
-    "find": "\"could not open the PDF — it may be encrypted or corrupt\"",
+    "find": "\"could not open the PDF \u2014 it may be encrypted or corrupt\"",
     "replace": "\"could not open the PDF\"",
     "fn": ["pdf-tools.call"]
   },
