@@ -63,8 +63,17 @@ macro_rules! all_ports {
     };
 }
 
+/// The executor of main-core's AI runtime the shell inserts (`host/net.rs`):
+/// the network the driver's fetches and servers go through
+pub type NetHost = runtime::NetHost;
+
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
     let provided = registry.provided();
+    // one driver of the AI runtime for every port, on the core thread
+    if provided.all::<runtime::Driver>().is_empty() {
+        let net = services.hosts.need::<NetHost>(Batch::A)?;
+        provided.add(std::rc::Rc::new(runtime::Driver::new(services, net)));
+    }
     macro_rules! register_each {
         ($($port:ident),*) => {$(
             let factory = services.hosts.need::<Factory<dyn ports::$port>>(Batch::A)?;
@@ -132,6 +141,8 @@ pub fn fake_ports(hosts: &mut shell_contract::Hosts, answers: &serde_json::Value
 pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
     fake_ports(hosts, &case["fake"]);
     let log = hosts.get::<probe::Log>().cloned();
+    let net: NetHost = runtime::testing::FakeNet::new(&case["net"], log.clone());
+    hosts.insert(net);
     hosts.insert(shell_ai_prefs::factory());
     hosts.insert(outbound::factory());
     hosts.insert::<outbound::OutboundShellHost>(std::sync::Arc::new(

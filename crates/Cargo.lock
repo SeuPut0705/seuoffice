@@ -1320,6 +1320,7 @@ dependencies = [
  "cbc",
  "getrandom 0.4.3",
  "jscompat",
+ "libc",
  "main-core",
  "pbkdf2",
  "security-framework",

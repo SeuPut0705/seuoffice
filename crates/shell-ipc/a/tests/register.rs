@@ -223,7 +223,7 @@ fn a_shell_without_a_port_does_not_start() {
     match err {
         RegisterError::MissingHost { batch, host } => {
             assert_eq!(batch, Batch::A);
-            assert!(host.contains("Factory"), "{host}");
+            assert!(host.contains("Net"), "{host}");
         }
         other => panic!("{other:?}"),
     }
@@ -232,6 +232,9 @@ fn a_shell_without_a_port_does_not_start() {
 #[test]
 fn a_shell_with_some_ports_built_starts_and_the_others_say_not_built() {
     let mut hosts = Hosts::default();
+    let net: shell_ipc_a::NetHost =
+        shell_ipc_a::runtime::testing::FakeNet::new(&serde_json::Value::Null, None);
+    hosts.insert(net);
     hosts.insert(shell_ipc_a::template_selection::factory());
     shell_ipc_a::insert_unbuilt_ports(&mut hosts);
     let mut registry = Checked::default();

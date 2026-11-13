@@ -5,16 +5,16 @@
 //! rejects with `Error: message`; a channel the case does not name answers
 //! `undefined`.
 
-pub mod drive;
-pub mod user_skills;
-pub mod slides_ai;
-pub mod mcp;
-pub mod generate;
-pub mod free_ai;
-pub mod ai_naming;
 pub mod agent;
+pub mod ai_naming;
+pub mod drive;
+pub mod free_ai;
+pub mod generate;
 pub mod integrations;
 pub mod knowledge_base;
+pub mod mcp;
+pub mod slides_ai;
+pub mod user_skills;
 pub mod zotero;
 
 use shell_contract::ipc::Responder;
