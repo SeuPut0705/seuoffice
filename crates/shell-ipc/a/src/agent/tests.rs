@@ -256,6 +256,9 @@ impl ClaudeSession for Program {
     }
 }
 
+/// A callback receiving each event the program reports
+type EventListener = Arc<dyn Fn(JsonValue) + Send + Sync>;
+
 struct Svc {
     statuses: Mutex<JsonValue>,
     settings: Mutex<JsonValue>,
@@ -267,7 +270,7 @@ struct Svc {
     hooks: Mutex<Vec<Arc<dyn SkillHooks>>>,
     /// the first event the program reports when it starts
     first_event: Mutex<Option<JsonValue>>,
-    sink: Mutex<Vec<Arc<dyn Fn(JsonValue) + Send + Sync>>>,
+    sink: Mutex<Vec<EventListener>>,
     /// the program's start waits here when set
     gate: Mutex<Option<Arc<Gate>>>,
     uuids: AtomicU64,

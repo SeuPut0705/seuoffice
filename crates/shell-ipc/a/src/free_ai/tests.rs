@@ -157,6 +157,9 @@ impl OpenRouterHost for Router {
     fn close_servers(&mut self) {}
 }
 
+/// A sign-in's browser callback and the test's step while it waits
+type SignIn = (Option<String>, Option<Box<dyn FnOnce() + Send>>);
+
 struct FakeHost {
     settings: Mutex<JsonValue>,
     writes: Mutex<Vec<JsonValue>>,
@@ -167,7 +170,7 @@ struct FakeHost {
     script: Script,
     requests: Arc<Mutex<Vec<FetchRequest>>>,
     /// per sign-in, in order: the browser's callback and the test's step while it waits
-    sign_ins: Mutex<VecDeque<(Option<String>, Option<Box<dyn FnOnce() + Send>>)>>,
+    sign_ins: Mutex<VecDeque<SignIn>>,
     signals: Mutex<Vec<CancelToken>>,
 }
 

@@ -51,7 +51,7 @@ struct Live(Mutex<HashSet<u32>>);
 
 impl Views for Live {
     fn sender_of(&self, view: ViewId) -> Option<Sender> {
-        self.0.lock().unwrap().contains(&view.0).then(|| Sender {
+        self.0.lock().unwrap().contains(&view.0).then_some(Sender {
             view,
             window: WindowId(1),
             surface: Surface::Shell,

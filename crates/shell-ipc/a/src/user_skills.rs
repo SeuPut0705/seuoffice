@@ -2071,8 +2071,7 @@ mod tests {
         ) -> Result<IpcValue, IpcError> {
             let slot = self.start(view, channel, args);
             self.settle();
-            let answer = lock(&slot).take().expect("answered");
-            answer
+            lock(&slot).take().expect("answered")
         }
 
         fn changed(&self) -> usize {

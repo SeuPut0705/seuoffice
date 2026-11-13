@@ -42,11 +42,14 @@ fn world() -> Rc<World> {
 
 // ---- fakes ----
 
+/// A hook run before each spawn, given the spawn count
+type SpawnHook = Box<dyn Fn(usize) + Send + Sync>;
+
 /// Runs every job at once; `spawn`s are counted and may run a hook first
 #[derive(Default)]
 struct Inline {
     spawns: AtomicUsize,
-    before_spawn: Mutex<Option<Box<dyn Fn(usize) + Send + Sync>>>,
+    before_spawn: Mutex<Option<SpawnHook>>,
 }
 
 impl Thread for Inline {
@@ -68,10 +71,13 @@ impl Workers for Inline {
     }
 }
 
+/// A callback told when a view is destroyed
+type ViewListener = Box<dyn Fn(ViewId) + Send + Sync>;
+
 #[derive(Default)]
 struct TestViews {
     gone: Mutex<HashSet<u32>>,
-    listeners: Mutex<Vec<Box<dyn Fn(ViewId) + Send + Sync>>>,
+    listeners: Mutex<Vec<ViewListener>>,
 }
 
 impl TestViews {

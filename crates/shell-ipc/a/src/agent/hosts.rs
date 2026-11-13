@@ -59,7 +59,7 @@ impl Fault {
 /// problem, or any other error (with the `kind` of an `AiRunError`)
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunnerFault {
-    pub problem: Option<AgentProgramProblem>,
+    pub problem: Option<Box<AgentProgramProblem>>,
     pub kind: Option<String>,
     pub fault: Fault,
 }

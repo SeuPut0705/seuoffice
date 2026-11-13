@@ -856,9 +856,7 @@ fn a_deferred_wakes_the_future_that_awaits_it() {
     let (resolver, wait) = fx.driver.deferred::<String>();
     let done: Rc<RefCell<Option<String>>> = Rc::default();
     let out = done.clone();
-    fx.driver.run(async move { wait.await }, move |v| {
-        *out.borrow_mut() = Some(v)
-    });
+    fx.driver.run(wait, move |v| *out.borrow_mut() = Some(v));
     assert!(done.borrow().is_none());
     resolver.resolve("settled".into());
     assert_eq!(done.take().as_deref(), Some("settled"));

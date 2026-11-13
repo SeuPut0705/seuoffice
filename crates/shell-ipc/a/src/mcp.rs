@@ -867,8 +867,7 @@ mod tests {
                 .pump_until(10_000, || slot.lock().unwrap().is_some()),
             "no answer"
         );
-        let answered = slot.lock().unwrap().take().unwrap();
-        answered
+        slot.lock().unwrap().take().unwrap()
     }
 
     fn field(value: &IpcValue, name: &str) -> Option<IpcValue> {

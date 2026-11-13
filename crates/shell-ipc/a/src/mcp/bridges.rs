@@ -269,8 +269,11 @@ pub struct Bridges {
     common: Rc<Common>,
     docs: RefCell<DocsBridge<FamilyHost>>,
     sheets: RefCell<SheetsBridge<FamilyHost>>,
-    waiting: RefCell<HashMap<(bool, u64), Then<Option<JsonValue>>>>,
+    waiting: RefCell<Waiting>,
 }
+
+/// the commands sent to an editor and waiting for its result, by (docs or not, op)
+type Waiting = HashMap<(bool, u64), Then<Option<JsonValue>>>;
 
 thread_local! {
     static BRIDGES: RefCell<HashMap<u64, Weak<Bridges>>> = RefCell::new(HashMap::new());
@@ -539,11 +542,11 @@ mod tests {
         })
     }
 
-    fn collect() -> (
-        Rc<RefCell<Vec<Result<Option<JsonValue>, IpcError>>>>,
-        impl Fn() -> Then<Option<JsonValue>>,
-    ) {
-        let results: Rc<RefCell<Vec<Result<Option<JsonValue>, IpcError>>>> = Rc::default();
+    /// The outcomes a call has settled with, in order
+    type Outcomes = Vec<Result<Option<JsonValue>, IpcError>>;
+
+    fn collect() -> (Rc<RefCell<Outcomes>>, impl Fn() -> Then<Option<JsonValue>>) {
+        let results: Rc<RefCell<Outcomes>> = Rc::default();
         let sink = results.clone();
         (results, move || {
             let sink = sink.clone();

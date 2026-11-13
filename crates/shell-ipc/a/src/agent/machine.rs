@@ -145,7 +145,7 @@ fn runner_error(fault: RunnerFault) -> RunnerError {
     match fault.problem {
         Some(problem) => RunnerError::Program(
             main_core::packages::ai_provider::agent_session_program_problem::AgentProgramError::new(
-                problem,
+                *problem,
                 fault.fault.message,
             ),
         ),
@@ -856,8 +856,11 @@ pub(super) struct World {
 pub(super) struct Inner {
     sh: Rc<Shared>,
     world: RefCell<World>,
-    local: RefCell<VecDeque<Box<dyn FnOnce(&Rc<Inner>)>>>,
+    local: RefCell<VecDeque<LocalJob>>,
 }
+
+/// work queued for the port's state, run once no handler holds it
+type LocalJob = Box<dyn FnOnce(&Rc<Inner>)>;
 
 /// What [`Inner::new`] needs from the shell
 pub(super) struct Wiring {

@@ -171,6 +171,9 @@ impl MainWindow for Main {
 const GEN_WINDOW: WindowId = WindowId(7);
 const GEN_VIEW: u32 = 70;
 
+/// A callback receiving the user's answer to a save prompt
+type SaveReply = Box<dyn FnOnce(SaveAnswer) + Send>;
+
 #[derive(Default)]
 struct World {
     log: Vec<String>,
@@ -181,7 +184,7 @@ struct World {
     open_target: Option<String>,
     window_open: bool,
     events: Option<super::GenerateWindowEvents>,
-    saves: Vec<(SaveNeed, Box<dyn FnOnce(SaveAnswer) + Send>)>,
+    saves: Vec<(SaveNeed, SaveReply)>,
     timers: Vec<(f64, Job)>,
     handoffs: Vec<GenerateHandoff>,
 }

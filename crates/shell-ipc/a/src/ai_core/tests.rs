@@ -112,12 +112,15 @@ impl EventSink for Recorder {
     }
 }
 
+/// A callback told when a view is destroyed
+type ViewListener = Box<dyn Fn(ViewId) + Send + Sync>;
+
 /// The views of the case: a view alive until [`TestViews::destroy`]
 #[derive(Default)]
 struct TestViews {
     gone: Mutex<Vec<ViewId>>,
     cancels: Mutex<HashMap<u32, CancelToken>>,
-    listeners: Mutex<Vec<Box<dyn Fn(ViewId) + Send + Sync>>>,
+    listeners: Mutex<Vec<ViewListener>>,
 }
 
 impl TestViews {
@@ -215,6 +218,9 @@ impl Net for TestNet {
     }
 }
 
+/// A generated image's bytes and its mime type
+type ImageAnswer = (Vec<u8>, String);
+
 /// The host the entry gives: what it answers is set by the test, what it was
 /// asked is kept
 #[derive(Default)]
@@ -229,7 +235,7 @@ struct FakeHost {
     /// a read of this url waits until its signal fires
     slow_read: Mutex<Option<String>>,
     read_cancelled: Mutex<bool>,
-    images: Mutex<VecDeque<Option<(Vec<u8>, String)>>>,
+    images: Mutex<VecDeque<Option<ImageAnswer>>>,
 }
 
 impl AiCoreHost for FakeHost {

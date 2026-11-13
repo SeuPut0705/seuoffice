@@ -69,7 +69,7 @@ fn problem_of(problem: &JsonValue) -> Option<AgentProgramProblem> {
 /// `kind` of a run error, or just an `Error` with its name and code
 pub(super) fn fault_of(error: &JsError) -> RunnerFault {
     let problem = if error.name == AgentProgramError::NAME {
-        error.prop("problem").and_then(problem_of)
+        error.prop("problem").and_then(problem_of).map(Box::new)
     } else {
         None
     };
@@ -244,7 +244,7 @@ mod tests {
             );
         let fault = fault_of(&thrown);
         assert_eq!(
-            fault.problem,
+            fault.problem.map(|p| *p),
             Some(AgentProgramProblem::Exited {
                 exit_code: Some(3.0)
             })
@@ -257,7 +257,7 @@ mod tests {
                 problem(vec![("type", word("refused")), ("step", word("login"))]),
             );
         assert_eq!(
-            fault_of(&refused).problem,
+            fault_of(&refused).problem.map(|p| *p),
             Some(AgentProgramProblem::Refused {
                 step: "login".into(),
                 code: None

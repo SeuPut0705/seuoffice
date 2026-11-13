@@ -320,8 +320,7 @@ impl World {
             Responder::new(move |reply| *out.lock().unwrap() = Some(reply)),
         );
         self.pump_until(|| slot.lock().unwrap().is_some());
-        let reply = slot.lock().unwrap().take().unwrap();
-        reply
+        slot.lock().unwrap().take().unwrap()
     }
 
     fn ok(&self, method: Method, args: Vec<IpcValue>) -> IpcValue {

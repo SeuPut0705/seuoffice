@@ -43,10 +43,13 @@ fn chunk(request_id: &Option<JsonValue>, kind: &str, rest: Vec<(&str, JsonValue)
     out
 }
 
+/// what the coalescer hands each gathered chunk to
+type SendChunk = Box<dyn FnMut(Chunk)>;
+
 /// `createChunkCoalescer(send)` with its gather timer on the runtime
 struct Out {
     rt: Rt,
-    coalescer: RefCell<ChunkCoalescer<Box<dyn FnMut(Chunk)>>>,
+    coalescer: RefCell<ChunkCoalescer<SendChunk>>,
     /// the `due_ms` the timer in flight was set for
     scheduled: Cell<Option<f64>>,
     timer: Cell<Option<Id>>,
@@ -94,12 +97,15 @@ impl Out {
     }
 }
 
+/// the ticker's timers: its own number and the runtime timer in flight
+type TickTimers = Rc<RefCell<Vec<(u64, Option<Id>)>>>;
+
 /// `setInterval` and `clearInterval` on the runtime's timers
 #[derive(Clone)]
 struct Ticker {
     rt: Rt,
     send: Rc<dyn Fn()>,
-    timers: Rc<RefCell<Vec<(u64, Option<Id>)>>>,
+    timers: TickTimers,
     next: Rc<Cell<u64>>,
 }
 

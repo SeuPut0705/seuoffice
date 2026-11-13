@@ -50,7 +50,7 @@ pub enum Msg {
     Call(OpId, String, JsonValue),
     Stop(OpId),
     Retry,
-    SetServer(McpServerConfig),
+    SetServer(Box<McpServerConfig>),
     Abort(OpId),
     AbortApp,
     Stdout(ChildId, Vec<u8>),
@@ -158,7 +158,7 @@ impl LocalConnection for LocalProxy {
     }
 
     fn set_server(&mut self, server: &McpServerConfig) {
-        self.send(Msg::SetServer(server.clone()));
+        self.send(Msg::SetServer(Box::new(server.clone())));
     }
 
     fn abort(&mut self, op: OpId) {

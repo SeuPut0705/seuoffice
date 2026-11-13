@@ -1140,10 +1140,7 @@ mod tests {
             vec![obj(&[
                 ("path", s(&a)),
                 ("folder", s("files")),
-                (
-                    "folderPath",
-                    s(&r.dir.join("files").to_string_lossy().into_owned())
-                ),
+                ("folderPath", s(&r.dir.join("files").to_string_lossy())),
                 ("name", s("lease.docx")),
                 ("ext", s("docx")),
                 ("sizeBytes", IpcValue::Number(5.0)),

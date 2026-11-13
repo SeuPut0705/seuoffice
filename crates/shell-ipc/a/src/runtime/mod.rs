@@ -583,7 +583,7 @@ impl Driver {
             clock: Box::new(now_ms),
             uuid: Box::new(random_uuid),
             random: Box::new(random_bytes),
-            kill: Box::new(|pid, signal| signal::kill(pid, signal)),
+            kill: Box::new(signal::kill),
         });
         let rt = runtime.rt().clone();
         let shared = Rc::new(Shared {
