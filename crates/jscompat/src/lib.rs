@@ -54,7 +54,7 @@ pub use number::{
     Radix, math_round, number_to_string, parse_float, parse_int, to_int32, to_number,
     to_string_radix16,
 };
-pub use object::{JsObject, Slot, array_index, camel, camel_len};
+pub use object::{JsObject, Slot, array_index, camel, camel_len, inherited_string};
 pub use random::{math_random, random_uuid};
 pub use regex::{
     BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexError, RegexLimit, RegexSyntaxError,

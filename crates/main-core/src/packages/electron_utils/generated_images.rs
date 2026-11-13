@@ -9,7 +9,7 @@ use std::fs;
 use std::io::Write;
 
 use jscompat::node_path::host;
-use jscompat::{decode_uri_component, js_regex, number_to_string, random_uuid};
+use jscompat::{decode_uri_component, inherited_string, js_regex, number_to_string, random_uuid};
 use url::Url;
 
 use crate::node_fs::{NodeError, node_error};
@@ -44,19 +44,7 @@ fn ext_by_mime(label: &str) -> String {
         "image/jpeg" | "image/jpg" => "jpg",
         "image/gif" => "gif",
         "image/webp" => "webp",
-        "constructor" => "function Object() { [native code] }",
-        "__defineGetter__" => "function __defineGetter__() { [native code] }",
-        "__defineSetter__" => "function __defineSetter__() { [native code] }",
-        "hasOwnProperty" => "function hasOwnProperty() { [native code] }",
-        "__lookupGetter__" => "function __lookupGetter__() { [native code] }",
-        "__lookupSetter__" => "function __lookupSetter__() { [native code] }",
-        "isPrototypeOf" => "function isPrototypeOf() { [native code] }",
-        "propertyIsEnumerable" => "function propertyIsEnumerable() { [native code] }",
-        "toString" => "function toString() { [native code] }",
-        "valueOf" => "function valueOf() { [native code] }",
-        "__proto__" => "[object Object]",
-        "toLocaleString" => "function toLocaleString() { [native code] }",
-        _ => "png",
+        key => inherited_string(key).unwrap_or("png"),
     };
     found.to_owned()
 }

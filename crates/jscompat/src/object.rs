@@ -34,6 +34,29 @@ pub fn array_index(key: &str) -> Option<u32> {
         .filter(|index| *index != u32::MAX)
 }
 
+/// `String(table[key])` for a key a plain object literal does not own: what
+/// `Object.prototype` answers there (the source text of a built-in method, or
+/// the prototype itself), as `String()` or a template literal writes it;
+/// `None` where it answers `undefined`. A table lookup `TABLE[key] ?? d`
+/// therefore finds these before the default.
+pub fn inherited_string(key: &str) -> Option<&'static str> {
+    Some(match key {
+        "constructor" => "function Object() { [native code] }",
+        "__defineGetter__" => "function __defineGetter__() { [native code] }",
+        "__defineSetter__" => "function __defineSetter__() { [native code] }",
+        "hasOwnProperty" => "function hasOwnProperty() { [native code] }",
+        "__lookupGetter__" => "function __lookupGetter__() { [native code] }",
+        "__lookupSetter__" => "function __lookupSetter__() { [native code] }",
+        "isPrototypeOf" => "function isPrototypeOf() { [native code] }",
+        "propertyIsEnumerable" => "function propertyIsEnumerable() { [native code] }",
+        "toString" => "function toString() { [native code] }",
+        "valueOf" => "function valueOf() { [native code] }",
+        "__proto__" => "[object Object]",
+        "toLocaleString" => "function toLocaleString() { [native code] }",
+        _ => return None,
+    })
+}
+
 /// A plain JavaScript object used as a table: `Record<string, V>`, written
 /// with `record[key] = value` or `setOwn(record, key, value)`. Every key is
 /// an own entry, `__proto__` too.

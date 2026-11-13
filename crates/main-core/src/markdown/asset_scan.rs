@@ -5,7 +5,7 @@
 //! The TypeScript walks UTF-16 code units (`markdown[index]`, `indexOf`,
 //! `slice`), so every position here is an index into the text's units.
 
-use jscompat::{Radix, is_js_space, js_regex, parse_int, try_js_regex};
+use jscompat::{Radix, inherited_string, is_js_space, js_regex, parse_int, try_js_regex};
 
 use super::fs_util::plain_error;
 use crate::node_fs::NodeError;
@@ -270,13 +270,14 @@ fn decode_html_image_source(value: &str) -> (String, bool) {
             "lt" => "<".to_owned(),
             "nbsp" => "\u{a0}".to_owned(),
             "quot" => "\"".to_owned(),
-            "constructor" => "function Object() { [native code] }".to_owned(),
-            "__proto__" => "[object Object]".to_owned(),
-            _ => {
-                // the complete HTML named-entity table is intentionally not duplicated
-                ambiguous = true;
-                entity.to_owned()
-            }
+            key => match inherited_string(key) {
+                Some(inherited) => inherited.to_owned(),
+                None => {
+                    // the complete HTML named-entity table is intentionally not duplicated
+                    ambiguous = true;
+                    entity.to_owned()
+                }
+            },
         }
     });
     if source.contains("&#") {

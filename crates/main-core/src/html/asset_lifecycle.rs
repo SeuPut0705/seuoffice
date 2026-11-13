@@ -25,9 +25,9 @@ use jscompat::node_path::host::{
     SEP, basename, dirname, extname, is_absolute, join, relative, resolve,
 };
 use jscompat::{
-    JsMap, JsObject, JsonValue, RegexLimit, decode_uri_component, is_js_space, js_regex,
-    json_parse, json_stringify_pretty, parse_int, slice_utf16, sort_by_number, string_less_than,
-    try_js_regex,
+    JsMap, JsObject, JsonValue, RegexLimit, decode_uri_component, inherited_string, is_js_space,
+    js_regex, json_parse, json_stringify_pretty, parse_int, slice_utf16, sort_by_number,
+    string_less_than, try_js_regex,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -1018,15 +1018,16 @@ fn decode_html_image_source(value: &str) -> (String, bool) {
             "lt" => "<".to_owned(),
             "nbsp" => "\u{a0}".to_owned(),
             "quot" => "\"".to_owned(),
-            "constructor" => "function Object() { [native code] }".to_owned(),
-            "__proto__" => "[object Object]".to_owned(),
-            _ => {
-                // The complete HTML named-entity table is intentionally not
-                // duplicated here. Unknown entities make sibling-GC parsing
-                // uncertain and therefore trigger its retain-all fallback.
-                ambiguous = true;
-                entity.to_owned()
-            }
+            key => match inherited_string(key) {
+                Some(inherited) => inherited.to_owned(),
+                None => {
+                    // The complete HTML named-entity table is intentionally not
+                    // duplicated here. Unknown entities make sibling-GC parsing
+                    // uncertain and therefore trigger its retain-all fallback.
+                    ambiguous = true;
+                    entity.to_owned()
+                }
+            },
         }
     });
     if js_regex!(r"&#(?:x[0-9a-f]*|[0-9]*)", "i").test(&source) {
