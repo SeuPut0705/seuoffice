@@ -560,6 +560,7 @@ dependencies = [
  "jscompat",
  "libc",
  "markup5ever_rcdom",
+ "rust-mcp-schema",
  "serde",
  "serde_json",
  "sha2",
@@ -890,6 +891,16 @@ name = "regress"
 version = "0.12.0"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "rust-mcp-schema"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a66664d256795cdd61b7d4d6516d8afe041c947bedd1d10aff9e41e15771b43"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
