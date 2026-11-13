@@ -81,10 +81,6 @@ fn sv(value: &JsonValue) -> Value {
     json_value_to_serde(value)
 }
 
-fn field<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
-    value.get(key).filter(|v| !v.is_null())
-}
-
 fn str_field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }

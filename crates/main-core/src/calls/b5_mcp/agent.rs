@@ -63,17 +63,6 @@ fn scripted(val: Option<&Value>) -> Result<Option<Value>, String> {
     Ok(val.get("value").cloned())
 }
 
-/// `Boolean(value)` of a scripted value
-fn truthy(value: &Option<Value>) -> bool {
-    match value {
-        None | Some(Value::Null) => false,
-        Some(Value::Bool(b)) => *b,
-        Some(Value::Number(n)) => n.as_f64().is_some_and(|n| n != 0.0),
-        Some(Value::String(s)) => !s.is_empty(),
-        Some(_) => true,
-    }
-}
-
 // ---- fakes ----
 
 /// `{ title, filePath?, dirty }` of a tab, as the hook of the spec logs it

@@ -1365,7 +1365,8 @@ impl Client {
 
     /// `_onresponse(response)`
     fn on_response(&mut self, host: &mut dyn ClientHost, response: JsonValue) {
-        let message_id = response.get("id").map_or(f64::NAN, |id| id.to_number());
+        let message_id = jscompat::to_primitive(response.get("id").as_deref())
+            .map_or(f64::NAN, |id| id.to_number());
         let Some(index) = self
             .pending
             .iter()
@@ -1385,7 +1386,8 @@ impl Client {
             return;
         }
         if let Some(error) = response.get("error") {
-            let code = error.get("code").map_or(f64::NAN, |code| code.to_number());
+            let code = jscompat::to_primitive(error.get("code").as_deref())
+                .map_or(f64::NAN, |code| code.to_number());
             let message = match error.get("message").as_deref() {
                 Some(JsonValue::String(message)) => message.clone(),
                 _ => String::new(),

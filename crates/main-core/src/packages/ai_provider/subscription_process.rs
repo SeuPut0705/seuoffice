@@ -146,7 +146,8 @@ fn windows_root_ok(value: &str) -> bool {
 pub fn windows_system_dir(env: EnvGet<'_>) -> String {
     let root = [env("SystemRoot"), env("SYSTEMROOT"), env("windir")]
         .into_iter()
-        .find(|value| value.as_deref().is_some_and(windows_root_ok));
+        .find(|value| value.as_deref().is_some_and(windows_root_ok))
+        .flatten();
     win32::join(&[root.as_deref().unwrap_or("C:\\Windows"), "System32"])
 }
 

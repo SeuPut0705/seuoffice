@@ -85,14 +85,6 @@ pub fn parse_pptx_outline(
     }
 }
 
-/// `typeof value === 'string'`, its text
-fn text_of(value: Option<&JsonValue>) -> Option<&str> {
-    match value {
-        Some(JsonValue::String(text)) => Some(text),
-        _ => None,
-    }
-}
-
 fn parse_json_outline(raw: &str) -> Result<Vec<OutlineSlide>, String> {
     let parsed = json_parse(raw).map_err(|error| {
         format!(

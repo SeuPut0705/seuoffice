@@ -619,8 +619,9 @@ impl SignIn {
                 }
             }
         }
+        let authorization_endpoint_value = metadata.get("authorization_endpoint");
         let authorization_endpoint =
-            as_str(metadata.get("authorization_endpoint").as_deref()).unwrap_or("undefined");
+            as_str(authorization_endpoint_value.as_deref()).unwrap_or("undefined");
         if !matches!(
             check_address(&mut *host, authorization_endpoint),
             AddressCheck::Allowed { .. }

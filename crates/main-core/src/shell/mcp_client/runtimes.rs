@@ -70,13 +70,6 @@ impl InstallId {
             InstallId::Uv => "uv",
         }
     }
-
-    fn runtime(self) -> McpRuntimeId {
-        match self {
-            InstallId::Node => McpRuntimeId::Node,
-            InstallId::Uv => McpRuntimeId::Uv,
-        }
-    }
 }
 
 /// `runtimeInstallDir(runtimesRoot, id, version)`: where a downloaded Node or
