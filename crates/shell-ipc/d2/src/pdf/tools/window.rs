@@ -816,14 +816,31 @@ impl Run {
         let Some(targets) = self.pick_targets(&names) else {
             return self.done(canceled());
         };
-        for target in &targets {
-            if self.sources.iter().any(|s| same_path(&s.path, target)) {
-                return self.fail("same-as-source");
-            }
-            if self.w.ctx.shell.file_has_unsaved_changes(target) {
-                return self.fail("unsaved-target");
-            }
+        self.check_targets(made, targets, 0)
+    }
+
+    /// each target in turn: never a source, never a file open with unsaved changes
+    fn check_targets(self, made: Vec<Vec<u8>>, targets: Vec<String>, i: usize) {
+        let Some(target) = targets.get(i).cloned() else {
+            return self.write(made, targets);
+        };
+        if self.sources.iter().any(|s| same_path(&s.path, &target)) {
+            return self.fail("same-as-source");
         }
+        let shell = self.w.ctx.shell.clone();
+        shell.file_has_unsaved_changes(
+            &target,
+            Box::new(move |unsaved| {
+                if unsaved {
+                    self.fail("unsaved-target")
+                } else {
+                    self.check_targets(made, targets, i + 1)
+                }
+            }),
+        )
+    }
+
+    fn write(self, made: Vec<Vec<u8>>, targets: Vec<String>) {
         let services = self.w.ctx.services.clone();
         let written = targets.clone();
         kit::on_worker(

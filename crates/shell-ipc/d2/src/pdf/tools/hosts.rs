@@ -269,8 +269,9 @@ pub trait PdfToolsShell: Send + Sync {
     fn open_result(&self, path: &str) -> bool;
     /// `deps.openForEditing(path)`: `revealShellWindow()` + `openDocumentPath`
     fn open_for_editing(&self, path: &str) -> bool;
-    /// `fileHasUnsavedChanges(path)`
-    fn file_has_unsaved_changes(&self, path: &str) -> bool;
+    /// `fileHasUnsavedChanges(path)`: the open documents' dirty state is
+    /// gathered from their renderers, so `then` answers later, on the core thread
+    fn file_has_unsaved_changes(&self, path: &str, then: Box<dyn FnOnce(bool)>);
     /// `openDocumentPath(path)`
     fn open_document_path(&self, path: &str) -> bool;
 
@@ -651,15 +652,17 @@ pub(crate) mod fake {
                 .and_then(|a| a.as_bool())
                 .unwrap_or(true)
         }
-        fn file_has_unsaved_changes(&self, path: &str) -> bool {
+        fn file_has_unsaved_changes(&self, path: &str, then: Box<dyn FnOnce(bool)>) {
             let unsaved = self.answers.lock().unwrap().get("unsavedFiles").cloned();
-            self.answer("file_has_unsaved_changes", json!(path))
+            let answer = self
+                .answer("file_has_unsaved_changes", json!(path))
                 .and_then(|a| a.as_bool())
                 .unwrap_or_else(|| {
                     unsaved
                         .and_then(|u| u.as_array().cloned())
                         .is_some_and(|u| u.iter().any(|p| p.as_str() == Some(path)))
-                })
+                });
+            then(answer)
         }
         fn open_document_path(&self, path: &str) -> bool {
             self.log(json!(["openDocumentPath", path]));
