@@ -409,14 +409,15 @@ pub enum Cmd {
     /// Stop the operation `id`, or the stream of the fetch `id` (its body and
     /// every clone: sent once no branch reads it any more, or its signal
     /// aborted); nothing answers it, and an answer already on its way is
-    /// dropped.
+    /// dropped. A stream a [`Cmd::Release`] already stopped may still get
+    /// one (its signal aborts later, as in JavaScript): nothing to do then.
     Cancel { id: Id },
-    /// The program dropped its last handle to the body `body` (the fetch's or
-    /// a clone's) before reading it to its end or cancelling it, which
-    /// JavaScript leaves to the garbage collector: free that branch's
-    /// buffered bytes. `stop`: no branch reads the stream of that fetch any
-    /// more and it has not ended; stop it as for [`Cmd::Cancel`]. Nothing
-    /// answers it, and an answer already on its way is dropped.
+    /// The program dropped its handle to the body `body` (the fetch's or a
+    /// clone's) before the host handed it its end, which JavaScript leaves to
+    /// the garbage collector: free that branch's buffered bytes. `stop`: no
+    /// branch can read the stream of that fetch any more and it has not
+    /// ended; stop it as for [`Cmd::Cancel`]. Nothing answers it, and an
+    /// answer already on its way is dropped.
     Release { body: Id, stop: Option<Id> },
     /// `setTimeout(..., ms)`: feed [`Event::Timer`] when it is due
     SetTimer { id: Id, ms: f64 },
@@ -602,16 +603,25 @@ struct BodyState {
     /// the `Cmd::Read`s in flight (a reader takes several `read()` calls at
     /// once), which a cancel of the body ends
     reads: Vec<Id>,
+    /// the host handed this branch its end or its failure: it freed it
+    over: bool,
+    /// the program dropped its handle ([`Cmd::Release`])
+    released: bool,
 }
 
 /// The stream of one fetch, which `response.clone()` tees: it is cancelled
 /// when no branch reads it any more, unless it has ended.
 #[derive(Default)]
 struct SourceState {
-    /// branches neither read to their end nor cancelled
+    /// branches neither read to their end nor cancelled; a dropped branch
+    /// still counts, as an unreachable JavaScript one does until it is
+    /// collected, so what the program sees does not depend on drops
     live: usize,
     ended: bool,
     cancelled: bool,
+    /// [`Cmd::Release`] stopped it: what JavaScript would still do to it
+    /// (an abort's `Cancel`) reaches the host, which ignores it
+    stopped: bool,
 }
 
 #[derive(Default)]
@@ -794,7 +804,7 @@ impl Rt {
                                 done: false,
                                 signal: signal.map(|s| s.id),
                                 source: id,
-                                reads: Vec::new(),
+                                ..BodyState::default()
                             },
                         );
                         st.sources.insert(
@@ -1053,6 +1063,7 @@ impl Rt {
             return;
         };
         let was_done = std::mem::replace(&mut b.done, true);
+        b.over = true;
         let source = b.source;
         if let Some(src) = st.sources.get_mut(&source) {
             src.ended = true;
@@ -1086,6 +1097,36 @@ impl Rt {
         }
     }
 
+    /// The handle to `body` went (JavaScript's garbage collector frees it
+    /// unseen). A branch the host still keeps is released, and the stream
+    /// stops once no branch can read it. The program's view (`live`, an
+    /// abort's `Cancel`) does not change, as JavaScript's does not at a drop.
+    /// A drop while the state is borrowed (only `Runtime`'s own drop) sends
+    /// nothing: the runtime is going.
+    fn release_body(&self, body: Id) {
+        let Ok(mut st) = self.0.st.try_borrow_mut() else {
+            return;
+        };
+        let Some(b) = st.bodies.get_mut(&body) else {
+            return;
+        };
+        b.released = true;
+        let (over, source) = (b.over, b.source);
+        let reading = st
+            .bodies
+            .values()
+            .any(|b| b.source == source && !b.released && !b.done);
+        let Some(src) = st.sources.get_mut(&source) else {
+            return;
+        };
+        if over || src.cancelled || src.stopped {
+            return;
+        }
+        let stop = (!src.ended && !reading).then_some(source);
+        src.stopped = stop.is_some();
+        st.cmds.push(Cmd::Release { body, stop });
+    }
+
     fn clone_body(&self, body: Id) -> Id {
         let to = self.id();
         let mut st = self.0.st.borrow_mut();
@@ -1099,7 +1140,7 @@ impl Rt {
                 done,
                 signal,
                 source,
-                reads: Vec::new(),
+                ..BodyState::default()
             },
         );
         if !done && let Some(src) = st.sources.get_mut(&source) {
@@ -1377,6 +1418,14 @@ pub struct Response {
     pub head: ResponseHead,
     body: Option<Id>,
     signal: Option<Signal>,
+}
+
+impl Drop for Response {
+    fn drop(&mut self) {
+        if let Some(body) = self.body {
+            self.rt.release_body(body);
+        }
+    }
 }
 
 impl Response {
@@ -2171,5 +2220,43 @@ mod tests {
         assert_eq!(read.take().unwrap().unwrap(), None);
         drop(response);
         assert!(runtime.poll().is_empty());
+    }
+
+    #[test]
+    fn a_drop_does_not_change_what_an_abort_sends_later() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let signal = rt.controller();
+        let given = signal.clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                Some(&given),
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        drop(call.take().expect("the fetch answered"));
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+        // JavaScript's body is still there to error: the abort cancels it, as before
+        signal.abort(None);
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
     }
 }
