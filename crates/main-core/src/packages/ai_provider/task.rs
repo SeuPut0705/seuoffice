@@ -658,6 +658,21 @@ fn take_pending_reads(st: &mut State, body: Id) -> Vec<Id> {
     pending
 }
 
+/// The host already answered a read of the stream `source` (any branch) with
+/// its end or its failure, which no task has taken yet: in JavaScript the
+/// stream closed or errored then, and a later abort leaves it as it is.
+fn ended_on_host(st: &State, source: Id) -> bool {
+    st.bodies
+        .values()
+        .filter(|b| b.source == source)
+        .flat_map(|b| &b.reads)
+        .any(|read| match st.ops.get(read) {
+            Some(Some(Ok(answer))) => !matches!(answer, Answer::Chunk(_)),
+            Some(Some(Err(_))) => true,
+            _ => false,
+        })
+}
+
 struct Inner {
     host: RefCell<HostInfo>,
     st: RefCell<State>,
@@ -994,8 +1009,10 @@ impl Rt {
                 if let Some(slot @ None) = st.ops.get_mut(&op) {
                     *slot = Some(Err(reason.clone()));
                     st.cmds.push(Cmd::Cancel { id: op });
-                } else if let Some(body) = st.bodies.get_mut(&op)
+                } else if let Some(body) = st.bodies.get(&op)
                     && !body.done
+                    && !ended_on_host(&st, body.source)
+                    && let Some(body) = st.bodies.get_mut(&op)
                 {
                     // the signal errors the stream itself, whatever its branches
                     body.done = true;
