@@ -31,48 +31,8 @@ use super::protocols_shared::{
 use super::providers::opencode_session_headers;
 use super::registry::model_echoes_reasoning;
 use super::task::{JsError, Request, RequestBody, Response, Rt};
+use super::types::AiChatResponse;
 use super::watchdog::{StreamWatchdog, create_stream_watchdog};
-
-/// `AiChatResponse`: `{ ok, content?, error? }`
-#[derive(Debug, Clone, PartialEq)]
-pub struct AiChatResponse {
-    pub ok: bool,
-    pub content: Option<String>,
-    pub error: Option<String>,
-}
-
-impl AiChatResponse {
-    /// `{ ok: true, content }`
-    pub fn succeeded(content: String) -> AiChatResponse {
-        AiChatResponse {
-            ok: true,
-            content: Some(content),
-            error: None,
-        }
-    }
-
-    /// `{ ok: false, error }`
-    pub fn failed(error: String) -> AiChatResponse {
-        AiChatResponse {
-            ok: false,
-            content: None,
-            error: Some(error),
-        }
-    }
-
-    /// The object `JSON.stringify` writes for it.
-    pub fn to_json(&self) -> JsonValue {
-        let mut out = Obj::new();
-        out.set("ok", JsonValue::Bool(self.ok));
-        if let Some(content) = &self.content {
-            out.set("content", text(content.clone()));
-        }
-        if let Some(error) = &self.error {
-            out.set("error", text(error.clone()));
-        }
-        JsonValue::Object(out)
-    }
-}
 
 /// `Per-endpoint request shaping resolved from the provider registry`
 #[derive(Debug, Clone, Default)]
@@ -337,7 +297,7 @@ fn emit_open_ai_json_message(
     if is_truthy(reasoning) {
         emitted = true;
         if let (Some(on_reasoning_delta), Some(reasoning)) = (&cb.on_reasoning_delta, reasoning) {
-            on_reasoning_delta(&js_string(reasoning));
+            on_reasoning_delta(reasoning.clone());
         }
     }
     let content = prop2(choice, "message", "content");
@@ -347,7 +307,7 @@ fn emit_open_ai_json_message(
         let flat = open_ai_content_text(content);
         if !flat.is_empty() {
             emitted = true;
-            (cb.on_delta)(&flat);
+            (cb.on_delta)(text(flat));
         }
     }
     let mut tool_calls: Vec<Obj> = Vec::new();
@@ -393,7 +353,7 @@ fn emit_open_ai_json_message(
         )));
     }
     if length_finish && let Some(on_stop_reason) = &cb.on_stop_reason {
-        on_stop_reason("max_tokens");
+        on_stop_reason(text("max_tokens"));
     }
     if let Some(json_usage) = prop(&msg, "usage").filter(|u| u.truthy())
         && let Some(usage) = usage_of(
@@ -717,7 +677,7 @@ async fn open_ai_compatible_turn(
             {
                 emitted = true;
                 if let Some(on_reasoning_delta) = &cb.on_reasoning_delta {
-                    on_reasoning_delta(reasoning);
+                    on_reasoning_delta(text(reasoning.clone()));
                 }
             }
             let content = prop2(Some(choice), "delta", "content");
@@ -726,7 +686,7 @@ async fn open_ai_compatible_turn(
                 let flat = open_ai_content_text(content);
                 if !flat.is_empty() {
                     emitted = true;
-                    (cb.on_delta)(&flat);
+                    (cb.on_delta)(text(flat));
                 }
             }
             for tc in iterate_or_empty(prop2(Some(choice), "delta", "tool_calls"))? {
@@ -831,7 +791,7 @@ async fn open_ai_compatible_turn(
         ));
     }
     if let (Some(stop_reason), Some(on_stop_reason)) = (&stop_reason, &cb.on_stop_reason) {
-        on_stop_reason(stop_reason);
+        on_stop_reason(text(stop_reason.clone()));
     }
     if let (Some(turn_usage), Some(on_usage)) = (turn_usage, &cb.on_usage) {
         on_usage(turn_usage);
@@ -947,6 +907,6 @@ async fn chat_open_ai_compatible_turn(
         None => Ok(AiChatResponse::failed(
             "AI returned an empty response".to_owned(),
         )),
-        Some(content) => Ok(AiChatResponse::succeeded(js_string(content))),
+        Some(content) => Ok(AiChatResponse::succeeded(content.clone())),
     }
 }

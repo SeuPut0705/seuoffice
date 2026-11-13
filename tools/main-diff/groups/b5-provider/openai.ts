@@ -719,6 +719,10 @@ const compatCases: Case[] = [
   c(w([ok([txt('ok'), fin('stop')])]), {
     messages: [{ role: 'user', text: 'x', images: [{ mime: 'image/png' }] }],
   }),
+  // a raw reasoning value of a JSON body reaches the callback as it is
+  c(w([json(message({ content: 'x', reasoning_content: 5 }))])),
+  c(w([json(message({ content: 'x', reasoning_content: { a: [1] } }))])),
+  c(w([json(message({ reasoning_content: true }))])),
 ]
 
 interface Step extends Opts {
@@ -790,6 +794,21 @@ const compatGroup: Group = {
       c(w([plain('{"error":"nope"}', 429, 'application/json')])),
       c(w([plain('<html><head><title>Blocked</title></head></html>', 403, 'text/html')])),
       c(w([plain(null, 500)])),
+      // a truthy `content` of any shape is handed over as it is
+      c(
+        w([
+          json({
+            choices: [{ message: { content: [{ type: 'text', text: 'part' }, 'x', null] } }],
+          }),
+        ]),
+      ),
+      c(w([json({ choices: [{ message: { content: { text: 'object', n: [1, 2] } } }] })])),
+      c(w([json({ choices: [{ message: { content: true } }] })])),
+      c(w([json({ choices: [{ message: { content: 7 } }] })])),
+      c(w([json({ choices: [{ message: { content: 0 } }] })])),
+      c(w([json({ choices: [{ message: { content: '' } }] })])),
+      c(w([json({ choices: [{ message: { content: false } }] })])),
+      c(w([json({ choices: [{ message: { content: null } }] })])),
       c(w([json({ choices: [{ message: { content: 'x' } }] })]), {
         options: { maxTokens: 64, temperature: 0.1 },
       }),
@@ -1103,6 +1122,33 @@ const responsesCases: Case[] = [
     config: {},
   }),
   c(w([]), { baseUrl: '::' }),
+  // a raw network value reaches the callbacks as it is
+  c(w([ok([ev('response.output_text.delta', { delta: 5 }), completed({})])])),
+  c(w([ok([ev('response.output_text.delta', { delta: { a: 1 } }), completed({})])])),
+  c(
+    w([
+      ok([
+        ev('response.reasoning_summary_text.delta', { delta: [1, 'b'] }),
+        rtext('t'),
+        completed({}),
+      ]),
+    ]),
+  ),
+  c(w([ok([ev('response.reasoning_summary_text.delta', { delta: true }), completed({})])])),
+  c(
+    w([
+      ok([
+        itemDone({ type: 'message', content: [{ type: 'output_text', text: 7 }] }),
+        completed({}),
+      ]),
+    ]),
+  ),
+  c(w([ok([itemDone(rsn('r', 'e', [{ text: { k: 1 } }])), completed({})])])),
+  c(
+    w([
+      json({ output: [{ type: 'message', content: [{ type: 'output_text', text: { n: 1 } }] }] }),
+    ]),
+  ),
 ]
 
 const respGroup: Group = {
@@ -1253,6 +1299,12 @@ const gatewayGroup: Group = {
         provider: true,
       }),
       c(w([json({ choices: [] })], { calls: ['t'] }), { baseUrl: GW, provider: true }),
+      c(
+        w([json({ choices: [{ message: { content: [{ type: 'text', text: 'g' }] } }] })], {
+          calls: ['t'],
+        }),
+        { baseUrl: GW, provider: true },
+      ),
     ],
   },
   'gateway-complete.setGatewayTokenProvider': {

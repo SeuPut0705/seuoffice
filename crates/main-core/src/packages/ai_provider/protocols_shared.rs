@@ -378,15 +378,18 @@ pub fn throw_if_tool_count_over_budget(count: f64, provider: &str) -> Result<(),
     Ok(())
 }
 
-/// `StreamCallbacks`: an absent optional callback is `None`. Tool calls and
-/// usage are the JSON objects the TypeScript hands over.
+/// `StreamCallbacks`: an absent optional callback is `None`. Every value is
+/// handed over as the TypeScript hands it: a protocol that forwards a raw
+/// network value (a delta or a stop reason that is not a string) forwards
+/// that value, so the callbacks take [`JsonValue`]; a string is
+/// `JsonValue::String`.
 #[derive(Clone)]
 pub struct StreamCallbacks {
-    pub on_delta: Rc<dyn Fn(&str)>,
+    pub on_delta: Rc<dyn Fn(JsonValue)>,
     /// `AgentToolCall`: `{ id, name, input, inputError?, truncated? }`
     pub on_tool_call: Rc<dyn Fn(JsonValue)>,
-    pub on_reasoning_delta: Option<Rc<dyn Fn(&str)>>,
-    pub on_stop_reason: Option<Rc<dyn Fn(&str)>>,
+    pub on_reasoning_delta: Option<Rc<dyn Fn(JsonValue)>>,
+    pub on_stop_reason: Option<Rc<dyn Fn(JsonValue)>>,
     /// `AiTokenUsage`
     pub on_usage: Option<Rc<dyn Fn(JsonValue)>>,
     /// `AiSubscriptionUsage[]`

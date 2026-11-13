@@ -454,5 +454,40 @@
     "find": "self.token_provider = next;",
     "replace": "if next.is_some() { self.token_provider = next; }",
     "fn": ["gateway-complete.setGatewayTokenProvider"]
+  },
+  {
+    "name": "a chat answer with non-string content is stringified",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "Some(content) => Ok(AiChatResponse::succeeded(content.clone())),",
+    "replace": "Some(content) => Ok(AiChatResponse::succeeded(text(js_string(content)))),",
+    "fn": ["openai-compatible.chatOpenAiCompatible", "gateway-complete.chatGatewayComplete"]
+  },
+  {
+    "name": "a falsy chat content is handed over",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "match content.filter(|c| c.truthy()) {",
+    "replace": "match content {",
+    "fn": ["openai-compatible.chatOpenAiCompatible"]
+  },
+  {
+    "name": "a raw reasoning value of a json body is stringified",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_compatible.rs",
+    "find": "on_reasoning_delta(reasoning.clone());",
+    "replace": "on_reasoning_delta(text(js_string(reasoning)));",
+    "fn": ["openai-compatible.streamOpenAiCompatible"]
+  },
+  {
+    "name": "a raw text delta of a response is stringified",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "(cb.on_delta)(delta.clone());",
+    "replace": "(cb.on_delta)(text(js_string(delta)));",
+    "fn": ["openai-responses.streamOpenAiResponses"]
+  },
+  {
+    "name": "a raw item text of a response is stringified",
+    "file": "main-core/src/packages/ai_provider/protocols_openai_responses.rs",
+    "find": "(cb.on_delta)(part_text.clone());",
+    "replace": "(cb.on_delta)(text(js_string(part_text)));",
+    "fn": ["openai-responses.streamOpenAiResponses"]
   }
 ]

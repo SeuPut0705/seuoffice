@@ -22,8 +22,8 @@ use super::jsval::{
     Obj, as_str, coalesce, js_string, js_string_or_empty, number, prop, prop2, text, value_key,
 };
 use super::protocols_openai_compatible::{
-    AiChatResponse, http_failure, is_str, is_truthy, iterate_or_empty, iterate_or_throw,
-    length_truthy, put, read_null_error,
+    http_failure, is_str, is_truthy, iterate_or_empty, iterate_or_throw, length_truthy, put,
+    read_null_error,
 };
 use super::protocols_shared::{
     CappedReadOptions, SseDataEvents, StreamCallbacks, endpoint_url, json_body_instead_of_sse,
@@ -31,6 +31,7 @@ use super::protocols_shared::{
     throw_if_tool_count_over_budget, throw_if_tool_json_over_budget, usage_count,
 };
 use super::task::{JsError, Rt};
+use super::types::AiChatResponse;
 use super::watchdog::{StreamWatchdog, create_stream_watchdog};
 
 /// `REASONING_SIGNATURE_PREFIX`
@@ -277,7 +278,7 @@ fn emit_finished_items(
                     if let Some(part_text) = prop(part, "text").filter(|t| t.truthy()) {
                         emitted = true;
                         if let Some(on_reasoning_delta) = &cb.on_reasoning_delta {
-                            on_reasoning_delta(&js_string(part_text));
+                            on_reasoning_delta(part_text.clone());
                         }
                     }
                 }
@@ -289,7 +290,7 @@ fn emit_finished_items(
                         && let Some(part_text) = prop(part, "text").filter(|t| t.truthy())
                     {
                         emitted = true;
-                        (cb.on_delta)(&js_string(part_text));
+                        (cb.on_delta)(part_text.clone());
                     }
                 }
             }
@@ -329,7 +330,7 @@ fn emit_finished_items(
         (cb.on_tool_call)(JsonValue::Object(call));
     }
     if cut_off && let Some(on_stop_reason) = &cb.on_stop_reason {
-        on_stop_reason("max_tokens");
+        on_stop_reason(text("max_tokens"));
     }
     if let Some(usage) = usage_of(response.and_then(|r| prop(r, "usage")))
         && let Some(on_usage) = &cb.on_usage
@@ -503,14 +504,14 @@ async fn responses_turn(
                 Some("response.output_text.delta") => {
                     if let Some(delta) = prop(&event, "delta").filter(|d| d.truthy()) {
                         streamed_any = true;
-                        (cb.on_delta)(&js_string(delta));
+                        (cb.on_delta)(delta.clone());
                     }
                 }
                 Some("response.reasoning_summary_text.delta") => {
                     if let Some(delta) = prop(&event, "delta").filter(|d| d.truthy()) {
                         streamed_any = true;
                         if let Some(on_reasoning_delta) = &cb.on_reasoning_delta {
-                            on_reasoning_delta(&js_string(delta));
+                            on_reasoning_delta(delta.clone());
                         }
                     }
                 }
@@ -713,5 +714,5 @@ pub async fn chat_open_ai_responses(
             "AI returned an empty response".to_owned(),
         ));
     }
-    Ok(AiChatResponse::succeeded(content))
+    Ok(AiChatResponse::succeeded(text(content)))
 }

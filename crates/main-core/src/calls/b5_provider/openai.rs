@@ -154,7 +154,8 @@ fn fetch_state(o: &Opts) -> AiFetch {
 fn callbacks(o: &Opts, sink: &Sink, signal: Signal) -> StreamCallbacks {
     let on_delta = {
         let sink = sink.clone();
-        Rc::new(move |t: &str| note(&sink, json!(["delta", t]))) as Rc<dyn Fn(&str)>
+        Rc::new(move |t: JsonValue| note(&sink, json!(["delta", json_value_to_serde(&t)])))
+            as Rc<dyn Fn(JsonValue)>
     };
     let on_tool_call = {
         let sink = sink.clone();
@@ -175,11 +176,15 @@ fn callbacks(o: &Opts, sink: &Sink, signal: Signal) -> StreamCallbacks {
     };
     if !o.bare {
         let s = sink.clone();
-        cb.on_reasoning_delta =
-            Some(Rc::new(move |t: &str| note(&s, json!(["reasoning", t]))) as Rc<dyn Fn(&str)>);
+        cb.on_reasoning_delta = Some(Rc::new(move |t: JsonValue| {
+            note(&s, json!(["reasoning", json_value_to_serde(&t)]))
+        }) as Rc<dyn Fn(JsonValue)>);
         let s = sink.clone();
         cb.on_stop_reason =
-            Some(Rc::new(move |r: &str| note(&s, json!(["stop", r]))) as Rc<dyn Fn(&str)>);
+            Some(
+                Rc::new(move |r: JsonValue| note(&s, json!(["stop", json_value_to_serde(&r)])))
+                    as Rc<dyn Fn(JsonValue)>,
+            );
         let s = sink.clone();
         cb.on_usage =
             Some(

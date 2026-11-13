@@ -16,12 +16,12 @@ use jscompat::{JsonValue, trim};
 use super::fetch::AiFetch;
 use super::jsval::{spread, text};
 use super::protocols_openai_compatible::{
-    AiChatResponse, OpenAiCompatibleState, OpenAiRequestOptions, chat_open_ai_compatible,
-    stream_open_ai_compatible,
+    OpenAiCompatibleState, OpenAiRequestOptions, chat_open_ai_compatible, stream_open_ai_compatible,
 };
 use super::protocols_shared::StreamCallbacks;
 use super::run_error::ai_run_error;
 use super::task::{JsError, LocalBoxFuture, Rt, Signal};
+use super::types::AiChatResponse;
 use super::watchdog::StreamWatchdog;
 
 /// `GatewayTokenProvider`: hands over the token for one request; an empty
