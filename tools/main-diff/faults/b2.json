@@ -1213,5 +1213,12 @@
     "find": "USER_SKILL_BUNDLE_MAX: usize = 500;",
     "replace": "USER_SKILL_BUNDLE_MAX: usize = 501;",
     "fn": ["user-skills-channels.USER_SKILL_BUNDLE_MAX"]
+  },
+  {
+    "name": "hm-default",
+    "file": "main-core/src/packages/electron_utils/headless_mode.rs",
+    "find": "headless: AtomicBool::new(false),",
+    "replace": "headless: AtomicBool::new(true),",
+    "fn": ["headless-mode.isHeadlessMode"]
   }
 ]

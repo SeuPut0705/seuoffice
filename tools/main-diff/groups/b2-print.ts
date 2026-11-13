@@ -1530,12 +1530,14 @@ export const group: Group = {
   },
   'headless-mode.isHeadlessMode': {
     ts: (a) => {
+      // null: no set at all, the state the module starts in (each case leaves it there)
+      if (a[0] === null) return isHeadlessMode()
       setHeadlessMode(a[0] as boolean)
       const now = isHeadlessMode()
       setHeadlessMode(false)
       return now
     },
-    cases: cases([true], [false]),
+    cases: cases([true], [false], [null]),
   },
 
   // ---------- handoff-editors.ts ----------

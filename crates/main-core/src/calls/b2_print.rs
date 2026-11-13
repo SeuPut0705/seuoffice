@@ -109,6 +109,8 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             let mode = HeadlessMode::new();
             match arg(args, 0) {
                 Some(Value::Bool(on)) => mode.set_headless_mode(*on),
+                // no set: the state a new store starts in
+                Some(Value::Null) if name == "headless-mode.isHeadlessMode" => {}
                 _ => return Some(Err(bad("a flag"))),
             }
             Ok(Some(Value::Bool(mode.is_headless_mode())))
