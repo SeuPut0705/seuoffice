@@ -17,6 +17,7 @@ pub mod knowledge_base;
 pub mod mcp;
 pub mod slides_ai;
 pub mod subscription;
+pub mod template_selection;
 pub mod user_skills;
 pub mod zotero;
 
