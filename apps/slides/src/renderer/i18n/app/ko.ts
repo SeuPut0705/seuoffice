@@ -29,6 +29,8 @@ export const ko = {
   appExportPdfProgress: 'PDF 내보내는 중…',
   appExportPdfDone: 'PDF 내보내기 완료: {path}',
   appExportPdfFailed: 'PDF 내보내기 실패: {error}',
+  appExportRefusedHidden:
+    '아무것도 내보내지 않았습니다. 이 프레젠테이션에는 AI에서 숨긴 내용이 있고, 사본에는 숨김 표시가 남지 않아 그 내용이 그대로 담깁니다. 파일 메뉴에서 직접 내보내면 선택할 수 있습니다.',
   appStatusBgAppliedAll: '배경색을 모든 슬라이드에 적용했습니다',
   appStatusThemeApplied: '테마 "{name}"을(를) 적용했습니다',
   appStatusThemeApplyFailed: '테마 적용 실패: {error}',

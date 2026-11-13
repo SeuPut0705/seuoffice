@@ -897,10 +897,10 @@
     "fn": ["image-edit.applyImageEdits"]
   },
   {
-    "name": "image unpremultiply of transparent",
+    "name": "image unpremultiply of nearly opaque",
     "file": "main-core/src/pdf/image_edit.rs",
     "find": "if a > 0 && a < 255 {",
-    "replace": "if a < 255 {",
+    "replace": "if a > 0 && a < 254 {",
     "fn": ["image-edit.decodeImage"]
   },
   {
@@ -1145,7 +1145,7 @@
     "name": "batch end depth",
     "file": "main-core/src/slides/session_state.rs",
     "find": "if batch.depth > 0 {",
-    "replace": "if batch.depth >= 0 {",
+    "replace": "if batch.depth > 1 {",
     "fn": ["slides/session-state.scenario"]
   },
   {
@@ -1394,17 +1394,17 @@
     "fn": ["slides/session-state.scenario"]
   },
   {
-    "name": "byte version step",
+    "name": "byte version shared by different bytes",
     "file": "main-core/src/slides/session_state.rs",
-    "find": "self.next_byte_version += 1;",
-    "replace": "self.next_byte_version += 2;",
+    "find": ".find(|(known, _)| Rc::ptr_eq(known, bytes))",
+    "replace": ".find(|(known, _)| Rc::ptr_eq(known, known))",
     "fn": ["slides/session-state.scenario"]
   },
   {
-    "name": "media context text",
+    "name": "media context ignores the part bytes",
     "file": "main-core/src/slides/session_state.rs",
-    "find": "\"{}:{version}\",",
-    "replace": "\"{}={version}\",",
+    "find": "let version = self.byte_version(part_bytes.as_ref());",
+    "replace": "let version = {\n                        let _ = &part_bytes;\n                        self.byte_version(None)\n                    };",
     "fn": ["slides/session-state.scenario"]
   },
   {

@@ -29,4 +29,4 @@ cp -r node_modules/@seuoffice/web/dist ./public/seuoffice
 - CDN이 큰 파일을 자동 압축하지 않으면(파일 크기 상한이 있는 곳이 있다) 올리기 전에 미리 압축해 `Content-Encoding`을 붙인다.
 - 확인: 브라우저 개발자 도구의 네트워크 탭에서 `rhwp_bg-*.wasm`의 응답 머리글에 `content-encoding: br`(또는 `gzip`)이 있는지 본다.
 
-라이선스: Apache-2.0. 저장소: https://github.com/SeuPut0705/seuoffice
+라이선스: FSL-1.1-ALv2(소스 공개, 판마다 2년 뒤 Apache-2.0), GenOffice·이음오피스에서 온 부분은 Apache-2.0. 저장소: https://github.com/SeuPut0705/seuoffice

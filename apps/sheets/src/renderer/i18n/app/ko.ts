@@ -576,6 +576,8 @@ export const ko = {
   appPdfCanceled: 'PDF 내보내기를 취소했습니다.',
   appPdfExported: '{path}을(를) 내보냈습니다.',
   appPdfExportFailed: 'PDF를 내보낼 수 없습니다.',
+  appPdfRefusedHidden:
+    'PDF를 만들지 않았습니다. 이 통합 문서에는 AI에서 숨긴 셀이 있고, PDF에는 숨김 표시가 남지 않아 그 셀이 그대로 담깁니다. 파일 메뉴에서 직접 내보내면 선택할 수 있습니다.',
   appPrintPreparing: '인쇄를 준비하는 중…',
   appPrintSent: '프린터로 전송했습니다.',
   appPrintCanceled: '인쇄가 취소되었습니다.',

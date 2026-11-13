@@ -83,8 +83,10 @@ pub trait RecoveryEditors {
 
     /// `isRecoveryEditorKind(kind) ? recoveryEditor(kind) : null` is not null
     fn has_recovery_editor(&self, kind: &str) -> bool;
-    /// `contract.openUntitledCopy(view.webContents, request)`: `Err` is a
-    /// throw or a rejection
+    /// `contract.openUntitledCopy(view.webContents, request)`, started and not
+    /// waited for (`void Promise.resolve(..).catch(warn)`): the caller must
+    /// not block on the copy being opened. `Err` is its synchronous throw;
+    /// a rejection later is the host's own `warn` with the same prefix
     fn open_untitled_copy(
         &self,
         kind: &str,

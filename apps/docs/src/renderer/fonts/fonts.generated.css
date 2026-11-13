@@ -3147,25 +3147,25 @@
  * Liberation Sans size-adjusted to the Word face's Latin advances (hmtx sentence ratio
  * over a mixed-case English sample).
  * 
- * GenOffice Cordia: hmtx 2026-11-03
+ * SeuOffice Cordia: hmtx 2026-11-03
  * Thai advances per glyph from hmtx, Regular and Bold; Latin ratio 0.649 regular / 0.643 bold
  * fonts: Cordia New (Word DFonts cordia.ttc); NotoSansThai; LiberationSans */
 @font-face {
-  font-family: 'GenOffice Cordia';
-  src: url('./GenOfficeCordia-Regular.woff2') format('woff2');
+  font-family: 'SeuOffice Cordia';
+  src: url('./SeuOfficeCordia-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Cordia';
-  src: url('./GenOfficeCordia-Bold.woff2') format('woff2');
+  font-family: 'SeuOffice Cordia';
+  src: url('./SeuOfficeCordia-Bold.woff2') format('woff2');
   font-weight: bold;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Cordia';
+  font-family: 'SeuOffice Cordia';
   src: url('./LiberationSans-Regular.ttf');
   size-adjust: 64.9%;
   unicode-range: U+0000-0DFF, U+0E80-10FFFF;
@@ -3174,7 +3174,7 @@
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Cordia';
+  font-family: 'SeuOffice Cordia';
   src: url('./LiberationSans-Bold.ttf');
   size-adjust: 64.3%;
   unicode-range: U+0000-0DFF, U+0E80-10FFFF;
@@ -3189,10 +3189,10 @@
  * itself resolves ahead of this alias.
  * Chromium local() matches PostScript/full names, not family names.
  * 
- * GenOffice Ethiopic: corpus 2026-08-13
+ * SeuOffice Ethiopic: corpus 2026-08-13
  * regression sample 39: line breaks match Word at 72%; the residual page-4 spill is line-height, not width */
 @font-face {
-  font-family: 'GenOffice Ethiopic';
+  font-family: 'SeuOffice Ethiopic';
   src: local('Kefa-Regular'), local('Kefa Regular'), local('Kefa');
   size-adjust: 72%;
   font-weight: normal;
@@ -3209,25 +3209,25 @@
  * Liberation Sans size-adjusted to the Word face's Latin advances (hmtx sentence ratio
  * over a mixed-case English sample).
  * 
- * GenOffice Sarabun: hmtx 2026-11-03
+ * SeuOffice Sarabun: hmtx 2026-11-03
  * Thai advances per glyph from hmtx, Regular and Bold; Latin ratio 0.644 regular / 0.657 bold
  * fonts: TH SarabunPSK (Word DFonts thsarabun.ttf); NotoSansThai; LiberationSans */
 @font-face {
-  font-family: 'GenOffice Sarabun';
-  src: url('./GenOfficeSarabun-Regular.woff2') format('woff2');
+  font-family: 'SeuOffice Sarabun';
+  src: url('./SeuOfficeSarabun-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Sarabun';
-  src: url('./GenOfficeSarabun-Bold.woff2') format('woff2');
+  font-family: 'SeuOffice Sarabun';
+  src: url('./SeuOfficeSarabun-Bold.woff2') format('woff2');
   font-weight: bold;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Sarabun';
+  font-family: 'SeuOffice Sarabun';
   src: url('./LiberationSans-Regular.ttf');
   size-adjust: 64.4%;
   unicode-range: U+0000-0DFF, U+0E80-10FFFF;
@@ -3236,7 +3236,7 @@
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice Sarabun';
+  font-family: 'SeuOffice Sarabun';
   src: url('./LiberationSans-Bold.ttf');
   size-adjust: 65.7%;
   unicode-range: U+0000-0DFF, U+0E80-10FFFF;
@@ -3250,11 +3250,11 @@
  * alias keeps digit-heavy cells wrapping like Word. A locally installed YaHei
  * precedes it in the chain.
  * 
- * GenOffice YaHei Latin: hmtx 2026-09-23
+ * SeuOffice YaHei Latin: hmtx 2026-09-23
  * tabular digits 0.586em (bold 0.617) vs Helvetica 0.556
  * fonts: Microsoft YaHei; Helvetica */
 @font-face {
-  font-family: 'GenOffice YaHei Latin';
+  font-family: 'SeuOffice YaHei Latin';
   src: local('Helvetica'), local('ArialMT'), url('./LiberationSans-Regular.ttf');
   size-adjust: 106%;
   unicode-range: U+0020-007E;
@@ -3263,7 +3263,7 @@
   font-display: block;
 }
 @font-face {
-  font-family: 'GenOffice YaHei Latin';
+  font-family: 'SeuOffice YaHei Latin';
   src: local('Helvetica-Bold'), local('Arial-BoldMT'), url('./LiberationSans-Bold.ttf');
   size-adjust: 108%;
   unicode-range: U+0020-007E;
@@ -3344,7 +3344,7 @@
  * (text-weighted mean 0.769em, bold 0.820em), U+30FC 0.816/0.882em,
  * ideographic space and 、。 0.664em, corner/angle brackets and ・ 0.5em, at
  * full glyph height; kanji and （）：；！？ stay 1em and fall through to the
- * chain. The bundled GenOffice UI Kana JP faces (tools/build-meiryo-ui-kana-
+ * chain. The bundled SeuOffice UI Kana JP faces (tools/build-meiryo-ui-kana-
  * font.py: Noto Sans JP outlines condensed horizontally to Meiryo UI's exact
  * per-glyph advances) carry those ranges — a size-adjust alias would shrink
  * the height too and leave kana at ~77% next to full-size kanji. Latin in
@@ -3353,10 +3353,10 @@
  * these aliases in the chain.
  * 
  * Meiryo UI GO: probe 2026-09-03
- * Word probe from meiryo.ttc: Latin Verdana-derived at 0.9705x (bold 0.948x), kana via the bundled GenOffice UI Kana JP faces */
+ * Word probe from meiryo.ttc: Latin Verdana-derived at 0.9705x (bold 0.948x), kana via the bundled SeuOffice UI Kana JP faces */
 @font-face {
   font-family: 'Meiryo UI GO';
-  src: url('./GenOfficeUIKanaJP-Regular.woff2') format('woff2');
+  src: url('./SeuOfficeUIKanaJP-Regular.woff2') format('woff2');
   unicode-range: U+3000-3002, U+3008-3011, U+3014-3015, U+3041-3096, U+3099-30FF;
   font-weight: normal;
   font-style: normal;
@@ -3364,7 +3364,7 @@
 }
 @font-face {
   font-family: 'Meiryo UI GO';
-  src: url('./GenOfficeUIKanaJP-Bold.woff2') format('woff2');
+  src: url('./SeuOfficeUIKanaJP-Bold.woff2') format('woff2');
   unicode-range: U+3000-3002, U+3008-3011, U+3014-3015, U+3041-3096, U+3099-30FF;
   font-weight: bold;
   font-style: normal;

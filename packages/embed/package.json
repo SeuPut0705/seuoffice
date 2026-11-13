@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/embed",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "description": "Open a document in a seuoffice iframe from its bytes and file name",
   "repository": {
     "type": "git",
@@ -28,6 +28,7 @@
     "dist",
     "README.md",
     "LICENSE",
+    "LICENSE-APACHE",
     "NOTICE"
   ],
   "scripts": {

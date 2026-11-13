@@ -84,6 +84,28 @@ export function hasRedactExtIn(xml: string): boolean {
 }
 
 /**
+ * The label a SmartArt data part withholds its text under, or undefined when it
+ * shows no trace of the mark. The shapes drawn for the diagram (its cached
+ * drawing, or the layout made from the data) do not carry the data's marks, so
+ * every word of the diagram is withheld under the first label the data names
+ * (`private` when none can be read): a trace counts, whatever its spelling.
+ */
+export function diagramDataRedactLabel(dataXml: string | undefined): string | undefined {
+  if (!dataXml) return undefined
+  const text = dataXml.replace(
+    /&#(?:x([0-9a-fA-F]+)|(\d+));/g,
+    (all, hex?: string, dec?: string) => {
+      const code = hex === undefined ? Number(dec) : Number.parseInt(hex, 16)
+      return code <= 0x10ffff && (code < 0xd800 || code > 0xdfff) ? String.fromCodePoint(code) : all
+    },
+  )
+  if (!text.includes(REDACT_EXT_URI) && !/<(?:[\w.-]+:)?redact[\s/>]/.test(text)) return undefined
+  const label = /<(?:[\w.-]+:)?redact\b[^>]*?\slabel\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(text)
+  const value = label?.[1] ?? label?.[2]
+  return value ? value : 'private'
+}
+
+/**
  * Sync our mark on the element named `tag` inside `xml` — `a:rPr` for a run, the
  * picture's `p:spPr` for media. A `label` of undefined removes it.
  *

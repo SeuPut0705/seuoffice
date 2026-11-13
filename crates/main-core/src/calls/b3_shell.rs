@@ -25,7 +25,8 @@ use crate::packages::electron_utils::recovery_store::{
 use crate::packages::i18n::Lang;
 use crate::shell::atomic_write::{atomic_copy_file, atomic_write_file};
 use crate::shell::control_handlers::{
-    ControlContents, ControlHost, ControlTab, ScriptRejected, control_handler,
+    ControlAnswer, ControlContents, ControlHost, ControlStep, ControlTab, ScriptRejected,
+    control_handler,
 };
 use crate::shell::control_server::{
     ControlListener, ControlSession, ControlStartError, SessionStep, control_endpoint_path,
@@ -57,14 +58,14 @@ use crate::shell::feedback::{
 };
 use crate::shell::launch_recovery::{
     EnsureLoaded, GateGet, GateSubmit, LAUNCH_NEEDS_USER_MESSAGE, LaunchCopy, LaunchCopySource,
-    LaunchJudgment, LaunchListGate, LaunchOutcome, LaunchPlan, LiveTabContentsDeps,
-    OS_SESSION_END_WRITE_TIMEOUT_MS, OsSessionEnd, OsSessionEndDeps, PlannedOpen, PlannedSplit,
-    PlannedTab, RecoveryChoice, RecoveryListItem, RecoveryListResult, WriteState,
-    live_session_source, live_tab_contents, normalize_launch_list_result, plan_launch,
-    recovery_identity_key, resolve_launch_decisions,
+    LaunchJudgment, LaunchListGate, LaunchOutcome, LaunchPlan, LiveTabContentsDeps, LiveTabLookup,
+    LiveTabStep, OS_SESSION_END_WRITE_TIMEOUT_MS, OsSessionEnd, OsSessionEndDeps, PlannedOpen,
+    PlannedSplit, PlannedTab, RecoveryChoice, RecoveryListItem, RecoveryListResult, WriteState,
+    live_session_source, normalize_launch_list_result, plan_launch, recovery_identity_key,
+    resolve_launch_decisions,
 };
 use crate::shell::pdf_convert_ui_handlers::{
-    PdfConvertUiDeps, PdfConvertUiTabs, create_pdf_convert_ui_handlers,
+    PdfConvertUiDeps, PdfConvertUiTabs, ReleaseStep, create_pdf_convert_ui_handlers,
 };
 use crate::shell::pdf_note_tabs::{
     NoteAppendContents, NoteTabHost, insert_into_note_tab, is_note_file, open_note_tab,
@@ -520,6 +521,7 @@ struct ControlShared {
     clock: Cell<f64>,
 }
 
+#[derive(Clone)]
 struct FakeControlContents {
     name: String,
     shared: Rc<ControlShared>,
@@ -567,8 +569,11 @@ impl ControlContents for FakeControlContents {
         state.0 += 1;
         answer
     }
+}
 
-    fn execute_javascript(&mut self, script: &str) -> Result<Option<JsonValue>, ScriptRejected> {
+impl FakeControlContents {
+    /// `await wc.executeJavaScript(script, true)` as the spec's fake answers it
+    fn execute_javascript(&self, script: &str) -> Result<Option<JsonValue>, ScriptRejected> {
         self.shared.log.push(vec![
             Value::from("exec"),
             Value::from(self.name.as_str()),
@@ -657,11 +662,6 @@ impl ControlHost for FakeControlHost {
     fn now_ms(&mut self) -> f64 {
         self.shared.clock.get()
     }
-
-    fn wait(&mut self, ms: f64) {
-        self.shared.clock.set(self.shared.clock.get() + ms);
-        self.shared.log.push(vec![Value::from("wait"), num(ms)]);
-    }
 }
 
 /// `[cfg, requests]`
@@ -685,10 +685,32 @@ fn control_handler_call(args: &[Value], cx: &mut Context) -> Answer {
         log: log.clone(),
         clock: Cell::new(cx.now_ms),
     });
-    let mut handler = control_handler(FakeControlHost { shared });
+    let mut handler = control_handler(FakeControlHost {
+        shared: shared.clone(),
+    });
     let replies: Vec<Value> = requests
         .iter()
-        .map(|request| json_value_to_serde(&handler.handle(&json_value_from_serde(request))))
+        .map(|request| {
+            let (mut run, mut step) = handler.handle(&json_value_from_serde(request));
+            loop {
+                let answer = match step {
+                    ControlStep::Done(reply) => break json_value_to_serde(&reply),
+                    ControlStep::ExecuteJavaScript {
+                        web_contents,
+                        script,
+                    } => ControlAnswer::Script(web_contents.execute_javascript(&script)),
+                    ControlStep::Wait(ms) => {
+                        shared.clock.set(shared.clock.get() + ms);
+                        shared.log.push(vec![Value::from("wait"), num(ms)]);
+                        ControlAnswer::Waited
+                    }
+                };
+                let Some(run) = run.as_mut() else {
+                    break Value::Null;
+                };
+                step = run.resume(&mut handler, answer);
+            }
+        })
         .collect();
     log.flush_into(cx);
     Ok(Some(Value::Array(replies)))
@@ -1004,7 +1026,7 @@ struct FakeConvertDeps {
     cfg: Value,
     log: Log,
     /// the Markdown tab of each path
-    tabs: Vec<(String, String)>,
+    tabs: Rc<RefCell<Vec<(String, String)>>>,
 }
 
 impl PdfConvertUiTabs for FakeConvertDeps {
@@ -1012,21 +1034,10 @@ impl PdfConvertUiTabs for FakeConvertDeps {
         self.log
             .push(vec![Value::from("findMarkdownTab"), Value::from(path)]);
         self.tabs
+            .borrow()
             .iter()
             .find(|(held, _)| held == path)
             .map(|(_, id)| id.clone())
-    }
-
-    fn close_tab(&mut self, tab_id: &str) -> Result<(), String> {
-        self.log
-            .push(vec![Value::from("closeTab"), Value::from(tab_id)]);
-        if field_bool(&self.cfg, "closeFails") {
-            return Err("close refused".to_string());
-        }
-        if !field_bool(&self.cfg, "keepOpen") {
-            self.tabs.retain(|(_, id)| id != tab_id);
-        }
-        Ok(())
     }
 
     fn activate_view(&mut self, view_id: f64) {
@@ -1084,19 +1095,22 @@ fn convert_call(args: &[Value], cx: &mut Context) -> Answer {
         .and_then(Value::as_array)
         .ok_or_else(|| bad("steps"))?;
     let log = Log::default();
-    let tabs = cfg
-        .get("tabs")
-        .and_then(Value::as_object)
-        .map(|tabs| {
-            tabs.iter()
-                .filter_map(|(path, id)| Some((path.clone(), id.as_str()?.to_string())))
-                .collect()
-        })
-        .unwrap_or_default();
+    let tabs: Rc<RefCell<Vec<(String, String)>>> = Rc::new(RefCell::new(
+        cfg.get("tabs")
+            .and_then(Value::as_object)
+            .map(|tabs| {
+                tabs.iter()
+                    .filter_map(|(path, id)| Some((path.clone(), id.as_str()?.to_string())))
+                    .collect()
+            })
+            .unwrap_or_default(),
+    ));
+    let close_fails = field_bool(&cfg, "closeFails");
+    let keep_open = field_bool(&cfg, "keepOpen");
     let mut handlers = create_pdf_convert_ui_handlers(FakeConvertDeps {
         cfg,
         log: log.clone(),
-        tabs,
+        tabs: tabs.clone(),
     });
     let mut out = Vec::new();
     for step in steps {
@@ -1111,9 +1125,24 @@ fn convert_call(args: &[Value], cx: &mut Context) -> Answer {
         let req = step.get(2).map(json_value_from_serde);
         let req = req.as_ref();
         out.push(match method {
-            "releaseTarget" => handlers
-                .release_target(view_id, req)
-                .map_or_else(error_value, Value::Bool),
+            "releaseTarget" => match handlers.release_target(view_id, req) {
+                ReleaseStep::Done(result) => result.map_or_else(error_value, Value::Bool),
+                ReleaseStep::CloseTab { tab_id, run } => {
+                    // `await deps.closeTab(tabId)` as the spec's fake answers it
+                    log.push(vec![Value::from("closeTab"), Value::from(tab_id.as_str())]);
+                    let closed = if close_fails {
+                        Err("close refused".to_string())
+                    } else {
+                        if !keep_open {
+                            tabs.borrow_mut().retain(|(_, id)| *id != tab_id);
+                        }
+                        Ok(())
+                    };
+                    handlers
+                        .finish_release_target(run, closed)
+                        .map_or_else(error_value, Value::Bool)
+                }
+            },
             "openResult" => Value::Bool(handlers.open_result(view_id, req)),
             "revealResult" => Value::Bool(handlers.reveal_result(view_id, req)),
             _ => return Err(bad("method")),
@@ -2512,8 +2541,16 @@ fn live_call(args: &[Value], cx: &mut Context) -> Answer {
     let source = live_session_source(strip.as_ref(), &detached, &mut |tab| {
         let shown = json_value_to_serde(tab);
         let id = field_str(&shown, "id").map(str::to_owned);
+        let title = field_str(&shown, "title").map(str::to_owned);
         log.push(vec![text("untitledOf"), shown]);
-        let answer = field(answers, id.as_deref()?)?;
+        // `o.untitledByTitle?.[tab.title] ?? o.untitled[tab.id]`
+        let by_title = title
+            .as_deref()
+            .and_then(|title| spec.get("untitledByTitle").and_then(|m| field(m, title)));
+        let answer = match by_title {
+            Some(answer) => answer,
+            None => field(answers, id.as_deref()?)?,
+        };
         Some(SessionUntitledCopy {
             untitled_id: field_str(answer, "untitledId")?.to_owned(),
             ext: field_str(answer, "ext")?.to_owned(),
@@ -2552,15 +2589,6 @@ struct TabLookup<'a> {
 }
 
 impl LiveTabContentsDeps<String> for TabLookup<'_> {
-    fn ensure_loaded(&mut self, tab_id: &str) -> Result<EnsureLoaded<String>, Failure> {
-        self.log.push(vec![text("ensureLoaded"), text(tab_id)]);
-        match field_str(self.spec, "ensure") {
-            Some("rejects") => Err(Failure("load failed".to_owned())),
-            Some("ready") => Ok(EnsureLoaded::Ready(format!("contents of {tab_id}"))),
-            Some("needs-user") => Ok(EnsureLoaded::NeedsUser),
-            _ => Ok(EnsureLoaded::Missing),
-        }
-    }
     fn detached(&mut self, tab_id: &str) -> Option<String> {
         self.log.push(vec![text("detached"), text(tab_id)]);
         field_str(self.spec, "detached").map(str::to_owned)
@@ -2571,11 +2599,36 @@ impl LiveTabContentsDeps<String> for TabLookup<'_> {
     }
 }
 
+/// what the caller does for `await deps.ensureLoaded(tabId)`
+fn carry_out_ensure_loaded(
+    spec: &Value,
+    log: &Log,
+    tab_id: &str,
+) -> Result<EnsureLoaded<String>, Failure> {
+    log.push(vec![text("ensureLoaded"), text(tab_id)]);
+    match field_str(spec, "ensure") {
+        Some("rejects") => Err(Failure("load failed".to_owned())),
+        Some("ready") => Ok(EnsureLoaded::Ready(format!("contents of {tab_id}"))),
+        Some("needs-user") => Ok(EnsureLoaded::NeedsUser),
+        _ => Ok(EnsureLoaded::Missing),
+    }
+}
+
 fn tab_contents_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
     let log = Log::default();
     let mut deps = TabLookup { spec, log: &log };
-    let found = live_tab_contents(field_str(spec, "tabId").unwrap_or_default(), &mut deps);
+    let (lookup, mut step) =
+        LiveTabLookup::begin::<String>(field_str(spec, "tabId").unwrap_or_default());
+    let found = loop {
+        match step {
+            LiveTabStep::EnsureLoaded(tab_id) => {
+                let answer = carry_out_ensure_loaded(spec, &log, &tab_id);
+                step = lookup.resume(&mut deps, answer);
+            }
+            LiveTabStep::Done(result) => break result,
+        }
+    };
     log.flush_into(cx);
     found
         .map(|contents| contents.map(Value::from))
