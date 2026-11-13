@@ -45,7 +45,7 @@ fn bound_with(
     schema: &Ty,
     refine: impl FnOnce(&IpcValue) -> Result<(), IpcError>,
 ) -> Result<SessionInfo, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(schema, input)?;
     refine(input)?;
     session_for(env, view, &session_id_of(input))

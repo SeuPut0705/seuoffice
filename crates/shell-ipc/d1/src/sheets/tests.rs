@@ -1108,6 +1108,30 @@ fn an_oversized_delimited_file_is_refused_before_it_is_read() {
 }
 
 #[test]
+fn a_view_the_shell_never_registered_is_an_untrusted_sender() {
+    let w = world("sheets-untrusted", Value::Null);
+    let stray = w.kit.view(7, Surface::Sheets);
+    assert!(editor_for(&w.registry.provided, stray.view).is_none());
+    for (channel, args) in [
+        ("workbook:save", vec![save_request("x", "save")]),
+        ("workbook:select", vec![]),
+        ("workbook:csv-save-confirm", vec![]),
+        ("sheets:files-add-pasted-image", vec![]),
+    ] {
+        let error = w.call(stray, channel, args).expect_err(channel);
+        assert_eq!(message(error), "Untrusted IPC sender.", "{channel}");
+    }
+    // a rejected call registers nothing
+    assert!(editor_for(&w.registry.provided, stray.view).is_none());
+    views().unwrap().register_tab(stray.view);
+    assert!(editor_for(&w.registry.provided, stray.view).is_some());
+    let error = w
+        .call(stray, "workbook:save", vec![save_request("x", "save")])
+        .expect_err("no such session");
+    assert_ne!(message(error), "Untrusted IPC sender.");
+}
+
+#[test]
 fn every_channel_of_the_list_has_a_handler() {
     let w = world("sheets-channels", Value::Null);
     let mine: Vec<&str> = shell_contract::CHANNELS

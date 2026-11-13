@@ -729,6 +729,11 @@ impl SheetsShell for FakeShell {
                     Some((view, input.to_owned(), e.get("out")?.as_str()?.to_owned()))
                 })
                 .collect(),
+            register_views: !self.script.is_null(),
+            unregistered: list("unregistered")
+                .iter()
+                .filter_map(|v| Some(ViewId(v.as_u64()? as u32)))
+                .collect(),
         }
     }
 

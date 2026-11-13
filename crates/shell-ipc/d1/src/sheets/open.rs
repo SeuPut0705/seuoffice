@@ -907,9 +907,9 @@ pub fn open_selected_workbook(
     explicit: Option<String>,
 ) -> Result<IpcValue, IpcError> {
     let queued = env.core(move |core| {
-        core.ensure_tab(view);
-        core.state.borrow_mut().queued_workbooks.remove(&view)
-    });
+        core.require_tab(view)?;
+        Ok(core.state.borrow_mut().queued_workbooks.remove(&view))
+    })?;
     let path = match explicit.or(queued) {
         Some(path) => path,
         None => {
@@ -1054,7 +1054,7 @@ pub fn open_selected_workbook(
 
 /// `openMergeSources`
 pub fn open_merge_sources(env: &Env, view: ViewId, paths: &[String]) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let mut opened: Vec<(String, SessionInfo)> = Vec::new();
     let mut values: Vec<IpcValue> = Vec::new();
     let close_opened = |opened: &mut Vec<(String, SessionInfo)>| {

@@ -366,7 +366,7 @@ fn collect_attachments(env: &Env, paths: &[String]) -> IpcValue {
 
 /// `sheets:files-pick`
 pub fn files_pick(env: &Env, view: ViewId) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let exts = attachable_exts();
     let picked = open_dialog(
         env,
@@ -391,7 +391,7 @@ pub fn files_pick(env: &Env, view: ViewId) -> Result<IpcValue, IpcError> {
 
 /// `sheets:files-add`
 pub fn files_add(env: &Env, view: ViewId, paths: &IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(
         &schema::array(schema::string().min(1).max(1024)).max(50),
         paths,
@@ -443,8 +443,12 @@ pub fn files_add_pasted_image(
     view: ViewId,
     data: &IpcValue,
     ext: &IpcValue,
-) -> IpcValue {
-    env.core(move |core| core.ensure_tab(view));
+) -> Result<IpcValue, IpcError> {
+    env.core(move |core| core.require_tab(view))?;
+    Ok(pasted_image_result(env, data, ext))
+}
+
+fn pasted_image_result(env: &Env, data: &IpcValue, ext: &IpcValue) -> IpcValue {
     match save_pasted_image(env, data, ext) {
         Some(path) => collect_attachments(env, &[path]),
         None => obj([
@@ -551,7 +555,7 @@ pub fn files_read(
     offset: &IpcValue,
     max_chars: &IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(&schema::string().min(1).max(1024), file_path)?;
     let IpcValue::String(path) = file_path else {
         return Ok(IpcValue::Undefined);
@@ -618,7 +622,7 @@ pub fn files_read_image(
     view: ViewId,
     file_path: &IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(&schema::string().min(1).max(1024), file_path)?;
     let IpcValue::String(path) = file_path else {
         return Ok(IpcValue::Undefined);
@@ -657,8 +661,12 @@ pub fn files_read_image(
 // ---- screen capture ----
 
 /// `sheets:capture-screen-sources`
-pub fn capture_screen_sources(env: &Env, view: ViewId) -> IpcValue {
-    env.core(move |core| core.ensure_tab(view));
+pub fn capture_screen_sources(env: &Env, view: ViewId) -> Result<IpcValue, IpcError> {
+    env.core(move |core| core.require_tab(view))?;
+    Ok(capture_screen_sources_of(env, view))
+}
+
+fn capture_screen_sources_of(env: &Env, view: ViewId) -> IpcValue {
     let denied = || {
         obj([
             ("status", string("denied")),
@@ -710,7 +718,7 @@ pub fn capture_screen_source(
     view: ViewId,
     input: &IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(
         &schema::strict(vec![("id", schema::string().min(1).max(256))]),
         input,

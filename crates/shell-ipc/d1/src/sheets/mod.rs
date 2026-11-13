@@ -97,7 +97,10 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     {
         let startup = env.shell.startup();
         for sender in services.views.all() {
-            if sender.surface == shell_contract::Surface::Sheets {
+            if startup.register_views
+                && sender.surface == shell_contract::Surface::Sheets
+                && !startup.unregistered.contains(&sender.view)
+            {
                 core.register_tab(sender.view);
             }
         }
@@ -325,7 +328,7 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     routes.push(worker(
         &env,
         "workbook:csv-save-confirm",
-        |env, view, _args| Ok(save::csv_save_confirm(env, view)),
+        |env, view, _args| save::csv_save_confirm(env, view),
     ));
     routes.push(worker(
         &env,
@@ -419,14 +422,7 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     routes.push(worker(
         &env,
         "sheets:files-add-pasted-image",
-        |env, view, args| {
-            Ok(misc::files_add_pasted_image(
-                env,
-                view,
-                args.get(0),
-                args.get(1),
-            ))
-        },
+        |env, view, args| misc::files_add_pasted_image(env, view, args.get(0), args.get(1)),
     ));
     routes.push(worker(&env, "sheets:files-read", |env, view, args| {
         misc::files_read(env, view, args.get(0), args.get(1), args.get(2))
@@ -439,7 +435,7 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     routes.push(worker(
         &env,
         "sheets:capture-screen-sources",
-        |env, view, _args| Ok(misc::capture_screen_sources(env, view)),
+        |env, view, _args| misc::capture_screen_sources(env, view),
     ));
     routes.push(worker(
         &env,
@@ -461,13 +457,14 @@ fn reopen(env: &Env, view: ViewId, path_arg: IpcValue) -> Reply {
     // A converted, restored, new or decrypted workbook is more than its path:
     // re-open the twin of the session being continued
     let sessions = env.core(move |core| {
-        core.ensure_tab(view);
-        core.state
+        core.require_tab(view)?;
+        Ok(core
+            .state
             .borrow()
             .tab(view)
             .map(|tab| tab.sessions.clone())
-            .unwrap_or_default()
-    });
+            .unwrap_or_default())
+    })?;
     let maps: Vec<_> = sessions.iter().map(|(_, s)| s.to_map()).collect();
     let previous = session_to_continue(&maps, &path)
         .and_then(|found| maps.iter().position(|m| std::ptr::eq(m, found)));

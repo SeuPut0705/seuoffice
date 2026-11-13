@@ -485,6 +485,7 @@ interface Startup {
   untitled?: string[]
   mcpWritable?: { view: number; path: string }[]
   headless?: { view: number; input?: string; out: string }[]
+  unregistered?: number[]
 }
 
 export async function loadSheets(cx: LoadContext): Promise<void> {
@@ -669,6 +670,8 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
   const running = new Set(headless.map((h) => h.view))
   for (const v of views) {
     if ((v.surface ?? 'Shell') !== 'Sheets' || running.has(v.view)) continue
+    // a view the shell showed without registerSheetsSession: no sheetsTabs entry
+    if ((startup.unregistered ?? []).includes(v.view)) continue
     nextView = v.view
     main.createSheetsView({ includeAiHandlers: false })
   }

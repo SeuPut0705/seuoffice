@@ -11,8 +11,9 @@ use main_core::sheets::close_guard::{CloseGuardDecision, close_guard_decision};
 use main_core::sheets::session_rename::session_after_rename;
 use main_core::sheets::temp_files::cleanup_expired_pasted_files;
 use shell_contract::editors::{DocumentEditors, SaveMode, Then};
-use shell_contract::{IpcError, IpcValue, Surface, ViewId, WindowId};
+use shell_contract::{IpcError, IpcValue, ViewId, WindowId};
 
+use super::core::TabState;
 use super::core::{CloseWaiter, Core};
 use super::dialogs::message_box;
 use super::open::cleanup_session;
@@ -74,9 +75,21 @@ impl Core {
             .insert(path.to_owned());
     }
 
-    /// `registerSheetsSession`'s tab: known to pick, rename and close before its first call
+    /// `registerSheetsSession`'s tab: the shell made the view; the first one
+    /// also starts the pasted-temp cleanup, as TS does
     pub fn register_tab(&self, view: ViewId) {
-        self.ensure_tab(view);
+        let added = {
+            let mut state = self.state.borrow_mut();
+            let added = state.tab(view).is_none();
+            if added {
+                state.tabs.push((view, TabState::new()));
+                state.active_view = Some(view);
+            }
+            added
+        };
+        if added {
+            self.start_pasted_temp_cleanup();
+        }
     }
 
     /// `discardSheetsRecovery`: the same as answering "Don't Save"
@@ -445,13 +458,6 @@ fn unsupported(what: &str) -> IpcError {
 impl DocumentEditors for SheetsEditors {
     fn owns(&self, view: ViewId) -> bool {
         self.core.state.borrow().tab(view).is_some()
-            || self
-                .core
-                .env
-                .services
-                .views
-                .sender_of(view)
-                .is_some_and(|sender| sender.surface == Surface::Sheets)
     }
 
     /// The renderer runs its journal save and answers on `workbook:close-save-result`

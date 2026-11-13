@@ -530,5 +530,19 @@
     "find": "(\"sourceId\", field(item, \"elementId\").clone()),\n                    (\"target\", field(item, \"target\").clone()),",
     "replace": "(\"elementId\", field(item, \"elementId\").clone()),\n                    (\"target\", field(item, \"target\").clone()),",
     "groups": ["d1/slides-fixtures"]
+  },
+  {
+    "name": "a sheets view the shell never registered is trusted by sessionFor",
+    "file": "shell-ipc/d1/src/sheets/core.rs",
+    "find": "            Err(thrown(\"Untrusted IPC sender.\"))",
+    "replace": "            Ok(())",
+    "groups": ["d1/sheets-read"]
+  },
+  {
+    "name": "the sheets editor owns a view without a registered tab",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "        self.core.state.borrow().tab(view).is_some()\n    }\n",
+    "replace": "        let _ = view;\n        true\n    }\n",
+    "groups": ["m/print-workbook"]
   }
 ]

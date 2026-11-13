@@ -66,6 +66,34 @@ const PIVOT = 'xl/pivotTables/pivotTable1.xml'
 const CACHE = 'xl/pivotCache/pivotCacheDefinition1.xml'
 
 const cases: Case[] = [
+  // sessionFor refuses a view the shell never registered, before any argument is read
+  sheetsCase(
+    'a sheets view without registerSheetsSession is an untrusted sender',
+    { d1: { startup: { unregistered: [1] } } },
+    [
+      call('workbook:read-range', [withSession(NOBODY, { sheetId: 's1', range: range() })]),
+      call('workbook:read-range', [null]),
+      call('workbook:recalc', [withSession(NOBODY, { edits: [], reads: [] })]),
+      call('workbook:select'),
+      call('workbook:save', [null]),
+      call('workbook:save-edits-begin', [null]),
+      call('workbook:csv-save-confirm'),
+      call('workbook:create-document', [null]),
+      call('workbook:close', [NOBODY]),
+      call('workbook:auto-rename', [NOBODY, 'x']),
+      call('sheets:files-pick'),
+      call('sheets:files-add', [null]),
+      call('sheets:files-add-pasted-image', ['x', 'png']),
+      call('sheets:capture-screen-sources'),
+      call('sheets:capture-screen-source', [null]),
+      call('workbook:list-tabs'),
+      call('workbook:list-tabs', [], { view: 2 }),
+      call('workbook:read-range', [withSession(NOBODY, { sheetId: 's1', range: range() })], {
+        view: 2,
+      }),
+    ],
+    { views: [tab(1), tab(2)] },
+  ),
   // ---- before any session ----
   sheetsCase('a tab with no workbook has no session to read', { d1: A }, [
     call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range() })]),

@@ -360,6 +360,13 @@ pub struct Startup {
     /// `(view, input, outPath)` of a running `exportSheetsPdfHeadless`: the
     /// input is queued for the view
     pub headless: Vec<(ViewId, String, String)>,
+    /// the probe registers a tab for every Sheets view it was given (what the
+    /// TypeScript side does with `createSheetsView`); a case without a sheets
+    /// script has no sheets editor on either side
+    pub register_views: bool,
+    /// Sheets views the shell showed without `registerSheetsSession` (probe only):
+    /// they get no tab, so every `sessionFor` channel refuses them
+    pub unregistered: Vec<ViewId>,
 }
 
 /// A screen source the capturer lists (`desktopCapturer.getSources`)

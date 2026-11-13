@@ -58,9 +58,9 @@ pub fn unknown_session() -> IpcError {
 pub fn session_for(env: &Env, view: ViewId, id: &str) -> Result<SessionInfo, IpcError> {
     let id = id.to_owned();
     env.core(move |core| {
-        core.ensure_tab(view);
-        core.session_of(view, &id)
-    })
+        core.require_tab(view)?;
+        Ok(core.session_of(view, &id))
+    })?
     .ok_or_else(unknown_session)
 }
 
@@ -192,13 +192,14 @@ pub fn resolve_transferred(env: &Env, view: ViewId, request: Value) -> Result<Va
     }
     let session_id = text(&request, "sessionId").unwrap_or_default().to_owned();
     let taken = env.core(move |core| {
-        core.ensure_tab(view);
+        core.require_tab(view)?;
         let mut state = core.state.borrow_mut();
-        let tab = state.tab_mut(view).expect("ensured");
-        tab.save_transfers
+        let tab = state.tab_mut(view).expect("registered");
+        Ok(tab
+            .save_transfers
             .take(&transfer_id, &session_id)
-            .map_err(|e| e.0.to_owned())
-    });
+            .map_err(|e| e.0.to_owned()))
+    })?;
     let edits = taken.map_err(thrown)?;
     let mut request = request;
     if let Some(map) = request.as_object_mut() {
@@ -351,7 +352,7 @@ fn disk_changed(env: &Env) -> IpcError {
 
 /// `saveWorkbook`
 pub fn save_workbook(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let request = parse_save_request(env, &input)?;
     let request = resolve_transferred(env, view, request)?;
     let session_id = text(&request, "sessionId").unwrap_or_default().to_owned();
@@ -1042,7 +1043,7 @@ fn export_workbook_as_ods(
 
 /// `exportOds`
 pub fn export_ods(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(
         &schema::strict(vec![
             ("sessionId", schema::uuid()),
@@ -1212,7 +1213,7 @@ fn without(value: &IpcValue, key: &str) -> IpcValue {
 
 /// `exportCsv`
 pub fn export_csv(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(
         &schema::strict(vec![
             ("fileName", schema::string().min(1).max(255)),
@@ -1323,8 +1324,8 @@ pub fn export_csv(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, 
 }
 
 /// `csvSaveConfirm`
-pub fn csv_save_confirm(env: &Env, view: ViewId) -> IpcValue {
-    env.core(move |core| core.ensure_tab(view));
+pub fn csv_save_confirm(env: &Env, view: ViewId) -> Result<IpcValue, IpcError> {
+    env.core(move |core| core.require_tab(view))?;
     let options = message_box(
         "warning",
         env.tm.t("csvKeepFormatMsg"),
@@ -1337,11 +1338,11 @@ pub fn csv_save_confirm(env: &Env, view: ViewId) -> IpcValue {
         0,
         Some(2),
     );
-    string(match ask(env, dialog_parent(env, view), &options) {
+    Ok(string(match ask(env, dialog_parent(env, view), &options) {
         0 => "csv",
         1 => "xlsx",
         _ => "cancel",
-    })
+    }))
 }
 
 /// `withheldExportChoice`: the copy format the renderer is about to write
@@ -1351,7 +1352,7 @@ pub fn withheld_export_choice(
     view: ViewId,
     format: &IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let format = match as_str(format) {
         Some(format @ ("CSV" | "PDF")) => format,
         _ => return Err(thrown("Invalid export format.")),
@@ -1369,7 +1370,7 @@ pub fn withheld_export_choice(
 
 /// `exportPdf` of the handler and pdf-export.ts
 pub fn export_pdf(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let request = env.engine.parse_export_pdf_request(&input)?;
     let save_as = match field(&request, "saveAsPath") {
         IpcValue::String(path) => Some(path.clone()),
@@ -1437,7 +1438,7 @@ pub fn export_pdf(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, 
 
 /// `createDocument`: never throws, answers `{ ok: false, error }`
 pub fn create_document(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let types: &'static [&'static str] = &["xlsx", "csv", "docx", "pdf", "md", "html"];
     schema::parse(
         &schema::strict(vec![
@@ -1516,7 +1517,7 @@ pub fn write_workbook_recovery(
     view: ViewId,
     input: IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let request = parse_save_request(env, &input)?;
     let request = resolve_transferred(env, view, request)?;
     let id = text(&request, "sessionId").unwrap_or_default().to_owned();
@@ -1535,7 +1536,7 @@ pub fn write_workbook_recovery(
 
 /// `workbookTemplateBytes`
 pub fn template_bytes(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let request = parse_save_request(env, &input)?;
     let request = resolve_transferred(env, view, request)?;
     let id = text(&request, "sessionId").unwrap_or_default().to_owned();
@@ -1573,7 +1574,7 @@ pub fn close_workbook(
     view: ViewId,
     session_arg: IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let id = uuid_arg(&session_arg)?;
     let key = id.clone();
     let session = env.core(move |core| {
@@ -1599,7 +1600,7 @@ pub fn auto_rename(
     session_arg: IpcValue,
     base_arg: IpcValue,
 ) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     let id = uuid_arg(&session_arg)?;
     let not_renamed = || obj([("renamed", IpcValue::Bool(false))]);
     let key = id.clone();
@@ -1751,7 +1752,7 @@ pub fn update_password(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcVa
 
 /// `saveEditsBegin`
 pub fn save_edits_begin(core: &Core, view: ViewId, input: &IpcValue) -> Result<IpcValue, IpcError> {
-    core.ensure_tab(view);
+    core.require_tab(view)?;
     schema::parse(
         &schema::strict(vec![
             ("sessionId", schema::uuid()),
@@ -1789,7 +1790,7 @@ pub fn save_edits_begin(core: &Core, view: ViewId, input: &IpcValue) -> Result<I
 
 /// `saveEditsChunk`: the chunk's JSON is parsed on the worker
 pub fn save_edits_chunk(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, IpcError> {
-    env.core(move |core| core.ensure_tab(view));
+    env.core(move |core| core.require_tab(view))?;
     schema::parse(
         &schema::strict(vec![
             ("sessionId", schema::uuid()),
@@ -1825,7 +1826,7 @@ pub fn save_edits_chunk(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcV
 
 /// `saveEditsAbort`: a no-op when the transfer was already consumed or expired
 pub fn save_edits_abort(core: &Core, view: ViewId, input: &IpcValue) -> Result<IpcValue, IpcError> {
-    core.ensure_tab(view);
+    core.require_tab(view)?;
     schema::parse(
         &schema::strict(vec![
             ("sessionId", schema::uuid()),
@@ -1838,7 +1839,7 @@ pub fn save_edits_abort(core: &Core, view: ViewId, input: &IpcValue) -> Result<I
         _ => String::new(),
     };
     let mut state = core.state.borrow_mut();
-    let tab = state.tab_mut(view).expect("ensured");
+    let tab = state.tab_mut(view).expect("registered");
     tab.save_transfers
         .discard(&get("transferId"), &get("sessionId"));
     Ok(IpcValue::Undefined)

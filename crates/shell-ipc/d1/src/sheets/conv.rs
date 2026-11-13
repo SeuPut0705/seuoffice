@@ -36,6 +36,8 @@ fn number(x: f64) -> Option<Value> {
     Number::from_f64(x).map(Value::Number)
 }
 
+/// a fake's scripted answer as the renderer would receive it
+#[cfg(any(test, feature = "probe"))]
 pub fn serde_to_ipc(value: &Value) -> IpcValue {
     match value {
         Value::Null => IpcValue::Null,

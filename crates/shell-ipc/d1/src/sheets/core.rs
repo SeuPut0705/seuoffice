@@ -27,12 +27,13 @@ use main_core::sheets::save_as_formats::SaveAsExportTargets;
 use main_core::sheets::save_edits_transfer::{SaveEditsTransferStore, SweepTimers};
 use shell_contract::ipc::Target;
 use shell_contract::runtime::{PathName, Services};
-use shell_contract::{ClipboardHost, DialogsHost, IpcValue, ViewId, WindowId};
+use shell_contract::{ClipboardHost, DialogsHost, IpcError, IpcValue, ViewId, WindowId};
 
 use super::engine::{ScreenCaptureHost, SheetsShellHost, WorkbookEngineHost};
 use super::i18n::Tm;
 use super::session::SessionInfo;
 use crate::host::{RecoveryStateHost, Shared};
+use crate::value::thrown;
 
 /// The store's sweep interval is left to the next call: every `begin` and
 /// `addChunk` sweeps expired uploads first, so only the early release of an
@@ -54,7 +55,7 @@ pub struct TabState {
 }
 
 impl TabState {
-    fn new() -> TabState {
+    pub(super) fn new() -> TabState {
         TabState {
             sessions: Vec::new(),
             save_transfers: SaveEditsTransferStore::new(NoTimers),
@@ -347,21 +348,13 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 impl Core {
-    /// Makes sure `view` is a known tab (`sessionFor`): the surface check of
-    /// the shell has already refused senders that are not sheets views, so
-    /// the TypeScript's `Untrusted IPC sender.` cannot happen here
-    pub fn ensure_tab(&self, view: ViewId) {
-        let added = {
-            let mut state = self.state.borrow_mut();
-            let added = state.tab(view).is_none();
-            if added {
-                state.tabs.push((view, TabState::new()));
-                state.active_view = Some(view);
-            }
-            added
-        };
-        if added {
-            self.start_pasted_temp_cleanup();
+    /// `sessionFor`: the tab `register_tab` made for `view`, or the thrown
+    /// `Untrusted IPC sender.` when the shell never registered the view
+    pub fn require_tab(&self, view: ViewId) -> Result<(), IpcError> {
+        if self.state.borrow().tab(view).is_some() {
+            Ok(())
+        } else {
+            Err(thrown("Untrusted IPC sender."))
         }
     }
 
