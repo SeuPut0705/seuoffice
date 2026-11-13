@@ -394,6 +394,16 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+Public Suffix List
+
+The Rust shell checks the polling address of a queued FLUX image job with the
+psl crate (https://github.com/addr-rs/psl) and its psl-types crate, both
+dual-licensed under the MIT License and the Apache License, Version 2.0.
+psl compiles in the Public Suffix List (https://publicsuffix.org/list/),
+ICANN and private sections, which is distributed under the Mozilla Public
+License, Version 2.0 (https://mozilla.org/MPL/2.0/). The list is used
+unmodified; its source is https://publicsuffix.org/list/public_suffix_list.dat.
+
 Trademarks
 
 IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft

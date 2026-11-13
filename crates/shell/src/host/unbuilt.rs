@@ -374,9 +374,11 @@ impl HomeApp for Unbuilt {
     fn folder_watchers_changed(&self) {
         unbuilt("HomeApp::folder_watchers_changed");
     }
+    /// batch A's codec over safeStorage (`host/secrets.rs` sets it)
     fn secrets(&self) -> Option<&dyn AiSecretCodec> {
-        unbuilt("HomeApp::secrets");
-        None
+        super::secrets::CODEC
+            .get()
+            .map(|codec| codec.as_ref() as &dyn AiSecretCodec)
     }
     fn probe_decision(&self, _: &FileSearchSettings) -> Result<(), String> {
         unbuilt("HomeApp::probe_decision");
@@ -561,8 +563,11 @@ impl TabHooks for Unbuilt {
     fn mark_docs_new_blank(&self, _: i64) {
         unbuilt("TabHooks::mark_docs_new_blank");
     }
-    fn queue_docs_ai_content(&self, _: i64, _: &serde_json::Value) {
-        unbuilt("TabHooks::queue_docs_ai_content");
+    fn queue_docs_ai_content(&self, wc_id: i64, content: &serde_json::Value) {
+        match crate::host::net::ai::pending_ai_docs() {
+            Some(pending) => pending.queue(wc_id, content),
+            None => unbuilt("TabHooks::queue_docs_ai_content before A's AI hosts"),
+        }
     }
     fn queue_docs_copy(&self, _: i64, _: &str, _: &str) {
         unbuilt("TabHooks::queue_docs_copy");
