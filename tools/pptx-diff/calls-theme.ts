@@ -2,12 +2,7 @@
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_theme.rs to `pptxTheme.<module>.<TypeScript name>`.
 import { xmlParser } from './reference/xml-parser'
-import {
-  applyColorMods,
-  hexToRgb,
-  resolveColorNode,
-  scaleLuminance,
-} from './reference/color'
+import { applyColorMods, hexToRgb, resolveColorNode, scaleLuminance } from './reference/color'
 import {
   type EaScript,
   eaScriptOfLang,

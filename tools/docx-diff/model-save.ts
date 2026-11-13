@@ -537,7 +537,9 @@ async function saveHiddenStories(): Promise<void> {
     const model = modelWithoutBytes(doc)
     const base = originals(doc)
     const edits = Math.max(
-      ...[...(doc.comments ?? []), ...(doc.footnotes ?? [])].map((entry) => editsOf(entry.text).length),
+      ...[...(doc.comments ?? []), ...(doc.footnotes ?? [])].map(
+        (entry) => editsOf(entry.text).length,
+      ),
       1,
     )
     for (let edit = 0; edit < edits; edit++) {
@@ -555,10 +557,24 @@ async function saveHiddenStories(): Promise<void> {
           endnotes: doc.endnotes?.map(edited),
         },
       }
-      await compareVariant(population(hiddenVariants, variant.name), where, doc, story.docx, model, variant)
+      await compareVariant(
+        population(hiddenVariants, variant.name),
+        where,
+        doc,
+        story.docx,
+        model,
+        variant,
+      )
     }
     for (const variant of variantsOf(doc)) {
-      await compareVariant(population(hiddenVariants, variant.name), where, doc, story.docx, model, variant)
+      await compareVariant(
+        population(hiddenVariants, variant.name),
+        where,
+        doc,
+        story.docx,
+        model,
+        variant,
+      )
     }
   }
 }

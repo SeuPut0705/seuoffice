@@ -187,7 +187,11 @@ export const XMLTAG: CallSpec[] = [
     fromDocument: (parts) =>
       [...parts]
         .filter(([path]) => /^word\/(?:document|header\d*|footer\d*)\.xml$/.test(path))
-        .flatMap(([, text]) => ['w:tbl', 'w:tr', 'w:tc', 'w:p'].flatMap((tag) => elementFragments(text, tag).slice(0, 4)))
+        .flatMap(([, text]) =>
+          ['w:tbl', 'w:tr', 'w:tc', 'w:p'].flatMap((tag) =>
+            elementFragments(text, tag).slice(0, 4),
+          ),
+        )
         .map((text) => ({ text })),
     built: INNER_TEXTS.map((text) => ({ text })),
   },
@@ -207,14 +211,16 @@ export const XMLTAG: CallSpec[] = [
   },
   {
     fn: 'xmltag.replaceSegments',
-    call: (text, args) =>
-      replaceSegments(text, String(args.tag), REPLACERS[String(args.mode)]!),
+    call: (text, args) => replaceSegments(text, String(args.tag), REPLACERS[String(args.mode)]!),
     fromDocument: (parts) =>
       [...parts]
         .filter(([path]) => /^word\/(?:document|header\d*|footer\d*)\.xml$/.test(path))
         .flatMap(([, text]) =>
           ['w:txbxContent', 'mc:Fallback'].flatMap((tag) =>
-            ['wrap', 'length'].map((mode) => ({ text: text.slice(0, 60_000), args: { tag, mode } })),
+            ['wrap', 'length'].map((mode) => ({
+              text: text.slice(0, 60_000),
+              args: { tag, mode },
+            })),
           ),
         ),
     built: SEGMENT_CASES.flatMap(({ text, tag }) =>
@@ -226,10 +232,8 @@ export const XMLTAG: CallSpec[] = [
     call: (text) => canonicalXmlSyntax(text),
     fromDocument: (parts) =>
       [...parts].flatMap(([, text]) => [{ text: text.slice(0, 60_000) }]).slice(0, 40),
-    built: [
-      ...CANONICAL_TEXTS,
-      ...SEGMENT_CASES.map(({ text }) => text),
-      ...INNER_TEXTS,
-    ].map((text) => ({ text })),
+    built: [...CANONICAL_TEXTS, ...SEGMENT_CASES.map(({ text }) => text), ...INNER_TEXTS].map(
+      (text) => ({ text }),
+    ),
   },
 ]

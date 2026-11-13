@@ -68,7 +68,13 @@ const own = 'freeze-reference.mjs'
 let changed = 0
 for (const entry of readdirSync(here, { withFileTypes: true })) {
   // the render benchmark names the binding and the reference apart on purpose
-  if (!entry.isFile() || !TEXT.test(entry.name) || entry.name === own || entry.name.startsWith('bench-')) continue
+  if (
+    !entry.isFile() ||
+    !TEXT.test(entry.name) ||
+    entry.name === own ||
+    entry.name.startsWith('bench-')
+  )
+    continue
   const file = join(here, entry.name)
   const before = readFileSync(file, 'utf8')
   const after = before

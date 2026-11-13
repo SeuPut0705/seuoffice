@@ -69,7 +69,12 @@ const MOCK_SLIDE: Slide = {
       id: 'el1',
       type: 'shape',
       anchor: { spIndex: 0, originalXml: MOCK_SP, range: [0, MOCK_SP.length] },
-      transform: { offset: { x: 100, y: 100, cx: 200, cy: 200 }, rot: 0, flipH: false, flipV: false },
+      transform: {
+        offset: { x: 100, y: 100, cx: 200, cy: 200 },
+        rot: 0,
+        flipH: false,
+        flipV: false,
+      },
     },
   ],
   originalXml: '<p:sld><p:cSld><p:spTree><p:grpSpPr/></p:spTree></p:cSld></p:sld>',

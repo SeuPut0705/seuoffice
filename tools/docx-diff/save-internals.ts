@@ -17,10 +17,15 @@ function writeCopy(): void {
   const source = ts.createSourceFile(SOURCE, text, ts.ScriptTarget.Latest, true)
   const edits: Array<{ at: number; insert: string; drop?: number }> = []
   const exported = (statement: ts.Statement): boolean =>
-    !!ts.getModifiers(statement as ts.HasModifiers)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+    !!ts
+      .getModifiers(statement as ts.HasModifiers)
+      ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
   const back = relative(resolve(toolDir, 'out'), resolve(SOURCE, '..')).replaceAll('\\', '/')
   for (const statement of source.statements) {
-    if ((ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) && statement.moduleSpecifier) {
+    if (
+      (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) &&
+      statement.moduleSpecifier
+    ) {
       const specifier = statement.moduleSpecifier as ts.StringLiteral
       if (specifier.text.startsWith('./')) {
         // './x' becomes '<back>/x'

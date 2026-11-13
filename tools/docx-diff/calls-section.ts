@@ -727,14 +727,53 @@ const RICH_PARAS: Array<Array<Array<Record<string, unknown>>>> = [
   [],
   [[]],
   [[{ text: 'plain' }]],
-  [[{ text: 'a' }, { text: '1', redact: 'phone' }, { text: '2', redact: 'phone' }, { text: 'b' }, { text: 'x', redact: 'name' }, { text: 'y', redact: 'phone' }]],
-  [[{ text: 'a', redact: 'p' }], [{ text: 'b' }], [{ text: 'c', redact: 'q' }, { text: 'd', redact: 'q' }]],
+  [
+    [
+      { text: 'a' },
+      { text: '1', redact: 'phone' },
+      { text: '2', redact: 'phone' },
+      { text: 'b' },
+      { text: 'x', redact: 'name' },
+      { text: 'y', redact: 'phone' },
+    ],
+  ],
+  [
+    [{ text: 'a', redact: 'p' }],
+    [{ text: 'b' }],
+    [
+      { text: 'c', redact: 'q' },
+      { text: 'd', redact: 'q' },
+    ],
+  ],
   [[{ text: 'gone', redact: 'p', del: DELETED }, { text: 'kept' }]],
-  [[{ text: 'a', redact: 'p', del: DELETED }, { text: 'b', redact: 'p' }, { text: 'c', del: DELETED }]],
-  [[{ text: 'a', redact: '' }, { text: 'b', redact: '{braces} <x> "q"' }, { text: 'c', redact: 'a'.repeat(50) }]],
+  [
+    [
+      { text: 'a', redact: 'p', del: DELETED },
+      { text: 'b', redact: 'p' },
+      { text: 'c', del: DELETED },
+    ],
+  ],
+  [
+    [
+      { text: 'a', redact: '' },
+      { text: 'b', redact: '{braces} <x> "q"' },
+      { text: 'c', redact: 'a'.repeat(50) },
+    ],
+  ],
   [[{ text: 'a', redact: 'p', ins: { author: 'Bob' } }], [{ text: '', redact: 'p' }]],
-  [[{ text: 'a', redact: 'p' }, { text: 'b', del: DELETED, redact: 'q' }, { text: 'c', redact: 'p' }]],
-  [[{ text: '\u{1F600}', redact: '\u{1F600}'.repeat(25) }, { text: 'e', redact: 'e\u0301' }]],
+  [
+    [
+      { text: 'a', redact: 'p' },
+      { text: 'b', del: DELETED, redact: 'q' },
+      { text: 'c', redact: 'p' },
+    ],
+  ],
+  [
+    [
+      { text: '\u{1F600}', redact: '\u{1F600}'.repeat(25) },
+      { text: 'e', redact: 'e\u0301' },
+    ],
+  ],
 ]
 
 const notePartsOf = (parts: ReadonlyMap<string, string>): Input[] =>

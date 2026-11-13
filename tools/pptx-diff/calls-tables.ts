@@ -269,9 +269,7 @@ const DOLLAR_EDITS: Array<Record<string, unknown>> = [
 ]
 
 const patchInputs: Input[] = [
-  ...TABLE_TEXTS.flatMap((text) =>
-    EDITS.map((edit): Input => ({ text, args: { edit } })),
-  ),
+  ...TABLE_TEXTS.flatMap((text) => EDITS.map((edit): Input => ({ text, args: { edit } }))),
   ...TABLE_TEXTS.slice(0, 3).flatMap((text) =>
     DOLLAR_EDITS.map((edit): Input => ({ text, args: { edit } })),
   ),

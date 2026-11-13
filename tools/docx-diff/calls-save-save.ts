@@ -55,9 +55,31 @@ const SETTINGS_VARIANTS: Array<Record<string, unknown>> = [
   SETTINGS,
   { ...SETTINGS, orientation: 'landscape', pageWidth: 16838, pageHeight: 11906 },
   { ...SETTINGS, gutter: 360, marginLeft: 1500, headerDist: 600, footerDist: 500 },
-  { ...SETTINGS, gutter: 360, gutterAtTop: true, marginTop: 100, marginTopFixed: true, marginBottomFixed: true },
+  {
+    ...SETTINGS,
+    gutter: 360,
+    gutterAtTop: true,
+    marginTop: 100,
+    marginTopFixed: true,
+    marginBottomFixed: true,
+  },
   { ...SETTINGS, pageBorder: true },
-  { ...SETTINGS, pageBorder: true, pageBorderProps: { spacePt: 4, widthPt: 0.5, sides: { top: BORDER_SIDE, left: { ...BORDER_SIDE, art: true, shadow: true }, bottom: { ...BORDER_SIDE, frame: true, widthPt: 3 } }, display: 'firstPage', offsetFrom: 'page', zOrder: 'back' } },
+  {
+    ...SETTINGS,
+    pageBorder: true,
+    pageBorderProps: {
+      spacePt: 4,
+      widthPt: 0.5,
+      sides: {
+        top: BORDER_SIDE,
+        left: { ...BORDER_SIDE, art: true, shadow: true },
+        bottom: { ...BORDER_SIDE, frame: true, widthPt: 3 },
+      },
+      display: 'firstPage',
+      offsetFrom: 'page',
+      zOrder: 'back',
+    },
+  },
   { ...SETTINGS, pageBorder: true, pageBorderProps: { spacePt: 4, widthPt: 0.5 } },
   { ...SETTINGS, columns: 2 },
   { ...SETTINGS, columns: 2, colSpace: 300 },
@@ -79,9 +101,44 @@ const NOTES_LISTS: Array<Array<Record<string, unknown>>> = [
   [{ id: '2', text: 'one\ntwo changed' }],
   [{ id: '2', text: 'only one paragraph' }],
   [{ id: '3', text: 'new\nnote' }],
-  [{ id: '4', text: '', richParas: [[{ text: 'rich', bold: true, italic: true, underline: true, strike: true, color: 'ff0000', sizeHalfPoints: 30, fontAscii: 'Arial', font: 'MS Gothic' }, { text: 'ins', ins: { author: 'A', date: '2024-01-01T00:00:00Z', id: '7001' } }, { text: 'del', del: { author: 'B' } }], [{ text: 'second' }]] }],
-  [{ id: '5', text: 'a & b < c', richParas: [] }, { id: '6', text: '' }],
-  [{ id: '7', text: '', richParas: [[{ text: 'a & b < c' }, { text: 'x < y & z', del: { author: 'B' } }], [{ text: '<w:t>&amp;</w:t>', bold: true }]] }],
+  [
+    {
+      id: '4',
+      text: '',
+      richParas: [
+        [
+          {
+            text: 'rich',
+            bold: true,
+            italic: true,
+            underline: true,
+            strike: true,
+            color: 'ff0000',
+            sizeHalfPoints: 30,
+            fontAscii: 'Arial',
+            font: 'MS Gothic',
+          },
+          { text: 'ins', ins: { author: 'A', date: '2024-01-01T00:00:00Z', id: '7001' } },
+          { text: 'del', del: { author: 'B' } },
+        ],
+        [{ text: 'second' }],
+      ],
+    },
+  ],
+  [
+    { id: '5', text: 'a & b < c', richParas: [] },
+    { id: '6', text: '' },
+  ],
+  [
+    {
+      id: '7',
+      text: '',
+      richParas: [
+        [{ text: 'a & b < c' }, { text: 'x < y & z', del: { author: 'B' } }],
+        [{ text: '<w:t>&amp;</w:t>', bold: true }],
+      ],
+    },
+  ],
 ]
 
 /** Notes parts that hold hidden text, each with the edits a person can make to a note: unchanged, across words, a paragraph more or fewer. */
@@ -94,7 +151,10 @@ const HIDDEN_NOTES: Input[] = NOTE_PARTS.flatMap((text) =>
           text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
           args: {
             kind,
-            notes: [{ id: note.id, text: edited }, { id: '99', text: 'a new note' }],
+            notes: [
+              { id: note.id, text: edited },
+              { id: '99', text: 'a new note' },
+            ],
             hasOriginal: true,
           },
         })),
@@ -114,10 +174,15 @@ const HF_EDITS: Array<Record<string, unknown>> = [
 
 const ANCHOR = (h: string, v: string, wrap = '<wp:wrapSquare wrapText="right"/>'): string =>
   `<w:drawing><wp:anchor distT="0"><wp:positionH relativeFrom="column">${h}</wp:positionH><wp:positionV relativeFrom="paragraph">${v}</wp:positionV><wp:extent cx="952500" cy="476250"/>${wrap}<wp:docPr id="1" name="x"/><a:graphic><a:graphicData><pic:pic><a:blip r:embed="rId5"/></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>`
-const INLINE = '<w:drawing><wp:inline><wp:extent cx="952500" cy="476250"/><wp:docPr id="1" name="y"/><a:graphic><a:graphicData><pic:pic><a:blip r:embed="rId5"/></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>'
+const INLINE =
+  '<w:drawing><wp:inline><wp:extent cx="952500" cy="476250"/><wp:docPr id="1" name="y"/><a:graphic><a:graphicData><pic:pic><a:blip r:embed="rId5"/></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>'
 const PICTURES: string[] = [
   ANCHOR('<wp:posOffset>100</wp:posOffset>', '<wp:posOffset>200</wp:posOffset>'),
-  ANCHOR('<wp:align>left</wp:align>', '<wp:align>top</wp:align>', '<wp:wrapTight wrapText="left"><wp:wrapPolygon edited="0"/></wp:wrapTight>'),
+  ANCHOR(
+    '<wp:align>left</wp:align>',
+    '<wp:align>top</wp:align>',
+    '<wp:wrapTight wrapText="left"><wp:wrapPolygon edited="0"/></wp:wrapTight>',
+  ),
   ANCHOR('<wp:posOffset>5</wp:posOffset>', '<wp:posOffset>6</wp:posOffset>', '<wp:wrapNone/>'),
   INLINE,
   '<w:pict><v:shape/></w:pict>',
@@ -138,17 +203,30 @@ const GEOMETRIES: Array<Record<string, unknown>> = [
 
 const PARTS_WITH_MEDIA: Array<Array<[string, string]>> = [
   [],
-  [['word/media/aidocs3.png', 'x'], ['word/media/aidocs12.jpg', 'y'], ['word/media/image1.png', 'z']],
-  [['word/media/aidocs9.', 'x'], ['xword/media/aidocs99.png', 'y']],
+  [
+    ['word/media/aidocs3.png', 'x'],
+    ['word/media/aidocs12.jpg', 'y'],
+    ['word/media/image1.png', 'z'],
+  ],
+  [
+    ['word/media/aidocs9.', 'x'],
+    ['xword/media/aidocs99.png', 'y'],
+  ],
 ]
 
 const STORY_PARTS: Array<[string, string]> = [
-  ['word/document.xml', '<w:document><w:body><w:p><w:moveFromRangeStart w:id="1" w:name="m"/><w:moveFromRangeEnd w:id="1"/><w:moveToRangeStart w:id="2" w:name="n"/></w:p></w:body></w:document>'],
+  [
+    'word/document.xml',
+    '<w:document><w:body><w:p><w:moveFromRangeStart w:id="1" w:name="m"/><w:moveFromRangeEnd w:id="1"/><w:moveToRangeStart w:id="2" w:name="n"/></w:p></w:body></w:document>',
+  ],
   ['word/header1.xml', '<w:hdr><w:p><w:moveToRangeEnd w:id="3"/></w:p></w:hdr>'],
   ['word/footnotes.xml', '<w:footnotes/>'],
   ['word/comments2.xml', '<w:comments w:id="12"/>'],
   ['word/media/x.xml', '<a/>'],
-  ['word/glossary/document.xml', '<w:document><w:moveFromRangeStart w:id="4" w:name="g"/></w:document>'],
+  [
+    'word/glossary/document.xml',
+    '<w:document><w:moveFromRangeStart w:id="4" w:name="g"/></w:document>',
+  ],
   ['customXml/item1.xml', '<w:id w:id="99"/>'],
 ]
 
@@ -182,16 +260,43 @@ const SAVE_BLOCKS: SaveBlock[][] = [
   [],
   [{ kind: 'original', docxIndex: 1 }],
   [{ kind: 'generated', block: { type: 'heading', level: 2, runs: [] } }],
-  [{ kind: 'generated', block: { type: 'heading', level: 12, runs: [] } }, { kind: 'generated', block: { type: 'heading', level: 0, runs: [] } }],
-  [{ kind: 'generated', block: { type: 'heading', level: 1, styleId: 'H', runs: [] } }, { kind: 'generated', block: { type: 'heading', level: 4, outlineOnly: true, runs: [] } }, { kind: 'generated', block: { type: 'paragraph', runs: [] } }, { kind: 'xml', xml: '<w:p/>' }],
-  [{ kind: 'generated', block: { type: 'heading', runs: [] } }, { kind: 'generated', block: { type: 'heading', level: 1.5, runs: [] } }, { kind: 'generated', block: { type: 'heading', level: 9, runs: [] } }],
+  [
+    { kind: 'generated', block: { type: 'heading', level: 12, runs: [] } },
+    { kind: 'generated', block: { type: 'heading', level: 0, runs: [] } },
+  ],
+  [
+    { kind: 'generated', block: { type: 'heading', level: 1, styleId: 'H', runs: [] } },
+    { kind: 'generated', block: { type: 'heading', level: 4, outlineOnly: true, runs: [] } },
+    { kind: 'generated', block: { type: 'paragraph', runs: [] } },
+    { kind: 'xml', xml: '<w:p/>' },
+  ],
+  [
+    { kind: 'generated', block: { type: 'heading', runs: [] } },
+    { kind: 'generated', block: { type: 'heading', level: 1.5, runs: [] } },
+    { kind: 'generated', block: { type: 'heading', level: 9, runs: [] } },
+  ],
 ]
 
 const IMAGES: Array<Record<string, unknown>> = [
   { base64: 'AAAA', mime: 'image/png', widthPx: 10, heightPx: 20 },
   { base64: '', mime: 'image/jpeg', widthPx: 0, heightPx: 5, rotDeg: 1e300, zOrder: 1e300 },
-  { base64: 'AA', mime: 'image/gif', widthPx: -3, heightPx: 4, rotDeg: 45, zOrder: 2, posOffsetEmu: { x: 1e300, y: 0 } },
-  { base64: 'AA', mime: 'image/png', widthPx: 1e300, heightPx: 3, posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' }, paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'exact' } },
+  {
+    base64: 'AA',
+    mime: 'image/gif',
+    widthPx: -3,
+    heightPx: 4,
+    rotDeg: 45,
+    zOrder: 2,
+    posOffsetEmu: { x: 1e300, y: 0 },
+  },
+  {
+    base64: 'AA',
+    mime: 'image/png',
+    widthPx: 1e300,
+    heightPx: 3,
+    posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' },
+    paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'exact' },
+  },
   { base64: 'AA', mime: 'image/png', widthPx: 8, heightPx: 3, paraSpacing: {} },
 ]
 
@@ -200,33 +305,49 @@ const NUMBERS = [0, 1, -1, 2.5, 1e15, 1e300, 3e9, -3e9, null, 9525, 272730423169
 export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.applyPageNumType',
-    call: (text, args) => applyPageNumType(text, args.fmt as string | undefined, args.start as number | undefined),
-    built: sectBuilt([{}, { fmt: 'decimal' }, { start: 3 }, { fmt: 'lowerRoman', start: 0 }, { fmt: '', start: -2.5 }]),
+    call: (text, args) =>
+      applyPageNumType(text, args.fmt as string | undefined, args.start as number | undefined),
+    built: sectBuilt([
+      {},
+      { fmt: 'decimal' },
+      { start: 3 },
+      { fmt: 'lowerRoman', start: 0 },
+      { fmt: '', start: -2.5 },
+    ]),
   },
   {
     fn: 'save.injectIntoSectPr',
     call: (text, args) => injectIntoSectPr(text, args.tag as string),
     built: [...SECT_PRS, 'no sectPr', '<w:p><w:pPr><w:sectPr/></w:pPr></w:p>'].flatMap((text) =>
-      ['<w:headerReference w:type="default" r:id="rId1"/>', '$&$1'].map((tag) => ({ text, args: { tag } })),
+      ['<w:headerReference w:type="default" r:id="rId1"/>', '$&$1'].map((tag) => ({
+        text,
+        args: { tag },
+      })),
     ),
   },
   {
     fn: 'save.pageBordersXml',
     call: (_text, args) => pageBordersXml(args.props as Parameters<typeof pageBordersXml>[0]),
-    built: SETTINGS_VARIANTS.map((settings) => ({ args: { props: settings.pageBorderProps ?? null } })),
+    built: SETTINGS_VARIANTS.map((settings) => ({
+      args: { props: settings.pageBorderProps ?? null },
+    })),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'save.applySectionSettings',
-    call: (text, args) => applySectionSettings(text, args.settings as Parameters<typeof applySectionSettings>[1]),
+    call: (text, args) =>
+      applySectionSettings(text, args.settings as Parameters<typeof applySectionSettings>[1]),
     built: sectBuilt(SETTINGS_VARIANTS.map((settings) => ({ settings }))),
     argMutation: true,
   },
   {
     fn: 'save.applySectionStartType',
-    call: (text, args) => applySectionStartType(text, args.type as Parameters<typeof applySectionStartType>[1]),
-    built: sectBuilt(['nextPage', 'continuous', 'evenPage', 'oddPage', 'nextColumn'].map((type) => ({ type }))),
+    call: (text, args) =>
+      applySectionStartType(text, args.type as Parameters<typeof applySectionStartType>[1]),
+    built: sectBuilt(
+      ['nextPage', 'continuous', 'evenPage', 'oddPage', 'nextColumn'].map((type) => ({ type })),
+    ),
   },
   {
     fn: 'save.applyTitlePg',
@@ -236,11 +357,18 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.buildNotesXml',
     call: (text, args) =>
-      buildNotesXml(args.kind as 'footnote' | 'endnote', args.notes as Parameters<typeof buildNotesXml>[1], args.hasOriginal ? text : null),
+      buildNotesXml(
+        args.kind as 'footnote' | 'endnote',
+        args.notes as Parameters<typeof buildNotesXml>[1],
+        args.hasOriginal ? text : null,
+      ),
     built: NOTES_LISTS.flatMap((notes): Input[] =>
       (['footnote', 'endnote'] as const).flatMap((kind): Input[] => [
         { text: NOTE_ORIGINAL, args: { kind, notes, hasOriginal: true } },
-        { text: NOTE_ORIGINAL.replaceAll('w:footnote', 'w:endnote'), args: { kind, notes, hasOriginal: true } },
+        {
+          text: NOTE_ORIGINAL.replaceAll('w:footnote', 'w:endnote'),
+          args: { kind, notes, hasOriginal: true },
+        },
         { text: '', args: { kind, notes } },
       ]),
     ).concat(HIDDEN_NOTES),
@@ -248,34 +376,42 @@ export const SAVE_SAVE: CallSpec[] = [
   },
   {
     fn: 'save.patchHfPicturesXml',
-    call: (text, args) => patchHfPicturesXml(text, args.edits as Parameters<typeof patchHfPicturesXml>[1]),
+    call: (text, args) =>
+      patchHfPicturesXml(text, args.edits as Parameters<typeof patchHfPicturesXml>[1]),
     built: HF_EDITS.map((edits) => ({ text: PICTURE_PART, args: { edits } })),
     argMutation: true,
   },
   {
     fn: 'save.patchRunPictureXml',
-    call: (text, args) => patchRunPictureXml(text, args.next as Parameters<typeof patchRunPictureXml>[1]),
+    call: (text, args) =>
+      patchRunPictureXml(text, args.next as Parameters<typeof patchRunPictureXml>[1]),
     built: PICTURES.flatMap((text) => GEOMETRIES.map((next) => ({ text, args: { next } }))),
     argMutation: true,
   },
   {
     fn: 'save.usableNumber',
     call: (_text, args) => usableNumber(args.value, args.emuPerUnit as number | undefined),
-    built: NUMBERS.flatMap((value) => [{}, { emuPerUnit: 9525 }, { emuPerUnit: 635 }].map((more) => ({ args: { value, ...more } }))),
+    built: NUMBERS.flatMap((value) =>
+      [{}, { emuPerUnit: 9525 }, { emuPerUnit: 635 }].map((more) => ({ args: { value, ...more } })),
+    ),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'save.usablePictureSize',
     call: (_text, args) => usablePictureSize(args.widthPx, args.heightPx),
-    built: NUMBERS.flatMap((widthPx) => [1, 0, null, 5e9, 1e300].map((heightPx) => ({ args: { widthPx, heightPx } }))),
+    built: NUMBERS.flatMap((widthPx) =>
+      [1, 0, null, 5e9, 1e300].map((heightPx) => ({ args: { widthPx, heightPx } })),
+    ),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'save.usablePositionOffset',
     call: (_text, args) => usablePositionOffset(args.value, args.emuPerUnit as number | undefined),
-    built: NUMBERS.flatMap((value) => [{}, { emuPerUnit: 9525 }].map((more) => ({ args: { value, ...more } }))),
+    built: NUMBERS.flatMap((value) =>
+      [{}, { emuPerUnit: 9525 }].map((more) => ({ args: { value, ...more } })),
+    ),
     mutation: 'none',
     argMutation: true,
   },
@@ -292,8 +428,21 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.missingHeadingLevels',
     call: (_text, args) =>
-      missingHeadingLevels(args.blocks as SaveBlock[], new Map(args.headingStyleIds as Array<[number, string]>)),
-    built: SAVE_BLOCKS.flatMap((blocks) => [[], [[1, 'Heading1']], [[2, 'H2'], [3, 'H3']], [[4, 'x']]].map((headingStyleIds) => ({ args: { blocks, headingStyleIds } }))),
+      missingHeadingLevels(
+        args.blocks as SaveBlock[],
+        new Map(args.headingStyleIds as Array<[number, string]>),
+      ),
+    built: SAVE_BLOCKS.flatMap((blocks) =>
+      [
+        [],
+        [[1, 'Heading1']],
+        [
+          [2, 'H2'],
+          [3, 'H3'],
+        ],
+        [[4, 'x']],
+      ].map((headingStyleIds) => ({ args: { blocks, headingStyleIds } })),
+    ),
     mutation: 'none',
     argMutation: true,
   },
@@ -321,10 +470,13 @@ export const SAVE_SAVE: CallSpec[] = [
   },
   {
     fn: 'save.replaceAbstractNumLevel',
-    call: (text, args) => internals.replaceAbstractNumLevel!(text, args.abstractNumId, args.ilvl, args.level),
+    call: (text, args) =>
+      internals.replaceAbstractNumLevel!(text, args.abstractNumId, args.ilvl, args.level),
     built: [NUMBERING, '<w:numbering/>', ''].flatMap((text) =>
       ['1', '2', '3', 'a.b'].flatMap((abstractNumId) =>
-        [0, 1, 2, 5].flatMap((ilvl) => LEVELS.map((level) => ({ text, args: { abstractNumId, ilvl, level } }))),
+        [0, 1, 2, 5].flatMap((ilvl) =>
+          LEVELS.map((level) => ({ text, args: { abstractNumId, ilvl, level } })),
+        ),
       ),
     ),
     argMutation: true,
@@ -337,15 +489,24 @@ export const SAVE_SAVE: CallSpec[] = [
       '<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>',
       '<cp:coreProperties/>',
       '<cp:coreProperties><cp:revision>99999999999999999999</cp:revision></cp:coreProperties>',
-    ].flatMap((text) => ['2024-05-06T07:08:09.123Z', '2024-05-06T07:08:09Z', '$&-$1', 'text'].map((savedAt) => ({ text, args: { savedAt } }))),
+    ].flatMap((text) =>
+      ['2024-05-06T07:08:09.123Z', '2024-05-06T07:08:09Z', '$&-$1', 'text'].map((savedAt) => ({
+        text,
+        args: { savedAt },
+      })),
+    ),
   },
   {
     fn: 'save.defaultParagraphStyleId',
-    call: (_text, args) => internals.defaultParagraphStyleId!(new Map(args.styles as Array<[string, unknown]>)),
+    call: (_text, args) =>
+      internals.defaultParagraphStyleId!(new Map(args.styles as Array<[string, unknown]>)),
     built: [
       [],
       [['A', { styleId: 'A', name: 'A', type: 'paragraph' }]],
-      [['A', { styleId: 'A', name: 'A', type: 'paragraph' }], ['B', { styleId: 'B', name: 'B', type: 'paragraph', isDefault: true }]],
+      [
+        ['A', { styleId: 'A', name: 'A', type: 'paragraph' }],
+        ['B', { styleId: 'B', name: 'B', type: 'paragraph', isDefault: true }],
+      ],
       [['C', { styleId: 'C', name: 'C', type: 'character', isDefault: true }]],
     ].map((styles) => ({ args: { styles } })),
     mutation: 'none',
@@ -354,18 +515,30 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.insertBeforeClosingTag',
     call: (text, args) => internals.insertBeforeClosingTag!(text, args.content),
-    built: ['<w:p><w:r/></w:p>', '<w:p/>', 'no tags', '', '</w:p></w:p>'].flatMap((text) => ['<w:r/>', '$&'].map((content) => ({ text, args: { content } }))),
+    built: ['<w:p><w:r/></w:p>', '<w:p/>', 'no tags', '', '</w:p></w:p>'].flatMap((text) =>
+      ['<w:r/>', '$&'].map((content) => ({ text, args: { content } })),
+    ),
   },
   {
     fn: 'save.markParagraphRevision',
     call: (text, args) => internals.markParagraphRevision!(text, args.kind, args.attrs),
     built: PARAS_REVISION.flatMap((text) =>
-      (['ins', 'del'] as const).map((kind) => ({ text, args: { kind, attrs: ' w:id="1" w:author="A"' } })),
+      (['ins', 'del'] as const).map((kind) => ({
+        text,
+        args: { kind, attrs: ' w:id="1" w:author="A"' },
+      })),
     ),
   },
   {
     fn: 'save.fillRevisionIds',
-    call: (text, args) => internals.fillRevisionIds!(text, ((n) => () => String(n++))(args.start as number)),
+    call: (text, args) =>
+      internals.fillRevisionIds!(
+        text,
+        (
+          (n) => () =>
+            String(n++)
+        )(args.start as number),
+      ),
     built: [
       '<w:ins w:id="" w:author="a"/><w:del w:author="b" w:id=""/><w:cellIns w:id=""/><w:cellDel w:id="1"/>',
       '<w:insX w:id=""/><w:ins w:id=\'\'/><w:ins w:id="">',
@@ -390,7 +563,12 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.maxDocPrId',
     call: (text) => internals.maxDocPrId!(text),
-    built: ['<wp:docPr id="5" name="a"/><wp:docPr name="b" id="12"/>', "<wp:docPr id='9002'/>", '<wp:docPrX id="9"/>', ''].map((text) => ({ text })),
+    built: [
+      '<wp:docPr id="5" name="a"/><wp:docPr name="b" id="12"/>',
+      "<wp:docPr id='9002'/>",
+      '<wp:docPrX id="9"/>',
+      '',
+    ].map((text) => ({ text })),
   },
   {
     fn: 'save.nextImageSeq',
@@ -401,7 +579,12 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.nextDocPrSeq',
     call: (text, args) => internals.nextDocPrSeq!(zipOf(args.parts), text),
-    built: PARTS_WITH_MEDIA.flatMap((parts) => ['', '<wp:docPr id="9050"/>', '<wp:docPr id="5"/>'].map((text) => ({ text, args: { parts } }))),
+    built: PARTS_WITH_MEDIA.flatMap((parts) =>
+      ['', '<wp:docPr id="9050"/>', '<wp:docPr id="5"/>'].map((text) => ({
+        text,
+        args: { parts },
+      })),
+    ),
   },
   {
     fn: 'save.retargetImageBlip',
@@ -417,13 +600,26 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.carriesMoveRanges',
     call: (_text, args) => internals.carriesMoveRanges!(args.name, args.documentPath),
-    built: ['word/document.xml', 'WORD/Header2.XML', 'word/footer.xml', 'word/footnotes.xml', 'word/endnotes.XML', 'word/glossary/document.xml', 'word/comments.xml', 'word/header1.rels', 'word/headerx/y.xml', 'word/main.xml'].map((name) => ({ args: { name, documentPath: 'word/main.xml' } })),
+    built: [
+      'word/document.xml',
+      'WORD/Header2.XML',
+      'word/footer.xml',
+      'word/footnotes.xml',
+      'word/endnotes.XML',
+      'word/glossary/document.xml',
+      'word/comments.xml',
+      'word/header1.rels',
+      'word/headerx/y.xml',
+      'word/main.xml',
+    ].map((name) => ({ args: { name, documentPath: 'word/main.xml' } })),
     mutation: 'none',
   },
   {
     fn: 'save.hasOrphanMoveRanges',
     call: (_text, args) => internals.hasOrphanMoveRanges!(zipOf(args.parts), args.documentPath),
-    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4), STORY_PARTS.slice(2, 5)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
+    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4), STORY_PARTS.slice(2, 5)].map(
+      (parts) => ({ args: { parts, documentPath: 'word/document.xml' } }),
+    ),
     mutation: 'none',
   },
   {
@@ -431,9 +627,15 @@ export const SAVE_SAVE: CallSpec[] = [
     call: async (_text, args) => {
       const zip = zipOf(args.parts)
       await internals.cleanStoryMoveRanges!(zip, args.documentPath)
-      return Promise.all(Object.keys(zip.files).filter((name) => !zip.files[name]!.dir).map(async (name) => [name, await zip.file(name)!.async('string')]))
+      return Promise.all(
+        Object.keys(zip.files)
+          .filter((name) => !zip.files[name]!.dir)
+          .map(async (name) => [name, await zip.file(name)!.async('string')]),
+      )
     },
-    built: [STORY_PARTS, STORY_PARTS.slice(1)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
+    built: [STORY_PARTS, STORY_PARTS.slice(1)].map((parts) => ({
+      args: { parts, documentPath: 'word/document.xml' },
+    })),
     mutation: 'none',
   },
   {
@@ -442,7 +644,13 @@ export const SAVE_SAVE: CallSpec[] = [
       const next = internals.nextRevisionIdAllocator!(args.partsXml, args.floor) as () => string
       return [next(), next(), next()]
     },
-    built: [[], ['<w:ins w:id="12"/>', "<w:del w:id='9005'/><w:ins w:id='x'/>"], ['<w:ins w:id="99999999999"/>']].flatMap((partsXml) => [{}, { floor: 5 }, { floor: 20000 }].map((more) => ({ args: { partsXml, ...more } }))),
+    built: [
+      [],
+      ['<w:ins w:id="12"/>', "<w:del w:id='9005'/><w:ins w:id='x'/>"],
+      ['<w:ins w:id="99999999999"/>'],
+    ].flatMap((partsXml) =>
+      [{}, { floor: 5 }, { floor: 20000 }].map((more) => ({ args: { partsXml, ...more } })),
+    ),
     mutation: 'none',
   },
   {
@@ -451,7 +659,9 @@ export const SAVE_SAVE: CallSpec[] = [
       const next = internals.nextBookmarkIdAllocator!(text) as (name: string) => number
       return [next('a'), next('b'), next('c')]
     },
-    built: ['', '<w:bookmarkStart w:id="4"/>', "<w:bookmarkEnd w:id='40'/>"].map((text) => ({ text })),
+    built: ['', '<w:bookmarkStart w:id="4"/>', "<w:bookmarkEnd w:id='40'/>"].map((text) => ({
+      text,
+    })),
   },
   {
     fn: 'save.storyPartsXml',

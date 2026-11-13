@@ -5,11 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
-import {
-  FONT_TABLE_PART_PATH,
-  parseFontTable,
-  readEmbeddedFonts,
-} from './reference/font-table'
+import { FONT_TABLE_PART_PATH, parseFontTable, readEmbeddedFonts } from './reference/font-table'
 import {
   canonicalXmlSyntax,
   needsOoxmlNormalization,
@@ -33,13 +29,7 @@ import {
   THEME_PART_PATH,
 } from './reference/theme'
 import type { StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
-import {
-  attrsOf,
-  findChildren,
-  nameOf,
-  type XNode,
-  xmlParser,
-} from './reference/xml-utils'
+import { attrsOf, findChildren, nameOf, type XNode, xmlParser } from './reference/xml-utils'
 import { loadDocxZip } from './reference/zip-load'
 import { failed } from './engine'
 import { type Comparison, describeTextDifference, engine, repoRoot, SHOW, toolDir } from './harness'

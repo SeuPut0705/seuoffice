@@ -141,7 +141,7 @@ export const CANONICAL_TEXTS = [
   '<a b = "">',
   "<a b=''>",
   '<a b="1" c=\'>\' d="\'">',
-  '\u{1F600}<a b = \'\u{1F600}>\'/>',
+  "\u{1F600}<a b = '\u{1F600}>'/>",
   "<w:t xml:space = 'preserve'>x</w:t >",
   "<w:p><!-- <w:t a='1'>hidden</w:t > --><w:r><w:t>shown</w:t></w:r><![CDATA[<w:t>x</w:t>]]></w:p>",
   '<a b="1" c="2" d="3" e="4" f="5" g="6" h="7">',

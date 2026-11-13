@@ -2,13 +2,7 @@ import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { charIndentsOf, paraBorderSidesOf } from './reference/parse-props'
 import { DEFAULT_THEME_COLORS } from './reference/theme'
-import type {
-  CharIndents,
-  ParaBorderSides,
-  ParaFormat,
-  Run,
-  ThemeFonts,
-} from './reference/types'
+import type { CharIndents, ParaBorderSides, ParaFormat, Run, ThemeFonts } from './reference/types'
 import { nameOf, type XNode, xmlParser } from './reference/xml-utils'
 import { failed } from './engine'
 import { tagTokens } from './fragments'

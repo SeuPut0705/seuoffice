@@ -12,7 +12,9 @@ import { openPptx } from './reference/index'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { DECKS } from './deck-ops'
 
-const decks = await Promise.all(DECKS.map(async ([, base64]) => (await openPptx(Buffer.from(base64, 'base64'))).deck))
+const decks = await Promise.all(
+  DECKS.map(async ([, base64]) => (await openPptx(Buffer.from(base64, 'base64'))).deck),
+)
 
 const inputs = (kind: 'deck' | 'slide' | 'element'): Input[] => {
   const values =
@@ -20,7 +22,9 @@ const inputs = (kind: 'deck' | 'slide' | 'element'): Input[] => {
       ? decks
       : kind === 'slide'
         ? decks.flatMap((deck) => deck.slides)
-        : decks.flatMap((deck) => deck.slides.flatMap((slide) => [...slide.elements, ...(slide.decorations ?? [])]))
+        : decks.flatMap((deck) =>
+            deck.slides.flatMap((slide) => [...slide.elements, ...(slide.decorations ?? [])]),
+          )
   return values.map((value) => ({ text: JSON.stringify(value) }))
 }
 

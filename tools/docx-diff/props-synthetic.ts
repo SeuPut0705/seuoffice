@@ -110,8 +110,12 @@ export const PROPS_TEXTS: Record<string, string[]> = {
       `<w:bookmarkStart w:id="1" w:name = 'single quoted'/><w:bookmarkStart w:id="2" w:descr="a>b" w:name="after gt"/>` +
         `<w:bookmarkStart w:id = "3" w:name = "_Toc9" />`,
     ),
-    p(`<!-- <w:bookmarkStart w:id="3" w:name="in comment"/> --><w:bookmarkStart w:id="4" w:name="own"/>`),
-    p(`<![CDATA[<w:bookmarkStart w:id="3" w:name="in cdata"/>]]><w:bookmarkStart w:id="4" w:name='_hid den'/>`),
+    p(
+      `<!-- <w:bookmarkStart w:id="3" w:name="in comment"/> --><w:bookmarkStart w:id="4" w:name="own"/>`,
+    ),
+    p(
+      `<![CDATA[<w:bookmarkStart w:id="3" w:name="in cdata"/>]]><w:bookmarkStart w:id="4" w:name='_hid den'/>`,
+    ),
     `<w:p w:rsidR=">"><w:pPr><w:keepNext/></w:pPr>${r(t('x'))}</w:p>`,
     `<w:p w:rsidR='>'>\n<w:pPr><w:jc w:val="center"/></w:pPr ></w:p>`,
     `<w:p><!-- <w:pPr><w:jc w:val="left"/></w:pPr> --><w:pPr><w:jc w:val="right"/></w:pPr></w:p>`,
@@ -124,7 +128,11 @@ export const PROPS_TEXTS: Record<string, string[]> = {
     `<w:p><?probe <w:pPr/>?></w:p>`,
     `<w:p><w:pPr><w:pPrChange w:id="1"><w:pPr/></w:pPrChange ></w:pPr ><w:r/></w:p>`,
     p(r(`<w:drawing><wp:extent cx = '5000000' cy = "0"/></w:drawing>`)),
-    p(r(`<w:drawing><!-- <wp:extent cx="1" cy="1"/> --><wp:extent cx="5000000" cy="0"/></w:drawing>`)),
+    p(
+      r(
+        `<w:drawing><!-- <wp:extent cx="1" cy="1"/> --><wp:extent cx="5000000" cy="0"/></w:drawing>`,
+      ),
+    ),
     p(
       r(
         `<w:drawing><wp:extent cx="14287" cy="10"/><a:ln w = '19050'><a:solidFill><a:srgbClr val = 'AABBCC'/></a:solidFill></a:ln ></w:drawing>`,
@@ -145,8 +153,14 @@ export const PROPS_TEXTS: Record<string, string[]> = {
     pict(`<!-- <v:imagedata r:id="rId1"/> --><v:shape style="visibility:hidden"/>`),
     pict(`<v:shape style="visibility:hidden"/><![CDATA[<w:txbxContent/>]]>`),
     pict(`<v:shape style="visibility:hidden" descr="a>b"/>`),
-    p(r(`<w:t>before</w:t><w:txbxContent a="1"><w:p>${t('in')}</w:p></w:txbxContent ><w:t>after</w:t>`)),
-    p(`<w:txbxContent><w:p><!-- </w:txbxContent> -->${r(t('in'))}</w:p></w:txbxContent>${r(t('after'))}`),
+    p(
+      r(
+        `<w:t>before</w:t><w:txbxContent a="1"><w:p>${t('in')}</w:p></w:txbxContent ><w:t>after</w:t>`,
+      ),
+    ),
+    p(
+      `<w:txbxContent><w:p><!-- </w:txbxContent> -->${r(t('in'))}</w:p></w:txbxContent>${r(t('after'))}`,
+    ),
     p(`<w:txbxContent a=">"><w:p/></w:txbxContent>${r('<w:br w:type="page"/>')}`),
     p(`<w:txbxContent><w:p/></w:txbxContent >${r('<w:br w:type="page"/>')}`),
     p(`<w:r><w:t xml:space = 'preserve'>a</w:t ></w:r><w:r><w:t>b</w:t ></w:r>`),
@@ -641,7 +655,12 @@ export const PROPS_RUN_LISTS: Run[][] = [
     run('a', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
     run('b', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
     run('c', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
-    run('d', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }, { seq: 3, open: '<w:ins>', close: '</w:ins>' }] }),
+    run('d', {
+      wrap: [
+        { seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' },
+        { seq: 3, open: '<w:ins>', close: '</w:ins>' },
+      ],
+    }),
     run('e', { wrap: [] }),
     run('f'),
     run('g', { wrap: [{ seq: 2, open: '<w:sdt>', close: '</w:sdt>' }] }),

@@ -394,7 +394,9 @@ const MARKUP_FRAGMENTS = (): string[] => [
   ...hiddenIn('<wp:wrapNone/>').map((hidden) =>
     anchor(ANCHOR_ATTRS, `${STD}${hidden}<wp:wrapSquare wrapText="bothSides"/>`),
   ),
-  ...hiddenIn('<wp:extent cx="1" cy="2"/>').map((hidden) => anchor(ANCHOR_ATTRS, `${hidden}${STD}`)),
+  ...hiddenIn('<wp:extent cx="1" cy="2"/>').map((hidden) =>
+    anchor(ANCHOR_ATTRS, `${hidden}${STD}`),
+  ),
   ...hiddenIn('<wp:posOffset>9</wp:posOffset>').map((hidden) =>
     anchor('', `${pos('H', 'page', `${hidden}<wp:posOffset>7</wp:posOffset>`)}${EXTENT}`),
   ),
@@ -404,10 +406,13 @@ const MARKUP_FRAGMENTS = (): string[] => [
     '',
     `<wp:positionH relativeFrom = 'page'><wp:posOffset>7</wp:posOffset></wp:positionH ><wp:positionV relativeFrom='margin'><wp:align>top</wp:align></wp:positionV >${"<wp:extent cx = '5' cy = '6' />"}`,
   ),
-  anchor('', `<wp:positionH relativeFrom="page" descr="a>b"><wp:posOffset>9</wp:posOffset></wp:positionH>${EXTENT}`),
-  anchor(' layoutInCell = \'false\'', STD),
+  anchor(
+    '',
+    `<wp:positionH relativeFrom="page" descr="a>b"><wp:posOffset>9</wp:posOffset></wp:positionH>${EXTENT}`,
+  ),
+  anchor(" layoutInCell = 'false'", STD),
   anchor(' descr="a>b" behindDoc="1"', `${STD}<wp:wrapNone/>`),
-  anchor(' descr=\'a>b\' behindDoc=\'1\'', `${STD}<wp:wrapSquare/>`),
+  anchor(" descr='a>b' behindDoc='1'", `${STD}<wp:wrapSquare/>`),
 ]
 
 const FRAGMENTS: string[] = [
@@ -835,7 +840,9 @@ const LINE_SHAPES: string[] = [
     ln: lnOf('', srgbLn('123456')),
     style: WSP_STYLE_LN_REF('<a:schemeClr val="accent1"/>'),
   }),
-  lineShape('line', { style: '<wps:style><a:fillRef idx="1"><a:srgbClr val="00FF00"/></a:fillRef></wps:style>' }),
+  lineShape('line', {
+    style: '<wps:style><a:fillRef idx="1"><a:srgbClr val="00FF00"/></a:fillRef></wps:style>',
+  }),
   // the arrow ends, alone, on each preset kind, and an end without its a:ln
   ...ARROW_TYPES.flatMap((head) =>
     ARROW_TYPES.map((tail) =>
@@ -857,7 +864,10 @@ const LINE_SHAPES: string[] = [
       }),
     ),
   ),
-  lineShape('line', { xfrm: xfrmOf(' flipH="1"', '952500', '0'), ln: lnOf('', ends(undefined, 'stealth')) }),
+  lineShape('line', {
+    xfrm: xfrmOf(' flipH="1"', '952500', '0'),
+    ln: lnOf('', ends(undefined, 'stealth')),
+  }),
   // extents: missing, zero, negative, fractional, not a number, the 12 px boundary
   lineShape('line', { xfrm: '<a:xfrm/>' }),
   lineShape('line', { xfrm: xfrmOf('') }),
@@ -881,16 +891,33 @@ const LINE_SHAPES: string[] = [
     ['line', 'bentConnector2'].map((prst) => lineShape(prst, { xfrm: xfrmOf('', cx, cy) })),
   ),
   // flips: each spelling, on straight and on bent presets, at a low height
-  ...['flipH="1"', 'flipH="true"', 'flipH="0"', 'flipH="True"', 'flipV="1"', 'flipV="true"', 'flipV="false"'].flatMap(
-    (flip) =>
-      ['line', 'curvedConnector4'].map((prst) =>
-        lineShape(prst, { xfrm: xfrmOf(` ${flip}`, '952500', '9525') }),
-      ),
+  ...[
+    'flipH="1"',
+    'flipH="true"',
+    'flipH="0"',
+    'flipH="True"',
+    'flipV="1"',
+    'flipV="true"',
+    'flipV="false"',
+  ].flatMap((flip) =>
+    ['line', 'curvedConnector4'].map((prst) =>
+      lineShape(prst, { xfrm: xfrmOf(` ${flip}`, '952500', '9525') }),
+    ),
   ),
   // rotation in 60000ths of a degree
-  ...['5400000', '-30000', '30000', '29999', '-90000', '0', '-0', 'abc', '', '5400000.7', '21599999'].map(
-    (rot) => lineShape('line', { xfrm: xfrmOf(` rot="${rot}"`, '952500', '0') }),
-  ),
+  ...[
+    '5400000',
+    '-30000',
+    '30000',
+    '29999',
+    '-90000',
+    '0',
+    '-0',
+    'abc',
+    '',
+    '5400000.7',
+    '21599999',
+  ].map((rot) => lineShape('line', { xfrm: xfrmOf(` rot="${rot}"`, '952500', '0') })),
   // a:ln widths in EMU
   ...['12700', '9525', '0', '-1', '1', '95', '96', 'abc', '', '6350.7', '28575', '1e3'].map((w) =>
     lineShape('line', { ln: lnOf(` w="${w}"`) }),

@@ -18,10 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { crc32, deflateSync } from 'node:zlib'
 import { buildTimingXml, type SlideAnimation } from './reference/animation'
 import { BLANK_SLIDE_XML, createBlankPptx } from './reference/blank'
-import {
-  buildChartSpaceXml,
-  type NewChartOptions,
-} from './reference/chart-insert'
+import { buildChartSpaceXml, type NewChartOptions } from './reference/chart-insert'
 import {
   CHART_WORKBOOK_REL_TYPE,
   XLSX_CONTENT_TYPE,
@@ -37,19 +34,11 @@ import {
   nextCNvPrId,
   type NewElementOptions,
 } from './reference/insert'
-import {
-  GLB_CONTENT_TYPE,
-  MODEL3D_REL_TYPE,
-  model3dXml,
-} from './reference/model3d'
+import { GLB_CONTENT_TYPE, MODEL3D_REL_TYPE, model3dXml } from './reference/model3d'
 import { setRedactExt } from './reference/redaction-xml'
 import { TABLE_STYLE_PRESETS, ensureTableStyleXml } from './reference/table-edit'
 import type { EmuRect, Paragraph, Slide } from './reference/types'
-import {
-  creationIdXml,
-  escapeXmlAttr,
-  maxRelationshipIdNumber,
-} from './reference/xml-utils'
+import { creationIdXml, escapeXmlAttr, maxRelationshipIdNumber } from './reference/xml-utils'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const OUT = join(here, '../../packages/pptx-engine/tests/fixtures/06_corpus_gaps.pptx')
