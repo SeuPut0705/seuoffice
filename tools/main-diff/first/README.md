@@ -32,3 +32,15 @@ anything was fixed: the measure of the port (decision 0030, crates/README.md).
   `registerHtmlHandoffIpc` became a getter, because the spec read them before
   its builders were defined and no group could load (no case and no Rust
   changed). The porters compared nothing before this run.
+- `b6-tabs-gate.txt` and `b6-apps-gate.txt`: batch 6 (the modules that call
+  Electron), groups `b6-tabs` and `b6-apps`, first run on the MacBook (not a
+  runner: the GitHub API limit of the account was spent), at d6f4f919e,
+  2026-11-13. `b6-tabs` 151 checks, 38 differences; `b6-apps` 263 checks, 60
+  differences and six functions with a single answer. All 98 were the spec:
+  `require('electron')` and `import 'electron'` loaded the fake as two modules
+  and only one followed `useElectron`, and a group's module fakes reached the
+  modules of another group through Node's resolve cache (now each group runs
+  in a process of its own). Group `b6-shell` crashed the process at its first
+  run for the second reason, so it has no first output; `b6-utils` (279
+  checks) differed in two cases, both listed (a language named `constructor`). No
+  Rust port changed; the dispatchers of two groups did.
