@@ -147,17 +147,41 @@ fn languages(host: &dyn MHost, view: ViewId, available: &[String]) -> IpcValue {
 pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), RegisterError> {
     let journal = cx.user_data_file(JOURNAL_FILE);
 
-    // a crash leaves ignored words in the dictionary; the journal names them
+    // a crash leaves ignored words in the dictionary; the journal names them.
+    // The TypeScript iterates whatever the file holds with `for (const w of
+    // orphans)`: a string yields its characters, other non-iterables throw
+    // before anything happens, and Electron throws on a non-string word,
+    // which ends the scrub before the journal is rewritten.
     let orphans = fs::read(&journal)
         .ok()
         .and_then(|bytes| jscompat::json_parse(&String::from_utf8_lossy(&bytes)).ok());
-    if let Some(JsonValue::Array(items)) = &orphans {
-        for word in items {
-            if let JsonValue::String(word) = word {
-                cx.host.spell_remove_word(word);
+    let words: Option<Vec<Option<String>>> = match &orphans {
+        Some(JsonValue::Array(items)) => Some(
+            items
+                .iter()
+                .map(|w| match w {
+                    JsonValue::String(w) => Some(w.clone()),
+                    _ => None,
+                })
+                .collect(),
+        ),
+        Some(JsonValue::String(text)) => {
+            Some(text.chars().map(|c| Some(c.to_string())).collect())
+        }
+        _ => None,
+    };
+    if let Some(words) = words {
+        let mut scrubbed = true;
+        for word in &words {
+            match word {
+                Some(word) => cx.host.spell_remove_word(word),
+                None => {
+                    scrubbed = false;
+                    break;
+                }
             }
         }
-        if !items.is_empty() {
+        if scrubbed && !words.is_empty() {
             let _ = write_journal(&journal, &cx.state.spell_ignored_words());
         }
     }
@@ -657,8 +681,8 @@ mod tests {
                 "session.removeWordFromSpellCheckerDictionary bbb"
             ]
         );
-        // rewritten with what this process holds: nothing
-        assert_eq!(journal(&first), "[]");
+        // Electron throws on the number: the scrub ends there, the journal stays as it was
+        assert_eq!(journal(&first), "[\"aaa\", \"bbb\", 3]");
     }
 
     #[test]
