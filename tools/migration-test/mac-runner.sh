@@ -61,5 +61,12 @@ result "updated to $to_version"
 
 start_app
 sleep 10
-probe check --seed "$out/seed.json" --version "$to_version"
+if ! probe check --seed "$out/seed.json" --version "$to_version"; then
+  # what ran and listened when the updated app could not be read
+  { ps -axo pid,ppid,etime,command | grep -i '[S]euOffice'; lsof -nP -iTCP:$port -sTCP:LISTEN; } >"$out/after-check.txt" 2>&1 || true
+  ud="$HOME/Library/Application Support/seuoffice"
+  ls -la "$ud" >>"$out/after-check.txt" 2>&1 || true
+  cp "$ud/update-log.txt" "$out/" 2>/dev/null || true
+  exit 1
+fi
 result passed

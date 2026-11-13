@@ -67,7 +67,8 @@ function InstallDir {
 function Exe { Join-Path (InstallDir) 'SeuOffice.exe' }
 function ExeVersion {
   $exe = Exe
-  if (Test-Path $exe) { (Get-Item $exe).VersionInfo.ProductVersion } else { $null }
+  # the exe carries x.y.z.0; the release and the app call it x.y.z
+  if (Test-Path $exe) { (Get-Item $exe).VersionInfo.ProductVersion -replace '\.0$', '' } else { $null }
 }
 function AppProcesses {
   $dir = InstallDir
@@ -139,11 +140,13 @@ try {
 
   # 3. the update, through the app's dialog
   Feed $To $ToVersion
+  StartApp @()
   if ($Fault -eq 'block-start') {
+    # set once the old app runs: Windows reads it when a SeuOffice.exe starts,
+    # so only the one the installer starts after the update is stopped
     New-Item -Force -Path $ifeo | Out-Null
     Set-ItemProperty -Path $ifeo -Name Debugger -Value 'C:\migration-test\no-such-debugger.exe'
   }
-  StartApp @()
   $installersBefore = @(Get-Process | ForEach-Object Id)
   & node (Join-Path $here 'probe.mjs') update --port $Port --version $ToVersion
   if ($LASTEXITCODE -ne 0) { Fail 'the update did not reach "downloaded"' }
@@ -169,7 +172,11 @@ try {
   if ($Fault -eq 'block-start') { Remove-Item -Force -Path $ifeo }
   StopApp
   $version = ExeVersion
-  Step 'after-install' @{ version = $version; appStartedByInstaller = $started; seconds = $t.Elapsed.TotalSeconds }
+  $files = if (Test-Path (InstallDir)) { @(Get-ChildItem (InstallDir) | ForEach-Object Name) } else { @() }
+  Step 'after-install' @{
+    version = $version; appStartedByInstaller = $started; seconds = $t.Elapsed.TotalSeconds
+    installDir = (InstallDir); installDirFiles = $files
+  }
 
   # 4. the data, read by the app now installed
   $expected = if ($Fault -eq 'none') { $ToVersion } else { $fromVersion }
