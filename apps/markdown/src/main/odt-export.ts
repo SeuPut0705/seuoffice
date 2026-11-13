@@ -52,7 +52,7 @@ export async function exportOdt(
     const { odtBytes, report } = await convert(await steps.docx())
     // an ODT shows a hidden-from-AI run as plain words: nothing is written
     if (report.some((item) => item.feature === 'hidden_from_ai')) {
-      return { ok: false, error: tOdt(getUiLang(), 'markedRefused') }
+      return { ok: false, error: tOdt(getUiLang(), 'markedMessage') }
     }
     if (report.length > 0 && !(await steps.confirm(report))) return { ok: true, canceled: true }
     if (steps.prepare && !(await steps.prepare(path))) return { ok: true, canceled: true }
