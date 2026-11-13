@@ -25,7 +25,7 @@ use shell_contract::runtime::Services;
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
     let apps = [
         diagram::routes(services, &registry.provided())?,
-        mindmap::routes(services)?,
+        mindmap::routes(services, &registry.provided())?,
         sheets::routes(services)?,
         slides::routes(services)?,
     ];
@@ -41,7 +41,7 @@ const _: RegisterBatch = register;
 #[cfg(any(test, feature = "probe"))]
 pub fn insert_fakes(hosts: &mut shell_contract::Hosts) {
     diagram::insert_fakes(hosts, &serde_json::Value::Null);
-    mindmap::insert_fakes(hosts);
+    mindmap::insert_fakes(hosts, &serde_json::Value::Null);
     sheets::insert_fakes(hosts);
     slides::insert_fakes(hosts);
 }
