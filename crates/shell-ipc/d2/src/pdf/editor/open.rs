@@ -210,7 +210,7 @@ pub(crate) fn move_pdf_file_no_clobber(source: &str, target: &str) -> NoClobber 
 }
 
 /// The result store the note links live in (`ResultStore` under userData)
-struct Store(super::PdfEngineHost, String);
+struct Store(super::hosts::PdfEngineHost, String);
 
 fn thrown(e: String) -> Thrown {
     Thrown(e)
