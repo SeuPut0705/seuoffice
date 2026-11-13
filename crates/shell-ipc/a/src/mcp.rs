@@ -122,8 +122,11 @@ fn reject(error: NodeError) -> IpcError {
     }
 }
 
+/// What a hub handler answers: `None` is `undefined`, an `Err` a rejection
 fn answer(value: HubValue) -> Result<IpcValue, IpcError> {
-    value.map(|v| from_json(&v)).map_err(reject)
+    value
+        .map(|v| v.map_or(IpcValue::Undefined, |v| from_json(&v)))
+        .map_err(reject)
 }
 
 /// What the hub and its hosts share: the app's side of `startMcpHub`
@@ -747,7 +750,9 @@ impl McpHubPorts for McpHubPort {
 
     fn mcp_tools_cancel(&self, cx: &CallContext, args: Args, reply: Responder) {
         let (id, a0) = (sender(cx), arg(&args, 0));
-        self.plain(reply, |ipc| ipc.tools_cancel(id, a0.as_ref()));
+        self.hub.ipc.borrow_mut().tools_cancel(id, a0.as_ref());
+        self.hub.pump();
+        reply.reply(Ok(IpcValue::Undefined));
     }
 
     fn mcp_tools_list(&self, _cx: &CallContext, _args: Args, reply: Responder) {
@@ -1013,7 +1018,7 @@ mod tests {
         // cancelling a call nobody made is harmless
         assert_eq!(
             answer(&t, 2, |p, cx, re| p.mcp_tools_cancel(cx, vec![s("c9")], re)),
-            Ok(IpcValue::Null)
+            Ok(IpcValue::Undefined)
         );
     }
 
