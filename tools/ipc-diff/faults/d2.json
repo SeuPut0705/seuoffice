@@ -658,6 +658,13 @@
     "groups": ["d2/pdf-tools-structure"]
   },
   {
+    "name": "store-ai-read-pages answers no pages",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "e.store(dir, StoreMethod::ReadAiReadPages, vec![doc_hash.into_ipc()])?,",
+    "replace": "{ let _ = (e, dir, doc_hash); IpcValue::Array(Vec::new()) },",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
     "name": "blank-page removal skips the found-pages check",
     "file": "shell-ipc/d2/src/pdf/tools/window.rs",
     "find": "                return self.fail(\"not-found\");",
