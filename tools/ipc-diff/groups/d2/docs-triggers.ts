@@ -116,6 +116,21 @@ const cases = [
     ],
   },
   {
+    note: 'the tab menu saves and the File menu exports by menu command',
+    calls: [
+      trigger('request-save', ['save']),
+      trigger('request-save', ['saveAs']),
+      trigger('export-request', ['pdf']),
+    ],
+  },
+  {
+    // the close check's reply resumes the trigger only once a step can answer
+    // a waiting one: here the renderer stays silent and the 2 s pass
+    note: 'a close the shell asks for: no reply, Cancel',
+    hosts: { shared: { dialogs: { message: [{ response: 1 }] } } },
+    calls: [trigger('request-close', [1])],
+  },
+  {
     note: 'another app asks for an AI document',
     calls: [trigger('create-ai-document', [{ type: 'md', title: 'Notes', content: '# n' }])],
   },

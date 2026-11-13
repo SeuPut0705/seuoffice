@@ -117,6 +117,12 @@ export function docsTriggers(main: DocsMain, cx: LoadContext): DocsTriggers {
   const editor = () =>
     (require('@seuoffice/electron-utils').recoveryEditor('docs') ?? {}) as Record<string, Fn>
   return {
+    // the shell's tab menu (tab-document-actions.ts) and File > Export menu
+    'request-save': (view, [mode]) => {
+      contents(view).send('menu:command', mode === 'saveAs' ? 'save-as' : 'save')
+      return true
+    },
+    'export-request': (view, [format]) => contents(view).send('menu:command', `export-${format}`),
     'request-close': (view, [parent]) =>
       fn('requestDocsClose')(
         contents(view),

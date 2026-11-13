@@ -830,9 +830,8 @@ fn a_renamed_file_keeps_its_grant_under_the_new_name() {
 }
 
 #[test]
-fn the_editor_saves_through_the_renderer_and_exports_by_menu_command() {
+fn the_editor_saves_and_exports_by_menu_command() {
     let mut t = T::new(json!({}));
-    let a = t.a;
     let editor = editor_for(&t.rt.provided(), ViewId(1)).unwrap();
     assert!(editor.owns(ViewId(1)));
     let other = t.rt.view(3, Surface::Pdf);
@@ -844,14 +843,20 @@ fn the_editor_saves_through_the_renderer_and_exports_by_menu_command() {
         SaveMode::Save,
         Box::new(move |r| *g.borrow_mut() = Some(r)),
     );
-    assert_eq!(t.channels(), vec!["docs:close-save-request"]);
-    t.rt.send("docs:close-save-result", a, vec![false.into_ipc()]);
-    assert_eq!(*got.borrow(), Some(Ok(false)));
+    // the tab menu's save is the renderer's own flow: the command goes out
+    assert_eq!(*got.borrow(), Some(Ok(true)));
     editor.export_request(ViewId(1), "pdf");
-    let events = t.rt.events();
+    let events: Vec<_> =
+        t.rt.events()
+            .into_iter()
+            .map(|e| (e.channel, e.args[0].clone()))
+            .collect();
     assert_eq!(
-        (events[0].channel, events[0].args[0].clone()),
-        ("menu:command", s("export-pdf"))
+        events,
+        vec![
+            ("menu:command", s("save")),
+            ("menu:command", s("export-pdf"))
+        ]
     );
 }
 
