@@ -231,6 +231,7 @@ jobs:
           if-no-files-found: ignore
 
   pptx:
+    needs: quick
     if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -291,6 +292,7 @@ jobs:
 
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
+    needs: quick
     if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
     # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
