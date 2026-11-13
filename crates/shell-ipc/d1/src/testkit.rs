@@ -19,6 +19,7 @@ use shell_contract::ipc::{
     CallContext, ChannelKind, EventSink, Handler, RegisterError, Registry, Responder, Sender,
     Target,
 };
+use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, CancelToken, PathName, Services, Thread, Views, Workers};
 use shell_contract::{
     Batch, CHANNELS, ClipboardHost, ContentsHost, DialogsHost, IpcError, IpcValue, MainWindowHost,
@@ -31,6 +32,8 @@ use crate::host::{Locale, LocaleHost, RecoveryStateHost, Shared};
 #[derive(Default)]
 pub struct TestRegistry {
     pub handlers: BTreeMap<&'static str, (ChannelKind, Rc<dyn Handler>)>,
+    /// what the batch added for the other batches (its document editors)
+    pub provided: Rc<Provided>,
 }
 
 impl Registry for TestRegistry {
@@ -60,6 +63,10 @@ impl Registry for TestRegistry {
         }
         self.handlers.insert(channel, (kind, handler));
         Ok(())
+    }
+
+    fn provided(&self) -> Rc<Provided> {
+        self.provided.clone()
     }
 }
 
