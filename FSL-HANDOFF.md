@@ -10,7 +10,7 @@
   - `tools/asset-licenses.json` + `tools/check-asset-licenses.mjs`(`npm run licenses`에 연결). 로컬에서 통과(523개 자산, 46항목), 항목을 빼면 실패하는 것 확인.
   - 예상 위험: rhwp 그래프에서 IJG 외 다른 라이선스나 bans(wildcard)가 걸릴 수 있다. 그러면 `deny.toml`에 근거와 함께 크레이트별 예외를 둔다.
 - `chore/fsl-prep` = 위 커밋 + `b036c1d14`(LICENSE→FSL 원문, `LICENSE-APACHE`, NOTICE 끝 단락, license 필드 47개 + lockfile + Cargo 2개, 설치본·npm·CLI 묶음에 LICENSE-APACHE 싣기, About·온보딩 문구, README 둘, AGENTS.md·CLAUDE.md) + 이 인계 커밋(결정 0031 초안 포함). 합치지 않는다.
-- `chore/remove-genoffice-branding`: 다른 세션(GenOffice 제거)이 작업. 그 세션의 마지막 커밋이 인계 시점의 것이다.
+- `chore/remove-genoffice-branding` = `38790a331` (푸시함, 다른 세션 "GenOffice 제거"가 작업, origin/main 위 7커밋): Flatpak·Nix·Docker 꾸러미 삭제(결정 0030), CLI 묶음·설치 파일 이름을 seuoffice로, 단독 Docs·Slides 빌드 앱 id, i18n·diagram·web 문서 문구. 남은 일: `git grep -il -E 'genoffice|genspark' -- ':!docs/archive'` 결과를 남길 것(old-names*, 네임스페이스, `genoffice-app://`, NOTICE·법적 고지, 결정 기록)과 바꿀 것으로 나누기, 로고 파일 확인, 글꼴 패밀리 이름 `GenOffice*`(저장 문서가 이름을 가리키면 남김), 코드 주석의 `genoffice#NNNN`. 시험은 로컬에서 못 돌렸고(vitest 없음), CI(`CI`, `seuoffice`)는 띄웠지만 결과를 아직 안 봤다.
 
 ## 남은 일
 
