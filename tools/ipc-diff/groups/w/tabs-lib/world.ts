@@ -620,13 +620,19 @@ export async function loadWorld(cx: LoadContext): Promise<void> {
     calledByApp() ? push('console', text, message(err)) : real.error(text, err)
 
   // handlers that start file work they do not wait for (the copy of a duplicated
-  // file, a new blank file) are given the time it takes before the next call
+  // file, a new blank file) are given the time it takes before the next call:
+  // until the log has been quiet for 60 ms (at most 5 s), so a loaded machine
+  // does not move the tab the work opens into the next call's record
   const later =
     (fn: (...a: unknown[]) => unknown) =>
     async (...a: unknown[]) => {
       const out = await fn(...a)
-      // a plain Promise: the harness compiles to ES2022, without Promise.withResolvers
-      await new Promise<void>((resolve) => real.setTimeout(resolve, 40))
+      const until = Date.now() + 5000
+      let seen = -1
+      while (seen !== log.length && Date.now() < until) {
+        seen = log.length
+        await new Promise<void>((resolve) => real.setTimeout(resolve, 60))
+      }
       return out
     }
   for (const channel of ['tabs:show-tab-menu', 'home:new-sheet', 'home:new-pdf']) {

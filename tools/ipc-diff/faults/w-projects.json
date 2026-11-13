@@ -1,0 +1,135 @@
+[
+  {
+    "name": "project:loadChat defaults to another limit (positive control)",
+    "file": "shell-ipc/w/src/projects/legacy.rs",
+    "find": "None | Some(JsonValue::Null) => json!(200),",
+    "replace": "None | Some(JsonValue::Null) => json!(201),",
+    "groups": ["w/projects-store"]
+  },
+  {
+    "name": "project:appendChat accepts one more character of text",
+    "file": "shell-ipc/w/src/projects/legacy.rs",
+    "find": "<= 200_000",
+    "replace": "<= 200_001",
+    "groups": ["w/projects-store"]
+  },
+  {
+    "name": "project:resolveChat names an unsaved chat with an underscore",
+    "file": "shell-ipc/w/src/projects/legacy.rs",
+    "find": "unsaved-{}",
+    "replace": "unsaved_{}",
+    "groups": ["w/projects-store"]
+  },
+  {
+    "name": "project:appendChat words the tools refusal differently",
+    "file": "shell-ipc/w/src/projects/legacy.rs",
+    "find": "\"Invalid chat tools\"",
+    "replace": "\"Invalid tools\"",
+    "groups": ["w/projects-store"]
+  },
+  {
+    "name": "project:appendChat words the attachments refusal differently",
+    "file": "shell-ipc/w/src/projects/legacy.rs",
+    "find": "\"Invalid chat attachments\"",
+    "replace": "\"Invalid attachments\"",
+    "groups": ["w/projects-store"]
+  },
+  {
+    "name": "the wait for a return arms its timer a moment later",
+    "file": "shell-ipc/w/src/projects/mod.rs",
+    "find": "TRUST_RETURN_ARM_MS);",
+    "replace": "TRUST_RETURN_ARM_MS + 1.0);",
+    "groups": ["w/projects-trust"]
+  },
+  {
+    "name": "a page that goes away leaves the wait for its return running",
+    "file": "shell-ipc/w/src/projects/mod.rs",
+    "find": "wait.watch.destroyed();",
+    "replace": "wait.watch.blur();",
+    "groups": ["w/projects-trust"]
+  },
+  {
+    "name": "a reload forgets the listeners of untracked windows only",
+    "file": "shell-ipc/w/src/projects/mod.rs",
+    "find": "if self.tracked.borrow().contains(&view) {",
+    "replace": "if !self.tracked.borrow().contains(&view) {",
+    "groups": ["w/projects-chats"]
+  },
+  {
+    "name": "the person confirms using an existing folder with the other button",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "Ok(self.0.message_box(owner, &options) == 0)",
+    "replace": "Ok(self.0.message_box(owner, &options) == 1)",
+    "groups": ["w/projects-trust"]
+  },
+  {
+    "name": "a run scope answers to any window",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "Some((_, held_owner, project)) if *held_owner == owner",
+    "replace": "Some((_, held_owner, project)) if *held_owner == owner || true",
+    "groups": ["w/projects"]
+  },
+  {
+    "name": "run scopes are made of fewer random bytes",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": ".random_bytes(24)",
+    "replace": ".random_bytes(12)",
+    "groups": ["w/projects"]
+  },
+  {
+    "name": "an event reaches a window the shell no longer has",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "if self.shell.views.sender_of(view).is_none() {",
+    "replace": "if self.shell.views.sender_of(view).is_some() {",
+    "groups": ["w/projects-chats"]
+  },
+  {
+    "name": "the shell view is no AI window",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "return Some(ProjectWindow::Home);",
+    "replace": "return None;",
+    "groups": ["w/projects", "w/projects-chats"]
+  },
+  {
+    "name": "the folder is not handed to the file manager",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "let _ = self.shell.os.open_path(Path::new(path));",
+    "replace": "let _ = path;",
+    "groups": ["w/projects"]
+  },
+  {
+    "name": "the trust prompt's answer is read one button off",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "trust_choice_of(self.message_box(owner, &options) as f64)",
+    "replace": "trust_choice_of(self.message_box(owner, &options) as f64 + 1.0)",
+    "groups": ["w/projects-trust"]
+  },
+  {
+    "name": "any window can close a run scope",
+    "file": "shell-ipc/w/src/projects/services.rs",
+    "find": "!(known == scope && *held_owner == owner)",
+    "replace": "!(known == scope)",
+    "groups": ["w/projects"]
+  },
+  {
+    "name": "the unknown window refusal reads differently (main-core)",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "pub const PROJECT_IPC_UNKNOWN_WINDOW: &str = \"not an AI window\";",
+    "replace": "pub const PROJECT_IPC_UNKNOWN_WINDOW: &str = \"not an AI Window\";",
+    "groups": ["w/projects", "w/projects-chats"]
+  },
+  {
+    "name": "a message goes back to the window that recorded it (main-core)",
+    "file": "main-core/src/shell/projects/project_ipc.rs",
+    "find": "*n == target as f64",
+    "replace": "*n != target as f64",
+    "groups": ["w/projects-chats"]
+  },
+  {
+    "name": "a finished wait leaves its timer set",
+    "file": "shell-ipc/w/src/projects/mod.rs",
+    "find": "self.shell.host.clear_timer(ProjectTimer::ReturnArm(wait.id));",
+    "replace": "let _ = wait.id;",
+    "groups": ["w/projects-trust"]
+  }
+]

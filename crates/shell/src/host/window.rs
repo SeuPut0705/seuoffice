@@ -23,10 +23,51 @@ use tauri::{
     AppHandle, LogicalPosition, LogicalSize, Manager, Webview, WebviewUrl, WebviewWindowBuilder,
 };
 
+use tauri_runtime_cef::{
+    ConsoleMessage, FrameEvent, FrameEventKind, WebviewBuilderCefExt, WebviewWindowBuilderCefExt,
+};
+
 use super::HostContext;
 use crate::app_scheme;
 use crate::preload;
+use crate::trace::{self, trace};
 use crate::views::ViewTable;
+
+/// One console line of a page, as the trace shows it
+fn console_line(label: &str, message: &ConsoleMessage) {
+    trace!(
+        "console",
+        "{label} {:?} {} ({}:{})", message.level, message.message, message.source, message.line
+    );
+}
+
+/// A frame event of `view`: a main frame that lost its renderer goes to the
+/// crash watch (U) always; the rest is a trace line
+fn frame_event(view: ViewId, label: &str, event: &FrameEvent) {
+    if event.is_main && matches!(event.kind, FrameEventKind::RendererTerminated) {
+        super::crash::renderer_terminated(view);
+    }
+    if trace::enabled() {
+        frame_line(label, event);
+    }
+}
+
+/// The frame events worth a line: where a page went and whether it loaded
+fn frame_line(label: &str, event: &FrameEvent) {
+    let what = match &event.kind {
+        FrameEventKind::NavigationStarted { url } => format!("navigation started {url}"),
+        FrameEventKind::DocumentCommitted { url } => format!("document committed {url}"),
+        FrameEventKind::NavigationFailed { url } => format!("NAVIGATION FAILED {url}"),
+        FrameEventKind::LoadingStateChanged { is_loading } => format!("loading {is_loading}"),
+        FrameEventKind::RendererTerminated => "RENDERER TERMINATED".to_owned(),
+        _ => return,
+    };
+    trace!(
+        "frame",
+        "{label} {}{what}",
+        if event.is_main { "" } else { "(subframe) " }
+    );
+}
 
 /// How a view talks to the shell
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,12 +91,18 @@ impl Bridge {
         }
     }
 
-    fn script(self) -> Option<&'static str> {
-        match self {
-            Bridge::None => None,
-            Bridge::Surface(surface) => Some(preload::source(surface)),
-            Bridge::Measure => Some(preload::MEASURE),
-        }
+    /// The initialization script; with the trace on, the bridge is told to log its stages
+    fn script(self) -> Option<String> {
+        let source = match self {
+            Bridge::None => return None,
+            Bridge::Surface(surface) => preload::source(surface),
+            Bridge::Measure => preload::MEASURE,
+        };
+        Some(if trace::enabled() {
+            format!("window.__SEUOFFICE_TRACE__ = true;\n{source}")
+        } else {
+            source.to_owned()
+        })
     }
 }
 
@@ -72,6 +119,14 @@ pub struct WindowSpec {
     pub size: (f64, f64),
     pub min_size: Option<(f64, f64)>,
     pub visible: bool,
+    /// the OS title bar and borders (Electron's `frame`)
+    pub decorations: bool,
+    pub transparent: bool,
+    pub resizable: bool,
+    /// a child window of this one (Electron's `parent`): above it, and gone with it
+    pub parent: Option<WindowId>,
+    /// takes the focus when it shows (false: Electron's `showInactive`)
+    pub focus: bool,
     /// this window's first view is the shell window's (what [`MainWindow`] answers)
     pub main: bool,
     pub view: ViewSpec,
@@ -109,13 +164,42 @@ impl Windows {
         let window = self.views.new_window_id();
         let view = self.views.new_view_id();
         let label = format!("view-{}", view.0);
+        let frames = label.clone();
         let mut builder = WebviewWindowBuilder::new(&self.app, &label, url)
             .title(spec.title)
             .inner_size(spec.size.0, spec.size.1)
-            .visible(spec.visible);
+            .visible(spec.visible)
+            .decorations(spec.decorations)
+            .transparent(spec.transparent)
+            .resizable(spec.resizable)
+            .focused(spec.focus)
+            .on_frame_event(move |e| frame_event(view, &frames, &e));
         if let Some((w, h)) = spec.min_size {
             builder = builder.min_inner_size(w, h);
         }
+        if let Some(parent) = spec.parent {
+            let parent = self
+                .views
+                .label_of_window(parent)
+                .and_then(|l| self.app.get_webview_window(&l))
+                .ok_or_else(|| format!("no parent window {}", parent.0))?;
+            builder = builder
+                .parent(&parent)
+                .map_err(|e| format!("parenting a window: {e}"))?;
+        }
+        if trace::enabled() {
+            let console = label.clone();
+            builder = builder.on_console_message(move |m| console_line(&console, &m));
+        }
+        trace!(
+            "window",
+            "open window {} view {} '{label}' {} (bridge {:?}, script {} bytes)",
+            window.0,
+            view.0,
+            spec.view.url,
+            spec.view.bridge,
+            spec.view.bridge.script().map_or(0, |s| s.len())
+        );
         if let Some(script) = spec.view.bridge.script() {
             builder = builder
                 .initialization_script(script)
@@ -139,7 +223,10 @@ impl Windows {
             }
         }
         match builder.build() {
-            Ok(_) => Ok((window, view)),
+            Ok(_) => {
+                trace!("window", "window {} built", window.0);
+                Ok((window, view))
+            }
             Err(error) => {
                 self.views.remove_window(window);
                 Err(format!("opening a window: {error}"))
@@ -166,9 +253,19 @@ impl Windows {
             .ok_or_else(|| format!("window {} is gone", window.0))?;
         let view = self.views.new_view_id();
         let view_label = format!("view-{}", view.0);
+        let frames = view_label.clone();
         let mut builder = WebviewBuilder::new(&view_label, url)
             .position(LogicalPosition::new(bounds.x, bounds.y))
-            .size(LogicalSize::new(bounds.width, bounds.height));
+            .size(LogicalSize::new(bounds.width, bounds.height))
+            .on_frame_event(move |e| frame_event(view, &frames, &e));
+        if trace::enabled() {
+            let console = view_label.clone();
+            builder = builder.on_console_message(move |m| console_line(&console, &m));
+        }
+        trace!(
+            "window",
+            "add view {} '{view_label}' to window {} {}", view.0, window.0, spec.url
+        );
         if let Some(script) = spec.bridge.script() {
             builder = builder
                 .initialization_script(script)
@@ -206,6 +303,24 @@ impl Windows {
             .ok_or_else(|| format!("no view {}", view.0))?;
         self.views.remove_view(view);
         webview.close().map_err(|e| e.to_string())
+    }
+
+    /// Shows a window, taking the focus or not (Electron's `show` and `showInactive`)
+    #[allow(dead_code)] // U's update window and the WindowsHost that replaces its stub
+    pub fn show(&self, window: WindowId, focus: bool) -> Result<(), String> {
+        let label = self
+            .views
+            .label_of_window(window)
+            .ok_or_else(|| format!("no window {}", window.0))?;
+        let window = self
+            .app
+            .get_window(&label)
+            .ok_or_else(|| format!("window {label} is gone"))?;
+        window.show().map_err(|e| e.to_string())?;
+        if focus {
+            window.set_focus().map_err(|e| e.to_string())?;
+        }
+        Ok(())
     }
 
     pub fn close_window(&self, window: WindowId) -> Result<(), String> {

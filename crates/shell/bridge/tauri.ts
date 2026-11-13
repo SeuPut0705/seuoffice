@@ -29,6 +29,19 @@ interface TauriInternals {
   convertFileSrc(path: string, protocol?: string): string
 }
 
+/**
+ * A line of the shell's trace (crates/shell/src/trace.rs): the shell sets
+ * `window.__SEUOFFICE_TRACE__` in front of the bridge when tracing, and
+ * forwards the page's console to its own log with a timestamp, so a stall
+ * shows which stage the page reached.
+ */
+const TRACING =
+  (window as unknown as { __SEUOFFICE_TRACE__?: boolean }).__SEUOFFICE_TRACE__ === true
+const t0 = performance.now()
+function trace(stage: string): void {
+  if (TRACING) console.log(`[bridge +${(performance.now() - t0).toFixed(0)}ms] ${stage}`)
+}
+
 /** The scheme of the synchronous requests (crates/shell/src/ipc/sync.rs) */
 const SYNC_SCHEME = 'seuoffice-ipc'
 
@@ -112,15 +125,46 @@ export function tauriTransport(): Transport & {
   zoomFactor(): number
 } {
   const internals = takeInternals()
+  if (TRACING) {
+    trace(
+      `loaded at ${location.href}; internals: ${Object.getOwnPropertyNames(internals).join(',')}; ` +
+        `'ipc' in internals: ${'ipc' in internals}`,
+    )
+  }
+  let frames = 0
   let onFrame: ((frame: Uint8Array) => void) | undefined
-  const channel = orderedChannel(internals, (data) => onFrame?.(new Uint8Array(data)))
+  const channel = orderedChannel(internals, (data) => {
+    frames += 1
+    if (frames <= 5) trace(`stream frame #${frames}: ${data.byteLength} bytes`)
+    onFrame?.(new Uint8Array(data))
+  })
   // commands go out one after another: the shell handles the messages of a
   // view in the order they were sent, and concurrent requests would not keep
   // it. The queue never rejects, so one failed command does not stop the rest.
   let queue: Promise<void> = Promise.resolve()
+  let posted = 0
   const post = (cmd: string, args: unknown): void => {
+    const n = (posted += 1)
+    // the first few commands are traced, and any command that is slow to be
+    // acknowledged (the queue behind it waits for it)
+    const noisy = TRACING && (n <= 5 || cmd === 'ipc_listen')
     queue = queue
-      .then(() => internals.invoke(cmd, args))
+      .then(() => {
+        const sent = performance.now()
+        if (noisy) trace(`${cmd} #${n} sent`)
+        const slow = TRACING
+          ? setTimeout(
+              () =>
+                trace(`${cmd} #${n} still not acknowledged after 3 s: the queue behind it waits`),
+              3000,
+            )
+          : undefined
+        return internals.invoke(cmd, args).finally(() => {
+          clearTimeout(slow)
+          if (noisy)
+            trace(`${cmd} #${n} acknowledged after ${(performance.now() - sent).toFixed(1)} ms`)
+        })
+      })
       .then(
         () => undefined,
         (error: unknown) => {
@@ -141,6 +185,7 @@ export function tauriTransport(): Transport & {
     sendSync: (channelName, frame) => syncRequest(internals, channelName, frame),
     listen(handler) {
       onFrame = handler
+      trace('listen: opening the output stream')
       // the first command: every later one waits behind it, so no reply can
       // come before the stream is open
       post('ipc_listen', { onFrame: channel })

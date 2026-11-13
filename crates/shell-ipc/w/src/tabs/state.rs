@@ -28,7 +28,7 @@ use main_core::shell::tab_lifecycle::{
     CloseInOrder, CloseInOrderStep, TabCloseManager, TabCloseTarget,
 };
 use main_core::shell::tab_manager::{
-    DetachedTab, Ready, SplitViewState, TabCloseStep, TabHost, TabManager, canonical_path,
+    DetachedTab, Ready, SplitViewState, TabCloseStep, TabHost, TabKind, TabManager, canonical_path,
     tab_strip_height,
 };
 use shell_contract::editors::editor_for;
@@ -915,6 +915,127 @@ impl TabsState {
         }
         if let Some(reply) = pending.reply.take() {
             reply.reply(Ok(IpcValue::Undefined));
+        }
+    }
+}
+
+/// What `apps/shell/src/main/index.ts` does for the shell's own entries (the
+/// application menu, the dock, a command line): thin wrappers over the logic
+/// above, for the shell crate's `ShellTabs`. Called on the core thread.
+impl TabsState {
+    /// `activeEditorTarget(kind, ...)`: the focused detached window's view when
+    /// it shows a document of `kind`, else the shell's active tab of that kind
+    /// (a Present tab is no html target)
+    pub fn active_editor(&self, kind: TabKind) -> Option<ViewId> {
+        let mut g = self.inner.borrow_mut();
+        let Inner {
+            detached,
+            bridge,
+            manager,
+            ..
+        } = &mut *g;
+        if let Some(focused) = detached.focused_detached_tab(bridge)
+            && focused.kind == kind
+        {
+            return Some(focused.view);
+        }
+        manager
+            .as_ref()
+            .and_then(|m| m.active_tab_of_kind(kind))
+            .map(|tab| tab.view)
+    }
+
+    /// `tabManager.openHomeTab()`
+    pub fn open_home_tab(&self) {
+        self.inner
+            .borrow_mut()
+            .manager_call(|m, b| m.open_home_tab(b));
+    }
+
+    /// `newDocTab`, `newSheetTab`, ...: one new tab for a home kind (`docx`,
+    /// `xlsx`, `pptx`, `md`, `html`, `xmind`, `drawio`, `hwp`, `pdf`), as
+    /// `home:new-*` does without a remembered folder; `false` for any other name
+    pub fn new_document(&self, home_kind: &str) -> bool {
+        let Some((_, _, kind)) = super::menus::new_kind_entry(home_kind) else {
+            return false;
+        };
+        self.new_tab(kind);
+        true
+    }
+
+    /// `visibleHomeKinds(readHomeKinds())` without `pdfTools`, in home's order
+    pub fn visible_home_kinds(&self) -> Vec<String> {
+        crate::home_settings::visible_home_kinds(&app_settings_path(&self.services))
+    }
+
+    /// "Open in New Window" for the shell's active tab of `kind`: its view
+    /// moves into a window of its own, unsaved edits included. Nothing when
+    /// the active tab is of another kind or cannot detach.
+    pub fn open_active_in_new_window(&self, kind: TabKind) {
+        let id = self
+            .inner
+            .borrow()
+            .manager
+            .as_ref()
+            .and_then(|m| m.active_tab_of_kind(kind))
+            .map(|tab| tab.id);
+        if let Some(id) = id
+            && self
+                .inner
+                .borrow()
+                .manager
+                .as_ref()
+                .is_some_and(|m| m.can_detach_tab(&id))
+        {
+            self.detach_tab_to_window(&id);
+        }
+    }
+
+    /// `app-settings.json`, where the interface scale is kept
+    pub fn settings_path(&self) -> String {
+        app_settings_path(&self.services)
+    }
+
+    /// `tabManager?.layout()`: the strip moved (the interface scale changed),
+    /// so the views below it move too
+    pub fn relayout(&self) {
+        self.inner.borrow_mut().manager_call(|m, b| m.layout(b));
+    }
+
+    /// `openFileViaDialog`: File > Open, through the shell's hook
+    pub fn open_file_via_dialog(&self) {
+        self.hooks.open_file_via_dialog();
+    }
+
+    /// `closeFocusedEditor`: a focused detached editor window closes itself
+    /// (its own unsaved-changes guard runs, as for the window's close box),
+    /// otherwise the shell's active tab closes
+    pub fn close_focused_editor(&self) {
+        let detached = {
+            let mut g = self.inner.borrow_mut();
+            let Inner {
+                detached, bridge, ..
+            } = &mut *g;
+            detached.focused_detached_tab(bridge).map(|f| f.window)
+        };
+        if let Some(window) = detached {
+            self.window_event(window, WindowEvent::Close);
+            return;
+        }
+        let step = self
+            .inner
+            .borrow_mut()
+            .manager_call(|m, b| m.close_active_tab(b));
+        if let Some(step) = step {
+            let hooks = self.hooks.clone();
+            self.drive_close(
+                step,
+                Box::new(move |done| {
+                    if let Err(error) = done {
+                        hooks.warn("[shell] close failed:", &error);
+                    }
+                }),
+            );
         }
     }
 }

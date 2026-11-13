@@ -30,6 +30,8 @@ mod ipc;
 mod measure;
 mod paths;
 mod preload;
+mod trace;
+mod ui_scale;
 mod views;
 
 use std::path::PathBuf;
@@ -185,6 +187,11 @@ fn open_first_window(windows: &Windows, options: &Options) -> Result<(), String>
             size: (1280.0, 860.0),
             min_size: None,
             visible: true,
+            decorations: true,
+            transparent: false,
+            resizable: true,
+            parent: None,
+            focus: true,
             main,
             view: ViewSpec {
                 url: url.into(),
@@ -241,7 +248,15 @@ static ROOTS: OnceLock<Vec<(String, String)>> = OnceLock::new();
 
 #[tauri_runtime_cef::cef_entry_point]
 fn main() {
+    // another instance takes this launch's files and arguments; this one ends
+    if host::os::hand_over_to_running_instance() {
+        return;
+    }
     let options = Options::read();
+    // the measurement runs unwatched: its path is always traced
+    if options.measure.is_some() || std::env::var("SEUOFFICE_SHELL_TRACE").is_ok_and(|v| v == "1") {
+        trace::enable();
+    }
     // the thread that starts the event loop is the UI thread
     let ui_thread = std::thread::current().id();
 
@@ -279,9 +294,25 @@ fn main() {
                 let roots = ROOTS.get_or_init(|| {
                     app_scheme::roots(ctx.app_handle().path().resource_dir().ok(), measure_page)
                 });
+                let label = ctx.webview_label().to_owned();
                 // reading a file is not for the UI thread
                 tauri::async_runtime::spawn_blocking(move || {
-                    responder.respond(app_scheme::serve(roots, host, &request));
+                    let response = app_scheme::serve(roots, host, &request);
+                    trace::trace!(
+                        "scheme",
+                        "'{label}' {} {}{} -> {} ({} bytes, {})",
+                        request.method(),
+                        host,
+                        request.uri().path(),
+                        response.status().as_u16(),
+                        response.body().len(),
+                        response
+                            .headers()
+                            .get("content-type")
+                            .and_then(|v| v.to_str().ok())
+                            .unwrap_or("no content type")
+                    );
+                    responder.respond(response);
                 });
             },
         );
@@ -299,6 +330,19 @@ fn main() {
                 ipc.views.remove_window(id);
             }
         })
+        .on_page_load(|webview, payload| {
+            // `did-finish-load`: the stored interface scale goes into every page
+            trace::trace!(
+                "page",
+                "'{}' {:?} {}",
+                webview.label(),
+                payload.event(),
+                payload.url()
+            );
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                ui_scale::on_page_finished(webview);
+            }
+        })
         .on_webview_event(|webview, event| {
             // the paths of a drop, for `webUtils.getPathForFile`
             if let WebviewEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event
@@ -311,6 +355,7 @@ fn main() {
             let handle = app.handle().clone();
             let views = setup_views;
             let paths = setup_paths;
+            ui_scale::install(&handle, &paths.settings_file().to_string_lossy());
 
             let ui: Arc<dyn Thread> = Arc::new(TauriUi {
                 app: handle.clone(),
@@ -354,6 +399,7 @@ fn main() {
             start(handle, services, windows, paths, options);
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running the tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building the tauri application")
+        .run(|app, event| host::on_run_event(app, &event));
 }

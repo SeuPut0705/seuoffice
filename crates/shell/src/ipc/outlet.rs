@@ -11,6 +11,8 @@ use shell_contract::ids::ViewId;
 use shell_core::outlet::Outlet;
 use tauri::ipc::{Channel, InvokeResponseBody};
 
+use crate::trace::trace;
+
 /// What waits for a stream that is not open yet is bounded: a view that never
 /// listens must not grow the queue without end
 const MAX_WAITING_FRAMES: usize = 1024;
@@ -40,6 +42,16 @@ impl TauriOutlet {
     /// navigation), and the calls of the old page are cancelled by the caller.
     pub fn attach(&self, view: ViewId, channel: Channel<InvokeResponseBody>) -> bool {
         let mut streams = self.streams.lock().unwrap();
+        trace!(
+            "outlet",
+            "view {}: stream attached (channel {}), {} frames were waiting",
+            view.0,
+            channel.id(),
+            match streams.get(&view) {
+                Some(Stream::Waiting(frames)) => frames.len(),
+                _ => 0,
+            }
+        );
         let waiting = match streams.remove(&view) {
             Some(Stream::Waiting(frames)) => frames,
             Some(Stream::Open(_)) => {
@@ -74,10 +86,22 @@ impl Outlet for TauriOutlet {
         // a view that is gone has no slot: what is sent to it is dropped, as
         // a reply nobody waits for is (the contract, section 2, "cancel")
         let Some(stream) = streams.get_mut(&view) else {
+            trace!(
+                "outlet",
+                "view {}: gone, {} bytes dropped",
+                view.0,
+                frame.len()
+            );
             return;
         };
         match stream {
             Stream::Waiting(frames) => {
+                trace!(
+                    "outlet",
+                    "view {}: no stream yet, {} bytes kept",
+                    view.0,
+                    frame.len()
+                );
                 if frames.len() < MAX_WAITING_FRAMES {
                     frames.push(frame);
                 } else {
@@ -85,8 +109,12 @@ impl Outlet for TauriOutlet {
                 }
             }
             Stream::Open(channel) => {
-                if let Err(error) = channel.send(InvokeResponseBody::Raw(frame)) {
-                    eprintln!("shell: view {}: a frame was not sent: {error}", view.0);
+                let bytes = frame.len();
+                match channel.send(InvokeResponseBody::Raw(frame)) {
+                    Ok(()) => trace!("outlet", "view {}: {bytes} bytes sent", view.0),
+                    Err(error) => {
+                        eprintln!("shell: view {}: a frame was not sent: {error}", view.0)
+                    }
                 }
             }
         }
