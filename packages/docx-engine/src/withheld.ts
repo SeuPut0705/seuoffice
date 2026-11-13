@@ -5,12 +5,19 @@ import {
   childrenOf,
   escapeXmlAttr,
   findChild,
+  maskOpaque,
   nameOf,
   textOf,
   xmlParser,
   type XNode,
 } from './xml-utils'
-import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
+import {
+  REDACT_EL,
+  REDACT_NAMESPACES,
+  REDACT_NS_WRITTEN,
+  REDACT_PREFIX,
+} from '@seuoffice/agent-core/redact-range'
+import { findStartTag } from './xml-tag'
 
 /**
  * Text a person marked "hidden from AI" outside the body: in a header, a
@@ -261,32 +268,58 @@ export function overWithheld(entryXml: string, label: string): string {
   )
 }
 
+const MC_NS = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
+
+/** a start tag's attributes, each with where its value sits and the quote around it */
+function tagAttributes(tag: string) {
+  const out = new Map<string, { value: string; start: number; end: number }>()
+  for (const m of tag.matchAll(/\s([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    const value = m[2] ?? m[3] ?? ''
+    const end = m.index + m[0].length - 1
+    out.set(m[1]!, { value, start: end - value.length, end })
+  }
+  return out
+}
+
 /**
- * A part's root with the mark's namespace declared and ignorable, so a
- * consumer that does not know it skips the element instead of rejecting the
- * run that carries it (as the document root gets on save).
+ * A written story part (the document, a header or footer, the comments, the
+ * notes) whose runs carry the editor's mark, with its root declaring what a
+ * consumer needs to keep that mark: the mark's namespace, that namespace as
+ * ignorable (a consumer that does not know it skips the element instead of
+ * rejecting the run), and the mark element as preserved (a consumer that
+ * re-saves keeps it instead of dropping every ignorable element). The root is
+ * read through its quoted values whatever its name or quotes, an existing
+ * markup-compatibility prefix and lists are extended, and a root that binds
+ * the mark's prefix to another namespace is left as it is.
  */
-export function withRedactNamespace(partXml: string, rootTag: string): string {
-  const open = new RegExp(`<${rootTag}\\b[^>]*>`).exec(partXml)
-  if (!open || !partXml.includes(`<${REDACT_EL}`)) return partXml
-  let tag = open[0]
-  const bound = new RegExp(`xmlns:${REDACT_PREFIX}=["']([^"']*)["']`).exec(tag)
-  if (bound && bound[1] !== REDACT_NS_WRITTEN) return partXml
-  if (!bound)
-    tag = tag.replace(`<${rootTag}`, `<${rootTag} xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
-  if (!/xmlns:mc=/.test(tag)) {
-    tag = tag.replace(
-      `<${rootTag}`,
-      `<${rootTag} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"`,
-    )
+export function withRedactRoot(partXml: string): string {
+  if (!partXml.includes(`<${REDACT_EL}`)) return partXml
+  const root = findStartTag(maskOpaque(partXml))
+  if (!root || root.selfClosing) return partXml
+  let tag = partXml.slice(root.start, root.end)
+  const name = /^<([\w.:-]+)/.exec(tag)![1]!
+  const add = (attr: string) => {
+    tag = `<${name} ${attr}${tag.slice(name.length + 1)}`
   }
-  const ignorable = /mc:Ignorable="([^"]*)"/.exec(tag)
-  if (!ignorable) tag = tag.replace(`<${rootTag}`, `<${rootTag} mc:Ignorable="${REDACT_PREFIX}"`)
-  else if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
-    tag = tag.replace(
-      /mc:Ignorable="([^"]*)"/,
-      `mc:Ignorable="${(ignorable[1] ?? '').trim()} ${REDACT_PREFIX}"`,
-    )
+  const bound = tagAttributes(tag).get(`xmlns:${REDACT_PREFIX}`)?.value
+  if (bound !== undefined && !REDACT_NAMESPACES.includes(bound)) return partXml
+  if (bound === undefined) add(`xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
+  let mc = [...tagAttributes(tag)]
+    .find(([attr, a]) => attr.startsWith('xmlns:') && a.value === MC_NS)?.[0]
+    .slice(6)
+  if (mc === undefined) {
+    mc = tagAttributes(tag).has('xmlns:mc') ? 'mce' : 'mc'
+    add(`xmlns:${mc}="${MC_NS}"`)
   }
-  return partXml.slice(0, open.index) + tag + partXml.slice(open.index + open[0].length)
+  // each list holds its token once, the producer's own entries kept
+  const ensure = (list: string, token: string) => {
+    const attr = tagAttributes(tag).get(`${mc}:${list}`)
+    if (!attr) return add(`${mc}:${list}="${token}"`)
+    const tokens = attr.value.split(/\s+/).filter(Boolean)
+    if (tokens.includes(token)) return
+    tag = `${tag.slice(0, attr.start)}${[...tokens, token].join(' ')}${tag.slice(attr.end)}`
+  }
+  ensure('Ignorable', REDACT_PREFIX)
+  ensure('PreserveElements', REDACT_EL)
+  return partXml.slice(0, root.start) + tag + partXml.slice(root.end)
 }
