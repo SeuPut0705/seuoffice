@@ -396,6 +396,15 @@ const BATCHES = [
 const PINNED: Record<string, string> = {
   'slides:font-install-local': 'D1',
   'workbook:sidecar-crashed': 'D1',
+  // M would only forward these into another batch's state (2026-11-13, M's proposal)
+  'slides:set-element-font': 'D1',
+  'slides:apply-theme': 'D1',
+  'slides:private-font-faces': 'D1',
+  'slides:private-font-data': 'D1',
+  'pdf:store-page-fingerprints': 'D2',
+  'app:get-split-role': 'W',
+  'app:view-focused': 'W',
+  'app:open-dropped-files': 'W',
 }
 const APP_BATCH: Record<string, string> = {
   shell: 'W',
