@@ -629,7 +629,10 @@ fn attachments_are_checked_by_type_and_size() {
     let thrown = rt
         .invoke_now("html:files-read", v, vec![IpcValue::Undefined])
         .unwrap_err();
-    assert_eq!(thrown.name.as_deref(), Some("TypeError"));
+    assert_eq!(
+        thrown.name.as_deref(),
+        Some("TypeError [ERR_INVALID_ARG_TYPE]")
+    );
     let not_image = rt
         .invoke_now("html:files-read-image", v, vec![s(&txt)])
         .unwrap();
