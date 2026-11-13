@@ -211,7 +211,8 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny --locked
+        # pinned: 0.20 takes --config before the subcommand, not after `check`
+        run: cargo install cargo-deny --locked --version 0.20.2
 
       - name: rhwp source at the pinned commit with the vendor patches
         run: node tools/build-rhwp-core.mjs --source-only
@@ -220,11 +221,11 @@ jobs:
       # every graph that breaks the policy
       - name: xlsx sidecar
         if: ${{ !cancelled() }}
-        run: cargo deny --manifest-path apps/sheets/native/xlsx-engine/Cargo.toml --all-features --locked check --config deny.toml licenses bans
+        run: cargo deny --config deny.toml --manifest-path apps/sheets/native/xlsx-engine/Cargo.toml --all-features --locked check licenses bans
 
       - name: xlsx sidecar for the web (xlsx-wasm)
         if: ${{ !cancelled() }}
-        run: cargo deny --manifest-path apps/sheets/native/xlsx-wasm/Cargo.toml --all-features --locked check --config deny.toml licenses bans
+        run: cargo deny --config deny.toml --manifest-path apps/sheets/native/xlsx-wasm/Cargo.toml --all-features --locked check licenses bans
 
       # what ships is the wasm32 build: rhwp's native-only dependencies (ureq,
       # skia) and its test dependencies are not in rhwp_bg.wasm
@@ -235,11 +236,11 @@ jobs:
           features=$(node -p "(require('./vendor/rhwp-core/package.json').rhwp.features ?? []).join(',')")
           set -- --manifest-path "crates/.rhwp-source/$tag/Cargo.toml" --target wasm32-unknown-unknown --exclude-dev
           if [ -n "$features" ]; then set -- "$@" --no-default-features --features "$features"; fi
-          cargo deny "$@" check --config deny.toml licenses bans
+          cargo deny --config deny.toml "$@" check licenses bans
 
       - name: crates/ (the Rust engines), when this tree has them
         if: ${{ !cancelled() && hashFiles('crates/Cargo.toml') != '' }}
-        run: cargo deny --manifest-path crates/Cargo.toml --all-features check --config crates/deny.toml licenses bans
+        run: cargo deny --config crates/deny.toml --manifest-path crates/Cargo.toml --all-features check licenses bans
 
   e2e:
     # 22.04, not -latest: 24.04's AppArmor hardening blocks Electron renderer
