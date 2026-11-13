@@ -104,18 +104,12 @@ const realImmediate = globalThis.setImmediate
  */
 async function quiet(): Promise<void> {
   for (let calm = 0, round = 0; calm < 6 && round < 20_000; round++) {
-    const next = Promise.withResolvers<void>()
-    realImmediate(next.resolve)
-    await next.promise
+    await new Promise<void>((resolve) => realImmediate(resolve))
     const busy = process
       .getActiveResourcesInfo()
       .some((name) => name.startsWith('FSReq') || name === 'CloseReq')
     calm = busy ? 0 : calm + 1
-    if (busy) {
-      const nap = Promise.withResolvers<void>()
-      setTimeout(nap.resolve, 1)
-      await nap.promise
-    }
+    if (busy) await new Promise<void>((resolve) => setTimeout(resolve, 1))
   }
 }
 
