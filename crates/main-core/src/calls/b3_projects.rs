@@ -3,6 +3,7 @@
 //! it calls. Each part dispatches the modules of one spec part
 //! (`groups/b3-projects-<part>.ts`).
 
+mod chats;
 mod cloud;
 mod files;
 mod foundation;
@@ -14,7 +15,13 @@ use super::{Answer, Context};
 
 type Part = fn(&str, &[Value], &mut Context) -> Option<Answer>;
 
-const PARTS: &[Part] = &[foundation::call, cloud::call, guard::call, files::call];
+const PARTS: &[Part] = &[
+    foundation::call,
+    cloud::call,
+    guard::call,
+    files::call,
+    chats::call,
+];
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     PARTS.iter().find_map(|part| part(name, args, cx))

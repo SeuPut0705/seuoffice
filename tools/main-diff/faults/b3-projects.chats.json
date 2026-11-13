@@ -1,0 +1,828 @@
+[
+  {
+    "name": "chat-store: the automatic title is one character short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "pub const CHAT_TITLE_CHARS: usize = 40;",
+    "replace": "pub const CHAT_TITLE_CHARS: usize = 39;",
+    "fn": ["chat-store.CHAT_TITLE_CHARS", "chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a rename keeps one character less",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "pub const CHAT_TITLE_MAX_CHARS: usize = 200;",
+    "replace": "pub const CHAT_TITLE_MAX_CHARS: usize = 199;",
+    "fn": ["chat-store.CHAT_TITLE_MAX_CHARS", "chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the text cap is one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TEXT_MAX_CHARS: usize = 32_000;",
+    "replace": "const TEXT_MAX_CHARS: usize = 31_999;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the truncation mark has one line feed less",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TEXT_TRUNCATED_MARK: &str = \"\\n\\n[truncated]\";",
+    "replace": "const TEXT_TRUNCATED_MARK: &str = \"\\n[truncated]\";",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a tool field is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TOOL_FIELD_MAX_CHARS: usize = 16_000;",
+    "replace": "const TOOL_FIELD_MAX_CHARS: usize = 15_999;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: one tool less is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const MAX_TOOLS_PER_MESSAGE: usize = 64;",
+    "replace": "const MAX_TOOLS_PER_MESSAGE: usize = 63;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: one attachment less is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const MAX_ATTACHMENTS_PER_MESSAGE: usize = 32;",
+    "replace": "const MAX_ATTACHMENTS_PER_MESSAGE: usize = 31;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a tool name is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TOOL_NAME_MAX_CHARS: usize = 200;",
+    "replace": "const TOOL_NAME_MAX_CHARS: usize = 199;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a tool summary is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TOOL_SUMMARY_MAX_CHARS: usize = 2_000;",
+    "replace": "const TOOL_SUMMARY_MAX_CHARS: usize = 1_999;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an attachment field is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const ATTACHMENT_FIELD_MAX_CHARS: usize = 1_000;",
+    "replace": "const ATTACHMENT_FIELD_MAX_CHARS: usize = 999;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the scope text is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const SCOPE_TEXT_MAX_CHARS: usize = 400;",
+    "replace": "const SCOPE_TEXT_MAX_CHARS: usize = 399;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the scope label is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const SCOPE_LABEL_MAX_CHARS: usize = 200;",
+    "replace": "const SCOPE_LABEL_MAX_CHARS: usize = 199;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: one skill chip less is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const MAX_SKILLS_PER_MESSAGE: usize = 32;",
+    "replace": "const MAX_SKILLS_PER_MESSAGE: usize = 31;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a skill id may be one unit shorter",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const SKILL_ID_MAX_CHARS: usize = 512;",
+    "replace": "const SKILL_ID_MAX_CHARS: usize = 511;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a skill field is cut one unit short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const SKILL_FIELD_MAX_CHARS: usize = 200;",
+    "replace": "const SKILL_FIELD_MAX_CHARS: usize = 199;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the opening messages are written one earlier",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "pub const MAX_PENDING_OPENING_MESSAGES: usize = 200;",
+    "replace": "pub const MAX_PENDING_OPENING_MESSAGES: usize = 199;",
+    "fn": ["chat-store.MAX_PENDING_OPENING_MESSAGES", "chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the state cache limit is one short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "pub const CHAT_STATE_CACHE_LIMIT: usize = 64;",
+    "replace": "pub const CHAT_STATE_CACHE_LIMIT: usize = 63;",
+    "fn": ["chat-store.CHAT_STATE_CACHE_LIMIT"]
+  },
+  {
+    "name": "chat-store: the scan cache limit is one short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "pub const FOREIGN_SCAN_CACHE_LIMIT: usize = 512;",
+    "replace": "pub const FOREIGN_SCAN_CACHE_LIMIT: usize = 511;",
+    "fn": ["chat-store.FOREIGN_SCAN_CACHE_LIMIT"]
+  },
+  {
+    "name": "chat-store: the default open limit is one short",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const DEFAULT_OPEN_LIMIT: f64 = 200.0;",
+    "replace": "const DEFAULT_OPEN_LIMIT: f64 = 199.0;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the tail window is 4 MiB",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "const TAIL_READ_BYTES: u64 = 8 * 1024 * 1024;",
+    "replace": "const TAIL_READ_BYTES: u64 = 4 * 1024 * 1024;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a window that starts after a line feed is not told from one that starts inside a line",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if before[0] == 0x0a {",
+    "replace": "if before[0] == 0x0b {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a line feed at the end of the window counts as a boundary",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&& (newline as i64) < bytes_read as i64 - 1",
+    "replace": "&& (newline as i64) <= bytes_read as i64 - 1",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the next number starts from zero",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let mut max_seq = -1.0;",
+    "replace": "let mut max_seq = 0.0;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the next number follows the last record, not the highest",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "max_seq = math_max(max_seq, seq_of(&record));",
+    "replace": "max_seq = seq_of(&record);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat with an info only is not on disk",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "materialized: messages_path.is_some() || raw_info.is_some(),",
+    "replace": "materialized: messages_path.is_some() && raw_info.is_some(),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat of another project is not told",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".is_some_and(|info| info.project_id() != chat.project_id),",
+    "replace": ".is_some_and(|info| info.project_id() == chat.project_id),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a state from the other data folder is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Some(known) if known.data_dir == data_dir => (known, false),",
+    "replace": "Some(known) if known.data_dir != data_dir => (known, false),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat on disk keeps its old numbering when the data folder changes",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Some(mut known) if !known.materialized && !read.materialized => {",
+    "replace": "Some(mut known) if !known.materialized || !read.materialized => {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the states are never trimmed",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if moved {\n            self.trim_states();",
+    "replace": "if false {\n            self.trim_states();",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the first trim check forgets the state in use",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if (self.states.len() + 1) as f64 <= self.state_limit {\n            return;",
+    "replace": "if self.states.len() as f64 <= self.state_limit {\n            return;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a state with a pending message is dropped as idle",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "        state.pending.is_empty()\n            && state.unrecorded.is_empty()",
+    "replace": "        state.unrecorded.is_empty()",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a state with an unwritten info is dropped as idle",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "state.pending.is_empty()\n            && state.unrecorded.is_empty()\n            && state.attach_docs.is_empty()",
+    "replace": "state.pending.is_empty()\n            && state.attach_docs.is_empty()",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a state with an attached document is dropped as idle",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            && state.attach_docs.is_empty()\n            && state.title.is_none()",
+    "replace": "            && state.title.is_none()",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a state with a rename is dropped as idle",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            && state.attach_docs.is_empty()\n            && state.title.is_none()",
+    "replace": "            && state.attach_docs.is_empty()",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a scan is reused whatever its size",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            && cached.size == size\n            && cached.mtime_ms == mtime",
+    "replace": "            && cached.mtime_ms == mtime",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a scan is reused whatever its time",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            && cached.mtime_ms == mtime\n        {",
+    "replace": "        {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a reused scan answers the opposite",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let foreign = cached.foreign;",
+    "replace": "let foreign = !cached.foreign;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat of this install counts as another",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if info.origin() != install_id {",
+    "replace": "if info.origin() == install_id {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: one scan more is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if self.foreign_cache.len() as f64 <= self.foreign_limit {",
+    "replace": "if (self.foreign_cache.len() as f64) < self.foreign_limit {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an unconfirmed folder shows the chats of other installs",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if foreign && self.guide.trust_state(project_id) != ProjectTrustState::Use {",
+    "replace": "if foreign && self.guide.trust_state(project_id) == ProjectTrustState::Without {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat of another project is visible",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if info.project_id() != project_id {",
+    "replace": "if info.project_id() == project_id {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a name that is no id is listed",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !is_valid_project_id(chat_id) {\n                continue;\n            }",
+    "replace": "if false {\n                continue;\n            }",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the list is oldest first",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let newest = locale_compare(b.info.updated_at(), a.info.updated_at());",
+    "replace": "let newest = locale_compare(a.info.updated_at(), b.info.updated_at());",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: equal times are ordered by id the other way",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "locale_compare(a.info.id(), b.info.id())",
+    "replace": "locale_compare(b.info.id(), a.info.id())",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: ids are compared as code points, not collated",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "match COLLATOR.compare(a, b) {",
+    "replace": "match a.cmp(b) {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an info with nothing to write is written",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if entries.is_empty() && attached.is_empty() && rename.is_none() {",
+    "replace": "if entries.is_empty() || attached.is_empty() || rename.is_none() {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an info of another project is overwritten",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "                if let Some(parsed) = &parsed\n                    && parsed.project_id() != project_id\n                {\n                    return None;\n                }\n",
+    "replace": "",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a new info is made at the clock, not the first message",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Some(entry) => record_str(&entry.message, \"ts\"),\n                    None => host.now_iso(),",
+    "replace": "Some(_) => host.now_iso(),\n                    None => host.now_iso(),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a new info has no origin",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "fresh.set(\"origin\", string_value(install_id()));",
+    "replace": "fresh.set(\"origin\", string_value(String::new()));",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a document that is there is added again",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".filter(|item| !same_rel(platform, item, rel))",
+    "replace": ".filter(|_| true)",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: darwin keeps the case of a document",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if platform == \"win32\" || platform == \"darwin\" {",
+    "replace": "if platform == \"win32\" {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a document with a backslash is another one",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let plain = nfc(&value.replace('\\\\', \"/\"));",
+    "replace": "let plain = nfc(value);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a document is compared without normalization",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let plain = nfc(&value.replace('\\\\', \"/\"));",
+    "replace": "let plain = value.replace('\\\\', \"/\");",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a later message replaces the title",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "} else if info.title().is_empty()",
+    "replace": "} else if true",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the title comes from the first reply",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".find(|entry| record_str(&entry.message, \"role\") == \"user\")",
+    "replace": ".find(|entry| record_str(&entry.message, \"role\") == \"assistant\")",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the attached documents are written again",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "state.attach_docs = state.attach_docs.split_off(attached_len);",
+    "replace": "state.attach_docs = std::mem::take(&mut state.attach_docs);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a missing final newline is not added",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if let Ok(true) = lacks_final_newline(&existing) {",
+    "replace": "if let Ok(false) = lacks_final_newline(&existing) {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a failed append is taken as written",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if appended != ProjectWriteResult::Ok {\n                return appended;",
+    "replace": "if false {\n                return appended;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an outside document is recorded each time",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if self.outside_recorded.get(&key).map(String::as_str) == Some(chat_id) {\n                continue;",
+    "replace": "if false {\n                continue;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a recorded outside document is forgotten",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Ok(()) => self.outside_recorded.set(key, chat_id.to_owned()),",
+    "replace": "Ok(()) => {}",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an id held in memory is handed out",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if self.states.has(&format!(\"{project_id}/{chat_id}\")) {\n                continue;",
+    "replace": "if false {\n                continue;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an id with a file is handed out",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&& lstat_or_null(&path).is_some()",
+    "replace": "&& false",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the messages are not sorted",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "sort_by_number(&mut messages, |a, b| seq_of(a) - seq_of(b));",
+    "replace": "sort_by_number(&mut messages, |_, _| 0.0);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the limit does not cut",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let start = messages.len().saturating_sub(limit);",
+    "replace": "let start = limit * 0;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a fractional limit is rounded",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "MAX_OPEN_LIMIT.min(math_max(1.0, limit.floor()))",
+    "replace": "MAX_OPEN_LIMIT.min(math_max(1.0, limit.round()))",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a limit of zero shows nothing",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "MAX_OPEN_LIMIT.min(math_max(1.0, limit.floor()))",
+    "replace": "MAX_OPEN_LIMIT.min(math_max(0.0, limit.floor()))",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an editor that is none is kept in a message",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let editor = match record.get(\"editor\") {\n                    Some(JsonValue::String(editor)) if is_editor(editor) => editor.clone(),",
+    "replace": "let editor = match record.get(\"editor\") {\n                    Some(JsonValue::String(editor)) if true => editor.clone(),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an origin that is no string is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "record.set(\"origin\", string_value(origin));",
+    "replace": "let _ = origin;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a record with a seq that is no number is read",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let finite_seq =\n            matches!(record.get(\"seq\"), Some(JsonValue::Number(seq)) if seq.is_finite());",
+    "replace": "let finite_seq = record.get(\"seq\").is_some();",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a record without a text is read",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if finite_seq && role && text {",
+    "replace": "if finite_seq && role {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an info for another id is read",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Some(JsonValue::String(id)) if id == chat_id => {}",
+    "replace": "Some(JsonValue::String(_id)) if true => {}",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an editor that is none is kept in an info",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let last_editor = match raw.get(\"lastEditor\") {\n        Some(JsonValue::String(editor)) if is_editor(editor) => editor.clone(),",
+    "replace": "let last_editor = match raw.get(\"lastEditor\") {\n        Some(JsonValue::String(editor)) if true => editor.clone(),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the version of an info is not set",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "    info.set(\n        \"version\",\n        JsonValue::Number(f64::from(PROJECT_FORMAT_VERSION)),\n    );\n",
+    "replace": "",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: documents of an info that are no strings are kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".filter(|item| matches!(item, JsonValue::String(_)))",
+    "replace": ".filter(|_| true)",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: text of exactly 32000 units is cut",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if utf16_len(&args_text) > TEXT_MAX_CHARS {",
+    "replace": "if utf16_len(&args_text) >= TEXT_MAX_CHARS {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a message has no file reference",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if let Some(file_ref) = fields.file_ref {\n        message.set(\"fileRef\", string_value(file_ref));\n    }",
+    "replace": "",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the tools are cut before the non-objects go",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".filter(|tool| is_object_like(tool))\n        .take(MAX_TOOLS_PER_MESSAGE)",
+    "replace": ".take(MAX_TOOLS_PER_MESSAGE)\n        .filter(|tool| is_object_like(tool))",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the attachments are cut before the non-objects go",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".filter(|item| is_object_like(item))\n        .take(MAX_ATTACHMENTS_PER_MESSAGE)",
+    "replace": ".take(MAX_ATTACHMENTS_PER_MESSAGE)\n        .filter(|item| is_object_like(item))",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a tool error flag is dropped",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if let Some(JsonValue::Bool(flag)) = prop(tool, \"isError\").as_deref() {\n                out.set(\"isError\", JsonValue::Bool(*flag));\n            }",
+    "replace": "",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a tool text field is written as JSON",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "JsonValue::String(text) => text.clone(),\n        other => json_stringify(other),",
+    "replace": "other => json_stringify(other),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a scope that is no object is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if let Some(scope) = prop(args, \"scope\")\n        && is_object_like(&scope)\n    {",
+    "replace": "if let Some(scope) = prop(args, \"scope\") {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an empty skill list is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !skills.is_empty() {",
+    "replace": "if true {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an empty tool list is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !tools.is_empty() {",
+    "replace": "if true {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a skill id that is empty is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if id.is_empty() || utf16_len(&id) > SKILL_ID_MAX_CHARS {",
+    "replace": "if utf16_len(&id) > SKILL_ID_MAX_CHARS {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: one skill chip more is kept",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if out.len() >= MAX_SKILLS_PER_MESSAGE {",
+    "replace": "if out.len() > MAX_SKILLS_PER_MESSAGE {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a line keeps one character more than the title limit",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let cut: String = trim(&collapsed).chars().take(max).collect();",
+    "replace": "let cut: String = trim(&collapsed).chars().take(max + 1).collect();",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a line is not trimmed after the cut",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "trim(&cut).to_owned()",
+    "replace": "cut",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: white space in a line is not collapsed",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !in_space {\n                collapsed.push(' ');\n            }",
+    "replace": "collapsed.push(' ');",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an opening message is held one more",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&& state.pending.len() < MAX_PENDING_OPENING_MESSAGES",
+    "replace": "&& state.pending.len() <= MAX_PENDING_OPENING_MESSAGES",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a reply is held like an opening message",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            && !is_assistant\n",
+    "replace": "",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an unwritable project holds the opening message as pending",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "return Ok(if unwritable {\n                AppendOutcome::Unwritable\n            } else {",
+    "replace": "return Ok(if false {\n                AppendOutcome::Unwritable\n            } else {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a document outside the folder gives no file reference",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": ".or_else(|| outside_doc.as_deref().map(|doc| basename(doc, None)));",
+    "replace": ".or_else(|| None);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the number goes up by two",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "state.next_seq += 1.0;",
+    "replace": "state.next_seq += 2.0;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a rename of a chat not on disk writes the info",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !state.materialized {\n                ProjectWriteResult::Ok\n            } else if self.guide.is_unwritable(&project_id) {",
+    "replace": "if false {\n                ProjectWriteResult::Ok\n            } else if self.guide.is_unwritable(&project_id) {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a document outside the folder is attached",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let Some(rel) = self.guide.document_relative_path(project_id, doc_path) else {\n            return Ok(ProjectWriteResult::Ok);\n        };",
+    "replace": "let rel = self\n            .guide\n            .document_relative_path(project_id, doc_path)\n            .unwrap_or_default();",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a folder is moved to the trash",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if stats.is_dir() {\n                continue;\n            }",
+    "replace": "if false {\n                continue;\n            }",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a failed move does not mark the project",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "self.guide.mark_unwritable(project_id);",
+    "replace": "let _ = project_id;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a deleted chat keeps its scan",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "            self.foreign_cache.delete(&path);\n        }\n        // the state is dropped",
+    "replace": "        }\n        // the state is dropped",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a deleted chat keeps its state",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "// the state is dropped: it is not put back\n        Ok(ProjectWriteResult::Ok)",
+    "replace": "self.check_in(&chat, state);\n        Ok(ProjectWriteResult::Ok)",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the oldest chat holding a document is picked",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "return Ok(chats\n                .iter()\n                .find(",
+    "replace": "return Ok(chats\n                .iter()\n                .rev()\n                .find(",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the chat of a document in another project is used",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "let chat_id = if selection.project_id.as_deref() == Some(project_id) {",
+    "replace": "let chat_id = if true {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat that is not visible is picked for an outside document",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Ok(self\n            .visible(project_id, &root, &data_dir, &chat_id)\n            .map(|_| chat_id))",
+    "replace": "{\n            let _ = self.visible(project_id, &root, &data_dir, &chat_id);\n            Ok(Some(chat_id))\n        }",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a failing listener is not warned about",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "self.host\n                        .warn(\"[projects] chat append listener failed:\", Some(&error));",
+    "replace": "let _ = &error;",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an unsubscribed listener stays, the others go",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "self.listeners.retain(|(listener, _)| *listener != id.0);",
+    "replace": "self.listeners.retain(|(listener, _)| *listener == id.0);",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the unknown project message is another",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "format!(\"unknown project {project_id}\")",
+    "replace": "format!(\"unknown {project_id}\")",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a chat of another project is refused with another message",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "\"chat {} belongs to another project\"",
+    "replace": "\"chat {} is of another project\"",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the empty title message is another",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "\"a chat title cannot be empty\"",
+    "replace": "\"a chat title is empty\"",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an assistant role is refused",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if role.as_deref() != Some(\"user\") && role.as_deref() != Some(\"assistant\") {",
+    "replace": "if role.as_deref() != Some(\"user\") {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: an editor that is none is taken",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if !is_editor(&sender.editor) {",
+    "replace": "if false {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a relative document path of the sender is taken",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "if let Some(doc_path) = doc_path\n            && !is_absolute(doc_path)\n        {",
+    "replace": "if let Some(doc_path) = doc_path\n            && false\n        {",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the default id is 15 characters",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "        .replace('/', \"_\")\n}",
+    "replace": "        .replace('/', \"_\")\n        .chars()\n        .skip(1)\n        .collect()\n}",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: macos is not darwin",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "\"macos\" => \"darwin\",",
+    "replace": "\"macos\" => \"macos\",",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the read warning of a state names another chat",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&format!(\"[projects] cannot read chat {}:\", chat.chat_id),",
+    "replace": "&format!(\"[projects] cannot read {}:\", chat.chat_id),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the read warning of an opening names another chat",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&format!(\"[projects] cannot read chat {chat_id}:\"),",
+    "replace": "&format!(\"[projects] cannot read {chat_id}:\"),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the trash warning says something else",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "&format!(\"[projects] cannot move chat {chat_id} to the trash:\"),",
+    "replace": "&format!(\"[projects] cannot move {chat_id} to the trash:\"),",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the outside warning says something else",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "\"[projects] cannot record the chat of an outside document:\",",
+    "replace": "\"[projects] cannot record the chat of a document:\",",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: a sender tag of none is written",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub key: Option<JsonValue>,",
+    "replace": "    pub key: Option<JsonValue>,",
+    "fn": ["chat-store.scenario"]
+  },
+  {
+    "name": "chat-store: the last byte of a file is not told from a line feed",
+    "file": "main-core/src/shell/projects/chat_store.rs",
+    "find": "Ok(last[0] != 0x0a)",
+    "replace": "Ok(last[0] == 0x0a)",
+    "fn": ["chat-store.scenario"]
+  }
+]
