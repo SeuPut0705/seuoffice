@@ -10,10 +10,7 @@
  * the entry imports, and the shell window and tab manager as one host line
  * (`shellWindow.showHomeTab`, as the Rust fake logs it).
  */
-import { readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import ts from 'typescript'
+import { join } from 'node:path'
 import {
   readAppSettings,
   writeAppSetting,
@@ -29,11 +26,10 @@ import {
   SLIDES_AI_FONTS_KEY,
 } from '../../../../packages/ui/src/slides-ai-fonts.ts'
 import type { Call, Case, Group, View } from '../../types.ts'
+import { entryStatements, runWith } from './lib/entry-source.ts'
 
-const ENTRY = resolve(fileURLToPath(import.meta.url), '../../../../../apps/shell/src/main/index.ts')
-
-/** How each statement the group runs starts, in the entry's order */
-const STATEMENTS = [
+/** The entry's statements that answer the group's channels, in its order */
+const entryCode = entryStatements('apps/shell/src/main/index.ts', [
   'let cachedAiPanelPrefs',
   'function currentAiPanelPrefs(',
   'ipcMain.handle(HOME_CHANNELS.getAiPanelPrefs,',
@@ -44,33 +40,7 @@ const STATEMENTS = [
   'ipcMain.handle(HOME_CHANNELS.getSlidesAiFonts,',
   'ipcMain.handle(HOME_CHANNELS.setSlidesAiFonts,',
   "ipcMain.handle('ai:open-model-settings',",
-]
-
-/** The statements of the entry that answer the group's channels, as JavaScript */
-const entryCode: string = (() => {
-  const file = ts.createSourceFile(ENTRY, readFileSync(ENTRY, 'utf8'), ts.ScriptTarget.Latest, true)
-  const found = new Map<string, string[]>(STATEMENTS.map((s) => [s, []]))
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isExpressionStatement(node) ||
-      ts.isVariableStatement(node) ||
-      ts.isFunctionDeclaration(node)
-    ) {
-      const text = node.getText(file)
-      for (const start of STATEMENTS) if (text.startsWith(start)) found.get(start)!.push(text)
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(file)
-  const source = STATEMENTS.map((start) => {
-    const texts = found.get(start)!
-    if (texts.length !== 1)
-      throw new Error(`${ENTRY}: ${texts.length} statements start with ${start}`)
-    return texts[0]
-  }).join('\n')
-  return ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } })
-    .outputText
-})()
+])
 
 const views: View[] = [
   { view: 1, window: 1, surface: 'Shell' },
@@ -188,7 +158,7 @@ export const group: Group = {
     const caseViews = cx.case.views ?? [{ view: 1, surface: 'Shell' }]
     const shellView = caseViews.find((v) => (v.surface ?? 'Shell') === 'Shell')
     const hostsA = (cx.case.hosts?.a ?? {}) as { documentLocale?: string }
-    const names: Record<string, unknown> = {
+    runWith(entryCode, {
       ipcMain: cx.electron.ipcMain,
       webContents: cx.electron.webContents,
       HOME_CHANNELS,
@@ -210,8 +180,7 @@ export const group: Group = {
         webContents: cx.electron.contents(shellView.view),
       },
       tabManager: { openHomeTab: () => cx.electron.log.push(['shellWindow.showHomeTab']) },
-    }
-    new Function(...Object.keys(names), entryCode)(...Object.values(names))
+    })
   },
   cases,
 }

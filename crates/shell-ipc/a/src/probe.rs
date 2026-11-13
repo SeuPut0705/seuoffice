@@ -81,3 +81,23 @@ impl crate::shell_ai_prefs::ShellUi for FakeShellUi {
         push(&self.log, serde_json::json!(["shellWindow.showHomeTab"]));
     }
 }
+
+/// `currentLang()`: `hosts.a.lang` (`ko` by default)
+fn case_lang(case: &serde_json::Value) -> main_core::packages::i18n::Lang {
+    main_core::packages::i18n::normalize_lang(Some(case["lang"].as_str().unwrap_or("ko")))
+}
+
+/// The shell entry's values for outbound-confirm
+pub struct FakeOutboundShell(main_core::packages::i18n::Lang);
+
+impl FakeOutboundShell {
+    pub fn new(case: &serde_json::Value) -> Self {
+        FakeOutboundShell(case_lang(case))
+    }
+}
+
+impl crate::outbound::OutboundShell for FakeOutboundShell {
+    fn lang(&self) -> main_core::packages::i18n::Lang {
+        self.0
+    }
+}

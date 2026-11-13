@@ -107,6 +107,10 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     fake_ports(hosts, &case["fake"]);
     let log = hosts.get::<probe::Log>().cloned();
     hosts.insert(shell_ai_prefs::factory());
+    hosts.insert(outbound::factory());
+    hosts.insert::<outbound::OutboundShellHost>(std::sync::Arc::new(
+        probe::FakeOutboundShell::new(case),
+    ));
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
         case, log,
     )));

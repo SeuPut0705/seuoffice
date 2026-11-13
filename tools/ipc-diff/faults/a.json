@@ -47,5 +47,40 @@
     "find": "            self.ui.show_home_tab();\n",
     "replace": "",
     "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "closing the question allows",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "answer.response == 1",
+    "replace": "answer.response != 0",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "any stored value turns the tools off",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "            Some(JsonValue::Bool(false))\n",
+    "replace": "            Some(_)\n",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "Allow is the default button",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "        default_id: Some(0),",
+    "replace": "        default_id: Some(1),",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "addresses are cut at 200 characters",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "const SHOWN_ADDRESS_CHARS: usize = 300;",
+    "replace": "const SHOWN_ADDRESS_CHARS: usize = 200;",
+    "groups": ["a/outbound"]
+  },
+  {
+    "name": "the question is put over no window",
+    "file": "shell-ipc/a/src/outbound.rs",
+    "find": "self.dialogs.message(Some(cx.sender.window), &options)",
+    "replace": "self.dialogs.message(None, &options)",
+    "groups": ["a/outbound"]
   }
 ]
