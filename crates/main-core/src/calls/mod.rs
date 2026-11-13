@@ -10,21 +10,29 @@
 //! - followed by `"logs":[[...],...]` when the function logged, one array of
 //!   arguments per call of its logger.
 
+mod b2_cli;
 mod b2_misc;
 mod b2_print;
 mod b2_recovery;
 mod b2_remote;
+mod b3_projects;
 mod b3_session;
 mod b3_shell;
 mod b3_update;
+mod b3b4_rest;
 mod b4_docs;
+mod b4_fonts;
 mod b4_html;
 mod b4_hwp;
 mod b4_markdown;
 mod b4_pdf;
+mod b4_pdf_store;
 mod b4_sheets;
 mod b4_slides;
+mod b5_agent;
 mod b5_ai;
+mod b5_mcp;
+mod b5_provider;
 mod b6_apps;
 mod b6_shell;
 mod b6_tabs;
@@ -101,10 +109,18 @@ const GROUPS: &[Group] = &[
     b4_pdf::call,
     b4_hwp::call,
     b5_ai::call,
+    b5_agent::call,
     b6_utils::call,
     b6_shell::call,
     b6_apps::call,
     b6_tabs::call,
+    b2_cli::call,
+    b4_fonts::call,
+    b4_pdf_store::call,
+    b3b4_rest::call,
+    b3_projects::call,
+    b5_mcp::call,
+    b5_provider::call,
     w_shell::call,
 ];
 

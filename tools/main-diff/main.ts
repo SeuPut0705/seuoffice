@@ -20,6 +20,7 @@ import {
   chmodSync,
   existsSync,
   linkSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -98,6 +99,11 @@ function snapshot(dir: string): Record<string, string> {
     for (const name of readdirSync(at).sort()) {
       const path = join(at, name)
       const rel = relative(dir, path)
+      // a link whose target is gone has nothing to read: it is listed as such
+      if (!existsSync(path) && lstatSync(path).isSymbolicLink()) {
+        out[rel] = 'dangling link'
+        continue
+      }
       const st = statSync(path)
       const mode = st.mode & 0o777
       if (st.isDirectory()) {

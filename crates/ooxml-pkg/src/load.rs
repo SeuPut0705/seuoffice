@@ -162,6 +162,7 @@ pub fn load_package(
         is_dir,
         uncompressed_size,
         content,
+        ..
     } in entries
     {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
