@@ -2433,4 +2433,110 @@ mod tests {
         let error = later.take().expect("the read ended").unwrap_err();
         assert_eq!(error.message, "terminated");
     }
+
+    /// A response fetched with a signal: the response, the fetch id, the
+    /// signal.
+    fn fetched_with_signal(runtime: &mut Runtime) -> (Rc<Response>, Id, Signal) {
+        let rt = runtime.rt().clone();
+        let signal = rt.controller();
+        let given = signal.clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                Some(&given),
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        (
+            Rc::new(call.take().expect("the fetch answered")),
+            fetch,
+            signal,
+        )
+    }
+
+    /// One `read()` of `response`, answered `answer` by the host.
+    fn read_answered(
+        runtime: &mut Runtime,
+        response: &Rc<Response>,
+        answer: Result<Answer, JsError>,
+    ) -> Result<Option<Vec<u8>>, JsError> {
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        let id = read_of(&runtime.poll());
+        runtime.feed(match answer {
+            Ok(answer) => Event::Done { id, answer },
+            Err(error) => Event::Failed { id, error },
+        });
+        assert!(runtime.poll().is_empty());
+        read.take().expect("the read ended")
+    }
+
+    /// A `read()` of `response` the runtime answers without the host.
+    fn read_now(
+        runtime: &mut Runtime,
+        response: &Rc<Response>,
+    ) -> Result<Option<Vec<u8>>, JsError> {
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        assert!(runtime.poll().is_empty());
+        read.take().expect("the read ended")
+    }
+
+    #[test]
+    fn a_later_abort_does_not_change_how_a_stream_ended() {
+        let mut runtime = Runtime::new(host());
+        // failed, then aborted: reads keep the stream's failure
+        let (response, _, signal) = fetched_with_signal(&mut runtime);
+        let failed = read_answered(
+            &mut runtime,
+            &response,
+            Err(JsError::type_error("terminated")),
+        );
+        assert_eq!(failed.unwrap_err().message, "terminated");
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(
+            read_now(&mut runtime, &response).unwrap_err().message,
+            "terminated"
+        );
+
+        // closed, then aborted: reads stay done
+        let (response, _, signal) = fetched_with_signal(&mut runtime);
+        assert_eq!(
+            read_answered(&mut runtime, &response, Ok(Answer::End)).unwrap(),
+            None
+        );
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
+
+        // cancelled, then aborted: reads stay done
+        let (response, fetch, signal) = fetched_with_signal(&mut runtime);
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        signal.abort(None);
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
+
+        // aborted while open: the abort errors the stream
+        let (response, fetch, signal) = fetched_with_signal(&mut runtime);
+        signal.abort(None);
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        assert_eq!(
+            read_now(&mut runtime, &response).unwrap_err().name,
+            "AbortError"
+        );
+    }
 }
