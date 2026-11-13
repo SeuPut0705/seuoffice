@@ -354,6 +354,25 @@ impl GuideError {
     }
 }
 
+/// What the chat store throws for an error of the guide: its message and,
+/// for a Node file error, its `code`
+fn chat_error(error: GuideError) -> ChatStoreError {
+    ChatStoreError {
+        message: error.message(),
+        code: error.code(),
+    }
+}
+
+/// What the guide reports for an error a chat store change threw: a Node
+/// file error where it carries a `code`
+fn guide_error(error: ChatStoreError) -> GuideError {
+    if error.code.is_some() {
+        GuideError::Node(error.into())
+    } else {
+        GuideError::Plain(error.message)
+    }
+}
+
 impl std::fmt::Display for GuideError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.message())
@@ -2507,10 +2526,9 @@ macro_rules! guide_traits {
                     rel_path,
                     &mut |current: Option<&str>| -> Result<Option<String>, GuideError> {
                         change(current, &mut || {
-                            ProjectGuide::install_id(guide)
-                                .map_err(|error| ChatStoreError(error.message()))
+                            ProjectGuide::install_id(guide).map_err(chat_error)
                         })
-                        .map_err(|ChatStoreError(message)| GuideError::Plain(message))
+                        .map_err(guide_error)
                     },
                     data_dir,
                 )
@@ -2529,8 +2547,7 @@ macro_rules! guide_traits {
             }
 
             fn install_id(&mut self) -> Result<String, ChatStoreError> {
-                ProjectGuide::install_id(self.guide())
-                    .map_err(|error| ChatStoreError(error.message()))
+                ProjectGuide::install_id(self.guide()).map_err(chat_error)
             }
 
             fn trust_state(&mut self, id: &str) -> ProjectTrustState {
