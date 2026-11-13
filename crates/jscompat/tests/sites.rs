@@ -118,6 +118,11 @@ fn rust_files(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
 /// most a few times, or over a short text, or its regex reads nothing ahead;
 /// otherwise search once with `find_iter`.
 const RESTARTS_THAT_MAY_READ_AHEAD: &[(&str, usize)] = &[
+    // innerTextRanges and pushPointEdits: once per series and per cached point,
+    // over one chart part (a short text)
+    ("docx-engine/src/save/features/chart_write.rs", 2),
+    // occupiedRelIds: once per tag, over that one tag's text
+    ("docx-engine/src/save/save/helpers.rs", 1),
     // one search per SDT, over a pattern held in a constant
     ("docx-engine/src/sdt.rs", 1),
     // one pass over the attributes of one tag

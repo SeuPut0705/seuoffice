@@ -5,6 +5,7 @@
 //! and `zlib`) is `hwp5-file.ts`, which `field_kinds`, `section_tails` and
 //! `tab_widths` stand on; `ipc` is the part of `src/shared/ipc.ts` they use.
 
+pub mod ai_image;
 pub mod atomic_write;
 pub mod cfb;
 pub mod dialog_strings;

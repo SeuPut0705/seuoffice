@@ -1,0 +1,758 @@
+[
+  {
+    "name": "metrics cache file name",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "\"font-vertical-metrics.json\"",
+    "replace": "\"font-metrics.json\"",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "korean language id",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "const KOREAN_LANG_ID: i64 = 0x0412;",
+    "replace": "const KOREAN_LANG_ID: i64 = 0x0413;",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "korean needs the windows platform",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "korean: platform == 3 && be16(buf, r + 4) == KOREAN_LANG_ID,",
+    "replace": "korean: platform == 3 || be16(buf, r + 4) == KOREAN_LANG_ID,",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "family records of any platform",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "|| (platform != 0 && platform != 3) {",
+    "replace": "|| false {",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "odd length names are read",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if len == 0 || len % 2 != 0 || off + len > buf.len() as i64 {",
+    "replace": "if len == 0 || off + len > buf.len() as i64 {",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "empty names are kept",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if len == 0 || len % 2 != 0 ||",
+    "replace": "if len % 2 != 0 ||",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "string ending at the table end is cut",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "|| off + len > buf.len() as i64 {",
+    "replace": "|| off + len >= buf.len() as i64 {",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "name ids other than family",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if (name_id != 1 && name_id != 16) ||",
+    "replace": "if (name_id != 1 && name_id != 17) ||",
+    "fn": ["family-info.parseFamilyNames", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "hangul code page bits",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "range & ((1 << 19) | (1 << 21)) != 0",
+    "replace": "range & (1 << 19) != 0",
+    "fn": ["family-info.declaresHangul", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "hangul wansung bit",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "range & ((1 << 19) | (1 << 21)) != 0",
+    "replace": "range & ((1 << 20) | (1 << 21)) != 0",
+    "fn": ["family-info.declaresHangul", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "jamo block",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "0x1100..=0x11ff | 0x3130..=0x318f | 0xac00..=0xd7a3",
+    "replace": "0x3130..=0x318f | 0xac00..=0xd7a3",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "compatibility jamo block",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "0x1100..=0x11ff | 0x3130..=0x318f | 0xac00..=0xd7a3",
+    "replace": "0x1100..=0x11ff | 0xac00..=0xd7a3",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "hangul syllables block",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "0x1100..=0x11ff | 0x3130..=0x318f | 0xac00..=0xd7a3",
+    "replace": "0x1100..=0x11ff | 0x3130..=0x318f",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "typographic names last",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "for id in [16u16, 1] {",
+    "replace": "for id in [1u16, 16] {",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "repeated names kept",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if out.iter().any(|f| f.name == record.name) {",
+    "replace": "if false {",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "korean name without hangul",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": ".find(|r| r.korean && has_hangul(&r.name))",
+    "replace": ".find(|r| r.korean)",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "hangul not declared",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "hangul: hangul_declared,",
+    "replace": "hangul: false,",
+    "fn": ["family-info.faceFamilies", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "merge hangul of the last face",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "hangul = hangul || f.hangul;",
+    "replace": "hangul = f.hangul;",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "merge keeps the last korean name",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if ko.is_some() {\n            continue;\n        }",
+    "replace": "if false {\n            continue;\n        }",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "suffix matched at the start",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if !face_ko.to_lowercase().ends_with(&suffix.to_lowercase()) {",
+    "replace": "if !face_ko.to_lowercase().starts_with(&suffix.to_lowercase()) {",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "suffix compared in case",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if !face_ko.to_lowercase().ends_with(&suffix.to_lowercase()) {",
+    "replace": "if !face_ko.ends_with(&suffix) {",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "korean name equal to the family",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if !name.is_empty() && norm(name) != norm(family) {",
+    "replace": "if !name.is_empty() && norm(name) == norm(family) {",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "empty korean name kept",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if !name.is_empty() && norm(name) != norm(family) {",
+    "replace": "if norm(name) != norm(family) {",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "korean name not trimmed",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let name = trim(&name);",
+    "replace": "let name = name.as_str();",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "style word demi",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "(?:extra|ultra|semi|demi)?",
+    "replace": "(?:extra|ultra|semi)?",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "style word hairline",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "thin|hairline|light",
+    "replace": "thin|light",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "style word expanded",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "condensed|narrow|expanded))+$",
+    "replace": "condensed|narrow))+$",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "style suffix separators",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "^(?:[\\s-]+(?:extra",
+    "replace": "^(?:[\\s]+(?:extra",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "prefix compared in case",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "f.name.to_lowercase().starts_with(&lower)",
+    "replace": "f.name.starts_with(family)",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "prefix family not lower cased",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let lower = family.to_lowercase();",
+    "replace": "let lower = family.to_owned();",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "suffix counted in code points",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let family_length = family.encode_utf16().count() as f64;",
+    "replace": "let family_length = family.chars().count() as f64;",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "korean strip counted in code points",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let end = face_ko.encode_utf16().count() as f64 - suffix.encode_utf16().count() as f64;",
+    "replace": "let end = face_ko.chars().count() as f64 - suffix.chars().count() as f64;",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "exact match not normalized",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "exact.get(&norm(family))",
+    "replace": "exact.get(family.as_str())",
+    "fn": ["family-info.resolveFamilyInfo", "family-info.familyInfoFor"]
+  },
+  {
+    "name": "family length limit",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "const MAX_FAMILY_CHARS: usize = 256;",
+    "replace": "const MAX_FAMILY_CHARS: usize = 255;",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "family length counted in bytes",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "JsonValue::String(text) if text.encode_utf16().count() <= MAX_FAMILY_CHARS => {",
+    "replace": "JsonValue::String(text) if text.len() <= MAX_FAMILY_CHARS => {",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "family count limit",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "const MAX_FAMILIES: usize = 5000;",
+    "replace": "const MAX_FAMILIES: usize = 5001;",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "scan not restarted",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "if self.generation != fonts.font_dirs_generation() as i64 {",
+    "replace": "if false {",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "scan ignores the app folders",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "for path in fonts.scanned_font_files() {",
+    "replace": "for path in fonts.system_font_files() {",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "scan ignores the OS/2 table",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let hangul = declares_hangul(os2.as_deref());",
+    "replace": "let hangul = declares_hangul(None);",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "a name table of 512 bytes",
+    "file": "main-core/src/packages/font_metrics/family_info.rs",
+    "find": "let Some(name) = read_table(&file, &tables, \"name\", 1 << 20)? else",
+    "replace": "let Some(name) = read_table(&file, &tables, \"name\", 1 << 8)? else",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "alias of the name itself",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "seen.insert(key.clone());",
+    "replace": "",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "alias slots by platform only",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "matched_slots.insert((record.platform, record.name_id));",
+    "replace": "matched_slots.insert((record.platform, 0));",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "alias slots by name id only",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "matched_slots.insert((record.platform, record.name_id));",
+    "replace": "matched_slots.insert((0, record.name_id));",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "canonical aliases last",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "canonical.push(record.name.clone());",
+    "replace": "localized.push(record.name.clone());",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "alias match not normalized",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "if norm(&record.name) == key {",
+    "replace": "if record.name == name {",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "alias seen not normalized",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "let record_key = norm(&record.name);",
+    "replace": "let record_key = record.name.clone();",
+    "fn": ["sfnt.familyAliases"]
+  },
+  {
+    "name": "extra folders flat scan",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "font_files(dir, 0, &mut out);\n        }\n        out",
+    "replace": "font_files(dir, 2, &mut out);\n        }\n        out",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "system folders one level",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "font_files(&dir, 2, &mut out);",
+    "replace": "font_files(&dir, 1, &mut out);",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "system folders three levels",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "font_files(&dir, 2, &mut out);",
+    "replace": "font_files(&dir, 3, &mut out);",
+    "fn": ["family-info.familyInfoFor"]
+  },
+  {
+    "name": "generation not bumped",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "self.generation += 1;",
+    "replace": "self.generation += 0;",
+    "fn": ["family-info.familyInfoFor", "metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "app index kept",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "self.extra_dirs = dirs.to_vec();\n        self.app_index = None;",
+    "replace": "self.extra_dirs = dirs.to_vec();",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "app folders not indexed",
+    "file": "main-core/src/packages/font_metrics/sfnt.rs",
+    "find": "app.index_file(&path);",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "typographic metrics offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "typo_ascender: at(has_typo, &|t| i16_be(t, 68)),",
+    "replace": "typo_ascender: at(has_typo, &|t| i16_be(t, 70)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "typo descender offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "typo_descender: at(has_typo, &|t| i16_be(t, 70)),",
+    "replace": "typo_descender: at(has_typo, &|t| i16_be(t, 68)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "win ascent offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "win_ascent: at(has_win, &|t| u16_be(t, 74)),",
+    "replace": "win_ascent: at(has_win, &|t| u16_be(t, 76)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "win descent signed",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "win_descent: at(has_win, &|t| u16_be(t, 76)),",
+    "replace": "win_descent: at(has_win, &|t| i16_be(t, 76)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "average width offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "x_avg_char_width: at(len >= 4, &|t| i16_be(t, 2)),",
+    "replace": "x_avg_char_width: at(len >= 4, &|t| i16_be(t, 4)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "code page range offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "code_page_range1: at(len >= 82, &|t| u32_be(t, 78)),",
+    "replace": "code_page_range1: at(len >= 82, &|t| u32_be(t, 74)),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "hhea ascender offset",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "hhea_ascender: i16_be(&hhea, 4),",
+    "replace": "hhea_ascender: i16_be(&hhea, 6),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "hhea line gap unsigned",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "hhea_line_gap: i16_be(&hhea, 8),",
+    "replace": "hhea_line_gap: u16_be(&hhea, 8),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "typo group length",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "let has_typo = len >= 74;",
+    "replace": "let has_typo = len > 74;",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "win group length",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "let has_win = len >= 78;",
+    "replace": "let has_win = len > 78;",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "typo metrics flag length",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "use_typo_metrics: len >= 64 &&",
+    "replace": "use_typo_metrics: len > 64 &&",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "typo metrics flag bit",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "u16_be(t, 62) & 0x80 != 0",
+    "replace": "u16_be(t, 62) & 0x40 != 0",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "average width length",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "at(len >= 4, &|t| i16_be(t, 2))",
+    "replace": "at(len > 4, &|t| i16_be(t, 2))",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "code page length",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "at(len >= 82, &|t| u32_be(t, 78))",
+    "replace": "at(len > 82, &|t| u32_be(t, 78))",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "zero em accepted",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if units_per_em == 0 {\n        return Ok(None);\n    }",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "misses not remembered",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "self.misses.insert(key.clone());",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "misses kept across generations",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if self.misses_generation != fonts.font_dirs_generation() {\n            self.misses.clear();",
+    "replace": "if self.misses_generation != fonts.font_dirs_generation() {",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "misses of a configured cache kept",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "self.persisted = None;\n        self.misses.clear();",
+    "replace": "self.persisted = None;",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "face order of one family",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "sorted.sort_by_key(|f| std::cmp::Reverse(style_score(f, &[])));",
+    "replace": "sorted.sort_by_key(|f| style_score(f, &[]));",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "stale entry kept",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if !matches!(hit, Hit::None) {",
+    "replace": "if matches!(hit, Hit::Own(_)) {",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "inherited name is no hit",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "None if key == \"constructor\" => Hit::Inherited,",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "falsy entry is a hit",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "Some(entry) if entry.truthy() => Hit::Own(entry.clone()),",
+    "replace": "Some(entry) => Hit::Own(entry.clone()),",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "old entries believed",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "JsonValue::Object(o) if o.get(\"codePageRange1\").is_some())",
+    "replace": "JsonValue::Object(o) if o.get(\"codePageRange1\").is_none())",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "size of a cache entry",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "same(\"mtimeMs\", st.mtime_ms) && same(\"size\", st.size as f64)",
+    "replace": "same(\"mtimeMs\", st.mtime_ms)",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "time of a cache entry",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "same(\"mtimeMs\", st.mtime_ms) && same(\"size\", st.size as f64)",
+    "replace": "same(\"size\", st.size as f64)",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "array cache read as object",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "Ok(array @ JsonValue::Array(_)) => persisted.array = Some(array),",
+    "replace": "Ok(JsonValue::Array(_)) => {}",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "deleted entry stays",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": ".filter(|(k, _)| *k != key)",
+    "replace": ".filter(|(k, _)| *k == key)",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "transient failure cached",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if let (Some(st), true) = (st, parsed) {",
+    "replace": "if let Some(st) = st {",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "face offset not persisted",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "entry.set(\"offset\", number(face.offset));",
+    "replace": "entry.set(\"offset\", number(0));",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "cache entry path",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "entry.set(\"path\", JsonValue::String(face.path.clone()));",
+    "replace": "entry.set(\"path\", JsonValue::String(String::new()));",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "cache entry m",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "entry.set(\"m\", metrics.as_ref().map_or(JsonValue::Null, metrics_json));",
+    "replace": "entry.set(\"m\", JsonValue::Null);",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "null metrics believed",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if matches!(&*m, JsonValue::Null) {\n                return None;\n            }",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "cache not saved",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "let _ = fs::write(file, persisted.json());",
+    "replace": "",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "array cache written as object",
+    "file": "main-core/src/packages/font_metrics/metrics.rs",
+    "find": "if let Some(array) = &self.array {\n            json_stringify(array)",
+    "replace": "if let Some(array) = None::<&JsonValue> {\n            json_stringify(array)",
+    "fn": ["metrics.familyVerticalMetrics"]
+  },
+  {
+    "name": "edit font first readable",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "found = Some(bytes);\n                break;",
+    "replace": "found = Some(bytes);",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font cache",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "if !cache.cache.has(&key) {",
+    "replace": "if true {",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font cache key ignores the style",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "let key = format!(\"{id}#{}\", style.as_str());",
+    "replace": "let key = format!(\"{id}#regular\");",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font list style",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "load_edit_font(cache, id, EditFontStyle::Regular, map_path)",
+    "replace": "load_edit_font(cache, id, EditFontStyle::Bold, map_path)",
+    "fn": ["text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font bold slot",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "EditFontStyle::Bold => 1,",
+    "replace": "EditFontStyle::Bold => 2,",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font italic slot",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "EditFontStyle::Italic => 2,",
+    "replace": "EditFontStyle::Italic => 1,",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font bold italic slot",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "EditFontStyle::BoldItalic => 3,",
+    "replace": "EditFontStyle::BoldItalic => 0,",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font id prefix",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": ".find(|(own, _)| *own == id)",
+    "replace": ".find(|(own, _)| own.starts_with(id))",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font mac arial",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/System/Library/Fonts/Supplemental/Arial.ttf\",",
+    "replace": "\"/System/Library/Fonts/Supplemental/Arial1.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font windows arial bold",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"C:\\\\Windows\\\\Fonts\\\\arialbd.ttf\",",
+    "replace": "\"C:\\\\Windows\\\\Fonts\\\\arialb.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation sans italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationSans-Oblique.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font mac arial bold italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/System/Library/Fonts/Supplemental/Arial Bold Italic.ttf\",",
+    "replace": "\"/System/Library/Fonts/Supplemental/Arial BoldItalic.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation sans regular",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationSans.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font windows times",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"C:\\\\Windows\\\\Fonts\\\\times.ttf\",",
+    "replace": "\"C:\\\\Windows\\\\Fonts\\\\time.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation serif bold",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationSerif-Heavy.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation serif italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationSerif-Slanted.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font windows times bold italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"C:\\\\Windows\\\\Fonts\\\\timesbi.ttf\",",
+    "replace": "\"C:\\\\Windows\\\\Fonts\\\\timesib.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation serif regular",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationSerif.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation mono bold",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationMono-Heavy.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font mac courier bold italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/System/Library/Fonts/Supplemental/Courier New Bold Italic.ttf\",",
+    "replace": "\"/System/Library/Fonts/Supplemental/Courier New BoldItalic.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font windows courier",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"C:\\\\Windows\\\\Fonts\\\\cour.ttf\",",
+    "replace": "\"C:\\\\Windows\\\\Fonts\\\\courier.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  },
+  {
+    "name": "edit font liberation mono bold italic",
+    "file": "main-core/src/pdf/edit_fonts.rs",
+    "find": "\"/usr/share/fonts/truetype/liberation/LiberationMono-BoldItalic.ttf\",",
+    "replace": "\"/usr/share/fonts/truetype/liberation/LiberationMono-BoldOblique.ttf\",",
+    "fn": ["text-edit.loadEditFont", "text-edit.listEditFonts"]
+  }
+]

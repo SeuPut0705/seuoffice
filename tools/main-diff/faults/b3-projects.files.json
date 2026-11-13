@@ -1,0 +1,856 @@
+[
+  {
+    "name": "project-files: the oldest file comes first",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "let by_time = b.entry.mtime_ms.0 - a.entry.mtime_ms.0;",
+    "replace": "let by_time = a.entry.mtime_ms.0 - b.entry.mtime_ms.0;",
+    "fn": [
+      "project-files.listVisibleFiles",
+      "project-files.listIgnoredFiles",
+      "project-files.projectMentionFiles",
+      "project-files.createContextFiles",
+      "project-tools.ProjectFolderTools"
+    ]
+  },
+  {
+    "name": "project-files: equal times are not ordered by path",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "if string_less_than(&a.entry.rel_path, &b.entry.rel_path) {",
+    "replace": "if string_less_than(&b.entry.rel_path, &a.entry.rel_path) {",
+    "fn": ["project-files.listVisibleFiles", "project-files.projectMentionFiles"]
+  },
+  {
+    "name": "project-files: the walk goes one folder deeper than the index",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "if f64::from(depth) > SCAN_MAX_DEPTH {",
+    "replace": "if f64::from(depth) > SCAN_MAX_DEPTH + 1.0 {",
+    "fn": ["project-files.listVisibleFiles"]
+  },
+  {
+    "name": "project-files: an unsupported file is listed",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "} else if kind.is_file() && is_supported_tree_file(&name) && keep_file(&child_rel)? {",
+    "replace": "} else if kind.is_file() && keep_file(&child_rel)? {",
+    "fn": ["project-files.listVisibleFiles"]
+  },
+  {
+    "name": "project-files: the extension keeps its case",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "let ext = extname(&name).get(1..).unwrap_or(\"\").to_lowercase();",
+    "replace": "let ext = extname(&name).get(1..).unwrap_or(\"\").to_owned();",
+    "fn": ["project-files.listVisibleFiles"]
+  },
+  {
+    "name": "project-files: the relative path is not normalized",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "rel_path: nfc(&child_rel),",
+    "replace": "rel_path: child_rel.clone(),",
+    "fn": ["project-files.listVisibleFiles"]
+  },
+  {
+    "name": "project-files: the ignored list keeps files the AI sees",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "Ok(shown(rel, false)? && !visibility.is_visible(rel, false)?)",
+    "replace": "Ok(shown(rel, false)? && visibility.is_visible(rel, false)?)",
+    "fn": ["project-files.listIgnoredFiles"]
+  },
+  {
+    "name": "project-files: a failed detector marks files as on this PC",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": ".is_none_or(|verdicts| verdicts.get(&file.path) != Some(&false));",
+    "replace": ".is_some_and(|verdicts| verdicts.get(&file.path) != Some(&false));",
+    "fn": [
+      "project-files.withCloudFlags",
+      "project-files.createContextFiles",
+      "project-tools.ProjectFolderTools"
+    ]
+  },
+  {
+    "name": "project-files: a file without a verdict is on this PC",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": ".is_none_or(|verdicts| verdicts.get(&file.path) != Some(&false));",
+    "replace": ".is_none_or(|verdicts| verdicts.get(&file.path) == Some(&true));",
+    "fn": [
+      "project-files.withCloudFlags",
+      "project-files.createContextFiles",
+      "project-tools.ProjectFolderTools"
+    ]
+  },
+  {
+    "name": "project-files: the detector is run for no file",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "if files.is_empty() {",
+    "replace": "if false {",
+    "fn": ["project-files.withCloudFlags", "project-files.createContextFiles"]
+  },
+  {
+    "name": "project-files: a negative slice end counts as zero",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "(length + index).max(0.0)",
+    "replace": "0.0",
+    "fn": ["project-files.projectMentionFiles", "project-files.createContextFiles"]
+  },
+  {
+    "name": "project-files: the mention title is the whole path",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "title: basename(&file.path, None),",
+    "replace": "title: file.path.clone(),",
+    "fn": ["project-files.projectMentionFiles"]
+  },
+  {
+    "name": "project-files: nothing is counted as omitted",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "omitted: all.len().saturating_sub(shown.len()) as u64,",
+    "replace": "omitted: 0,",
+    "fn": ["project-files.createContextFiles"]
+  },
+  {
+    "name": "project-files: the context limit is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "limit: limit.unwrap_or(PROJECT_CONTEXT_FILES_LIMIT),",
+    "replace": "limit: limit.unwrap_or(PROJECT_CONTEXT_FILES_LIMIT + 1.0),",
+    "fn": ["project-files.createContextFiles"]
+  },
+  {
+    "name": "project-files: the mention limit is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "limit.unwrap_or(PROJECT_MENTION_FILES_LIMIT)",
+    "replace": "limit.unwrap_or(PROJECT_MENTION_FILES_LIMIT + 1.0)",
+    "fn": ["project-files.projectMentionFiles"]
+  },
+  {
+    "name": "project-files: a walk expires one tick late",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": ".filter(|(_, walk)| at - walk.at >= ttl)",
+    "replace": ".filter(|(_, walk)| at - walk.at > ttl)",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: the walk key ignores the rule",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "let key = format!(\"{}\\u{0}{rule_key}\", visibility.root);",
+    "replace": "let key = format!(\"{}\\u{0}\", visibility.root);",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: a visibility without a rule key is cached",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "let Some(rule_key) = &visibility.rule_key else {",
+    "replace": "let rule_key = &visibility.rule_key.clone().unwrap_or_default();\n        let Some(_) = Some(()) else {",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: a failed walk is remembered as empty",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "let files = self.list.list(visibility)?;",
+    "replace": "let files = self.list.list(visibility).unwrap_or_default();",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: the cache time is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "ttl: ttl_ms.unwrap_or(PROJECT_FILE_LIST_CACHE_MS),",
+    "replace": "ttl: ttl_ms.unwrap_or(PROJECT_FILE_LIST_CACHE_MS + 1.0),",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: invalidate forgets the other roots",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "root.is_none_or(|root| walk.root == root)",
+    "replace": "root.is_none_or(|root| walk.root != root)",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: invalidate without a root forgets nothing",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "root.is_none_or(|root| walk.root == root)",
+    "replace": "root.is_some_and(|root| walk.root == root)",
+    "fn": ["project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: the context limit constant is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "pub const PROJECT_CONTEXT_FILES_LIMIT: f64 = 500.0;",
+    "replace": "pub const PROJECT_CONTEXT_FILES_LIMIT: f64 = 501.0;",
+    "fn": ["project-files.PROJECT_CONTEXT_FILES_LIMIT", "project-files.createContextFiles"]
+  },
+  {
+    "name": "project-files: the cache time constant is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "pub const PROJECT_FILE_LIST_CACHE_MS: f64 = 5_000.0;",
+    "replace": "pub const PROJECT_FILE_LIST_CACHE_MS: f64 = 5_001.0;",
+    "fn": ["project-files.PROJECT_FILE_LIST_CACHE_MS", "project-files.createCachedFileLister"]
+  },
+  {
+    "name": "project-files: the mention limit constant is one more",
+    "file": "main-core/src/shell/projects/project_files.rs",
+    "find": "pub const PROJECT_MENTION_FILES_LIMIT: f64 = 50.0;",
+    "replace": "pub const PROJECT_MENTION_FILES_LIMIT: f64 = 51.0;",
+    "fn": ["project-files.PROJECT_MENTION_FILES_LIMIT", "project-files.projectMentionFiles"]
+  },
+  {
+    "name": "project-index: a file is a project folder",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": "is_ok_and(|info| info.is_dir())",
+    "replace": "is_ok()",
+    "fn": ["project-index.projectFolderRoots"]
+  },
+  {
+    "name": "project-index: a project folder is kept only if listed the same way",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": ".any(|kept| is_inside_folder(root, kept, platform))",
+    "replace": ".any(|kept| kept == root)",
+    "fn": ["project-index.mergeIndexRoots"]
+  },
+  {
+    "name": "project-index: a failed detector leaves no path name-only",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": "Err(_) => inside.iter().collect(),",
+    "replace": "Err(_) => Vec::new(),",
+    "fn": ["project-index.createProjectNameOnly"]
+  },
+  {
+    "name": "project-index: a path without a verdict is not name-only",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": ".filter(|path| verdicts.get(path) != Some(&false))",
+    "replace": ".filter(|path| verdicts.get(path) == Some(&true))",
+    "fn": ["project-index.createProjectNameOnly"]
+  },
+  {
+    "name": "project-index: a path is kept once per mention",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": "if !set.contains(path) {",
+    "replace": "if true {",
+    "fn": ["project-index.createProjectNameOnly"]
+  },
+  {
+    "name": "project-index: the project test is turned round",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": "is_inside_folder(path, root, platform)",
+    "replace": "is_inside_folder(root, path, platform)",
+    "fn": ["project-index.createProjectNameOnly"]
+  },
+  {
+    "name": "project-index: a missing project is read for its rule",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": ".filter(|project| !project.missing)",
+    "replace": ".filter(|_project| true)",
+    "fn": ["project-index.createRerankIgnoreFilter"]
+  },
+  {
+    "name": "project-index: only the first project holding a path is asked",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": ".map(|project| self.guide.ai_visibility(&project.id))",
+    "replace": ".take(1)\n            .map(|project| self.guide.ai_visibility(&project.id))",
+    "fn": ["project-index.createRerankIgnoreFilter"]
+  },
+  {
+    "name": "project-index: a rule that cannot be read is skipped",
+    "file": "main-core/src/shell/projects/project_index.rs",
+    "find": "if let Some(rule) = answer? {",
+    "replace": "if let Some(rule) = answer.ok().flatten() {",
+    "fn": ["project-index.createRerankIgnoreFilter"]
+  },
+  {
+    "name": "project-tools: the list page is one more",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "pub const PROJECT_LIST_DEFAULT_LIMIT: f64 = 200.0;",
+    "replace": "pub const PROJECT_LIST_DEFAULT_LIMIT: f64 = 201.0;",
+    "fn": ["project-tools.PROJECT_LIST_DEFAULT_LIMIT"]
+  },
+  {
+    "name": "project-tools: the search page is one more",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "pub const PROJECT_SEARCH_DEFAULT_LIMIT: f64 = 20.0;",
+    "replace": "pub const PROJECT_SEARCH_DEFAULT_LIMIT: f64 = 21.0;",
+    "fn": ["project-tools.PROJECT_SEARCH_DEFAULT_LIMIT", "project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the query cap is one more",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "const QUERY_MAX_CHARS: f64 = 200.0;",
+    "replace": "const QUERY_MAX_CHARS: f64 = 201.0;",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the unknown-scope message changes",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "\"project scope is not open\"",
+    "replace": "\"project scope is closed\"",
+    "fn": ["project-tools.PROJECT_SCOPE_UNKNOWN", "project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the unavailable message changes",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "\"project is not listed or its folder is missing\"",
+    "replace": "\"project is not listed\"",
+    "fn": ["project-tools.PROJECT_UNAVAILABLE", "project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: only one leading ./ is dropped",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "while let Some(rest) = rel.strip_prefix(\"./\") {",
+    "replace": "if let Some(rest) = rel.strip_prefix(\"./\") {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a backslash stays a backslash",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": ".replace('\\\\', \"/\")",
+    "replace": ".replace('\\\\', \"\\\\\")",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: case is folded on win32 only",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "platform == \"win32\" || platform == \"darwin\"",
+    "replace": "platform == \"win32\"",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an empty project id reaches the guide",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if project_id.is_empty() {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a file counts as a project folder",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": ".is_ok_and(|info| info.is_dir())",
+    "replace": ".is_ok()",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the list prefix keeps case on darwin",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "file.entry.rel_path.to_lowercase().starts_with(&wanted)",
+    "replace": "file.entry.rel_path.starts_with(&wanted)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the page ends at the limit, not offset plus limit",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "let range = slice_bounds(files.len(), offset, offset + limit);",
+    "replace": "let range = slice_bounds(files.len(), offset, limit);",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the total is the page",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "total: files.len() as u64,",
+    "replace": "total: page.len() as u64,",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an extension keeps its case",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": ".unwrap_or(ext).to_lowercase()",
+    "replace": ".unwrap_or(ext).to_owned()",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an empty extension filters",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "JsonValue::String(ext) if !ext.is_empty() => Some(ext.as_str()),",
+    "replace": "JsonValue::String(ext) => Some(ext.as_str()),",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an empty query is searched",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if query.is_empty() {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the index ranks files of other projects",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "Ok(rel_of(&visibility, platform, path)?.is_some())",
+    "replace": "Ok(true)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an excerpt is quoted from an unsaved file",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "without_unsaved_files(open_files, &indexed, |path| path.clone())",
+    "replace": "indexed.clone()",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an excerpt is quoted from a file not indexed as on disk",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "let indexed = store.paths_indexed_as_on_disk(&paths);",
+    "replace": "let indexed = paths.clone();",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a failed detector marks hits as on this PC",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": ".is_none_or(|cloud| cloud.get(&hit.path) != Some(&false));",
+    "replace": ".is_some_and(|cloud| cloud.get(&hit.path) != Some(&false));",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a hit that is not visible is kept",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "rel_of(&visibility, platform, &hit.path)?",
+    "replace": "Some(hit.path.clone())",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the excerpt parts are joined by a space",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "hit.snippet.unwrap_or_default().concat()",
+    "replace": "hit.snippet.unwrap_or_default().join(\" \")",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a drive path is not taken as absolute",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if is_absolute(given) || has_drive_prefix(given) {",
+    "replace": "if is_absolute(given) {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a dot segment is allowed",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "*segment == \"..\" || *segment == \".\"",
+    "replace": "*segment == \"..\"",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: win32 spellings are not refused",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if self.platform == \"win32\" &&",
+    "replace": "if false &&",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: hidden is reported as ignored",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "return Ok(Some(ProjectReadRefusal::Hidden));",
+    "replace": "return Ok(Some(ProjectReadRefusal::Ignored));",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: ignored is reported as hidden",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "return Ok(Some(ProjectReadRefusal::Ignored));",
+    "replace": "return Ok(Some(ProjectReadRefusal::Hidden));",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a folder is reported as outside",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "Ok(info) if info.is_dir() => ProjectReadRefusal::NotFound,",
+    "replace": "Ok(info) if info.is_dir() => ProjectReadRefusal::Outside,",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a file reached through a link is reported as not found",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "Ok(_) => ProjectReadRefusal::Outside,",
+    "replace": "Ok(_) => ProjectReadRefusal::NotFound,",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the name as given is not judged before the disk is asked",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "self.judge(visibility, &asked)?",
+    "replace": "None::<ProjectReadRefusal>",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an unsupported file is read",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if !is_supported_tree_file(&path) {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: unsaved changes are checked late",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if file_has_unsaved_changes(open_files, &path) {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a failed detector does not ask",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if cloud.is_none_or(|cloud| cloud.get(&path) != Some(&false)) {",
+    "replace": "if cloud.is_some_and(|cloud| cloud.get(&path) != Some(&false)) {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a file without a verdict does not ask",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if cloud.is_none_or(|cloud| cloud.get(&path) != Some(&false)) {",
+    "replace": "if cloud.is_none_or(|cloud| cloud.get(&path) == Some(&true)) {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a question that fails counts as yes",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": ".unwrap_or(false);",
+    "replace": ".unwrap_or(true);",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a declined download is read anyway",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if !agreed {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the question names the whole path",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "file_name: basename(&path, None),",
+    "replace": "file_name: path.clone(),",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the question carries the absolute path",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "rel_path: segments.join(\"/\"),",
+    "replace": "rel_path: path.clone(),",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a page that finds unsaved changes is unreadable",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if message == UNSAVED_CHANGES_MESSAGE {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the read offset is dropped",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "self.read_in(open_files, owner, &project_id, &visibility, given, offset)",
+    "replace": "self.read_in(open_files, owner, &project_id, &visibility, given, 0.0)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: an unlisted project gets a scope",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "if self.visibility(project_id)?.is_none() {",
+    "replace": "if false {",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a scope is closed by no one",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "self.scopes.close(owner, field(raw, \"scope\"));",
+    "replace": "self.scopes.close(owner, None);",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: every project is available",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "Ok(self.visibility(project_id)?.is_some())",
+    "replace": "Ok(true)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: the visible test passes hidden files",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "visible.then_some(rel)",
+    "replace": "Some(rel)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-tools: a count keeps its fraction",
+    "file": "main-core/src/shell/projects/project_tools.rs",
+    "find": "n.floor().max(0.0)",
+    "replace": "n.max(0.0)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "project-dialog-text: a text of exactly the limit is cut",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "if length <= max {",
+    "replace": "if length < max {",
+    "fn": [
+      "project-dialog-text.shownText",
+      "project-dialog-text.shownExcerpt",
+      "project-dialog-text.trustPromptOptions"
+    ]
+  },
+  {
+    "name": "project-dialog-text: the count of characters left out is the whole length",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "more: length - max,",
+    "replace": "more: length,",
+    "fn": ["project-dialog-text.shownExcerpt", "project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the cut has no ellipsis",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "text: format!(\"{kept}\\u{2026}\"),",
+    "replace": "text: kept,",
+    "fn": [
+      "project-dialog-text.shownText",
+      "project-dialog-text.shownExcerpt",
+      "project-dialog-text.trustPromptOptions"
+    ]
+  },
+  {
+    "name": "project-dialog-text: the text is not trimmed",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "let trimmed = trim(text);",
+    "replace": "let trimmed = text;",
+    "fn": [
+      "project-dialog-text.shownText",
+      "project-dialog-text.shownExcerpt",
+      "project-dialog-text.trustPromptOptions"
+    ]
+  },
+  {
+    "name": "project-dialog-text: a count the host cannot format is empty",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".unwrap_or_else(|_| number_to_string(count))",
+    "replace": ".unwrap_or_default()",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a bad date is empty",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "return iso.to_owned();",
+    "replace": "return String::new();",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a date the host cannot format is written as given",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "to_iso_string(at).expect(\"a time that parsed is a valid date\")",
+    "replace": "iso.to_owned()",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: one chat too many is listed",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".take(TRUST_CHATS_SHOWN)",
+    "replace": ".take(TRUST_CHATS_SHOWN + 1)",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: one chat left out is not counted",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "if more > 0 {",
+    "replace": "if more > 1 {",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a chat title is cut one late",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "shown_text(&chat.title, Some(120))",
+    "replace": "shown_text(&chat.title, Some(121))",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: an empty chat title stays empty",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "let title = if title.is_empty() {",
+    "replace": "let title = if title.is_empty() && false {",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a blank text is shown",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "if trim(text).is_empty() {",
+    "replace": "if text.is_empty() {",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: cancel is not the default",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "default_id: TRUST_CANCEL,",
+    "replace": "default_id: TRUST_USE,",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: closing the box is not cancel",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "cancel_id: Some(TRUST_CANCEL),",
+    "replace": "cancel_id: Some(TRUST_USE),",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the use button is another response",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "const TRUST_USE: u32 = 0;",
+    "replace": "const TRUST_USE: u32 = 4;",
+    "fn": ["project-dialog-text.trustChoiceOf", "project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the without button is another response",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "const TRUST_WITHOUT: u32 = 1;",
+    "replace": "const TRUST_WITHOUT: u32 = 5;",
+    "fn": ["project-dialog-text.trustChoiceOf"]
+  },
+  {
+    "name": "project-dialog-text: the view button is another response",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "const TRUST_VIEW: u32 = 2;",
+    "replace": "const TRUST_VIEW: u32 = 6;",
+    "fn": ["project-dialog-text.trustChoiceOf"]
+  },
+  {
+    "name": "project-dialog-text: the cancel button is another response",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "const TRUST_CANCEL: u32 = 3;",
+    "replace": "const TRUST_CANCEL: u32 = 7;",
+    "fn": ["project-dialog-text.trustChoiceOf", "project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the download question names no file",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "message: text_with(lang, \"downloadMessage\", \"file\", file_name),",
+    "replace": "message: text_with(lang, \"downloadMessage\", \"name\", file_name),",
+    "fn": ["project-dialog-text.downloadPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the existing-folder question defaults to cancel",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "default_id: 0,",
+    "replace": "default_id: 1,",
+    "fn": ["project-dialog-text.useExistingPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the existing-folder question has no detail",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "detail: Some(folder_path.to_owned()),",
+    "replace": "detail: None,",
+    "fn": ["project-dialog-text.useExistingPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: an empty path part is a folder name",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".rfind(|part| !part.is_empty())",
+    "replace": ".rfind(|_part| true)",
+    "fn": ["project-dialog-text.useExistingPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a path of separators has no name",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".unwrap_or(folder_path)",
+    "replace": ".unwrap_or(\"\")",
+    "fn": ["project-dialog-text.useExistingPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: a backslash is not a separator",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".split(['\\\\', '/'])",
+    "replace": ".split('/')",
+    "fn": ["project-dialog-text.useExistingPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: relocating asks with the add title",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "ProjectFolderPickPurpose::Relocate => \"relocateTitle\",",
+    "replace": "ProjectFolderPickPurpose::Relocate => \"pickFolderTitle\",",
+    "fn": ["project-dialog-text.folderPickerOptions"]
+  },
+  {
+    "name": "project-dialog-text: the use button is worded differently",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "\"Use with instructions\",",
+    "replace": "\"Use instructions\",",
+    "fn": ["project-dialog-text.PROJECT_DIALOG_STRINGS", "project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: AGENTS.md shows the CLAUDE.md text",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "section(\"AGENTS.md\".to_owned(), prompt.agents.as_ref());",
+    "replace": "section(\"AGENTS.md\".to_owned(), prompt.claude.as_ref());",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the count of more characters is one over",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "let count = shown_count(shown.more as f64, lang, intl);",
+    "replace": "let count = shown_count(shown.more as f64 + 1.0, lang, intl);",
+    "fn": ["project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the shown characters constant is one more",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "pub const TRUST_TEXT_SHOWN_CHARS: usize = 1_500;",
+    "replace": "pub const TRUST_TEXT_SHOWN_CHARS: usize = 1_501;",
+    "fn": [
+      "project-dialog-text.TRUST_TEXT_SHOWN_CHARS",
+      "project-dialog-text.shownText",
+      "project-dialog-text.shownExcerpt",
+      "project-dialog-text.trustPromptOptions"
+    ]
+  },
+  {
+    "name": "project-dialog-text: the shown chats constant is one more",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": "pub const TRUST_CHATS_SHOWN: usize = 20;",
+    "replace": "pub const TRUST_CHATS_SHOWN: usize = 21;",
+    "fn": ["project-dialog-text.TRUST_CHATS_SHOWN", "project-dialog-text.trustPromptOptions"]
+  },
+  {
+    "name": "project-dialog-text: the default cut is shorter",
+    "file": "main-core/src/shell/projects/project_dialog_text.rs",
+    "find": ".unwrap_or(TRUST_TEXT_SHOWN_CHARS)",
+    "replace": ".unwrap_or(1_000)",
+    "fn": [
+      "project-dialog-text.shownText",
+      "project-dialog-text.shownExcerpt",
+      "project-dialog-text.trustPromptOptions"
+    ]
+  },
+  {
+    "name": "stand-ins: a picture cap is one megabyte more",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "pub const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "pub const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
+    "fn": ["attachable.attachableMaxBytes"]
+  },
+  {
+    "name": "stand-ins: a picture is read up to its attachment cap",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "cap.max(KB_READ_MAX_BYTES)",
+    "replace": "cap",
+    "fn": ["knowledge-base.kbReadMaxBytes"]
+  },
+  {
+    "name": "stand-ins: the attachment cap is one megabyte more",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "pub const ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "pub const ATTACHABLE_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
+    "fn": ["attachable.attachableMaxBytes", "knowledge-base.kbReadMaxBytes"]
+  },
+  {
+    "name": "stand-ins: an extension with a dot keeps the dot",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "ext.strip_prefix('.').unwrap_or(ext).to_lowercase()",
+    "replace": "ext.to_lowercase()",
+    "fn": ["attachable.attachableMaxBytes"]
+  },
+  {
+    "name": "stand-ins: the knowledge cap is one megabyte more",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "pub const KB_READ_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "pub const KB_READ_MAX_BYTES: f64 = 51.0 * 1024.0 * 1024.0;",
+    "fn": ["knowledge-base.KB_READ_MAX_BYTES", "knowledge-base.kbReadMaxBytes"]
+  },
+  {
+    "name": "stand-ins: a size-free format has the attachment cap",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "return f64::INFINITY;",
+    "replace": "return ATTACHABLE_MAX_BYTES;",
+    "fn": ["attachable.attachableMaxBytes", "knowledge-base.kbReadMaxBytes"]
+  },
+  {
+    "name": "stand-ins: a picture has the attachment cap",
+    "file": "main-core/src/packages/file_parse/attachable.rs",
+    "find": "return ATTACHABLE_IMAGE_MAX_BYTES;",
+    "replace": "return ATTACHABLE_MAX_BYTES;",
+    "fn": ["attachable.attachableMaxBytes"]
+  }
+]
