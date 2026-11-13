@@ -20,6 +20,7 @@ use shell_contract::hosts::{
     Contents, ContentsHost, Dialogs, DialogsHost, FileDialog, MainWindow,
     MainWindowHost, MessageBox, MessageBoxAnswer, OsShell, OsShellHost,
 };
+use shell_contract::provided::Provided;
 use shell_contract::{Hosts, IpcValue, RequestId, ViewId, WindowId};
 use serde_json::Value;
 
@@ -157,6 +158,7 @@ impl MainWindow for Shared {
 #[derive(Default)]
 pub struct FakeRegistry {
     pub handlers: HashMap<&'static str, (ChannelKind, Rc<dyn Handler>)>,
+    pub provided: Rc<Provided>,
 }
 
 impl Registry for FakeRegistry {
@@ -185,6 +187,10 @@ impl Registry for FakeRegistry {
             return Err(RegisterError::Twice(channel));
         }
         Ok(())
+    }
+
+    fn provided(&self) -> Rc<Provided> {
+        self.provided.clone()
     }
 }
 
