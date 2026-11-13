@@ -1062,5 +1062,33 @@
     "find": "(self.core.now)());",
     "replace": "(self.core.now)() + 1.0);",
     "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "disconnect writes nothing",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "disconnect(&mut bridge, arg(&args, 0).as_ref());",
+    "replace": "let _ = (&mut bridge, arg(&args, 0));",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "quota of Gemini is undefined, not null",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "return reply.reply(Ok(IpcValue::Null));",
+    "replace": "return reply.reply(Ok(IpcValue::Undefined));",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "an unknown provider is a network failure",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "FreeConnectResult::Failed(FreeConnectFailure::Invalid).to_json(),",
+    "replace": "FreeConnectResult::Failed(FreeConnectFailure::Network).to_json(),",
+    "groups": ["a/free-ai"]
+  },
+  {
+    "name": "the key page never opens",
+    "file": "shell-ipc/a/src/free_ai.rs",
+    "find": "self.os.open_external(url)",
+    "replace": "Err::<(), String>(\"blocked\".to_owned())",
+    "groups": ["a/free-ai"]
   }
 ]
