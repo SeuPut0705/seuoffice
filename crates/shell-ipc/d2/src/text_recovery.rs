@@ -186,26 +186,39 @@ fn file_identity(kind: &str, file_path: &str) -> RecoveryIdentity {
     })
 }
 
+/// The hosts the recovery takes, read once when the editor registers
+pub(crate) struct RecoveryHosts {
+    pub dialogs: DialogsHost,
+    pub contents: ContentsHost,
+    pub shared: SharedRecoveryHost,
+}
+
+impl RecoveryHosts {
+    pub(crate) fn need(services: &Services) -> Result<Self, shell_contract::ipc::RegisterError> {
+        let by = shell_contract::Batch::D2;
+        Ok(RecoveryHosts {
+            dialogs: services.hosts.need::<DialogsHost>(by)?,
+            contents: services.hosts.need::<ContentsHost>(by)?,
+            shared: services.hosts.need::<SharedRecoveryHost>(by)?,
+        })
+    }
+}
+
 impl TextRecovery {
     pub(crate) fn new(
         services: &Services,
         host: TextRecoveryHost,
-    ) -> Result<Rc<Self>, shell_contract::ipc::RegisterError> {
-        Ok(Rc::new(TextRecovery {
-            dialogs: services
-                .hosts
-                .need::<DialogsHost>(shell_contract::Batch::D2)?,
-            contents: services
-                .hosts
-                .need::<ContentsHost>(shell_contract::Batch::D2)?,
+        hosts: RecoveryHosts,
+    ) -> Rc<Self> {
+        Rc::new(TextRecovery {
+            dialogs: hosts.dialogs,
+            contents: hosts.contents,
+            shared: hosts.shared,
             services: services.clone(),
             host,
-            shared: services
-                .hosts
-                .need::<SharedRecoveryHost>(shell_contract::Batch::D2)?,
             views: RefCell::default(),
             title_source: RefCell::default(),
-        }))
+        })
     }
 
     fn with_store<R>(&self, f: impl FnOnce(&RecoveryStore<'_>) -> R) -> R {
@@ -750,13 +763,13 @@ impl TextRecovery {
     }
 
     /// `contract.isUnprotectable`: every copy here is plain text the user could have saved
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
+    #[allow(dead_code, reason = "the shell's recovery registry calls it")]
     pub(crate) fn is_unprotectable(&self, _view: ViewId) -> bool {
         false
     }
 
     /// `kind` of the contract the shell registers
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
+    #[allow(dead_code, reason = "the shell's recovery registry calls it")]
     pub(crate) fn kind(&self) -> &'static str {
         self.host.kind
     }
@@ -1020,7 +1033,8 @@ mod tests {
             untitled_fallback_title: Box::new(|| "Untitled".into()),
             reload: Box::new(move |v| l.borrow_mut().reloaded.push(v)),
         };
-        (TextRecovery::new(&rt.services, host).unwrap(), ed)
+        let hosts = super::RecoveryHosts::need(&rt.services).unwrap();
+        (TextRecovery::new(&rt.services, host, hosts), ed)
     }
 
     fn copy_dir(rt: &Rt) -> std::path::PathBuf {
