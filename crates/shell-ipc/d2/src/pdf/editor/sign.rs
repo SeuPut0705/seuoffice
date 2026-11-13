@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use jscompat::node_path::host::{dirname, join};
-use jscompat::{JsonValue, buffer_from_base64, random_uuid};
+use jscompat::{JsonValue, buffer_from_base64};
 use main_core::pdf::atomic_write::write_pdf_atomically;
 use main_core::pdf::signature_store::{
     SavedSignature, add_signature, is_signature_data, load_signatures, remove_signature,
@@ -154,7 +154,7 @@ impl Editor {
 
     /// `rememberCert(wcId, entry)`: the opaque id the renderer gets
     fn remember_cert(&self, view: ViewId, entry: CertEntry) -> String {
-        let id = random_uuid();
+        let id = self.shell.random_uuid();
         self.with_view(view, |v| v.certs.insert(id.clone(), entry));
         id
     }
