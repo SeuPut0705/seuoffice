@@ -1748,8 +1748,47 @@ struct Shown {
     check_updates: String,
 }
 
-/// What each entry of the ☰ popup last listed does
-static POPUP: Mutex<Option<(TabKind, HashMap<u32, Act>)>> = Mutex::new(None);
+/// What the entries of the ☰ popups listed lately do
+static POPUPS: Mutex<Popups> = Mutex::new(Popups::new());
+
+/// The tab strip keeps each popup it opened until that one closes, and a
+/// selection reaches [`app_menu_activate`] by entry id only. The ids never
+/// repeat across popups, so a selection that arrives after another popup was
+/// listed still runs its own entry, or nothing once it is too old.
+struct Popups {
+    next: u32,
+    /// the latest last; what each listed id does, and on which kind's menu
+    listed: std::collections::VecDeque<(TabKind, HashMap<u32, Act>)>,
+}
+
+impl Popups {
+    /// Popups kept: a native popup is modal, so more than one outstanding
+    /// is a selection racing a new ☰ click
+    const KEPT: usize = 4;
+
+    const fn new() -> Popups {
+        Popups {
+            next: 0,
+            listed: std::collections::VecDeque::new(),
+        }
+    }
+
+    fn list(&mut self, kind: TabKind, menus: &[Node], check_updates: &str) -> Vec<MenuEntry> {
+        let (entries, acts) = popup_entries(menus, check_updates, &mut self.next);
+        if self.listed.len() == Self::KEPT {
+            self.listed.pop_front();
+        }
+        self.listed.push_back((kind, acts));
+        entries
+    }
+
+    fn chosen(&self, id: u32) -> Option<(TabKind, Act)> {
+        self.listed
+            .iter()
+            .rev()
+            .find_map(|(kind, acts)| acts.get(&id).map(|act| (*kind, act.clone())))
+    }
+}
 
 /// The kind of the menu last asked for, for a rebuild in another language
 static KIND: Mutex<Option<TabKind>> = Mutex::new(None);
@@ -2114,26 +2153,26 @@ fn perform(app: &AppHandle, kind: TabKind, act: Act) {
 pub(crate) fn app_menu_popup() -> Option<Vec<MenuEntry>> {
     let shown = lock(&SHOWN);
     let shown = shown.as_ref()?;
-    let (entries, acts) = popup_entries(&shown.menus, &shown.check_updates);
-    *lock(&POPUP) = Some((shown.kind, acts));
-    Some(entries)
+    Some(lock(&POPUPS).list(shown.kind, &shown.menus, &shown.check_updates))
 }
 
 /// A click on an entry [`app_menu_popup`] listed: the item's own click
 pub(crate) fn app_menu_activate(id: u32) {
     let Some(shell) = SHELL.get() else { return };
-    let Some((kind, act)) = lock(&POPUP)
-        .as_ref()
-        .and_then(|(kind, acts)| acts.get(&id).map(|act| (*kind, act.clone())))
-    else {
+    let Some((kind, act)) = lock(&POPUPS).chosen(id) else {
         return;
     };
     perform(&shell.app, kind, act);
 }
 
 /// The popup's entries and what each id does: the menus, a separator, then
-/// Check for Updates as an item of its own (the update check is in Help only on macOS)
-fn popup_entries(menus: &[Node], check_updates: &str) -> (Vec<MenuEntry>, HashMap<u32, Act>) {
+/// Check for Updates as an item of its own (the update check is in Help only
+/// on macOS). The ids continue from `next`.
+fn popup_entries(
+    menus: &[Node],
+    check_updates: &str,
+    next: &mut u32,
+) -> (Vec<MenuEntry>, HashMap<u32, Act>) {
     fn entry(id: u32, kind: MenuEntryKind, label: &str, enabled: bool) -> MenuEntry {
         MenuEntry {
             id,
@@ -2148,7 +2187,7 @@ fn popup_entries(menus: &[Node], check_updates: &str) -> (Vec<MenuEntry>, HashMa
     fn walk(nodes: &[Node], next: &mut u32, acts: &mut HashMap<u32, Act>) -> Vec<MenuEntry> {
         let mut out = Vec::new();
         for node in nodes {
-            *next += 1;
+            *next = next.wrapping_add(1);
             let id = *next;
             match node {
                 Node::Separator => out.push(entry(id, MenuEntryKind::Separator, "", true)),
@@ -2183,12 +2222,12 @@ fn popup_entries(menus: &[Node], check_updates: &str) -> (Vec<MenuEntry>, HashMa
         }
         out
     }
-    let mut next = 0;
     let mut acts = HashMap::new();
-    let mut entries = walk(menus, &mut next, &mut acts);
-    entries.push(entry(next + 1, MenuEntryKind::Separator, "", true));
-    entries.push(entry(next + 2, MenuEntryKind::Normal, check_updates, true));
-    acts.insert(next + 2, Act::CheckUpdates);
+    let mut entries = walk(menus, next, &mut acts);
+    *next = next.wrapping_add(2);
+    entries.push(entry(*next - 1, MenuEntryKind::Separator, "", true));
+    entries.push(entry(*next, MenuEntryKind::Normal, check_updates, true));
+    acts.insert(*next, Act::CheckUpdates);
     (entries, acts)
 }
 
@@ -3332,7 +3371,7 @@ mod tests {
             for kind in KINDS {
                 let mut menus = menu_for(kind, &ctx(os, Lang::En));
                 number(&mut menus, &AtomicU32::new(1));
-                let (entries, acts) = popup_entries(&menus, "Check for Updates\u{2026}");
+                let (entries, acts) = popup_entries(&menus, "Check for Updates\u{2026}", &mut 0);
                 assert_eq!(entries.len(), menus.len() + 2, "{os:?} {kind:?}");
                 let last = &entries[entries.len() - 1];
                 assert_eq!(entries[entries.len() - 2].kind, MenuEntryKind::Separator);
@@ -3358,7 +3397,7 @@ mod tests {
         }
         // Home's Edit menu is made of roles, which the popup runs on the page
         let menus = menu_for(TabKind::Home, &ctx(Os::Windows, Lang::En));
-        let (entries, acts) = popup_entries(&menus, "");
+        let (entries, acts) = popup_entries(&menus, "", &mut 0);
         let edit = entries.iter().find(|e| e.label == "Edit").expect("Edit");
         let undo = edit
             .submenu
@@ -3381,7 +3420,7 @@ mod tests {
         set_menu_item_enabled(INSERT_EQUATION, false);
         set_menu_item_checked(DARK_MODE, true);
         set_menu_item_checked("no-such-item", true);
-        let (entries, _) = popup_entries(&lock(&SHOWN).as_ref().expect("shown").menus, "");
+        let (entries, _) = popup_entries(&lock(&SHOWN).as_ref().expect("shown").menus, "", &mut 0);
         let find = |menu: &str, label: &str| {
             entries
                 .iter()
@@ -3473,5 +3512,54 @@ mod tests {
                 .any(|l| l.contains("Make"));
             assert!(!has, "{kind:?} lists document links");
         }
+    }
+
+    /// A selection from a popup that arrives after another popup was listed
+    /// runs its own popup's entry, not the newer popup's entry of that place
+    #[test]
+    fn a_late_selection_runs_its_own_popup() {
+        let entry_of = |entries: &[MenuEntry], menu: &str, label: &str| {
+            entries
+                .iter()
+                .find(|e| e.label == menu)
+                .and_then(|m| m.submenu.iter().find(|e| e.label == label))
+                .map(|e| e.id)
+                .unwrap_or_else(|| panic!("{menu} > {label}"))
+        };
+        let c = ctx(Os::Windows, Lang::En);
+        let mut home = menu_for(TabKind::Home, &c);
+        number(&mut home, &AtomicU32::new(1));
+        let mut pdf = menu_for(TabKind::Pdf, &c);
+        number(&mut pdf, &AtomicU32::new(1));
+        let mut popups = Popups::new();
+        let first = popups.list(TabKind::Pdf, &pdf, "Check");
+        let second = popups.list(TabKind::Home, &home, "Check");
+        // the first popup's Save As, chosen after the second was listed
+        let save_as = entry_of(&first, "File", "Save As\u{2026}");
+        assert_eq!(
+            popups.chosen(save_as),
+            Some((TabKind::Pdf, Act::Save(SaveMode::SaveAs)))
+        );
+        let open = entry_of(&second, "File", "Open\u{2026}");
+        assert_eq!(popups.chosen(open), Some((TabKind::Home, Act::Open)));
+        // ids never repeat across popups
+        let ids = |entries: &[MenuEntry]| {
+            fn walk(entries: &[MenuEntry], out: &mut Vec<u32>) {
+                for e in entries {
+                    out.push(e.id);
+                    walk(&e.submenu, out);
+                }
+            }
+            let mut out = Vec::new();
+            walk(entries, &mut out);
+            out
+        };
+        let older = ids(&first);
+        assert!(ids(&second).iter().all(|id| !older.contains(id)));
+        // a popup older than the kept ones runs nothing
+        for _ in 0..Popups::KEPT {
+            popups.list(TabKind::Home, &home, "Check");
+        }
+        assert_eq!(popups.chosen(save_as), None);
     }
 }
