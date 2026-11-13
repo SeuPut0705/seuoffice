@@ -1,0 +1,104 @@
+[
+  {
+    "name": "d9 odt box without Word drops cancel",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "None => vec![text.clear_marks.clone(), text.cancel.clone()],",
+    "replace": "None => vec![text.clear_marks.clone()],",
+    "fn": ["marked-odt.markedOdtBox"]
+  },
+  {
+    "name": "d9 odt box cancel is always the third",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "cancel_id: buttons.len() - 1,",
+    "replace": "cancel_id: 2,",
+    "fn": ["marked-odt.markedOdtBox"]
+  },
+  {
+    "name": "d9 odt box default is the second",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "default_id: 0,",
+    "replace": "default_id: 1,",
+    "fn": ["marked-odt.markedOdtBox"]
+  },
+  {
+    "name": "d9 odt box links",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "no_link: true,",
+    "replace": "no_link: false,",
+    "fn": ["marked-odt.markedOdtBox"]
+  },
+  {
+    "name": "d9 odt box is info",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "kind: \"warning\",",
+    "replace": "kind: \"info\",",
+    "fn": ["marked-odt.markedOdtBox"]
+  },
+  {
+    "name": "d9 odt choice without Word clears below zero",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "return if response == 0.0 {",
+    "replace": "return if response <= 0.0 {",
+    "fn": ["marked-odt.markedOdtChoice"]
+  },
+  {
+    "name": "d9 odt choice clears past the second button",
+    "file": "main-core/src/packages/electron_utils/marked_odt.rs",
+    "find": "} else if response == 1.0 {",
+    "replace": "} else if response >= 1.0 {",
+    "fn": ["marked-odt.markedOdtChoice"]
+  },
+  {
+    "name": "d9 html mark test is case-sensitive",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "js_regex!(r\"data-gx-redact|gx:redact:\", \"i\")",
+    "replace": "js_regex!(r\"data-gx-redact|gx:redact:\", \"\")",
+    "fn": [
+      "marked-html.holdsHiddenMarks",
+      "marked-html.clearHiddenMarks",
+      "marked-html.planMarkedExport"
+    ]
+  },
+  {
+    "name": "d9 html attribute suffix without colon",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "(?:-[\\w:.-]+)?",
+    "replace": "(?:-[\\w.-]+)?",
+    "fn": ["marked-html.clearHiddenMarks", "marked-html.planMarkedExport"]
+  },
+  {
+    "name": "d9 html attribute after a space only",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "r#\"\\sdata-gx-redact",
+    "replace": "r#\" data-gx-redact",
+    "fn": ["marked-html.clearHiddenMarks", "marked-html.planMarkedExport"]
+  },
+  {
+    "name": "d9 html script mark greedy",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "gx:redact:[^]*?\\*\\/",
+    "replace": "gx:redact:[^]*\\*\\/",
+    "fn": ["marked-html.clearHiddenMarks", "marked-html.planMarkedExport"]
+  },
+  {
+    "name": "d9 html trace left unchecked",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "if holds_hidden_marks(&cleared) {",
+    "replace": "if false && holds_hidden_marks(&cleared) {",
+    "fn": ["marked-html.clearHiddenMarks", "marked-html.planMarkedExport"]
+  },
+  {
+    "name": "d9 html headless writes a marked page",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "return Ok(MarkedExportPlan::Declined);",
+    "replace": "return Ok(MarkedExportPlan::Write { html: html.to_owned() });",
+    "fn": ["marked-html.planMarkedExport"]
+  },
+  {
+    "name": "d9 html asks for an unmarked page",
+    "file": "main-core/src/html/marked_html.rs",
+    "find": "if !holds_hidden_marks(html) {",
+    "replace": "if html.is_empty() {",
+    "fn": ["marked-html.planMarkedExport"]
+  }
+]
