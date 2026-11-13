@@ -2259,4 +2259,32 @@ mod tests {
         signal.abort(None);
         assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
     }
+
+    #[test]
+    fn a_response_held_by_a_cleared_timer_is_released() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let rt = runtime.rt().clone();
+        // the timer's callback owns the last handle; clearing it drops the callback
+        let timer = rt.set_timeout(1000.0, move || drop(response));
+        let set = runtime.poll();
+        assert_eq!(
+            set,
+            vec![Cmd::SetTimer {
+                id: timer,
+                ms: 1000.0
+            }]
+        );
+        rt.clear_timeout(Some(timer));
+        assert_eq!(
+            runtime.poll(),
+            vec![
+                Cmd::ClearTimer { id: timer },
+                Cmd::Release {
+                    body: fetch,
+                    stop: Some(fetch)
+                }
+            ]
+        );
+    }
 }
