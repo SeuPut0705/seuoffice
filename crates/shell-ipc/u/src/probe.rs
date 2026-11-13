@@ -17,9 +17,15 @@
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use shell_contract::IpcValue;
+use shell_contract::editors::Then;
+use shell_contract::runtime::Services;
+
 use main_core::shell::launch_recovery::{RecoveryChoice, RecoveryListItem, RecoveryListResult};
 use main_core::shell::update_notes::normalize_release_notes;
-use main_core::shell::updater::{UpdateAction, UpdatePhase, UpdateUiState, UpdateUiStrings};
+use main_core::shell::updater::{
+    UpdateAction, UpdatePhase, UpdateStatePatch, UpdateUiState, UpdateUiStrings,
+};
 use serde_json::{Map, Value, json};
 use shell_contract::{Hosts, IpcError, WindowId};
 
@@ -101,6 +107,56 @@ fn result_value(result: &RecoveryListResult) -> Value {
     }
 }
 
+/// the updater's callbacks, logged
+fn logged_actions(log: ProbeLog) -> update_window::Actions {
+    Rc::new(move |action| {
+        log.lock()
+            .unwrap()
+            .push(json!(["update.action", action_name(action)]))
+    })
+}
+
+/// What the updater does outside a channel call, by name:
+///
+/// - `u/show-update-window` `{state, inactive}`: `showUpdateWindow`;
+/// - `u/push-update-state` `{phase, percent?, visibleInstall?}`: `pushUpdateState`;
+/// - `u/close-update-window`: `closeUpdateWindow` (install, quit);
+/// - `u/update-window-closed`: the window's `closed` event (the user closed it).
+pub fn trigger(name: &str, args: &Value, services: &Services, then: Then<IpcValue>) -> bool {
+    let log = services
+        .hosts
+        .get::<ProbeLog>()
+        .cloned()
+        .unwrap_or_default();
+    let window = update_window::current().expect("registered");
+    match name {
+        "u/show-update-window" => window.show(
+            ui_state(&args["state"]),
+            logged_actions(log),
+            args["inactive"].as_bool().unwrap_or(false),
+        ),
+        "u/push-update-state" => window.push(&UpdateStatePatch {
+            phase: phase(&args["phase"]),
+            percent: args["percent"].as_f64(),
+            visible_install: args["visibleInstall"].as_bool(),
+        }),
+        "u/close-update-window" => window.close(),
+        "u/update-window-closed" => window.closed(WindowId(window_id(services))),
+        _ => return false,
+    }
+    then(Ok(IpcValue::Undefined));
+    true
+}
+
+/// the id the fake gave the window (`hosts.u.windowId`)
+fn window_id(services: &Services) -> u32 {
+    services
+        .hosts
+        .get::<Seed>()
+        .and_then(|Seed(case)| case["windowId"].as_u64())
+        .unwrap_or(900) as u32
+}
+
 pub fn seed(hosts: &Hosts) {
     let Some(Seed(case)) = hosts.get::<Seed>() else {
         return;
@@ -108,15 +164,10 @@ pub fn seed(hosts: &Hosts) {
     let log = hosts.get::<ProbeLog>().cloned().unwrap_or_default();
     let window = update_window::current().expect("registered");
     for shown in case["update"].as_array().into_iter().flatten() {
-        let log = log.clone();
         let inactive = shown["inactive"].as_bool().unwrap_or(false);
         window.show(
             ui_state(&shown["state"]),
-            Rc::new(move |action| {
-                log.lock()
-                    .unwrap()
-                    .push(json!(["update.action", action_name(action)]))
-            }),
+            logged_actions(log.clone()),
             inactive,
         );
     }
@@ -153,18 +204,21 @@ fn text(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_owned()
 }
 
-fn ui_state(state: &Value) -> UpdateUiState {
-    let phase = match state["phase"].as_str() {
+fn phase(value: &Value) -> UpdatePhase {
+    match value.as_str() {
         Some("downloading") => UpdatePhase::Downloading,
         Some("downloaded") => UpdatePhase::Downloaded,
         Some("error") => UpdatePhase::Error,
         Some("manual") => UpdatePhase::Manual,
         Some("install-failed") => UpdatePhase::InstallFailed,
         _ => UpdatePhase::Available,
-    };
+    }
+}
+
+fn ui_state(state: &Value) -> UpdateUiState {
     let s = &state["strings"];
     UpdateUiState {
-        phase,
+        phase: phase(&state["phase"]),
         version: text(state, "version"),
         current_version: text(state, "currentVersion"),
         percent: state["percent"].as_f64().unwrap_or(0.0),

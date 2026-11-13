@@ -53,5 +53,19 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     probe::hosts(hosts, case)
 }
 
+/// Runs what the updater does outside a channel call (`probe::trigger`
+/// lists the names); false for a name that is not U's
+#[cfg(feature = "probe")]
+pub fn probe_trigger(
+    name: &str,
+    _view: shell_contract::ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    _provided: &Rc<shell_contract::Provided>,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    probe::trigger(name, args, services, then)
+}
+
 #[cfg(test)]
 mod tests;
