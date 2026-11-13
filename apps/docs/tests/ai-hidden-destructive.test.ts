@@ -303,3 +303,39 @@ describe('body edits that would remove hidden content', () => {
     expect(editor.state.doc.textContent).not.toContain('Plain paragraph')
   })
 })
+
+describe('a chart block hidden from AI', () => {
+  it('is not edited, and the answer quotes none of its data', async () => {
+    const chartDisplay = {
+      partPath: 'word/charts/chart1.xml',
+      kind: 'bar',
+      title: `Calls to ${SECRET}`,
+      categories: ['Q1', 'Q2'],
+      series: [{ name: 'Calls', values: [3, 4] }],
+    }
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'docProtected',
+            attrs: { blockType: 'passthrough', label: 'Chart', chartDisplay, redact: LABEL },
+          },
+          { type: 'docParagraph', content: [{ type: 'text', text: 'After' }] },
+        ],
+      },
+    })
+    editors.add(editor)
+    const before = editor.getJSON()
+    const done = await run(editor, 'edit_chart', {
+      blockIndex: 0,
+      series: [{ index: 0, values: [5, 6] }],
+    })
+    expect(done.isError).toBe(true)
+    expect(done.output).not.toContain(SECRET)
+    expect(done.output).not.toContain('Calls')
+    expect(editor.getJSON()).toEqual(before)
+  })
+})
