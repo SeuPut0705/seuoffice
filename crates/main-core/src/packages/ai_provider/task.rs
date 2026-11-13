@@ -414,10 +414,11 @@ pub enum Cmd {
     Cancel { id: Id },
     /// The program dropped its handle to the body `body` (the fetch's or a
     /// clone's) before the host handed it its end, which JavaScript leaves to
-    /// the garbage collector: free that branch's buffered bytes. `stop`: no
-    /// branch can read the stream of that fetch any more and it has not
-    /// ended; stop it as for [`Cmd::Cancel`]. Nothing answers it, and an
-    /// answer already on its way is dropped.
+    /// the garbage collector, or cancelled it while every other branch was
+    /// dropped: free that branch's buffered bytes. `stop`: no branch can read
+    /// the stream of that fetch any more and it has not ended; stop it as for
+    /// [`Cmd::Cancel`]. Nothing answers it, and an answer already on its way
+    /// is dropped.
     Release { body: Id, stop: Option<Id> },
     /// `setTimeout(..., ms)`: feed [`Event::Timer`] when it is due
     SetTimer { id: Id, ms: f64 },
@@ -1089,11 +1090,24 @@ impl Rt {
         b.done = true;
         let reads = std::mem::take(&mut b.reads);
         let source = b.source;
+        // a branch the program dropped still counts for `live` (JavaScript's
+        // garbage) but reads nothing: with none other left to read, the host
+        // stops the stream through a release, no `Cancel` the program would see
+        let reading = st
+            .bodies
+            .values()
+            .any(|b| b.source == source && !b.released && !b.done);
         if let Some(src) = st.sources.get_mut(&source) {
             src.live = src.live.saturating_sub(1);
             if src.live == 0 && !src.ended && !src.cancelled {
                 src.cancelled = true;
                 st.cmds.push(Cmd::Cancel { id: source });
+            } else if !reading && !src.ended && !src.cancelled && !src.stopped {
+                src.stopped = true;
+                st.cmds.push(Cmd::Release {
+                    body,
+                    stop: Some(source),
+                });
             }
         }
         drop(st);
