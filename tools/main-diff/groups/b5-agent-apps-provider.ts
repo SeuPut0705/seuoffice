@@ -181,6 +181,14 @@ const contexts: J[] = [
 const backendCases: Case[] = imageSettings.flatMap((settings) =>
   contexts.map((context): Case => ({ args: [settings, context ?? null, false] })),
 )
+/** deepseek has no image protocol: a stored image model does not make it a generator */
+const noImageProviderSettings: J = {
+  media: {
+    imageProvider: 'deepseek',
+    providers: { deepseek: { apiKey: 'k', imageModel: 'img' } },
+  },
+}
+
 backendCases.push(
   { args: [imageSettings[3], { codex: { provider: 'codex', state: 'ready' } }, true] },
   { args: [imageSettings[10], { codex: { provider: 'codex', state: 'ready' } }, true] },
@@ -189,6 +197,8 @@ backendCases.push(
   { args: [imageSettings[3], { codex: { provider: 'codex', state: 'metered' } }, true] },
   { args: [imageSettings[4], { codex: { provider: 'codex', state: 'ready' } }, true] },
   { args: [imageSettings[3], { codex: { provider: 'codex', state: 'ready' } }, false] },
+  { args: [noImageProviderSettings, { codex: { provider: 'codex', state: 'ready' } }, false] },
+  { args: [noImageProviderSettings, null, false] },
 )
 
 async function freshImageBackend(): Promise<J> {
@@ -198,7 +208,13 @@ async function freshImageBackend(): Promise<J> {
 const imageBackendFns: Group = {
   'ai-provider/image-backend.configuredImageKeyProviders': {
     ts: (a) => imageBackend.configuredImageKeyProviders(a[0] as J),
-    cases: imageSettings.map((settings): Case => ({ args: [settings] })),
+    cases: [
+      ...imageSettings.map((settings): Case => ({ args: [settings] })),
+      {
+        args: [noImageProviderSettings],
+        note: 'a provider with no image protocol and an image model',
+      },
+    ],
   },
   'ai-provider/image-backend.imageProviderSelection': {
     ts: (a) =>
@@ -789,6 +805,10 @@ const freeConnectFns: Group = {
       ['c', 'v', { fetch: [{ throws: 'offline' }] }],
       ['c', 'v', { fetch: [{ throws: 'offline' }], aborted: true }],
       ['c', 'v', { fetch: [{ status: 200, jsonThrows: true }], aborted: true }],
+      ['c', 'v', { fetch: [{ status: 302, location: 'https://evil.test/x' }], aborted: true }],
+      ['c', 'v', { fetch: [{ status: 301 }], aborted: true }],
+      ['c', 'v', { fetch: [{ status: 307, location: 'https://evil.test/x' }], aborted: true }],
+      ['c', 'v', { fetch: [{ status: 200, opaque: true, json: { key: 'sk-or-1' } }] }],
     ),
   },
   'ai-provider/free-connect.pickOpenRouterFreeModel': {
@@ -910,6 +930,16 @@ const freeConnectFns: Group = {
       ['too short', { fetch: [{ status: 200 }] }],
       [5, { fetch: [{ status: 200 }] }],
       [null, {}],
+      [
+        'AIzaSyA1234567890abcdefgh',
+        { fetch: [{ status: 302, location: 'https://evil.test' }], aborted: true },
+      ],
+      ['AIzaSyA1234567890abcdefgh', { fetch: [{ status: 301 }], aborted: true }],
+      [
+        'AIzaSyA1234567890abcdefgh',
+        { fetch: [{ status: 307, location: 'https://evil.test' }], aborted: true },
+      ],
+      ['AIzaSyA1234567890abcdefgh', { fetch: [{ status: 200, opaque: true }] }],
     ),
   },
   'ai-provider/free-connect.openRouterFreeQuota': {
@@ -983,6 +1013,18 @@ const freeConnectFns: Group = {
       ],
       ['key1', { fetch: [{ status: 301, location: 'https://evil.test' }] }],
       ['key1', { fetch: [{ throws: 'offline' }] }],
+      [
+        'key1',
+        {
+          fetch: [
+            {
+              status: 200,
+              opaque: true,
+              json: { data: { free_model_daily_requests: { used: 1, limit: 50, remaining: 49 } } },
+            },
+          ],
+        },
+      ],
     ),
   },
 }
@@ -1030,15 +1072,18 @@ async function diagramPictureExtModule(): Promise<J> {
 const fileParseFns: Group = {
   'drawio-model/format.detectDiagramFormat': {
     ts: (a) => drawioFormat.detectDiagramFormat(a[0] as string),
-    cases: cases(...DIAGRAM_NAMES.map((n) => [n])),
+    cases: cases(...DIAGRAM_NAMES.map((n) => [n]), ['studio'], ['.dio']),
   },
   'file-parse/attachable.diagramPictureExtOfName': {
     ts: (a) => attachable.diagramPictureExtOfName(a[0] as string),
-    cases: cases(...DIAGRAM_NAMES.map((n) => [n])),
+    cases: cases(...DIAGRAM_NAMES.map((n) => [n]), ['studio']),
   },
   'file-parse/diagram.diagramFormatOf': {
     ts: (a) => fileParseDiagram.diagramFormatOf(a[0] as string),
-    cases: cases(...DIAGRAM_NAMES.map((n) => [`/docs/${n}`])),
+    cases: [
+      ...cases(...DIAGRAM_NAMES.map((n) => [`/docs/${n}`])),
+      ...cases(['/docs/a.drawio/'], ['/docs/studio']),
+    ],
   },
   'file-parse/diagram.diagramPictureExtOf': {
     ts: async (a) => {
@@ -1087,6 +1132,11 @@ const fileParseFns: Group = {
         args: ['$DIR/dir.drawio.svg'],
         files: { 'dir.drawio.svg': { dir: true } },
         note: 'a folder with the name',
+      },
+      {
+        args: ['$DIR/h.png'],
+        files: { 'h.png': '<svg>diagram</svg>' },
+        note: 'a name that is not a draw.io picture is never read, whatever it holds',
       },
     ],
   },

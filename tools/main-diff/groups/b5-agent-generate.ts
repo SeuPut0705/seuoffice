@@ -38,7 +38,6 @@ import { mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'no
 import fsPromises from 'node:fs/promises'
 import { registerHooks, syncBuiltinESMExports } from 'node:module'
 import { dirname } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { useElectron } from '../electron-fake.ts'
 import type { Case, FnSpec, Group, TsContext } from '../types.ts'
 
@@ -79,9 +78,8 @@ const box: Box = {
 }
 ;(globalThis as unknown as Record<symbol, Box>)[BOX_KEY] = box
 
-const attachableUrl = pathToFileURL(
-  new URL('../../../packages/file-parse/src/attachable.ts', import.meta.url).pathname,
-).href
+const attachableUrl = new URL('../../../packages/file-parse/src/attachable.ts', import.meta.url)
+  .href
 
 const STUB_URLS: Record<string, string> = {
   '@seuoffice/file-parse': 'main-diff-generate:file-parse',
@@ -771,7 +769,11 @@ function makeOpenDeps(o: OpenScenario, cx: TsContext) {
   const saveFor = (kind: string) => {
     const result = o.saveResult?.[kind]
     return async (...args: unknown[]) => {
-      cx.log('save', kind, ...args.map((a) => (typeof a === 'object' ? 'contents' : a)))
+      cx.log(
+        'save',
+        kind,
+        ...args.map((a) => (typeof a === 'object' ? `contents:${(a as { id: number }).id}` : a)),
+      )
       if (result === 'throws') throw new Error(`${kind} save failed`)
       return result ?? true
     }
@@ -2496,6 +2498,8 @@ async function runWindow(o: WindowScenario, cx: TsContext): Promise<unknown[]> {
   box.log = cx.log
   const realNow = Date.now
   Date.now = () => cx.now
+  const realWarn = console.warn
+  console.warn = (...args: unknown[]) => cx.log('warn', args[0], message(args[1]))
 
   try {
     // a copy of the module of its own: its state (deps, window, session) starts empty
@@ -2586,6 +2590,7 @@ async function runWindow(o: WindowScenario, cx: TsContext): Promise<unknown[]> {
     box.engine = {}
     box.log = () => {}
     Date.now = realNow
+    console.warn = realWarn
     unsaved.setOpenFilesSource(null)
     if (realUrl === undefined) delete process.env.ELECTRON_RENDERER_URL
     else process.env.ELECTRON_RENDERER_URL = realUrl
@@ -2994,6 +2999,252 @@ const windowCases: Case[] = [
 // the group
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// cases added after the first fault run: appended, so the ledger's indexes hold
+// ---------------------------------------------------------------------------
+
+const valueCasesMore = [...valueCases, ...each([' mindmap-to-markdown'], [' slides '])]
+
+const inspectCasesMore: Case[] = [
+  {
+    // a reader that says no gives no length, whatever else it hands back
+    args: [
+      {
+        stat: { '/m/n.txt': { size: 3, mtimeMs: 1 } },
+        engine: { parse: { '/m/n.txt': { ok: false, kind: 'text', text: 'abc' } } },
+        injectParse: true,
+        steps: [{ inspect: '/m/n.txt' }],
+      },
+    ],
+  },
+  {
+    // the cache keeps 64 lengths: after 66 files the second one is read again
+    args: [
+      {
+        engine: {
+          parse: Object.fromEntries(
+            Array.from({ length: 66 }, (_, i) => [`f${i}.txt`, text(i + 1)]),
+          ),
+        },
+        steps: [
+          ...Array.from({ length: 66 }, (_, i) => ({ inspect: `$DIR/f${i}.txt` })),
+          { inspect: '$DIR/f1.txt' },
+          { inspect: '$DIR/f64.txt' },
+        ],
+      },
+    ],
+    files: Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [`f${i}.txt`, { text: 'x', mtimeMs: 3000 }]),
+    ),
+  },
+]
+
+const openCasesMore: Case[] = [
+  {
+    // editors the host gave no save for: shown, never written
+    args: [
+      {
+        tabs: [
+          tab('m1', 'markdown', '$DIR/a.md'),
+          tab('h1', 'html', '$DIR/a.html'),
+          tab('k1', 'mindmap', '$DIR/a.xmind'),
+        ],
+        contents: { m1: { id: 41 }, h1: { id: 42 }, k1: { id: 43 } },
+        save: [],
+        steps: [
+          { saveActionFor: '$DIR/a.md' },
+          { saveActionFor: '$DIR/a.html' },
+          { saveActionFor: '$DIR/a.xmind' },
+          { saveMaterial: '$DIR/a.md' },
+          { saveMaterial: '$DIR/a.html' },
+          { saveMaterial: '$DIR/a.xmind' },
+        ],
+      },
+    ],
+  },
+]
+
+const markdownCasesMore: Case[] = [
+  {
+    // a mark counts only with a blank after it: a glued one is a topic
+    args: [
+      {
+        engine: { root: topic('Central', topic('kept')) },
+        steps: [
+          {
+            markdown: {
+              outline:
+                '- Central\n  - (boundary)glued\n  - (relationship)also\n  - (boundary) fenced\n  - kept',
+              untitled: 'U',
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // siblings below a bullet keep their order
+    args: [
+      {
+        engine: {
+          root: topic(
+            'Central',
+            topic('A', topic('A1', topic('x'), topic('y'), topic('z')), topic('A2')),
+          ),
+        },
+        steps: [{ markdown: { outline: MAP, untitled: 'U' } }],
+      },
+    ],
+  },
+]
+
+const noticeCasesMore: Case[] = [
+  {
+    // the cache keeps 32 answers: after 34 files the second one is read again
+    args: [
+      {
+        engine: {
+          parse: Object.fromEntries(
+            Array.from({ length: 34 }, (_, i) => [`n${i}.md`, parsed(i % 2 === 0 ? 'x' : 'y')]),
+          ),
+        },
+        steps: [
+          ...Array.from({ length: 34 }, (_, i) => ({ notice: `$DIR/n${i}.md` })),
+          { notice: '$DIR/n1.md' },
+          { notice: '$DIR/n33.md' },
+        ],
+      },
+    ],
+    files: Object.fromEntries(
+      Array.from({ length: 34 }, (_, i) => [`n${i}.md`, { text: 'x', mtimeMs: 6000 }]),
+    ),
+  },
+]
+
+const sessionCasesMore: Case[] = [
+  // a closed session stays quiet: a read after "make" pushes nothing
+  sess({
+    refs: [p(A)],
+    inspect: { [A]: [ok(A)] },
+    ids: MAKE_IDS,
+    steps: [{ refresh: true }, { make: 'go' }, { refresh: true }, { state: true }],
+  }),
+  // "make" starts from a clean slate: the failure of an earlier save is gone from its first push
+  sess({
+    refs: [p(A)],
+    saveActionFor: { [A]: 'save' },
+    saveMaterial: { [A]: 'failed' },
+    inspect: { [A]: [unsavedAt(A), ok(A)] },
+    ids: MAKE_IDS,
+    steps: [{ refresh: true }, { save: A }, { state: true }, { make: 'go' }],
+  }),
+]
+
+const windowCasesMore: Case[] = [
+  // a cancel from another page leaves the window; the window's own closes it
+  win(
+    [
+      configure,
+      { openPaths: { paths: ['$DIR/a.txt'] } },
+      ipc('generate:cancel', 'other'),
+      ipc('generate:get-state'),
+      { contents: true },
+      ipc('generate:cancel'),
+      ipc('generate:get-state'),
+      { contents: true },
+    ],
+    { engine: { parse: READ('a.txt') } },
+    { 'a.txt': textFile() },
+  ),
+  // another page cannot choose a conversion; the window's page can
+  win(
+    [
+      configure,
+      { openPaths: { paths: ['$DIR/map.xmind'] } },
+      ipc('generate:set-convert', 'other', 'mindmap-to-markdown'),
+      ipc('generate:get-state'),
+      ipc('generate:set-convert', 'window:1', 'mindmap-to-markdown'),
+      ipc('generate:get-state'),
+    ],
+    {
+      canConvert: true,
+      engine: { parse: { 'map.xmind': { ok: true, kind: 'text', text: '- Central\n  - A' } } },
+    },
+    { 'map.xmind': textFile() },
+  ),
+  // a torn-down window's focus does not read the session of the window that replaced it
+  win(
+    [
+      configure,
+      { openPaths: { paths: ['$DIR/a.txt'] } },
+      { destroy: 1 },
+      { openPaths: { paths: ['$DIR/a.txt'] } },
+      { event: { window: 1, name: 'focus' } },
+      { event: { window: 2, name: 'focus' } },
+    ],
+    { engine: { parse: READ('a.txt') } },
+    { 'a.txt': textFile() },
+  ),
+  // a closed window's focus reads nothing (a never-saved document is asked for its tab), and it has no contents
+  win(
+    [
+      configure,
+      { openDocument: { webContentsId: 31, title: 'Untitled 1' } },
+      { close: true },
+      { event: { window: 1, name: 'focus' } },
+      { contents: true },
+      ipc('generate:get-state'),
+    ],
+    {
+      tabs: [{ id: 't1', kind: 'docs', title: 'Untitled 1', dirty: true }],
+      contents: { t1: { id: 31 } },
+    },
+  ),
+  // markdown to a map through the window: the engine is asked with the window's "untitled" text
+  win(
+    [
+      configure,
+      { openPaths: { paths: ['$DIR/note.md'] } },
+      ipc('generate:set-convert', 'window:1', 'markdown-to-mindmap'),
+      ipc('generate:make', 'window:1', ''),
+      ipc('generate:get-state'),
+    ],
+    {
+      canConvert: true,
+      lang: 'ko',
+      engine: { parse: { 'note.md': { ok: true, kind: 'text', text: '- one\n- two' } } },
+    },
+    { 'note.md': { text: '- one\n- two', mtimeMs: 8_000 } },
+  ),
+  // an editor's save that fails: the failure shows and nothing waits for another look
+  win(
+    [
+      configure,
+      { openPaths: { paths: ['$DIR/a.docx', '$DIR/b.md'] } },
+      ipc('generate:get-state'),
+      ipc('generate:save-material', 'window:1', '$DIR/a.docx'),
+      ipc('generate:get-state'),
+      ipc('generate:save-material', 'window:1', '$DIR/b.md'),
+      ipc('generate:get-state'),
+    ],
+    {
+      openFiles: [
+        { filePath: '$DIR/a.docx', dirty: true },
+        { filePath: '$DIR/b.md', dirty: true },
+      ],
+      tabs: [
+        { id: 't1', kind: 'docs', title: 'a', filePath: '$DIR/a.docx', dirty: true },
+        { id: 't2', kind: 'markdown', title: 'b', filePath: '$DIR/b.md', dirty: true },
+      ],
+      contents: { t1: { id: 31 }, t2: { id: 32 } },
+      save: ['docs', 'markdown'],
+      saveResult: { docs: 'throws', markdown: false },
+      engine: { parse: {} },
+    },
+    { 'a.docx': textFile(), 'b.md': textFile() },
+  ),
+]
+
 const stepsOf = (c: Case): WindowStep[] => (c.args[0] as WindowScenario).steps
 const windowWith = (key: string, limit = Infinity): Case[] =>
   windowCases.filter((c) => stepsOf(c).some((step) => key in step)).slice(0, limit)
@@ -3101,7 +3352,7 @@ export const group: Group = {
   },
   'materials.inspectMaterial': {
     ts: (a, cx) => runInspect(a[0] as InspectScenario, cx),
-    cases: inspectCases,
+    cases: [...inspectCases, ...inspectCasesMore],
   },
   'materials.generateNotices': {
     ts: (a) => materials.generateNotices(a[0] as never, a[1] as number),
@@ -3113,8 +3364,8 @@ export const group: Group = {
   },
 
   // ---- request
-  'request.isAiTargetKind': { ts: (a) => request.isAiTargetKind(a[0]), cases: valueCases },
-  'request.isConvertKind': { ts: (a) => request.isConvertKind(a[0]), cases: valueCases },
+  'request.isAiTargetKind': { ts: (a) => request.isAiTargetKind(a[0]), cases: valueCasesMore },
+  'request.isConvertKind': { ts: (a) => request.isConvertKind(a[0]), cases: valueCasesMore },
   'request.availableConversions': {
     ts: (a) => request.availableConversions(a[0] as string[]),
     cases: conversionCases,
@@ -3131,7 +3382,7 @@ export const group: Group = {
   // ---- open-materials
   'open-materials.createOpenMaterials': {
     ts: (a, cx) => runOpen(a[0] as OpenScenario, cx),
-    cases: openCases,
+    cases: [...openCases, ...openCasesMore],
   },
 
   // ---- convert
@@ -3141,7 +3392,7 @@ export const group: Group = {
   },
   'convert.mapOutlineToSlidesMarkdown': {
     ts: (a, cx) => runConvert(a[0] as ConvertScenario, cx),
-    cases: markdownCases,
+    cases: [...markdownCases, ...markdownCasesMore],
   },
   'convert.mapOutlineToSlides': {
     ts: (a, cx) => runConvert(a[0] as ConvertScenario, cx),
@@ -3153,7 +3404,7 @@ export const group: Group = {
   },
   'convert.markdownRedactionNotice': {
     ts: (a, cx) => runNotice(a[0] as NoticeScenario, cx),
-    cases: noticeCases,
+    cases: [...noticeCases, ...noticeCasesMore],
   },
 
   // ---- converted-tab
@@ -3165,7 +3416,7 @@ export const group: Group = {
   // ---- session
   'session.GenerateSession': {
     ts: (a, cx) => runSession(a[0] as SessionScenario, cx),
-    cases: sessionCases,
+    cases: [...sessionCases, ...sessionCasesMore],
   },
 
   // ---- generate-window
@@ -3175,7 +3426,7 @@ export const group: Group = {
   },
   'generate-window.openGenerateWindow': {
     ts: (a, cx) => runWindow(a[0] as WindowScenario, cx),
-    cases: windowCases,
+    cases: [...windowCases, ...windowCasesMore],
   },
   'generate-window.openGenerateWindowWithPaths': {
     ts: (a, cx) => runWindow(a[0] as WindowScenario, cx),

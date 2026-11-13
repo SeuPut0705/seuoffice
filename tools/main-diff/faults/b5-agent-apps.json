@@ -306,10 +306,10 @@
     "fn": ["ai-provider/free-ai.freeAiConnected"]
   },
   {
-    "name": "free-ai: an empty config is connected",
+    "name": "free-ai: the provider of the question is not the one looked up",
     "file": "main-core/src/packages/ai_provider/free_ai_browser.rs",
-    "find": "let Some(config) = config.filter(|c| c.truthy()) else {",
-    "replace": "let Some(config) = config else {",
+    "find": "prop(settings, \"providers\").and_then(|p| prop(p, provider))",
+    "replace": "prop(settings, \"providers\").and_then(|p| prop(p, \"openrouter\"))",
     "fn": ["ai-provider/free-ai.freeAiConnected"]
   },
   {
@@ -1640,13 +1640,12 @@
     ]
   },
   {
-    "name": "tool-routing: a turned off cli is not turned off for claude",
+    "name": "tool-routing: a turned off cli switches off codex",
     "file": "main-core/src/packages/ai_search/tool_routing.rs",
-    "find": "    for id in [\"claude-code\", \"codex\"] {\n        if subscription_off_in",
-    "replace": "    for id in [\"codex\"] {\n        if subscription_off_in",
+    "find": "            statuses.set(id, off_subscription_status(id));",
+    "replace": "            statuses.set(\"codex\", off_subscription_status(id));",
     "fn": [
       "ai-search/tool-routing.resolveImageRoute",
-      "ai-search/tool-routing.resolveImageAnalysisRoute",
       "ai-search/tool-capabilities.aiToolCapabilities"
     ]
   },
@@ -4901,7 +4900,7 @@
     "fn": ["ai-search/media-tools.readAiSettingsFile"]
   },
   {
-    "name": "src attachments: the refusal of an unsaved file has another message",
+    "name": "diagram attachments: the refusal of an unsaved file has another message",
     "file": "main-core/src/diagram/ai_attachments.rs",
     "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",
@@ -4911,14 +4910,14 @@
     ]
   },
   {
-    "name": "src attachments: the refusal of an unsaved file has another message",
+    "name": "epub attachments: the refusal of an unsaved file has another message",
     "file": "main-core/src/epub/ai_attachments.rs",
     "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",
     "fn": ["epub/ai-attachments.readAttachmentPage", "epub/ai-attachments.registerEpubAiIpc"]
   },
   {
-    "name": "src attachments: the refusal of an unsaved file has another message",
+    "name": "mindmap attachments: the refusal of an unsaved file has another message",
     "file": "main-core/src/mindmap/ai_attachments.rs",
     "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",

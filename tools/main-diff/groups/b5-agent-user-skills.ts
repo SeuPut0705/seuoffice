@@ -1569,6 +1569,27 @@ group['user-skills-service.createUserSkillsService'] = {
         [`${APP}/gh/SKILL.md`]: skillMd('gh', ['metadata:', '  ieum-editors: hwp']),
       },
     ),
+    scenario(
+      { builtin: true },
+      [
+        { m: 'hideBuiltin', a: ['builtin:bi-one'] },
+        { m: 'unhideBuiltins', a: [['BI-ONE']] },
+        { m: 'list' },
+        { m: 'hideBuiltin', a: ['builtin:bi-one'] },
+        { m: 'unhideBuiltins', a: [['bi-one']] },
+        { m: 'list' },
+      ],
+      withLibrary(),
+    ),
+    scenario(
+      {},
+      [
+        { m: 'read', a: ['plugin:ZETA:pz'] },
+        { m: 'setState', a: ['plugin:Alpha:pa', { enabled: true }] },
+        { m: 'list' },
+      ],
+      withLibrary(),
+    ),
   ],
 }
 

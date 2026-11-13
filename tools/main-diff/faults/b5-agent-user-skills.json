@@ -1,5 +1,12 @@
 [
   {
+    "name": "service: the settings file is not read",
+    "file": "main-core/src/shell/user_skills/user_skills_service.rs",
+    "find": "resolve_user_skill_states(skills, Some(&settings))",
+    "replace": "resolve_user_skill_states(skills, Some(&JsonValue::Null))",
+    "fn": ["user-skills-service.createUserSkillsService"]
+  },
+  {
     "name": "service: names compare as written",
     "file": "main-core/src/shell/user_skills/user_skills_service.rs",
     "find": "a.to_lowercase() == b.to_lowercase()",

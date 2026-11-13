@@ -1003,10 +1003,10 @@
     "fn": ["session.GenerateSession"]
   },
   {
-    "name": "session: an unsaved row can be saved by default",
+    "name": "session: an unsaved row never offers to save in place",
     "file": "main-core/src/shell/generate/session.rs",
     "find": "view.save_action = Some(row.save_action.unwrap_or(SaveAction::Show));",
-    "replace": "view.save_action = Some(row.save_action.unwrap_or(SaveAction::Save));",
+    "replace": "view.save_action = Some(SaveAction::Show);",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1027,7 +1027,7 @@
     "name": "session: two listed rows still offer a conversion",
     "file": "main-core/src/shell/generate/session.rs",
     "find": "        if listed.len() != 1 {",
-    "replace": "        if listed.len() > 1 {",
+    "replace": "        if listed.is_empty() {",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1185,10 +1185,10 @@
     "fn": ["session.GenerateSession"]
   },
   {
-    "name": "session: a closed session makes again",
+    "name": "session: make keeps the failure of an earlier action",
     "file": "main-core/src/shell/generate/session.rs",
-    "find": "        if self.closed || self.making {",
-    "replace": "        if self.making {",
+    "find": "        self.making = true;\n        self.failure = None;\n        self.push(host);",
+    "replace": "        self.making = true;\n        self.push(host);",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1381,10 +1381,10 @@
     "fn": ["generate-window.openGenerateWindow", "generate-window.openGenerateWindowWithPaths"]
   },
   {
-    "name": "generate-window: an empty path is kept",
+    "name": "generate-window: a path of 4097 characters is kept",
     "file": "main-core/src/shell/generate/generate_window.rs",
     "find": ".filter(|p| !p.is_empty() && p.encode_utf16().count() <= 4096)",
-    "replace": ".filter(|p| p.encode_utf16().count() <= 4096)",
+    "replace": ".filter(|p| !p.is_empty() && p.encode_utf16().count() <= 4097)",
     "fn": ["generate-window.openGenerateWindow", "generate-window.openGenerateWindowWithPaths"]
   },
   {
@@ -1704,14 +1704,14 @@
     "file": "main-core/src/shell/generate/generate_window.rs",
     "find": "                parent,\n                opener: Some(NewDocumentOpener::Home),",
     "replace": "                parent,\n                opener: None,",
-    "fn": ["generate-window.openGenerateWindowWithPaths"]
+    "fn": ["generate-window.openGenerateWindowWithPaths", "generate-window.openGenerateWindow"]
   },
   {
     "name": "generate-window: Home's paths are not read as Home",
     "file": "main-core/src/shell/generate/generate_window.rs",
     "find": "                parent,\n                opener: Some(NewDocumentOpener::Home),",
     "replace": "                parent,\n                opener: Some(NewDocumentOpener::Window { web_contents_id: 0.0 }),",
-    "fn": ["generate-window.openGenerateWindowWithPaths"]
+    "fn": ["generate-window.openGenerateWindowWithPaths", "generate-window.openGenerateWindow"]
   },
   {
     "name": "generate-window: an empty file name is a path",
@@ -1742,10 +1742,10 @@
     "fn": ["generate-window.closeGenerateWindow", "generate-window.openGenerateWindow"]
   },
   {
-    "name": "generate-window: close keeps the opener",
+    "name": "generate-window: close leaves the window recorded",
     "file": "main-core/src/shell/generate/generate_window.rs",
     "find": "    let current = win.take();\n    *opener = None;",
-    "replace": "    let current = win.take();",
+    "replace": "    let current = *win;\n    *opener = None;",
     "fn": ["generate-window.closeGenerateWindow", "generate-window.openGenerateWindow"]
   },
   {
@@ -1867,10 +1867,10 @@
     "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
   },
   {
-    "name": "open-materials: a document that cannot be written is saved as failed",
+    "name": "open-materials: a sheets tab is not saved by path",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "        _ => SaveMaterialStep::Done(SaveOutcome::Failed),",
-    "replace": "        _ => SaveMaterialStep::Done(SaveOutcome::Saved),",
+    "find": "        DocumentTabKind::Docs | DocumentTabKind::Sheets | DocumentTabKind::Slides => {\n            SaveMaterialStep::Need(",
+    "replace": "        DocumentTabKind::Docs | DocumentTabKind::Slides => {\n            SaveMaterialStep::Need(",
     "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
   },
   {

@@ -932,10 +932,17 @@ impl OpenFake {
                 );
                 SaveAnswer::ToPath(self.save_result(*kind).map(|_| ()))
             }
-            SaveNeed::Editor { kind, .. } => {
+            SaveNeed::Editor {
+                kind,
+                web_contents_id,
+            } => {
                 log_line(
                     &self.log,
-                    vec![text("save"), text(kind.as_str()), text("contents")],
+                    vec![
+                        text("save"),
+                        text(kind.as_str()),
+                        text(&format!("contents:{}", number_to_string(*web_contents_id))),
+                    ],
                 );
                 SaveAnswer::Editor(self.save_result(*kind))
             }

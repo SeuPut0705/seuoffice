@@ -590,6 +590,9 @@ async function runWorld(spec: J, cx: TsContext): Promise<J> {
       case 'popUndo':
         s.undoStack.pop()
         return null
+      case 'shiftUndo':
+        s.undoStack.shift()
+        return null
       case 'meta':
         ss.markMetaDirty(s)
         return null
@@ -899,6 +902,21 @@ const proposalCases = {
       },
       'the same number of steps, but not the same steps',
     ),
+    c(
+      {
+        session: { slides: [S1] },
+        steps: [
+          { op: 'registerAi' },
+          { op: 'pushRedo' },
+          begin(),
+          { op: 'registerAi' },
+          push,
+          edit(S2),
+          hold(),
+        ],
+      },
+      "the redo stack and the rollback points of before the run come back; the run's own point goes",
+    ),
   ],
   accept: [
     c({ session: { slides: [S1] }, steps: [accept] }, 'no proposal'),
@@ -947,6 +965,17 @@ const proposalCases = {
     c(
       { session: { slides: [S1] }, steps: [push, begin(), push, edit(S1, S2), hold(), accept] },
       'the same stacks as the revert left them',
+    ),
+    c(
+      { session: { slides: [S1] }, steps: [...heldRun, { op: 'pushRedo' }, accept] },
+      'a step on the redo stack since the revert',
+    ),
+    c(
+      {
+        session: { slides: [S1] },
+        steps: [push, push, begin(), push, edit(S1, S2), hold(), { op: 'shiftUndo' }, accept],
+      },
+      'the oldest undo step was trimmed away: the same top step, a shorter stack',
     ),
   ],
   reject: [
@@ -1267,7 +1296,64 @@ const failure = (extra: J = {}): J => ({
   ...extra,
 })
 
+const udKeep = { 'ud/keep.txt': 'x' }
+
 const aiCases = {
+  /** the log needs its folder to exist: userData is made by the shell, not by the log */
+  logRunFailureInFolder: [
+    c(
+      { steps: [{ op: 'setup' }, invoke('ai:log-run-failure', [failure()])] },
+      'a line in an existing folder',
+      udKeep,
+    ),
+    c(
+      {
+        steps: [
+          { op: 'setup' },
+          invoke('ai:log-run-failure', [
+            failure({ instruction: 'x'.repeat(20001), streamed: 'y'.repeat(20000) }),
+          ]),
+        ],
+      },
+      'a text one past the limit is cut by one, the length of the other kept',
+      udKeep,
+    ),
+    c(
+      {
+        steps: [
+          { op: 'setup' },
+          invoke('ai:log-run-failure', [failure({ ts: 'mine', streamedChars: 1 })]),
+        ],
+      },
+      'keys of the entry keep their place',
+      udKeep,
+    ),
+    c(
+      { steps: [{ op: 'setup' }, invoke('ai:log-run-failure', [failure()])] },
+      'a log past two megabytes is rotated first',
+      { ...udKeep, 'ud/ai-run-failures.jsonl': { text: 'z'.repeat(2_000_001) } },
+    ),
+    c(
+      { steps: [{ op: 'setup' }, invoke('ai:log-run-failure', [failure()])] },
+      'a log at two megabytes is kept and appended to',
+      { ...udKeep, 'ud/ai-run-failures.jsonl': { text: 'z'.repeat(2_000_000) } },
+    ),
+    c(
+      {
+        steps: [
+          { op: 'setup' },
+          invoke('ai:log-run-failure', [failure({ instruction: ['a', 'b'], streamed: ['c'] })]),
+        ],
+      },
+      'lists have a slice and a length too',
+      udKeep,
+    ),
+    c(
+      { steps: [{ op: 'setup' }, invoke('ai:log-run-failure', [{ kind: 'x' }])] },
+      'an entry without its texts leaves no line',
+      udKeep,
+    ),
+  ],
   setup: [
     c(
       { steps: [{ op: 'setup' }] },
@@ -2616,6 +2702,7 @@ export const group: Group = {
     ...aiCases.imageSearch,
     ...aiCases.readUrl,
     ...aiCases.subscription,
+    ...aiCases.logRunFailureInFolder,
   ]),
   'slides/ai-ipc.registerSlidesOnlyAiIpc': scenario([
     ...slidesCases.defaultFonts,
@@ -2727,12 +2814,18 @@ export const group: Group = {
       [{ provider: 'auto', subscriptionOff: { codex: true } }, {}],
       [{ provider: 'auto' }, { subscriptionOff: { claude: true } }],
       [{ provider: 'auto' }, {}],
+      [{ provider: 'auto', subscriptionOff: { codex: true } }, { subscriptionOff: null }],
+      [{ provider: 'auto', subscriptionOff: { codex: true } }, { subscriptionOff: false }],
+      [{ provider: 'auto' }, { subscriptionOff: {} }],
     ],
     [
       'the file decides',
       'a window cannot turn a CLI off',
       'a window cannot turn it back on',
       'neither',
+      'a null in the file turns nothing off',
+      'false in the file turns nothing off',
+      'an empty table in the file is still a table',
     ],
   ),
   'ai-provider/key-model-refresh.withStoredKeyModels': {
@@ -2788,6 +2881,10 @@ export const group: Group = {
           { provider: 'auto' },
         ],
         note: 'a provider that is null',
+      },
+      {
+        args: [providersOf({}, { modelEfforts: { sent: { efforts: ['max'] } } }), providersOf({})],
+        note: 'a table the renderer sent is not kept when the file has none',
       },
     ],
   },

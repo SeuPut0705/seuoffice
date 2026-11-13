@@ -408,7 +408,7 @@
     "file": "main-core/src/shell/agent/project_skills.rs",
     "find": "if is_absolute(key)",
     "replace": "if true",
-    "fn": ["project-skills.approvedFingerprint"]
+    "fn": ["project-skills.writeProjectSkillsApproval"]
   },
   {
     "name": "project-skills: an empty fingerprint is kept",

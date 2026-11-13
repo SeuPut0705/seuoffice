@@ -753,6 +753,24 @@ const sweepCases: Case[] = [
     files: folder('aaaaaa', owner(200, CREATED), fresh),
     note: 'the second variable is the one that counts',
   },
+  {
+    args: [
+      sweep({
+        platform: 'win32',
+        alive: null,
+        kill: { alive: [200], eperm: [] },
+        env: { SystemRoot: 'D:\\Win' },
+        exec: '  200 1794452300000 \r',
+      }),
+    ],
+    files: folder('aaaaaa', owner(200, NOW - 2 * HOUR), fresh),
+    note: 'a line with white space and a carriage return around it',
+  },
+  {
+    args: [sweep({ alive: null, kill: { alive: [7000], eperm: [] }, uptime: 600 })],
+    files: folder('aaaaaa', owner(7000, NOW - 50_000), fresh),
+    note: 'this process has run for ten minutes: it started before its folder',
+  },
 ]
 
 // ---- the scripts of the specs of this part ----
@@ -891,6 +909,11 @@ const problemCases: Case[] = [
     note: 'Windows folds case',
   },
   { args: ['$DIR/Home', '$DIR/home', guards, 'linux'], files: folderProblemFiles },
+  {
+    args: ['$DIR/home/.claude/sub', '$DIR/home', guards, 'linux'],
+    files: { ...folderProblemFiles, 'home/.claude/sub/y': 'x' },
+    note: 'a folder inside a protected one',
+  },
 ]
 
 /** a text whose pretty JSON is exactly `size` characters long */
@@ -1996,6 +2019,27 @@ const managerCases: Case[] = [
     }),
     files: PROJECT_FILES,
     note: 'Windows',
+  },
+  {
+    args: scenario({
+      openDocuments: ['/docs/a.docx'],
+      steps: [
+        start(),
+        {
+          op: 'setOpenDocuments',
+          paths: [
+            '/docs/./a.docx',
+            '/docs//a.docx',
+            '/docs/x/../a.docx',
+            '/docs/b.docx',
+            '/docs/./b.docx',
+          ],
+        },
+        at('send', { text: 'spellings' }),
+      ],
+    }),
+    files: PROJECT_FILES,
+    note: 'one document written in several ways',
   },
 ]
 export const group: Group = {

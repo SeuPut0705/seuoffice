@@ -216,8 +216,8 @@ const collectCases = (): Case[] => [
       'over.txt': { text: 'x'.repeat(50 * 1024 * 1024 + 1) },
       'limit.txt': { text: 'x'.repeat(50 * 1024 * 1024) },
       'over.docx': { text: 'x'.repeat(50 * 1024 * 1024 + 1) },
-      'over.png': { hex: '00'.repeat(5 * 1024 * 1024 + 1) },
-      'limit.png': { hex: '00'.repeat(5 * 1024 * 1024) },
+      'over.png': { hex: '61'.repeat(5 * 1024 * 1024 + 1) },
+      'limit.png': { hex: '61'.repeat(5 * 1024 * 1024) },
     },
     note: 'the size limits: text 50 MB, pictures 5 MB, office files none',
   },
@@ -225,6 +225,16 @@ const collectCases = (): Case[] => [
     args: [[`${D}pic.png`, `${D}missing.png`], { lang: 'ko' }],
     files: FILES(),
     note: 'Korean reasons',
+  },
+  {
+    args: [[`${D}over.txt`], {}],
+    files: { 'over.txt': { text: 'x'.repeat(50 * 1024 * 1024 + 1) } },
+    note: 'the too large text, in English',
+  },
+  {
+    args: [[`${D}pic.png`, `${D}a.txt`, `${D}notes.MD`], {}],
+    files: { ...FILES(), 'pic.png': { hex: '89504e47'.repeat(5) } },
+    note: 'what is accepted, with the size of each file in bytes',
   },
 ]
 
@@ -680,8 +690,8 @@ const regCases = (app: AppId): Case[] => {
       args: [
         [
           { register: true },
-          { paste: { kind: 'buffer', hex: '00'.repeat(5 * 1024 * 1024 + 1), ext: 'png' } },
-          { paste: { kind: 'view', hex: '00'.repeat(5 * 1024 * 1024), ext: 'png' } },
+          { paste: { kind: 'buffer', hex: '61'.repeat(5 * 1024 * 1024 + 1), ext: 'png' } },
+          { paste: { kind: 'view', hex: '61'.repeat(5 * 1024 * 1024), ext: 'png' } },
         ],
         { temp: `${D}tmp3` },
       ],

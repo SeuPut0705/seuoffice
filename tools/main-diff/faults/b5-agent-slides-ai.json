@@ -231,10 +231,10 @@
     "fn": ["slides/ai-proposal.registerAiProposalIpc"]
   },
   {
-    "name": "ai-proposal: dropping a window reverts any run",
+    "name": "ai-proposal: dropping a window does not revert its run",
     "file": "main-core/src/slides/ai_proposal.rs",
     "find": "    if review.run.as_ref().is_some_and(|run| run.owner == owner) {",
-    "replace": "    if review.run.is_some() {",
+    "replace": "    if false {",
     "fn": ["slides/ai-proposal.dropAiRunOf"]
   },
   {
@@ -840,10 +840,10 @@
     "fn": ["pipelines/slides/cover-crop.coverCropFractions"]
   },
   {
-    "name": "ai-ipc: a finished stream stays registered",
+    "name": "ai-ipc: a chunk is sent to a window that is gone",
     "file": "main-core/src/slides/ai_ipc.rs",
-    "find": "    streams.delete(&run.key);",
-    "replace": "    let _ = &run.key;",
+    "find": "    if !sender.is_destroyed() {\n        sender.send(\"ai:stream-chunk\", chunk);",
+    "replace": "    if true {\n        sender.send(\"ai:stream-chunk\", chunk);",
     "fn": ["slides/ai-ipc.registerAiIpc"]
   },
   {

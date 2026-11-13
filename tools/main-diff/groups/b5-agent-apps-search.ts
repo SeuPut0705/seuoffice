@@ -224,6 +224,14 @@ const abortCases: Case[] = [
     note: 'the window is forgotten, then known again',
   },
   { args: [[{ abort: 7 }, { begin: 'a', sender: 7 }, { abort: 8 }]], note: 'nothing to stop' },
+  {
+    args: [[{ begin: 'a' }, { begin: 'b', sender: 2 }, { destroy: 1 }, { abort: 2 }]],
+    note: 'a window that goes away takes its own calls only',
+  },
+  {
+    args: [[{ begin: 'a' }, { begin: 'b' }, { end: 'a' }, { abort: 1 }]],
+    note: 'a call that settled leaves the other one of its window in flight',
+  },
 ]
 
 const mediaAbortFns: Group = {
@@ -240,6 +248,10 @@ const mediaAbortFns: Group = {
         args: [
           [{ begin: 'a' }, { begin: 'b', sender: 2 }, { abort: 2 }, { end: 'b' }, { abort: 1 }],
         ],
+      },
+      {
+        args: [[{ begin: 'a' }, { begin: 'b' }, { end: 'a' }, { abort: 1 }]],
+        note: 'a call that settled leaves the other one of its window in flight',
       },
     ],
   },
@@ -601,6 +613,31 @@ const ROUTE_SETTINGS: J[] = [
   norm({ metered: 1, meteredAccepted: { codex: true }, provider: 'codex' }),
   norm({ provider: 'claude-code', subscriptionOff: { 'claude-code': true } }),
   norm({ provider: 'claude-code' }),
+  norm({
+    media: mediaSet({
+      imageProvider: 'none',
+      analysisProvider: 'custom',
+      videoAnalysisProvider: 'custom',
+      providers: {
+        custom: {
+          apiKey: 'ck',
+          baseUrl: 'https://llm.test/v1',
+          imageModel: '',
+          analysisModel: 'my-vision',
+        },
+      },
+    }),
+  }),
+  norm({
+    media: mediaSet({
+      imageProvider: 'none',
+      analysisProvider: 'openai',
+      videoAnalysisProvider: 'none',
+    }),
+  }),
+  norm({
+    media: mediaSet({ analysisProvider: 'chat', videoAnalysisProvider: 'gemini' }),
+  }),
 ]
 
 const ROUTE_CONTEXTS: (J | null)[] = [
@@ -630,7 +667,16 @@ const ROUTE_STATES: RouteState[] = [
   { available: false, generator: false },
   { available: true, generator: false },
   { available: true, generator: true },
+  { available: false, generator: true },
 ]
+
+/** a generator is registered in a build that does not offer Codex image generation */
+const genOnlyCases = (): Case[] =>
+  [ROUTE_SETTINGS[0]!, ROUTE_SETTINGS[10]!].flatMap((settings) =>
+    [ROUTE_CONTEXTS[2]!, ROUTE_CONTEXTS[3]!].map((context): Case => ({
+      args: [settings, context, ROUTE_STATES[3]!],
+    })),
+  )
 
 /** every settings against every context, two of the states */
 const routeCases = (): Case[] =>
@@ -667,7 +713,7 @@ const routingFns: Group = {
           () => toolRouting.resolveImageRoute(a[0] as J),
         ),
       ),
-    cases: routeCases(),
+    cases: [...routeCases(), ...genOnlyCases()],
   },
   'ai-search/tool-routing.imageGenerationUnavailableMessage': {
     ts: (a) =>
@@ -678,7 +724,7 @@ const routingFns: Group = {
           () => toolRouting.imageGenerationUnavailableMessage(a[0] as J),
         ),
       ),
-    cases: routeCases(),
+    cases: [...routeCases(), ...genOnlyCases()],
   },
   'ai-search/tool-routing.resolveImageAnalysisRoute': {
     ts: (a) =>
@@ -744,6 +790,70 @@ const capCases = (): Case[] =>
     ),
   )
 
+/** what the matrix above leaves out: each route kind the report names, one by one */
+const extraCapCases = (): Case[] => {
+  const screen = (statuses: J): J => ({ path: 'screen', statuses })
+  const custom = (analysisModel: string): J => ({
+    providers: {},
+    media: mediaSet({
+      imageProvider: 'none',
+      analysisProvider: 'custom',
+      videoAnalysisProvider: 'custom',
+      providers: {
+        custom: { apiKey: 'ck', baseUrl: 'https://llm.test/v1', imageModel: '', analysisModel },
+      },
+    }),
+  })
+  const sets: [J, J | null, RouteState][] = [
+    [
+      { providers: {}, provider: 'claude-code' },
+      screen({ 'claude-code': READY('claude-code') }),
+      ROUTE_STATES[0]!,
+    ],
+    [
+      { providers: {}, provider: 'codex', meteredAccepted: { codex: true } },
+      screen({ codex: METERED('codex') }),
+      ROUTE_STATES[0]!,
+    ],
+    [
+      {
+        providers: {},
+        search: { provider: 'searchapi', providers: { searchapi: { apiKey: 'sa' } } },
+      },
+      null,
+      ROUTE_STATES[0]!,
+    ],
+    [{ providers: {} }, screen({ codex: READY('codex') }), ROUTE_STATES[3]!],
+    [
+      { providers: {}, provider: 'claude-code', subscriptionOff: { 'claude-code': true } },
+      screen({ codex: READY('codex') }),
+      ROUTE_STATES[2]!,
+    ],
+    [custom('my-vision'), null, ROUTE_STATES[0]!],
+    [
+      {
+        providers: {},
+        media: mediaSet({
+          imageProvider: 'none',
+          analysisProvider: 'openai',
+          videoAnalysisProvider: 'none',
+        }),
+      },
+      null,
+      ROUTE_STATES[0]!,
+    ],
+    [
+      {
+        providers: {},
+        media: mediaSet({ analysisProvider: 'chat', videoAnalysisProvider: 'gemini' }),
+      },
+      null,
+      ROUTE_STATES[0]!,
+    ],
+  ]
+  return sets.map(([settings, context, state]): Case => ({ args: [settings, context, state, {}] }))
+}
+
 const capabilityFns: Group = {
   'ai-search/tool-capabilities.aiToolCapabilities': {
     ts: (a) =>
@@ -756,7 +866,7 @@ const capabilityFns: Group = {
           ),
         ),
       ),
-    cases: capCases(),
+    cases: [...capCases(), ...extraCapCases()],
   },
 }
 

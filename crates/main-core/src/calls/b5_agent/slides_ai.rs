@@ -998,6 +998,13 @@ impl World {
                 slot.session.undo_stack.pop();
                 Ok(Value::Null)
             }
+            "shiftUndo" => {
+                let slot = self.slots[0].as_mut().ok_or_else(no_session)?;
+                if !slot.session.undo_stack.is_empty() {
+                    slot.session.undo_stack.remove(0);
+                }
+                Ok(Value::Null)
+            }
             "meta" => {
                 let slot = self.slots[0].as_mut().ok_or_else(no_session)?;
                 slot.session.mark_meta_dirty();
