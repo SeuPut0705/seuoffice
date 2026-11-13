@@ -1,0 +1,443 @@
+[
+  {
+    "name": "codex a stdout line may be a byte shorter",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "pub const MAX_RPC_LINE_BYTES: usize = 4 * 1024 * 1024;",
+    "replace": "pub const MAX_RPC_LINE_BYTES: usize = 4 * 1024 * 1024 - 1;",
+    "fn": ["codex.MAX_RPC_LINE_BYTES", "codex.attachBoundedRpcStdout"]
+  },
+  {
+    "name": "codex request timeout is shorter",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const REQUEST_TIMEOUT_MS: f64 = 30_000.0;",
+    "replace": "const REQUEST_TIMEOUT_MS: f64 = 29_000.0;",
+    "fn": ["codex.readCodexAccount", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex idle shutdown is shorter",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const IDLE_SHUTDOWN_MS: f64 = 120_000.0;",
+    "replace": "const IDLE_SHUTDOWN_MS: f64 = 110_000.0;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex one session less is kept",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const MAX_NATIVE_SESSIONS: usize = 64;",
+    "replace": "const MAX_NATIVE_SESSIONS: usize = 63;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex one model page less is read",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const MAX_MODEL_PAGES: usize = 10;",
+    "replace": "const MAX_MODEL_PAGES: usize = 9;",
+    "fn": ["codex.listCodexModels"]
+  },
+  {
+    "name": "codex one MCP status page less is read",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const MAX_MCP_STATUS_PAGES: usize = 10;",
+    "replace": "const MAX_MCP_STATUS_PAGES: usize = 9;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the stderr tail is shorter",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const DIAGNOSTIC_LIMIT: usize = 16_000;",
+    "replace": "const DIAGNOSTIC_LIMIT: usize = 15_000;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the rate limit read waits less",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const RATE_LIMIT_READ_TIMEOUT_MS: f64 = 5_000.0;",
+    "replace": "const RATE_LIMIT_READ_TIMEOUT_MS: f64 = 4_000.0;",
+    "fn": ["codex.streamCodexAppServer", "codex.waitForTurn"]
+  },
+  {
+    "name": "codex a server request is refused with another code",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "number(-32601.0)",
+    "replace": "number(-32600.0)",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a limit at 100 percent is not used up",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "w.used_percent >= 100.0",
+    "replace": "w.used_percent > 100.0",
+    "fn": ["codex.codexRunError", "codex.waitForTurn"]
+  },
+  {
+    "name": "codex the five hour window is another length",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Some(300.0) => \"five_hour\",",
+    "replace": "Some(301.0) => \"five_hour\",",
+    "fn": ["codex.codexSubscriptionUsage"]
+  },
+  {
+    "name": "codex utilization may pass one",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": ".clamp(0.0, 1.0)",
+    "replace": ".clamp(0.0, 2.0)",
+    "fn": ["codex.codexSubscriptionUsage"]
+  },
+  {
+    "name": "codex a reset at zero counts",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "*at > 0.0",
+    "replace": "*at >= 0.0",
+    "fn": ["codex.codexSubscriptionUsage"]
+  },
+  {
+    "name": "codex the limit id codex is not the main one",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "as_str(limit_id) != Some(\"codex\")",
+    "replace": "as_str(limit_id) != Some(\"codexx\")",
+    "fn": ["codex.codexSubscriptionUsage"]
+  },
+  {
+    "name": "codex assistant messages are sent again",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "!= Some(\"assistant\"))\n            .cloned()",
+    "replace": "!= Some(\"assistant_\"))\n            .cloned()",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the same messages start a new thread",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if messages.len() < known {",
+    "replace": "if messages.len() <= known {",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex program paths keep their case",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "program.entry.to_lowercase()",
+    "replace": "program.entry.clone()",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a changed metered login is accepted",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "login.login_kind.as_deref() != Some(status_kind.as_str())",
+    "replace": "login.login_kind.as_deref() == Some(status_kind.as_str())",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a ready MCP server is not refused",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Some(\"ready\")",
+    "replace": "Some(\"readyy\")",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a line of exactly the cap overflows",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if self.pending_bytes > MAX_RPC_LINE_BYTES {",
+    "replace": "if self.pending_bytes >= MAX_RPC_LINE_BYTES {",
+    "fn": ["codex.attachBoundedRpcStdout"]
+  },
+  {
+    "name": "codex the carriage return stays",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "line.strip_suffix('\\r').unwrap_or(line)",
+    "replace": "line",
+    "fn": ["codex.attachBoundedRpcStdout"]
+  },
+  {
+    "name": "codex a tool call id is kept only when empty",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Some(id) if !id.is_empty() => id.to_owned(),",
+    "replace": "Some(id) if id.is_empty() => id.to_owned(),",
+    "fn": ["codex.parseCodexAppServerTurn"]
+  },
+  {
+    "name": "codex a made-up tool call id is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "format!(\"codex-{}\", rt.random_uuid())",
+    "replace": "format!(\"codex_{}\", rt.random_uuid())",
+    "fn": ["codex.parseCodexAppServerTurn"]
+  },
+  {
+    "name": "codex the prompt words the budget otherwise",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "within roughly",
+    "replace": "within about",
+    "fn": ["codex.buildCodexAppServerPrompt"]
+  },
+  {
+    "name": "codex an empty tool list allows one call",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "tool_calls.push((\"maxItems\", number(0.0)));",
+    "replace": "tool_calls.push((\"maxItems\", number(1.0)));",
+    "fn": ["codex.codexAppServerOutputSchema"]
+  },
+  {
+    "name": "codex status 401 is another status",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "http_status_of(info) == Some(401.0)",
+    "replace": "http_status_of(info) == Some(403.0)",
+    "fn": ["codex.codexRunError"]
+  },
+  {
+    "name": "codex a missing program is another kind",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"not-installed\"",
+    "replace": "\"not_installed\"",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a metered login is another kind",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"metered-not-accepted\"",
+    "replace": "\"metered\"",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the permission profile has another name",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "const CODEX_PERMISSION_PROFILE: &str = \"seuoffice\";",
+    "replace": "const CODEX_PERMISSION_PROFILE: &str = \"seuoffice2\";",
+    "fn": ["codex.codexThreadStartParams", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the approval policy asks",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "text(\"never\")",
+    "replace": "text(\"on-request\")",
+    "fn": ["codex.codexThreadStartParams"]
+  },
+  {
+    "name": "codex the thread is kept in the Codex home",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "base.set(\"ephemeral\", JsonValue::Bool(true));",
+    "replace": "base.set(\"ephemeral\", JsonValue::Bool(false));",
+    "fn": ["codex.codexThreadStartParams"]
+  },
+  {
+    "name": "codex the fallback sandbox may write",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "base.set(\"sandbox\", text(\"read-only\"));",
+    "replace": "base.set(\"sandbox\", text(\"workspace-write\"));",
+    "fn": ["codex.codexThreadStartParams"]
+  },
+  {
+    "name": "codex hidden models are listed",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "(\"includeHidden\", JsonValue::Bool(false)),",
+    "replace": "(\"includeHidden\", JsonValue::Bool(true)),",
+    "fn": ["codex.listCodexModels"]
+  },
+  {
+    "name": "codex the MCP status detail is full",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "text(\"toolsAndAuthOnly\")",
+    "replace": "text(\"full\")",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the account read refreshes the token",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "object(vec![(\"refreshToken\", JsonValue::Bool(false))])",
+    "replace": "object(vec![(\"refreshToken\", JsonValue::Bool(true))])",
+    "fn": ["codex.readCodexAccount"]
+  },
+  {
+    "name": "codex the client has another version",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "(\"version\", text(\"0.1.0\")),",
+    "replace": "(\"version\", text(\"0.2.0\")),",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the client asks for the experimental api",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "(\"experimentalApi\", JsonValue::Bool(false)),",
+    "replace": "(\"experimentalApi\", JsonValue::Bool(true)),",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex user hooks stay on",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"features.hooks=false\",",
+    "replace": "\"features.hooks=true\",",
+    "fn": ["codex.CODEX_CONFIG_OVERRIDES", "codex.codexAppServerLaunchArgs"]
+  },
+  {
+    "name": "codex the listen address is another word",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "args.push(\"--listen\".to_owned());",
+    "replace": "args.push(\"--listens\".to_owned());",
+    "fn": ["codex.codexAppServerLaunchArgs"]
+  },
+  {
+    "name": "codex the effort is sent under another name",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "params.push((\"effort\", text(effort)));",
+    "replace": "params.push((\"effortLevel\", text(effort)));",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex an empty cursor is another page",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if cursor.as_deref().is_none_or(str::is_empty) {",
+    "replace": "if cursor.is_none() {",
+    "fn": ["codex.listCodexModels"]
+  },
+  {
+    "name": "codex hidden entries are the ones kept",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Some(entry) if !is_true(entry.get(\"hidden\")) => entries.push(value.clone()),",
+    "replace": "Some(entry) if is_true(entry.get(\"hidden\")) => entries.push(value.clone()),",
+    "fn": ["codex.listCodexModels"]
+  },
+  {
+    "name": "codex the first default wins",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "default_model = id;",
+    "replace": "if default_model.is_empty() { default_model = id; }",
+    "fn": ["codex.listCodexModels"]
+  },
+  {
+    "name": "codex an ignored profile thread is kept",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if let Some(abandoned) = optional_thread_id(profile.as_ref()) {",
+    "replace": "if let Some(abandoned) = optional_thread_id(None) {",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex an unknown image type has another extension",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "_ => \".img\",",
+    "replace": "_ => \".imgx\",",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex jpeg has another extension",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"jpeg\" | \"jpg\" => \".jpg\",",
+    "replace": "\"jpeg\" | \"jpg\" => \".jpeg\",",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex activity does not re-arm the watchdog",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "touched.touch();",
+    "replace": "let _ = &touched;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the final message is not read from the turn",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if st.final_text.is_empty() {",
+    "replace": "if false {",
+    "fn": ["codex.waitForTurn"]
+  },
+  {
+    "name": "codex a failed turn is another status",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "== Some(\"failed\")",
+    "replace": "== Some(\"failedd\")",
+    "fn": ["codex.waitForTurn", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a reported error does not decide a closing",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Some(reported) if !error.is(\"AiRunError\")",
+    "replace": "Some(reported) if error.is(\"AiRunError\")",
+    "fn": ["codex.waitForTurn", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the limits are asked for when known",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "|| limit_reset_time(rate_limits.as_ref()).is_some()",
+    "replace": "|| limit_reset_time(rate_limits.as_ref()).is_none()",
+    "fn": ["codex.waitForTurn", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex turning Codex off does not stick",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "off_app.borrow_mut().codex_off = off;",
+    "replace": "off_app.borrow_mut().codex_off = false;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a login change does not retire",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if provider == \"codex\" {",
+    "replace": "if provider == \"codexx\" {",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex an attached MCP server is accepted",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if checked && attached == 0 {",
+    "replace": "if checked {",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex attached servers are not counted",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "attached += codex_attached_mcp_servers(&result)?.len();",
+    "replace": "attached += codex_attached_mcp_servers(&result)?.len() * 0;",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex the fence is read with case",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "(?:json)?\\s*\", \"i\")",
+    "replace": "(?:json)?\\s*\", \"\")",
+    "fn": ["codex.parseCodexAppServerTurn"]
+  },
+  {
+    "name": "codex a cancelled run leaves the process",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "if signal.is_some_and(Signal::aborted) {\n        client.stop_when_unused();\n    }\n    client.release();",
+    "replace": "client.release();",
+    "fn": ["codex.streamCodexAppServer", "codex.chatCodexAppServer"]
+  },
+  {
+    "name": "codex the account check cancel is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"The Codex account check was cancelled\"",
+    "replace": "\"The Codex account check was cancelledd\"",
+    "fn": ["codex.readCodexAccount"]
+  },
+  {
+    "name": "codex the turn cancel is worded otherwise",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"Codex app-server request was cancelled\"",
+    "replace": "\"Codex app-server request was cancelledd\"",
+    "fn": ["codex.waitForTurn"]
+  },
+  {
+    "name": "codex an rpc error drops its colon",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"Codex app-server error{code}: {message}{data}\"",
+    "replace": "\"Codex app-server error{code} {message}{data}\"",
+    "fn": ["codex.readCodexAccount", "codex.listCodexModels"]
+  },
+  {
+    "name": "codex an unfinished MCP check passes",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "Ok::<bool, JsError>(cursor.is_none())",
+    "replace": "Ok::<bool, JsError>(true)",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a failed MCP check passes",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": ".unwrap_or(false);",
+    "replace": ".unwrap_or(true);",
+    "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a process started while off joins the pool",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "let off = app.borrow().codex_off;",
+    "replace": "let off = false;",
+    "fn": ["codex.streamCodexAppServer"]
+  }
+]

@@ -1636,6 +1636,52 @@ impl Rt {
     }
 }
 
+/// `new StringDecoder('utf8')` of `node:string_decoder`: UTF-8 across
+/// chunks, a sequence cut between chunks finished by the next one, each
+/// ill-formed sequence U+FFFD. Unlike `TextDecoder` it keeps a byte order
+/// mark at the start.
+pub struct StringDecoder {
+    decoder: encoding_rs::Decoder,
+}
+
+impl Default for StringDecoder {
+    fn default() -> Self {
+        StringDecoder::new()
+    }
+}
+
+impl StringDecoder {
+    pub fn new() -> StringDecoder {
+        StringDecoder {
+            decoder: encoding_rs::UTF_8.new_decoder_without_bom_handling(),
+        }
+    }
+
+    /// `decoder.write(chunk)`
+    pub fn write(&mut self, bytes: &[u8]) -> String {
+        self.decode(bytes, false)
+    }
+
+    /// `decoder.end()`: what was held back, as U+FFFD
+    pub fn end(&mut self) -> String {
+        self.decode(&[], true)
+    }
+
+    fn decode(&mut self, bytes: &[u8], last: bool) -> String {
+        let mut out = String::with_capacity(bytes.len() + 8);
+        let mut input = bytes;
+        loop {
+            let (result, read, _) = self.decoder.decode_to_string(input, &mut out, last);
+            input = &input[read..];
+            match result {
+                encoding_rs::CoderResult::InputEmpty => break,
+                encoding_rs::CoderResult::OutputFull => out.reserve(input.len() * 3 + 16),
+            }
+        }
+        out
+    }
+}
+
 /// The result of a started task.
 pub struct Call<T> {
     cell: Rc<RefCell<Option<T>>>,
