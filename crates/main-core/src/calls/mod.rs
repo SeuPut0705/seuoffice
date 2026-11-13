@@ -117,7 +117,6 @@ const GROUPS: &[Group] = &[
     b6_apps::call,
     b6_tabs::call,
     d2_hwp_recovery::call,
-    w_shell::call,
     b2_cli::call,
     b4_fonts::call,
     b4_pdf_store::call,
