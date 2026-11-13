@@ -714,7 +714,20 @@ async function writeHtmlPdf(
   html: string,
   docPath: string | undefined,
   target: string,
+  win?: BrowserWindow,
 ): Promise<ExportResult> {
+  // A PDF cannot keep content hidden from AI: a marked page is exported only
+  // without its marks, when the person agrees; a headless export writes nothing.
+  const plan = await planMarkedExport(
+    html,
+    isHeadlessMode() ? null : () => askMarkedExport('pdf', (options) => showBox(win, options)),
+  )
+  if (plan.kind === 'declined') {
+    return isHeadlessMode()
+      ? { ok: false, error: markedExportRefusal(undefined, 'pdf') }
+      : { ok: true, canceled: true }
+  }
+  html = plan.html
   const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-pdf-'))
   try {
     await writeFile(target, await renderPrintPdf(html, docPath, workDir))
@@ -1295,7 +1308,7 @@ function registerHtmlIpc(): void {
             BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
           const exported =
             exportAs === 'pdf'
-              ? await writeHtmlPdf(html, pathAtRequest, target)
+              ? await writeHtmlPdf(html, pathAtRequest, target, win)
               : exportAs === 'docx'
                 ? await writeHtmlDocx(html, pathAtRequest, target, win)
                 : await writeHtmlOdt(
@@ -1615,7 +1628,7 @@ function registerHtmlIpc(): void {
               configuredDefaultSaveDir(app),
             )
       if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
-      return writeHtmlPdf(request.html, savePathByWc.get(e.sender.id), picked.filePath)
+      return writeHtmlPdf(request.html, savePathByWc.get(e.sender.id), picked.filePath, win)
     },
   )
 
