@@ -15,4 +15,4 @@ pub use ordered::{
     serialize, serialize_element,
 };
 pub use tag::{Tag, mask_opaque, opaque_end, tag_at};
-pub use utf16::Utf16Map;
+pub use utf16::{Utf16Index, Utf16Map};

@@ -601,6 +601,7 @@ export const ko = {
   appOdtFeatureProtection: '편집 제한·보호',
   appOdtFeatureFormField: '누름틀',
   appOdtFeatureObject: '그 밖의 개체',
+  appOdtFeatureHiddenFromAi: 'AI에게 가린 표시(글은 남고 AI가 읽을 수 있음)',
   appOdtOff: 'ODT 문서에서는 쓸 수 없습니다. docx로 저장하면 쓸 수 있습니다',
   appOdtProtectedCell: '보호된 칸입니다. 한컴에서 잠근 칸이라 고칠 수 없습니다.',
   appOdtProtectedCellTip: '보호된 칸',

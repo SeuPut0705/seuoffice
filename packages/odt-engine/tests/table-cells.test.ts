@@ -5,25 +5,18 @@
  */
 import { type Block, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import type { TableExt } from '../src/table'
+import type { TableExt } from './helpers/bridge-ext'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
 import { hCell, hPara, hRow, hTable } from './helpers/hancom-fragments'
-import {
-  cellRuns,
-  editRuns,
-  firstDiff,
-  patchCells,
-  tableRegistry,
-  tableTexts,
-} from './helpers/table-editor'
+import { cellRuns, editRuns, firstDiff, patchCells, tableTexts } from './helpers/table-editor'
 
 async function open(body: string) {
-  const bridge = await odtToBridge(await buildOdt({ body }), tableRegistry())
+  const bridge = await odtToBridge(await buildOdt({ body }))
   const parsed = await parseDocx(bridge.docx)
   const visible = parsed.blocks.filter((b) => !b.hidden)
   const ext = bridge.map.ext.table as unknown as TableExt
-  return { bridge, visible, ext, xml: bridge.doc.contentXml }
+  return { bridge, visible, ext, xml: bridge.content }
 }
 
 async function editTable(
@@ -114,7 +107,7 @@ describe('tables in sections and empty cells', () => {
       patchCells(b, [{ row: 0, tc: 1, paras: [{ runs: [{ text: '새' }] }] }]),
     )
     let stripped = wb.content
-    for (const x of wb.rctx.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
+    for (const x of wb.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
     const at = o.xml.indexOf(empty)
     expect(stripped.slice(0, at)).toBe(o.xml.slice(0, at))
     expect(stripped.slice(at)).toMatch(

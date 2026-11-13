@@ -15,6 +15,7 @@ pptx-engine.workspace = true
 mtx.workspace = true
 epub-engine = { workspace = true, features = ["primitives", "ranges", "package", "pure", "xml", "book", "book-translate"] }
 file-parse = { workspace = true, features = ["redaction", "docx", "pptx", "xlsx", "html", "ppt", "doc", "hwp", "epub", "dispatch"] }
+odt-engine.workspace = true
 jscompat.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true

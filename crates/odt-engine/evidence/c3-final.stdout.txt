@@ -1,0 +1,216 @@
+odt-diff: 120 built ODTs, 225 exported from docx, 227 docx (205 tracked); populations {"docxTracked":205,"docxBuilt":22,"docxRendered":4,"docxMutated":90,"odt-built":119,"odt-built-opened":109,"edits":2626,"odt-sample":1,"odt-sample-opened":1,"odt-exported":225,"odt-exported-opened":225,"odt-mutation":210,"odt-mutation-opened":158}
+(a) odtToDocx: opens or refuses alike          compared    555  floor    552  differences 0
+(a) odtToDocx: the bridge docx, entries        compared    335  floor    332  differences 0
+(a+) odtToDocx: mutated ODTs, docx entries     compared    158  floor    150  differences 0
+(a) odtToDocx: the bridge JSON as written      compared    493  floor    489  differences 0
+(a) odtToDocx: the report                      compared    493  floor    489  differences 0
+(b) saveOdt: unchanged or not, or the refusal  compared   2626  floor   2597  differences 0
+(b) saveOdt: the saved ODT, entries            compared   1335  floor   1327  differences 0
+(c) docxToOdt: with rendered objects           compared      4  floor      4  differences 0
+(c) docxToOdt: tracked docx                    compared    205  floor    205  differences 0
+(c) docxToOdt: built docx                      compared     22  floor     22  differences 0
+(c+) docxToOdt: mutated docx                   compared     90  floor     90  differences 0
+(d) odtToText: the text, or the refusal        compared    555  floor    552  differences 0
+(f) odtCore on the corpus, checks              compared  77482  floor  76840  differences 0  (TypeScript threw in 30: Rust must refuse those too)
+(f) odtCore on built inputs, checks            compared    314  floor    314  differences 0  (TypeScript threw in 15: Rust must refuse those too)
+(f+) odtCore on mutated texts, checks          compared   5981  floor   5900  differences 0  (TypeScript threw in 124: Rust must refuse those too)
+(f) odtText on the corpus, checks              compared  48081  floor  47634  differences 0
+(f) odtText on built inputs, checks            compared    628  floor    622  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f+) odtText on mutated texts, checks          compared   4500  floor   4500  differences 0
+(f+) odtText on mutated arguments, checks      compared   4500  floor   4500  differences 0
+(f) odtTable on the corpus, checks             compared   4788  floor   4754  differences 0
+(f) odtTable on built inputs, checks           compared    205  floor    205  differences 0
+(f+) odtTable on mutated texts, checks         compared   1500  floor   1500  differences 0
+(f+) odtTable on mutated arguments, checks     compared   1500  floor   1500  differences 0
+(f) odtObjects on the corpus, checks           compared   5389  floor   5341  differences 0
+(f) odtObjects on built inputs, checks         compared    541  floor    541  differences 0
+(f+) odtObjects on mutated texts, checks       compared   3299  floor   3200  differences 0
+(f+) odtObjects on mutated arguments, checks   compared   1500  floor   1500  differences 0
+(f) odtPage on the corpus, checks              compared  16845  floor  16686  differences 0
+(f) odtPage on built inputs, checks            compared    307  floor    307  differences 0
+(f+) odtPage on mutated texts, checks          compared   2399  floor   2300  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f+) odtPage on mutated arguments, checks      compared   1500  floor   1500  differences 0
+(f) odtAssemble on the corpus, checks          compared   3712  floor   3688  differences 0
+(f) odtAssemble on built inputs, checks        compared    346  floor    346  differences 0
+(f+) odtAssemble on mutated texts, checks      compared   2700  floor   2700  differences 0
+(f+) odtAssemble on mutated arguments, checks  compared   7500  floor   7500  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+rust panics (each one a difference above): 0
+(f) odtCore: 34 functions (floor     34); with a single distinct result, so not really compared: 0; never threw in TypeScript: 15 of 34
+    odtCore.decodeXmlEntities                checks    4506  differences      0  key order only      0  distinct results  2272  TypeScript threw 0
+    odtCore.escapeXmlText                    checks    4495  differences      0  key order only      0  distinct results  2264  TypeScript threw 0
+    odtCore.escapeXmlAttr                    checks    4495  differences      0  key order only      0  distinct results  2255  TypeScript threw 0
+    odtCore.readAttributes                   checks   22358  differences      0  key order only      0  distinct results  1337  TypeScript threw 0
+    odtCore.attributeMap                     checks    9028  differences      0  key order only      0  distinct results  1057  TypeScript threw 0
+    odtCore.readRoot                         checks    1670  differences      0  key order only      0  distinct results   163  TypeScript threw 0
+    odtCore.XmlScanner                       checks    3040  differences      0  key order only      0  distinct results  1004  TypeScript threw 0
+    odtCore.walkElements                     checks    5742  differences      0  key order only      0  distinct results  1749  TypeScript threw 0
+    odtCore.scanOdtBody                      checks     660  differences      0  key order only      0  distinct results   495  TypeScript threw 81
+    odtCore.sliceNode                        checks    2889  differences      0  key order only      0  distinct results  1485  TypeScript threw 0
+    odtCore.nodesOfKind                      checks    2012  differences      0  key order only      0  distinct results   495  TypeScript threw 29
+    odtCore.walkNodes                        checks     986  differences      0  key order only      0  distinct results   597  TypeScript threw 22
+    odtCore.pairBookmarks                    checks     646  differences      0  key order only      0  distinct results    50  TypeScript threw 18
+    odtCore.pairAnnotations                  checks     646  differences      0  key order only      0  distinct results    47  TypeScript threw 14
+    odtCore.anchorType                       checks    3019  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtCore.cellSpan                         checks    3019  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.bookmarkName                     checks    3019  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtCore.readManifest                     checks     644  differences      0  key order only      0  distinct results   272  TypeScript threw 0
+    odtCore.classifyGenerator                checks     656  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    odtCore.detectGenerator                  checks     647  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtCore.readOdtStyles                    checks     644  differences      0  key order only      0  distinct results   513  TypeScript threw 0
+    odtCore.OdtStyleTable.resolve            checks    5330  differences      0  key order only      0  distinct results  1402  TypeScript threw 0
+    odtCore.createBridgeMap                  checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtCore.paragraphIdentityName            checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtCore.markerBookmarkName               checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.paragraphIdFromBookmarks         checks      11  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtCore.unquoteFamily                    checks    2792  differences      0  key order only      0  distinct results   378  TypeScript threw 0
+    odtCore.applyTextPatches                 checks     688  differences      0  key order only      0  distinct results   567  TypeScript threw 1
+    odtCore.readDocxPart                     checks      12  differences      0  key order only      0  distinct results     5  TypeScript threw 4
+    odtCore.crc32                            checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtCore.dosDateTime                      checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtCore.editedItems                      checks      82  differences      0  key order only      0  distinct results    77  TypeScript threw 0
+    odtCore.paragraphBlockOf                 checks       7  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.constant                         checks       7  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+(f+) odtText: 570 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtText: 39 functions (floor     39); with a single distinct result, so not really compared: 0; never threw in TypeScript: 15 of 39
+    odtText.alignTexts                       checks    3648  differences      0  key order only      0  distinct results   755  TypeScript threw 0
+    odtText.numFmtFromOdf                    checks     312  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtText.numFmtToOdf                      checks     315  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    odtText.keptCharacters                   checks     259  differences      0  key order only      0  distinct results   198  TypeScript threw 0
+    odtText.placeMarkers                     checks      84  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    odtText.textStyleAttrs                   checks     940  differences      0  key order only      0  distinct results   191  TypeScript threw 0
+    odtText.readParagraph                    checks    3050  differences      0  key order only      0  distinct results  2731  TypeScript threw 0
+    odtText.editedParagraphFromBlock         checks    2531  differences      0  key order only      0  distinct results  1182  TypeScript threw 0
+    odtText.editedParagraphFromTableParagraph checks    1896  differences      0  key order only      0  distinct results  1177  TypeScript threw 0
+    odtText.isInvisibleInline                checks    6085  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtText.isFormFieldName                  checks    1507  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtText.pairMarkers                      checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtText.tabStopsFromOdf                  checks    3467  differences      0  key order only      0  distinct results    40  TypeScript threw 0
+    odtText.paraFormatFromOdf                checks    1734  differences      0  key order only      0  distinct results   195  TypeScript threw 0
+    odtText.paraKeys                         checks    1702  differences      0  key order only      0  distinct results    91  TypeScript threw 0
+    odtText.changedParaKeys                  checks     442  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    odtText.tabStopsToOdf                    checks      30  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtText.paraOverrides                    checks     402  differences      0  key order only      0  distinct results    45  TypeScript threw 0
+    odtText.textFormatFromOdf                checks    1330  differences      0  key order only      0  distinct results   303  TypeScript threw 0
+    odtText.textKeys                         checks     489  differences      0  key order only      0  distinct results    49  TypeScript threw 0
+    odtText.changedTextKeys                  checks      10  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    odtText.clearedToInherited               checks      11  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtText.textOverrides                    checks      22  differences      0  key order only      0  distinct results    20  TypeScript threw 0
+    odtText.quoteFamily                      checks     310  differences      0  key order only      0  distinct results   240  TypeScript threw 0
+    odtText.patchStartTag                    checks    3232  differences      0  key order only      0  distinct results   693  TypeScript threw 1
+    odtText.editStyleXml                     checks    4832  differences      0  key order only      0  distinct results  1478  TypeScript threw 0
+    odtText.newStyleXml                      checks     305  differences      0  key order only      0  distinct results   233  TypeScript threw 0
+    odtText.readOoxmlPPr                     checks     711  differences      0  key order only      0  distinct results   106  TypeScript threw 0
+    odtText.readOoxmlRPr                     checks     590  differences      0  key order only      0  distinct results   140  TypeScript threw 0
+    odtText.docxStylesById                   checks     381  differences      0  key order only      0  distinct results   149  TypeScript threw 0
+    odtText.styleEntryForOdf                 checks       6  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtText.styleEntryById                   checks       6  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtText.lengthToTwips                    checks    5666  differences      0  key order only      0  distinct results   296  TypeScript threw 0
+    odtText.twips                            checks    5666  differences      0  key order only      0  distinct results   280  TypeScript threw 0
+    odtText.percent                          checks    5666  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtText.twipsToCm                        checks      21  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtText.twipsToPt                        checks      21  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtText.halfPointsToPt                   checks      21  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtText.constant                         checks       2  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f+) odtTable: 275 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtTable: 20 functions (floor     20); with a single distinct result, so not really compared: 0; never threw in TypeScript: 5 of 20
+    odtTable.elementRecord                   checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtTable.borderFromOdf                   checks     638  differences      0  key order only      0  distinct results    42  TypeScript threw 0
+    odtTable.cellPropsFromOdf                checks     305  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    odtTable.cellBordersXml                  checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtTable.borderToOdf                     checks      18  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtTable.mapSequence                     checks      14  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtTable.tcIndexes                       checks     215  differences      0  key order only      0  distinct results    32  TypeScript threw 0
+    odtTable.lengthCm                        checks    2578  differences      0  key order only      0  distinct results   243  TypeScript threw 0
+    odtTable.segmentTable                    checks     362  differences      0  key order only      0  distinct results   348  TypeScript threw 0
+    odtTable.normalizedTcPr                  checks     362  differences      0  key order only      0  distinct results   240  TypeScript threw 0
+    odtTable.withoutBridgeBookmarks          checks    1284  differences      0  key order only      0  distinct results   813  TypeScript threw 0
+    odtTable.editedGrid                      checks    1556  differences      0  key order only      0  distinct results   969  TypeScript threw 0
+    odtTable.editedItems                     checks     230  differences      0  key order only      0  distinct results   132  TypeScript threw 0
+    odtTable.paraText                        checks     375  differences      0  key order only      0  distinct results   241  TypeScript threw 0
+    odtTable.protectedCellsOf                checks       5  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtTable.isProtectedCell                 checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtTable.anchorOf                        checks      16  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtTable.spanOf                          checks       8  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtTable.asJson                          checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtTable.constant                        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+(f+) odtObjects: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtObjects: 25 functions (floor     25); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 25
+    odtObjects.lengthToEmu                   checks     797  differences      0  key order only      0  distinct results    91  TypeScript threw 0
+    odtObjects.emuToCm                       checks      16  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtObjects.drawingXml                    checks    1506  differences      0  key order only      0  distinct results   531  TypeScript threw 0
+    odtObjects.readDrawing                   checks     345  differences      0  key order only      0  distinct results   117  TypeScript threw 0
+    odtObjects.drawingsOf                    checks     388  differences      0  key order only      0  distinct results    35  TypeScript threw 0
+    odtObjects.sniffImage                    checks      19  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtObjects.base64Encode                  checks      19  differences      0  key order only      0  distinct results    19  TypeScript threw 0
+    odtObjects.base64Decode                  checks     321  differences      0  key order only      0  distinct results    54  TypeScript threw 0
+    odtObjects.dataUrlBytes                  checks     311  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtObjects.sameBytes                     checks      57  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtObjects.hrefPath                      checks     372  differences      0  key order only      0  distinct results   235  TypeScript threw 0
+    odtObjects.subElements                   checks    1688  differences      0  key order only      0  distinct results   871  TypeScript threw 0
+    odtObjects.plainTextOf                   checks    1687  differences      0  key order only      0  distinct results   872  TypeScript threw 0
+    odtObjects.keepName                      checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtObjects.pictureName                   checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtObjects.parseKeepName                 checks     317  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtObjects.parsePictureName              checks     317  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    odtObjects.patchManifestXml              checks    2370  differences      0  key order only      0  distinct results   372  TypeScript threw 0
+    odtObjects.noteKey                       checks       5  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtObjects.entriesOf                     checks      51  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtObjects.graphicProps                  checks      42  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtObjects.textWidthEmu                  checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtObjects.anchorOf                      checks      21  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtObjects.analyzeObject                 checks      57  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtObjects.constant                      checks       9  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+(f+) odtPage: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtPage: 20 functions (floor     20); with a single distinct result, so not really compared: 0; never threw in TypeScript: 7 of 20
+    odtPage.twipsToLength                    checks      16  differences      0  key order only      0  distinct results    14  TypeScript threw 0
+    odtPage.layoutGeometry                   checks     556  differences      0  key order only      0  distinct results    47  TypeScript threw 0
+    odtPage.columnsOf                        checks       7  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.isEmptyOverrides                 checks       4  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtPage.layoutOverrides                  checks    2248  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    odtPage.odfLengths                       checks      48  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtPage.startTagAt                       checks    7023  differences      0  key order only      0  distinct results  1210  TypeScript threw 0
+    odtPage.childElements                    checks    1381  differences      0  key order only      0  distinct results   311  TypeScript threw 0
+    odtPage.editLayoutXml                    checks    1941  differences      0  key order only      0  distinct results   567  TypeScript threw 1
+    odtPage.editMasterXml                    checks    2480  differences      0  key order only      0  distinct results   558  TypeScript threw 0
+    odtPage.readPageExt                      checks       5  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.writePageExt                     checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.hfFormat                         checks      18  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtPage.pairParagraphs                   checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    odtPage.buildSectPr                      checks    1505  differences      0  key order only      0  distinct results   348  TypeScript threw 0
+    odtPage.injectParagraphSectPr            checks    1302  differences      0  key order only      0  distinct results   828  TypeScript threw 0
+    odtPage.paragraphSectPr                  checks    1852  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtPage.stripParagraphSectPr             checks     322  differences      0  key order only      0  distinct results   253  TypeScript threw 0
+    odtPage.stripPPrSectPr                   checks     319  differences      0  key order only      0  distinct results   207  TypeScript threw 0
+    odtPage.constant                         checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+(f+) odtAssemble: 581 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtAssemble: 26 functions (floor     26); with a single distinct result, so not really compared: 0; never threw in TypeScript: 9 of 26
+    odtAssemble.readMetaPeople               checks     648  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtAssemble.coreXmlFor                   checks    1354  differences      0  key order only      0  distinct results    60  TypeScript threw 0
+    odtAssemble.personalInfoRemoved          checks      72  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtAssemble.scrubMetaXml                 checks     647  differences      0  key order only      0  distinct results   324  TypeScript threw 0
+    odtAssemble.classifyObject               checks     397  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.objectSize                   checks     394  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtAssemble.fallbackPictureRId           checks     325  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.drawingXml                   checks     305  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    odtAssemble.dataUrlOf                    checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.pictureRun                   checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtAssemble.labelRun                     checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtAssemble.defaultSize                  checks     307  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    odtAssemble.solidPng                     checks       5  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtAssemble.headingsAsParagraphs         checks    1341  differences      0  key order only      0  distinct results   588  TypeScript threw 0
+    odtAssemble.withRowFloors                checks    1507  differences      0  key order only      0  distinct results   366  TypeScript threw 0
+    odtAssemble.paragraphProps               checks    1700  differences      0  key order only      0  distinct results    77  TypeScript threw 0
+    odtAssemble.textProps                    checks    1985  differences      0  key order only      0  distinct results   242  TypeScript threw 0
+    odtAssemble.documentDefaults             checks      86  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    odtAssemble.defaultStyleXml              checks      86  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    odtAssemble.paragraphStylesXml           checks    1519  differences      0  key order only      0  distinct results    53  TypeScript threw 0
+    odtAssemble.pageLayoutXml                checks    1506  differences      0  key order only      0  distinct results   295  TypeScript threw 0
+    odtAssemble.columnsXml                   checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtAssemble.masterPageXml                checks       6  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtAssemble.unresolvedThemeReferences    checks      25  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtAssemble.odtToDocxReport              checks      20  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    odtAssemble.constant                     checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+(f) listed class lone-surrogate-from-numeric-reference: 74 inputs, 18 differ as listed and are not counted above
+(f) listed class offset-inside-surrogate-pair: 6 inputs, 3 differ as listed and are not counted above
+divergences.json: 2 classes, 2 exact inputs, 0 no longer reproduce

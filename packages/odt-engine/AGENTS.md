@@ -2,24 +2,30 @@
 
 OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, 편집 결과를 원본 ODT에 고친 곳만 끼워 넣어 저장한다. 원본 ODT가 없는 문서는 ODT로 통째로 바꾼다.
 
+## 엔진의 자리 (2026-11, 묶음 C3)
+
+- 엔진은 Rust다: `crates/odt-engine`(계약 `crates/odt-engine/C3-PLAN.md`). 이 패키지에는 공개 API와 그 타입만 남았다: `src/index.ts`(이름 그대로), `src/engine.ts`(wasm 호출, `@seuoffice/engine-wasm`), `src/types.ts`(공개 타입과 상수), `src/errors.ts`(여는 오류 클래스), `src/node/index.ts`(`node` 내보내기 조건에서 엔진을 스스로 띄움). 렌더러와 웹은 docx 엔진과 같은 wasm을 쓰므로 `initDocxEngine`이 한 번 띄우면 된다.
+- 아래 층 설명은 Rust 모듈에 그대로 해당한다: TypeScript 파일 하나가 `crates/odt-engine/src/<층>/<파일>.rs` 하나이고(이름은 snake_case), 함수마다 원래 이름이 doc 줄에 있다. 위치는 엔진 안에서는 UTF-8 바이트, 다리 지도와 모든 JSON 값에서는 UTF-16 단위다(`crates/odt-engine/src/offset.rs`).
+- 동작이 TypeScript와 같은지는 `tools/odt-diff`가 본다(얼려 둔 TypeScript `tools/odt-diff/reference`와 비교). 공개 타입이 얼려 둔 것과 같은지는 `tools/odt-diff/types-parity.ts`가 컴파일 때 본다.
+
 ## 맡은 범위
 
-- 핵심 층(`src/core`, 진입점 `src/core/index.ts`): 나머지 층(글자, 표, 개체, 쪽, 조립)이 모두 이 위에 선다.
+- 핵심 층(`crates/odt-engine/src/core`, 진입점 `crates/odt-engine/src/core/mod.rs`): 나머지 층(글자, 표, 개체, 쪽, 조립)이 모두 이 위에 선다.
   - `openOdt`: zip 관문 → 패키지 읽기 → `mimetype` 검사 → 암호 검사 → 본문 위치 지도 → 스타일 표 → 생성 프로그램 판별.
   - `readOdtPackage`: 항목마다 원래 바이트(압축 푼 것), 원래 압축 방식, 원래 순서(로컬 헤더 위치 순)를 지닌다. 다시 묶을 때 이것을 쓴다.
   - `scanOdtBody`: `office:text`의 최상위 요소와 그 안의 문단·목록·구역·색인·표·행·셀·가려진 셀·글상자·그림·개체·도형·책갈피·메모·각주를 원본 문자열의 위치(`start`/`openEnd`/`closeStart`/`end`)로 기록한다.
   - `readOdtStyles`: 공용 스타일, 기본 스타일, 목록 스타일, 쪽 모양, 바탕쪽(머리글·바닥글과 왼쪽·첫쪽 변형), 두 파트의 자동 스타일을 위치와 함께 담고 상속을 풀어 준다(`resolve`).
   - 변환 뼈대(`convert.ts`, `flow.ts`, `docx-package.ts`): 양방향 변환의 문맥, 다리 지도, 처리기 등록, 본문 흐름 걷기, 다리 docx 묶기. 아래 "변환 뼈대" 절.
-- 글자 층(`src/text`, 진입점 `src/text/index.ts`): 문단·제목·글자 묶음(`text:span`)·공백·탭·줄 바꿈·쪽 나누기·하이퍼링크·목록·누름틀 책갈피, 공용 스타일과 기본 스타일. 아래 "글자 층" 절.
-- 표 층(`src/table`), 개체 층(`src/objects`), 쪽 층(`src/page`): 아래 각 절.
-- 조립 층(`src/assemble`, 공개 진입점 `src/index.ts`): 등록 순서, 공개 API(`odtToDocx`, `saveOdt`, `docxToOdt`, `odtToText`), 다시 묶기, 메타데이터, 바뀌는 것 목록. 아래 "공개 API"와 "조립" 절.
+- 글자 층(`crates/odt-engine/src/text`, 진입점 `crates/odt-engine/src/text/mod.rs`): 문단·제목·글자 묶음(`text:span`)·공백·탭·줄 바꿈·쪽 나누기·하이퍼링크·목록·누름틀 책갈피, 공용 스타일과 기본 스타일. 아래 "글자 층" 절.
+- 표 층(`crates/odt-engine/src/table`), 개체 층(`crates/odt-engine/src/objects`), 쪽 층(`crates/odt-engine/src/page`): 아래 각 절.
+- 조립 층(`crates/odt-engine/src/assemble`, 공개 진입점 `src/index.ts`): 등록 순서, 공개 API(`odtToDocx`, `saveOdt`, `docxToOdt`, `odtToText`), 다시 묶기, 메타데이터, 바뀌는 것 목록. 아래 "공개 API"와 "조립" 절.
 
 ## 맡지 않는 것 (경계)
 
 - docx의 해석과 저장은 `packages/docx-engine`이 한다. 이 패키지는 그 엔진을 고치지 않고 공개 API만 쓴다.
 - 편집 화면, 저장 창, 꺼 둔 기능의 안내는 `apps/docs`가 한다.
 - 층끼리는 처리기 등록으로만 만난다. 바깥(편집기, 명령줄, MCP)은 `src/index.ts`의 공개 API만 쓴다.
-- AI에 보내기 전 가리기(redaction)는 이 패키지가 하지 않는다.
+- AI에 보내기 전 가리기(redaction)는 이 패키지가 하지 않는다. ODT에는 "AI에게 가림" 표시를 둘 자리가 없어서 `docxToOdt`·`saveOdt`가 표시를 버리고 글만 쓴다. 그 수를 `dropped`/`hidden_from_ai`로 알리므로, 부르는 쪽(저장 창, 명령줄)은 이 항목이 있으면 쓰지 않고 거절한다.
 - 원본(GenOffice)에서 받아오는 문서 엔진과 달리 이 패키지는 이 프로젝트가 만들었다. 고칠 때 사람에게 먼저 묻지 않아도 된다. 다만 아래 규칙과 docx 엔진을 바꾸지 않는다는 규칙은 지킨다.
 
 ## 항상 지켜야 하는 것
@@ -42,7 +48,7 @@ OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, �
 - 한컴의 `draw:equation`은 수식이 아니라 도형(`draw:custom-shape`)의 모양 계산식이다. 노드로 잡지 않는다. 수식 개체는 `draw:object`다.
 - 모든 위치(문단 글자 위치 포함)는 UTF-16 단위다. 파트 문자열의 위치는 원본 ODT의 디코드한 `content.xml`/`styles.xml` 문자열 기준이다.
 
-## 변환 뼈대 (`src/core`)
+## 변환 뼈대 (`crates/odt-engine/src/core`)
 
 ### 전체 흐름
 
@@ -118,7 +124,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 
 블록 단위로 묶어 바뀌지 않았으면 원본 범위를 복사하고(사이 공백까지), 아니면 그 처리기의 `toOdf`에 넘긴다. 아무 블록에도 속하지 않는 새 요소는 `FreeWriter`로 간다.
 
-## 글자 층 (`src/text`)
+## 글자 층 (`crates/odt-engine/src/text`)
 
 - `registerTextConverters(registry)`: 문단·제목·목록 블록(`textBlockConverter`, id `text`)과 새 문단 쓰기(`textFreeWriter`).
 - `convertOdtStyles(ctx)`: 공용 문단 스타일 → docx 문단 스타일(표시 이름 그대로, `basedOn`은 부모 사슬). `Standard`가 있으면 `Normal`과 대응. 기본 스타일 → `w:docDefaults`. ODF는 부모의 탭 목록을 대체하고 OOXML은 합치므로, 탭은 docx 스타일에 넣지 않고 문단에 실제 탭 목록을 직접 넣는다. `style:default-outline-level`(한컴 "개요 n")은 docx 제목으로 바꾸지 않는다(한컴은 `text:h`를 쓰지 않는다). 편집기의 제목·하이퍼링크 명령을 위해 없으면 `Heading1…6`, `Hyperlink`를 더한다.
@@ -144,7 +150,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 - 문단 모양 중 다리가 옮기지 않는 것(테두리, 세로 정렬 등)은 원래 스타일의 복사본에 그대로 남지만 편집기에서 바꿀 수 없다.
 - 지운 글자 속성을 문단 스타일 사슬의 값으로 되돌릴 때, 그 값을 문단 자동 스타일이나 바깥 span이 따로 정하고 있으면 그 값이 남을 수 있다(docx는 그 값을 run에 직접 썼기 때문). 한컴 문서는 span 자동 스타일이 모든 글자 속성을 지녀 해당이 드물다.
 
-## 표 층 (`src/table`)
+## 표 층 (`crates/odt-engine/src/table`)
 
 - `registerTableConverters(registry)`: 글자 층 다음에 등록한다(조립 순서: 글자 → 표 → 개체 → 쪽). 블록 처리기 id는 `table`, 새 표를 쓰는 `FreeWriter`도 같은 id다.
 - 맡는 것: 본문의 `table:table`, 한컴이 글상자에 넣은 표를 담은 문단(`text:p > draw:frame > draw:text-box > table:table`, 글상자 안에 표 하나만 있는 틀), 셀 안의 표(맨 표와 글상자 표 모두, 몇 겹이든).
@@ -216,9 +222,9 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 - `tests/helpers/table-editor.ts`: 편집기의 두 저장 방식(`patchCells` = `patchTableCellTexts`, `regenerate` = `generateTableModelXml`)과 등록 순서(`tableRegistry`). `table-fixtures.ts`: 한컴 모양의 표 문서.
 - `tests/table-corpus.test.ts`(`ODT_CORPUS`): 모든 표 변환, 편집 없는 저장이 원본과 같음, 첫 표를 편집기가 그대로 다시 만들어도 쓰는 것이 없음, 첫 표의 칸 하나를 고치면 그 칸만 바뀜.
 
-## 개체 층 (`src/objects`)
+## 개체 층 (`crates/odt-engine/src/objects`)
 
-그림, 이음오피스가 고칠 수 없는 개체(수식, 도형, 글상자 속 글, 차례, 차트, 변경 기록), 각주·미주, 기존 메모를 맡는다. 진입점은 `src/objects/index.ts`.
+그림, 이음오피스가 고칠 수 없는 개체(수식, 도형, 글상자 속 글, 차례, 차트, 변경 기록), 각주·미주, 기존 메모를 맡는다. 진입점은 `crates/odt-engine/src/objects/mod.rs`.
 
 - `registerObjectConverters(registry)`: 글자 층(그리고 표 층) 다음에 등록한다. 인라인 처리기(`draw:frame`과 도형·묶음 등 `DRAW_OBJECT_NAMES`, `text:note`, `office:annotation`, `office:annotation-end`, 변경 기록 표시), run 쓰기(그림·각주 번호), 끼우기(메모 시작·끝, 엔진이 읽지 못한 그림), 블록 처리기(`objects`: 차례·색인, 흐름에 바로 놓인 글상자·도형, 변경 기록 범위가 든 문단), 새 요소 쓰기(그림만 든 문단)를 한 번에 등록한다. 나중에 등록한 것이 먼저이므로 남의 몫은 `null`로 사양한다: 표를 담은 글상자(`draw:text-box > table:table`)는 표 층에 남긴다.
 
@@ -284,7 +290,7 @@ const changes = objectPackageChanges(rctx, { contentXml, stylesXml }) // 패치 
 - 새 각주 앞뒤의 기존 각주 인용 글자(`2)`)는 다시 매기지 않는다(한컴·LibreOffice가 열 때 다시 매긴다).
 - 그림 문단의 정렬을 그림 도구로 바꾸면 그 문단은 글자 층으로 다시 쓰인다.
 
-## 쪽 층 (`src/page`)
+## 쪽 층 (`crates/odt-engine/src/page`)
 
 쪽 모양(`style:page-layout`), 바탕쪽(`style:master-page`, 머리글·바닥글과 첫쪽·왼쪽 변형), 구역을 docx의 구역과 머리글·바닥글 파트로 옮기고, 편집 결과를 `styles.xml`의 쪽 모양·바탕쪽과 구역을 시작하는 문단의 스타일에 되돌려 쓴다.
 
@@ -383,7 +389,7 @@ const patches = rctx.finish()
 
 ```ts
 odtToDocx(odtBytes: Uint8Array): Promise<{ docxBytes: Uint8Array; bridge: BridgeMap; report: ConversionReport }>
-saveOdt(input: { originalOdt: Uint8Array; bridge: BridgeMap; editedDocx: Uint8Array }): Promise<Uint8Array>
+saveOdt(input: { originalOdt: Uint8Array; bridge: BridgeMap; editedDocx: Uint8Array }): Promise<{ odtBytes: Uint8Array; report: ConversionReport }>
 docxToOdt(docxBytes: Uint8Array, options?: { renderedObjects?: Record<string, RenderedObject> | ReadonlyMap<string, RenderedObject> }): Promise<{ odtBytes: Uint8Array; report: ConversionReport }>
 odtToText(odtBytes: Uint8Array): Promise<string>
 
@@ -392,14 +398,14 @@ type ConversionReport = ReportItem[]
 interface ReportItem { kind: 'converted' | 'dropped'; feature: ReportFeature; count: number }
 type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'columns' | 'citation' | 'cross_reference'
   | 'page_color' | 'mirror_margins' | 'theme' | 'comment' | 'revision' | 'ink' | 'watermark' | 'password'
-  | 'protection' | 'form_field' | 'object'
+  | 'protection' | 'form_field' | 'object' | 'hidden_from_ai'
 ```
 
 - 여는 오류는 `OdtOpenError`(`code`: `encrypted` | `not-odt-text` | `zip-rejected` | `corrupt`)와 그 하위 `OdtEncryptedError`, `OdtNotTextError`다. `isOdtOpenError(err, 'encrypted')`로 가려 "암호를 푼 뒤 열어 달라"고 안내한다. `odtToDocx`, `saveOdt`(원본을 다시 연다), `odtToText`가 같은 오류를 던진다. `docxToOdt`는 docx가 아니면 docx 엔진의 오류를 그대로 던진다.
 - `bridge`는 JSON이다(IPC로 오간다). `saveOdt`는 받은 지도를 바꾸지 않는다.
 - 그 밖의 공개: `ODT_MIMETYPE`, `REPORT_FEATURES`, 잠긴 칸 읽기(`protectedCellsOf`, `isProtectedCell`), 자리 표시 읽기(`parseKeepName`, `OBJECT_KINDS`, `ObjectsExt`).
 
-## 조립 (`src/assemble`)
+## 조립 (`crates/odt-engine/src/assemble`)
 
 ### 등록 순서 (`registry.ts`)
 
@@ -450,6 +456,7 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 - ODT → docx(`odtToDocx`): 잠긴 개체 자리 표시를 종류별로(`toc`, `chart`, `equation`, `shape`, `textbox`, 그 밖은 `object`) `converted`, 변경 기록 범위(`text:changed-region` 수와 잠긴 범위 중 큰 쪽) `revision` `converted`, 누름틀(시작·점 책갈피 수) `form_field` `converted`, 잠긴 칸과 보호된 구역 `protection` `dropped`.
 - docx → ODT(`docxToOdt`): 차례 수(`toc`), 개체 종류별(`chart`/`equation`/`shape`/`textbox`), 너비가 다른 단(`columns`), 인용·참고 문헌 필드(`citation`), 상호 참조·캡션 필드(`cross_reference`, 차례의 `PAGEREF _Toc`는 빼고), 테마가 답하지 못하는 테마 참조(`theme`)는 `converted`. 거울 여백은 `style:page-usage="mirrored"`로 그대로 남으므로 보고하지 않는다(`mirror_margins`는 목록에만 남는다).
 - 테마(`export/theme.ts`): 엔진이 읽으면서 테마 글꼴(`w:asciiTheme` 등, 비어 있는 동아시아·복합 문자 칸 포함)과 테마 색(`w:themeColor`/`w:themeFill`, 밝기·어둡기 포함)을 실제 값으로 풀고, 편집기와 ODT가 같은 값을 쓴다. 보이는 것이 같고 테마와의 연결만 없어지므로 보고하지 않는다. 테마 부분이 있다는 것만으로도 보고하지 않는다. 내보내는 내용(본문, 머리글·바닥글, 그것들이 쓰는 스타일과 그 부모, 문서 기본값)의 테마 참조 가운데 테마가 답하지 못하는 것만 하나씩 센다: 테마 부분이 없거나 읽히지 않는데 글꼴 테마를 가리킴, 가리킨 라틴 글꼴 칸이 비어 있음, 테마에 없는 색 칸을 가리킴(`dk1`/`lt1`은 엔진의 기본값이 있어 빼고). 이때 엔진과 ODT는 Word가 곁에 저장해 둔 값(`w:val`, 글꼴 이름)을 쓰는데, Word라면 테마의 값으로 바꿔 보였을 것이다. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
+- "AI에게 가림" 표시(`hidden_from_ai`, `dropped`): `docxToOdt`는 받은 docx, `saveOdt`는 편집된 docx에서 모든 XML 부분의 표시를 센다. 표시는 docx 엔진이 읽는 대로 앞붙이 없이도 어떤 앞붙이로도 `redact` 요소다(`<(?:[\w.-]+:)?redact\b`, 주석 안의 것도 센다). ODT는 표시를 하나도 지니지 못하므로 숨긴 글이 ODT를 여는 모든 것(AI 첨부, 명령줄 `docs read`, MCP)에 그대로 보인다. `saveOdt`의 목록은 이 항목만 담는다.
 - 개수가 0인 항목은 넣지 않는다. 순서는 `REPORT_FEATURES` 순서다.
 
 ### 알려진 한계
@@ -470,14 +477,13 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
   - `build-odt.ts`: `buildOdt(options)`/`buildOdtPackage(options)`. 기본값이 한컴과 같다(항목 이름순이라 `mimetype`이 맨 앞이 아니고 압축됨, `office:version` 없음, 문단마다 자동 스타일과 탭 목록, 머리글·바닥글이 있는 바탕쪽 둘). `body`, `extraContentAutomaticStyles`, `extraCommonStyles`, `masterStyles`, `pictures`, `extraEntries`, `overrideParts`, `encrypted`, `mimetype`, `generator`로 무엇이든 바꿔 넣는다.
   - `hancom-fragments.ts`: 한컴 모양의 조각(`hPara`, `hTable`, `hCell`, `hFramedTable`, `hFieldBookmark`, `hFootnote`, `hAnnotation`, `hImageFrame`, `hFormulaObject`, `hCustomShape` 등). 조각은 쓴 문자열을 그대로 돌려주므로 테스트가 "범위로 자른 원문 = 조각"을 바로 비교할 수 있다.
   - `hancom-sample.ts`: 위 특징을 모두 담은 문서 하나(글상자 안의 표, 본문 표, 셀 안의 표, 병합·가려진 셀, 잠긴 셀, 누름틀 책갈피, 그림, 각주, 메모, 수식 개체, 도형, 목록, 구역, 차례, 같은 바탕쪽을 쓰는 여러 구역).
-  - `bridge.ts`: `odtToBridge`(열기, 지도는 JSON 왕복), `editorSave`(편집기처럼 `rawPPr`을 다시 쓰거나 합쳐 `saveDocx`로 저장; `keep`/`edit`/`insert`/`xml`), `editOnly`, `replaceText`, `writeBack`(편집된 docx를 원본 ODT 문자열에 되돌려 씀). 다른 층의 왕복 시험도 이것을 쓴다.
+  - `bridge.ts`: `odtToBridge`(열기, 지도는 JSON 왕복), `editorSave`(편집기처럼 `rawPPr`을 다시 쓰거나 합쳐 `saveDocx`로 저장; `keep`/`edit`/`insert`/`xml`), `editOnly`, `replaceText`, `writeBack`(편집된 docx를 `saveOdt`로 원본 ODT에 되돌려 쓰고, 고친 파트와 새 자동 스타일을 원본과 비교해 돌려줌). 시험은 모두 공개 API만 쓴다(`src/index.ts`, docx 엔진의 공개 API, JSZip).
   - `text-fixtures.ts`: 글자 층 시험 문서(누름틀, 제목, 링크, 목록, 쪽 나누기, 공백, 필드·각주, 지우기용 강한 글자 모양).
-- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @seuoffice/odt-engine`. 변수가 없으면 `tests/core-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면(`rawPPr` 지름길 없이 모든 속성을 비교해도) 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.
+- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @seuoffice/odt-engine`. 변수가 없으면 `tests/open-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면(`rawPPr` 지름길 없이 모든 속성을 비교해도) 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.
 - 조립 층 시험:
   - `tests/assemble-api.test.ts`: 공개 API로 편집 없는 저장 = 원본 바이트, 문단·칸·그림·머리글 하나씩 고치면 그 파트의 그 요소만 바뀜(다른 항목의 푼 바이트 같음, `mimetype` 맨 앞·무압축, 원래 순서), meta.xml은 개인 정보 제거 때만, 암호 ODT는 `OdtEncryptedError`, ODT→docx 보고, `odtToText`(글상자 표, 셀 안 표, 각주).
   - `tests/assemble-integration.test.ts`: 층 사이 고침(구역 안 표의 `identify`, 칸 안 각주, as-char 그림 뒤 공백, 칸 안 그림, 글상자 표로 끝나는 쪽 흐름).
   - `tests/assemble-export.test.ts`: `docxToOdt` 패키지 표준, 다시 읽은 내용(문단·글자·표 격자·그림·각주·쪽·머리글·기본 글꼴/크기/줄 간격)이 원본 docx와 같음, 제목·목록·링크·글자 모양, 구역별 바탕쪽(모양이 같아도 따로), 머리글 위치 계산, 이어지는 구역의 단(`text:section`)과 쪽 전체 단, 한컴이 다르게 읽는 것(제목을 `text:p`로, 문단 속 쪽 나누기, 표 행 높이 바닥, 공용 스타일의 모양 전체), 다리 docx 이름의 그림, 대체 그림·이름표·편집기 그림, 보고(테마는 테마가 답하지 못하는 참조만, 거울 여백은 보고하지 않음).
   - 도우미: `tests/helpers/api.ts`(공개 API 왕복, 패키지 비교), `build-docx.ts`/`docx-fixtures.ts`(합성 docx, 모든 기능을 담은 `kitchenSink`), `docx-signature.ts`(docx를 비교할 수 있는 값으로).
-- 층 사이 시험: `ODT_FULL_REGISTRY=1 npm run test -w @seuoffice/odt-engine`이면 모든 층의 시험이 조립 등록 순서와 조립 저장 순서(`tests/helpers/full.ts`)로 돈다. 일부러 일부 층만 등록해야 뜻이 있는 시험 4개는 이때 건너뛴다.
 - `ODT_CORPUS`가 있으면 `tests/assemble-corpus.test.ts`가 공개 API로 66개를 모두 열고, 편집 없는 저장이 원본 바이트와 같은지, 문단 하나·칸 하나·여백 하나 편집이 그 파트의 그 요소(새 자동 스타일 빼고)만 바꾸는지 보고, 가장 큰 파일의 열기·저장 시간을 찍는다. `tests/assemble-export-corpus.test.ts`는 `<ODT_CORPUS>/docx`의 docx를 `docxToOdt`로 바꿔 `<ODT_CORPUS>/out-docx2odt`(저장소 밖)에 쓰고, 다시 읽어 내용이 같은지 본다. 받은 ODT 66개를 연 다리 docx도 `docxToOdt`로 새 ODT를 만들어 같은지 본다(편집기에서 연 ODT를 다른 이름으로 ODT 저장하는 경우). 말뭉치 점검은 `out-`으로 시작하는 폴더를 건너뛴다.
 - 말뭉치 결과(2026-10-15): 66/66 열림, 편집 없는 저장 66/66 바이트 같음, 문단 편집 54개·칸 편집 57개·여백 편집 65개 파일 모두 해당 요소만 바뀜(나머지는 고를 요소가 없음). docx 27개와 받은 ODT 66개의 다리 docx 모두 새 ODT로 바꿔 다시 읽은 내용 같음. ODF 검사기(odfvalidator 0.13, ODF 1.3): docx→ODT 결과 93개 모두 오류 0(목록 시작 값 0을 쓰던 것을 고친 뒤). 받은 ODT 13개를 고쳐 저장하면 오류가 원본보다 늘지 않음(다시 묶기로 패키지 오류가 2개에서 3개 줄어듦). 시간: 가장 큰 파일(6.7MB) 열기 약 0.4초에서 1초, 편집 없는 저장 약 0.5초, content.xml이 가장 큰 파일(12.5MB) 열기 약 1.4초에서 2초, 편집 없는 저장 약 3초.

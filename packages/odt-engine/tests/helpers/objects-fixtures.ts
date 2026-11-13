@@ -1,9 +1,8 @@
 /**
  * Test plumbing for the objects layer (pictures, uneditable objects, notes,
- * comments): the registry in the assembling order (text, then objects), an
+ * comments): a Hancom-like fixture opened through the public API and an
  * editor-like save that takes raw `SaveBlock`s (picture replacement, new
- * pictures, note and comment lists), and a write-back that runs the objects
- * layer's pre- and post-steps and applies the package changes to the manifest.
+ * pictures, note and comment lists).
  */
 import {
   type Block,
@@ -13,25 +12,14 @@ import {
   parseDocx,
   saveDocx,
 } from '@seuoffice/docx-engine'
-import {
-  ConversionRegistry,
-  OoxmlToOdfContext,
-  applyTextPatches,
-  readDocxPart,
-  rebuildOdtBody,
-} from '../../src/core'
-import {
-  type ObjectsExt,
-  type OdtPackageChanges,
-  objectPackageChanges,
-  patchManifestXml,
-  prepareObjectWriteBack,
-  registerObjectConverters,
-} from '../../src/objects'
-import { registerTextConverters, updateOdtStyles } from '../../src/text'
+import type { ObjectsExt } from '../../src'
 import { type Bridge, odtToBridge } from './bridge'
 import { type BuildOdtOptions, type BuiltOdt, buildOdtPackage } from './build-odt'
-import { FULL_REGISTRY, fullWriteBack, registryOr } from './full'
+
+/** `wp:docPr` name prefix of an editable ODF picture in the bridge docx (`odt-pic:<id>`). */
+export const ODT_PICTURE_PREFIX = 'odt-pic:'
+/** `wp:docPr` name prefix of a locked placeholder in the bridge docx (`odt-keep:<id>:<kind>`). */
+export const ODT_KEEP_PREFIX = 'odt-keep:'
 
 /** A second valid PNG (1x1 light grey), different bytes from `PNG_1X1`. */
 export const PNG_GREY = new Uint8Array([
@@ -42,23 +30,16 @@ export const PNG_GREY = new Uint8Array([
   0x44, 0xae, 0x42, 0x60, 0x82,
 ])
 
-/** Text then objects, as the assembling task registers them (tables are not on this branch). */
-export function objectsRegistry(): ConversionRegistry {
-  return registryOr(() =>
-    registerObjectConverters(registerTextConverters(new ConversionRegistry())),
-  )
-}
-
 export interface ObjectsFixture {
   built: BuiltOdt
   bridge: Bridge
   ext: ObjectsExt
 }
 
-/** Builds a Hancom-like ODT and opens it through text + objects. */
+/** Builds a Hancom-like ODT and opens it with the public API. */
 export async function objectsBridge(opts: BuildOdtOptions): Promise<ObjectsFixture> {
   const built = await buildOdtPackage(opts)
-  const bridge = await odtToBridge(built.bytes, objectsRegistry())
+  const bridge = await odtToBridge(built.bytes)
   const ext = (bridge.map.ext.objects ?? {
     version: 1,
     placeholders: [],
@@ -104,57 +85,6 @@ export function keepAllBut(
     }
   })
   return out
-}
-
-export interface ObjectsWriteBack {
-  content: string
-  styles: string
-  manifest: string
-  changes: OdtPackageChanges
-  rctx: OoxmlToOdfContext
-}
-
-/** Writes an edited docx back with the objects layer's pre- and post-steps. */
-export async function writeBackObjects(
-  fixture: ObjectsFixture,
-  edited: Uint8Array,
-): Promise<ObjectsWriteBack> {
-  const { bridge, built } = fixture
-  const parsed = await parseDocx(edited)
-  const editedStylesXml = await readDocxPart(edited, 'word/styles.xml')
-  if (FULL_REGISTRY) {
-    const full = await fullWriteBack(
-      bridge.doc,
-      bridge.map,
-      parsed,
-      bridge.registry,
-      editedStylesXml,
-    )
-    const changes = objectPackageChanges(full.rctx, {
-      contentXml: full.content,
-      stylesXml: full.styles,
-    })
-    return { ...full, manifest: patchManifestXml(built.manifestXml, changes), changes }
-  }
-  // the map crosses IPC: write back from a JSON copy, as the app does
-  const map = JSON.parse(JSON.stringify(bridge.map)) as typeof bridge.map
-  const rctx = new OoxmlToOdfContext(bridge.doc, map, parsed, bridge.registry, {
-    editedStylesXml,
-  })
-  prepareObjectWriteBack(rctx)
-  rebuildOdtBody(rctx)
-  updateOdtStyles(rctx)
-  const patches = rctx.finish()
-  const content = applyTextPatches(bridge.doc.contentXml, patches['content.xml'])
-  const styles = applyTextPatches(bridge.doc.stylesXml ?? '', patches['styles.xml'])
-  const changes = objectPackageChanges(rctx, { contentXml: content, stylesXml: styles })
-  return {
-    content,
-    styles,
-    manifest: patchManifestXml(built.manifestXml, changes),
-    changes,
-    rctx,
-  }
 }
 
 /** Base64 of bytes (tests only). */

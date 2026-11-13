@@ -33,6 +33,7 @@ mod file_parse;
 mod file_parse_hwp;
 mod file_parse_legacy;
 mod invoke;
+mod odt;
 mod package;
 mod props;
 mod saxes_calls;
@@ -130,6 +131,22 @@ enum Command {
         options: Option<serde_json::Value>,
         now_ms: f64,
     },
+    /// The odt engine (`crates/odt-engine/C3-PLAN.md`, "The wire"). Blob 0:
+    /// an ODT; `now` dates the bridge docx's entries. Reply `{ report }`;
+    /// blob 0 the bridge docx, blob 1 the bridge JSON.
+    OdtToDocx { now: odt::WireNow },
+    /// Blobs: the received ODT, its bridge JSON, the edited docx. Reply
+    /// `{ unchanged }`; blob 0 the saved ODT unless unchanged.
+    SaveOdt { now: odt::WireNow },
+    /// Blob 0: a docx; `rendered` names, per object key, the blob of its PNG.
+    /// Reply `{ report }`; blob 0 the new ODT.
+    DocxToOdt {
+        #[serde(default)]
+        rendered: Vec<(String, odt::WireRendered)>,
+        now: odt::WireNow,
+    },
+    /// Blob 0: an ODT. Reply `{ text }`.
+    OdtToText,
 }
 
 /// `ParseOptions` of parse.ts on the wire.
@@ -341,6 +358,10 @@ fn encode_frame(header: &[u8], mut blobs: Vec<Vec<u8>>) -> Vec<u8> {
 
 fn json(reply: &Reply<'_>) -> Vec<u8> {
     serde_json::to_vec(reply).unwrap_or_else(|_| b"{}".to_vec())
+}
+
+fn odt_reply(reply: serde_json::Value) -> Vec<u8> {
+    serde_json::to_vec(&reply).unwrap_or_else(|_| b"{}".to_vec())
 }
 
 fn scan(xml: &[u8]) -> Vec<u8> {
@@ -602,11 +623,13 @@ fn invoke_command(
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
     // the product's calls: a model value read as the TypeScript reads it (wire.rs)
+    // `fileParse.<name>`, `pptx.<name>` and `odt.<name>`: the other engines' exports besides their commands
     let result = jscompat::reading_leniently(|| match function.split_once('.') {
         Some(("fileParse", name)) => args
             .resolved()
             .and_then(|values| invoke::file_parse::invoke(&mut env, name, &values)),
         Some(("pptx", name)) => invoke::pptx_table::invoke(&mut env, name, args),
+        Some(("odt", name)) => odt::invoke(name, &args.resolved()?),
         _ => invoke::table::invoke(&mut env, function, args),
     });
     let warnings = docx_engine::warnings::take();
@@ -820,6 +843,19 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::PptxPackage,
                     None,
                 ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),
+                (Command::OdtToDocx { now }, _) => {
+                    odt_reply(odt::odt_to_docx(&frame.blobs, now, &mut reply_blobs))
+                }
+                (Command::SaveOdt { now }, _) => {
+                    odt_reply(odt::save_odt(&frame.blobs, now, &mut reply_blobs))
+                }
+                (Command::DocxToOdt { rendered, now }, _) => odt_reply(odt::docx_to_odt(
+                    &frame.blobs,
+                    rendered,
+                    now,
+                    &mut reply_blobs,
+                )),
+                (Command::OdtToText, _) => odt_reply(odt::odt_to_text(&frame.blobs)),
             },
         },
     };

@@ -128,7 +128,7 @@ const save: SaveBlock[] = blocks.map((x, i) =>
     : { kind: 'original', docxIndex: x.docxIndex as number },
 )
 const editedDocx = await saveDocx(parsed, save)
-const saved = await saveOdt({ originalOdt, bridge, editedDocx })
+const { odtBytes: saved } = await saveOdt({ originalOdt, bridge, editedDocx })
 writeFileSync(output, saved)
 // saveOdt hands back the received bytes themselves when it wrote nothing
 const changed = saved !== originalOdt
