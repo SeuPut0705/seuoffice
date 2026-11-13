@@ -68,7 +68,8 @@ impl AiChatResponse {
     }
 
     /// `{ ok: false, error }`
-    pub fn failed(error: String) -> AiChatResponse {
+    pub fn failed(error: impl Into<String>) -> AiChatResponse {
+        let error: String = error.into();
         AiChatResponse {
             ok: false,
             content: None,

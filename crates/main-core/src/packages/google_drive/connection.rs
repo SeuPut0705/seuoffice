@@ -12,7 +12,7 @@
 use std::cell::RefCell;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::task::{Context, Poll, Waker};
+use std::task::{Context, Waker};
 
 use jscompat::JsonValue;
 

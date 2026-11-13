@@ -23,8 +23,10 @@ use crate::packages::ai_provider::codex_app_server::{
 use crate::packages::ai_provider::jsval::Obj;
 use crate::packages::ai_provider::protocols_shared::StreamCallbacks;
 use crate::packages::ai_provider::subscription_locate::{
-    SubscriptionLocateOptions, SubscriptionProgram,
+    SubscriptionLocateOptions, SubscriptionLocateState, SubscriptionProgram,
 };
+use crate::packages::ai_provider::subscription_process::SharedChildRegistry;
+use crate::packages::ai_provider::subscription_temp_dirs::SubscriptionTempState;
 use crate::packages::ai_provider::task::{JsError, LocalBoxFuture, Rt, Signal};
 
 const ENTRY: &str = "/opt/codex/bin/codex";
@@ -467,7 +469,12 @@ fn scenario(args: &[Value], cx: &mut Context) -> Answer {
     let world = arg(args, 0).cloned();
     let o = arg(args, 1).cloned().unwrap_or(Value::Null);
     drive(world.as_ref(), cx, move |rt, signal, sink| async move {
-        let app: CodexApp = Rc::new(RefCell::new(CodexAppServerState::default()));
+        let shared = SharedChildRegistry::new(rt.now());
+        let temp_dirs = Rc::new(RefCell::new(SubscriptionTempState::default()));
+        let locate = Rc::new(RefCell::new(SubscriptionLocateState::new(shared.clone())));
+        let app: CodexApp = Rc::new(RefCell::new(CodexAppServerState::new(
+            shared, locate, temp_dirs,
+        )));
         let resolve_error = o
             .get("resolveError")
             .and_then(Value::as_str)

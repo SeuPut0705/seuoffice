@@ -542,10 +542,12 @@ pub struct HostInfo {
     pub uuid: Box<dyn FnMut() -> String>,
     /// `crypto.randomBytes(n)`
     pub random: Box<dyn FnMut(usize) -> Vec<u8>>,
-    /// `process.kill(pid, signal)`, a system call the shell makes at once on
-    /// the core thread: a negative pid is a process group, `None` is
-    /// `SIGTERM`; the `Err` is what Node throws (`ESRCH`, `EPERM`), which
-    /// callers act on (a child that leads no group is signalled alone)
+    /// `process.kill(pid, signal)`: the one synchronous host call that does
+    /// I/O. The shell runs it inline on the core thread, so it must not
+    /// block (`kill(2)` does not). A negative pid is a process group, `None`
+    /// is `SIGTERM`; the `Err` is what Node throws (`ESRCH`, `EPERM`), which
+    /// callers act on at once, as the TypeScript does (a child that leads no
+    /// group is then signalled alone)
     pub kill: Box<dyn FnMut(f64, Option<&str>) -> Result<(), JsError>>,
 }
 

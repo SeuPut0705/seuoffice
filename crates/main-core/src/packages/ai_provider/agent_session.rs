@@ -10,12 +10,11 @@ pub use super::agent_session_program_problem::*;
 pub use super::agent_session_skills::*;
 pub use super::agent_session_types::*;
 
+// what claude.ts exports of the Claude agent session itself (the launch, the
+// settings, the session) is not in agent_session_claude.rs yet: the MCP
+// session owns that port
 pub use super::agent_session_claude::{
-    AGENT_APP_MCP_TOOLS, APP_MCP_SERVER_NAME, CLAUDE_AGENT_TOOLS, ClaudeAgentDeps,
-    ClaudeAgentLaunch, agent_relay_tool_of, agent_usable_relays, claude_agent_action,
-    claude_agent_init_problem, claude_agent_launch_args, claude_agent_mcp_config,
-    claude_agent_permission_mode, claude_agent_settings, claude_rule_path, is_agent_app_mcp_tool,
-    start_claude_agent_session,
+    AGENT_APP_MCP_TOOLS, APP_MCP_SERVER_NAME, agent_usable_relays, is_agent_app_mcp_tool,
 };
 pub use super::agent_session_codex::{
     CODEX_AGENT_PROFILE, CodexAgentDeps, CodexAgentSessionOptions, agent_sandbox_unavailable_error,

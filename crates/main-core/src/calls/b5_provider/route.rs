@@ -48,7 +48,11 @@ fn providers(rt: &Rt) -> Providers {
         openai: Rc::default(),
         gateway: Rc::default(),
         caps: Rc::default(),
-        codex: Rc::new(RefCell::new(CodexAppServerState::default())),
+        codex: Rc::new(RefCell::new(CodexAppServerState::new(
+            shared.clone(),
+            locate.clone(),
+            temp_dirs.clone(),
+        ))),
         claude: ClaudeCodeCliDeps::new(shared, temp_dirs, locate),
         chatgpt: ChatGptBridgeDeps {
             fx,

@@ -368,8 +368,11 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 } else {
                     rt.race(futures).await.1.map(Value::String)
                 }
-            })?;
-            outcome.map(Some).map_err(thrown)
+            });
+            match outcome {
+                Ok(outcome) => outcome.map(Some).map_err(thrown),
+                Err(e) => Err(e),
+            }
         }
         _ => return None,
     })

@@ -50,15 +50,17 @@ use super::protocols_shared::{
 use super::run_error::ai_run_error;
 use super::subscription_contract::subscription_models_of;
 use super::subscription_locate::{
-    SubscriptionLocateOptions, SubscriptionProgram, resolve_subscription_program,
+    LocateState, SubscriptionLocateOptions, SubscriptionLocateState, SubscriptionProgram,
+    resolve_subscription_program,
 };
 use super::subscription_process::{
-    KillHost, KillTreeOptions, KillerSpawn, Signal as KillSignal, SubscriptionSpawnOptions,
-    kill_process_tree, on_kill_timeout, on_killer_error, spawn_subscription_program,
+    KillHost, KillTreeOptions, KillerSpawn, SharedChildRegistry, Signal as KillSignal,
+    SubscriptionSpawnOptions, kill_process_tree, on_kill_timeout, on_killer_error,
+    spawn_subscription_program,
 };
-use super::subscription_status::codex_account_info;
+use super::subscription_status::{SubscriptionLogin, codex_account_info};
 use super::subscription_temp_dirs::{
-    SubscriptionTempDirsState, TempDirOptions, create_tracked_temp_dir, remove_tracked_temp_dir,
+    SubscriptionTempState, TempDirOptions, create_tracked_temp_dir, remove_tracked_temp_dir,
 };
 use super::task::{
     Child, ChildEvent, Id, JsError, LocalBoxFuture, Rt, Settle, SpawnRequest, Stdio, StringDecoder,
@@ -538,8 +540,11 @@ fn real_kill_tree(rt: &Rt, child: &Child) {
 // ---------------------------------------------------------------------------
 
 /// The variables of `codex-app-server.ts`, which the caller owns.
-#[derive(Default)]
 pub struct CodexAppServerState {
+    /// the registry the app-server children are registered in (`process.ts`'s shared one)
+    pub shared: SharedChildRegistry,
+    /// the state of `locate.ts`, which finds the program
+    pub locate: LocateState,
     /// `runtime`
     pub runtime: CodexAppServerRuntime,
     /// the pool, by the entry of the program (lower case on Windows)
@@ -552,9 +557,41 @@ pub struct CodexAppServerState {
     /// (`signed-out` when it found none); `None` until a status check ran
     pub status_login_kind: Option<String>,
     /// the state of `subscription/temp-dirs.ts`, which the session folders go through
-    pub temp_dirs: Rc<RefCell<SubscriptionTempDirsState>>,
+    pub temp_dirs: Rc<RefCell<SubscriptionTempState>>,
     /// the next token that names a cached reading
     next_token: u64,
+}
+
+impl CodexAppServerState {
+    /// A state over the registries the caller owns.
+    pub fn new(
+        shared: SharedChildRegistry,
+        locate: LocateState,
+        temp_dirs: Rc<RefCell<SubscriptionTempState>>,
+    ) -> CodexAppServerState {
+        CodexAppServerState {
+            shared,
+            locate,
+            runtime: CodexAppServerRuntime::default(),
+            clients: JsMap::new(),
+            codex_off: false,
+            status_login_kind: None,
+            temp_dirs,
+            next_token: 0,
+        }
+    }
+}
+
+impl Default for CodexAppServerState {
+    fn default() -> Self {
+        let shared = SharedChildRegistry::new(0.0);
+        let locate = Rc::new(RefCell::new(SubscriptionLocateState::new(shared.clone())));
+        CodexAppServerState::new(
+            shared,
+            locate,
+            Rc::new(RefCell::new(SubscriptionTempState::default())),
+        )
+    }
 }
 
 /// What every call of this module takes.
@@ -743,8 +780,10 @@ impl CodexAppServerClient {
     /// on, and [`CodexAppServerClient::ready`] waits for the process.
     async fn launch(&self, program: &SubscriptionProgram) -> Result<(), JsError> {
         let rt = &self.0.rt;
+        let shared = self.0.app.borrow().shared.clone();
         let child = spawn_subscription_program(
             rt,
+            &shared,
             program,
             &codex_app_server_launch_args(),
             &SubscriptionSpawnOptions {
@@ -1357,7 +1396,10 @@ async fn client_for(
     let resolve = app.borrow().runtime.resolve.clone();
     let program = match resolve {
         Some(resolve) => resolve(rt, "codex", &options).await?,
-        None => resolve_subscription_program(rt, "codex", &options).await?,
+        None => {
+            let locate = app.borrow().locate.clone();
+            resolve_subscription_program(rt, &locate, "codex", &options).await?
+        }
     };
     let key = if rt.platform() == "win32" {
         program.entry.to_lowercase()
@@ -2484,18 +2526,23 @@ async fn assert_runnable_account(client: &CodexAppServerClient) -> Result<(), Js
     let account = client
         .request("account/read", Some(&refresh_token_false()))
         .await?;
-    let Some(login) = codex_account_info(Some(&account)) else {
+    let Some(login) = codex_account_info(&account) else {
         return Ok(());
     };
-    if !login.signed_in {
+    let SubscriptionLogin::SignedIn {
+        login_method,
+        login_kind,
+        ..
+    } = login
+    else {
         return Err(signed_out_error());
-    }
-    if login.login_method.as_deref() == Some("subscription") {
+    };
+    if login_method == "subscription" {
         return Ok(());
     }
     let status_kind = client.app().borrow().status_login_kind.clone();
     if let Some(status_kind) = status_kind
-        && login.login_kind.as_deref() != Some(status_kind.as_str())
+        && login_kind != status_kind
     {
         return Err(ai_run_error(
             "metered-not-accepted",
@@ -2944,12 +2991,11 @@ pub async fn read_codex_account(
                 let account = client
                     .request("account/read", Some(&refresh_token_false()))
                     .await?;
-                if let Some(login) = codex_account_info(Some(&account)) {
-                    kind_app.borrow_mut().status_login_kind = if login.signed_in {
-                        login.login_kind
-                    } else {
-                        Some("signed-out".to_owned())
-                    };
+                if let Some(login) = codex_account_info(&account) {
+                    kind_app.borrow_mut().status_login_kind = Some(match login {
+                        SubscriptionLogin::SignedIn { login_kind, .. } => login_kind,
+                        SubscriptionLogin::SignedOut => "signed-out".to_owned(),
+                    });
                 }
                 Ok(account)
             },
