@@ -146,6 +146,10 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     let log = hosts.get::<probe::Log>().cloned();
     let net: NetHost = runtime::testing::FakeNet::new(&case["net"], log.clone());
     hosts.insert(net);
+    // `hosts.a.now`: the runtime's `Date.now()`, pinned (the group pins its own the same)
+    if let Some(now) = case["now"].as_f64() {
+        hosts.insert(runtime::RuntimeClock(std::sync::Arc::new(move || now)));
+    }
     hosts.insert(shell_ai_prefs::factory());
     hosts.insert(outbound::factory());
     hosts.insert::<outbound::OutboundShellHost>(std::sync::Arc::new(

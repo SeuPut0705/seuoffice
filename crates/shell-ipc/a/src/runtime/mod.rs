@@ -98,6 +98,12 @@ pub trait Net: Send + Sync {
 
 pub type NetHost = Arc<dyn Net>;
 
+/// `Date.now()` of the runtime, when the shell hands one in: the probe pins it
+/// so answers that carry the clock (`ai:local-test`) compare; without it the
+/// system clock
+#[derive(Clone)]
+pub struct RuntimeClock(pub Arc<dyn Fn() -> f64 + Send + Sync>);
+
 /// Where a [`Net`] host hands its outcomes: posts to the core thread, from
 /// any thread, in the order of the calls of one thread
 #[derive(Clone)]
@@ -548,15 +554,18 @@ impl Driver {
     /// Built once in a port factory, on the core thread, from the shell's
     /// services and the batch's [`NetHost`]
     pub fn new(services: &Services, net: NetHost) -> Driver {
-        Driver::from_parts(
+        let clock = services.hosts.get::<RuntimeClock>().cloned();
+        Driver::with_clock(
             services.core.clone(),
             services.workers.clone(),
             &services.paths.path(PathName::Temp),
             &services.paths.path(PathName::Home),
             net,
+            clock,
         )
     }
 
+    #[cfg(test)]
     fn from_parts(
         core: Arc<dyn Thread>,
         workers: Arc<dyn Workers>,
@@ -564,9 +573,24 @@ impl Driver {
         homedir: &Path,
         net: NetHost,
     ) -> Driver {
+        Driver::with_clock(core, workers, tmpdir, homedir, net, None)
+    }
+
+    fn with_clock(
+        core: Arc<dyn Thread>,
+        workers: Arc<dyn Workers>,
+        tmpdir: &Path,
+        homedir: &Path,
+        net: NetHost,
+        clock: Option<RuntimeClock>,
+    ) -> Driver {
         let scope = NEXT_SCOPE.fetch_add(1, Ordering::Relaxed);
         assert!(scope < 1 << (64 - SCOPE_SHIFT), "more drivers than ids");
-        let started_at = now_ms();
+        let clock: Box<dyn Fn() -> f64> = match clock {
+            Some(RuntimeClock(clock)) => Box::new(move || clock()),
+            None => Box::new(now_ms),
+        };
+        let started_at = clock();
         let runtime = Runtime::new(HostInfo {
             platform: crate::secrets::PLATFORM.to_owned(),
             pid: f64::from(std::process::id()),
@@ -580,7 +604,7 @@ impl Driver {
                     )
                 })
                 .collect(),
-            clock: Box::new(now_ms),
+            clock,
             uuid: Box::new(random_uuid),
             random: Box::new(random_bytes),
             kill: Box::new(signal::kill),

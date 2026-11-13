@@ -1286,5 +1286,12 @@
     "find": "            .on_event(&mut w.host.io, owner_id, session_id, event);",
     "replace": "            .on_event(&mut w.host.io, owner_id, session_id, &JsonValue::Null);",
     "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the runtime ignores the clock it is handed",
+    "file": "shell-ipc/a/src/runtime/mod.rs",
+    "find": "Some(RuntimeClock(clock)) => Box::new(move || clock()),",
+    "replace": "Some(RuntimeClock(_)) => Box::new(now_ms),",
+    "groups": ["a/ai-core"]
   }
 ]
