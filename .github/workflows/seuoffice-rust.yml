@@ -30,6 +30,10 @@ on:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
         default: ''
+      odt_faults:
+        description: Odt fault ids, comma-separated, probed alone (the other jobs are skipped)
+        required: false
+        default: ''
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -40,7 +44,7 @@ permissions:
 
 jobs:
   crates:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -183,7 +187,7 @@ jobs:
           if-no-files-found: ignore
 
   pptx:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -243,7 +247,7 @@ jobs:
 
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -297,7 +301,7 @@ jobs:
           if-no-files-found: ignore
 
   odt:
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -399,7 +403,9 @@ jobs:
 
       - name: Odt fault probes
         if: steps.has.outputs.odt == 'true'
-        run: npm --prefix tools/odt-diff run faults -- --shard ${{ matrix.shard }}/13
+        env:
+          ONLY: ${{ inputs.odt_faults }}
+        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/13
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.odt == 'true'
