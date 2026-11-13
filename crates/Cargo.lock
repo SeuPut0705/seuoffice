@@ -1029,6 +1029,9 @@ dependencies = [
 name = "shell-ipc-u"
 version = "0.1.0"
 dependencies = [
+ "jscompat",
+ "main-core",
+ "serde",
  "serde_json",
  "shell-contract",
 ]
