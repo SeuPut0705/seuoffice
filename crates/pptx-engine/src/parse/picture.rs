@@ -534,6 +534,16 @@ pub(super) fn graphic_frame_passthrough(
         if let Some(model) = model {
             let c_nv_pr = get(get(node, "p:nvGraphicFramePr"), "p:cNvPr");
             let descr = truthy(attr(c_nv_pr, "@_descr"));
+            // the overlay shapes' own words count too: they are drawn on the chart
+            let redact = model.redact.as_ref().cloned().or_else(|| {
+                user_shapes
+                    .iter()
+                    .filter_map(|shape| shape.text.as_ref())
+                    .flat_map(|text| text.paragraphs.iter().flatten())
+                    .flat_map(|p| p.runs.iter().flatten())
+                    .find_map(|r| r.redact.as_ref().filter(|label| !label.is_empty()))
+                    .cloned()
+            });
             return Ok(SlideElement::Chart(Box::new(ChartElement {
                 id: Slot::of(ctx.uid("chart")),
                 r#type: Slot::of(ElementType::Chart),
@@ -541,6 +551,7 @@ pub(super) fn graphic_frame_passthrough(
                 transform: Slot::of(frame_xfrm),
                 name: assigned(attr(c_nv_pr, "@_name").map(str::to_owned)),
                 descr: Slot::maybe(descr.map(str::to_owned)),
+                redact: Slot::maybe(redact.filter(|label| !label.is_empty())),
                 chart: Slot::of(model),
                 user_shapes: Slot::maybe((!user_shapes.is_empty()).then_some(user_shapes)),
                 ..ChartElement::default()

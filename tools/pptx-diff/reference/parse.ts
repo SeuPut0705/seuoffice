@@ -1490,6 +1490,13 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
     if (model) {
       const cNvPr = node['p:nvGraphicFramePr']?.['p:cNvPr']
       const descr: string | undefined = cNvPr?.['@_descr'] || undefined
+      // the overlay shapes' own words count too: they are drawn on the chart
+      const redact =
+        model.redact ??
+        userShapes
+          .flatMap((shape) => shape.text?.paragraphs ?? [])
+          .flatMap((p) => p.runs)
+          .find((r) => r.redact)?.redact
       return {
         id: uid('chart'),
         type: 'chart',
@@ -1497,6 +1504,7 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
         transform: frameXfrm,
         name: cNvPr?.['@_name'],
         ...(descr ? { descr } : {}),
+        ...(redact ? { redact } : {}),
         chart: model,
         ...(userShapes.length ? { userShapes } : {}),
       } satisfies ChartElement

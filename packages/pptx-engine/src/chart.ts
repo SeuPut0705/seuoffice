@@ -176,6 +176,12 @@ export interface ChartModel {
   overlapPct?: number
   categories: string[]
   series: ChartSeries[]
+  /**
+   * The label of a run in the chart's rich text (title, axis titles, data labels) hidden from AI.
+   * Chart text is drawn by the renderer and carried by no reader's text, so the chart as a whole
+   * is the unit that is withheld: the parent element takes this as its own `redact`.
+   */
+  redact?: string
   /** Legend position (undefined when there is no c:legend) */
   legendPos?: 't' | 'b' | 'l' | 'r' | 'tr'
   /** Legend text size (pt) from c:legend/c:txPr default run properties */
