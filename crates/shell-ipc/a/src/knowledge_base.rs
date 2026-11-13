@@ -26,6 +26,7 @@ use main_core::packages::electron_utils::unsaved_files::UNSAVED_CHANGES_MESSAGE;
 use main_core::shell::atomic_write::atomic_write_file;
 use shell_contract::ipc::{CallContext, Responder};
 use shell_contract::runtime::{AppPaths, PathName, Thread, Workers};
+use shell_contract::value::BytesKind;
 use shell_contract::{IpcError, IpcValue, ViewId};
 
 use crate::ports::KnowledgeBase;
@@ -141,8 +142,9 @@ pub trait KbServices {
     fn parse_file_to_text(&self, path: &str) -> Result<String, Option<String>>;
     /// `projectFolderServices().tools.isAvailable(projectId)`, worker thread
     fn project_available(&self, project_id: &str) -> bool;
-    /// `projectFolderServices().tools.visibleTest(projectId)`, worker thread
-    fn project_visible_test(&self, project_id: &str) -> VisibleTest;
+    /// `projectFolderServices().tools.visibleTest(projectId)`, worker thread;
+    /// `None` when the project is not available (`null`)
+    fn project_visible_test(&self, project_id: &str) -> Option<VisibleTest>;
     /// `projectFolderServices().tools.readPath(owner, projectId, path, offset)`,
     /// worker thread
     fn project_read(&self, owner: ViewId, project_id: &str, path: &str, offset: f64)
@@ -190,7 +192,35 @@ fn js_number(value: Option<&IpcValue>) -> f64 {
         Some(IpcValue::String(s)) => to_number(s),
         Some(IpcValue::Bool(b)) => f64::from(u8::from(*b)),
         Some(IpcValue::Null) => 0.0,
-        _ => f64::NAN,
+        Some(IpcValue::Date(ms)) => *ms,
+        Some(value @ (IpcValue::Array(_) | IpcValue::Bytes(..) | IpcValue::Object(_))) => {
+            to_number(&primitive_text(value))
+        }
+        Some(IpcValue::Undefined) | None => f64::NAN,
+    }
+}
+
+/// What `Number` reads of an object: its `toString()`, an array's `join(',')`
+/// (a date inside an array is text no number can be read from)
+fn primitive_text(value: &IpcValue) -> String {
+    match value {
+        IpcValue::Undefined | IpcValue::Null => String::new(),
+        IpcValue::Bool(b) => b.to_string(),
+        IpcValue::Number(n) => number_to_string(*n),
+        IpcValue::String(s) => s.clone(),
+        IpcValue::Date(_) => "Date".to_owned(),
+        IpcValue::Array(items) => items
+            .iter()
+            .map(primitive_text)
+            .collect::<Vec<_>>()
+            .join(","),
+        IpcValue::Bytes(BytesKind::Uint8Array, bytes) => bytes
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(","),
+        IpcValue::Bytes(BytesKind::ArrayBuffer, _) => "[object ArrayBuffer]".to_owned(),
+        IpcValue::Object(_) => "[object Object]".to_owned(),
     }
 }
 
@@ -1077,7 +1107,7 @@ impl KnowledgeBase for KnowledgeBasePort {
         let host = self.host.clone();
         let limit = limit.min(KB_SEARCH_LIMIT_MAX) as usize;
         self.answer_from_worker(reply, move || {
-            let within = project_id.map(|id| host.project_visible_test(&id));
+            let within = project_id.and_then(|id| host.project_visible_test(&id));
             let hits = search_saved_knowledge(&*host, &q, &in_scope, limit, within);
             Ok(IpcValue::Array(
                 hits.iter().map(KbSearchHit::to_ipc).collect(),
@@ -1174,17 +1204,30 @@ impl KnowledgeBase for KnowledgeBasePort {
     }
 }
 
+/// Names the scopes of runs, where the host wants them predictable (the
+/// probe does); without one main mints `randomBytes(24).toString('hex')`
+pub type KbScopeIds = Arc<dyn Fn() -> String + Send + Sync>;
+
 /// The host the shell inserts for this port
 pub fn factory() -> crate::Factory<dyn KnowledgeBase> {
     crate::Factory::new(|services, _| {
-        let port: std::rc::Rc<dyn KnowledgeBase> = std::rc::Rc::new(KnowledgeBasePort::new(
-            services.paths.clone(),
-            services.workers.clone(),
-            services.core.clone(),
-            services
-                .hosts
-                .need::<KbServicesHost>(shell_contract::Batch::A)?,
-        ));
+        let scopes = match services.hosts.get::<KbScopeIds>() {
+            Some(ids) => {
+                let ids = ids.clone();
+                KbRunScopes::new(Box::new(move || ids()), KB_SCOPES_MAX)
+            }
+            None => KbRunScopes::default(),
+        };
+        let port: std::rc::Rc<dyn KnowledgeBase> =
+            std::rc::Rc::new(KnowledgeBasePort::with_scopes(
+                services.paths.clone(),
+                services.workers.clone(),
+                services.core.clone(),
+                services
+                    .hosts
+                    .need::<KbServicesHost>(shell_contract::Batch::A)?,
+                scopes,
+            ));
         Ok(port)
     })
 }
@@ -1460,6 +1503,7 @@ mod tests {
         cap: Option<f64>,
         available: bool,
         visible: HashSet<String>,
+        no_visible_test: bool,
         project_reads: HashMap<String, ProjectRead>,
         read_by: Vec<(ViewId, String, String, f64)>,
         placement: Option<Placement>,
@@ -1533,9 +1577,12 @@ mod tests {
         fn project_available(&self, _project_id: &str) -> bool {
             self.state().available
         }
-        fn project_visible_test(&self, _project_id: &str) -> VisibleTest {
+        fn project_visible_test(&self, _project_id: &str) -> Option<VisibleTest> {
+            if self.state().no_visible_test {
+                return None;
+            }
             let visible = self.state().visible.clone();
-            Arc::new(move |path| visible.contains(path))
+            Some(Arc::new(move |path| visible.contains(path)))
         }
         fn project_read(
             &self,
@@ -1928,6 +1975,45 @@ mod tests {
         let got = paths_of(search(&r, obj(&[("q", s("x")), ("scope", s(&id))])));
         assert_eq!(got, vec![seen, starred]);
         assert_eq!(r.host.state().searches, vec![("x".to_owned(), 200, true)]);
+    }
+
+    #[test]
+    fn a_project_without_a_visible_test_searches_the_starred_files_alone() {
+        let r = rig("search-project-gone");
+        let starred = r.file("starred.md", "");
+        let seen = r.file("seen.md", "");
+        r.star(&[(&starred, None)]);
+        {
+            let mut st = r.host.state();
+            st.available = true;
+            st.no_visible_test = true;
+            st.hits = vec![hit(&seen), hit(&starred)];
+            st.on_disk = [starred.clone(), seen.clone()].into();
+            st.visible = [seen.clone()].into();
+        }
+        let IpcValue::String(id) = open_scope(&r, obj(&[("projectId", s("p1"))])).unwrap() else {
+            panic!("a scope")
+        };
+        let got = paths_of(search(&r, obj(&[("q", s("x")), ("scope", s(&id))])));
+        assert_eq!(got, vec![starred]);
+        assert_eq!(r.host.state().searches, vec![("x".to_owned(), 200, false)]);
+    }
+
+    #[test]
+    fn number_reads_an_array_a_date_or_bytes_as_javascript_does() {
+        let n = |value: IpcValue| js_number(Some(&value));
+        assert_eq!(n(IpcValue::Array(vec![s("6")])), 6.0);
+        assert_eq!(n(IpcValue::Array(vec![])), 0.0);
+        assert!(
+            n(IpcValue::Array(vec![
+                IpcValue::Number(1.0),
+                IpcValue::Number(2.0)
+            ]))
+            .is_nan()
+        );
+        assert_eq!(n(IpcValue::Date(7.0)), 7.0);
+        assert_eq!(n(IpcValue::Bytes(BytesKind::Uint8Array, vec![9])), 9.0);
+        assert!(n(obj(&[])).is_nan());
     }
 
     fn read(r: &Rig, path: &str, offset: IpcValue) -> Reply {

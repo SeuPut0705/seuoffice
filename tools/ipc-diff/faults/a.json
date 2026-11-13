@@ -404,5 +404,271 @@
     "find": "if *version != 1.0 || !self.cipher.available() {",
     "replace": "if !self.cipher.available() {",
     "groups": ["a/drive"]
+  },
+  {
+    "name": "a search without a limit returns nine hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SEARCH_LIMIT_DEFAULT: f64 = 8.0;",
+    "replace": "const KB_SEARCH_LIMIT_DEFAULT: f64 = 9.0;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a search returns up to 21 hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SEARCH_LIMIT_MAX: f64 = 20.0;",
+    "replace": "const KB_SEARCH_LIMIT_MAX: f64 = 21.0;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a read page is one character longer",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "pub const KB_READ_CHUNK_CHARS: usize = 24_000;",
+    "replace": "pub const KB_READ_CHUNK_CHARS: usize = 24_001;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the text cache holds nine files",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_TEXT_CACHE_MAX: usize = 8;",
+    "replace": "const KB_TEXT_CACHE_MAX: usize = 9;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "main holds 17 scopes",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SCOPES_MAX: usize = 16;",
+    "replace": "const KB_SCOPES_MAX: usize = 17;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a query is cut at 201 characters",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_QUERY_MAX_CHARS: usize = 200;",
+    "replace": "const KB_QUERY_MAX_CHARS: usize = 201;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index pool is 100 hits",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const KB_SEARCH_POOL: usize = 200;",
+    "replace": "const KB_SEARCH_POOL: usize = 100;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index is refreshed when 30 seconds stale",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "const INDEX_STALE_MS: u64 = 60_000;",
+    "replace": "const INDEX_STALE_MS: u64 = 30_000;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a document may be one character longer",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "pub const KB_CREATE_MAX_CHARS: usize = 2_000_000;",
+    "replace": "pub const KB_CREATE_MAX_CHARS: usize = 2_000_001;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "another window's scope is honoured",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(held) if held.owner == owner => Ok(Some(held)),",
+    "replace": "Some(held) => Ok(Some(held)),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "any window closes a scope",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": ".retain(|(s, held)| !(s == id && held.owner == owner));",
+    "replace": ".retain(|(s, _)| s != id);",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a file with unsaved changes is read",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if host.without_unsaved_files(&[path.to_owned()]).is_empty() {",
+    "replace": "if false {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a search hit is listed once per hit, not per file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if !allowed.contains(hit.path.as_str()) || !seen.insert(hit.path.as_str()) {",
+    "replace": "if !allowed.contains(hit.path.as_str()) || (seen.insert(hit.path.as_str()) && false) {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the extension keeps its case",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "chars[consumed..].iter().collect::<String>().to_lowercase()",
+    "replace": "chars[consumed..].iter().collect::<String>()",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a starred directory is listed",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "fs::metadata(path).ok().filter(|m| m.is_file())?;",
+    "replace": "fs::metadata(path).ok()?;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "any group name opens a scope",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "IpcValue::String(g) if !g.is_empty() && group_of.values().any(|v| v == g) => Ok(g.clone()),",
+    "replace": "IpcValue::String(g) if !g.is_empty() => Ok(g.clone()),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project that is not available opens a scope",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if !available {",
+    "replace": "if !available && false {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the project's visible files are not searched",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(&|path: &str| starred.contains(path) || within(path)),",
+    "replace": "Some(&|path: &str| starred.contains(path)),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "project hits may be open with unsaved changes",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let project_ok = host.without_unsaved_files(&host.paths_indexed_as_on_disk(&from_project));",
+    "replace": "let project_ok = host.paths_indexed_as_on_disk(&from_project);",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project without a visible test sees every file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let within = project_id.and_then(|id| host.project_visible_test(&id));",
+    "replace": "let within = project_id.map(|id| host.project_visible_test(&id).unwrap_or_else(|| Arc::new(|_: &str| true) as VisibleTest));",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a declined download reads as outside the base",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "ProjectRead::Declined => Err(KB_DOWNLOAD_DECLINED.to_owned()),",
+    "replace": "ProjectRead::Declined => Err(KB_NOT_IN_BASE.to_owned()),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "an unreadable project file is worded differently",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "ProjectRead::Refused(ProjectReadRefusal::Unreadable) => Err(\"unreadable file\".to_owned()),",
+    "replace": "ProjectRead::Refused(ProjectReadRefusal::Unreadable) => Err(\"unreadable\".to_owned()),",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "every path reads as starred",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let allowed = self.starred_files().contains(&path)",
+    "replace": "let allowed = true",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a title is cut at 79 characters",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let cut = slice_units(trim(&replaced), 0, 80);",
+    "replace": "let cut = slice_units(trim(&replaced), 0, 79);",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a taken name gets -3 first",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "let mut n = 2;",
+    "replace": "let mut n = 3;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the conversion's temporary folder stays",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "    let _ = fs::remove_dir_all(&dir);\n    made",
+    "replace": "    let _ = &dir;\n    made",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a new document is not put on the recent list",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "finish_host.record_recent_file(&path);",
+    "replace": "let _ = &path;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a date limit reads as no number",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(IpcValue::Date(ms)) => *ms,",
+    "replace": "Some(IpcValue::Date(_)) => f64::NAN,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a null limit reads as no number",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "Some(IpcValue::Null) => 0.0,",
+    "replace": "Some(IpcValue::Null) => f64::NAN,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the oldest cached text is kept",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "self.entries.remove(0);",
+    "replace": "self.entries.pop();",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the content limit counts characters, not UTF-16 units",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if utf16_len(content) > KB_CREATE_MAX_CHARS {",
+    "replace": "if content.chars().count() > KB_CREATE_MAX_CHARS {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a query is not trimmed before it is cut",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "slice_units(trim(query), 0, KB_QUERY_MAX_CHARS)",
+    "replace": "slice_units(query, 0, KB_QUERY_MAX_CHARS)",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a blank query reaches the index",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if trim(&q).is_empty() || !self.host.has_file_index() {",
+    "replace": "if q.is_empty() || !self.host.has_file_index() {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the index is not refreshed",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "self.host.refresh_file_index_if_stale(INDEX_STALE_MS);",
+    "replace": "let _ = INDEX_STALE_MS;",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a parser without a message says nothing",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "e.unwrap_or_else(|| \"unreadable file\".to_owned())",
+    "replace": "e.unwrap_or_default()",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a project scope with a group reaches every starred file",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "StarredAsk::Group(group) => StarredReach::Group(checked_group(group, group_of)?),",
+    "replace": "StarredAsk::Group(_) => StarredReach::All,",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "a read without a path is checked against the scope first",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "if path.is_empty() {",
+    "replace": "if false {",
+    "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "closing a scope leaves it open",
+    "file": "shell-ipc/a/src/knowledge_base.rs",
+    "find": "lock(&self.scopes).close(cx.sender.view, args.first());",
+    "replace": "let _ = args.first();",
+    "groups": ["a/knowledge-base"]
   }
 ]
