@@ -81,17 +81,19 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 .map_err(|e| disk.fail(&e))?;
             Ok(None)
         }),
-        "write-guard.appendData" => on_disk(args, |disk, rest| {
-            disk.guard()
-                .append_data(
-                    str_arg(rest, 0)?,
-                    str_arg(rest, 1)?,
-                    str_arg(rest, 2)?,
-                    data_dir_in(rest, 3),
-                )
-                .map_err(|e| disk.fail(&e))?;
-            Ok(None)
-        }),
+        "write-guard.appendData" | "write-guard.appendData.hardLinks" => {
+            on_disk(args, |disk, rest| {
+                disk.guard()
+                    .append_data(
+                        str_arg(rest, 0)?,
+                        str_arg(rest, 1)?,
+                        str_arg(rest, 2)?,
+                        data_dir_in(rest, 3),
+                    )
+                    .map_err(|e| disk.fail(&e))?;
+                Ok(None)
+            })
+        }
         "write-guard.updateData" => on_disk_logged(args, cx, update_call),
         "write-guard.removeData" => on_disk(args, |disk, rest| {
             disk.guard()

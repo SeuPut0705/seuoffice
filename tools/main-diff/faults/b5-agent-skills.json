@@ -559,8 +559,8 @@
   {
     "name": "agent-window: an unreadable folder is an unknown failure",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "Err(_) => return failed(&AgentStartFailure::BadFolder),",
-    "replace": "Err(_) => return failed(&AgentStartFailure::Unknown),",
+    "find": "Err(_) => return Err(failed(&AgentStartFailure::BadFolder)),",
+    "replace": "Err(_) => return Err(failed(&AgentStartFailure::Unknown)),",
     "fn": ["agent-window.startAgentForWindow"]
   },
   {
@@ -573,7 +573,7 @@
   {
     "name": "agent-window: the failure records another program",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "entry.set(\"program\", JsonValue::String(provider.to_owned()));",
+    "find": "entry.set(\"program\", JsonValue::String(provider.clone()));",
     "replace": "entry.set(\"program\", JsonValue::String(\"claude-code\".to_owned()));",
     "fn": ["agent-window.startAgentForWindow"]
   },
@@ -587,14 +587,14 @@
   {
     "name": "agent-window: the folder is not remembered",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "host.write_prefs(&with_recent_folder(&next, folder));",
+    "find": "host.write_prefs(&with_recent_folder(&next, &folder));",
     "replace": "host.write_prefs(&next);",
     "fn": ["agent-window.startAgentForWindow"]
   },
   {
     "name": "agent-window: the program is not remembered",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "next.provider = provider.to_owned();",
+    "find": "next.provider = provider;",
     "replace": "let _ = provider;",
     "fn": ["agent-window.startAgentForWindow"]
   },
@@ -720,22 +720,22 @@
   {
     "name": "agent-window: a refused message is said to be sent",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "host.send(owner, session_id, text).is_ok()",
-    "replace": "host.send(owner, session_id, text).is_ok() || true",
+    "find": "AgentSendStep::Done(done) => AgentWindowSendStep::Done(done.is_ok()),",
+    "replace": "AgentSendStep::Done(done) => AgentWindowSendStep::Done(done.is_ok() || true),",
     "fn": ["agent-window.window"]
   },
   {
     "name": "agent-window: every answer is a refusal",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "agent_permission_answer(allow, scope),\n    );",
-    "replace": "PermissionAnswer::Deny,\n    );",
+    "find": "let answer = AgentPermissionAnswer::from(agent_permission_answer(allow, scope));",
+    "replace": "let answer = AgentPermissionAnswer::from(PermissionAnswer::Deny);",
     "fn": ["agent-window.window"]
   },
   {
     "name": "agent-window: stop does not reach the session",
     "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "host.stop(owner, session_id);",
-    "replace": "let _ = (owner, session_id);",
+    "find": "manager.stop(host.agent(), owner, session_id);",
+    "replace": "let _ = (manager, owner, session_id);",
     "fn": ["agent-window.window"]
   },
   {
@@ -925,6 +925,20 @@
     "file": "main-core/src/shell/agent/agent_window.rs",
     "find": "suggested: &input.suggested_template_path,",
     "replace": "suggested: \"\",",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: a stopped start still remembers its folder",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "                return failed(&failure);\n            }\n            AgentStartResult::Started {",
+    "replace": "                host.write_prefs(&prefs);\n                return failed(&failure);\n            }\n            AgentStartResult::Started {",
+    "fn": ["agent-window.window"]
+  },
+  {
+    "name": "agent-window: the scope of an allow is not told to the session",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "scope: Some(scope.to_owned()),",
+    "replace": "scope: None,",
     "fn": ["agent-window.window"]
   }
 ]
