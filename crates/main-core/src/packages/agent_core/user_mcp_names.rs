@@ -68,7 +68,7 @@ fn length(text: &str) -> f64 {
 
 fn is_reserved(name: &str) -> bool {
     let lower = name.to_lowercase();
-    reserved_mcp_server_names().iter().any(|n| *n == lower)
+    reserved_mcp_server_names().contains(&lower)
 }
 
 /// The structural part of the server rule, the one parsing relies on

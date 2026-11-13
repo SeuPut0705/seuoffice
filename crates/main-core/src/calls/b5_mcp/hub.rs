@@ -469,10 +469,10 @@ fn outcome_of(sh: &mut Shared, st: &Rc<RefCell<ConnState>>, kind: OpKind) -> Con
                 _ => None,
             };
             if let Some(reason) = first {
-                if let JsonValue::Object(o) = &mut st.cfg {
-                    if let Some(JsonValue::Array(list)) = o.get_mut("callErrors") {
-                        list.remove(0);
-                    }
+                if let JsonValue::Object(o) = &mut st.cfg
+                    && let Some(JsonValue::Array(list)) = o.get_mut("callErrors")
+                {
+                    list.remove(0);
                 }
                 return ConnOutcome::RemoteCalled(Err(ConnError::Remote(remote_reason(&reason))));
             }
@@ -980,10 +980,10 @@ fn seed_server(
         }));
         json = approve_launch(&json, &fingerprint_of(&ready));
     }
-    if let Some(name) = as_str(get("listing")) {
-        if let Some(listing) = listings.get(name) {
-            json = accept_first_listing(&json, listing);
-        }
+    if let Some(name) = as_str(get("listing"))
+        && let Some(listing) = listings.get(name)
+    {
+        json = accept_first_listing(&json, listing);
     }
     if let Some(patch) = get("patch") {
         merge(&mut json, patch);
@@ -1538,14 +1538,14 @@ fn scenario(args: &[Value]) -> Answer {
         let (result, label) = run_step(&mut world, step, index);
         pump(&mut world.ipc, &world.sh);
         for (ticket, value) in world.ipc.take_settled() {
-            if let Some(label) = world.tickets.remove(&ticket) {
-                if let Some(entry) = world.entries.iter_mut().find(|e| e.label == label) {
-                    entry.done = true;
-                    entry.value = match value {
-                        Ok(v) => v,
-                        Err(error) => rejected(&error.message),
-                    };
-                }
+            if let Some(label) = world.tickets.remove(&ticket)
+                && let Some(entry) = world.entries.iter_mut().find(|e| e.label == label)
+            {
+                entry.done = true;
+                entry.value = match value {
+                    Ok(v) => v,
+                    Err(error) => rejected(&error.message),
+                };
             }
         }
         let mut changed = false;
@@ -1568,20 +1568,20 @@ fn scenario(args: &[Value]) -> Answer {
         if let Some(result) = result {
             record.set("result", result);
         }
-        if let Some(label) = &label {
-            if let Some(entry) = world.entries.iter_mut().find(|e| &e.label == label) {
-                if entry.done {
-                    let value = undefined_value(entry);
-                    entry.reported = true;
-                    if as_str(prop(step, "op")) == Some("ipc") {
-                        if let Some(JsonValue::String(token)) = prop(&value, "token") {
-                            world.tokens.push(token.clone());
-                        }
-                    }
-                    record.set("result", value);
-                } else {
-                    record.set("pending", text(label.as_str()));
+        if let Some(label) = &label
+            && let Some(entry) = world.entries.iter_mut().find(|e| &e.label == label)
+        {
+            if entry.done {
+                let value = undefined_value(entry);
+                entry.reported = true;
+                if as_str(prop(step, "op")) == Some("ipc")
+                    && let Some(JsonValue::String(token)) = prop(&value, "token")
+                {
+                    world.tokens.push(token.clone());
                 }
+                record.set("result", value);
+            } else {
+                record.set("pending", text(label.as_str()));
             }
         }
         let mut settled = world
@@ -1626,8 +1626,9 @@ fn scenario(args: &[Value]) -> Answer {
             );
         }
         for server in world.store.borrow().get().servers {
-            if !world.names.iter().any(|(id, _)| *id == server.id) {
-                world.names.push((server.id.clone(), server.name.clone()));
+            match world.names.iter_mut().find(|(id, _)| *id == server.id) {
+                Some(entry) => entry.1 = server.name.clone(),
+                None => world.names.push((server.id.clone(), server.name.clone())),
             }
         }
         records.push(normalized(&JsonValue::Object(record), &world.names, &dirs));
@@ -1827,7 +1828,7 @@ fn app_scenario(args: &[Value]) -> Answer {
         let start_sent = sent.borrow().len();
         let mut record = JsObject::new();
         record.set("i", number(index as f64));
-        let op = as_str(prop(&step, "op")).unwrap_or_default().to_owned();
+        let op = as_str(prop(step, "op")).unwrap_or_default().to_owned();
         record.set("op", text(op.as_str()));
         let mut host = AppIpcHost { app: &*app };
         match op.as_str() {

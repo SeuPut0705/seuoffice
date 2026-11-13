@@ -225,6 +225,9 @@ pub struct MessageExtra {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Outgoing {
     pub message: JsonValue,
+    /// a line the tool wrapper logged on the way to this answer: it is logged
+    /// when the answer is sent, so lines and answers keep the order of the SDK
+    pub log: Option<String>,
     /// the depth of the promise chain the send came from: messages of one
     /// delivery are sent in the order of this number, then of arrival
     pub ticks: u32,
@@ -254,6 +257,10 @@ pub trait SessionServer {
     }
     /// the signals that fired since the last call
     fn take_aborted(&mut self) -> Vec<Aborted> {
+        Vec::new()
+    }
+    /// the lines tools logged after their request was handed over, in order
+    fn take_logs(&mut self) -> Vec<String> {
         Vec::new()
     }
     /// the awaits tools started since the last call, in order
@@ -390,6 +397,8 @@ enum Reply {
 
 struct HandlerOutcome {
     reply: Reply,
+    /// the line the tool wrapper logged
+    log: Option<String>,
     /// the depth when it is not the default of the result
     ticks: Option<u32>,
 }
@@ -398,6 +407,7 @@ impl HandlerOutcome {
     fn done(result: Result<JsonValue, HandlerError>) -> Self {
         HandlerOutcome {
             reply: Reply::Done(result),
+            log: None,
             ticks: None,
         }
     }
@@ -610,6 +620,7 @@ impl<'h> Server<'h> {
                     HandlerReply::Now(result) => Reply::Done(result),
                     HandlerReply::Later(ticket) => Reply::Later(ticket),
                 },
+                log: None,
                 ticks: None,
             }),
         )
@@ -687,6 +698,7 @@ impl<'h> Server<'h> {
                         "Method not found",
                         None,
                     ),
+                    log: None,
                     ticks: TICKS_AT_ONCE,
                 }];
             }
@@ -747,7 +759,9 @@ impl<'h> Server<'h> {
             Ok(_) => TICKS_ANSWERED,
             Err(_) => TICKS_THREW,
         });
-        vec![reply(id, result, ticks)]
+        let mut sent = reply(id, result, ticks);
+        sent.log = outcome.log;
+        vec![sent]
     }
 
     /// `controller.abort(reason)` of a pending request
@@ -804,7 +818,11 @@ fn reply(id: JsonValue, result: Result<JsonValue, HandlerError>, ticks: u32) -> 
             error_response(id, code, &message, error.data)
         }
     };
-    Outgoing { message, ticks }
+    Outgoing {
+        message,
+        log: None,
+        ticks,
+    }
 }
 
 /// `request.params.task` is truthy
@@ -1084,6 +1102,8 @@ pub struct ToolConfig {
 /// shell's wrapper never rejects: a throw is a result with `isError`).
 pub struct ToolReturn {
     pub result: JsonValue,
+    /// the `[mcp] tool ...` line logged when the wrapper settled
+    pub log: Option<String>,
     /// the work behind the callback rejected, which ends its promise chain
     /// one step sooner (it moves the order of the answers of a batch)
     pub rejected: bool,
@@ -1118,6 +1138,8 @@ struct Registry<'h> {
     inflight: Vec<(Ticket, Continuation<'h>)>,
     /// the awaits not yet taken by the caller
     host_calls: Vec<(Ticket, HostCall)>,
+    /// lines logged after the request was handed over (`resume_tool`)
+    logs: Vec<String>,
 }
 
 /// `new McpServer(serverInfo, options)`'s options
@@ -1201,6 +1223,7 @@ impl<'h> McpServer<'h> {
                 max_tool_input_elements: options.max_tool_input_elements.filter(|n| n.is_finite()),
                 inflight: Vec::new(),
                 host_calls: Vec::new(),
+                logs: Vec::new(),
             })),
             tool_handlers_initialized: false,
         }
@@ -1299,7 +1322,7 @@ fn call_tool<'h>(
         _ => String::new(),
     };
     let arguments = params.get("arguments").map(|v| v.into_owned());
-    let (result, ticks) = match run_tool(registry, &name, arguments.as_ref()) {
+    let (result, ticks, log) = match run_tool(registry, &name, arguments.as_ref()) {
         Ok(ToolRun::Done(done)) => done,
         Ok(ToolRun::Await { call, then }) => {
             let mut registry = registry.borrow_mut();
@@ -1307,21 +1330,23 @@ fn call_tool<'h>(
             registry.host_calls.push((ticket, call));
             return HandlerOutcome {
                 reply: Reply::ToolLater(ticket),
+                log: None,
                 ticks: None,
             };
         }
         // `error instanceof Error ? error.message : String(error)`
-        Err((message, ticks)) => (create_tool_error(&message), ticks),
+        Err((message, ticks)) => (create_tool_error(&message), ticks, None),
     };
     HandlerOutcome {
         reply: Reply::Done(Ok(result)),
+        log,
         ticks: Some(ticks),
     }
 }
 
 /// how far the `try` of the `tools/call` handler got
 enum ToolRun<'h> {
-    Done((JsonValue, u32)),
+    Done((JsonValue, u32, Option<String>)),
     Await {
         call: HostCall,
         then: Continuation<'h>,
@@ -1420,7 +1445,7 @@ fn run_tool<'h>(
                 (false, false) => TICKS_CALL_PLAIN,
                 (false, true) => TICKS_CALL_PLAIN_REJECTED,
             };
-            Ok(ToolRun::Done((returned.result, ticks)))
+            Ok(ToolRun::Done((returned.result, ticks, returned.log)))
         }
         CallStep::Await { call, then } => Ok(ToolRun::Await { call, then }),
     }
@@ -1451,6 +1476,10 @@ impl SessionServer for McpServer<'_> {
         std::mem::take(&mut self.registry.borrow_mut().host_calls)
     }
 
+    fn take_logs(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.registry.borrow_mut().logs)
+    }
+
     /// the promise of the tool callback settles after its awaited call did:
     /// the rest runs, and at the end the response is written as for any
     /// request that answered later (nothing when its request was aborted)
@@ -1463,7 +1492,14 @@ impl SessionServer for McpServer<'_> {
             registry.inflight.remove(at).1
         };
         match continuation(settled) {
-            CallStep::Done(returned) => self.server.settle(ticket, Ok(returned.result)),
+            CallStep::Done(returned) => {
+                // the wrapper logs when the awaited promise settles, whatever
+                // became of the request
+                if let Some(line) = returned.log {
+                    self.registry.borrow_mut().logs.push(line);
+                }
+                self.server.settle(ticket, Ok(returned.result))
+            }
             CallStep::Await { call, then } => {
                 let mut registry = self.registry.borrow_mut();
                 registry.inflight.push((ticket, then));

@@ -207,12 +207,15 @@ pub fn is_json_content_type(header: Option<&str>) -> bool {
     media_type_essence(header).as_deref() == Some("application/json")
 }
 
+/// `onsessioninitialized`: called with the session id
+pub type SessionInitialized = Box<dyn FnMut(&str)>;
+
 /// the options the shell gives `new StreamableHTTPServerTransport(...)`
 pub struct StreamableOptions {
     /// `sessionIdGenerator: () => id`
     pub session_id: String,
     /// `onsessioninitialized`
-    pub on_session_initialized: Option<Box<dyn FnMut(&str)>>,
+    pub on_session_initialized: Option<SessionInitialized>,
 }
 
 struct Stream {
@@ -235,7 +238,7 @@ pub struct StreamableHttpServerTransport {
     io: Io,
     session_id: Option<String>,
     id_to_set: String,
-    on_session_initialized: Option<Box<dyn FnMut(&str)>>,
+    on_session_initialized: Option<SessionInitialized>,
     started: bool,
     initialized: bool,
     closed: bool,
@@ -671,9 +674,7 @@ impl StreamableHttpServerTransport {
                 stream.keep_alive = timer;
             }
         }
-        for sent in in_send_order(outgoing) {
-            self.send(sent);
-        }
+        self.send_outgoing(outgoing);
     }
 
     /// `handleDeleteRequest(req)`
@@ -749,6 +750,9 @@ impl StreamableHttpServerTransport {
     /// the answers of requests that were settled later, sent as they come
     pub fn send_outgoing(&mut self, outgoing: Vec<Outgoing>) {
         for sent in in_send_order(outgoing) {
+            if let Some(line) = &sent.log {
+                self.io.log(line.clone());
+            }
             self.send(sent);
         }
     }

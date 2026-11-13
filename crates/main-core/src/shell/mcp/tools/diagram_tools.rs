@@ -32,6 +32,9 @@ use crate::packages::zod::{ZodShape, ZodType, z};
 use crate::shell::mcp::mcp_server::{McpToolDefinition, Settled, ToolStep};
 use crate::shell::tab_manager::{OpenDocumentTab, TabKind};
 
+/// `isDetached`: true for a document in a detached window
+pub type DetachedCheck<'h> = Rc<dyn Fn(&str) -> bool + 'h>;
+
 /// `DiagramToolsDeps`
 pub struct DiagramToolsDeps<'h> {
     /// a `DiagramControl` is wired; absent in headless runs, where the two
@@ -40,7 +43,7 @@ pub struct DiagramToolsDeps<'h> {
     /// `control.isDetached?`: true for a document in a detached window. An
     /// active one there is its focused window, which is in front of the
     /// shell's active tab. `None` is a control without the method.
-    pub is_detached: Option<Rc<dyn Fn(&str) -> bool + 'h>>,
+    pub is_detached: Option<DetachedCheck<'h>>,
 }
 
 /// `DIAGRAM_MCP_TOOL_NAMES.read`
@@ -245,7 +248,7 @@ pub fn front_diagram<'a>(
 
 /// `targetDiagram(control, document)` as steps: `DiagramControl.list []` is awaited
 fn target_diagram<'h>(
-    is_detached: Option<Rc<dyn Fn(&str) -> bool + 'h>>,
+    is_detached: Option<DetachedCheck<'h>>,
     document: Option<JsonValue>,
     then: impl FnOnce(OpenDocumentTab) -> ToolStep<'h> + 'h,
 ) -> ToolStep<'h> {

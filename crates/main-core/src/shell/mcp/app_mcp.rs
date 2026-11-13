@@ -40,7 +40,7 @@ use super::mcp_logger::{LogClock, McpLogger};
 use super::mcp_server::{
     DEFAULT_MCP_PORT, McpHost, McpServerService, McpServerServiceOptions, McpToolDefinition,
 };
-use super::tools::diagram_tools::{DiagramToolsDeps, create_diagram_tools};
+use super::tools::diagram_tools::{DetachedCheck, DiagramToolsDeps, create_diagram_tools};
 use super::tools::document_tools::{
     DefaultSaveDir, DocToolDeps, create_document_tools, document_driver,
 };
@@ -82,7 +82,7 @@ pub struct McpRuntimeDeps<'h> {
     /// headless runs, where the two tools answer that the app is not running
     pub diagram_control: bool,
     /// `diagramControl.isDetached`: absent in a control without it
-    pub diagram_is_detached: Option<Rc<dyn Fn(&str) -> bool + 'h>>,
+    pub diagram_is_detached: Option<DetachedCheck<'h>>,
     /// where the MCP log file lives (userData); logging is unavailable without it
     pub log_file_path: Option<String>,
     /// the PDF engine behind `read_pdf` (`readPdfText` of the pdf workspace)

@@ -182,13 +182,13 @@ impl McpHubIpcHost for AppIpcHost<'_> {
     }
 
     fn send_settings_changed(&mut self, view: &JsonValue) {
-        if let Some(shell) = self.app.shell_contents() {
-            if !shell.is_destroyed() {
-                shell.send(
-                    channel_named(&MCP_SERVERS_CHANNELS, "changed"),
-                    std::slice::from_ref(view),
-                );
-            }
+        if let Some(shell) = self.app.shell_contents()
+            && !shell.is_destroyed()
+        {
+            shell.send(
+                channel_named(&MCP_SERVERS_CHANNELS, "changed"),
+                std::slice::from_ref(view),
+            );
         }
     }
 }

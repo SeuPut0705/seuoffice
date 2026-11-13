@@ -90,6 +90,9 @@ function answer(val: Spec | undefined): unknown {
 
 /** what the SDK lists of tools registered as mcp-server.ts registers them */
 async function listed(tools: Spec[]): Promise<unknown> {
+  // the SDK registers its `tools/list` handler with the first tool, so a set
+  // with no tool has nothing to ask: what the factory built is the empty list
+  if (tools.length === 0) return []
   const server = new McpServer({ name: 'main-diff', version: '1' })
   for (const tool of tools) {
     server.registerTool(

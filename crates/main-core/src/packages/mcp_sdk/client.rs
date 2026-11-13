@@ -721,6 +721,9 @@ pub enum TransportEvent {
     Message(JsonValue),
     /// `onerror(error)`
     Error(ClientError),
+    /// `onerror(error)` raised by the abort of a stream, a few ticks after the
+    /// `close()` that aborted it
+    LateError(ClientError),
     /// `onclose()`
     Closed,
     /// the settling of the promise `start()` returned [`StartState::Pending`] for
@@ -748,6 +751,11 @@ pub trait Transport {
     fn set_protocol_version(&mut self, version: &str);
     /// the next event, in the order of the TypeScript's callbacks
     fn pop_event(&mut self) -> Option<TransportEvent>;
+    /// whether `send` reaches the network only after the current synchronous
+    /// work (the transport awaits its headers first)
+    fn defers_send(&self) -> bool {
+        false
+    }
     /// a timer the transport started fires: whether it was the transport's
     fn on_timeout(&mut self, _host: &mut dyn ClientHost, _timer: u64) -> bool {
         false
@@ -847,6 +855,11 @@ pub struct Client {
     /// `this._transport !== undefined`
     connected: bool,
     pumping: bool,
+    /// events taken off the transport's queue that wait for their turn
+    backlog: VecDeque<TransportEvent>,
+    /// [`TransportEvent::LateError`]s wait for the end of a rejection
+    hold_late: bool,
+    late: Vec<ClientError>,
     next_message_id: u64,
     pending: Vec<Pending>,
     /// the abort listeners the SDK never removes: (operation, message id)
@@ -888,6 +901,9 @@ impl Client {
             transport: None,
             connected: false,
             pumping: false,
+            backlog: VecDeque::new(),
+            hold_late: false,
+            late: Vec::new(),
             next_message_id: 0,
             pending: Vec::new(),
             listeners: Vec::new(),
@@ -942,11 +958,12 @@ impl Client {
     // ---- sending ----
 
     fn send(&mut self, host: &mut dyn ClientHost, message: &JsonValue) -> Result<(), ClientError> {
+        self.park_queued();
         let result = match self.transport.as_mut() {
             Some(transport) => transport.send(host, message),
             None => Err(ClientError::plain("Not connected")),
         };
-        self.pump(host);
+        self.flush(host);
         result
     }
 
@@ -975,10 +992,20 @@ impl Client {
 
     /// the promise of an operation rejects: a failed `connect` closes first
     fn reject(&mut self, host: &mut dyn ClientHost, op: OpId, kind: &Kind, error: ClientError) {
-        if *kind == Kind::Initialize {
-            self.close(host);
+        if *kind != Kind::Initialize {
+            host.settle(op, Err(error));
+            return;
         }
+        // the errors of the streams the close aborts surface after the
+        // rejection reached its caller
+        self.hold_late = true;
+        self.close(host);
+        self.hold_late = false;
+        let late = std::mem::take(&mut self.late);
         host.settle(op, Err(error));
+        for error in late {
+            host.on_error(&error);
+        }
     }
 
     /// `request(request, resultSchema, options)`
@@ -1318,9 +1345,9 @@ impl Client {
         }
         self.pumping = true;
         loop {
-            let event = match self.transport.as_mut() {
-                Some(transport) => transport.pop_event(),
-                None => None,
+            let event = match self.backlog.pop_front() {
+                Some(event) => Some(event),
+                None => self.transport.as_mut().and_then(|t| t.pop_event()),
             };
             match event {
                 Some(event) => self.handle_event(host, event),
@@ -1330,10 +1357,40 @@ impl Client {
         self.pumping = false;
     }
 
+    /// before a call into the transport made while events are being handled:
+    /// what the transport queued so far is older than what the call queues
+    fn park_queued(&mut self) {
+        if !self.pumping {
+            return;
+        }
+        while let Some(event) = self.transport.as_mut().and_then(|t| t.pop_event()) {
+            self.backlog.push_back(event);
+        }
+    }
+
+    /// after a call into the transport: its callbacks ran inside the call, so
+    /// what it queued is handled at once, also while events are being handled
+    fn flush(&mut self, host: &mut dyn ClientHost) {
+        if !self.pumping {
+            self.pump(host);
+            return;
+        }
+        while let Some(event) = self.transport.as_mut().and_then(|t| t.pop_event()) {
+            self.handle_event(host, event);
+        }
+    }
+
     fn handle_event(&mut self, host: &mut dyn ClientHost, event: TransportEvent) {
         match event {
             TransportEvent::Message(message) => self.handle_message(host, message),
             TransportEvent::Error(error) => host.on_error(&error),
+            TransportEvent::LateError(error) => {
+                if self.hold_late {
+                    self.late.push(error);
+                } else {
+                    host.on_error(&error);
+                }
+            }
             TransportEvent::Closed => self.on_closed(host),
             TransportEvent::Started(outcome) => {
                 if let Some(ctx) = self.connecting.take() {
@@ -1442,6 +1499,7 @@ impl Client {
                             "Method not found",
                             None,
                         ),
+                        true,
                     );
                     return;
                 }
@@ -1450,6 +1508,7 @@ impl Client {
             self.send_response(
                 host,
                 types::error_response(id, error_code::METHOD_NOT_FOUND, "Method not found", None),
+                true,
             );
             return;
         };
@@ -1469,17 +1528,23 @@ impl Client {
                 types::error_response(id, code, &message, error.data)
             }
         };
-        self.send_response(host, response);
+        self.send_response(host, response, false);
     }
 
-    /// `capturedTransport?.send(response)` of `_onrequest`
-    fn send_response(&mut self, host: &mut dyn ClientHost, response: JsonValue) {
+    /// `capturedTransport?.send(response)` of `_onrequest`; `no_handler` is the
+    /// branch whose failure reads "Failed to send an error response"
+    fn send_response(&mut self, host: &mut dyn ClientHost, response: JsonValue, no_handler: bool) {
         if !self.connected {
             return;
         }
         if let Err(error) = self.send(host, &response) {
+            let what = if no_handler {
+                "an error response"
+            } else {
+                "response"
+            };
             host.on_error(&ClientError::plain(&format!(
-                "Failed to send response: {}",
+                "Failed to send {what}: {}",
                 error.to_js_string()
             )));
         }
@@ -1587,28 +1652,69 @@ impl Client {
                 )
             }
         };
-        if self.connected {
+        let send_cancel = self.connected;
+        // a transport that awaits its headers sends after the synchronous
+        // rejection (and the close and abort that follow it)
+        let deferred = send_cancel && self.transport.as_ref().is_some_and(|t| t.defers_send());
+        let cancelled = send_cancel.then(|| {
             let params = object(vec![
                 ("requestId", JsonValue::Number(id as f64)),
                 ("reason", JsonValue::String(reason_text)),
             ]);
-            let cancelled = object(vec![
+            object(vec![
                 ("jsonrpc", text("2.0")),
                 ("method", text("notifications/cancelled")),
                 ("params", params),
-            ]);
-            if let Err(failure) = self.send(host, &cancelled) {
-                host.on_error(&ClientError::plain(&format!(
-                    "Failed to send cancellation: {}",
-                    failure.to_js_string()
-                )));
-            }
+            ])
+        });
+        let mut sent = None;
+        if let Some(cancelled) = &cancelled
+            && !deferred
+        {
+            sent = Some(self.send_held(host, cancelled));
         }
         if let Some(entry) = entry
             && !entry.orphan
         {
             self.reject(host, entry.op, &entry.kind, ClientError::Mcp(error));
         }
+        if let Some(cancelled) = &cancelled
+            && deferred
+        {
+            sent = Some(self.send_held(host, cancelled));
+        }
+        // `send(cancel).catch(...)`: what the send answers comes after the
+        // rejection above
+        if let Some((result, held)) = sent {
+            for event in held {
+                self.handle_event(host, event);
+            }
+            if let Err(failure) = result {
+                host.on_error(&ClientError::plain(&format!(
+                    "Failed to send cancellation: {}",
+                    failure.to_js_string()
+                )));
+            }
+            self.pump(host);
+        }
+    }
+
+    /// a send whose events wait for the caller
+    fn send_held(
+        &mut self,
+        host: &mut dyn ClientHost,
+        message: &JsonValue,
+    ) -> (Result<(), ClientError>, Vec<TransportEvent>) {
+        self.park_queued();
+        let Some(transport) = self.transport.as_mut() else {
+            return (Err(ClientError::plain("Not connected")), Vec::new());
+        };
+        let result = transport.send(host, message);
+        let mut held = Vec::new();
+        while let Some(event) = transport.pop_event() {
+            held.push(event);
+        }
+        (result, held)
     }
 
     /// `await client.close()`
@@ -1616,10 +1722,11 @@ impl Client {
         if !self.connected {
             return;
         }
+        self.park_queued();
         if let Some(transport) = self.transport.as_mut() {
             transport.close(host);
         }
-        self.pump(host);
+        self.flush(host);
     }
 
     /// `_onclose()`

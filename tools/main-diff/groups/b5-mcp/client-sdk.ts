@@ -2986,6 +2986,30 @@ const streamableScenarios: Scenario[] = [
     ],
   },
   {
+    // the connect times out while the answer stream is open: close aborts the
+    // stream before the cancel POST is fetched
+    fetches: [{ status: 200, headers: SSE_HEADERS, stream: true }, accepted],
+    steps: [
+      { op: 'connect', id: 'c' },
+      { op: 'timer', n: 1 },
+    ],
+  },
+  {
+    // a request times out while its answer stream is open: the stream stays
+    fetches: [
+      initAnswer(),
+      accepted,
+      { status: 405 },
+      { status: 200, headers: SSE_HEADERS, stream: true },
+      accepted,
+    ],
+    steps: [
+      { op: 'connect', id: 'c' },
+      { op: 'listTools', id: 'l', timeout: 300 },
+      { op: 'timer', n: 2 },
+    ],
+  },
+  {
     fetches: [initAnswer(), accepted, { status: 200, headers: SSE_HEADERS, stream: true }],
     steps: [{ op: 'connect', id: 'c' }, { op: 'close' }],
   },

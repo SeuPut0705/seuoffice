@@ -41,8 +41,8 @@ use crate::shell::mcp::pptx_outline::{
 use crate::shell::mcp::sheets_bridge::{SheetsBridge, SheetsBridgeHost};
 use crate::shell::mcp::slides_bridge::{SlidesBridge, SlidesBridgeHost, element_withholds};
 use crate::shell::mcp::tools::diagram_tools::{
-    DIAGRAM_MCP_TOOL_APPLY, DIAGRAM_MCP_TOOL_READ, DiagramToolsDeps, create_diagram_tools,
-    diagram_op_item_schema, front_diagram,
+    DIAGRAM_MCP_TOOL_APPLY, DIAGRAM_MCP_TOOL_READ, DetachedCheck, DiagramToolsDeps,
+    create_diagram_tools, diagram_op_item_schema, front_diagram,
 };
 use crate::shell::mcp::tools::formats::{EditorFamily, FORMAT_FAMILIES, SessionFamily};
 use crate::shell::mcp::tools::hwp_tools::HwpTextReader;
@@ -53,8 +53,7 @@ use crate::shell::mcp::tools::sheets_tools::{
     SheetsCommandName, SheetsToolDeps, create_sheets_tools, sheets_driver,
 };
 use crate::shell::mcp::tools::slides_tools::{
-    Isolation, ReadDeckOptions, SlidesToolDeps, SlidesTxnRequest, create_slides_tools,
-    slides_driver,
+    ReadDeckOptions, SlidesToolDeps, create_slides_tools, slides_driver,
 };
 use crate::shell::tab_manager::{OpenDocumentTab, TabKind};
 
@@ -95,7 +94,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             "apply": DIAGRAM_MCP_TOOL_APPLY,
         }))),
         "diagram-tools.diagramOpItemSchema" => schema_call(args),
-        "diagram-tools.frontDiagram" => (|| {
+        "diagram-tools.frontDiagram" => {
             let documents = tabs_of(arg(args, 0));
             let detached: Option<Vec<String>> =
                 arg(args, 1).and_then(Value::as_array).map(|list| {
@@ -114,7 +113,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 None => front_diagram(&documents, None),
             };
             Ok(Some(front.map_or(Value::Null, OpenDocumentTab::to_value)))
-        })(),
+        }
         "diagram-tools.tools" => create_diagram_tools(DiagramToolsDeps {
             control: true,
             is_detached: None,
@@ -433,17 +432,13 @@ fn answer_call(deps: &Value, log: &Log, call: &HostCall) -> Settled {
             }
         }
         ("DiagramControl", "read") => {
-            let id = arg_of(0)
-                .get("id")
-                .map_or(Value::Null, |id| sv(&id.into_owned()));
+            let id = arg_of(0).get("id").map_or(Value::Null, |id| sv(&id));
             let page = call.args.get(1).map_or(Value::Null, sv);
             push(log, vec![Value::from("diagram.read"), id, page]);
             settled_of(deps.get("control").and_then(|c| c.get("read")))
         }
         ("DiagramControl", "apply") => {
-            let id = arg_of(0)
-                .get("id")
-                .map_or(Value::Null, |id| sv(&id.into_owned()));
+            let id = arg_of(0).get("id").map_or(Value::Null, |id| sv(&id));
             push(log, vec![Value::from("diagram.apply"), id, sv(&arg_of(1))]);
             settled_of(deps.get("control").and_then(|c| c.get("apply")))
         }
@@ -595,7 +590,7 @@ fn diagram_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
     let control = spec.get("control").filter(|control| control.is_object());
-    let is_detached: Option<Rc<dyn Fn(&str) -> bool>> = control
+    let is_detached: Option<DetachedCheck> = control
         .and_then(|control| control.get("detached"))
         .and_then(Value::as_array)
         .map(|list| {
@@ -606,7 +601,7 @@ fn diagram_call(args: &[Value], cx: &mut Context) -> Answer {
                     vec![Value::from("diagram.isDetached"), Value::from(id)],
                 );
                 ids.iter().any(|d| d.as_str() == Some(id))
-            }) as Rc<dyn Fn(&str) -> bool>
+            }) as DetachedCheck
         });
     let answer = match create_diagram_tools(DiagramToolsDeps {
         control: control.is_some(),
@@ -1293,9 +1288,7 @@ fn open_bridge_call(args: &[Value], cx: &mut Context) -> Answer {
                     &log,
                     vec![
                         Value::from("deps.recoveryDiscard"),
-                        arg_of(0)
-                            .get("id")
-                            .map_or(Value::Null, |id| sv(&id.into_owned())),
+                        arg_of(0).get("id").map_or(Value::Null, |id| sv(&id)),
                         sv(&arg_of(1)),
                     ],
                 );
@@ -1516,14 +1509,10 @@ impl SlidesBridgeHost for SlidesHost {
         }
     }
 
-    fn apply_session_txn(&mut self, wc_id: i64, req: &SlidesTxnRequest) -> Option<JsonValue> {
+    fn apply_session_txn(&mut self, wc_id: i64, req: &JsonValue) -> Option<JsonValue> {
         push(
             &self.log,
-            vec![
-                Value::from("applySessionTxn"),
-                Value::from(wc_id),
-                sv(&req.to_json()),
-            ],
+            vec![Value::from("applySessionTxn"), Value::from(wc_id), sv(req)],
         );
         let result = jv(self.sessions.get(&wc_id)?.txn.as_ref()?);
         result.truthy().then_some(result)
@@ -1649,23 +1638,10 @@ fn slides_bridge_call(args: &[Value], cx: &mut Context) -> Answer {
         } else if step.get("vanish").is_some() {
             bridge.host_mut().wcs.remove(&id_of("vanish"));
         } else if step.get("txn").is_some() {
-            let req = step.get("req").cloned().unwrap_or(Value::Null);
-            let request = SlidesTxnRequest {
-                ops: req
-                    .get("ops")
-                    .and_then(Value::as_array)
-                    .map(|list| list.iter().map(jv).collect())
-                    .unwrap_or_default(),
-                isolation: match req.get("isolation").and_then(Value::as_str) {
-                    Some("per_op") => Some(Isolation::PerOp),
-                    Some("atomic") => Some(Isolation::Atomic),
-                    _ => None,
-                },
-                dry_run: on(&req, "dryRun"),
-            };
+            let req = step.get("req").map_or(JsonValue::Null, jv);
             answers.push(step_answer(
                 bridge
-                    .run_txn(id_of("txn"), &request)
+                    .run_txn(id_of("txn"), &req)
                     .map(|value| value.map(|value| sv(&value))),
             ));
         } else if step.get("read").is_some() {
@@ -1723,11 +1699,12 @@ fn slides_bridge_call(args: &[Value], cx: &mut Context) -> Answer {
 
 // ---- app-mcp ----
 
-struct ZeroClock;
+/// the clock of the case, in UTC
+struct CaseClock(f64);
 
-impl LogClock for ZeroClock {
+impl LogClock for CaseClock {
     fn now_ms(&self) -> f64 {
-        0.0
+        self.0
     }
 
     fn utc_offset_ms(&self, _at_ms: f64) -> f64 {
@@ -1749,6 +1726,7 @@ impl McpHost for IdleHost {
 
 struct AppHost {
     log: Log,
+    now_ms: f64,
 }
 
 impl McpRuntimeHost for AppHost {
@@ -1758,7 +1736,7 @@ impl McpRuntimeHost for AppHost {
     }
 
     fn new_log_clock(&self) -> Box<dyn LogClock> {
-        Box::new(ZeroClock)
+        Box::new(CaseClock(self.now_ms))
     }
 }
 
@@ -1917,6 +1895,7 @@ fn app_call(args: &[Value], cx: &mut Context) -> Answer {
     let log = new_log();
     let mut runtime = McpRuntime::new(Box::new(AppHost {
         log: Rc::clone(&log),
+        now_ms: cx.now_ms,
     }));
     let mut labels: HashMap<u32, String> = HashMap::new();
     let mut outcomes = Map::new();

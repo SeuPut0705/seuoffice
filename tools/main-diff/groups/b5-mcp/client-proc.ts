@@ -1675,7 +1675,12 @@ async function kitScenario(a: unknown[], cx: TsContext): Promise<unknown> {
         }
       }
       if (step.op === 'resolve') results.push(await one(step.command, step.offerDownload))
-      else results.push(await Promise.all(step.commands.map((command) => one(command))))
+      else {
+        // which of the concurrent lookups reaches the queue first depends on the thread pool's
+        // completion order, so the answers are listed in sorted order
+        const all = await Promise.all(step.commands.map((command) => one(command)))
+        results.push(all.sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1)))
+      }
     }
     return { results }
   } finally {
@@ -1846,12 +1851,12 @@ const kitCases: Case[] = [
   kc(kitOptions({ platform: 'darwin', arch: 'arm64', allowed: ['node'] }), [rs('npm')], 'macOS'),
   kc(
     kitOptions({ ask: [true] }),
-    [{ op: 'resolveAll', commands: ['node', 'npx', 'npm'] }],
+    [{ op: 'resolveAll', commands: ['node', 'node', 'node'] }],
     'concurrent lookups are queued: one question, one download',
   ),
   kc(
     kitOptions({ ask: [false, true] }),
-    [{ op: 'resolveAll', commands: ['node', 'npx'] }],
+    [{ op: 'resolveAll', commands: ['node', 'node'] }],
     'concurrent lookups: the second asks again after a no',
   ),
   // uv and python

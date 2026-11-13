@@ -917,12 +917,23 @@ impl RemoteConnection {
 
     /// `close()`
     pub fn close(&mut self, host: &mut dyn RemoteHost, op: u64) {
+        let mark = self.finished.len();
+        let mut sign_in_op = None;
         if let Some(current) = self.sign_in_current {
+            sign_in_op = self.sign_ins.iter().find(|r| r.id == current).map(|r| r.op);
             self.abort_sign_in(host, current);
         }
         self.drop_client(host);
         self.pump(host);
+        // an aborted sign-in answers through several promise hops, `close` through one
+        let (late, early): (Vec<_>, Vec<_>) = self
+            .finished
+            .split_off(mark)
+            .into_iter()
+            .partition(|(answered, _)| Some(*answered) == sign_in_op);
+        self.finished.extend(early);
         self.finish(op, Ok(RemoteResult::Closed));
+        self.finished.extend(late);
     }
 
     // ---- what the world tells ----
@@ -1223,8 +1234,18 @@ impl RemoteConnection {
         let id = self.shared.next_client;
         self.shared.next_client += 1;
         let transport: Box<dyn Transport> = match kind {
-            Kind::Sse => Box::new(SseTransport::new(&self.shared.href)),
-            Kind::Streamable => Box::new(StreamableHttpTransport::new(&self.shared.href)),
+            // `serverFetch` is an async wrapper, so a request the transport sends
+            // reaches fetch a promise hop after the synchronous code around it
+            Kind::Sse => {
+                let mut transport = SseTransport::new(&self.shared.href);
+                transport.set_late_send(true);
+                Box::new(transport)
+            }
+            Kind::Streamable => {
+                let mut transport = StreamableHttpTransport::new(&self.shared.href);
+                transport.set_late_send(true);
+                Box::new(transport)
+            }
         };
         let mut client = Client::new(self.shared.client_info.clone());
         client.set_notification_handler();

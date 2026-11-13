@@ -347,6 +347,12 @@ async function headlessRun(
   const { runner, scratch } = scriptedCli(spec.outcome, cx)
   try {
     return await call(runner)
+  } catch (error) {
+    // the scratch folder's random suffix shows in a Node error's message
+    if (error instanceof Error) {
+      error.message = error.message.replace(/[^\s']*seuoffice-mcp-[A-Za-z0-9]{6}/g, '<tmp>')
+    }
+    throw error
   } finally {
     const dir = scratch()
     cx.log('scratch folder removed', dir === undefined ? null : !existsSync(dir))

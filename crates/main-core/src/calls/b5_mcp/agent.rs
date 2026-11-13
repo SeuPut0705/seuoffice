@@ -752,7 +752,7 @@ enum Item {
 
 /// what the scenario drives: the session's app server, or the relays
 enum Target {
-    Agent(AgentMcpServer<'static>),
+    Agent(Box<AgentMcpServer<'static>>),
     Relays(AgentMcpRelays<'static>),
 }
 
@@ -1301,7 +1301,7 @@ fn agent_scenario(args: &[Value]) -> Answer {
         bytes: Cell::new(0),
     });
     let (server, _, commands) = start_agent_mcp_server(deps, &text(&spec, "root"), host);
-    let mut target = Target::Agent(server);
+    let mut target = Target::Agent(Box::new(server));
     world.wires.push(Wire::default());
     world.ports.push(BOUND_PORT);
     if let Target::Agent(server) = &target {
