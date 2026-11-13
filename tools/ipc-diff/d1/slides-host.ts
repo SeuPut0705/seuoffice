@@ -52,14 +52,18 @@ const asObject = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json)
 const shortTimers = new Set<unknown>()
 const realSetTimeout = globalThis.setTimeout
 const realClearTimeout = globalThis.clearTimeout
-;(globalThis as Record<string, unknown>).setTimeout = (fn: () => void, ms?: number, ...a: unknown[]) => {
+;(globalThis as Record<string, unknown>).setTimeout = (
+  fn: () => void,
+  ms?: number,
+  ...a: unknown[]
+) => {
   if (typeof ms === 'number' && ms > 0 && ms <= 200) {
     const handle = setImmediate(() => fn(...(a as [])))
     shortTimers.add(handle)
     return handle
   }
   const timer = realSetTimeout(fn, ms, ...a)
-  timer.unref?.()
+  ;(timer as unknown as { unref?: () => void }).unref?.()
   return timer
 }
 ;(globalThis as Record<string, unknown>).clearTimeout = (handle: never) =>
@@ -179,7 +183,8 @@ box.exportSlidesPdf = async (opts: { filePath?: unknown; openExportedPdf(path: s
   }
   return { ok: path !== undefined, ...(path !== undefined ? { path } : {}) }
 }
-box.randomUUID = () => `00000000-0000-4000-8000-${String(++(box.uuids as number)).padStart(12, '0')}`
+box.randomUUID = () =>
+  `00000000-0000-4000-8000-${String(++(box.uuids as number)).padStart(12, '0')}`
 box.takeGenerateHandoff = (target: string, view: number) => {
   box.log(['generate-handoff.takeGenerateHandoff', target, view])
   const handoff = box.handoff
@@ -200,9 +205,7 @@ box.parseFileToText = async (path: string) => {
 }
 box.installLocalFontFiles = (paths: string[]) => {
   box.log(['font-store.installLocalFontFiles', paths.length])
-  return paths
-    .map((p) => p.split('/').at(-1) ?? p)
-    .map((n) => n.split('.')[0] ?? n)
+  return paths.map((p) => p.split('/').at(-1) ?? p).map((n) => n.split('.')[0] ?? n)
 }
 
 function wrapperSource(name: string, real: string): string {
@@ -288,7 +291,7 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
     typeof clock === 'number'
       ? (class FixedDate extends RealDate {
           constructor(...args: unknown[]) {
-            if (args.length === 0) super(clock)
+            if (args.length === 0) super(clock as number)
             else super(...(args as [number]))
           }
           static override now(): number {

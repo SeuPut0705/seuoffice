@@ -102,6 +102,10 @@ export function diagramCase(
 export const opened = (...names: (string | { name: string; decision?: string })[]) => ({
   open: names.map((n, i) => {
     const entry = typeof n === 'string' ? { name: n } : n
-    return { view: i + 1, path: `$DIR/${entry.name}`, ...(entry.decision ? { decision: entry.decision } : {}) }
+    return {
+      view: i + 1,
+      path: `$DIR/${entry.name}`,
+      ...(entry.decision ? { decision: entry.decision } : {}),
+    }
   }),
 })

@@ -98,7 +98,11 @@ export const queued = (...entries: [number, string][]) => ({
 export const SELECT = call('workbook:select')
 
 /** a save request of a session: the schema's own full form (sheets-canon.json), with what the case changes */
-export const saveRequest = (session: string, mode: string, extra: Record<string, unknown> = {}) => ({
+export const saveRequest = (
+  session: string,
+  mode: string,
+  extra: Record<string, unknown> = {},
+) => ({
   ...(canon.saveRequest as Record<string, unknown>),
   sessionId: session,
   mode,

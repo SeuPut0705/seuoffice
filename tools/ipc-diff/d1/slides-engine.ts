@@ -196,9 +196,7 @@ function check(working: Working, op: Json): string | undefined {
     case 'deleteComment': {
       if (!slideOk) return 'slide not found'
       const idx = num(op.idx) ?? -1
-      return idx >= 0 && idx < working.slides[slide].comments.length
-        ? undefined
-        : 'no such comment'
+      return idx >= 0 && idx < working.slides[slide].comments.length ? undefined : 'no such comment'
     }
     default: {
       // any other op addresses a slide, and an element of it, or none
@@ -222,7 +220,7 @@ interface TxnRecord {
   op: Json
   slideId?: string
   created?: string[]
-  after: undefined
+  after: unknown
 }
 
 function apply(working: Working, op: Json): TxnRecord {

@@ -29,7 +29,10 @@ const range = (extra: Record<string, number> = {}) => ({
   endColumn: 1,
   ...extra,
 })
-const withSession = (session: string, rest: Record<string, unknown> = {}) => ({ sessionId: session, ...rest })
+const withSession = (session: string, rest: Record<string, unknown> = {}) => ({
+  sessionId: session,
+  ...rest,
+})
 const both = (channel: string, rest: Record<string, unknown> = {}) => [
   SELECT,
   call(channel, [withSession(S1, rest)]),
@@ -76,17 +79,24 @@ const cases: Case[] = [
     call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range() })]),
     call('workbook:read-range', [withSession(NOBODY, { sheetId: 's1', range: range() })]),
     call('workbook:read-range', [withSession('x', { sheetId: 's1', range: range() })]),
-    call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range({ startRow: 5, endRow: 1 }) })]),
-    call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range({ endRow: 99_999, endColumn: 9 }) })]),
+    call('workbook:read-range', [
+      withSession(S1, { sheetId: 's1', range: range({ startRow: 5, endRow: 1 }) }),
+    ]),
+    call('workbook:read-range', [
+      withSession(S1, { sheetId: 's1', range: range({ endRow: 99_999, endColumn: 9 }) }),
+    ]),
     call('workbook:read-range', [withSession(S1, { range: range() })]),
-    call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range({ startRow: -1 }) })]),
+    call('workbook:read-range', [
+      withSession(S1, { sheetId: 's1', range: range({ startRow: -1 }) }),
+    ]),
     call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range(), extra: 1 })]),
     call('workbook:read-range', []),
   ]),
-  sheetsCase('the engine fails to read a range', { d1: { ...A, readRange: { error: 'sidecar gone' } } }, [
-    SELECT,
-    call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range() })]),
-  ]),
+  sheetsCase(
+    'the engine fails to read a range',
+    { d1: { ...A, readRange: { error: 'sidecar gone' } } },
+    [SELECT, call('workbook:read-range', [withSession(S1, { sheetId: 's1', range: range() })])],
+  ),
   sheetsCase('formula cells', { d1: A }, [
     ...both('workbook:read-formulas', { sheetId: 's1' }),
     call('workbook:read-formulas', [withSession(S1, { sheetId: '' })]),
@@ -95,70 +105,120 @@ const cases: Case[] = [
     ...both('workbook:read-row-outline', { sheetId: 's1' }),
     call('workbook:read-row-outline', [withSession(S1)]),
   ]),
-  sheetsCase('find: a whole workbook, a sheet, resuming, and requests the schema refuses', { d1: A }, [
-    SELECT,
-    call('workbook:find-cells', [
-      withSession(S1, { query: 'x', matchCase: false, matchEntireCell: false, lookIn: 'values', wildcards: false, limit: 50 }),
-    ]),
-    call('workbook:find-cells', [
-      withSession(S1, {
-        sheetId: 's1',
-        query: 'x',
-        matchCase: true,
-        matchEntireCell: true,
-        lookIn: 'both',
-        wildcards: true,
-        resumeAt: { sheetId: 's1', row: 3, column: 2 },
-        limit: 100_000,
-      }),
-    ]),
-    call('workbook:find-cells', [
-      withSession(NOBODY, { query: 'x', matchCase: false, matchEntireCell: false, lookIn: 'values', wildcards: false, limit: 50 }),
-    ]),
-    call('workbook:find-cells', [
-      withSession(S1, { query: '', matchCase: false, matchEntireCell: false, lookIn: 'values', wildcards: false, limit: 50 }),
-    ]),
-    call('workbook:find-cells', [
-      withSession(S1, { query: 'x', matchCase: false, matchEntireCell: false, lookIn: 'nowhere', wildcards: false, limit: 0 }),
-    ]),
-    call('workbook:find-cells', [withSession(S1, { query: 'x' })]),
-  ]),
+  sheetsCase(
+    'find: a whole workbook, a sheet, resuming, and requests the schema refuses',
+    { d1: A },
+    [
+      SELECT,
+      call('workbook:find-cells', [
+        withSession(S1, {
+          query: 'x',
+          matchCase: false,
+          matchEntireCell: false,
+          lookIn: 'values',
+          wildcards: false,
+          limit: 50,
+        }),
+      ]),
+      call('workbook:find-cells', [
+        withSession(S1, {
+          sheetId: 's1',
+          query: 'x',
+          matchCase: true,
+          matchEntireCell: true,
+          lookIn: 'both',
+          wildcards: true,
+          resumeAt: { sheetId: 's1', row: 3, column: 2 },
+          limit: 100_000,
+        }),
+      ]),
+      call('workbook:find-cells', [
+        withSession(NOBODY, {
+          query: 'x',
+          matchCase: false,
+          matchEntireCell: false,
+          lookIn: 'values',
+          wildcards: false,
+          limit: 50,
+        }),
+      ]),
+      call('workbook:find-cells', [
+        withSession(S1, {
+          query: '',
+          matchCase: false,
+          matchEntireCell: false,
+          lookIn: 'values',
+          wildcards: false,
+          limit: 50,
+        }),
+      ]),
+      call('workbook:find-cells', [
+        withSession(S1, {
+          query: 'x',
+          matchCase: false,
+          matchEntireCell: false,
+          lookIn: 'nowhere',
+          wildcards: false,
+          limit: 0,
+        }),
+      ]),
+      call('workbook:find-cells', [withSession(S1, { query: 'x' })]),
+    ],
+  ),
   sheetsCase('an image of the sheet', { d1: A }, [
     ...both('workbook:read-media', { visualId: 'v1' }),
     call('workbook:read-media', [withSession(S1, { visualId: '' })]),
   ]),
 
   // ---- recalculation ----
-  sheetsCase('recalculation: values, formulas, a sheet that is not in the file, reversed and oversize reads', { d1: A }, [
-    SELECT,
-    call('workbook:recalc', [
-      withSession(S1, {
-        edits: [
-          { sheetId: 's1', row: 0, column: 0, input: '42' },
-          { sheetId: 's1', row: 1, column: 0, input: '=A1*2' },
-          { sheetId: 's1', row: 2, column: 0, input: 'text' },
-          { sheetId: 's1', row: 3, column: 0, input: '  ' },
-        ],
-        reads: [{ sheetId: 's1', range: range() }],
-      }),
-    ]),
-    call('workbook:recalc', [withSession(S1, { edits: [], reads: [] })]),
-    call('workbook:recalc', [withSession(S1, { edits: [{ sheetId: 's9', row: 0, column: 0, input: '1' }], reads: [] })]),
-    call('workbook:recalc', [withSession(S1, { edits: [], reads: [{ sheetId: 's9', range: range() }] })]),
-    call('workbook:recalc', [withSession(S1, { edits: [], reads: [{ sheetId: 's1', range: range({ startColumn: 4, endColumn: 1 }) }] })]),
-    call('workbook:recalc', [
-      withSession(S1, {
-        edits: [],
-        reads: [
-          { sheetId: 's1', range: range({ endRow: 999, endColumn: 99 }) },
-          { sheetId: 's1', range: range({ endRow: 999, endColumn: 99 }) },
-        ],
-      }),
-    ]),
-    call('workbook:recalc', [withSession(NOBODY, { edits: [], reads: [] })]),
-    call('workbook:recalc', [withSession(S1, { edits: [{ sheetId: 's1', row: 1_048_576, column: 0, input: '1' }], reads: [] })]),
-    call('workbook:recalc', [withSession(S1, { edits: [] })]),
-  ]),
+  sheetsCase(
+    'recalculation: values, formulas, a sheet that is not in the file, reversed and oversize reads',
+    { d1: A },
+    [
+      SELECT,
+      call('workbook:recalc', [
+        withSession(S1, {
+          edits: [
+            { sheetId: 's1', row: 0, column: 0, input: '42' },
+            { sheetId: 's1', row: 1, column: 0, input: '=A1*2' },
+            { sheetId: 's1', row: 2, column: 0, input: 'text' },
+            { sheetId: 's1', row: 3, column: 0, input: '  ' },
+          ],
+          reads: [{ sheetId: 's1', range: range() }],
+        }),
+      ]),
+      call('workbook:recalc', [withSession(S1, { edits: [], reads: [] })]),
+      call('workbook:recalc', [
+        withSession(S1, { edits: [{ sheetId: 's9', row: 0, column: 0, input: '1' }], reads: [] }),
+      ]),
+      call('workbook:recalc', [
+        withSession(S1, { edits: [], reads: [{ sheetId: 's9', range: range() }] }),
+      ]),
+      call('workbook:recalc', [
+        withSession(S1, {
+          edits: [],
+          reads: [{ sheetId: 's1', range: range({ startColumn: 4, endColumn: 1 }) }],
+        }),
+      ]),
+      call('workbook:recalc', [
+        withSession(S1, {
+          edits: [],
+          reads: [
+            { sheetId: 's1', range: range({ endRow: 999, endColumn: 99 }) },
+            { sheetId: 's1', range: range({ endRow: 999, endColumn: 99 }) },
+          ],
+        }),
+      ]),
+      call('workbook:recalc', [withSession(NOBODY, { edits: [], reads: [] })]),
+      call('workbook:recalc', [
+        withSession(S1, {
+          edits: [{ sheetId: 's1', row: 1_048_576, column: 0, input: '1' }],
+          reads: [],
+        }),
+      ]),
+      call('workbook:recalc', [withSession(S1, { edits: [] })]),
+    ],
+  ),
 
   // ---- external links ----
   sheetsCase('the links of a workbook, refreshed, and what uses them', { d1: A }, [
@@ -166,26 +226,41 @@ const cases: Case[] = [
     ...both('workbook:update-external-links'),
     ...both('workbook:read-external-link-usage'),
   ]),
-  sheetsCase('a link source is picked by the host: chosen, cancelled, empty', { opens: [['$DIR/b.xlsx'], null, []] }, [
-    call('workbook:select-external-link-source'),
-    call('workbook:select-external-link-source'),
-    call('workbook:select-external-link-source'),
-  ]),
+  sheetsCase(
+    'a link source is picked by the host: chosen, cancelled, empty',
+    { opens: [['$DIR/b.xlsx'], null, []] },
+    [
+      call('workbook:select-external-link-source'),
+      call('workbook:select-external-link-source'),
+      call('workbook:select-external-link-source'),
+    ],
+  ),
 
   // ---- pivot, slicer, connections, queries, redactions ----
   sheetsCase('a pivot table is read from the snapshot of its session', { d1: A }, [
     SELECT,
     call('workbook:read-pivot-definition', [withSession(S1, { path: PIVOT, cachePath: CACHE })]),
-    call('workbook:read-pivot-definition', [withSession(NOBODY, { path: PIVOT, cachePath: CACHE })]),
-    call('workbook:read-pivot-definition', [withSession(S1, { path: '../x.xml', cachePath: CACHE })]),
+    call('workbook:read-pivot-definition', [
+      withSession(NOBODY, { path: PIVOT, cachePath: CACHE }),
+    ]),
+    call('workbook:read-pivot-definition', [
+      withSession(S1, { path: '../x.xml', cachePath: CACHE }),
+    ]),
     call('workbook:read-pivot-definition', [withSession(S1, { path: PIVOT })]),
-    call('workbook:read-pivot-definition', [withSession(S1, { path: 'xl/a b.xml', cachePath: 'xl/.xml' })]),
+    call('workbook:read-pivot-definition', [
+      withSession(S1, { path: 'xl/a b.xml', cachePath: 'xl/.xml' }),
+    ]),
   ]),
-  sheetsCase('a workbook with no slicers is answered before the parser runs', { d1: A }, both('workbook:read-slicer-state')),
-  sheetsCase('slicers are read when the snapshot has their parts', { d1: { ...A, readSlicerState: [SLICER] } }, [
-    SELECT,
-    call('workbook:read-slicer-state', [withSession(S1)]),
-  ]),
+  sheetsCase(
+    'a workbook with no slicers is answered before the parser runs',
+    { d1: A },
+    both('workbook:read-slicer-state'),
+  ),
+  sheetsCase(
+    'slicers are read when the snapshot has their parts',
+    { d1: { ...A, readSlicerState: [SLICER] } },
+    [SELECT, call('workbook:read-slicer-state', [withSession(S1)])],
+  ),
   sheetsCase('connections: listed, refreshed, and the ones that cannot be', { d1: A }, [
     ...both('workbook:list-connections'),
     SELECT,
@@ -195,58 +270,82 @@ const cases: Case[] = [
     call('workbook:refresh-connection', [withSession(S1, { connectionId: 'c'.repeat(201) })]),
     call('workbook:refresh-connection', [withSession(S1)]),
   ]),
-  sheetsCase('a connection the workbook does not have', { d1: { ...A, refreshOutcome: { unknown: true } } }, [
-    SELECT,
-    call('workbook:refresh-connection', [withSession(S1, { connectionId: 'c1' })]),
-  ]),
-  sheetsCase('a connection whose source has no table', { d1: { ...A, refreshOutcome: { noTable: true } } }, [
-    SELECT,
-    call('workbook:refresh-connection', [withSession(S1, { connectionId: 'c1' })]),
-  ]),
+  sheetsCase(
+    'a connection the workbook does not have',
+    { d1: { ...A, refreshOutcome: { unknown: true } } },
+    [SELECT, call('workbook:refresh-connection', [withSession(S1, { connectionId: 'c1' })])],
+  ),
+  sheetsCase(
+    'a connection whose source has no table',
+    { d1: { ...A, refreshOutcome: { noTable: true } } },
+    [SELECT, call('workbook:refresh-connection', [withSession(S1, { connectionId: 'c1' })])],
+  ),
   sheetsCase('queries and redactions', { d1: A }, [
     ...both('workbook:read-queries'),
     ...both('workbook:read-redactions'),
   ]),
 
   // ---- tabs and the range pick ----
-  sheetsCase('another tab shows in the list once it has a workbook', { d1: TWO }, [
-    call('workbook:select', [], { view: 1 }),
-    call('workbook:list-tabs', [], { view: 1 }),
-    call('workbook:select', [], { view: 2 }),
-    call('workbook:list-tabs', [], { view: 1 }),
-    call('workbook:list-tabs', [], { view: 2 }),
-  ], { views: [tab(1), tab(2)] }),
+  sheetsCase(
+    'another tab shows in the list once it has a workbook',
+    { d1: TWO },
+    [
+      call('workbook:select', [], { view: 1 }),
+      call('workbook:list-tabs', [], { view: 1 }),
+      call('workbook:select', [], { view: 2 }),
+      call('workbook:list-tabs', [], { view: 1 }),
+      call('workbook:list-tabs', [], { view: 2 }),
+    ],
+    { views: [tab(1), tab(2)] },
+  ),
 
-  sheetsCase('a range pick: armed on the source tab, chosen there, and cancelled on the rest', { d1: TWO }, [
-    call('workbook:select', [], { view: 1 }),
-    call('workbook:select', [], { view: 2 }),
-    call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
-    call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1' })], { view: 1 }),
-    call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1', rangeType: 2 })], { view: 2 }),
-    call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1' })], { view: 2 }),
-    call('workbook:pick-cancel', [{ pickId: PICK1 }], { view: 1 }),
-  ], { views: [tab(1), tab(2)] }),
-  sheetsCase('a second arm supersedes the first, and a cancel ends the pick', { d1: TWO }, [
-    call('workbook:select', [], { view: 1 }),
-    call('workbook:select', [], { view: 2 }),
-    call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
-    call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
-    call('workbook:pick-cancel', [{ pickId: PICK1 }], { view: 2 }),
-    call('workbook:pick-cancel', [{ pickId: PICK2 }], { view: 2 }),
-    call('workbook:pick-cancel', [{ pickId: PICK2 }], { view: 2 }),
-    call('workbook:pick-arm', [{ wcId: 1 }], { view: 1 }),
-    call('workbook:pick-arm', [{ wcId: 99 }], { view: 1 }),
-  ], { views: [tab(1), tab(2)] }),
-  sheetsCase('a pick the schema refuses', { d1: TWO }, [
-    call('workbook:select', [], { view: 1 }),
-    call('workbook:pick-arm', [{}], { view: 1 }),
-    call('workbook:pick-arm', [{ wcId: 1.5 }], { view: 1 }),
-    call('workbook:pick-arm', [null], { view: 1 }),
-    call('workbook:pick-select', [{ pickId: '', sheetName: '', startRow: -1 }], { view: 1 }),
-    call('workbook:pick-select', [pick('p', { sheetName: 'S', extra: 1 })], { view: 1 }),
-    call('workbook:pick-cancel', [{ pickId: '' }], { view: 1 }),
-    call('workbook:pick-cancel', [], { view: 1 }),
-  ], { views: [tab(1), tab(2)] }),
+  sheetsCase(
+    'a range pick: armed on the source tab, chosen there, and cancelled on the rest',
+    { d1: TWO },
+    [
+      call('workbook:select', [], { view: 1 }),
+      call('workbook:select', [], { view: 2 }),
+      call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
+      call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1' })], { view: 1 }),
+      call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1', rangeType: 2 })], {
+        view: 2,
+      }),
+      call('workbook:pick-select', [pick(PICK1, { sheetName: 'Sheet1' })], { view: 2 }),
+      call('workbook:pick-cancel', [{ pickId: PICK1 }], { view: 1 }),
+    ],
+    { views: [tab(1), tab(2)] },
+  ),
+  sheetsCase(
+    'a second arm supersedes the first, and a cancel ends the pick',
+    { d1: TWO },
+    [
+      call('workbook:select', [], { view: 1 }),
+      call('workbook:select', [], { view: 2 }),
+      call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
+      call('workbook:pick-arm', [{ wcId: 2 }], { view: 1 }),
+      call('workbook:pick-cancel', [{ pickId: PICK1 }], { view: 2 }),
+      call('workbook:pick-cancel', [{ pickId: PICK2 }], { view: 2 }),
+      call('workbook:pick-cancel', [{ pickId: PICK2 }], { view: 2 }),
+      call('workbook:pick-arm', [{ wcId: 1 }], { view: 1 }),
+      call('workbook:pick-arm', [{ wcId: 99 }], { view: 1 }),
+    ],
+    { views: [tab(1), tab(2)] },
+  ),
+  sheetsCase(
+    'a pick the schema refuses',
+    { d1: TWO },
+    [
+      call('workbook:select', [], { view: 1 }),
+      call('workbook:pick-arm', [{}], { view: 1 }),
+      call('workbook:pick-arm', [{ wcId: 1.5 }], { view: 1 }),
+      call('workbook:pick-arm', [null], { view: 1 }),
+      call('workbook:pick-select', [{ pickId: '', sheetName: '', startRow: -1 }], { view: 1 }),
+      call('workbook:pick-select', [pick('p', { sheetName: 'S', extra: 1 })], { view: 1 }),
+      call('workbook:pick-cancel', [{ pickId: '' }], { view: 1 }),
+      call('workbook:pick-cancel', [], { view: 1 }),
+    ],
+    { views: [tab(1), tab(2)] },
+  ),
 ]
 
 export const group: Group = {

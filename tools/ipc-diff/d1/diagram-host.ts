@@ -71,7 +71,11 @@ box.openDiagram = (name: string, bytes: Uint8Array) => {
   const scripted = asObject(asObject(box.d1.openDiagram)[name])
   if (Object.keys(scripted).length > 0) {
     if (scripted.ok !== true) {
-      return { ok: false, reason: String(scripted.reason ?? ''), message: String(scripted.message ?? '') }
+      return {
+        ok: false,
+        reason: String(scripted.reason ?? ''),
+        message: String(scripted.message ?? ''),
+      }
     }
     return {
       ok: true,
@@ -155,7 +159,10 @@ registerHooks({
       if (specifier === './diagram-session') return { url: SESSION_FAKE, shortCircuit: true }
       if (specifier in FAKES) {
         const real = next(specifier, context).url
-        return { url: `${FAKE}wrap?name=${encodeURIComponent(specifier)}&real=${encodeURIComponent(real)}`, shortCircuit: true }
+        return {
+          url: `${FAKE}wrap?name=${encodeURIComponent(specifier)}&real=${encodeURIComponent(real)}`,
+          shortCircuit: true,
+        }
       }
     }
     return next(specifier, context)
@@ -236,7 +243,9 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
     async loadURL(url: string): Promise<void> {
       const token = url.split('/print/')[1]
       if (token === undefined) return
-      const { takePrintDocument } = req(resolve(root, MAIN, 'print-document.ts')) as typeof PrintDocument
+      const { takePrintDocument } = req(
+        resolve(root, MAIN, 'print-document.ts'),
+      ) as typeof PrintDocument
       this.html = takePrintDocument(token) ?? ''
     }
     isDestroyed = () => this.destroyed
@@ -311,17 +320,25 @@ export async function loadDiagram(cx: LoadContext): Promise<void> {
 
   // the views the shell made (`open` absent: none)
   const open = Array.isArray(box.d1.open)
-    ? (box.d1.open as { view: number; path?: string; decision?: 'restore' | 'original'; seed?: string }[])
+    ? (box.d1.open as {
+        view: number
+        path?: string
+        decision?: 'restore' | 'original'
+        seed?: string
+      }[])
     : []
   for (const entry of open) {
     box.nextView = entry.view
     main.createDiagramView(entry.path ?? null)
     if (entry.decision) recovery.setViewOpenDecision(entry.view, entry.decision)
-    if (entry.seed !== undefined) main.queueDiagramSeedFor(e.contents(entry.view) as never, { xml: entry.seed })
+    if (entry.seed !== undefined)
+      main.queueDiagramSeedFor(e.contents(entry.view) as never, { xml: entry.seed })
   }
   const job = asObject(box.d1.headlessJob)
   if (typeof job.path === 'string') {
     box.nextView = job.view as number
-    void headless.exportDiagramHeadless(job.path, resolve(cx.dir, 'headless-out.png'), 'png', {} as never).catch(() => {})
+    void headless
+      .exportDiagramHeadless(job.path, resolve(cx.dir, 'headless-out.png'), 'png', {} as never)
+      .catch(() => {})
   }
 }

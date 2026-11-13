@@ -44,17 +44,21 @@ const cases: Case[] = [
   diagramCase('a view made for a file is told its path', diagramHost('a.drawio'), [
     call('diagram:consume-pending'),
   ]),
-  diagramCase('a path that is not there is not granted', { d1: { open: [{ view: 1, path: '$DIR/missing.drawio' }] } }, [
-    call('diagram:consume-pending'),
-    call('diagram:open-file', ['$DIR/missing.drawio']),
-  ]),
-  diagramCase('content queued for a new view is taken once', { d1: { open: [{ view: 1, seed: DIAGRAM }] } }, [
-    call('diagram:seed-take'),
-    call('diagram:seed-take'),
-  ]),
-  diagramCase('a view that opens a file has no seed', { d1: { open: [{ view: 1, path: '$DIR/a.drawio', seed: DIAGRAM }] } }, [
-    call('diagram:seed-take'),
-  ]),
+  diagramCase(
+    'a path that is not there is not granted',
+    { d1: { open: [{ view: 1, path: '$DIR/missing.drawio' }] } },
+    [call('diagram:consume-pending'), call('diagram:open-file', ['$DIR/missing.drawio'])],
+  ),
+  diagramCase(
+    'content queued for a new view is taken once',
+    { d1: { open: [{ view: 1, seed: DIAGRAM }] } },
+    [call('diagram:seed-take'), call('diagram:seed-take')],
+  ),
+  diagramCase(
+    'a view that opens a file has no seed',
+    { d1: { open: [{ view: 1, path: '$DIR/a.drawio', seed: DIAGRAM }] } },
+    [call('diagram:seed-take')],
+  ),
 
   // ---- open-file ----
   diagramCase('a granted diagram opens, and again', diagramHost('a.drawio'), [OPEN_A, OPEN_A]),
@@ -63,35 +67,48 @@ const cases: Case[] = [
     call('diagram:open-file', [3]),
     call('diagram:open-file'),
   ]),
-  diagramCase('a file that is not a diagram opens nothing and gets no target', diagramHost('bad.drawio'), [
-    call('diagram:open-file', ['$DIR/bad.drawio']),
-    target('save'),
-    save(TOKEN, bin(DIAGRAM)),
-    dirty(true),
-    target('saveAs'),
-  ]),
+  diagramCase(
+    'a file that is not a diagram opens nothing and gets no target',
+    diagramHost('bad.drawio'),
+    [
+      call('diagram:open-file', ['$DIR/bad.drawio']),
+      target('save'),
+      save(TOKEN, bin(DIAGRAM)),
+      dirty(true),
+      target('saveAs'),
+    ],
+  ),
   diagramCase('a name that is not a diagram is unsupported', diagramHost('c.txt'), [
     call('diagram:open-file', ['$DIR/c.txt']),
   ]),
   diagramCase('a folder named like a diagram is unreadable', diagramHost('dir.drawio'), [
     call('diagram:open-file', ['$DIR/dir.drawio']),
   ]),
-  diagramCase('a Visio drawing is read for the importer and stays untitled', diagramHost('v.vsdx'), [
-    call('diagram:open-file', ['$DIR/v.vsdx']),
-    call('diagram:consume-pending'),
-  ]),
+  diagramCase(
+    'a Visio drawing is read for the importer and stays untitled',
+    diagramHost('v.vsdx'),
+    [call('diagram:open-file', ['$DIR/v.vsdx']), call('diagram:consume-pending')],
+  ),
   diagramCase(
     'the model decides what opens',
     {
       d1: {
         ...opened('a.drawio', 'b.drawio'),
         openDiagram: {
-          'a.drawio': { ok: true, xml: '<mxfile compressed="true"/>', format: 'dio', root: 'mxfile' },
+          'a.drawio': {
+            ok: true,
+            xml: '<mxfile compressed="true"/>',
+            format: 'dio',
+            root: 'mxfile',
+          },
           'b.drawio': { ok: false, reason: 'corrupt_image', message: 'broken' },
         },
       },
     },
-    [call('diagram:open-file', ['$DIR/a.drawio']), call('diagram:open-file', ['$DIR/b.drawio'], { view: 2 })],
+    [
+      call('diagram:open-file', ['$DIR/a.drawio']),
+      call('diagram:open-file', ['$DIR/b.drawio'], { view: 2 }),
+    ],
     { views: [view(1), view(2)] },
   ),
   diagramCase(
@@ -101,28 +118,31 @@ const cases: Case[] = [
   ),
 
   // ---- save-target ----
-  diagramCase('an untitled diagram asks where, and offers .drawio in the default folder', { saves: ['$DIR/out'] }, [
-    target('save', 'My/Plan'),
-    target('save'),
-  ]),
-  diagramCase('a picked name takes the format it ends in', { saves: ['$DIR/pic.drawio.png', '$DIR/plain.svg', null] }, [
-    target('saveAs', 'x'),
-    target('saveAs'),
-    target('saveAs'),
-  ]),
-  diagramCase('a view with a file saves to it; Save As asks, naming the file first', { ...diagramHost('a.drawio'), saves: ['$DIR/copy.dio'] }, [
-    OPEN_A,
-    target('save'),
-    target('retarget'),
-    target('saveAs'),
-  ]),
-  diagramCase('the project folder is where an untitled diagram is offered', { d1: { newDocumentDir: '$DIR/proj' }, saves: [null] }, [
-    target('save', 'idea'),
-  ]),
-  diagramCase('an imported diagram is offered beside its file, under its name', { ...diagramHost('v.vsdx'), saves: ['$DIR/imported'] }, [
-    call('diagram:open-file', ['$DIR/v.vsdx']),
-    target('save', 'ignored'),
-  ]),
+  diagramCase(
+    'an untitled diagram asks where, and offers .drawio in the default folder',
+    { saves: ['$DIR/out'] },
+    [target('save', 'My/Plan'), target('save')],
+  ),
+  diagramCase(
+    'a picked name takes the format it ends in',
+    { saves: ['$DIR/pic.drawio.png', '$DIR/plain.svg', null] },
+    [target('saveAs', 'x'), target('saveAs'), target('saveAs')],
+  ),
+  diagramCase(
+    'a view with a file saves to it; Save As asks, naming the file first',
+    { ...diagramHost('a.drawio'), saves: ['$DIR/copy.dio'] },
+    [OPEN_A, target('save'), target('retarget'), target('saveAs')],
+  ),
+  diagramCase(
+    'the project folder is where an untitled diagram is offered',
+    { d1: { newDocumentDir: '$DIR/proj' }, saves: [null] },
+    [target('save', 'idea')],
+  ),
+  diagramCase(
+    'an imported diagram is offered beside its file, under its name',
+    { ...diagramHost('v.vsdx'), saves: ['$DIR/imported'] },
+    [call('diagram:open-file', ['$DIR/v.vsdx']), target('save', 'ignored')],
+  ),
   diagramCase('a request that is not an object', {}, [
     call('diagram:save-target'),
     call('diagram:save-target', ['saveAs']),
@@ -142,19 +162,15 @@ const cases: Case[] = [
       save('nope', bin(CHANGED)),
     ],
   ),
-  diagramCase(
-    'what is not a diagram is refused, whatever the target',
-    diagramHost('a.drawio'),
-    [
-      OPEN_A,
-      target('save'),
-      dirty(true),
-      save(TOKEN, bin('<html/>')),
-      target('save'),
-      save(TOKEN2, 'not bytes'),
-      save(TOKEN, UNDEFINED),
-    ],
-  ),
+  diagramCase('what is not a diagram is refused, whatever the target', diagramHost('a.drawio'), [
+    OPEN_A,
+    target('save'),
+    dirty(true),
+    save(TOKEN, bin('<html/>')),
+    target('save'),
+    save(TOKEN2, 'not bytes'),
+    save(TOKEN, UNDEFINED),
+  ]),
   diagramCase('a clean diagram at its file writes nothing', diagramHost('a.drawio'), [
     OPEN_A,
     target('save'),
@@ -193,16 +209,24 @@ const cases: Case[] = [
   diagramCase('without project folders nothing is written', {}, [
     call('diagram:save-into-project', [{ bytes: bin(DIAGRAM), defaultName: 'p' }]),
   ]),
-  diagramCase('a new diagram goes into the project and then has its file', { d1: { writeNewDocument: { path: '$DIR/proj/p.drawio' } } }, [
-    call('diagram:save-into-project', [{ bytes: bin(DIAGRAM), defaultName: 'p/q' }]),
-    call('diagram:save-into-project', [{ bytes: bin(DIAGRAM) }]),
-    call('diagram:consume-pending'),
-  ]),
-  diagramCase('a bad request, a diagram that would not open, the project saying no', { d1: { writeNewDocument: { error: 'no room' } } }, [
-    call('diagram:save-into-project', [{ bytes: 'x' }]),
-    call('diagram:save-into-project', [{ bytes: bin('<html/>') }]),
-    call('diagram:save-into-project', [{ bytes: bin(DIAGRAM) }]),
-  ]),
+  diagramCase(
+    'a new diagram goes into the project and then has its file',
+    { d1: { writeNewDocument: { path: '$DIR/proj/p.drawio' } } },
+    [
+      call('diagram:save-into-project', [{ bytes: bin(DIAGRAM), defaultName: 'p/q' }]),
+      call('diagram:save-into-project', [{ bytes: bin(DIAGRAM) }]),
+      call('diagram:consume-pending'),
+    ],
+  ),
+  diagramCase(
+    'a bad request, a diagram that would not open, the project saying no',
+    { d1: { writeNewDocument: { error: 'no room' } } },
+    [
+      call('diagram:save-into-project', [{ bytes: 'x' }]),
+      call('diagram:save-into-project', [{ bytes: bin('<html/>') }]),
+      call('diagram:save-into-project', [{ bytes: bin(DIAGRAM) }]),
+    ],
+  ),
   diagramCase('no project panel: skipped', { d1: { writeNewDocument: {} } }, [
     call('diagram:save-into-project', [{ bytes: bin(DIAGRAM) }]),
   ]),
@@ -215,58 +239,74 @@ const cases: Case[] = [
     call('diagram:open-link', ['file:///etc/passwd']),
     call('diagram:open-link', [5]),
   ]),
-  diagramCase('a link the system could not open', { osShell: { openExternalError: 'no handler' } }, [
-    call('diagram:open-link', ['https://a.example/x']),
-  ]),
+  diagramCase(
+    'a link the system could not open',
+    { osShell: { openExternalError: 'no handler' } },
+    [call('diagram:open-link', ['https://a.example/x'])],
+  ),
   diagramCase('Help is handed to the shell', {}, [send('diagram:open-help')]),
 
   // ---- open-failed ----
-  diagramCase('only a view whose file did not open may close itself', { d1: { ...opened('bad.drawio'), openFailed: true } }, [
-    call('diagram:open-failed', ['  boom  ']),
-    call('diagram:open-file', ['$DIR/bad.drawio']),
-    call('diagram:open-failed', ['  boom  ']),
-    call('diagram:open-failed', ['   ']),
-    call('diagram:open-failed', [4]),
-  ]),
-  diagramCase('an import that did not become a file may close itself too', { d1: { ...opened('v.vsdx'), openFailed: false } }, [
-    call('diagram:open-file', ['$DIR/v.vsdx']),
-    call('diagram:open-failed', ['x'.repeat(2100)]),
-  ]),
+  diagramCase(
+    'only a view whose file did not open may close itself',
+    { d1: { ...opened('bad.drawio'), openFailed: true } },
+    [
+      call('diagram:open-failed', ['  boom  ']),
+      call('diagram:open-file', ['$DIR/bad.drawio']),
+      call('diagram:open-failed', ['  boom  ']),
+      call('diagram:open-failed', ['   ']),
+      call('diagram:open-failed', [4]),
+    ],
+  ),
+  diagramCase(
+    'an import that did not become a file may close itself too',
+    { d1: { ...opened('v.vsdx'), openFailed: false } },
+    [call('diagram:open-file', ['$DIR/v.vsdx']), call('diagram:open-failed', ['x'.repeat(2100)])],
+  ),
 
   // ---- dirty-changed, recovery-copy ----
-  diagramCase('a copy is not taken without unsaved changes, or from something that is not bytes', diagramHost('a.drawio'), [
-    OPEN_A,
-    call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
-    dirty(true),
-    call('diagram:recovery-copy', [{ bytes: 'no' }]),
-    call('diagram:recovery-copy'),
-    dirty('yes'),
-    call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
-  ]),
-  diagramCase('a headless export keeps no copy', { d1: { ...opened('a.drawio'), headless: true } }, [
-    OPEN_A,
-    dirty(true),
-    call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM), name: 'x' }]),
-  ]),
+  diagramCase(
+    'a copy is not taken without unsaved changes, or from something that is not bytes',
+    diagramHost('a.drawio'),
+    [
+      OPEN_A,
+      call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
+      dirty(true),
+      call('diagram:recovery-copy', [{ bytes: 'no' }]),
+      call('diagram:recovery-copy'),
+      dirty('yes'),
+      call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
+    ],
+  ),
+  diagramCase(
+    'a headless export keeps no copy',
+    { d1: { ...opened('a.drawio'), headless: true } },
+    [OPEN_A, dirty(true), call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM), name: 'x' }])],
+  ),
   diagramCase('a view whose file did not open takes no changes', diagramHost('bad.drawio'), [
     call('diagram:open-file', ['$DIR/bad.drawio']),
     dirty(true),
     call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
   ]),
-  diagramCase('a copy that cannot be written is an error for the renderer', diagramHost('a.drawio'), [
-    OPEN_A,
-    dirty(true),
-    call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }]),
-  ], { files: { ...FILES, 'userData/diagram-autosave': 'in the way' } }),
+  diagramCase(
+    'a copy that cannot be written is an error for the renderer',
+    diagramHost('a.drawio'),
+    [OPEN_A, dirty(true), call('diagram:recovery-copy', [{ bytes: bin(DIAGRAM) }])],
+    { files: { ...FILES, 'userData/diagram-autosave': 'in the way' } },
+  ),
 
   // ---- provisional-title ----
-  diagramCase('an untitled diagram is named from its first request; one with a file keeps its name', diagramHost('a.drawio'), [
-    send('diagram:provisional-title', ['  Sales   plan  ']),
-    send('diagram:provisional-title', ['   ']),
-    send('diagram:provisional-title', [4]),
-    OPEN_A,
-    send('diagram:provisional-title', ['Ignored']),
-  ]),
+  diagramCase(
+    'an untitled diagram is named from its first request; one with a file keeps its name',
+    diagramHost('a.drawio'),
+    [
+      send('diagram:provisional-title', ['  Sales   plan  ']),
+      send('diagram:provisional-title', ['   ']),
+      send('diagram:provisional-title', [4]),
+      OPEN_A,
+      send('diagram:provisional-title', ['Ignored']),
+    ],
+  ),
   diagramCase('an untitled view', {}, [send('diagram:provisional-title', ['x'.repeat(100)])]),
 
   // ---- answers of the renderer nobody is waiting for ----
@@ -322,13 +362,17 @@ export const group: Group = {
   cases,
   single: {
     'diagram:open-help': 'a send: the shell hook it calls is in the host log',
-    'diagram:dirty-changed': 'a send: its effect is read by the recovery-copy and save calls after it',
+    'diagram:dirty-changed':
+      'a send: its effect is read by the recovery-copy and save calls after it',
     'diagram:close-save-result': 'a send answers nothing; with no close waiting it changes nothing',
     'diagram:save-request-ack': 'a send answers nothing; with no save waiting it changes nothing',
-    'diagram:recovery-copy-now-done': 'a send answers nothing; with no copy waiting it changes nothing',
+    'diagram:recovery-copy-now-done':
+      'a send answers nothing; with no copy waiting it changes nothing',
     'diagram:provisional-title': 'a send: its effect is the shell hook in the host log',
-    'diagram:read-result': 'a send: it settles a question the MCP server asked, which no call can start',
-    'diagram:apply-result': 'a send: it settles a question the MCP server asked, which no call can start',
+    'diagram:read-result':
+      'a send: it settles a question the MCP server asked, which no call can start',
+    'diagram:apply-result':
+      'a send: it settles a question the MCP server asked, which no call can start',
     'diagram:bytes-result': 'a send nothing listens to',
     'diagram:headless-done': 'a send: its effect is read by headless-job after it',
   },

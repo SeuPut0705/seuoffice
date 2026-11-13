@@ -102,8 +102,7 @@ const list = (key: string, fallback: string[]): Set<string> => {
 }
 box.limit = (key: string, fallback: number): number =>
   typeof attachable()[key] === 'number' ? (attachable()[key] as number) : fallback
-box.attachableExts = () =>
-  list('exts', ['txt', 'md', 'xmind', 'png', 'jpg', 'jpeg', 'gif', 'webp'])
+box.attachableExts = () => list('exts', ['txt', 'md', 'xmind', 'png', 'jpg', 'jpeg', 'gif', 'webp'])
 box.attachableImageExts = () => list('imageExts', ['png', 'jpg', 'jpeg', 'gif', 'webp'])
 
 box.diagramPictureExt = (name: string, path: string) => {
@@ -263,7 +262,7 @@ export async function loadMindmap(cx: LoadContext): Promise<void> {
     typeof clock === 'number'
       ? (class FixedDate extends RealDate {
           constructor(...args: unknown[]) {
-            if (args.length === 0) super(clock)
+            if (args.length === 0) super(clock as number)
             else super(...(args as [number]))
           }
           static override now(): number {
@@ -271,7 +270,9 @@ export async function loadMindmap(cx: LoadContext): Promise<void> {
           }
         } as DateConstructor)
       : RealDate
-  box.openQueue = (Array.isArray(box.d1.openXmind) ? [...(box.d1.openXmind as Json[])] : []) as Json[]
+  box.openQueue = (
+    Array.isArray(box.d1.openXmind) ? [...(box.d1.openXmind as Json[])] : []
+  ) as Json[]
   const handoff = asObject(box.d1.handoff)
   box.handoff =
     Object.keys(handoff).length === 0

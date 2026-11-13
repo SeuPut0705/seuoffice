@@ -8,7 +8,16 @@
  * The audience window is view and window 100; every random UUID counts up.
  */
 import { loadSlides } from '../../d1/slides-host.ts'
-import { OPEN_A, UNDEFINED, bin, call, deck, send, slidesCase, view } from '../../d1/slides-cases.ts'
+import {
+  OPEN_A,
+  UNDEFINED,
+  bin,
+  call,
+  deck,
+  send,
+  slidesCase,
+  view,
+} from '../../d1/slides-cases.ts'
 import type { Case, Group } from '../../types.ts'
 
 const TWO = { views: [view(1), view(100)] }
@@ -25,26 +34,36 @@ const cases: Case[] = [
     call('slides:presenter-end'),
     call('slides:presenter-end'),
   ]),
-  slidesCase('with an external display the audience window opens, follows and swaps', { slides: { externalDisplay: true } }, [
-    OPEN_A,
-    call('slides:presenter-start'),
-    call('slides:presenter-start'),
-    send('slides:presenter-sync', [SYNC]),
-    call('slides:audience-ready', [], { view: 100 }),
-    send('slides:audience-nav', ['next'], 100),
-    send('slides:presenter-ink', [{ kind: 'stroke' }]),
-    call('slides:get-render-slides', [], { view: 100 }),
-    call('slides:presenter-swap'),
-    call('slides:presenter-end'),
-    call('slides:audience-ready', [], { view: 100 }),
-  ], TWO),
-  slidesCase('without a deck there is no audience, and no sync to hand over', { slides: { externalDisplay: true } }, [
-    call('slides:presenter-start'),
-    call('slides:audience-ready'),
-    send('slides:audience-nav', ['prev']),
-    send('slides:presenter-sync', [SYNC]),
-    call('slides:presenter-swap'),
-  ], TWO),
+  slidesCase(
+    'with an external display the audience window opens, follows and swaps',
+    { slides: { externalDisplay: true } },
+    [
+      OPEN_A,
+      call('slides:presenter-start'),
+      call('slides:presenter-start'),
+      send('slides:presenter-sync', [SYNC]),
+      call('slides:audience-ready', [], { view: 100 }),
+      send('slides:audience-nav', ['next'], 100),
+      send('slides:presenter-ink', [{ kind: 'stroke' }]),
+      call('slides:get-render-slides', [], { view: 100 }),
+      call('slides:presenter-swap'),
+      call('slides:presenter-end'),
+      call('slides:audience-ready', [], { view: 100 }),
+    ],
+    TWO,
+  ),
+  slidesCase(
+    'without a deck there is no audience, and no sync to hand over',
+    { slides: { externalDisplay: true } },
+    [
+      call('slides:presenter-start'),
+      call('slides:audience-ready'),
+      send('slides:audience-nav', ['prev']),
+      send('slides:presenter-sync', [SYNC]),
+      call('slides:presenter-swap'),
+    ],
+    TWO,
+  ),
   slidesCase('the show goes fullscreen and leaves it after the debounce', {}, [
     call('slides:show-fullscreen', [true]),
     call('slides:show-fullscreen', [true]),
@@ -63,19 +82,26 @@ const cases: Case[] = [
     call('slides:microphone-access'),
     call('slides:microphone-access'),
   ]),
-  slidesCase('attachments are checked, picked and read', { opens: [['$DIR/note.txt', '$DIR/pic.png'], null] }, [
-    call('slides:files-add', [['$DIR/note.txt', '$DIR/pic.png', '$DIR/missing.txt', '$DIR/dir.pptx', '$DIR/x.bin']]),
-    call('slides:files-pick'),
-    call('slides:files-pick'),
-    call('slides:files-read', ['$DIR/note.txt', 0, 5]),
-    call('slides:files-read', ['$DIR/note.txt', 3.7, 0]),
-    call('slides:files-read', ['$DIR/missing.txt', 0, 10]),
-    call('slides:files-read', ['$DIR/pic.png', 0, 10]),
-    call('slides:files-read', ['$DIR/x.bin', 0, 10]),
-    call('slides:files-read-image', ['$DIR/pic.png']),
-    call('slides:files-read-image', ['$DIR/note.txt']),
-    call('slides:files-read-image', ['$DIR/missing.png']),
-  ], { files: { 'note.txt': 'hello attachments', 'pic.png': 'png-bytes', 'x.bin': 'xx' } }),
+  slidesCase(
+    'attachments are checked, picked and read',
+    { opens: [['$DIR/note.txt', '$DIR/pic.png'], null] },
+    [
+      call('slides:files-add', [
+        ['$DIR/note.txt', '$DIR/pic.png', '$DIR/missing.txt', '$DIR/dir.pptx', '$DIR/x.bin'],
+      ]),
+      call('slides:files-pick'),
+      call('slides:files-pick'),
+      call('slides:files-read', ['$DIR/note.txt', 0, 5]),
+      call('slides:files-read', ['$DIR/note.txt', 3.7, 0]),
+      call('slides:files-read', ['$DIR/missing.txt', 0, 10]),
+      call('slides:files-read', ['$DIR/pic.png', 0, 10]),
+      call('slides:files-read', ['$DIR/x.bin', 0, 10]),
+      call('slides:files-read-image', ['$DIR/pic.png']),
+      call('slides:files-read-image', ['$DIR/note.txt']),
+      call('slides:files-read-image', ['$DIR/missing.png']),
+    ],
+    { files: { 'note.txt': 'hello attachments', 'pic.png': 'png-bytes', 'x.bin': 'xx' } },
+  ),
   // a saved paste is named after the clock (`pasted-<stamp>-n.png`), which the Rust side reads from the system
   slidesCase('a pasted image that is no image or no data is refused', {}, [
     call('slides:files-add-pasted-image', [bin('data'), 'exe']),
@@ -83,14 +109,26 @@ const cases: Case[] = [
     call('slides:files-add-pasted-image', ['text', 'png']),
     call('slides:files-add-pasted-image', [bin('big'), UNDEFINED]),
   ]),
-  slidesCase('the generate hand-off is taken once and a run reported', { slides: { handoff: { id: 'h1', text: 'make a deck', materials: [{ path: '$DIR/a.pptx', name: 'a.pptx' }] } } }, [
-    call('slides:handoff-take'),
-    call('slides:handoff-take'),
-    call('slides:handoff-run-started', [['$DIR/a.pptx']]),
-    call('slides:handoff-run-started', [[]]),
-    call('slides:handoff-run-started', [['', 5]]),
-    call('slides:handoff-run-started', ['x']),
-  ]),
+  slidesCase(
+    'the generate hand-off is taken once and a run reported',
+    {
+      slides: {
+        handoff: {
+          id: 'h1',
+          text: 'make a deck',
+          materials: [{ path: '$DIR/a.pptx', name: 'a.pptx' }],
+        },
+      },
+    },
+    [
+      call('slides:handoff-take'),
+      call('slides:handoff-take'),
+      call('slides:handoff-run-started', [['$DIR/a.pptx']]),
+      call('slides:handoff-run-started', [[]]),
+      call('slides:handoff-run-started', [['', 5]]),
+      call('slides:handoff-run-started', ['x']),
+    ],
+  ),
   slidesCase('a page is generated from a spec and landed', { slides: { blankSlides: 1 } }, [
     call('slides:local-page-generate', [{ specJson: '{"layout":"title"}' }]),
     call('slides:local-page-generate', [{ specJson: '' }]),
@@ -114,14 +152,18 @@ const cases: Case[] = [
     OPEN_A,
     call('slides:template-bytes'),
   ]),
-  slidesCase('local fonts are installed or declined', { opens: [['$DIR/A.ttf', '$DIR/b.otf'], null, []] }, [
-    call('slides:font-install-local'),
-    call('slides:font-install-local'),
-    call('slides:font-install-local'),
-    call('slides:private-font-faces'),
-    call('slides:private-font-data', ['id-1']),
-    call('slides:private-font-data', [UNDEFINED]),
-  ]),
+  slidesCase(
+    'local fonts are installed or declined',
+    { opens: [['$DIR/A.ttf', '$DIR/b.otf'], null, []] },
+    [
+      call('slides:font-install-local'),
+      call('slides:font-install-local'),
+      call('slides:font-install-local'),
+      call('slides:private-font-faces'),
+      call('slides:private-font-data', ['id-1']),
+      call('slides:private-font-data', [UNDEFINED]),
+    ],
+  ),
 ]
 
 export const group: Group = {
@@ -133,8 +175,9 @@ export const group: Group = {
     'slides:audience-nav': 'a send that answers nothing; the forwarded event is compared',
     'slides:presenter-sync': 'a send that answers nothing; the forwarded event is compared',
     'slides:presenter-ink': 'a send that answers nothing; the forwarded event is compared',
-    'slides:files-add': 'the answer lists accepted and rejected files of the case\'s folder',
-    'slides:files-add-pasted-image': 'the saved name is made from the clock, so only refusals are compared',
+    'slides:files-add': "the answer lists accepted and rejected files of the case's folder",
+    'slides:files-add-pasted-image':
+      'the saved name is made from the clock, so only refusals are compared',
     'slides:private-font-data': 'the fake font store holds no face: the answer is null',
     'slides:show-fullscreen': 'answers nothing; the snap and the bleed are the logged calls',
   },

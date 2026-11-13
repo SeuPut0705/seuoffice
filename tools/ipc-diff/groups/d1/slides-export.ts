@@ -14,7 +14,9 @@ const PNGS = ['AAEC', 'AwQF', 'BgcI']
 const images = (extra: Record<string, unknown> = {}) =>
   call('slides:export-images', [{ dir: '$DIR/img', baseName: 'slide', pngsBase64: PNGS, ...extra }])
 const pdf = (extra: Record<string, unknown> = {}) =>
-  call('slides:export-pdf', [{ filePath: '$DIR/out.pdf', pages: [], widthPx: 1280, heightPx: 720, ...extra }])
+  call('slides:export-pdf', [
+    { filePath: '$DIR/out.pdf', pages: [], widthPx: 1280, heightPx: 720, ...extra },
+  ])
 
 const cases: Case[] = [
   slidesCase('the folder picker answers a folder or null', { opens: [['$DIR/img'], null, []] }, [
@@ -34,13 +36,18 @@ const cases: Case[] = [
   slidesCase('a picture that cannot be written reports the error', { saves: ['$DIR/dir.pptx'] }, [
     call('slides:save-picture', [{ pngBase64: 'AAEC', defaultName: 'Picture 1' }]),
   ]),
-  slidesCase('images are written one file per slide', {}, [
-    images(),
-    images({ format: 'jpg', baseName: 'photo' }),
-    images({ format: 'gif', dir: '$DIR/gif' }),
-    images({ pngsBase64: ['AAEC'], baseName: 'one' }),
-    images({ pngsBase64: [] }),
-  ], { files: { 'img/.keep': '' } }),
+  slidesCase(
+    'images are written one file per slide',
+    {},
+    [
+      images(),
+      images({ format: 'jpg', baseName: 'photo' }),
+      images({ format: 'gif', dir: '$DIR/gif' }),
+      images({ pngsBase64: ['AAEC'], baseName: 'one' }),
+      images({ pngsBase64: [] }),
+    ],
+    { files: { 'img/.keep': '' } },
+  ),
   slidesCase('images into a folder that is not there fail', {}, [
     images({ dir: '$DIR/missing/deeper' }),
     images({ dir: '$DIR/a.pptx' }),
@@ -59,20 +66,36 @@ const cases: Case[] = [
     pdf({ filePath: '$DIR/second.pdf' }),
     pdf({ filePath: UNDEFINED }),
   ]),
-  slidesCase('the question before a PDF or image copy of a marked deck', { messages: [{ response: 0 }, { response: 1 }, { response: 2 }, { response: 9 }, { response: 1 }] }, [
-    call('slides:ask-withheld-export', ['PDF']),
-    call('slides:ask-withheld-export', ['JPG']),
-    call('slides:ask-withheld-export', ['PNG']),
-    call('slides:ask-withheld-export', ['PDF']),
-    call('slides:ask-withheld-export', ['PNG']),
-  ]),
-  slidesCase('a format the question does not offer is refused before any dialog', { messages: [{ response: 0 }] }, [
-    call('slides:ask-withheld-export', ['DOCX']),
-    call('slides:ask-withheld-export', ['pdf']),
-    call('slides:ask-withheld-export', [UNDEFINED]),
-    call('slides:ask-withheld-export'),
-    call('slides:ask-withheld-export', ['JPG']),
-  ]),
+  slidesCase(
+    'the question before a PDF or image copy of a marked deck',
+    {
+      messages: [
+        { response: 0 },
+        { response: 1 },
+        { response: 2 },
+        { response: 9 },
+        { response: 1 },
+      ],
+    },
+    [
+      call('slides:ask-withheld-export', ['PDF']),
+      call('slides:ask-withheld-export', ['JPG']),
+      call('slides:ask-withheld-export', ['PNG']),
+      call('slides:ask-withheld-export', ['PDF']),
+      call('slides:ask-withheld-export', ['PNG']),
+    ],
+  ),
+  slidesCase(
+    'a format the question does not offer is refused before any dialog',
+    { messages: [{ response: 0 }] },
+    [
+      call('slides:ask-withheld-export', ['DOCX']),
+      call('slides:ask-withheld-export', ['pdf']),
+      call('slides:ask-withheld-export', [UNDEFINED]),
+      call('slides:ask-withheld-export'),
+      call('slides:ask-withheld-export', ['JPG']),
+    ],
+  ),
   slidesCase('the headless export target is handed over once', {}, [
     call('slides:consume-headless-export'),
     call('slides:consume-headless-export'),
@@ -88,6 +111,7 @@ export const group: Group = {
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
   single: {
-    'slides:headless-export-done': 'a send that answers nothing; only a headless export has a waiter to settle',
+    'slides:headless-export-done':
+      'a send that answers nothing; only a headless export has a waiter to settle',
   },
 }

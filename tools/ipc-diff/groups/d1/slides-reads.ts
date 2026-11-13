@@ -87,20 +87,32 @@ const cases: Case[] = [
     call('slides:redo'),
     call('slides:get-comments', [0]),
   ]),
-  slidesCase('the comment author is the configured name or the account', {}, [
-    OPEN_A,
-    comment(0, 'by Ann'),
-  ], { files: { 'userData/app-settings.json': '{"authorName":"  Bo   Lee "}' } }),
+  slidesCase(
+    'the comment author is the configured name or the account',
+    {},
+    [OPEN_A, comment(0, 'by Ann')],
+    { files: { 'userData/app-settings.json': '{"authorName":"  Bo   Lee "}' } },
+  ),
   slidesCase('a link is set, refused or cleared', {}, [
     OPEN_A,
-    call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'https://example.com/a' } }]),
-    call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'javascript:alert(1)' } }]),
-    call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'mailto:a@b.c' } }]),
-    call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'file:///etc/passwd' } }]),
+    call('slides:set-link', [
+      { slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'https://example.com/a' } },
+    ]),
+    call('slides:set-link', [
+      { slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'javascript:alert(1)' } },
+    ]),
+    call('slides:set-link', [
+      { slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'mailto:a@b.c' } },
+    ]),
+    call('slides:set-link', [
+      { slideIndex: 0, sourceId: 'e1', target: { kind: 'url', url: 'file:///etc/passwd' } },
+    ]),
     call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: null }]),
-    call('slides:set-link', [{ slideIndex: 0, sourceId: 'e1', target: { kind: 'slide', slideIndex: 1 } }]),
+    call('slides:set-link', [
+      { slideIndex: 0, sourceId: 'e1', target: { kind: 'slide', slideIndex: 1 } },
+    ]),
   ]),
-  slidesCase('a new blank deck is queried', { blankSlides: 2 }, [
+  slidesCase('a new blank deck is queried', {}, [
     NEW,
     call('slides:get-slide-size'),
     call('slides:get-render-slides'),
@@ -114,7 +126,8 @@ export const group: Group = {
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
   single: {
-    'slides:get-notes': 'the fake deck has no notes: the one answer is the empty text (the missing-slide answer is the same)',
+    'slides:get-notes':
+      'the fake deck has no notes: the one answer is the empty text (the missing-slide answer is the same)',
     'slides:get-animations': 'the fake deck has no animations',
     'slides:get-header-footer': 'the fake deck has no header or footer: one fixed answer',
     'slides:get-link': 'the fake deck has no links, and a missing deck answers the same',

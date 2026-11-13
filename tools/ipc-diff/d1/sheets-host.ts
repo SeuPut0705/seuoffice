@@ -35,7 +35,9 @@ import type { LoadContext } from '../types.ts'
 
 const RealDate = Date
 const req = createRequire(import.meta.url)
-const { setHeadlessMode, setOpenPathProbe } = req('@seuoffice/electron-utils') as typeof import('@seuoffice/electron-utils')
+const { setHeadlessMode, setOpenPathProbe } = req(
+  '@seuoffice/electron-utils',
+) as typeof import('@seuoffice/electron-utils')
 const root = resolve(import.meta.dirname, '../../..')
 const MAIN = 'apps/sheets/src/main'
 const MAIN_PATH = `/${MAIN}/`
@@ -73,8 +75,7 @@ const fails = (name: string): void => {
   const message = asObject(box.d1[name]).error
   if (typeof message === 'string') throw new Error(message)
 }
-const answer = (name: string): unknown =>
-  name in box.d1 ? box.d1[name] : { fake: name }
+const answer = (name: string): unknown => (name in box.d1 ? box.d1[name] : { fake: name })
 
 // ---- the sidecar client ----
 
@@ -151,7 +152,10 @@ box.client = {
     box.lastSnapshot = snapshot
     const slicers = Array.isArray(box.d1.readSlicerState) && box.d1.readSlicerState.length > 0
     return {
-      entries: [{ name: 'xl/workbook.xml' }, ...(slicers ? [{ name: 'xl/slicers/slicer1.xml' }] : [])],
+      entries: [
+        { name: 'xl/workbook.xml' },
+        ...(slicers ? [{ name: 'xl/slicers/slicer1.xml' }] : []),
+      ],
     }
   },
   async convertWorkbook(input: { path: string; targetPath: string }) {
@@ -193,7 +197,10 @@ box.client = {
 box.saveWorkbookViaSidecar = async (input: { sourcePath: string; targetPath: string }) => {
   box.log(['xlsx.writeWorkbook', scrub(input.sourcePath), scrub(input.targetPath)])
   fails('writeWorkbook')
-  writeFileSync(input.targetPath, Buffer.concat([readFileSync(input.sourcePath), Buffer.from('+edits')]))
+  writeFileSync(
+    input.targetPath,
+    Buffer.concat([readFileSync(input.sourcePath), Buffer.from('+edits')]),
+  )
   return { touchedEntries: ['xl/worksheets/sheet1.xml'] }
 }
 box.promoteFileAtomically = async (from: string, to: string) => {
@@ -224,7 +231,9 @@ box.refreshableQueriesOf = async () => {
 }
 box.connectionSourceOf = async (_read: unknown, id: string) => {
   box.log(['xlsx.refreshConnection', box.lastSnapshot, id])
-  return asObject(box.d1.refreshOutcome).unknown === true ? undefined : { url: 'http://example.test/t' }
+  return asObject(box.d1.refreshOutcome).unknown === true
+    ? undefined
+    : { url: 'http://example.test/t' }
 }
 box.fetchRemoteTable = async () =>
   asObject(box.d1.refreshOutcome).noTable === true ? null : answer('refreshConnection')
@@ -284,7 +293,8 @@ box.unlockOfficeFile = async (bytes: Buffer, ask: (retry: boolean) => Promise<st
 }
 box.assertFileSaved = async (path: string) => {
   const unsaved = box.d1.unsaved
-  if (Array.isArray(unsaved) && unsaved.includes(path)) throw new Error('The file has unsaved changes.')
+  if (Array.isArray(unsaved) && unsaved.includes(path))
+    throw new Error('The file has unsaved changes.')
 }
 box.parseFileToText = async (path: string) => {
   box.log(['fileParse.parseFileToText', path])
@@ -315,7 +325,9 @@ const WRAPPERS: Record<string, Record<string, string>> = {
     unlockOfficeFile: `(b, a) => ${SELF}.unlockOfficeFile(b, a)`,
     encryptOoxml: `(b, p) => ${SELF}.encryptOoxml(b, p)`,
   },
-  '@seuoffice/electron-utils/remote-table': { fetchRemoteTable: `(s) => ${SELF}.fetchRemoteTable(s)` },
+  '@seuoffice/electron-utils/remote-table': {
+    fetchRemoteTable: `(s) => ${SELF}.fetchRemoteTable(s)`,
+  },
   '@seuoffice/xlsx-gateway/gateway/csv-import': {
     decodeCsvBuffer: `(b, c) => ${SELF}.decodeCsvBuffer(b, c)`,
   },
@@ -459,7 +471,7 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
     typeof clock === 'number'
       ? (class FixedDate extends RealDate {
           constructor(...args: unknown[]) {
-            if (args.length === 0) super(clock)
+            if (args.length === 0) super(clock as number)
             else super(...(args as [number]))
           }
           static override now(): number {
@@ -530,7 +542,9 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
       this.webContents = e.contents(nextView)
     }
   }
-  const screenStatus = Array.isArray(box.d1.screenStatus) ? [...(box.d1.screenStatus as string[])] : []
+  const screenStatus = Array.isArray(box.d1.screenStatus)
+    ? [...(box.d1.screenStatus as string[])]
+    : []
   const sources = [
     { id: 'screen:0', name: 'Screen 1' },
     { id: 'window:1', name: 'Window 1' },
@@ -614,9 +628,9 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
   main.setSheetsPasswordPrompt((_parent, fileName) => {
     e.log.push(['shell.passwordPrompt', fileName])
     const password = box.d1.password
-    return (typeof password === 'string'
-      ? { ask: async () => password, close() {} }
-      : undefined) as never
+    return (
+      typeof password === 'string' ? { ask: async () => password, close() {} } : undefined
+    ) as never
   })
 
   // the tabs the shell made, in view order
@@ -627,7 +641,8 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
     main.createSheetsView({ includeAiHandlers: false })
   }
   // what the shell set up before the renderer's first call
-  for (const q of startup.queued ?? []) main.queueWorkbookForView(e.contents(q.view) as never, q.path)
+  for (const q of startup.queued ?? [])
+    main.queueWorkbookForView(e.contents(q.view) as never, q.path)
   if (startup.newBlank) main.setSheetsNewBlank()
   for (const path of startup.untitled ?? []) main.markSheetsUntitledPath(path)
   for (const m of startup.mcpWritable ?? []) main.authorizeMcpSheetWrite(m.view, m.path)

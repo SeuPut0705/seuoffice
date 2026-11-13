@@ -12,7 +12,9 @@ import { OPEN_A, UNDEFINED, call, slidesCase, view } from '../../d1/slides-cases
 import type { Case, Group } from '../../types.ts'
 
 const copyEls = (extra: Record<string, unknown> = {}) =>
-  call('slides:copy-elements', [{ slideIndex: 0, sourceIds: ['e1', 'e2'], clipboardToken: 'tok-1', ...extra }])
+  call('slides:copy-elements', [
+    { slideIndex: 0, sourceIds: ['e1', 'e2'], clipboardToken: 'tok-1', ...extra },
+  ])
 const pasteEls = (extra: Record<string, unknown> = {}) =>
   call('slides:paste-elements', [{ slideIndex: 0, fitWidthPx: 1280, ...extra }])
 const copySlides = (extra: Record<string, unknown> = {}) =>
@@ -28,7 +30,9 @@ const cases: Case[] = [
     call('slides:repaste-slide', [{ mode: 'keep', fitWidthPx: 1280 }]),
     copyEls(),
     pasteEls(),
-    call('slides:duplicate-elements', [{ slideIndex: 0, sourceIds: ['e1'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 }]),
+    call('slides:duplicate-elements', [
+      { slideIndex: 0, sourceIds: ['e1'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 },
+    ]),
     call('slides:copy-elements-image', ['tok-1', 'AAEC']),
     call('slides:clipboard-external'),
     call('slides:clipboard-probe'),
@@ -56,14 +60,19 @@ const cases: Case[] = [
     pasteSlide({ afterIndex: -1 }),
     call('slides:repaste-slide', [{ mode: 'keep', fitWidthPx: 1280 }]),
   ]),
-  slidesCase('a slide copied in one window is pasted into the other', {}, [
-    call('slides:open-path', ['$DIR/a.pptx', 1280]),
-    call('slides:open-path', ['$DIR/b.pptx', 1280], { view: 2 }),
-    copySlides({ slideIndexes: [0] }),
-    call('slides:paste-slide', [{ afterIndex: 0, fitWidthPx: 1000 }], { view: 2 }),
-    call('slides:get-render-slides', [], { view: 2 }),
-    call('slides:has-slide-clipboard', [], { view: 2 }),
-  ], { views: [view(1), view(2)] }),
+  slidesCase(
+    'a slide copied in one window is pasted into the other',
+    {},
+    [
+      call('slides:open-path', ['$DIR/a.pptx', 1280]),
+      call('slides:open-path', ['$DIR/b.pptx', 1280], { view: 2 }),
+      copySlides({ slideIndexes: [0] }),
+      call('slides:paste-slide', [{ afterIndex: 0, fitWidthPx: 1000 }], { view: 2 }),
+      call('slides:get-render-slides', [], { view: 2 }),
+      call('slides:has-slide-clipboard', [], { view: 2 }),
+    ],
+    { views: [view(1), view(2)] },
+  ),
   slidesCase('elements are copied, cut, pasted with a cascade and duplicated', {}, [
     OPEN_A,
     copyEls(),
@@ -72,9 +81,15 @@ const cases: Case[] = [
     pasteEls({ slideIndex: 1 }),
     copyEls({ cut: true, sourceIds: ['e1'] }),
     pasteEls(),
-    call('slides:duplicate-elements', [{ slideIndex: 0, sourceIds: ['e1', 'e2'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 }]),
-    call('slides:duplicate-elements', [{ slideIndex: 0, sourceIds: ['nope'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 }]),
-    call('slides:duplicate-elements', [{ slideIndex: 9, sourceIds: ['e1'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 }]),
+    call('slides:duplicate-elements', [
+      { slideIndex: 0, sourceIds: ['e1', 'e2'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 },
+    ]),
+    call('slides:duplicate-elements', [
+      { slideIndex: 0, sourceIds: ['nope'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 },
+    ]),
+    call('slides:duplicate-elements', [
+      { slideIndex: 9, sourceIds: ['e1'], dxPx: 10, dyPx: 10, fitWidthPx: 1280 },
+    ]),
     call('slides:is-dirty'),
   ]),
   slidesCase('elements that cannot be copied or pasted', {}, [
@@ -87,38 +102,53 @@ const cases: Case[] = [
     copyEls({ clipboardToken: UNDEFINED }),
     pasteEls(),
   ]),
-  slidesCase('the element clipboard image is written only for the token that copied', {}, [
-    OPEN_A,
-    call('slides:copy-elements-image', ['tok-1', 'AAEC']),
-    copyEls(),
-    call('slides:copy-elements-image', ['tok-1', 'AAEC']),
-    call('slides:copy-elements-image', ['other', 'AAEC']),
-    call('slides:copy-elements-image', ['tok-1', '']),
-    call('slides:copy-elements-image', ['tok-1', 'AAEC'], { view: 2 }),
-  ], { views: [view(1), view(2)] }),
-  slidesCase('the system clipboard holds text', { shared: { clipboard: { text: '  some words  ' } } }, [
+  slidesCase(
+    'the element clipboard image is written only for the token that copied',
+    {},
+    [
+      OPEN_A,
+      call('slides:copy-elements-image', ['tok-1', 'AAEC']),
+      copyEls(),
+      call('slides:copy-elements-image', ['tok-1', 'AAEC']),
+      call('slides:copy-elements-image', ['other', 'AAEC']),
+      call('slides:copy-elements-image', ['tok-1', '']),
+      call('slides:copy-elements-image', ['tok-1', 'AAEC'], { view: 2 }),
+    ],
+    { views: [view(1), view(2)] },
+  ),
+  slidesCase(
+    'the system clipboard holds text',
+    { shared: { clipboard: { text: '  some words  ' } } },
+    [call('slides:clipboard-probe'), call('slides:clipboard-external')],
+  ),
+  slidesCase(
+    'the system clipboard holds an image',
+    { shared: { clipboard: { imagePng: '89504e470d0a1a0a', formats: ['image/png'] } } },
+    [call('slides:clipboard-probe'), call('slides:clipboard-external')],
+  ),
+  slidesCase(
+    'the system clipboard holds html only',
+    { shared: { clipboard: { html: '<b>x</b>', text: '' } } },
+    [call('slides:clipboard-probe'), call('slides:clipboard-external')],
+  ),
+  slidesCase('the system clipboard is empty', {}, [
     call('slides:clipboard-probe'),
     call('slides:clipboard-external'),
   ]),
-  slidesCase('the system clipboard holds an image', { shared: { clipboard: { imagePng: '89504e470d0a1a0a', formats: ['image/png'] } } }, [
-    call('slides:clipboard-probe'),
-    call('slides:clipboard-external'),
-  ]),
-  slidesCase('the system clipboard holds html only', { shared: { clipboard: { html: '<b>x</b>', text: '' } } }, [
-    call('slides:clipboard-probe'),
-    call('slides:clipboard-external'),
-  ]),
-  slidesCase('the system clipboard is empty', {}, [call('slides:clipboard-probe'), call('slides:clipboard-external')]),
-  slidesCase('the in-app copy is still what the system clipboard holds', { shared: { clipboard: { text: 'other text' } } }, [
-    OPEN_A,
-    copySlides(),
-    call('slides:clipboard-probe'),
-    call('slides:clipboard-external'),
-    copyEls(),
-    call('slides:clipboard-probe'),
-    call('slides:clipboard-external'),
-  ]),
-  slidesCase('the page\'s own cut, copy and paste', {}, [
+  slidesCase(
+    'the in-app copy is still what the system clipboard holds',
+    { shared: { clipboard: { text: 'other text' } } },
+    [
+      OPEN_A,
+      copySlides(),
+      call('slides:clipboard-probe'),
+      call('slides:clipboard-external'),
+      copyEls(),
+      call('slides:clipboard-probe'),
+      call('slides:clipboard-external'),
+    ],
+  ),
+  slidesCase("the page's own cut, copy and paste", {}, [
     call('slides:native-clipboard', ['cut']),
     call('slides:native-clipboard', ['copy']),
     call('slides:native-clipboard', ['paste']),
@@ -131,6 +161,6 @@ export const group: Group = {
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
   single: {
-    'slides:native-clipboard': 'answers nothing; the page\'s cut, copy or paste is the logged call',
+    'slides:native-clipboard': "answers nothing; the page's cut, copy or paste is the logged call",
   },
 }

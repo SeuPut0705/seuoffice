@@ -82,7 +82,9 @@ const cases: Case[] = [
     call('slides:master-edit-fill', [
       { sourceId: 'm0', fill: { gradient: { from: '#000000', to: '#ffffff', angleDeg: 90 } } },
     ]),
-    call('slides:master-edit-stroke', [{ sourceId: 'm0', stroke: { color: '#112233', widthPt: 2 } }]),
+    call('slides:master-edit-stroke', [
+      { sourceId: 'm0', stroke: { color: '#112233', widthPt: 2 } },
+    ]),
     call('slides:master-edit-stroke', [{ sourceId: 'm0', stroke: null }]),
     call('slides:is-dirty'),
   ]),
@@ -102,7 +104,9 @@ export const group: Group = {
   load: (cx) => loadSlides(cx).then(() => {}),
   cases,
   single: {
-    'slides:master-edit-fill': 'the fake executor refuses setFill on a master part: the handler answers null',
-    'slides:master-edit-stroke': 'the fake executor refuses setStroke on a master part: the handler answers null',
+    'slides:master-edit-fill':
+      'the fake executor refuses setFill on a master part: the handler answers null',
+    'slides:master-edit-stroke':
+      'the fake executor refuses setStroke on a master part: the handler answers null',
   },
 }
