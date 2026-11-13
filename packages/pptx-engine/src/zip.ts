@@ -51,7 +51,11 @@ export class PackageArchive {
     entries: Array<[string, Uint8Array]>
     originalHash: string
   }): PackageArchive {
-    return new PackageArchive(new Map(wire.entries), wire.originalHash)
+    // copies: each entry is a view into the reply frame, which a kept view would pin
+    return new PackageArchive(
+      new Map(wire.entries.map(([path, bytes]) => [path, bytes.slice()])),
+      wire.originalHash,
+    )
   }
 
   static async open(bytes: Uint8Array): Promise<PackageArchive> {

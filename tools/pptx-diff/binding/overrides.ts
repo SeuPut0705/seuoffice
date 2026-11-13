@@ -425,7 +425,11 @@ export const PPTX_REPLACE: Readonly<Record<string, Readonly<Record<string, strin
 
   /** An archive from what the engine answers: its entries in order, and the hash of the original. */
   static fromWire(wire: { entries: Array<[string, Uint8Array]>; originalHash: string }): PackageArchive {
-    return new PackageArchive(new Map(wire.entries), wire.originalHash)
+    // copies: each entry is a view into the reply frame, which a kept view would pin
+    return new PackageArchive(
+      new Map(wire.entries.map(([path, bytes]) => [path, bytes.slice()])),
+      wire.originalHash,
+    )
   }
 
   static async open(bytes: Uint8Array): Promise<PackageArchive> {
