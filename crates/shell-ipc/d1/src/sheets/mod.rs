@@ -33,7 +33,7 @@ use shell_contract::{
 };
 
 pub use self::core::HeadlessReport;
-use self::core::{Env, create_core};
+use self::core::{Env, core_at, create_core};
 use self::editors::{SheetsEditors, install_views};
 pub use self::editors::{SheetsViews, views};
 use self::engine::{ScreenCaptureHost, SheetsShellHost, WorkbookEngineHost};
@@ -252,21 +252,33 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
         "workbook:update-password",
         |env, view, mut args| save::update_password(env, view, args.take(0)),
     ));
-    routes.push(worker(&env, "workbook:save", |env, view, mut args| {
-        let input = args.take(0);
-        let save_as = matches!(field(&input, "mode"), IpcValue::String(mode) if mode == "save-as");
-        let reply = save::save_workbook(env, view, input);
-        if save_as {
-            // a Save As the shell asked for (`request_save`) ends with this one:
-            // saved when the answer says it was not canceled
-            let saved = matches!(
-                &reply,
-                Ok(answer) if matches!(field(answer, "canceled"), IpcValue::Bool(false))
-            );
-            env.post(move |core| core.save_as_finished(view, saved));
-        }
-        reply
-    }));
+    routes.push({
+        let env = env.clone();
+        route::invoke_later("workbook:save", move |cx, mut args, reply| {
+            let (view, env) = (cx.sender.view, env.clone());
+            let input = args.take(0);
+            // a Save As the shell asked for (`request_save`) ends with the
+            // renderer's next `save-as` request; the request it waits for is
+            // the one current when this save arrives, not when it ends
+            let waiter =
+                matches!(field(&input, "mode"), IpcValue::String(mode) if mode == "save-as")
+                    .then(|| core_at(env.slot).save_as_token(view))
+                    .flatten();
+            let work = env.clone();
+            env.spawn(move || {
+                let answer = save::save_workbook(&work, view, input);
+                if let Some(token) = waiter {
+                    // saved when the answer says it was not canceled
+                    let saved = matches!(
+                        &answer,
+                        Ok(answer) if matches!(field(answer, "canceled"), IpcValue::Bool(false))
+                    );
+                    work.post(move |core| core.save_as_finished(view, token, saved));
+                }
+                reply.reply(answer)
+            });
+        })
+    });
     routes.push(worker(
         &env,
         "workbook:save-edits-chunk",

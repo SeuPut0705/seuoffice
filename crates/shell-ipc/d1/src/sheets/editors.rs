@@ -203,11 +203,30 @@ impl Core {
         }
     }
 
-    /// A `workbook:save` of mode `save-as` of `view` ended: `saved` when the
-    /// file was written (`canceled: false` in the answer), not when the
-    /// person canceled (`canceled: true`) or the save failed (it rejected)
-    pub fn save_as_finished(&self, view: ViewId, saved: bool) {
-        let waiter = self.state.borrow_mut().save_as_waiters.remove(&view);
+    /// The Save As the view waits for now, as a `workbook:save` of mode
+    /// `save-as` arrives: that save answers it and no later one
+    pub fn save_as_token(&self, view: ViewId) -> Option<u64> {
+        self.state
+            .borrow()
+            .save_as_waiters
+            .get(&view)
+            .map(|waiter| waiter.token)
+    }
+
+    /// The `workbook:save` that arrived for Save As `token` ended: `saved`
+    /// when the file was written (`canceled: false` in the answer), not when
+    /// the person canceled (`canceled: true`) or the save failed (it
+    /// rejected). A Save As that ended meanwhile (its two minutes, a newer
+    /// request, its view) is not answered again, and a newer one is left
+    /// waiting for its own save.
+    pub fn save_as_finished(&self, view: ViewId, token: u64, saved: bool) {
+        let waiter = {
+            let mut state = self.state.borrow_mut();
+            match state.save_as_waiters.get(&view) {
+                Some(waiter) if waiter.token == token => state.save_as_waiters.remove(&view),
+                _ => None,
+            }
+        };
         if let Some(waiter) = waiter {
             (waiter.resume)(saved);
         }

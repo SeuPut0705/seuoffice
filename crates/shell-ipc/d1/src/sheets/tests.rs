@@ -15,7 +15,7 @@ use shell_contract::{Batch, IpcError, IpcValue, Surface, WindowId};
 
 use super::fakes::{FakeEngine, FakeShell};
 use super::{insert_fakes, routes, views};
-use crate::testkit::{Kit, TestRegistry, call, temp_dir};
+use crate::testkit::{Kit, TestRegistry, call, start, temp_dir};
 use crate::value::{field, num, obj, string};
 
 struct World {
@@ -934,6 +934,55 @@ fn a_save_as_that_fails_or_goes_unanswered_is_not_saved() {
     editors.request_save(one.view, SaveMode::SaveAs, then);
     w.kit.destroy(one.view);
     assert_eq!(third.borrow_mut().take(), Some(Ok(false)));
+}
+
+/// A Save As whose save is still on a worker when its wait ends (two
+/// minutes, or a newer request) answers no later request: the save keeps
+/// the request it arrived for
+#[test]
+fn a_late_save_as_answers_only_the_request_it_arrived_for() {
+    let w = world("sheets-request-save-as-late", Value::Null);
+    let one = w.tab(1);
+    let session = clean_workbook(&w, one);
+    let editors = editor_for(&w.registry.provided, one.view).unwrap();
+
+    let (first, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    let target = w.dir.join("copy.xlsx").to_string_lossy().into_owned();
+    w.kit
+        .dialogs
+        .saves
+        .lock()
+        .unwrap()
+        .push_back(Some(target.into()));
+    w.kit.hold_workers();
+    let late = start(
+        &w.registry,
+        one,
+        "workbook:save",
+        vec![save_request(&session, "save-as")],
+    );
+    w.shell().fire(120_000);
+    assert_eq!(first.borrow_mut().take(), Some(Ok(false)));
+
+    let (second, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    w.kit.release_workers();
+    let written = late.try_recv().unwrap().unwrap();
+    assert_eq!(field(&written, "canceled"), &IpcValue::Bool(false));
+    assert!(
+        second.borrow().is_none(),
+        "the next Save As waits for its own save"
+    );
+
+    let swapped = text(field(&written, "file"), "sessionId");
+    w.call(
+        one,
+        "workbook:save",
+        vec![save_request(&swapped, "save-as")],
+    )
+    .unwrap();
+    assert_eq!(second.borrow_mut().take(), Some(Ok(false)));
 }
 
 #[test]

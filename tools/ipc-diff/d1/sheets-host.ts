@@ -724,14 +724,18 @@ export const sheetsTriggers: Record<string, Trigger> = {
       const real = invoke.get('workbook:save')
       invoke.set('workbook:save', async (...args: unknown[]) => {
         const [event, input] = args as [{ sender: { id: number } }, unknown]
-        const asked = (input as { mode?: unknown } | null)?.mode === 'save-as'
+        // the request this save answers is the one waiting as it arrives
+        const waiting =
+          (input as { mode?: unknown } | null)?.mode === 'save-as'
+            ? watching.get(event.sender.id)
+            : undefined
         let saved = false
         try {
           const answer = (await real!(event, input)) as { canceled?: unknown }
           saved = answer?.canceled === false
           return answer
         } finally {
-          if (asked) watching.get(event.sender.id)?.(saved)
+          waiting?.(saved)
         }
       })
     }

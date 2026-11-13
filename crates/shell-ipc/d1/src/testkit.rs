@@ -88,9 +88,25 @@ impl Thread for Inline {
     }
 }
 
-impl Workers for Inline {
-    fn spawn(&self, job: Box<dyn FnOnce() + Send>) {
-        job()
+type Job = Box<dyn FnOnce() + Send>;
+
+/// Workers that run a job at once, or keep it while [`Kit::hold_workers`]
+/// holds them, so a test can let other calls happen before it finishes
+#[derive(Default)]
+pub struct HeldWorkers {
+    held: Mutex<Option<Vec<Job>>>,
+}
+
+impl Workers for HeldWorkers {
+    fn spawn(&self, job: Job) {
+        let mut held = self.held.lock().unwrap();
+        match held.as_mut() {
+            Some(jobs) => jobs.push(job),
+            None => {
+                drop(held);
+                job()
+            }
+        }
     }
 }
 
@@ -364,6 +380,7 @@ pub struct Kit {
     pub os_shell: Arc<FakeOsShell>,
     pub clipboard: Arc<FakeClipboard>,
     pub log: Log,
+    pub workers: Arc<HeldWorkers>,
     pub root: PathBuf,
 }
 
@@ -399,10 +416,11 @@ impl Kit {
             ),
         )));
         more(&mut hosts);
+        let workers = Arc::new(HeldWorkers::default());
         let services = Services {
             ui: Arc::new(Inline { current: false }),
             core: Arc::new(Inline { current: true }),
-            workers: Arc::new(Inline { current: false }),
+            workers: workers.clone(),
             events: events.clone(),
             views: views.clone(),
             paths: Arc::new(FolderPaths(root.to_path_buf())),
@@ -416,6 +434,7 @@ impl Kit {
             os_shell,
             clipboard,
             log,
+            workers,
             root: root.to_path_buf(),
         }
     }
@@ -457,17 +476,31 @@ impl Kit {
     pub fn take_log(&self) -> Vec<String> {
         std::mem::take(&mut *self.log.lock().unwrap())
     }
+
+    /// From now on a worker's job waits for [`Kit::release_workers`]
+    pub fn hold_workers(&self) {
+        *self.workers.held.lock().unwrap() = Some(Vec::new());
+    }
+
+    /// Runs the held jobs in the order they were spawned; workers run at
+    /// once again
+    pub fn release_workers(&self) {
+        let jobs = self.workers.held.lock().unwrap().take().unwrap_or_default();
+        for job in jobs {
+            job()
+        }
+    }
 }
 
-/// Calls `channel` as `sender` would and returns its reply; panics when the
-/// handler kept the responder without answering (workers run inline here)
-pub fn call(
+/// Calls `channel` as `sender` would; the reply arrives on the receiver,
+/// at once or after the held workers ran
+pub fn start(
     registry: &TestRegistry,
     sender: Sender,
     channel: &str,
     args: Vec<IpcValue>,
-) -> Result<IpcValue, IpcError> {
-    let (kind, handler) = registry
+) -> mpsc::Receiver<Result<IpcValue, IpcError>> {
+    let (_, handler) = registry
         .handlers
         .get(channel)
         .unwrap_or_else(|| panic!("no handler for {channel}"));
@@ -484,10 +517,26 @@ pub fn call(
             let _ = tx.send(reply);
         }),
     );
-    let reply = rx
+    rx
+}
+
+/// Calls `channel` as `sender` would and returns its reply; panics when the
+/// handler kept the responder without answering (workers run inline here)
+pub fn call(
+    registry: &TestRegistry,
+    sender: Sender,
+    channel: &str,
+    args: Vec<IpcValue>,
+) -> Result<IpcValue, IpcError> {
+    let kind = registry
+        .handlers
+        .get(channel)
+        .map(|(kind, _)| *kind)
+        .unwrap_or_else(|| panic!("no handler for {channel}"));
+    let reply = start(registry, sender, channel, args)
         .try_recv()
         .unwrap_or_else(|_| panic!("{channel} did not answer"));
-    if *kind == ChannelKind::Send {
+    if kind == ChannelKind::Send {
         assert_eq!(reply.as_ref().ok(), Some(&IpcValue::Undefined));
     }
     reply
