@@ -237,6 +237,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "buildTextboxParagraphXml" => r_build_textbox_paragraph_xml(env, args),
         "buildWordArtParagraphXml" => r_build_word_art_paragraph_xml(env, args),
         "builtInHeadingStyleUpsert" => r_built_in_heading_style_upsert(env, args),
+        "canonicalXmlSyntax" => r_canonical_xml_syntax(env, args),
         "citationText" => r_citation_text(env, args),
         "cleanMoveRangeMarkers" => r_clean_move_range_markers(env, args),
         "colorNodeHex" => r_color_node_hex(env, args),
@@ -260,6 +261,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "dedupeStyleRefs" => r_dedupe_style_refs(env, args),
         "deobfuscateOdttf" => routes::deobfuscate_odttf(env, &args.resolved()?),
         "editedCommentModelText" => r_edited_comment_model_text(env, args),
+        "elementInner" => r_element_inner(env, args),
         "eqFieldToOmml" => r_eq_field_to_omml(env, args),
         "fieldDisplayOf" => r_field_display_of(env, args),
         "findChartWorkbookPath" => routes::find_chart_workbook_path(env, &args.resolved()?),
@@ -397,6 +399,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "removeElements" => r_remove_elements(env, args),
         "removePartsRefusalMessage" => r_remove_parts_refusal_message(env, args),
         "removePartsRefusalMessageFor" => r_remove_parts_refusal_message_for(env, args),
+        "removeSegments" => r_remove_segments(env, args),
         "resizeAnchoredPictureXml" => r_resize_anchored_picture_xml(env, args),
         "resizeInlinePictureXml" => r_resize_inline_picture_xml(env, args),
         "resolveCtxOf" => r_resolve_ctx_of(env, args),
@@ -727,6 +730,12 @@ fn r_built_in_heading_style_upsert(env: &mut InvokeEnv<'_>, args: Args<'_>) -> O
     Ok(Some(to_json(&r)?))
 }
 
+fn r_canonical_xml_syntax(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = ooxml_pkg::canonical_xml_syntax(p0);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_citation_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0: docx_engine::sources::SourceInfo = req(args, 0)?;
     let r = docx_engine::sources::citation_text(&p0);
@@ -872,6 +881,12 @@ fn r_edited_comment_model_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p1 = rstr(args, 1)?;
     let r = docx_engine::settings::edited_comment_model_text(p0, p1)
         .map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_element_inner(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::xml_tag::element_inner(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -1834,6 +1849,13 @@ fn r_remove_parts_refusal_message(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Ou
 fn r_remove_parts_refusal_message_for(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0: Vec<String> = req(args, 0)?;
     let r = docx_engine::save::parts::remove_parts::remove_parts_refusal_message_for(&p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_remove_segments(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let p1 = rstr(args, 1)?;
+    let r = docx_engine::xml_tag::remove_segments(p0, p1);
     Ok(Some(to_json(&r)?))
 }
 

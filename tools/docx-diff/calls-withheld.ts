@@ -3,7 +3,7 @@
 // parse-package.ts, and the two readers of text-patch.ts and hf-root.ts that
 // find tags past a comment or a CDATA section.
 import { commentEntries } from './reference/comment-slices'
-import { hfKeptRoot } from './reference/hf-root'
+import { hfKeptRoot, hfRootOpen } from './reference/hf-root'
 import { editedCommentModelText } from './reference/parse-package'
 import { patchParagraphTexts } from './reference/text-patch'
 import {
@@ -319,6 +319,24 @@ export const WITHHELD: CallSpec[] = [
     built: [
       ...ENTRY_PARTS.flatMap(stripAndPatch),
       ...MASKED_ENTRIES.flatMap(stripAndPatch),
+    ],
+  },
+  {
+    fn: 'withheld.hfRootOpen',
+    call: (text, args) => hfRootOpen(args.root as 'w:hdr' | 'w:ftr', args.absent === true ? null : text),
+    built: [
+      ...HF_PARTS.map(({ root, xml }) => ({ text: xml, args: { root } })),
+      ...(['w:hdr', 'w:ftr'] as const).flatMap((root) => [
+        { text: '', args: { root, absent: true } },
+        { text: '<a/>', args: { root } },
+        { text: `<${root}/>`, args: { root } },
+        { text: `<${root} xmlns:w="x" xmlns:r = "y" />`, args: { root } },
+        { text: `<${root} xmlns:w="x"\n  xmlns:v='urn:schemas-microsoft-com:vml'  >`, args: { root } },
+        { text: `<${root} a=">" xmlns:w10="z"\t>`, args: { root } },
+        { text: `<${root} xmlns:o="o" xmlns:w="w" xmlns:r="r" xmlns:v="v" xmlns:w10="w10">`, args: { root } },
+        { text: `<!-- <${root} xmlns:w="x"> --><${root}>`, args: { root } },
+        { text: `<${root} xmlns:wx="x">`, args: { root } },
+      ]),
     ],
   },
   {

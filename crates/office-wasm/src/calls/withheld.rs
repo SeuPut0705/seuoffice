@@ -2,13 +2,13 @@
 //! of parse-package.ts, and the readers of text-patch.ts and hf-root.ts that
 //! find tags past comments and CDATA.
 
-use docx_engine::parse::tables::hf_root::{HfRootName, hf_kept_root, is_text_para};
+use docx_engine::parse::tables::hf_root::{HfRootName, hf_kept_root, hf_root_open, is_text_para};
 use docx_engine::save::parts::text_patch::patch_paragraph_texts;
 use docx_engine::settings::edited_comment_model_text;
 use docx_engine::withheld::{
-    comment_entries, first_mark_label, has_mark_element, has_withheld_trace, over_withheld,
-    over_withheld_model_text, parse_entry, withheld_block_label, withheld_part_label, hidden_run_properties, runs_text, with_redact_namespace, withheld_label_of,
-    withheld_node, withheld_text,
+    comment_entries, first_mark_label, has_mark_element, has_withheld_trace, hidden_run_properties,
+    over_withheld, over_withheld_model_text, parse_entry, runs_text, with_redact_namespace,
+    withheld_block_label, withheld_label_of, withheld_node, withheld_part_label, withheld_text,
 };
 use ooxml_xml::XNode;
 use serde_json::{Value, json};
@@ -80,6 +80,17 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let new_text: String = required(args, "newText")?;
             let strip: bool = required(args, "strip")?;
             value(patch_paragraph_texts(text, &new_text, strip).map_err(|limit| limit.to_string())?)
+        }
+        "hfRootOpen" => {
+            let absent: Option<bool> = super::arg(args, "absent")?;
+            let root = match required::<String>(args, "root")?.as_str() {
+                "w:hdr" => HfRootName::Hdr,
+                _ => HfRootName::Ftr,
+            };
+            value(
+                hf_root_open(root, (absent != Some(true)).then_some(text))
+                    .map_err(|error| error.to_string())?,
+            )
         }
         "hfKeptRoot" => {
             let root = match required::<String>(args, "root")?.as_str() {
