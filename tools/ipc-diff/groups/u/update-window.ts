@@ -193,7 +193,10 @@ export const group: Group = {
     const mod = await cx.fresh<UpdateWindow>(MODULE)
     const parent = () => (main ? (fake.fromId(main.window ?? main.view) as never) : null)
     mod.setUpdateParentWindow(parent)
-    const action = (name: string) => () => log(['update.action', name])
+    // the updater's callbacks return nothing, so the dialog's invokes answer undefined
+    const action = (name: string) => (): void => {
+      log(['update.action', name])
+    }
     const actions = {
       onDownload: action('download'),
       onInstall: action('install'),
