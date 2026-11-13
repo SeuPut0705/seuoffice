@@ -6,17 +6,15 @@
  * documents. These emit the events no renderer call emits: docs:opened,
  * docs:renamed, docs:teardown, docs:write-recovery-now,
  * docs:recovery-copy-dropped.
- *
- * The trigger step is being added to tools/ipc-diff (main.ts, ipc-probe):
- * until then these cases cannot run.
  */
 import type { Case, Group, LoadContext } from '../../types.ts'
 import { type DocsTriggers, docsTriggers, loadDocs } from './docs-load.ts'
 
 const views = [{ view: 1, window: 1, surface: 'Docs' }]
-const trigger = (name: string, args: unknown[] = [], view = 1) => ({
+const trigger = (what: string, args: unknown[] = [], view = 1) => ({
+  channel: `d2/docs:${what}`,
   kind: 'trigger',
-  name: `d2/docs:${name}`,
+  name: `d2/docs:${what}`,
   view,
   args,
 })
@@ -134,17 +132,35 @@ const cases = [
     note: 'another app asks for an AI document',
     calls: [trigger('create-ai-document', [{ type: 'md', title: 'Notes', content: '# n' }])],
   },
-] as unknown as Case[]
+] as Case[]
 
 let triggers: DocsTriggers = {}
 
-export const group = {
+/** what `load` registered for this case, by the names the cases call */
+const NAMES = [
+  'request-save',
+  'export-request',
+  'request-close',
+  'file-renamed',
+  'mark-new-blank',
+  'queue-copy',
+  'authorize-mcp-doc-write',
+  'teardown',
+  'discard-recovery',
+  'recovery-identity',
+  'write-copies-now',
+  'open-file-with-decision',
+  'open-untitled-copy',
+  'create-ai-document',
+]
+
+export const group: Group = {
   batch: 'D2',
   async load(cx: LoadContext) {
     triggers = docsTriggers(await loadDocs(cx), cx)
   },
-  /** the TypeScript side of a trigger step */
-  trigger: (name: string, view: number, args: unknown[]) =>
-    triggers[name.replace(/^d2\/docs:/, '')]?.(view, args),
+  triggers: Object.fromEntries(
+    NAMES.map((what) => [`d2/docs:${what}`, (_cx, view, args) => triggers[what](view, args)]),
+  ),
   cases: cases.map((c) => (c.views ? c : { ...c, views })),
-} as Group
+}
