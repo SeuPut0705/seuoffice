@@ -426,35 +426,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard:
-          [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-          ]
+        # eight runners: with the probe-dev build (tools/odt-diff/faults.mjs) a
+        # wire-command fault takes minutes, and 26 runners, one fault each,
+        # spent more on setup and the baseline build than on faults
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
 
@@ -494,7 +469,7 @@ jobs:
         env:
           ONLY: ${{ inputs.odt_faults }}
         # the positive control proves the harness once per run, on shard 0
-        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/26 ${{ matrix.shard != 0 && '--no-control' || '' }}
+        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/8 ${{ matrix.shard != 0 && '--no-control' || '' }}
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.odt == 'true'
