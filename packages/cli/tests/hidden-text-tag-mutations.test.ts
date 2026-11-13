@@ -215,3 +215,33 @@ describe.each(SAVED)(
     })
   },
 )
+
+describe('a mark whose namespace is spelled with character references', () => {
+  it('is listed on the saved root by the namespace it is really in', async () => {
+    const { writeFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const JSZip = (await import('jszip')).default
+    const { buildDocx } = await import('../../docx-engine/tests/helpers/build-docx')
+    const { OWN_REDACT_NS } = await import('../../docx-engine/tests/helpers/hidden-stories')
+    const ns = OWN_REDACT_NS.replace(/\//g, '&#47;')
+    const dir = tempDir()
+    const file = join(dir, 'spelled.docx')
+    writeFileSync(
+      file,
+      await buildDocx({
+        docRootExtraAttrs: `xmlns:go="${ns}"`,
+        bodyXml:
+          `<w:p><w:r><w:rPr><go:redact w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r></w:p>` +
+          '<w:p><w:r><w:t>Edit me please</w:t></w:r></w:p>',
+      }),
+    )
+    const ops = join(dir, 'ops.json')
+    writeFileSync(ops, JSON.stringify(CHANGES['edit another paragraph']))
+    const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
+    expect(applied.code, applied.stdout).toBe(0)
+    const zip = await JSZip.loadAsync(readFileSync(file))
+    const xml = await zip.file('word/document.xml')!.async('string')
+    expect(xml).toContain(SECRET)
+    await expectMarkDirective('word/document.xml', xml)
+  })
+})
