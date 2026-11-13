@@ -183,5 +183,9 @@
   "callsWithheldCorpus": 806,
   "callsWithheldBuilt": 6600,
   "callsWithheldMutated": 4100,
-  "callsWithheldFunctions": 19
+  "callsWithheldFunctions": 19,
+  "callsHiddenContentCorpus": 0,
+  "callsHiddenContentBuilt": 140,
+  "callsHiddenContentMutated": 0,
+  "callsHiddenContentFunctions": 2
 }

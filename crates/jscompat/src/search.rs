@@ -142,7 +142,8 @@ mod tests {
             super::units_pattern("Id=\"\u{1F600}\""),
             "Id=\"\\uD83D(?:)\\uDE00\""
         );
-        let re = crate::TryJsRegex::new(&super::units_pattern("Id=\"\u{1F600}\""), "").unwrap();
+        let pattern = super::units_pattern("Id=\"\u{1F600}\"");
+        let re = crate::TryJsRegex::new(&pattern, "").unwrap();
         assert!(re.try_test("x Id=\"\u{1F600}\" y").unwrap());
         assert!(!re.try_test("x Id=\"b\" y").unwrap());
     }
