@@ -13,20 +13,26 @@
 //! `TabHooks` lives on the core thread and is provided, not hosted
 //! ([`super::w::register_hooks`]).
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use main_core::packages::ai_provider::settings_secrets::AiSecretCodec;
+use main_core::packages::electron_utils::default_save_dir::Thrown;
 use main_core::packages::electron_utils::unsaved_files::{OpenFileState, OpenFilesSourceFailed};
 use main_core::packages::i18n::Lang;
+use main_core::packages::project_store::LegacyDocumentChat;
 use main_core::shell::detached_windows::WindowOptions;
 use main_core::shell::doc_picker::asker::DocAsker;
 use main_core::shell::doc_picker::doc_list::{OpenDocumentEntry, ProjectFile, RecentDocumentEntry};
+use main_core::shell::projects::memory::LocalDateParts;
+use main_core::shell::projects::project_tools::{
+    IndexSearchOptions, IndexSearchResult, KbReadPage,
+};
 use main_core::shell::tab_manager::{
     DiagramIdentity, LoadedTabView, Opener, SplitViewState, TabError, TabKind,
     UnloadedTabOpenContext,
 };
+use serde_json::Value;
 use shell_contract::error::IpcError;
 use shell_contract::ids::{ViewId, WindowId};
 use shell_contract::value::IpcValue;
@@ -34,6 +40,9 @@ use shell_ipc_w::doc_picker::*;
 use shell_ipc_w::editor_files::{DocsTab, DocsTabs, FileParse, OpenFiles, SheetsTabs, UiLanguage};
 use shell_ipc_w::home_files::*;
 use shell_ipc_w::home_settings::*;
+use shell_ipc_w::projects::host::{
+    LegacyProjectStore, PageEvents, ProjectFiles, ProjectTimer, ProjectsHost,
+};
 use shell_ipc_w::quick_look::*;
 use shell_ipc_w::tabs::*;
 
@@ -315,40 +324,6 @@ impl FileSearch for Unbuilt {
     fn rerank(&self, _: &str, _: &[String]) -> Option<IpcValue> {
         unbuilt("FileSearch::rerank");
         None
-    }
-}
-
-impl FolderTree for Unbuilt {
-    fn list_folder(&self, _: &str, _: &HashSet<String>) -> FolderListing {
-        unbuilt("FolderTree::list_folder");
-        panic!("FolderTree::list_folder is not built yet")
-    }
-    fn create_folder(&self, _: &str, _: &str, _: &FolderErrors) -> RenameResult {
-        unbuilt("FolderTree::create_folder");
-        RenameResult {
-            ok: false,
-            path: None,
-            error: Some("not built yet".into()),
-        }
-    }
-    fn rename_folder(&self, _: &str, _: &str, _: &FolderErrors) -> RenameResult {
-        unbuilt("FolderTree::rename_folder");
-        RenameResult {
-            ok: false,
-            path: None,
-            error: Some("not built yet".into()),
-        }
-    }
-    fn move_paths_into(
-        &self,
-        _: &[String],
-        _: &str,
-        _: MoveConflictPolicy,
-        _: &FolderErrors,
-        _: &mut dyn MoveOptions,
-    ) -> Result<MoveResult, Option<String>> {
-        unbuilt("FolderTree::move_paths_into");
-        Err(Some(NOT_BUILT.into()))
     }
 }
 
@@ -776,5 +751,236 @@ impl TabHooks for Unbuilt {
     }
     fn tab_document_action(&self, _: TabKind, _: ViewId, _: &str, _: Option<&str>, _: DocAction) {
         unbuilt("TabHooks::tab_document_action");
+    }
+}
+
+// ---- the project modules (`shell_ipc_w::projects`) ----
+
+/// `Date`'s local getters of a time value: the civil date in UTC. The local
+/// time zone is not read yet, so a project guide's day stamps are UTC days.
+fn utc_date(at_ms: f64) -> LocalDateParts {
+    let secs = (at_ms / 1000.0).floor() as i64;
+    let days = secs.div_euclid(86_400);
+    let rest = secs.rem_euclid(86_400);
+    // Howard Hinnant's civil_from_days
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let date = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    LocalDateParts {
+        full_year: year,
+        month: month - 1,
+        date,
+        hours: rest / 3_600,
+        minutes: rest % 3_600 / 60,
+        seconds: rest % 60,
+    }
+}
+
+/// `Intl.NumberFormat(lang).format(count)` for English and Korean, which
+/// group by threes with commas and show up to three decimals
+fn grouped(count: f64) -> String {
+    if !count.is_finite() {
+        return if count.is_nan() {
+            "NaN".into()
+        } else if count > 0.0 {
+            "∞".into()
+        } else {
+            "-∞".into()
+        };
+    }
+    let text = format!("{:.3}", count.abs());
+    let (int, frac) = text.split_once('.').unwrap_or((&text, ""));
+    let frac = frac.trim_end_matches('0');
+    let mut out = String::new();
+    for (i, c) in int.chars().enumerate() {
+        if i > 0 && (int.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    if !frac.is_empty() {
+        out.push('.');
+        out.push_str(frac);
+    }
+    if count < 0.0 && out.chars().any(|c| c != '0' && c != '.' && c != ',') {
+        out.insert(0, '-');
+    }
+    out
+}
+
+/// `crypto.randomBytes(n)` for ids: the process's random hasher keys (seeded
+/// by the operating system) over a counter and the clock. Not for secrets.
+fn random_bytes(n: usize) -> Vec<u8> {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let mut out = Vec::with_capacity(n + 8);
+    while out.len() < n {
+        let mut hasher = RandomState::new().build_hasher();
+        hasher.write_u64(COUNTER.fetch_add(1, Ordering::Relaxed));
+        hasher.write_u128(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_or(0, |d| d.as_nanos()),
+        );
+        out.extend_from_slice(&hasher.finish().to_le_bytes());
+    }
+    out.truncate(n);
+    out
+}
+
+/// Real: the random source, the home folder, the number format (English and
+/// Korean) and `console.warn`. The date is the UTC day, and what needs the
+/// page (focus, navigation, timers) and the Windows listing are logged stand-ins.
+impl ProjectsHost for Unbuilt {
+    fn attach(&self, _: Arc<dyn PageEvents>) {
+        unbuilt("ProjectsHost::attach");
+    }
+    fn track(&self, _: ViewId) {
+        unbuilt("ProjectsHost::track");
+    }
+    fn page_destroyed(&self, _: ViewId) -> bool {
+        unbuilt("ProjectsHost::page_destroyed");
+        false
+    }
+    fn watch_return(&self, _: ViewId) {
+        unbuilt("ProjectsHost::watch_return");
+    }
+    fn stop_return(&self, _: ViewId) {
+        unbuilt("ProjectsHost::stop_return");
+    }
+    fn set_timer(&self, _: ProjectTimer, _: f64) {
+        unbuilt("ProjectsHost::set_timer");
+    }
+    fn clear_timer(&self, _: ProjectTimer) {
+        unbuilt("ProjectsHost::clear_timer");
+    }
+    fn random_bytes(&self, n: usize) -> Vec<u8> {
+        random_bytes(n)
+    }
+    fn local_date(&self, at_ms: f64) -> LocalDateParts {
+        unbuilt("ProjectsHost::local_date (UTC, not the local zone)");
+        utc_date(at_ms)
+    }
+    fn os_home_dir(&self) -> String {
+        dirs::home_dir().map_or_else(String::new, |p| p.to_string_lossy().into_owned())
+    }
+    fn format_number(&self, count: f64, _: Lang) -> Result<String, String> {
+        Ok(grouped(count))
+    }
+    fn format_date_time(&self, _: f64, _: Lang) -> Result<String, String> {
+        unbuilt("ProjectsHost::format_date_time");
+        Err(NOT_BUILT.into())
+    }
+    fn run_listing(
+        &self,
+        _: &str,
+        _: &[String],
+        _: &str,
+        _: &[(String, String)],
+        _: f64,
+        _: &str,
+    ) -> Result<String, String> {
+        unbuilt("ProjectsHost::run_listing");
+        Err(NOT_BUILT.into())
+    }
+    fn warn(&self, label: &str, detail: Option<&str>) {
+        match detail {
+            Some(detail) => eprintln!("shell: {label} {detail}"),
+            None => eprintln!("shell: {label}"),
+        }
+    }
+}
+
+impl ProjectFiles for Unbuilt {
+    fn search(&self, _: &str, _: &mut IndexSearchOptions<'_>) -> Result<IndexSearchResult, Thrown> {
+        unbuilt("ProjectFiles::search");
+        Err(Thrown(NOT_BUILT.into()))
+    }
+    fn paths_indexed_as_on_disk(&self, _: &[String]) -> Vec<String> {
+        unbuilt("ProjectFiles::paths_indexed_as_on_disk");
+        Vec::new()
+    }
+    fn read_page(&self, _: &str, _: f64) -> Result<KbReadPage, Thrown> {
+        unbuilt("ProjectFiles::read_page");
+        Err(Thrown(NOT_BUILT.into()))
+    }
+    fn open_files(&self) -> Result<Vec<OpenFileState>, OpenFilesSourceFailed> {
+        unbuilt("ProjectFiles::open_files");
+        panic!("ProjectFiles::open_files is not built yet")
+    }
+}
+
+impl LegacyProjectStore for Unbuilt {
+    fn legacy_chat_for(&self, _: &str) -> Result<Option<LegacyDocumentChat>, String> {
+        unbuilt("LegacyProjectStore::legacy_chat_for");
+        Ok(None)
+    }
+    fn ensure_default_project(&self) -> Result<(), String> {
+        unbuilt("LegacyProjectStore::ensure_default_project");
+        Err(NOT_BUILT.into())
+    }
+    fn resolve_chat_for_file(&self, _: &Value) -> Result<Value, String> {
+        unbuilt("LegacyProjectStore::resolve_chat_for_file");
+        Err(NOT_BUILT.into())
+    }
+    fn lookup_chat_for_file(&self, _: &Value) -> Result<Value, String> {
+        unbuilt("LegacyProjectStore::lookup_chat_for_file");
+        Err(NOT_BUILT.into())
+    }
+    fn append_chat_message(&self, _: &Value, _: &Value, _: &Value) -> Result<(), String> {
+        unbuilt("LegacyProjectStore::append_chat_message");
+        Err(NOT_BUILT.into())
+    }
+    fn load_chat(&self, _: &Value, _: &Value, _: &Value) -> Result<Value, String> {
+        unbuilt("LegacyProjectStore::load_chat");
+        Err(NOT_BUILT.into())
+    }
+    fn rebind_chat_to_file(&self, _: &Value, _: &Value, _: &Value) -> Result<Value, String> {
+        unbuilt("LegacyProjectStore::rebind_chat_to_file");
+        Err(NOT_BUILT.into())
+    }
+    fn rebind_chat(&self, _: &Value, _: &Value, _: &Value) -> Result<(), String> {
+        unbuilt("LegacyProjectStore::rebind_chat");
+        Err(NOT_BUILT.into())
+    }
+    fn sheets_session_path(&self, _: ViewId, _: &Value) -> Option<String> {
+        unbuilt("LegacyProjectStore::sheets_session_path");
+        None
+    }
+    fn headless(&self) -> bool {
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_civil_date_and_the_number_format() {
+        // 2026-11-14 08:09:10 UTC
+        let d = utc_date(1_794_643_750_000.0);
+        assert_eq!(
+            (d.full_year, d.month, d.date, d.hours, d.minutes, d.seconds),
+            (2026, 10, 14, 8, 9, 10)
+        );
+        let epoch = utc_date(0.0);
+        assert_eq!((epoch.full_year, epoch.month, epoch.date), (1970, 0, 1));
+        assert_eq!(grouped(1234567.0), "1,234,567");
+        assert_eq!(grouped(0.5), "0.5");
+        assert_eq!(grouped(-1234.25), "-1,234.25");
+        assert_eq!(grouped(999.0), "999");
+        assert_eq!(random_bytes(20).len(), 20);
+        assert_ne!(random_bytes(16), random_bytes(16));
     }
 }
