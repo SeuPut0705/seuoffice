@@ -71,7 +71,8 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
 const _: RegisterBatch = register;
 
 /// Inserts, for every port the shell has no factory for, one whose channels
-/// reject with "not built yet": call it after the real factories, so the
+/// reject with "not built yet": for a shell started partial only (a normal
+/// start must stop on the missing factory), after the real factories, so the
 /// batch registers whole and the built ports answer
 pub fn insert_unbuilt_ports(hosts: &mut shell_contract::Hosts) {
     macro_rules! insert_each {
