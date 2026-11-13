@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use jscompat::{JsObject, JsonValue};
+use jscompat::JsonValue;
 use main_core::shell::mcp::docs_bridge::{DocsBridge, DocsBridgeHost, Settled, Submitted};
 use main_core::shell::mcp::sheets_bridge::{SheetsBridge, SheetsBridgeHost};
 use main_core::shell::mcp::tools::document_tools::McpEditorCommandName;
@@ -118,16 +118,23 @@ impl FamilyHost {
 
     fn send(&self, wc_id: i64, request_id: &str, command: &str, payload: Option<&JsonValue>) {
         let Some(view) = view_of(wc_id) else { return };
-        let mut message = JsObject::new();
-        message.set("requestId", JsonValue::String(request_id.to_owned()));
-        message.set("command", JsonValue::String(command.to_owned()));
-        if let Some(payload) = payload {
-            message.set("payload", payload.clone());
-        }
+        // `wc.send(channel, { requestId, command, payload })` keeps the
+        // `payload` key when it is `undefined`, so the wire message does too.
+        let message = IpcValue::Object(vec![
+            (
+                "requestId".to_owned(),
+                IpcValue::String(request_id.to_owned()),
+            ),
+            ("command".to_owned(), IpcValue::String(command.to_owned())),
+            (
+                "payload".to_owned(),
+                payload.map_or(IpcValue::Undefined, from_json),
+            ),
+        ]);
         self.common.services.events.emit(
             Target::View(view),
             self.kind.command_channel(),
-            vec![from_json(&JsonValue::Object(message))],
+            vec![message],
         );
     }
 
@@ -484,6 +491,7 @@ pub fn factory() -> crate::Factory<dyn McpDocumentBridges> {
 mod tests {
     use std::sync::Mutex;
 
+    use jscompat::JsObject;
     use shell_contract::ipc::Sender;
     use shell_contract::{Surface, WindowId};
 

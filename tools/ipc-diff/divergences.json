@@ -71,7 +71,7 @@
           {
             "answer": {
               "value": {
-                "value": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd",
+                "value": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�",
                 "fallback": "tester"
               },
               "buffers": []
@@ -81,7 +81,7 @@
                 "view": 1,
                 "channel": "app:author-name-changed",
                 "args": [
-                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�"
                 ],
                 "buffers": []
               },
@@ -89,7 +89,7 @@
                 "view": 2,
                 "channel": "app:author-name-changed",
                 "args": [
-                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�"
                 ],
                 "buffers": []
               },
@@ -97,7 +97,7 @@
                 "view": 3,
                 "channel": "app:author-name-changed",
                 "args": [
-                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�"
                 ],
                 "buffers": []
               },
@@ -105,7 +105,7 @@
                 "view": 4,
                 "channel": "app:author-name-changed",
                 "args": [
-                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�"
                 ],
                 "buffers": []
               },
@@ -113,7 +113,7 @@
                 "view": 5,
                 "channel": "app:author-name-changed",
                 "args": [
-                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�"
                 ],
                 "buffers": []
               }
@@ -124,9 +124,784 @@
       },
       "files": {
         "userData": "dir 755",
-        "userData/app-settings.json": "file 644 \"{\\n  \\\"language\\\": \\\"en\\\",\\n  \\\"authorName\\\": \\\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd\\\"\\n}\""
+        "userData/app-settings.json": "file 644 \"{\\n  \\\"language\\\": \\\"en\\\",\\n  \\\"authorName\\\": \\\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy�\\\"\\n}\""
       }
     },
     "reason": "main-core holds the author name as a Rust String: cutting a surrogate pair at 120 UTF-16 units leaves a lone surrogate that JS keeps (answer, event and the escaped file text) and Rust turns into U+FFFD"
+  },
+  {
+    "id": "a-ai-core-undefined-keys",
+    "group": "a/ai-core",
+    "case": 0,
+    "typescript": {
+      "record": {
+        "calls": [
+          {
+            "answer": {
+              "value": {
+                "provider": "auto",
+                "providers": {
+                  "claude-code": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": ""
+                  },
+                  "chatgpt": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "codex": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": ""
+                  },
+                  "anthropic": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5-5",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "gemini": {
+                    "apiKey": "",
+                    "model": "gemini-3.8-flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "deepseek": {
+                    "apiKey": "",
+                    "model": "deepseek-v4-pro",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "openai": {
+                    "apiKey": "",
+                    "model": "gpt-6.1-terra",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "kimi": {
+                    "apiKey": "",
+                    "model": "kimi-k3.1-pro",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "glm": {
+                    "apiKey": "",
+                    "model": "glm-5.3",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "qwen": {
+                    "apiKey": "",
+                    "model": "qwen3.8-max",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "doubao": {
+                    "apiKey": "",
+                    "model": "doubao-seed-2-1-pro-260628",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "mimo": {
+                    "apiKey": "",
+                    "model": "mimo-v2.6-pro",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "hunyuan": {
+                    "apiKey": "",
+                    "model": "hy4-preview",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "ling": {
+                    "apiKey": "",
+                    "model": "Ling-3.0-flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "spark": {
+                    "apiKey": "",
+                    "model": "spark-x2.5",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "longcat": {
+                    "apiKey": "",
+                    "model": "LongCat-2.0",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "minimax": {
+                    "apiKey": "",
+                    "model": "MiniMax-M3.1-Flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "xai": {
+                    "apiKey": "",
+                    "model": "grok-4.6",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "mistral": {
+                    "apiKey": "",
+                    "model": "mistral-medium-latest",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "upstage": {
+                    "apiKey": "",
+                    "model": "solar-pro4",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "exaone": {
+                    "apiKey": "",
+                    "model": "k-exaone_v2.5",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "openrouter": {
+                    "apiKey": "",
+                    "model": "openrouter/auto",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "requesty": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "opper": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-4-6",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "cheaperinference": {
+                    "apiKey": "",
+                    "model": "gpt-5.4-mini",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "atlascloud": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/deepseek-v4-pro",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "runcrate": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "cloudgpu": {
+                    "apiKey": "",
+                    "model": "deepseek-v4.1-flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "siliconflow": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/DeepSeek-V4-Pro",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "ppio": {
+                    "apiKey": "",
+                    "model": "deepseek/deepseek-v4.1-flash",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "opencode-zen": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "opencode-go": {
+                    "apiKey": "",
+                    "model": "kimi-k2.7-code",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "commandcode": {
+                    "apiKey": "",
+                    "model": "zai-org/GLM-5.3",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "custom": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": "",
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  },
+                  "gateway": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": {
+                      "$": "u"
+                    },
+                    "cliPath": {
+                      "$": "u"
+                    }
+                  }
+                },
+                "media": {
+                  "imageProvider": "codex",
+                  "analysisProvider": "chat",
+                  "videoAnalysisProvider": "none",
+                  "providers": {
+                    "openai": {
+                      "apiKey": "",
+                      "imageModel": "gpt-image-2",
+                      "analysisModel": "gpt-5.6-luna",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "gemini": {
+                      "apiKey": "",
+                      "imageModel": "gemini-nano-banana-2.1",
+                      "analysisModel": "gemini-3.8-flash",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "doubao": {
+                      "apiKey": "",
+                      "imageModel": "doubao-seedream-5-0-pro-260628",
+                      "analysisModel": "doubao-seed-2-1-pro-260915",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "glm": {
+                      "apiKey": "",
+                      "imageModel": "glm-image",
+                      "analysisModel": "glm-4.6v",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "xai": {
+                      "apiKey": "",
+                      "imageModel": "grok-imagine-image-2.0",
+                      "analysisModel": "grok-4.6",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "qwen": {
+                      "apiKey": "",
+                      "imageModel": "qwen-image-3.0-pro",
+                      "analysisModel": "qwen3-vl-plus",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "minimax": {
+                      "apiKey": "",
+                      "imageModel": "image-01",
+                      "analysisModel": "MiniMax-M3",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "stability": {
+                      "apiKey": "",
+                      "imageModel": "stable-image-ultra",
+                      "analysisModel": "",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "bfl": {
+                      "apiKey": "",
+                      "imageModel": "flux-2-pro",
+                      "analysisModel": "",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "microsoft": {
+                      "apiKey": "",
+                      "imageModel": "MAI-Image-2.6",
+                      "analysisModel": "",
+                      "baseUrl": ""
+                    },
+                    "deepseek": {
+                      "apiKey": "",
+                      "imageModel": "",
+                      "analysisModel": "deepseek-flash",
+                      "baseUrl": {
+                        "$": "u"
+                      }
+                    },
+                    "custom": {
+                      "apiKey": "",
+                      "imageModel": "",
+                      "analysisModel": "",
+                      "baseUrl": ""
+                    }
+                  }
+                },
+                "search": {
+                  "provider": "parallel",
+                  "providers": {
+                    "serper": {
+                      "apiKey": ""
+                    },
+                    "serply": {
+                      "apiKey": ""
+                    },
+                    "searchapi": {
+                      "apiKey": ""
+                    },
+                    "tavily": {
+                      "apiKey": ""
+                    },
+                    "parallel": {
+                      "apiKey": ""
+                    },
+                    "exa": {
+                      "apiKey": ""
+                    },
+                    "firecrawl": {
+                      "apiKey": ""
+                    },
+                    "keenable": {
+                      "apiKey": ""
+                    }
+                  }
+                },
+                "meteredAccepted": {
+                  "claude-code": false,
+                  "codex": false
+                },
+                "headlessSubscriptionEnabled": false,
+                "headlessSubscriptionConsentVersion": 0,
+                "subscriptionNoticeSeen": false,
+                "subscriptionNoticeVersion": 0,
+                "pdfSendNoticeSeen": 0
+              },
+              "buffers": []
+            },
+            "events": []
+          }
+        ],
+        "log": []
+      },
+      "files": {}
+    },
+    "rust": {
+      "record": {
+        "calls": [
+          {
+            "answer": {
+              "value": {
+                "provider": "auto",
+                "providers": {
+                  "claude-code": {
+                    "apiKey": "",
+                    "model": "",
+                    "cliPath": ""
+                  },
+                  "chatgpt": {
+                    "apiKey": "",
+                    "model": ""
+                  },
+                  "codex": {
+                    "apiKey": "",
+                    "model": "",
+                    "cliPath": ""
+                  },
+                  "anthropic": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5-5"
+                  },
+                  "gemini": {
+                    "apiKey": "",
+                    "model": "gemini-3.8-flash"
+                  },
+                  "deepseek": {
+                    "apiKey": "",
+                    "model": "deepseek-v4-pro"
+                  },
+                  "openai": {
+                    "apiKey": "",
+                    "model": "gpt-6.1-terra"
+                  },
+                  "kimi": {
+                    "apiKey": "",
+                    "model": "kimi-k3.1-pro"
+                  },
+                  "glm": {
+                    "apiKey": "",
+                    "model": "glm-5.3"
+                  },
+                  "qwen": {
+                    "apiKey": "",
+                    "model": "qwen3.8-max"
+                  },
+                  "doubao": {
+                    "apiKey": "",
+                    "model": "doubao-seed-2-1-pro-260628"
+                  },
+                  "mimo": {
+                    "apiKey": "",
+                    "model": "mimo-v2.6-pro"
+                  },
+                  "hunyuan": {
+                    "apiKey": "",
+                    "model": "hy4-preview"
+                  },
+                  "ling": {
+                    "apiKey": "",
+                    "model": "Ling-3.0-flash"
+                  },
+                  "spark": {
+                    "apiKey": "",
+                    "model": "spark-x2.5"
+                  },
+                  "longcat": {
+                    "apiKey": "",
+                    "model": "LongCat-2.0"
+                  },
+                  "minimax": {
+                    "apiKey": "",
+                    "model": "MiniMax-M3.1-Flash"
+                  },
+                  "xai": {
+                    "apiKey": "",
+                    "model": "grok-4.6"
+                  },
+                  "mistral": {
+                    "apiKey": "",
+                    "model": "mistral-medium-latest"
+                  },
+                  "upstage": {
+                    "apiKey": "",
+                    "model": "solar-pro4"
+                  },
+                  "exaone": {
+                    "apiKey": "",
+                    "model": "k-exaone_v2.5"
+                  },
+                  "openrouter": {
+                    "apiKey": "",
+                    "model": "openrouter/auto"
+                  },
+                  "requesty": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5"
+                  },
+                  "opper": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-4-6"
+                  },
+                  "cheaperinference": {
+                    "apiKey": "",
+                    "model": "gpt-5.4-mini"
+                  },
+                  "atlascloud": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/deepseek-v4-pro"
+                  },
+                  "runcrate": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/DeepSeek-V4.1-Flash"
+                  },
+                  "cloudgpu": {
+                    "apiKey": "",
+                    "model": "deepseek-v4.1-flash"
+                  },
+                  "siliconflow": {
+                    "apiKey": "",
+                    "model": "deepseek-ai/DeepSeek-V4-Pro"
+                  },
+                  "ppio": {
+                    "apiKey": "",
+                    "model": "deepseek/deepseek-v4.1-flash"
+                  },
+                  "opencode-zen": {
+                    "apiKey": "",
+                    "model": "claude-sonnet-5"
+                  },
+                  "opencode-go": {
+                    "apiKey": "",
+                    "model": "kimi-k2.7-code"
+                  },
+                  "commandcode": {
+                    "apiKey": "",
+                    "model": "zai-org/GLM-5.3"
+                  },
+                  "custom": {
+                    "apiKey": "",
+                    "model": "",
+                    "baseUrl": ""
+                  },
+                  "gateway": {
+                    "apiKey": "",
+                    "model": ""
+                  }
+                },
+                "media": {
+                  "imageProvider": "codex",
+                  "analysisProvider": "chat",
+                  "videoAnalysisProvider": "none",
+                  "providers": {
+                    "openai": {
+                      "apiKey": "",
+                      "imageModel": "gpt-image-2",
+                      "analysisModel": "gpt-5.6-luna"
+                    },
+                    "gemini": {
+                      "apiKey": "",
+                      "imageModel": "gemini-nano-banana-2.1",
+                      "analysisModel": "gemini-3.8-flash"
+                    },
+                    "doubao": {
+                      "apiKey": "",
+                      "imageModel": "doubao-seedream-5-0-pro-260628",
+                      "analysisModel": "doubao-seed-2-1-pro-260915"
+                    },
+                    "glm": {
+                      "apiKey": "",
+                      "imageModel": "glm-image",
+                      "analysisModel": "glm-4.6v"
+                    },
+                    "xai": {
+                      "apiKey": "",
+                      "imageModel": "grok-imagine-image-2.0",
+                      "analysisModel": "grok-4.6"
+                    },
+                    "qwen": {
+                      "apiKey": "",
+                      "imageModel": "qwen-image-3.0-pro",
+                      "analysisModel": "qwen3-vl-plus"
+                    },
+                    "minimax": {
+                      "apiKey": "",
+                      "imageModel": "image-01",
+                      "analysisModel": "MiniMax-M3"
+                    },
+                    "stability": {
+                      "apiKey": "",
+                      "imageModel": "stable-image-ultra",
+                      "analysisModel": ""
+                    },
+                    "bfl": {
+                      "apiKey": "",
+                      "imageModel": "flux-2-pro",
+                      "analysisModel": ""
+                    },
+                    "microsoft": {
+                      "apiKey": "",
+                      "imageModel": "MAI-Image-2.6",
+                      "analysisModel": "",
+                      "baseUrl": ""
+                    },
+                    "deepseek": {
+                      "apiKey": "",
+                      "imageModel": "",
+                      "analysisModel": "deepseek-flash"
+                    },
+                    "custom": {
+                      "apiKey": "",
+                      "imageModel": "",
+                      "analysisModel": "",
+                      "baseUrl": ""
+                    }
+                  }
+                },
+                "search": {
+                  "provider": "parallel",
+                  "providers": {
+                    "serper": {
+                      "apiKey": ""
+                    },
+                    "serply": {
+                      "apiKey": ""
+                    },
+                    "searchapi": {
+                      "apiKey": ""
+                    },
+                    "tavily": {
+                      "apiKey": ""
+                    },
+                    "parallel": {
+                      "apiKey": ""
+                    },
+                    "exa": {
+                      "apiKey": ""
+                    },
+                    "firecrawl": {
+                      "apiKey": ""
+                    },
+                    "keenable": {
+                      "apiKey": ""
+                    }
+                  }
+                },
+                "meteredAccepted": {
+                  "claude-code": false,
+                  "codex": false
+                },
+                "headlessSubscriptionEnabled": false,
+                "headlessSubscriptionConsentVersion": 0,
+                "subscriptionNoticeSeen": false,
+                "subscriptionNoticeVersion": 0,
+                "pdfSendNoticeSeen": 0
+              },
+              "buffers": []
+            },
+            "events": []
+          }
+        ],
+        "log": []
+      },
+      "files": {}
+    },
+    "reason": "keys whose value is undefined: defaultAiSettings() leaves baseUrl, cliPath and others undefined, which Electronʼs structured clone sends as present keys; main-core builds the settings view as JSON (jscompat::JsonValue has no undefined), so Rust leaves the keys out. The two answers are JSON-equal and no renderer or package reads those keys by presence (stage 2: no `in` or hasOwnProperty checks, no spread over them)."
   }
 ]

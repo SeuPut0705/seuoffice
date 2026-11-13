@@ -109,7 +109,10 @@ export async function loadMcpHub(cx: LoadContext): Promise<void> {
   const hostsA = (cx.case.hosts?.a ?? {}) as { lang?: string; mcp?: McpWorld }
   const world = hostsA.mcp ?? {}
   cx.install({
-    app: { ...cx.electron.app, getVersion: () => world.version ?? '9.9.9' },
+    app: {
+      ...(cx.electron.app as Record<string, unknown>),
+      getVersion: () => world.version ?? '9.9.9',
+    },
     net: { fetch: fakeFetch(world, cx.electron.log) },
     safeStorage: {
       isEncryptionAvailable: () => world.storage?.available !== false,
@@ -122,13 +125,30 @@ export async function loadMcpHub(cx: LoadContext): Promise<void> {
   const views = cx.case.views ?? [{ view: 1, window: 1, surface: 'Shell' }]
   const main = views.find((v) => (v.surface ?? 'Shell') === 'Shell')
   const BrowserWindow = cx.electron.BrowserWindow as { fromId(id: number): unknown }
+  const started: { hub?: ReturnType<HubApp['startMcpHub']> } = {}
   runWith(entryCode, {
-    startMcpHub: hub.startMcpHub,
+    startMcpHub: (deps: Parameters<HubApp['startMcpHub']>[0]) =>
+      (started.hub = hub.startMcpHub(deps)),
     currentLang: () => hostsA.lang ?? 'ko',
     shellWindow: main ? BrowserWindow.fromId(main.window ?? main.view) : null,
     tabManager: { openHomeTab: () => void cx.electron.log.push(['shellWindow.showHomeTab']) },
     HOME_CHANNELS,
   })
+  // `void hub.load()` reads the store in the background; the Rust hub has loaded
+  // by the time its port is built. A case starts from the loaded hub (as a window's
+  // first call comes long after start-up): wait for the seeded servers, then for
+  // the notice of that load to go out.
+  if (cx.case.files?.['userData/mcp-servers.json'] !== undefined) {
+    const deadline = Date.now() + 5000
+    while (
+      started.hub &&
+      started.hub.settingsView().servers.length === 0 &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 5))
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 export const DOCS_URL = 'https://example.test/mcp'

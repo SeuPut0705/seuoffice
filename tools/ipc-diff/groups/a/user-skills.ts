@@ -410,8 +410,10 @@ async function load(cx: LoadContext): Promise<void> {
     openHomeTab: () => log.push(['shellWindow.showHomeTab']),
     list: () => focusable.map((id) => ({ id })),
     activateTab: (id: string) => log.push(['tabManager.activateTab', id]),
-    describeWebContents: (id: number) =>
-      files[String(id)] === undefined ? undefined : { filePath: files[String(id)] },
+    describeWebContents: (id: number) => {
+      log.push(['tabManager.describeWebContents', id])
+      return files[String(id)] === undefined ? undefined : { filePath: files[String(id)] }
+    },
   }
   const openTemplateCopyTab = async (copy: {
     editor: string
@@ -1104,13 +1106,19 @@ const bare: Case[] = [
 
 /**
  * The settings file is written by every change, which needs its folder (the
- * entry creates it at start); the case about the unwritable folder keeps it away
+ * entry creates it at start); the case about the unwritable folder keeps it away.
+ * `home` and `temp` are there in every case: `os.homedir()` and `os.tmpdir()`
+ * name them only while they are (see `load`), and the real folders must not answer
  */
-const cases: Case[] = bare.map((c) =>
-  c.note?.startsWith('no accepted warning')
-    ? c
-    : { ...c, files: { userData: { dir: true as const }, ...c.files } },
-)
+const cases: Case[] = bare.map((c) => ({
+  ...c,
+  files: {
+    home: { dir: true as const },
+    temp: { dir: true as const },
+    ...(c.note?.startsWith('no accepted warning') ? {} : { userData: { dir: true as const } }),
+    ...c.files,
+  },
+}))
 
 export const group: Group = {
   batch: 'A',

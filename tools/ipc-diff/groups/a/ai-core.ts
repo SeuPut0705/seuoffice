@@ -64,15 +64,7 @@ import { listCustomModelsForIpc } from '../../../../packages/ai-provider/src/cus
 import {
   createKeyModelRefresher,
   withStoredMainFields,
-} from '../../../../packages/ai-provider/src/key-models.ts'
-import {
-  abortMediaCalls,
-  imageSearchTool,
-  readAiSettingsFile,
-  testSearchProvider,
-  webSearchTool,
-  withMediaCallSignal,
-} from '../../../../packages/ai-search/src/index.ts'
+} from '../../../../packages/ai-provider/src/key-model-refresh.ts'
 import {
   abortOnDestroyed,
   isHeadlessMode,
@@ -128,6 +120,17 @@ registerHooks({
     return next(url, context)
   },
 })
+
+// `@seuoffice/ai-search` loads `search-tools.ts`, whose './index' import the hook above
+// answers: it is imported only now, after the hook exists (static imports are resolved first)
+const {
+  abortMediaCalls,
+  imageSearchTool,
+  readAiSettingsFile,
+  testSearchProvider,
+  webSearchTool,
+  withMediaCallSignal,
+} = await import('../../../../packages/ai-search/src/index.ts')
 
 // ---- the statements of the entries --------------------------------------------------------
 
@@ -209,7 +212,7 @@ const STATUS_TEXT: Record<number, string> = {
 }
 
 /** `FakeNet` of crates/shell-ipc/a/src/runtime/testing.rs for the text bodies this group scripts */
-function fakeFetch(rules: FetchRule[], log: unknown[][]): typeof fetch {
+function fakeFetch(rules: FetchRule[], log: unknown[]): typeof fetch {
   const used = rules.map(() => 0)
   let count = 0
   return (async (input: unknown, init: RequestInit = {}) => {
@@ -235,8 +238,58 @@ function fakeFetch(rules: FetchRule[], log: unknown[][]): typeof fetch {
     used[at]!++
     const rule = rules[at]!
     const status = rule.status ?? 200
-    const body = rule.body?.map((chunk) => (typeof chunk === 'string' ? chunk : '')).join('')
-    return new Response(rule.body === undefined ? null : body, {
+    if (rule.body == null) {
+      return new Response(null, {
+        status,
+        statusText: rule.statusText ?? STATUS_TEXT[status] ?? '',
+        headers: rule.headers,
+      })
+    }
+    // the body is read chunk by chunk, as the Rust fake serves it; a stream ended by its
+    // reader or cancelled before its end logs `["cancel", n]` once (a cancel, or an abort
+    // of the request's signal)
+    const chunks: (Uint8Array | Error)[] = rule.body.flatMap((chunk): (Uint8Array | Error)[] => {
+      if (typeof chunk === 'string') return chunk === '' ? [] : [new TextEncoder().encode(chunk)]
+      if ('hex' in chunk) return chunk.hex === '' ? [] : [unhex(chunk.hex)]
+      return [new TypeError(chunk.error)]
+    })
+    let ended = false
+    let cancelled = false
+    const cancel = (): void => {
+      if (ended || cancelled) return
+      cancelled = true
+      log.push(['cancel', n])
+    }
+    let failBody: ((reason: unknown) => void) | undefined
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          failBody = (reason) => controller.error(reason)
+        },
+        pull(controller) {
+          const next = chunks.shift()
+          if (next === undefined) {
+            ended = true
+            controller.close()
+          } else if (next instanceof Error) {
+            ended = true
+            controller.error(next)
+          } else controller.enqueue(next)
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    )
+    init.signal?.addEventListener(
+      'abort',
+      () => {
+        if (ended || cancelled) return
+        cancel()
+        failBody?.(init.signal!.reason)
+      },
+      { once: true },
+    )
+    return new Response(stream, {
       status,
       statusText: rule.statusText ?? STATUS_TEXT[status] ?? '',
       headers: rule.headers,
@@ -274,6 +327,14 @@ async function load(cx: LoadContext): Promise<void> {
     Date.now = REAL_DATE_NOW
   }
   setHeadlessMode(world.headless === true)
+  // a real webContents has `removeListener`, which `withMediaCallSignal` and `abortOnDestroyed`
+  // call when a call ends; the fake keeps `once` listeners for good (no case destroys a view),
+  // so there is nothing to take off
+  for (const v of cx.case.views ?? []) {
+    cx.electron.contents(v.view).removeListener = function (this: unknown) {
+      return this
+    }
+  }
   const electron = cx.electron as unknown as {
     ipcMain: unknown
     app: unknown
@@ -451,6 +512,18 @@ const cases: Case[] = [
           deepseek: { apiKey: 'sk-new', model: 'deepseek-reasoner', models: ['injected'] },
           custom: { apiKey: '', model: 'm', baseUrl: 'http://localhost:1234/v1' },
         },
+        // the id of an endpoint is random when the list is made from the single slot
+        // (`newCustomEndpointId`, Math.random on both sides): the case names it
+        customEndpoints: [
+          {
+            id: 'ep-fixed01',
+            name: '',
+            baseUrl: 'http://localhost:1234/v1',
+            apiKey: '',
+            model: 'm',
+          },
+        ],
+        customEndpoint: 'ep-fixed01',
         subscriptionOff: {},
       }),
       docs('ai:get-settings'),
