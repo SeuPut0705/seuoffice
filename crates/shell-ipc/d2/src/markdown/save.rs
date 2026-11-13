@@ -27,13 +27,13 @@ use main_core::markdown::image_host::{
     FetchInit, is_image_host_usable, normalize_image_host_config, upload_image_to_host,
 };
 use main_core::markdown::print_document::MarkdownPrintOptions;
-use main_core::markdown::print_pdf::print_markdown_pdf;
+use main_core::markdown::print_pdf::begin_print_markdown_pdf;
 use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::packages::electron_utils::marked_odt::{
     MarkedOdtChoice, MarkedOdtText, marked_odt_box, marked_odt_choice,
 };
-use main_core::packages::electron_utils::print_html_pdf::PrintWindow;
-use main_core::packages::electron_utils::print_window::JsError;
+use main_core::packages::electron_utils::print_html_pdf::{PdfJob, PdfStep, PrintWindow};
+use main_core::packages::electron_utils::print_window::{JsError, WindowStep};
 use main_core::packages::electron_utils::recovery_store::RecoveryIdentity;
 use main_core::packages::electron_utils::remote_image::{
     MAX_REMOTE_IMAGE_BYTES, fetch_remote_image, read_body_capped,
@@ -152,32 +152,60 @@ fn is_http(src: &str) -> bool {
     lower.starts_with("http:") || lower.starts_with("https:")
 }
 
-/// A boxed hidden window as `print_markdown_pdf` takes one
-struct Window(Box<dyn PrintWindow + Send>);
+/// A host window as `begin_print_markdown_pdf` holds one
+struct Window(Box<dyn super::MarkdownPrintWindow>);
 
 impl PrintWindow for Window {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.0.load_file(path)
-    }
-    fn print_to_pdf(&mut self, options: &serde_json::Value) -> Result<Vec<u8>, JsError> {
-        self.0.print_to_pdf(options)
-    }
     fn destroy(&mut self) -> Result<(), JsError> {
         self.0.destroy()
     }
 }
 
-/// `printMarkdownPdf(html)`, on a worker
-fn print_pdf(engine: &MarkdownEngineHost, html: &str, temp: &Path) -> Result<Vec<u8>, String> {
+/// `printMarkdownPdf(html)`: each renderer call the job awaits goes to the
+/// window, and its answer resumes the job on the core thread; `then` gets
+/// the PDF once the window is destroyed and the work folder removed
+fn print_pdf(
+    services: &Services,
+    engine: &MarkdownEngineHost,
+    html: &str,
+    temp: &Path,
+    then: impl FnOnce(Result<Vec<u8>, String>) + 'static,
+) {
     // the OS temp folder always exists; a shell that roots it elsewhere may not have made it
     let _ = std::fs::create_dir_all(temp);
-    print_markdown_pdf(
+    let step = begin_print_markdown_pdf(
         || Ok(Window(engine.print_window())),
         html,
         &MarkdownPrintOptions::default(),
         &temp.to_string_lossy(),
-    )
-    .map_err(|e| e.message)
+    );
+    drive_print(services, step, Box::new(then));
+}
+
+fn drive_print(
+    services: &Services,
+    step: PdfStep<Window>,
+    then: Box<dyn FnOnce(Result<Vec<u8>, String>)>,
+) {
+    let (call, mut job) = match step {
+        WindowStep::Done(pdf) => return then(pdf.map_err(|e| e.message)),
+        WindowStep::Await { call, job } => (call, job),
+    };
+    // the window is the job's, so the call goes out first and the job then
+    // waits in a cell for the answer; the answer always comes back through a
+    // posted core job, after the job is in the cell
+    let waiting: Rc<RefCell<Option<PdfJob<Window>>>> = Rc::default();
+    let resume = {
+        let (waiting, next_services) = (Rc::clone(&waiting), services.clone());
+        kit::back_on_core(services, move |answer| {
+            let job = waiting.borrow_mut().take();
+            if let Some(job) = job {
+                drive_print(&next_services, job.resume(answer), then)
+            }
+        })
+    };
+    job.window().0.call(call, resume);
+    *waiting.borrow_mut() = Some(job);
 }
 
 /// `{ ok: true, canceled: true }` or the error of what failed
@@ -280,22 +308,33 @@ impl Md {
         self.os.show_item_in_folder(Path::new(path))
     }
 
-    /// prints `html` on a worker, writes it to `target`, opens it
+    /// prints `html` in a hidden window, writes it to `target` on a worker,
+    /// opens it
     fn write_pdf(self: &Rc<Self>, html: String, target: String, then: Exported) {
-        let (engine, temp, to) = (self.engine.clone(), self.temp(), target.clone());
         let me = Rc::clone(self);
-        kit::on_worker(
+        print_pdf(
             &self.services,
-            move || {
-                let pdf = print_pdf(&engine, &html, &temp)?;
-                std::fs::write(&to, pdf).map_err(|e| e.to_string())
-            },
-            move |written| match written {
-                Ok(()) => {
-                    me.open_exported_pdf(&target);
-                    then(saved_at(&target))
-                }
-                Err(error) => then(failure(error)),
+            &self.engine,
+            &html,
+            &self.temp(),
+            move |printed| {
+                let pdf = match printed {
+                    Ok(pdf) => pdf,
+                    Err(error) => return then(failure(error)),
+                };
+                let to = target.clone();
+                let services = me.services.clone();
+                kit::on_worker(
+                    &services,
+                    move || std::fs::write(&to, pdf).map_err(|e| e.to_string()),
+                    move |written| match written {
+                        Ok(()) => {
+                            me.open_exported_pdf(&target);
+                            then(saved_at(&target))
+                        }
+                        Err(error) => then(failure(error)),
+                    },
+                );
             },
         );
     }
@@ -1288,31 +1327,27 @@ pub(super) fn entries(
                 Ok(id) => id,
                 Err(error) => return responder.reply(Ok(failure(error))),
             };
-            let (engine, temp, me) = (m.engine.clone(), m.temp(), Rc::clone(&m));
-            kit::on_worker(
-                &m.services,
-                move || print_pdf(&engine, &html, &temp),
-                move |printed| {
-                    let printed = printed.and_then(|pdf| {
-                        if me.e.docs.is_destroyed(view) {
-                            Err("Document closed during export".to_owned())
-                        } else {
-                            Ok(pdf)
-                        }
-                    });
-                    responder.reply(Ok(match printed {
-                        Ok(pdf) => obj([
-                            ("ok", true.into_ipc()),
-                            ("id", id.as_str().into_ipc()),
-                            ("pdfBase64", jscompat::base64(&pdf).into_ipc()),
-                        ]),
-                        Err(error) => {
-                            let _ = me.images.borrow_mut().finish(owner, &id, false);
-                            failure(error)
-                        }
-                    }))
-                },
-            );
+            let me = Rc::clone(&m);
+            print_pdf(&m.services, &m.engine, &html, &m.temp(), move |printed| {
+                let printed = printed.and_then(|pdf| {
+                    if me.e.docs.is_destroyed(view) {
+                        Err("Document closed during export".to_owned())
+                    } else {
+                        Ok(pdf)
+                    }
+                });
+                responder.reply(Ok(match printed {
+                    Ok(pdf) => obj([
+                        ("ok", true.into_ipc()),
+                        ("id", id.as_str().into_ipc()),
+                        ("pdfBase64", jscompat::base64(&pdf).into_ipc()),
+                    ]),
+                    Err(error) => {
+                        let _ = me.images.borrow_mut().finish(owner, &id, false);
+                        failure(error)
+                    }
+                }))
+            });
         },
     ));
 

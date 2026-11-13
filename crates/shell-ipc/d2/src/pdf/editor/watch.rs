@@ -313,7 +313,7 @@ impl Editor {
     /// every timer the watcher sets fires at once and its `stat` and `read`
     /// run inline, until it waits for nothing. Reaches the notice the
     /// TypeScript's real timers reach, without their time.
-    #[cfg(any(test, feature = "probe"))]
+    #[cfg(feature = "probe")]
     pub(super) fn disk_change_now(&self, view: ViewId, name: Option<&str>) {
         let Some(mut watch) = self.with_view(view, |v| v.watch.take()) else {
             return;

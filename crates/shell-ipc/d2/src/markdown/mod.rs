@@ -31,7 +31,7 @@ use main_core::markdown::wiki_heads::wiki_heads;
 use main_core::markdown::wiki_index::{WikiIndex, node_vault_fs};
 use main_core::markdown::wiki_notes::list_wiki_notes;
 use main_core::markdown::wiki_resolve::{ResolveOptions, node_fs, resolve_wiki_links};
-use main_core::packages::electron_utils::print_html_pdf::PrintWindow;
+use main_core::packages::electron_utils::print_window::{JsError, RendererAnswer, RendererCall};
 use main_core::packages::electron_utils::safe_remote_url::{Fetcher, Resolver, Response};
 use shell_contract::hosts::OsShellHost;
 use shell_contract::ipc::{RegisterError, Target};
@@ -43,12 +43,22 @@ use crate::html::text_doc::{DocChannels, DocHooks, TextDocs, text_document_edito
 use crate::kit::{self, Entry, IntoIpc, ViewMap, field, obj};
 use crate::text_recovery::ui::now_ms;
 
+/// `printMarkdownPdf`'s hidden window (`new BrowserWindow({ show: false,
+/// webPreferences: { sandbox: true, javascript: false } })`). Its renderer
+/// calls are awaited in the TypeScript, so here they answer later.
+pub trait MarkdownPrintWindow: Send {
+    /// carries out `win.loadFile(path)` or `webContents.printToPDF(options)`
+    /// and calls `answer` once, from any thread, with what it came to
+    fn call(&mut self, call: RendererCall, answer: Box<dyn FnOnce(RendererAnswer) + Send>);
+    /// `win.destroy()`
+    fn destroy(&mut self) -> Result<(), JsError>;
+}
+
 /// What the Markdown handlers call that is not in Rust. Every method may run
 /// on a worker.
 pub trait MarkdownEngine: Send + Sync {
-    /// `printMarkdownPdf`'s hidden window: `new BrowserWindow({ show: false,
-    /// webPreferences: { sandbox: true, javascript: false } })`
-    fn print_window(&self) -> Box<dyn PrintWindow + Send>;
+    /// a new hidden print window
+    fn print_window(&self) -> Box<dyn MarkdownPrintWindow>;
     /// `docxToOdt(docx)` (packages/odt-engine)
     fn docx_to_odt(&self, docx: Vec<u8>) -> Result<OdtConversion, String>;
     /// the DNS lookups `fetchRemoteImage` makes (Node's `dns.lookup`)

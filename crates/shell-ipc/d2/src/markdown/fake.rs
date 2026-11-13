@@ -7,13 +7,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use main_core::markdown::image_host::{FetchFailure, FetchInit, FetchResponse, ResponseHeaders};
-use main_core::packages::electron_utils::print_html_pdf::PrintWindow;
-use main_core::packages::electron_utils::print_window::JsError;
+use main_core::packages::electron_utils::print_window::{JsError, RendererAnswer, RendererCall};
 use main_core::packages::electron_utils::safe_remote_url::{Fetcher, Resolver, Response};
 use serde_json::{Value, json};
 use shell_contract::ViewId;
 
-use super::{MarkdownEngine, MarkdownShell};
+use super::{MarkdownEngine, MarkdownPrintWindow, MarkdownShell};
 use crate::html::fake::{Answers, NoNetwork, ProbeLog, file_text, hex, odt_answer};
 use crate::html::odt_export::OdtConversion;
 
@@ -23,20 +22,27 @@ struct FakeWindow {
     page: Option<PathBuf>,
 }
 
-impl PrintWindow for FakeWindow {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.page = Some(path.into());
-        Ok(())
-    }
-    fn print_to_pdf(&mut self, _options: &serde_json::Value) -> Result<Vec<u8>, JsError> {
-        let page = self.page.as_deref().map(file_text).unwrap_or_default();
-        self.fake.log(json!(["printToPDF", page]));
-        self.fake
-            .bytes("print_pdf", "", b"%PDF")
-            .map_err(|message| JsError {
-                code: None,
-                message,
-            })
+impl MarkdownPrintWindow for FakeWindow {
+    fn call(&mut self, call: RendererCall, answer: Box<dyn FnOnce(RendererAnswer) + Send>) {
+        match call {
+            RendererCall::LoadFile { path } => {
+                self.page = Some(path.into());
+                answer(RendererAnswer::Loaded(Ok(())))
+            }
+            RendererCall::PrintToPdf { .. } => {
+                let page = self.page.as_deref().map(file_text).unwrap_or_default();
+                self.fake.log(json!(["printToPDF", page]));
+                answer(RendererAnswer::Pdf(
+                    self.fake
+                        .bytes("print_pdf", "", b"%PDF")
+                        .map_err(JsError::plain),
+                ))
+            }
+            // the markdown PDF job loads and prints, nothing else
+            other => answer(RendererAnswer::Loaded(Err(JsError::plain(format!(
+                "the print window does not carry out {other:?}"
+            ))))),
+        }
     }
     fn destroy(&mut self) -> Result<(), JsError> {
         Ok(())
@@ -77,7 +83,7 @@ impl FakeMarkdown {
 }
 
 impl MarkdownEngine for FakeMarkdown {
-    fn print_window(&self) -> Box<dyn PrintWindow + Send> {
+    fn print_window(&self) -> Box<dyn MarkdownPrintWindow> {
         Box::new(FakeWindow {
             fake: Arc::clone(&self.answers),
             page: None,

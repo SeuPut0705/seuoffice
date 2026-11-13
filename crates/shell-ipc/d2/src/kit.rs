@@ -368,6 +368,69 @@ thread_local! {
     static NEXT: Cell<u64> = const { Cell::new(0) };
 }
 
+/// A callback any thread may call once: it posts the value to the core
+/// thread and runs `then` there with it. Dropping it uncalled (a worker that
+/// panicked, a host that never answers and lets go) drops `then` on the core
+/// thread, with the responder it holds, so the shell answers the invoke with
+/// an error instead of leaving it pending. Make it on the core thread.
+pub(crate) fn back_on_core<R: Send + 'static>(
+    services: &Services,
+    then: impl FnOnce(R) + 'static,
+) -> Box<dyn FnOnce(R) + Send> {
+    debug_assert!(
+        services.core.is_current(),
+        "back_on_core off the core thread"
+    );
+    let id = NEXT.with(|next| {
+        let id = next.get();
+        next.set(id + 1);
+        id
+    });
+    WAITING.with(|waiting| {
+        waiting.borrow_mut().insert(
+            id,
+            Box::new(move |result: Box<dyn Any + Send>| {
+                then(*result.downcast::<R>().expect("an answer of its own type"))
+            }),
+        )
+    });
+    let mut back = Back {
+        id,
+        core: Some(services.core.clone()),
+    };
+    Box::new(move |value: R| back.send(Some(Box::new(value))))
+}
+
+/// The sending end of [`back_on_core`]; sends `None` (drop the continuation)
+/// when dropped unsent
+struct Back {
+    id: u64,
+    core: Option<std::sync::Arc<dyn shell_contract::runtime::Thread>>,
+}
+
+impl Back {
+    fn send(&mut self, value: Option<Box<dyn Any + Send>>) {
+        let Some(core) = self.core.take() else {
+            return;
+        };
+        let id = self.id;
+        core.post(Box::new(move || {
+            let then = WAITING.with(|waiting| waiting.borrow_mut().remove(&id));
+            match (then, value) {
+                (Some(then), Some(value)) => then(value),
+                // dropped here, outside the borrow of WAITING
+                (then, _) => drop(then),
+            }
+        }));
+    }
+}
+
+impl Drop for Back {
+    fn drop(&mut self) {
+        self.send(None)
+    }
+}
+
 /// What TypeScript awaited: `work` runs on a worker with the data it owns,
 /// then `then` runs on the core thread with its result, where it may touch
 /// the handler's state and answer. Call it on the core thread.
@@ -380,37 +443,13 @@ pub(crate) fn on_worker<R: Send + 'static>(
     work: impl FnOnce() -> R + Send + 'static,
     then: impl FnOnce(R) + 'static,
 ) {
-    debug_assert!(services.core.is_current(), "on_worker off the core thread");
-    let id = NEXT.with(|next| {
-        let id = next.get();
-        next.set(id + 1);
-        id
-    });
-    WAITING.with(|waiting| {
-        waiting.borrow_mut().insert(
-            id,
-            Box::new(move |result: Box<dyn Any + Send>| {
-                then(
-                    *result
-                        .downcast::<R>()
-                        .expect("a worker result of its own type"),
-                )
-            }),
-        )
-    });
-    let core = services.core.clone();
+    let back = back_on_core(services, then);
     services.workers.spawn(Box::new(move || {
         // `work` owns its data and is gone after a panic: nothing observes a
-        // broken state
-        let result = catch_unwind(AssertUnwindSafe(|| Box::new(work()) as Box<dyn Any + Send>));
-        core.post(Box::new(move || {
-            let then = WAITING.with(|waiting| waiting.borrow_mut().remove(&id));
-            match (then, result) {
-                (Some(then), Ok(result)) => then(result),
-                // dropped here, outside the borrow of WAITING
-                (then, _) => drop(then),
-            }
-        }));
+        // broken state; `back` is dropped unsent, which drops `then`
+        if let Ok(result) = catch_unwind(AssertUnwindSafe(work)) {
+            back(result)
+        }
     }));
 }
 
