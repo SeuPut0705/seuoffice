@@ -356,7 +356,8 @@ const cases: Case[] = [
 ]
 
 /** A step that runs a call of the shell into the editor (tools/ipc-diff's `trigger`) */
-const trigger = (what: string, view: number, args: unknown[] = []) => ({
+const trigger = (what: string, view: number, args: unknown[] = []): Call => ({
+  channel: `d2/hwp:${what}`,
   kind: 'trigger',
   name: `d2/hwp:${what}`,
   view,
@@ -368,12 +369,47 @@ const TWO_PANES = [
   { view: 2, window: 1, surface: 'Hwp' },
 ]
 
-/**
- * The cases that need a view the shell set up on a file, or a call of the
- * shell into the editor: they join `cases` once tools/ipc-diff runs
- * `trigger` steps.
- */
-export const triggerCases = [
+cases.push(
+  {
+    note: 'tracked changes the engine can take out: the editor gets the plain document',
+    views: HWP_VIEW,
+    files: { 'a.hwp': { hex: HWP } },
+    hosts: hwp({ tracked_changes_of: 'tracked', without_tracked_changes: 'PLAIN' }),
+    calls: [
+      trigger('open-view', 1, ['$DIR/a.hwp']),
+      invoke('hwp:read-file', ['$DIR/a.hwp']),
+      invoke('hwp:tracking-dropped'),
+    ],
+  },
+  {
+    note: 'a structure the gate cannot read: Save over it is refused, the tab says so',
+    views: HWP_VIEW,
+    files: { 'a.hwp': { hex: HWP } },
+    hosts: hwp({ tracked_changes_of: 'unreadable' }),
+    calls: [
+      trigger('open-view', 1, ['$DIR/a.hwp']),
+      invoke('hwp:read-file', ['$DIR/a.hwp']),
+      invoke('hwp:structure-unverified'),
+      beginSave('save'),
+    ],
+  },
+  {
+    note: 'a skill template opened as a new document: an untitled copy',
+    views: HWP_VIEW,
+    files: { 'tpl/report.hwpx': { hex: HWPX_MAGIC } },
+    calls: [
+      trigger('open-view', 1, ['$DIR/tpl/report.hwpx', true]),
+      invoke('hwp:untitled-copy'),
+      invoke('hwp:read-file', ['$DIR/tpl/report.hwpx']),
+    ],
+  },
+)
+
+/** what the last waiting shell call settled to (`null` while it waits) */
+const outcome = (view = 1) => trigger('outcome', view)
+
+/** The cases that need a view the shell set up, or a call of the shell into the editor */
+cases.push(
   {
     note: 'a tab on a file reads it, and only it',
     views: HWP_VIEW,
@@ -418,7 +454,9 @@ export const triggerCases = [
       openView(1, null),
       send('hwp:dirty-changed', [true]),
       trigger('request-close', 1, [1]),
+      outcome(),
       send('hwp:close-save-result', [true]),
+      outcome(),
     ],
   },
   {
@@ -428,7 +466,9 @@ export const triggerCases = [
     calls: [
       openView(1, null),
       trigger('read-text', 1),
-      send('hwp:read-bytes-result', [{ ok: true, bytes: bytes() }]),
+      outcome(),
+      { ...send('hwp:read-bytes-result', [{ ok: true, bytes: bytes() }]), buffers: [HWP] },
+      outcome(),
     ],
   },
   {
@@ -464,6 +504,7 @@ export const triggerCases = [
       { ...invoke('hwp:consume-headless-export'), view: 900 },
       { ...invoke('hwp:consume-headless-export'), view: 900 },
       { ...send('hwp:headless-export-done', [{ ok: false, error: 'no pages' }]), view: 900 },
+      outcome(),
     ],
   },
   {
@@ -480,7 +521,7 @@ export const triggerCases = [
       trigger('request-preview', 1, ['print']),
     ],
   },
-]
+)
 
 /** The fake `webContents` members hwp-main.ts and recovery.ts reach beyond fakes.ts */
 function extendContents(cx: LoadContext, headless: { view: number | null }): void {
@@ -518,6 +559,93 @@ interface Entry {
   next: { view: number }
 }
 let entry: Entry | null = null
+
+/** what the last waiting shell call settled to; undefined while it waits */
+let lastOutcome: { value: unknown } | { error: string } | undefined
+
+/**
+ * Starts a shell call that waits for the renderer: the trigger answers at
+ * once, `outcome` tells what it settled to (probe.rs does the same)
+ */
+function waiting(run: Promise<unknown>): undefined {
+  lastOutcome = undefined
+  run.then(
+    (value) => (lastOutcome = { value }),
+    (err: unknown) => (lastOutcome = { error: String(err) }),
+  )
+  return undefined
+}
+
+/** emits a `webContents` event on a view's fake contents */
+function emit(view: number, name: string, ...args: unknown[]): void {
+  ;(entry!.wc(view) as unknown as EventEmitter).emit(name, ...args)
+}
+
+/**
+ * The shell's calls into the editor, by trigger name (`d2/hwp:<what>`), as
+ * `crates/shell-ipc/d2/src/hwp/probe.rs` runs them
+ */
+const triggers: Record<string, (view: number, args: unknown[]) => unknown> = {
+  'open-view': async (view, args) => {
+    const e = entry!
+    e.next.view = view
+    const option = args[1]
+    e.main.createHwpView((args[0] as string | null | undefined) ?? null, {
+      untitledCopy:
+        option === true
+          ? true
+          : option && typeof option === 'object'
+            ? (option as { baseName: string })
+            : undefined,
+    })
+  },
+  'request-save': (view, args) =>
+    waiting(entry!.main.requestHwpSave(entry!.wc(view), args[0] === 'saveAs' ? 'saveAs' : 'save')),
+  'request-close': (view, args) => {
+    const parent = typeof args[0] === 'number' ? entry!.BrowserWindow.fromId(args[0]) : null
+    return waiting(entry!.main.requestHwpClose(entry!.wc(view), parent))
+  },
+  'read-text': (view) => waiting(entry!.main.hwpReadText(entry!.wc(view))),
+  outcome: () => lastOutcome ?? null,
+  'file-renamed': async (view, args) =>
+    entry!.main.hwpFileRenamed(entry!.wc(view), String(args[0]), String(args[1])),
+  // DocumentEditors' export request: the File menu's PDF export
+  'export-request': async (view, args) => {
+    if (args[0] === 'pdf') entry!.main.requestHwpPrint(entry!.wc(view), 'pdf')
+  },
+  'request-preview': async (view, args) =>
+    entry!.main.requestHwpPreview(entry!.wc(view), args[0] === 'print' ? 'print' : 'open'),
+  'is-dirty': async (view) => entry!.main.hwpIsDirty(view),
+  'memo-modal-open': async (view) => entry!.main.hwpMemoModalOpen(view),
+  'recovery-identity': async (view) => entry!.main.hwpRecoveryIdentity(entry!.wc(view)),
+  'set-recovery-title': async (view, args) =>
+    entry!.main.setHwpRecoveryTitle(entry!.wc(view), String(args[0] ?? '')),
+  'discard-recovery-copy': async (view) => entry!.main.hwpDiscardRecoveryCopy(entry!.wc(view)),
+  'write-copies-now': async () => {
+    // the flushes go out; the Rust side does not wait for their answers either
+    void entry!.recovery.hwpRecoveryContract.writeCopiesNow()
+  },
+  'open-file-with-decision': async (view, args) =>
+    entry!.recovery.hwpRecoveryContract.openFileWithDecision(entry!.wc(view), {
+      filePath: String(args[0] ?? ''),
+      decision: args[1] === 'restore' ? 'restore' : 'original',
+    }),
+  'render-process-gone': async (view, args) =>
+    emit(view, 'render-process-gone', {}, { reason: args[0] ?? 'crashed' }),
+  'did-start-navigation': async (view, args) =>
+    emit(view, 'did-start-navigation', {
+      isMainFrame: args[0] === true,
+      isSameDocument: args[1] === true,
+    }),
+  'export-hwp-pdf-headless': (_view, args) =>
+    waiting(
+      entry!.main.exportHwpPdfHeadless(
+        String(args[0] ?? ''),
+        String(args[1] ?? ''),
+        typeof args[2] === 'number' ? args[2] : undefined,
+      ),
+    ),
+}
 
 export const group: Group = {
   batch: 'D2',
@@ -589,6 +717,12 @@ export const group: Group = {
     }
   },
   cases,
+  triggers: Object.fromEntries(
+    Object.keys(triggers).map((what) => [
+      `d2/hwp:${what}`,
+      (_cx: unknown, view: number, args: unknown[]) => triggers[what](view, args),
+    ]),
+  ),
   single: {
     'hwp:abort-save': 'a send: it answers nothing; the next commit-save shows its effect',
     'hwp:close-save-result': 'a send: settles a close the shell asked for (a trigger)',
@@ -599,72 +733,4 @@ export const group: Group = {
     'hwp:memo-modal-open': 'a send: its effect shows in memo-modal-state and begin-save',
     'hwp:recovery-flushed': 'a send: settles a flush the shell asked for (a trigger)',
   },
-}
-
-/** emits a `webContents` event on a view's fake contents */
-function emit(view: number, name: string, ...args: unknown[]): void {
-  ;(entry!.wc(view) as unknown as EventEmitter).emit(name, ...args)
-}
-
-/**
- * The shell's calls into the editor, by trigger name (`d2/hwp:<what>`), as
- * `crates/shell-ipc/d2/src/hwp/probe.rs` runs them
- */
-export const triggers: Record<string, (view: number, args: unknown[]) => Promise<unknown>> = {
-  'open-view': async (view, args) => {
-    const e = entry!
-    e.next.view = view
-    const option = args[1]
-    e.main.createHwpView((args[0] as string | null | undefined) ?? null, {
-      untitledCopy:
-        option === true
-          ? true
-          : option && typeof option === 'object'
-            ? (option as { baseName: string })
-            : undefined,
-    })
-  },
-  'request-save': (view, args) =>
-    entry!.main.requestHwpSave(entry!.wc(view), args[0] === 'saveAs' ? 'saveAs' : 'save'),
-  'request-close': (view, args) => {
-    const parent = typeof args[0] === 'number' ? entry!.BrowserWindow.fromId(args[0]) : null
-    return entry!.main.requestHwpClose(entry!.wc(view), parent)
-  },
-  'read-text': (view) => entry!.main.hwpReadText(entry!.wc(view)),
-  'file-renamed': async (view, args) =>
-    entry!.main.hwpFileRenamed(entry!.wc(view), String(args[0]), String(args[1])),
-  // DocumentEditors' export request: the File menu's PDF export
-  'export-request': async (view, args) => {
-    if (args[0] === 'pdf') entry!.main.requestHwpPrint(entry!.wc(view), 'pdf')
-  },
-  'request-preview': async (view, args) =>
-    entry!.main.requestHwpPreview(entry!.wc(view), args[0] === 'print' ? 'print' : 'open'),
-  'is-dirty': async (view) => entry!.main.hwpIsDirty(view),
-  'memo-modal-open': async (view) => entry!.main.hwpMemoModalOpen(view),
-  'recovery-identity': async (view) => entry!.main.hwpRecoveryIdentity(entry!.wc(view)),
-  'set-recovery-title': async (view, args) =>
-    entry!.main.setHwpRecoveryTitle(entry!.wc(view), String(args[0] ?? '')),
-  'discard-recovery-copy': async (view) => entry!.main.hwpDiscardRecoveryCopy(entry!.wc(view)),
-  'write-copies-now': async () => {
-    // the flushes go out; the Rust side does not wait for their answers either
-    void entry!.recovery.hwpRecoveryContract.writeCopiesNow()
-  },
-  'open-file-with-decision': async (view, args) =>
-    entry!.recovery.hwpRecoveryContract.openFileWithDecision(entry!.wc(view), {
-      filePath: String(args[0] ?? ''),
-      decision: args[1] === 'restore' ? 'restore' : 'original',
-    }),
-  'render-process-gone': async (view, args) =>
-    emit(view, 'render-process-gone', {}, { reason: args[0] ?? 'crashed' }),
-  'did-start-navigation': async (view, args) =>
-    emit(view, 'did-start-navigation', {
-      isMainFrame: args[0] === true,
-      isSameDocument: args[1] === true,
-    }),
-  'export-hwp-pdf-headless': (_view, args) =>
-    entry!.main.exportHwpPdfHeadless(
-      String(args[0] ?? ''),
-      String(args[1] ?? ''),
-      typeof args[2] === 'number' ? args[2] : undefined,
-    ),
 }

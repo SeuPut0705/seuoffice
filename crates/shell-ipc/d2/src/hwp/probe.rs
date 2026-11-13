@@ -1,8 +1,13 @@
 //! What the shell and the other areas call on the Hangul editor, run by
 //! name for tools/ipc-diff's `trigger` steps (`d2/hwp:<what>`). Each name
 //! is the kebab-case of the function hwp-main.ts or recovery.ts exported;
-//! the reply is what that function returned or resolved to.
+//! the reply is what that function returned. A call that waits for the
+//! renderer (`request-save`, `request-close`, `read-text`,
+//! `export-hwp-pdf-headless`) answers `undefined` at once, so the case can
+//! send the renderer's answer next; the `outcome` trigger then answers `null`
+//! while it waits, `{value}` or `{error}` once it settled.
 
+use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -12,6 +17,7 @@ use main_core::packages::electron_utils::recovery_contract::{
 use main_core::packages::electron_utils::recovery_store::RecoveryIdentity;
 use serde_json::Value;
 use shell_contract::editors::Then;
+use shell_contract::ipc::Reply;
 use shell_contract::runtime::Services;
 use shell_contract::{DocumentEditors, IpcValue, Provided, SaveMode, ViewId, WindowId};
 
@@ -32,6 +38,17 @@ fn identity(identity: Option<RecoveryIdentity>) -> IpcValue {
             ("ext", u.ext.into_ipc()),
         ]),
     }
+}
+
+thread_local! {
+    /// The outcome of the last waiting trigger: `None` while it waits
+    static OUTCOME: RefCell<Option<Reply>> = const { RefCell::new(None) };
+}
+
+/// Starts a waiting call: its outcome lands in `OUTCOME`
+fn wait<T: 'static>(into: impl Fn(T) -> IpcValue + 'static) -> Then<T> {
+    OUTCOME.with(|o| *o.borrow_mut() = None);
+    Box::new(move |r| OUTCOME.with(|o| *o.borrow_mut() = Some(r.map(into))))
 }
 
 fn text(args: &Value, i: usize) -> Option<&str> {
@@ -74,24 +91,21 @@ pub(crate) fn probe_trigger(
                 Some("saveAs") => SaveMode::SaveAs,
                 _ => SaveMode::Save,
             };
-            editors.request_save(
-                view,
-                mode,
-                Box::new(move |r| then(r.map(IntoIpc::into_ipc))),
-            )
+            editors.request_save(view, mode, wait(IntoIpc::into_ipc));
+            done(then)
         }
         "request-close" => {
             let parent = args
                 .get(0)
                 .and_then(Value::as_u64)
                 .map(|w| WindowId(w as u32));
-            editors.request_close(
-                view,
-                parent,
-                Box::new(move |r| then(r.map(IntoIpc::into_ipc))),
-            )
+            editors.request_close(view, parent, wait(IntoIpc::into_ipc));
+            done(then)
         }
-        "read-text" => editors.read_text(view, Box::new(move |r| then(r.map(IntoIpc::into_ipc)))),
+        "read-text" => {
+            editors.read_text(view, wait(IntoIpc::into_ipc));
+            done(then)
+        }
         "file-renamed" => {
             let (old, new) = (text(args, 0).unwrap_or(""), text(args, 1).unwrap_or(""));
             editors.file_renamed(view, Path::new(old), Path::new(new));
@@ -152,8 +166,17 @@ pub(crate) fn probe_trigger(
                 text(args, 0).unwrap_or(""),
                 text(args, 1).unwrap_or(""),
                 timeout,
-                Box::new(move |r| then(r.map(|()| IpcValue::Undefined))),
-            )
+                wait(|()| IpcValue::Undefined),
+            );
+            done(then)
+        }
+        "outcome" => {
+            let value = match OUTCOME.with(|o| o.borrow().clone()) {
+                None => IpcValue::Null,
+                Some(Ok(value)) => obj([("value", value)]),
+                Some(Err(e)) => obj([("error", e.to_string().into_ipc())]),
+            };
+            then(Ok(value))
         }
         _ => return false,
     }
@@ -222,13 +245,17 @@ mod tests {
             ])))
         );
         // a clean tab closes without asking
-        let (_, got) = trigger(&rt, "request-close", 1, json!([null]));
-        assert_eq!(*got.borrow(), Some(Ok(true.into_ipc())));
-        // a save waits for the renderer's commit
+        trigger(&rt, "request-close", 1, json!([null]));
+        let (_, got) = trigger(&rt, "outcome", 1, json!([]));
+        assert_eq!(*got.borrow(), Some(Ok(obj([("value", true.into_ipc())]))));
+        // a save waits for the renderer's commit: the outcome tells
         let (_, got) = trigger(&rt, "request-save", 1, json!(["saveAs"]));
-        assert_eq!(*got.borrow(), None);
+        assert_eq!(*got.borrow(), Some(Ok(IpcValue::Undefined)));
+        let (_, got) = trigger(&rt, "outcome", 1, json!([]));
+        assert_eq!(*got.borrow(), Some(Ok(IpcValue::Null)));
         rt.send("hwp:abort-save", from, vec![]);
-        assert_eq!(*got.borrow(), Some(Ok(false.into_ipc())));
+        let (_, got) = trigger(&rt, "outcome", 1, json!([]));
+        assert_eq!(*got.borrow(), Some(Ok(obj([("value", false.into_ipc())]))));
         let (known, got) = trigger(&rt, "no-such-thing", 1, json!([]));
         assert!(!known);
         assert_eq!(*got.borrow(), None);

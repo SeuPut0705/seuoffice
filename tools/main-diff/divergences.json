@@ -138,5 +138,65 @@
       "files": {}
     },
     "reason": "As labels-of-a-prototype-member-language: both tables answer Object.prototype.constructor for the language \"constructor\", a function whose spread copies no key, so appMenuLabels answers an object without labels. The Rust falls back to English. Languages come from normalizeLang. Final."
+  },
+  {
+    "id": "hwp-recovery-write-store-folder-is-a-file",
+    "fn": "recovery.ipc.recoveryWrite",
+    "case": 32,
+    "typescript": {
+      "answer": "{\"value\":[{\"op\":\"recovery.ipc.recoveryBegin\",\"value\":{\"ok\":true,\"format\":\"hwp\"}},{\"op\":\"recovery.ipc.recoveryWrite\",\"error\":\"EEXIST: file already exists, mkdir '$DIR/userData/hwp-autosave'\"}],\"logs\":[[\"saveBaseOf\",1]]}",
+      "files": {
+        "userData": "dir 755",
+        "userData/hwp-autosave": "file 644 \"in the way\""
+      }
+    },
+    "rust": {
+      "answer": "{\"value\":[{\"op\":\"recovery.ipc.recoveryBegin\",\"value\":{\"ok\":true,\"format\":\"hwp\"}},{\"op\":\"recovery.ipc.recoveryWrite\",\"value\":\"refused\"}],\"logs\":[[\"saveBaseOf\",1],[\"warn\",\"[hwp] could not write the recovery copy: EEXIST: file already exists, mkdir '$DIR/userData/hwp-autosave'\"]]}",
+      "files": {
+        "userData": "dir 755",
+        "userData/hwp-autosave": "file 644 \"in the way\""
+      }
+    },
+    "reason": "hwp:recovery-write on a store that fails (the store folder is a file, or the copy's slot is a folder): the TypeScript handler lets the Node error escape, so the invoke rejects with it. recovery.rs lists this in its `//!`: where the exception escapes into an IPC handler the Rust warns with the same text and answers `refused`, so the view goes on without a copy instead of failing; the folder after is equal. Final."
+  },
+  {
+    "id": "hwp-recovery-write-slot-is-a-folder",
+    "fn": "recovery.ipc.recoveryWrite",
+    "case": 33,
+    "typescript": {
+      "answer": "{\"value\":[{\"op\":\"recovery.ipc.recoveryBegin\",\"value\":{\"ok\":true,\"format\":\"hwp\"}},{\"op\":\"recovery.ipc.recoveryWrite\",\"error\":\"EISDIR: illegal operation on a directory, open '$DIR/userData/hwp-autosave/0e5c0f1d9d885754.hwp'\"}],\"logs\":[[\"saveBaseOf\",1]]}",
+      "files": {
+        "userData": "dir 755",
+        "userData/hwp-autosave": "dir 755",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp": "dir 755",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp.meta.json": "file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"kind\\\": \\\"hwp\\\",\\n  \\\"filePath\\\": \\\"/d/a.hwp\\\",\\n  \\\"untitledId\\\": null,\\n  \\\"title\\\": \\\"a.hwp\\\",\\n  \\\"writtenAt\\\": 1794452400000,\\n  \\\"runId\\\": \\\"0123456789abcdef\\\",\\n  \\\"state\\\": \\\"undecided\\\"\\n}\"",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp.unsaved.tmp": "file 644 hex:d0cf11e0a1b11ae10a0a"
+      }
+    },
+    "rust": {
+      "answer": "{\"value\":[{\"op\":\"recovery.ipc.recoveryBegin\",\"value\":{\"ok\":true,\"format\":\"hwp\"}},{\"op\":\"recovery.ipc.recoveryWrite\",\"value\":\"refused\"}],\"logs\":[[\"saveBaseOf\",1],[\"warn\",\"[hwp] could not write the recovery copy: EISDIR: illegal operation on a directory, open '$DIR/userData/hwp-autosave/0e5c0f1d9d885754.hwp'\"]]}",
+      "files": {
+        "userData": "dir 755",
+        "userData/hwp-autosave": "dir 755",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp": "dir 755",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp.meta.json": "file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"kind\\\": \\\"hwp\\\",\\n  \\\"filePath\\\": \\\"/d/a.hwp\\\",\\n  \\\"untitledId\\\": null,\\n  \\\"title\\\": \\\"a.hwp\\\",\\n  \\\"writtenAt\\\": 1794452400000,\\n  \\\"runId\\\": \\\"0123456789abcdef\\\",\\n  \\\"state\\\": \\\"undecided\\\"\\n}\"",
+        "userData/hwp-autosave/0e5c0f1d9d885754.hwp.unsaved.tmp": "file 644 hex:d0cf11e0a1b11ae10a0a"
+      }
+    },
+    "reason": "hwp:recovery-write on a store that fails (the store folder is a file, or the copy's slot is a folder): the TypeScript handler lets the Node error escape, so the invoke rejects with it. recovery.rs lists this in its `//!`: where the exception escapes into an IPC handler the Rust warns with the same text and answers `refused`, so the view goes on without a copy instead of failing; the folder after is equal. Final."
+  },
+  {
+    "id": "hwp-open-untitled-copy-refused-id",
+    "fn": "recovery.contract.openUntitledCopy",
+    "case": 9,
+    "typescript": {
+      "answer": "{\"value\":[{\"op\":\"recovery.contract.openUntitledCopy\",\"error\":\"invalid untitled recovery id\"}]}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":[{\"op\":\"recovery.contract.openUntitledCopy\"}],\"logs\":[[\"warn\",\"[hwp] could not open the recovery copy: invalid untitled recovery id\"]]}",
+      "files": {}
+    },
+    "reason": "openUntitledCopy of a copy the store refuses (an untitled id with a slash): the TypeScript throws the store's `invalid untitled recovery id` out of the contract method. recovery.rs lists this in its `//!` (`copyPath` in `open_untitled_copy`): the Rust warns with the same text and does nothing, so the tab stays as it was. Nothing was queued or set on either side; the folder after is equal. Final."
   }
 ]

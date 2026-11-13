@@ -1,0 +1,154 @@
+[
+  {
+    "name": "write outcome spelling (positive control)",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "RecoveryWriteOutcome::Written => \"written\",",
+    "replace": "RecoveryWriteOutcome::Written => \"writen\",",
+    "fn": ["recovery.ipc.recoveryWrite"]
+  },
+  {
+    "name": "copy barred ignores Don't Save",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "            || self.dont_save.contains(&wc_id)\n            || self.blocked.contains(&wc_id)",
+    "replace": "            || self.blocked.contains(&wc_id)",
+    "fn": [
+      "recovery.ipc.recoveryBegin",
+      "recovery.ipc.recoveryWrite",
+      "recovery.contract.writeCopiesNow"
+    ]
+  },
+  {
+    "name": "a save deletes its copy as discarded",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "self.drop_copy(e, store, wc_id, &before, RecoveryDeleteReason::Saved)",
+    "replace": "self.drop_copy(e, store, wc_id, &before, RecoveryDeleteReason::Discarded)",
+    "fn": ["recovery.hwpRecoverySaved"]
+  },
+  {
+    "name": "Don't Save deletes its copy as discarded",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "self.drop_copy(e, store, wc_id, &identity, RecoveryDeleteReason::DontSave)",
+    "replace": "self.drop_copy(e, store, wc_id, &identity, RecoveryDeleteReason::Discarded)",
+    "fn": ["recovery.hwpRecoveryDontSave"]
+  },
+  {
+    "name": "the other pane is not reset",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "                e.send_recovery_reset(other_id);\n",
+    "replace": "                let _ = other_id;\n",
+    "fn": [
+      "recovery.hwpRecoverySaved",
+      "recovery.hwpRecoveryDontSave",
+      "recovery.listener.destroyed"
+    ]
+  },
+  {
+    "name": "first flush token is 2",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "            next_flush_token: 1,",
+    "replace": "            next_flush_token: 2,",
+    "fn": [
+      "recovery.timer.flushTimedOut",
+      "recovery.ipc.recoveryFlushed",
+      "recovery.contract.writeCopiesNow"
+    ]
+  },
+  {
+    "name": "destroy keeps the Don't Save timer",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "        if self.dont_save.remove(&wc_id) {\n            e.clear_timeout(RecoveryTimer::DontSave(wc_id));\n        }\n        self.contents.retain",
+    "replace": "        self.dont_save.remove(&wc_id);\n        self.contents.retain",
+    "fn": ["recovery.listener.destroyed", "recovery.timer.dontSaveHoldEnded"]
+  },
+  {
+    "name": "default format swapped",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "HwpDefaultFormat::Hwp => HwpFormat::Hwp,\n                HwpDefaultFormat::Hwpx => HwpFormat::Hwpx,",
+    "replace": "HwpDefaultFormat::Hwp => HwpFormat::Hwpx,\n                HwpDefaultFormat::Hwpx => HwpFormat::Hwp,",
+    "fn": ["recovery.hwpRecoveryIdentityOf", "recovery.ipc.recoveryBegin"]
+  },
+  {
+    "name": "a copy name that is only an extension loses its name",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "                if stripped.is_empty() {\n                    copy.name.clone()\n                } else {\n                    stripped.to_owned()\n                }",
+    "replace": "                if !stripped.is_empty() {\n                    copy.name.clone()\n                } else {\n                    stripped.to_owned()\n                }",
+    "fn": ["recovery.ipc.recoveryWrite"]
+  },
+  {
+    "name": "a blank tab title is kept",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "if !trim(title).is_empty() {",
+    "replace": "if !title.is_empty() {",
+    "fn": ["recovery.setHwpRecoveryTitle"]
+  },
+  {
+    "name": "bytes of the wrong container pass",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "(!data.is_empty() && data.len() <= MAX_HWP_SAVE_BYTES && bytes_match_format(data, format))",
+    "replace": "(!data.is_empty() && data.len() <= MAX_HWP_SAVE_BYTES)",
+    "fn": ["recovery.ipc.recoveryWrite", "recovery.ipc.recoveryNewTabs"]
+  },
+  {
+    "name": "a crashed view's copy goes on close",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "                && !self.crashed.contains(&wc_id)\n",
+    "replace": "",
+    "fn": ["recovery.listener.renderProcessGone", "recovery.listener.destroyed"]
+  },
+  {
+    "name": "a write in another format than the turn passes",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "Some((_, format)) if format == turn_format => {}",
+    "replace": "Some(_) => {}",
+    "fn": ["recovery.ipc.recoveryWrite"]
+  },
+  {
+    "name": "the other pane is asked too",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "                    .any(|(id, other)| *id != wc_id && other == path)",
+    "replace": "                    .any(|(_, other)| other == path)",
+    "fn": ["recovery.hwpRecoveryOnRead", "recovery.hwpRecoveryFileRenamed"]
+  },
+  {
+    "name": "a view that never took its path is reloaded",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "if self.consumed.contains(&wc_id) && !e.is_destroyed(wc_id) {",
+    "replace": "if !e.is_destroyed(wc_id) {",
+    "fn": ["recovery.noteHwpPathConsumed", "recovery.contract.openFileWithDecision"]
+  },
+  {
+    "name": "a rename moves a copy the view does not own",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "if !self.owns_copy.contains(&wc_id) || !saved_here {",
+    "replace": "if !saved_here {",
+    "fn": ["recovery.hwpRecoveryFileRenamed"]
+  },
+  {
+    "name": "the protection notice every time",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "if self.notice_shown.insert(wc_id) {",
+    "replace": "if self.notice_shown.insert(wc_id) || true {",
+    "fn": ["recovery.ipc.recoveryOpened"]
+  },
+  {
+    "name": "a token that is no integer settles",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "if !(token.fract() == 0.0 && (0.0..=9_007_199_254_740_991.0).contains(&token)) {",
+    "replace": "if !(0.0..=9_007_199_254_740_991.0).contains(&token) {",
+    "fn": ["recovery.ipc.recoveryFlushed"]
+  },
+  {
+    "name": "the extension is matched case sensitively",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "let lower = path.to_ascii_lowercase();\n    if lower.ends_with(\".hwpx\") {\n        Some(HwpFormat::Hwpx)",
+    "replace": "let lower = path.to_owned();\n    if lower.ends_with(\".hwpx\") {\n        Some(HwpFormat::Hwpx)",
+    "fn": ["ipc.hwpFormatOfPath", "recovery.ipc.recoveryBegin"]
+  },
+  {
+    "name": "new tabs without a turn",
+    "file": "main-core/src/hwp/recovery.rs",
+    "find": "        if !self.turn.contains_key(&wc_id) {\n            return Vec::new();\n        }\n        match valid_bytes",
+    "replace": "        match valid_bytes",
+    "fn": ["recovery.ipc.recoveryNewTabs"]
+  }
+]
