@@ -8,6 +8,66 @@ use std::collections::VecDeque;
 use serde_json::Value;
 
 use crate::packages::electron_utils::message_box::{MessageBox, MessageBoxOptions, ParentWindow};
+use crate::packages::electron_utils::print_html_pdf::{PdfStep, PrintWindow};
+use crate::packages::electron_utils::print_window::{
+    JsError, LoadStep, PrintDialogOutcome, PrintDialogWindow, PrintStep, RendererAnswer,
+    RendererCall, WindowStep,
+};
+
+/// A window whose renderer a scenario scripts: it answers each call at once,
+/// so the drivers below play the Electron adapter and carry out every step of
+/// a job on it.
+pub(super) trait FakeRenderer {
+    /// what `call` comes to; a call the scenario lets hang until the job's
+    /// watchdog fires is [`RendererAnswer::TimedOut`]
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer;
+}
+
+/// Every step of `loadPrintHtml` carried out on the fake, up to its end.
+pub(super) fn drive_load<W: FakeRenderer>(
+    mut step: LoadStep,
+    win: &mut W,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<String, JsError> {
+    loop {
+        step = match step {
+            WindowStep::Await { call, job } => job.resume(win.answer(&call), log_probe_error),
+            WindowStep::Done(loaded) => return loaded,
+        }
+    }
+}
+
+/// Every step of `printHtmlDocument` carried out on the fake, up to its end.
+pub(super) fn drive_print<W: PrintDialogWindow + FakeRenderer>(
+    mut step: PrintStep,
+    win: &mut W,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<PrintDialogOutcome, JsError> {
+    loop {
+        step = match step {
+            WindowStep::Await { call, job } => {
+                let answer = win.answer(&call);
+                job.resume(win, answer, log_probe_error)
+            }
+            WindowStep::Done(outcome) => return outcome,
+        }
+    }
+}
+
+/// Every step of a PDF job carried out on the window it made, up to its end.
+pub(super) fn drive_pdf<W: PrintWindow + FakeRenderer>(
+    mut step: PdfStep<W>,
+) -> Result<Vec<u8>, JsError> {
+    loop {
+        step = match step {
+            WindowStep::Await { call, mut job } => {
+                let answer = job.window().answer(&call);
+                job.resume(answer)
+            }
+            WindowStep::Done(pdf) => return pdf,
+        }
+    }
+}
 
 /// a `BrowserWindow` that answers `isDestroyed`
 pub(super) struct FakeWindow {

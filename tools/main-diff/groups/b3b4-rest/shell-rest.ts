@@ -1354,6 +1354,14 @@ txnScenario.cases = [
     },
     'a partial per_op run reports its failures with the records',
   ),
+  txnCase(
+    {
+      req: { ops: ops(1) },
+      slides: ['', 's1'],
+      run: okRun([recOf(setText('e1'), '')]),
+    },
+    'an empty slide id finds no slide even where a slide has an empty durable id',
+  ),
 ]
 
 // ---------------------------------------------------------------------------
@@ -1763,6 +1771,39 @@ resizeSpec.cases = [
     },
     'an offset with no size yet: cx and cy are added after y',
   ),
+  aCase(
+    {
+      slides: [slideOf(el('e1', resizeBody))],
+      sourceId: 'e1',
+      rendered: rs(node('e1', { text: { contentHeight: 41 } })),
+      rebuilt: [rs(node('e1'))],
+    },
+    'needed height exactly a pixel under the box (49 against 50): written',
+  ),
+  aCase(
+    {
+      slides: [slideOf(el('e1', resizeBody))],
+      sourceId: 'e1',
+      rendered: rs(node('e1', { text: { contentHeight: 41.5 } })),
+    },
+    'half a pixel under: unchanged',
+  ),
+  aCase(
+    {
+      slides: [slideOf(el('e1', resizeBody))],
+      sourceId: 'e1',
+      rendered: rs(
+        node('e1', {
+          text: {
+            wrap: false,
+            lines: [{ align: 'right', runs: [{ x: 10, widthPx: 60.0001 }] }],
+          },
+        }),
+      ),
+      rebuilt: [rs(node('e1'))],
+    },
+    'a right-aligned nowrap body whose shift is a fraction of an EMU: the offset is rounded',
+  ),
 ]
 
 const syncSpec = autofitRun('syncAutofitScale')
@@ -2091,6 +2132,10 @@ seedScenario.cases = [
   sCase({ destroyedBefore: true }, 'the view is gone before the deferred message'),
   sCase({ destroyedAtQueue: true }, 'a view destroyed at queueing never gets a deck'),
   sCase({ deck: '', options: {} }, 'an empty deck'),
+  sCase(
+    { options: { askPathOnFirstSave: false, suggestedName: 'kept-only-with-ask.pptx' } },
+    'a suggested name beside an ask of false is not on the session',
+  ),
 ]
 
 // ---------------------------------------------------------------------------

@@ -1,17 +1,15 @@
 //! `apps/markdown/src/main/print-pdf.ts`: shared pagination for PDF and PNG
 //! export, with document scripts disabled.
 //!
-//! The window comes from the caller as a [`PrintWindow`] (the
-//! `new BrowserWindow(...)` and its `webPreferences` stay with it);
-//! `os.tmpdir()` is a parameter.
+//! The window comes from the caller's `createWindow` as a [`PrintWindow`] (the
+//! `new BrowserWindow(...)` and its `webPreferences` stay with it); its
+//! renderer calls are the steps of a [`PdfJob`]. `os.tmpdir()` is a parameter.
 
-use jscompat::node_path::host::join;
 use serde_json::{Map, Number, Value};
 
 use super::print_document::MarkdownPrintOptions;
-use crate::node_fs::{mkdtemp_random, node_error};
-use crate::packages::electron_utils::print_html_pdf::PrintWindow;
-use crate::packages::electron_utils::print_window::{JsError, rm_recursive_force};
+use crate::packages::electron_utils::print_html_pdf::{PdfStep, PrintWindow, begin_pdf_job};
+use crate::packages::electron_utils::print_window::JsError;
 
 fn number(x: f64) -> Value {
     Number::from_f64(x).map_or(Value::Null, Value::Number)
@@ -36,27 +34,22 @@ pub fn pdf_options(options: &MarkdownPrintOptions) -> Value {
     Value::Object(map)
 }
 
-/// `printMarkdownPdf(html, options)`: the PDF bytes. Whatever the steps throw
-/// goes out, after the window is destroyed and the folder removed; a window
-/// that cannot be destroyed leaves the folder, as in the TypeScript.
-pub fn print_markdown_pdf<W: PrintWindow>(
+/// `printMarkdownPdf(html, options)` up to its first await; its
+/// [`WindowStep::Done`](crate::packages::electron_utils::print_window::WindowStep)
+/// holds the PDF bytes. Whatever the steps throw goes out, after the window is
+/// destroyed and the folder removed; a window that cannot be destroyed leaves
+/// the folder, as in the TypeScript.
+pub fn begin_print_markdown_pdf<W: PrintWindow>(
     create_window: impl FnOnce() -> Result<W, JsError>,
     html: &str,
     options: &MarkdownPrintOptions,
     tmp_dir: &str,
-) -> Result<Vec<u8>, JsError> {
-    let work_dir = mkdtemp_random(&join(&[tmp_dir, "seuoffice-md-print-"]))?;
-    let mut print_win: Option<W> = None;
-    let printed = (|| -> Result<Vec<u8>, JsError> {
-        let window = print_win.insert(create_window()?);
-        let html_path = join(&[&work_dir, "print.html"]);
-        std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;
-        window.load_file(&html_path)?;
-        window.print_to_pdf(&pdf_options(options))
-    })();
-    if let Some(window) = print_win.as_mut() {
-        window.destroy()?;
-    }
-    rm_recursive_force(&work_dir)?;
-    printed
+) -> PdfStep<W> {
+    begin_pdf_job(
+        create_window,
+        html,
+        tmp_dir,
+        "seuoffice-md-print-",
+        pdf_options(options),
+    )
 }
