@@ -57,6 +57,7 @@ use shell_contract::runtime::{PathName, Services};
 use shell_contract::{ClipboardHost, DialogsHost, IpcValue, MainWindowHost, OsShellHost, ViewId};
 use shell_ipc_m::{AppMenuItems, MenuAction, MenuDict, app_menu_items, current_lang, menu_label};
 use shell_ipc_w::home_settings::HomeAppHost;
+use shell_ipc_w::tabs::{MenuEntry, MenuEntryKind};
 use tauri::menu::{
     CheckMenuItem, IsMenuItem, Menu, MenuItem as TauriItem, PredefinedMenuItem, Submenu,
 };
@@ -85,6 +86,13 @@ enum FrameEdit {
     Delete,
     /// `role: 'pasteAndMatchStyle'`
     PasteAndMatchStyle,
+    // the edit roles as the ☰ popup runs them: a popup entry has no native item
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -140,6 +148,10 @@ enum Act {
     MinimizeWindow,
     /// `win?.close()` of the focused window
     CloseWindow,
+    /// `role: 'zoom'` of the focused window, from the ☰ popup
+    MaximizeWindow,
+    /// `role: 'togglefullscreen'` of the focused window, from the ☰ popup
+    FullscreenWindow,
     Frame(FrameEdit),
 }
 
@@ -1646,6 +1658,19 @@ fn number(menus: &mut [Node], next: &AtomicU32) -> HashMap<String, Act> {
 /// What each id of the menu now set does, and for which kind of tab
 static CLICKS: Mutex<Option<(TabKind, HashMap<String, Act>)>> = Mutex::new(None);
 
+/// The menu now set, as the ☰ popup lists it, with the popup's own Check for
+/// Updates label (`appMenuPopupTemplate`)
+static SHOWN: Mutex<Option<Shown>> = Mutex::new(None);
+
+struct Shown {
+    kind: TabKind,
+    menus: Vec<Node>,
+    check_updates: String,
+}
+
+/// What each entry of the ☰ popup last listed does
+static POPUP: Mutex<Option<(TabKind, HashMap<u32, Act>)>> = Mutex::new(None);
+
 /// The kind of the menu last asked for, for a rebuild in another language
 static KIND: Mutex<Option<TabKind>> = Mutex::new(None);
 
@@ -1758,10 +1783,17 @@ fn build_menu(app: &AppHandle, menus: &[Node]) -> tauri::Result<Menu<DynRuntime>
 }
 
 /// On the UI thread: numbers the items, makes the Tauri menu and sets it
-fn set_menu(app: &AppHandle, kind: TabKind, mut menus: Vec<Node>) {
+fn set_menu(app: &AppHandle, kind: TabKind, mut menus: Vec<Node>, check_updates: String) {
     let clicks = number(&mut menus, &NEXT_ID);
     match build_menu(app, &menus).and_then(|menu| app.set_menu(menu)) {
-        Ok(_) => *lock(&CLICKS) = Some((kind, clicks)),
+        Ok(_) => {
+            *lock(&CLICKS) = Some((kind, clicks));
+            *lock(&SHOWN) = Some(Shown {
+                kind,
+                menus,
+                check_updates,
+            });
+        }
         Err(error) => eprintln!("shell: setting the {kind:?} menu: {error}"),
     }
 }
@@ -1818,8 +1850,10 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
             seams_of(provided),
         );
         let menus = menu_for(kind, &ctx);
+        let check_updates = ctx.labels.check_updates().to_owned();
         let on_ui = app.clone();
-        if let Err(error) = app.run_on_main_thread(move || set_menu(&on_ui, kind, menus)) {
+        let set = move || set_menu(&on_ui, kind, menus, check_updates);
+        if let Err(error) = app.run_on_main_thread(set) {
             eprintln!("shell: the {kind:?} menu: {error}");
         }
     });
@@ -1876,11 +1910,141 @@ fn dispatch(app: &AppHandle, id: &str) {
     else {
         return;
     };
+    perform(app, kind, act);
+}
+
+/// A click on an entry of `kind`'s menu, from the menu bar or the ☰ popup.
+/// Any thread: the window's own commands go to the UI thread, the rest to the core.
+fn perform(app: &AppHandle, kind: TabKind, act: Act) {
+    let on_window = |job: fn(&tauri::Window) -> tauri::Result<()>| {
+        let on_ui = app.clone();
+        if let Err(error) = app.run_on_main_thread(move || with_focused_window(&on_ui, job)) {
+            eprintln!("shell: a menu click on the focused window: {error}");
+        }
+    };
     match act {
-        Act::MinimizeWindow => with_focused_window(app, |window| window.minimize()),
-        Act::CloseWindow => with_focused_window(app, |window| window.close()),
+        Act::MinimizeWindow => on_window(|window| window.minimize()),
+        Act::CloseWindow => on_window(|window| window.close()),
+        Act::MaximizeWindow => on_window(|window| {
+            if window.is_maximized()? {
+                window.unmaximize()
+            } else {
+                window.maximize()
+            }
+        }),
+        Act::FullscreenWindow => {
+            on_window(|window| window.set_fullscreen(!window.is_fullscreen()?))
+        }
         act => post_core(move |provided, services| run(act, kind, provided, services)),
     }
+}
+
+// ---- the ☰ popup ----
+
+/// `appMenuPopupTemplate(menus)`: the menus now set as the ☰ button lists them
+/// on Windows and Linux, `None` before the first menu is set. On the core thread.
+pub(crate) fn app_menu_popup() -> Option<Vec<MenuEntry>> {
+    let shown = lock(&SHOWN);
+    let shown = shown.as_ref()?;
+    let (entries, acts) = popup_entries(&shown.menus, &shown.check_updates);
+    *lock(&POPUP) = Some((shown.kind, acts));
+    Some(entries)
+}
+
+/// A click on an entry [`app_menu_popup`] listed: the item's own click
+pub(crate) fn app_menu_activate(id: u32) {
+    let Some(shell) = SHELL.get() else { return };
+    let Some((kind, act)) = lock(&POPUP)
+        .as_ref()
+        .and_then(|(kind, acts)| acts.get(&id).map(|act| (*kind, act.clone())))
+    else {
+        return;
+    };
+    perform(&shell.app, kind, act);
+}
+
+/// The popup's entries and what each id does: the menus, a separator, then
+/// Check for Updates as an item of its own (the update check is in Help only on macOS)
+fn popup_entries(menus: &[Node], check_updates: &str) -> (Vec<MenuEntry>, HashMap<u32, Act>) {
+    fn entry(id: u32, kind: MenuEntryKind, label: &str, enabled: bool) -> MenuEntry {
+        MenuEntry {
+            id,
+            kind,
+            label: label.to_owned(),
+            enabled,
+            checked: false,
+            icon: None,
+            submenu: Vec::new(),
+        }
+    }
+    fn walk(nodes: &[Node], next: &mut u32, acts: &mut HashMap<u32, Act>) -> Vec<MenuEntry> {
+        let mut out = Vec::new();
+        for node in nodes {
+            *next += 1;
+            let id = *next;
+            match node {
+                Node::Separator => out.push(entry(id, MenuEntryKind::Separator, "", true)),
+                Node::Menu { label, items, .. } => {
+                    let mut menu = entry(id, MenuEntryKind::Normal, label, true);
+                    menu.submenu = walk(items, next, acts);
+                    out.push(menu);
+                }
+                Node::Item(item) => {
+                    let kind = if item.checked.is_some() {
+                        MenuEntryKind::Checkbox
+                    } else {
+                        MenuEntryKind::Normal
+                    };
+                    let mut shown = entry(id, kind, &item.label, item.enabled);
+                    shown.checked = item.checked.unwrap_or(false);
+                    if let Some(act) = &item.act {
+                        acts.insert(id, act.clone());
+                    }
+                    out.push(shown);
+                }
+                Node::Role { role, label } => {
+                    // the macOS application menu's roles never reach a popup
+                    let Some(act) = popup_role(*role) else {
+                        continue;
+                    };
+                    let label = label.clone().unwrap_or_else(|| format!("{role:?}"));
+                    out.push(entry(id, MenuEntryKind::Normal, &label, true));
+                    acts.insert(id, act);
+                }
+            }
+        }
+        out
+    }
+    let mut next = 0;
+    let mut acts = HashMap::new();
+    let mut entries = walk(menus, &mut next, &mut acts);
+    entries.push(entry(next + 1, MenuEntryKind::Separator, "", true));
+    entries.push(entry(next + 2, MenuEntryKind::Normal, check_updates, true));
+    acts.insert(next + 2, Act::CheckUpdates);
+    (entries, acts)
+}
+
+/// What a predefined item does when the ☰ popup, which has none, runs it
+fn popup_role(role: Role) -> Option<Act> {
+    Some(match role {
+        Role::Undo => Act::Frame(FrameEdit::Undo),
+        Role::Redo => Act::Frame(FrameEdit::Redo),
+        Role::Cut => Act::Frame(FrameEdit::Cut),
+        Role::Copy => Act::Frame(FrameEdit::Copy),
+        Role::Paste => Act::Frame(FrameEdit::Paste),
+        Role::SelectAll => Act::Frame(FrameEdit::SelectAll),
+        Role::Minimize => Act::MinimizeWindow,
+        Role::CloseWindow => Act::CloseWindow,
+        Role::Zoom => Act::MaximizeWindow,
+        Role::Fullscreen => Act::FullscreenWindow,
+        Role::About
+        | Role::Services
+        | Role::Hide
+        | Role::HideOthers
+        | Role::Unhide
+        | Role::Quit
+        | Role::Front => return None,
+    })
 }
 
 /// `BrowserWindow.getFocusedWindow()`; the menu event runs on the UI thread
@@ -1909,7 +2073,11 @@ fn run(act: Act, kind: TabKind, provided: &Provided, services: &Services) {
     };
     let editor = || tabs.active_editor(kind);
     match act {
-        Act::Unbound | Act::MinimizeWindow | Act::CloseWindow => {}
+        Act::Unbound
+        | Act::MinimizeWindow
+        | Act::CloseWindow
+        | Act::MaximizeWindow
+        | Act::FullscreenWindow => {}
         Act::Emit { channel, args } => {
             if let Some(view) = editor() {
                 services.events.emit(Target::View(view), channel, args);
@@ -2038,6 +2206,12 @@ fn run(act: Act, kind: TabKind, provided: &Provided, services: &Services) {
                     match edit {
                         FrameEdit::Delete => frame.del(),
                         FrameEdit::PasteAndMatchStyle => frame.paste_and_match_style(),
+                        FrameEdit::Undo => frame.undo(),
+                        FrameEdit::Redo => frame.redo(),
+                        FrameEdit::Cut => frame.cut(),
+                        FrameEdit::Copy => frame.copy(),
+                        FrameEdit::Paste => frame.paste(),
+                        FrameEdit::SelectAll => frame.select_all(),
                     }
                 }
             });
@@ -2969,5 +3143,59 @@ mod tests {
                 .as_ref()
                 .is_none_or(|(_, clicks)| !clicks.contains_key("other-1"))
         );
+    }
+
+    /// The ☰ popup lists every menu of the Windows/Linux bar and can run each
+    /// entry it shows, roles included, then the update check of its own
+    #[test]
+    fn the_popup_runs_every_entry_it_lists() {
+        fn leaves(entries: &[MenuEntry], ids: &mut Vec<u32>, out: &mut Vec<MenuEntry>) {
+            for entry in entries {
+                ids.push(entry.id);
+                if entry.submenu.is_empty() {
+                    out.push(entry.clone());
+                } else {
+                    leaves(&entry.submenu, ids, out);
+                }
+            }
+        }
+        for os in [Os::Windows, Os::Linux] {
+            for kind in KINDS {
+                let mut menus = menu_for(kind, &ctx(os, Lang::En));
+                number(&mut menus, &AtomicU32::new(1));
+                let (entries, acts) = popup_entries(&menus, "Check for Updates\u{2026}");
+                assert_eq!(entries.len(), menus.len() + 2, "{os:?} {kind:?}");
+                let last = &entries[entries.len() - 1];
+                assert_eq!(entries[entries.len() - 2].kind, MenuEntryKind::Separator);
+                assert_eq!(last.label, "Check for Updates\u{2026}");
+                assert_eq!(acts.get(&last.id), Some(&Act::CheckUpdates));
+                let (mut ids, mut shown) = (Vec::new(), Vec::new());
+                leaves(&entries, &mut ids, &mut shown);
+                let count = ids.len();
+                ids.sort_unstable();
+                ids.dedup();
+                assert_eq!(ids.len(), count, "{os:?} {kind:?}: ids repeat");
+                for entry in shown {
+                    if entry.kind == MenuEntryKind::Separator || !entry.enabled {
+                        continue;
+                    }
+                    assert!(
+                        acts.contains_key(&entry.id),
+                        "{os:?} {kind:?}: {} does nothing",
+                        entry.label
+                    );
+                }
+            }
+        }
+        // Home's Edit menu is made of roles, which the popup runs on the page
+        let menus = menu_for(TabKind::Home, &ctx(Os::Windows, Lang::En));
+        let (entries, acts) = popup_entries(&menus, "");
+        let edit = entries.iter().find(|e| e.label == "Edit").expect("Edit");
+        let undo = edit
+            .submenu
+            .iter()
+            .find(|e| e.label == "Undo")
+            .expect("Undo");
+        assert_eq!(acts.get(&undo.id), Some(&Act::Frame(FrameEdit::Undo)));
     }
 }

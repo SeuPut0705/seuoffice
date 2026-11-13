@@ -17,6 +17,8 @@ mod cef_ops;
 mod context;
 mod dock;
 
+pub(crate) use app::{app_menu_activate, app_menu_popup};
+
 pub(crate) use cef_ops::{host_of, print_preview};
 
 use std::path::Path;

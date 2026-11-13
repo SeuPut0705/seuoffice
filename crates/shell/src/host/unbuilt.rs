@@ -687,11 +687,10 @@ impl TabHooks for Unbuilt {
         unbuilt("TabHooks::detached_changed");
     }
     fn app_menu_popup(&self) -> Option<Vec<shell_ipc_w::tabs::MenuEntry>> {
-        unbuilt("TabHooks::app_menu_popup");
-        None
+        super::menu::app_menu_popup()
     }
-    fn app_menu_activate(&self, _: u32) {
-        unbuilt("TabHooks::app_menu_activate");
+    fn app_menu_activate(&self, id: u32) {
+        super::menu::app_menu_activate(id);
     }
     fn visible_home_kinds(&self) -> Vec<String> {
         shell_ipc_w::home_settings::visible_home_kinds(
