@@ -15,7 +15,7 @@
 //! without an open path) or from [`EpubEditors::create_view`] (with one).
 
 mod attachments;
-mod hosts;
+pub(crate) mod hosts;
 mod session;
 #[cfg(test)]
 mod tests;
@@ -62,7 +62,7 @@ use shell_contract::ipc::{CallContext, RegisterError, Reply, Responder, Target};
 use shell_contract::runtime::{AppPaths, PathName, Services};
 use shell_contract::{
     Batch, ContentsHost, DialogsHost, DocumentEditors, IpcError, IpcValue, OsShellHost, Provided,
-    ViewId, WindowId,
+    Surface, ViewId, WindowId,
 };
 
 use hosts::{
@@ -154,6 +154,7 @@ struct ViewState {
 /// `createReadingState({ dir: userDataDir, write: atomicWriteFile })`
 struct ReadingDeps {
     dir: String,
+    shell: EpubShellHost,
 }
 
 impl ReadingStateDeps for ReadingDeps {
@@ -164,19 +165,8 @@ impl ReadingStateDeps for ReadingDeps {
         atomic_write_file(path, text.as_bytes())
     }
     fn now(&mut self) -> f64 {
-        now_ms()
+        self.shell.now()
     }
-}
-
-fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64)
-}
-
-/// `randomBytes(16).toString('hex')`
-fn random_hex() -> String {
-    jscompat::random_uuid().replace('-', "")
 }
 
 #[derive(Default)]
@@ -817,8 +807,8 @@ enum OpenRun {
 }
 
 impl Epub {
-    /// `grantAndTrack(wc)` on a view's first message: every EPUB view is
-    /// tracked before it loads
+    /// `grantAndTrack(wc)` for a view that reaches the editor before the
+    /// shell set it up ([`EpubEditors::open_view`]): tracked, nothing granted
     fn track(&self, cx: &CallContext) -> ViewId {
         let view = cx.sender.view;
         self.state
@@ -891,10 +881,11 @@ impl Epub {
     /// `reading()`: the reading state, made on first use
     fn reading<R>(&self, f: impl FnOnce(&mut ReadingState<ReadingDeps>) -> R) -> R {
         let dir = self.user_data_dir();
+        let shell = self.shell.clone();
         let mut state = self.state.borrow_mut();
         f(state
             .reading
-            .get_or_insert_with(|| ReadingState::new(ReadingDeps { dir })))
+            .get_or_insert_with(|| ReadingState::new(ReadingDeps { dir, shell })))
     }
 
     /// `parentOf(contents)`
@@ -958,8 +949,12 @@ impl Epub {
 
     /// `assetTokenOf(wcId)`
     fn asset_token(&self, view: ViewId) -> String {
-        self.with_view(view, |v| v.token.get_or_insert_with(random_hex).clone())
-            .unwrap_or_else(random_hex)
+        if let Some(token) = self.view(view, |v| v.token.clone()).flatten() {
+            return token;
+        }
+        let token = self.shell.random_token();
+        self.with_view(view, |v| v.token = Some(token.clone()));
+        token
     }
 
     /// `refuseWrites(wcId)`: the view's file did not open
@@ -1402,17 +1397,11 @@ impl Epub {
             .reading(|r| r.set_view_prefs(to_js_json(args.get(0)).as_ref()))
             .map_err(|e| kit::error(e.message))?;
         let prefs = from_json(&prefs.to_json());
-        let others: Vec<ViewId> = self
-            .state
-            .borrow()
-            .views
-            .keys()
-            .copied()
-            .filter(|v| *v != view)
-            .collect();
-        for other in others {
-            if self.alive(other) {
-                self.emit(other, "epub:view-prefs-changed", vec![prefs.clone()]);
+        // every EPUB view but the sender (`contentsByWc`), whether or not it
+        // has reached the editor yet
+        for other in self.services.views.all() {
+            if other.surface == Surface::Epub && other.view != view {
+                self.emit(other.view, "epub:view-prefs-changed", vec![prefs.clone()]);
             }
         }
         Ok(prefs)
@@ -1740,8 +1729,8 @@ fn save_book(
 }
 
 /// The calls other areas make into the EPUB editor (the functions
-/// `epub-main.ts` exported)
-pub(crate) struct EpubEditors(Rc<Epub>);
+/// `epub-main.ts` exported): [`DocumentEditors`] and the methods below
+pub struct EpubEditors(Rc<Epub>);
 
 /// A continuation that settles once, whichever of the renderer's answer or
 /// its timer comes first, as a promise does
@@ -1756,10 +1745,9 @@ fn settle<T>(slot: &Once<T>) -> Option<T> {
 }
 
 impl EpubEditors {
-    /// `createEpubView(openPath)`'s `grantAndTrack`: the view may open
-    /// `open_path` when it exists
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn create_view(&self, view: ViewId, open_path: Option<&Path>) {
+    /// `createEpubView(openPath)`'s `grantAndTrack(wc, openPath)`: the shell
+    /// made `view` for `open_path`; the view may open it when it exists
+    pub fn open_view(&self, view: ViewId, open_path: Option<&Path>) {
         let open = open_path
             .filter(|p| p.exists())
             .map(|p| p.to_string_lossy().into_owned());
@@ -1773,20 +1761,17 @@ impl EpubEditors {
     }
 
     /// `epubIsTranslationLocked(wcId)`
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn is_translation_locked(&self, view: ViewId) -> bool {
+    pub fn is_translation_locked(&self, view: ViewId) -> bool {
         self.0.session(view).is_some_and(|s| s.borrow().locked)
     }
 
     /// `epubIsDirty(wcId)`
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn is_dirty(&self, view: ViewId) -> bool {
+    pub fn is_dirty(&self, view: ViewId) -> bool {
         self.0.is_dirty(view)
     }
 
     /// `sendEpubMenuCommand(contents, command)`
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn menu_command(&self, view: ViewId, command: &str) {
+    pub fn menu_command(&self, view: ViewId, command: &str) {
         if self.0.alive(view) {
             self.0
                 .emit(view, "epub:menu-command", vec![command.into_ipc()])
@@ -1795,8 +1780,7 @@ impl EpubEditors {
 
     /// what `epub-asset://<token>/` serves from (`registerEpubAssetProtocol`):
     /// the open book's bytes of the view the token names
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn asset_book(&self, token: &str) -> Option<Bytes> {
+    pub fn asset_book(&self, token: &str) -> Option<Bytes> {
         let state = self.0.state.borrow();
         let view = state
             .views
@@ -1813,7 +1797,11 @@ fn timer_slot() -> Rc<Cell<Option<Timer>>> {
 
 impl DocumentEditors for EpubEditors {
     fn owns(&self, view: ViewId) -> bool {
-        self.0.state.borrow().views.contains_key(&view)
+        self.0
+            .services
+            .views
+            .sender_of(view)
+            .is_some_and(|s| s.surface == Surface::Epub)
     }
 
     /// `requestEpubSave(contents, mode)`
@@ -1926,7 +1914,7 @@ impl DocumentEditors for EpubEditors {
                 "the file did not open, so there is no book to read",
             )));
         };
-        let request_id = random_hex();
+        let request_id = epub.shell.random_token();
         let then = once(then);
         let timer = timer_slot();
         let weak = Rc::downgrade(epub);
@@ -2070,10 +2058,111 @@ impl DocumentEditors for EpubEditors {
 
 /// This app's host fakes, answering from `case` (`hosts.d2.epub`): the
 /// engine from its `engine` member ([`hosts::FakeEngine`]), the shell from
-/// its `shell` member ([`hosts::FakeShell`])
+/// its `shell` member ([`hosts::FakeShell`]); both log to the case's log
+/// when ipc-probe inserted one
 #[cfg(any(test, feature = "probe"))]
 pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
     let member = |name: &str| case.get(name).cloned().unwrap_or(Value::Null);
-    hosts.insert::<EpubEngineHost>(Arc::new(hosts::FakeEngine::new(&member("engine"))));
-    hosts.insert::<EpubShellHost>(Arc::new(hosts::FakeShell::new(&member("shell"))));
+    let log = hosts.get::<hosts::Log>().cloned().unwrap_or_default();
+    hosts.insert::<EpubEngineHost>(Arc::new(hosts::FakeEngine::new(
+        &member("engine"),
+        log.clone(),
+    )));
+    hosts.insert::<EpubShellHost>(Arc::new(hosts::FakeShell::new(&member("shell"), log)));
+}
+
+#[cfg(any(test, feature = "probe"))]
+thread_local! {
+    /// The outcome of the last waiting trigger: `None` while it waits
+    static OUTCOME: RefCell<Option<Reply>> = const { RefCell::new(None) };
+}
+
+/// A `trigger` step of tools/ipc-diff (`d2/epub:<what>`): what the shell
+/// calls on the editor, by the TypeScript function's name in kebab case.
+/// `args` are that function's arguments after `contents`. A call that waits
+/// for the renderer (`request-save`, `request-close`, `read-text`,
+/// `save-to-path`) answers `undefined` at once; the `outcome` trigger then
+/// answers `null` while it waits, `{value}` or `{error}` once it settled.
+/// False for a name it does not know.
+#[cfg(any(test, feature = "probe"))]
+pub(crate) fn probe_trigger(
+    what: &str,
+    view: ViewId,
+    args: &Value,
+    _services: &Services,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    use shell_contract::editors::SaveMode;
+    let what = what.strip_prefix("d2/epub:").unwrap_or(what);
+    let Some(editors) = provided.all::<EpubEditors>().into_iter().next() else {
+        return false;
+    };
+    let arg = |i: usize| args.get(i).unwrap_or(&Value::Null);
+    let text = |i: usize| arg(i).as_str().unwrap_or("").to_owned();
+    /// starts a waiting call: its outcome lands in `OUTCOME`
+    fn wait<T: 'static>(
+        into: impl Fn(T) -> IpcValue + 'static,
+    ) -> shell_contract::editors::Then<T> {
+        OUTCOME.with(|o| *o.borrow_mut() = None);
+        Box::new(move |r| OUTCOME.with(|o| *o.borrow_mut() = Some(r.map(into))))
+    }
+    match what {
+        // createEpubView(openPath)
+        "open-view" => editors.open_view(view, arg(0).as_str().map(Path::new)),
+        // requestEpubSave(contents, mode)
+        "request-save" => {
+            let mode = if arg(0).as_str() == Some("saveAs") {
+                SaveMode::SaveAs
+            } else {
+                SaveMode::Save
+            };
+            editors.request_save(view, mode, wait(IpcValue::Bool))
+        }
+        // requestEpubClose(contents, parent)
+        "request-close" => {
+            let parent = arg(0).as_u64().map(|w| WindowId(w as u32));
+            editors.request_close(view, parent, wait(IpcValue::Bool))
+        }
+        // epubReadText(contents)
+        "read-text" => editors.read_text(view, wait(IpcValue::String)),
+        // epubSaveToPath(contents, filePath)
+        "save-to-path" => {
+            editors.save_to_path(view, PathBuf::from(text(0)), wait(|()| IpcValue::Undefined))
+        }
+        "outcome" => {
+            let value = match OUTCOME.with(|o| o.borrow().clone()) {
+                None => IpcValue::Null,
+                Some(Ok(value)) => kit::obj([("value", value)]),
+                Some(Err(e)) => kit::obj([("error", e.to_string().into_ipc())]),
+            };
+            return answer(then, value);
+        }
+        // epubFileRenamed(contents, oldPath, newPath)
+        "file-renamed" => editors.file_renamed(view, Path::new(&text(0)), Path::new(&text(1))),
+        // sendEpubMenuCommand(contents, command)
+        "menu-command" => editors.menu_command(view, &text(0)),
+        // epubIsDirty(wcId)
+        "is-dirty" => return answer(then, IpcValue::Bool(editors.is_dirty(view))),
+        // epubIsTranslationLocked(wcId)
+        "is-translation-locked" => {
+            return answer(then, IpcValue::Bool(editors.is_translation_locked(view)));
+        }
+        // epubFilePath(wcId)
+        "file-path" => {
+            let path = editors.document_path(view);
+            return answer(
+                then,
+                path.map_or(IpcValue::Undefined, |p| p.as_path().into_ipc()),
+            );
+        }
+        _ => return false,
+    }
+    answer(then, IpcValue::Undefined)
+}
+
+#[cfg(any(test, feature = "probe"))]
+fn answer(then: shell_contract::editors::Then<IpcValue>, value: IpcValue) -> bool {
+    then(Ok(value));
+    true
 }
