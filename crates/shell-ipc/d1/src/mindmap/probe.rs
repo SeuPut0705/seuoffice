@@ -6,7 +6,7 @@
 //! - `open`: `[{view, path?, decision?, seed?}]`, the views the shell made
 //!   (`createMindmapView(path)`, then `openMindmapFileWithDecision` for a
 //!   `decision` of `restore` or `original`, then `queueMindmapSeedFor` for a
-//!   `seed` of `{outline}` or `{copy}`); absent: one untitled map in view 1
+//!   `seed` of `{outline}` or `{copy}`); absent: no view at all
 //! - `startup`: `[{call, view, ...}]` run in order after the views are made:
 //!   `dirty`, `requestSave {mode}`, `requestClose`, `fileRenamed {from, to}`,
 //!   `menuCommand {command}`, `exportRequest {format}`, `readOutline`,
@@ -77,14 +77,6 @@ pub fn probe_open(case: &Value) -> ProbeOpen {
                 })
             })
             .collect(),
-        // a case that scripts the mind map host without `open` has one untitled
-        // map in view 1; unit tests (no case) make their own views
-        None if script.is_object() => vec![OpenView {
-            view: ViewId(1),
-            path: None,
-            decision: None,
-            seed: None,
-        }],
         None => Vec::new(),
     };
     let startup = script

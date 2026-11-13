@@ -391,10 +391,8 @@ export async function loadMindmap(cx: LoadContext): Promise<void> {
     e.log.push(['ai-attachments.provisionalTitleHook', wc.id, title])
   })
 
-  // the views the shell made (`open` absent: a new, untitled map in the first view)
-  const open: OpenEntry[] = Array.isArray(box.d1.open)
-    ? (box.d1.open as OpenEntry[])
-    : [{ view: views[0].view }]
+  // the views the shell made (`open` absent: none)
+  const open: OpenEntry[] = Array.isArray(box.d1.open) ? (box.d1.open as OpenEntry[]) : []
   for (const entry of open) {
     nextView = entry.view
     main.createMindmapView(entry.path ?? null)

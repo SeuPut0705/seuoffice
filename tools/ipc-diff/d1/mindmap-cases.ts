@@ -94,7 +94,8 @@ export function mindmapCase(
     files: options.files ?? FILES,
     hosts: {
       ...(Object.keys(shared).length > 0 ? { shared } : {}),
-      d1: { mindmap: host.d1 ?? {} },
+      // `open` absent: a new, untitled map in view 1
+      d1: { mindmap: { open: [{ view: 1 }], ...host.d1 } },
     },
     calls,
   }
