@@ -3,30 +3,74 @@
  * answers itself: the AI panel preferences every window shares, the slides
  * AI fonts and opening Settings at the AI model page.
  *
- * The shell entry starts the whole app when it is imported, so it cannot be
- * loaded on the fake Electron. These handlers are its handler bodies as they
- * stand there (`currentAiPanelPrefs` near line 1167, `setAiPanelPrefs` and its
- * two channels near 3772, the slides AI fonts near 4025,
- * `ai:open-model-settings` near 6509), over the same helpers the entry
- * imports. `tabManager.openHomeTab()` with the shell window brought forward is
- * one host line, `shellWindow.showHomeTab`, as in the Rust fake.
+ * The shell entry starts the whole app when it is imported, so it is not
+ * loaded. Its statements that answer these channels are taken from its source
+ * with the TypeScript parser (each must be found exactly once), stripped of
+ * types, and run over the names they use: the fake Electron, the same helpers
+ * the entry imports, and the shell window and tab manager as one host line
+ * (`shellWindow.showHomeTab`, as the Rust fake logs it).
  */
-import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import {
   readAppSettings,
   writeAppSetting,
   writeAppSettings,
 } from '../../../../apps/shell/src/main/app-settings.ts'
+import { HOME_CHANNELS } from '../../../../apps/shell/src/shared/home-api.ts'
 import {
   normalizeAiPanelPrefs,
   sameAiPanelPrefs,
-  type AiPanelPrefs,
 } from '../../../../packages/ui/src/ai-panel-prefs.ts'
 import {
   normalizeSlidesAiFonts,
   SLIDES_AI_FONTS_KEY,
 } from '../../../../packages/ui/src/slides-ai-fonts.ts'
 import type { Call, Case, Group, View } from '../../types.ts'
+
+const ENTRY = resolve(fileURLToPath(import.meta.url), '../../../../../apps/shell/src/main/index.ts')
+
+/** How each statement the group runs starts, in the entry's order */
+const STATEMENTS = [
+  'let cachedAiPanelPrefs',
+  'function currentAiPanelPrefs(',
+  'ipcMain.handle(HOME_CHANNELS.getAiPanelPrefs,',
+  "ipcMain.handle('app:get-ai-panel-prefs',",
+  'const setAiPanelPrefs =',
+  'ipcMain.handle(HOME_CHANNELS.setAiPanelPrefs,',
+  "ipcMain.handle('app:set-ai-panel-prefs',",
+  'ipcMain.handle(HOME_CHANNELS.getSlidesAiFonts,',
+  'ipcMain.handle(HOME_CHANNELS.setSlidesAiFonts,',
+  "ipcMain.handle('ai:open-model-settings',",
+]
+
+/** The statements of the entry that answer the group's channels, as JavaScript */
+const entryCode: string = (() => {
+  const file = ts.createSourceFile(ENTRY, readFileSync(ENTRY, 'utf8'), ts.ScriptTarget.Latest, true)
+  const found = new Map<string, string[]>(STATEMENTS.map((s) => [s, []]))
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isExpressionStatement(node) ||
+      ts.isVariableStatement(node) ||
+      ts.isFunctionDeclaration(node)
+    ) {
+      const text = node.getText(file)
+      for (const start of STATEMENTS) if (text.startsWith(start)) found.get(start)!.push(text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(file)
+  const source = STATEMENTS.map((start) => {
+    const texts = found.get(start)!
+    if (texts.length !== 1)
+      throw new Error(`${ENTRY}: ${texts.length} statements start with ${start}`)
+    return texts[0]
+  }).join('\n')
+  return ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } })
+    .outputText
+})()
 
 const views: View[] = [
   { view: 1, window: 1, surface: 'Shell' },
@@ -80,7 +124,9 @@ const cases: Case[] = [
     note: 'a key sent as undefined falls back to the default; a bad side keeps the old one',
     views,
     files: settings({ aiPanelSide: 'right', aiPanelSpellcheck: false }),
-    calls: [docs('app:set-ai-panel-prefs', { side: 'up', spellcheck: undef, openInNewDocs: false })],
+    calls: [
+      docs('app:set-ai-panel-prefs', { side: 'up', spellcheck: undef, openInNewDocs: false }),
+    ],
   },
   {
     note: 'null, a string and no argument are no patch at all',
@@ -95,10 +141,7 @@ const cases: Case[] = [
   {
     note: 'the folder is missing: the write fails after the cache took the value',
     views,
-    calls: [
-      docs('app:set-ai-panel-prefs', { fontSize: 'large' }),
-      docs('app:get-ai-panel-prefs'),
-    ],
+    calls: [docs('app:set-ai-panel-prefs', { fontSize: 'large' }), docs('app:get-ai-panel-prefs')],
   },
   {
     note: 'slides AI fonts: the default of the document language, then a stored value',
@@ -142,83 +185,33 @@ const cases: Case[] = [
 export const group: Group = {
   batch: 'A',
   async load(cx) {
-    const handle = (channel: string, fn: (event: unknown, ...args: unknown[]) => unknown) =>
-      cx.electron.handlers.invoke.set(channel, fn)
     const caseViews = cx.case.views ?? [{ view: 1, surface: 'Shell' }]
-    const APP_SETTINGS_PATH = () => join(cx.dir, 'userData', 'app-settings.json')
+    const shellView = caseViews.find((v) => (v.surface ?? 'Shell') === 'Shell')
     const hostsA = (cx.case.hosts?.a ?? {}) as { documentLocale?: string }
-    const currentDocumentLocale = () => hostsA.documentLocale ?? 'ko'
-    const shellView = caseViews.find(
-      (v) => (v.surface ?? 'Shell') === 'Shell',
-    )
-
-    let cachedAiPanelPrefs: AiPanelPrefs | null = null
-    function currentAiPanelPrefs(): AiPanelPrefs {
-      if (cachedAiPanelPrefs) return cachedAiPanelPrefs
-      const saved = readAppSettings(APP_SETTINGS_PATH())
-      cachedAiPanelPrefs = normalizeAiPanelPrefs({
-        side: saved.aiPanelSide,
-        fontSize: saved.aiPanelFontSize,
-        customFontSize: saved.aiPanelCustomFontSize,
-        spellcheck: saved.aiPanelSpellcheck,
-        openInNewDocs: saved.aiPanelOpenInNewDocs,
-        showAiSidebar: saved.aiPanelShowSidebar,
-      })
-      return cachedAiPanelPrefs
+    const names: Record<string, unknown> = {
+      ipcMain: cx.electron.ipcMain,
+      webContents: cx.electron.webContents,
+      HOME_CHANNELS,
+      APP_SETTINGS_PATH: () => join(cx.dir, 'userData', 'app-settings.json'),
+      readAppSettings,
+      writeAppSettings,
+      writeAppSetting,
+      normalizeAiPanelPrefs,
+      sameAiPanelPrefs,
+      normalizeSlidesAiFonts,
+      SLIDES_AI_FONTS_KEY,
+      currentDocumentLocale: () => hostsA.documentLocale ?? 'ko',
+      shellWindow: shellView && {
+        isDestroyed: () => false,
+        isMinimized: () => false,
+        restore() {},
+        show() {},
+        focus() {},
+        webContents: cx.electron.contents(shellView.view),
+      },
+      tabManager: { openHomeTab: () => cx.electron.log.push(['shellWindow.showHomeTab']) },
     }
-
-    handle('home:get-ai-panel-prefs', (): AiPanelPrefs => currentAiPanelPrefs())
-    handle('app:get-ai-panel-prefs', (): AiPanelPrefs => currentAiPanelPrefs())
-
-    const setAiPanelPrefs = (patch: unknown): AiPanelPrefs => {
-      const prev = currentAiPanelPrefs()
-      const raw =
-        patch !== null && typeof patch === 'object' ? (patch as Record<string, unknown>) : {}
-      const next = normalizeAiPanelPrefs({
-        side: raw.side === 'left' || raw.side === 'right' ? raw.side : prev.side,
-        fontSize: 'fontSize' in raw ? raw.fontSize : prev.fontSize,
-        customFontSize: 'customFontSize' in raw ? raw.customFontSize : prev.customFontSize,
-        spellcheck: 'spellcheck' in raw ? raw.spellcheck : prev.spellcheck,
-        openInNewDocs: 'openInNewDocs' in raw ? raw.openInNewDocs : prev.openInNewDocs,
-        showAiSidebar: 'showAiSidebar' in raw ? raw.showAiSidebar : prev.showAiSidebar,
-      })
-      if (sameAiPanelPrefs(next, prev)) return prev
-      cachedAiPanelPrefs = next
-      writeAppSettings(APP_SETTINGS_PATH(), {
-        aiPanelSide: next.side,
-        aiPanelFontSize: next.fontSize,
-        aiPanelCustomFontSize: next.customFontSize,
-        aiPanelSpellcheck: next.spellcheck,
-        aiPanelOpenInNewDocs: next.openInNewDocs,
-        aiPanelShowSidebar: next.showAiSidebar,
-      })
-      for (const v of caseViews) cx.electron.contents(v.view).send('app:ai-panel-prefs-changed', next)
-      return next
-    }
-    handle('home:set-ai-panel-prefs', (_event: unknown, patch: unknown) =>
-      setAiPanelPrefs(patch),
-    )
-    handle('app:set-ai-panel-prefs', (_event: unknown, patch: unknown) =>
-      setAiPanelPrefs(patch),
-    )
-
-    handle('home:get-slides-ai-fonts', () =>
-      normalizeSlidesAiFonts(
-        readAppSettings(APP_SETTINGS_PATH())[SLIDES_AI_FONTS_KEY],
-        currentDocumentLocale(),
-      ),
-    )
-    handle('home:set-slides-ai-fonts', (_event: unknown, fonts: unknown) => {
-      const next = normalizeSlidesAiFonts(fonts, currentDocumentLocale())
-      writeAppSetting(APP_SETTINGS_PATH(), SLIDES_AI_FONTS_KEY, next)
-      return next
-    })
-
-    handle('ai:open-model-settings', () => {
-      if (!shellView) return
-      cx.electron.log.push(['shellWindow.showHomeTab'])
-      cx.electron.contents(shellView.view).send('home:open-settings', { section: 'aiModel' })
-    })
+    new Function(...Object.keys(names), entryCode)(...Object.values(names))
   },
   cases,
 }
