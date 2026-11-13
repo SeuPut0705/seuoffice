@@ -18,7 +18,9 @@ use main_core::packages::electron_utils::context_menu::{
 };
 use main_core::packages::electron_utils::dialog_memory::Dialog;
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
-use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
+use main_core::packages::electron_utils::save_image::{
+    SaveImageOptions, fetch_image_for_save, save_fetched_image,
+};
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
 use shell_contract::ids::{ViewId, WindowId};
@@ -238,17 +240,22 @@ fn run(
                 .or_else(|| params.src_url.clone())
                 .unwrap_or_default();
             services.workers.spawn(Box::new(move || {
-                let mut dialog = SaveDialog(dialogs);
+                // the fetch takes no lock: other dialogs stay free while it runs
                 let mut fetch = |url: &str| page_fetch(&webview, url);
+                let image = match fetch_image_for_save(&url, &mut fetch) {
+                    Ok(image) => image,
+                    Err(error) => return eprintln!("shell: save image: {error}"),
+                };
+                let mut dialog = SaveDialog(dialogs);
                 let mut memory = memory
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
-                let result = save_image_from_url(
+                let result = save_fetched_image(
                     &mut memory,
                     &mut dialog,
-                    &mut fetch,
                     parent.as_ref(),
                     &url,
+                    image,
                     &SaveImageOptions {
                         title: &title,
                         fallback_dir: None,

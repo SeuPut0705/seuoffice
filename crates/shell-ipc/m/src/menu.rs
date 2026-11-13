@@ -211,7 +211,11 @@ const SHELL_LABELS: &[(&str, &str, &str)] = &[
         "Make Another Document from This",
         "\u{C774} \u{BB38}\u{C11C}\u{B85C} \u{B2E4}\u{B978} \u{BB38}\u{C11C} \u{B9CC}\u{B4E4}\u{AE30}",
     ),
-    ("menuDocumentSources", "View Sources", "\u{C790}\u{B8CC} \u{BCF4}\u{AE30}"),
+    (
+        "menuDocumentSources",
+        "View Sources",
+        "\u{C790}\u{B8CC} \u{BCF4}\u{AE30}",
+    ),
     (
         "menuDerivedDocuments",
         "Documents Made from This",
