@@ -1,12 +1,15 @@
 //! `apps/shell/src/main/headless-export.ts`: the headless export host, the
 //! single entry every dialog-free export path can be driven through.
 //!
-//! The per-module hidden-window exporters (`HeadlessExporters`), the
-//! placeholder export and the check for content hidden from AI
+//! `runHeadlessExport` is two calls around the export: [`begin_headless_export`]
+//! decides everything up to the run, [`finish_headless_export`] judges what the
+//! run left. The per-module hidden-window exporters and the placeholder export
+//! open a hidden window and wait for its renderer, so the caller carries them
+//! out ([`HeadlessRun`]) between the two. The check for content hidden from AI
 //! (`fileHoldsHiddenContent` of `@seuoffice/file-parse`: JSZip and the xlsx
-//! reader, engine-waiting) are traits the caller implements. `HeadlessFs` is
-//! the disk-probe interface of the TypeScript. `Date.now()` is a closure of
-//! the caller. `realFs` and the exporters' wiring stay with the caller.
+//! reader, engine-waiting) is the [`HiddenContent`] trait. `HeadlessFs` is the
+//! disk-probe interface of the TypeScript. `Date.now()` is a closure of the
+//! caller. `realFs` and the exporters' wiring stay with the caller.
 
 use jscompat::node_path::host::{basename, dirname, extname, join, resolve};
 use jscompat::value_truthy;
@@ -58,26 +61,6 @@ pub struct HeadlessExportProduct {
     pub paths: Vec<String>,
     /// facts for the caller, a JSON object
     pub detail: Option<Value>,
-}
-
-/// `HeadlessExporters`: the hidden-window export of each module's format.
-/// `Err` is the message of what the exporter threw (`err instanceof Error ?
-/// err.message : String(err)` is the caller's).
-pub trait HeadlessExporters {
-    fn export(
-        &mut self,
-        module: &str,
-        input: &str,
-        out_path: &str,
-        format: &str,
-        request: &HeadlessExportRequest,
-    ) -> Result<Option<HeadlessExportProduct>, String>;
-}
-
-/// `HeadlessPlaceholderExport`: writes `outPath` as the AI readers' view of a
-/// Word document. `Err` is the message of what it threw.
-pub trait HeadlessPlaceholderExport {
-    fn export(&mut self, input: &str, out_path: &str, format: &str) -> Result<(), String>;
 }
 
 /// `fileHoldsHiddenContent(bytes, ext)`. `Err` is a throw other than the
@@ -273,21 +256,65 @@ fn hidden_content_route(
     )))
 }
 
-/// `runHeadlessExport(request, exporters, fs, placeholders)`: runs one export
-/// end to end. The outcome is returned instead of thrown so the caller can
+/// What the caller must run for an export: the hidden-window export of a
+/// module's format, or the placeholder export of a Word document. Both open a
+/// hidden window and wait for its renderer, so the caller carries them out and
+/// hands the answer to [`finish_headless_export`].
+#[derive(Debug, Clone, PartialEq)]
+pub enum HeadlessRun {
+    /// `exporters[module](input, outPath, format, request)`; the request is
+    /// [`HeadlessExportPending::request`]
+    Exporter {
+        module: &'static str,
+        input: String,
+        out_path: String,
+        format: &'static str,
+    },
+    /// `placeholders(input, outPath, format)`; its answer carries no product
+    Placeholders {
+        input: String,
+        out_path: String,
+        format: &'static str,
+    },
+}
+
+/// An export that has passed its checks and waits for the caller's run.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeadlessExportPending {
+    pub run: HeadlessRun,
+    /// the request, the exporter's fourth argument
+    pub request: HeadlessExportRequest,
+    /// `Date.now()` read right before the run started
+    pub started_at: f64,
+    input: String,
+    out_path: String,
+}
+
+/// What [`begin_headless_export`] decides.
+#[derive(Debug, Clone, PartialEq)]
+pub enum HeadlessStep {
+    /// the outcome needs no export: a validation, hidden-content or
+    /// placeholder failure
+    Done(HeadlessExportOutcome),
+    /// run this, then call [`finish_headless_export`]
+    Export(HeadlessExportPending),
+}
+
+/// `runHeadlessExport(request, exporters, fs, placeholders)`, up to the run
+/// of the export. The outcome is returned instead of thrown so the caller can
 /// render the envelope and pick the exit code in one place; `Err` is a throw
 /// the TypeScript does not catch (the file read, the hidden-content check).
-pub fn run_headless_export(
+/// `has_placeholders` is whether the `placeholders` argument was given.
+pub fn begin_headless_export(
     request: &HeadlessExportRequest,
-    exporters: &mut dyn HeadlessExporters,
     fs: &mut dyn HeadlessFs,
-    mut placeholders: Option<&mut dyn HeadlessPlaceholderExport>,
     hidden: &mut dyn HiddenContent,
+    has_placeholders: bool,
     now_ms: &mut dyn FnMut() -> f64,
-) -> Result<HeadlessExportOutcome, String> {
+) -> Result<HeadlessStep, String> {
     let checked = match validate_headless_paths(request, fs) {
         Ok(checked) => checked,
-        Err(failure) => return Ok(failure.into_outcome()),
+        Err(failure) => return Ok(HeadlessStep::Done(failure.into_outcome())),
     };
     let route = hidden_content_route(
         &checked.input,
@@ -297,73 +324,99 @@ pub fn run_headless_export(
         hidden,
     )?;
     let use_placeholders = match route {
-        HiddenRoute::Refused(failure) => return Ok(failure.into_outcome()),
+        HiddenRoute::Refused(failure) => return Ok(HeadlessStep::Done(failure.into_outcome())),
         HiddenRoute::Placeholders => true,
         HiddenRoute::Clear => false,
     };
-    if use_placeholders && placeholders.is_none() {
-        return Ok(HeadlessFailure::of(
-            HEADLESS_EXIT_CONVERSION_FAILURE,
-            format!(
-                "cannot export {}: it holds content hidden from AI, and no placeholder export is available",
-                checked.input
-            ),
-        )
-        .into_outcome());
+    if use_placeholders && !has_placeholders {
+        return Ok(HeadlessStep::Done(
+            HeadlessFailure::of(
+                HEADLESS_EXIT_CONVERSION_FAILURE,
+                format!(
+                    "cannot export {}: it holds content hidden from AI, and no placeholder export is available",
+                    checked.input
+                ),
+            )
+            .into_outcome(),
+        ));
     }
     let started_at = now_ms();
-    let produced = match (use_placeholders, placeholders.as_mut()) {
-        (true, Some(placeholders)) => placeholders
-            .export(&checked.input, &checked.out_path, request.target_format)
-            .map(|()| None),
-        _ => exporters.export(
-            checked.module,
-            &checked.input,
-            &checked.out_path,
-            request.target_format,
-            request,
-        ),
-    };
-    let product = match produced {
-        Ok(product) => product,
-        Err(message) => {
-            return Ok(
-                HeadlessFailure::of(HEADLESS_EXIT_CONVERSION_FAILURE, message).into_outcome(),
-            );
+    let run = if use_placeholders {
+        HeadlessRun::Placeholders {
+            input: checked.input.clone(),
+            out_path: checked.out_path.clone(),
+            format: request.target_format,
+        }
+    } else {
+        HeadlessRun::Exporter {
+            module: checked.module,
+            input: checked.input.clone(),
+            out_path: checked.out_path.clone(),
+            format: request.target_format,
         }
     };
+    Ok(HeadlessStep::Export(HeadlessExportPending {
+        run,
+        request: request.clone(),
+        started_at,
+        input: checked.input,
+        out_path: checked.out_path,
+    }))
+}
+
+/// `runHeadlessExport` after the run: `product` is what the exporter answered
+/// (`None` for no product, and for the placeholder export), `Err` the message
+/// of what it threw (`err instanceof Error ? err.message : String(err)` is the
+/// caller's).
+pub fn finish_headless_export(
+    pending: HeadlessExportPending,
+    product: Result<Option<HeadlessExportProduct>, String>,
+    fs: &mut dyn HeadlessFs,
+) -> HeadlessExportOutcome {
+    let product = match product {
+        Ok(product) => product,
+        Err(message) => {
+            return HeadlessFailure::of(HEADLESS_EXIT_CONVERSION_FAILURE, message).into_outcome();
+        }
+    };
+    let HeadlessExportPending {
+        started_at,
+        input,
+        out_path,
+        ..
+    } = pending;
     let written: Vec<String> = match &product {
         Some(product) => product.paths.iter().map(|path| resolve(&[path])).collect(),
-        None => vec![checked.out_path.clone()],
+        None => vec![out_path.clone()],
     };
     for path in &written {
         if !fs.exists(path) || !fs.is_file(path) {
-            return Ok(HeadlessFailure::of(
+            return HeadlessFailure::of(
                 HEADLESS_EXIT_CONVERSION_FAILURE,
                 format!("export reported success but wrote no file at {path}"),
             )
-            .into_outcome());
+            .into_outcome();
         }
         if fs.has_mtime() && fs.mtime_ms(path) < started_at - MTIME_SLACK_MS {
-            return Ok(HeadlessFailure::of(
+            return HeadlessFailure::of(
                 HEADLESS_EXIT_CONVERSION_FAILURE,
                 format!("export reported success but left a stale file at {path}"),
             )
-            .into_outcome());
+            .into_outcome();
         }
     }
     let Some(product) = product else {
-        return Ok(HeadlessExportOutcome::Ok {
-            input: checked.input,
-            out_path: checked.out_path,
+        return HeadlessExportOutcome::Ok {
+            input,
+            out_path,
             out_paths: None,
             detail: None,
-        });
+        };
     };
-    Ok(HeadlessExportOutcome::Ok {
-        input: checked.input,
-        out_path: checked.out_path,
+    HeadlessExportOutcome::Ok {
+        input,
+        out_path,
         out_paths: Some(written),
         detail: product.detail.filter(|detail| value_truthy(Some(detail))),
-    })
+    }
 }

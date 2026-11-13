@@ -177,8 +177,8 @@
   {
     "name": "headless-export: placeholders wanted without any go to the exporter",
     "file": "main-core/src/shell/headless_export.rs",
-    "find": "if use_placeholders && placeholders.is_none() {",
-    "replace": "if false {",
+    "find": "if use_placeholders && !has_placeholders {",
+    "replace": "if false && !has_placeholders {",
     "fn": ["shell/headless-export.runHeadlessExport"]
   },
   {
@@ -212,7 +212,7 @@
   {
     "name": "headless-export: nothing is checked when no file is reported",
     "file": "main-core/src/shell/headless_export.rs",
-    "find": "None => vec![checked.out_path.clone()],",
+    "find": "None => vec![out_path.clone()],",
     "replace": "None => Vec::new(),",
     "fn": ["shell/headless-export.runHeadlessExport"]
   },

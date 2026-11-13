@@ -39,8 +39,8 @@ use crate::shell::document_links_shell::{
 };
 use crate::shell::dropped_files::{DroppedFilesDeps, handle_dropped_files};
 use crate::shell::headless_export::{
-    HeadlessExportProduct, HeadlessExporters, HeadlessFailure, HeadlessFs,
-    HeadlessPlaceholderExport, HiddenContent, run_headless_export, validate_headless_paths,
+    HeadlessExportProduct, HeadlessFailure, HeadlessFs, HeadlessRun, HeadlessStep, HiddenContent,
+    begin_headless_export, finish_headless_export, validate_headless_paths,
 };
 use crate::shell::tab_manager::TabKind;
 use crate::slides::autofit_writeback::{
@@ -387,66 +387,62 @@ impl HeadlessFs for FakeFs {
     }
 }
 
-struct FakeExporters {
-    state: Rc<RefCell<FsState>>,
-    spec: Value,
-    log: Log,
-}
-
-impl HeadlessExporters for FakeExporters {
-    fn export(
-        &mut self,
-        module: &str,
-        input: &str,
-        out_path: &str,
-        format: &str,
-        request: &HeadlessExportRequest,
-    ) -> Result<Option<HeadlessExportProduct>, String> {
-        self.log.push(vec![
-            text("export"),
-            text(module),
-            text(input),
-            text(out_path),
-            text(format),
-            request.to_value(),
-        ]);
-        self.state.borrow_mut().write(&self.spec);
-        match field_str(&self.spec, "throws") {
-            Some("error") => return Err("export failed".to_owned()),
-            Some("string") => return Err("export failed as text".to_owned()),
-            _ => {}
-        }
-        Ok(self
-            .spec
-            .get("product")
-            .filter(|product| product.is_object())
-            .map(|product| HeadlessExportProduct {
-                paths: strings(product.get("paths")),
-                detail: product.get("detail").cloned(),
-            }))
+/// `exporters[module](input, outPath, format, request)` of the spec: logs, writes
+/// what the case says it writes, then throws or answers its product
+#[allow(clippy::too_many_arguments)]
+fn run_fake_exporter(
+    state: &Rc<RefCell<FsState>>,
+    log: &Log,
+    spec: &Value,
+    module: &str,
+    input: &str,
+    out_path: &str,
+    format: &str,
+    request: &HeadlessExportRequest,
+) -> Result<Option<HeadlessExportProduct>, String> {
+    log.push(vec![
+        text("export"),
+        text(module),
+        text(input),
+        text(out_path),
+        text(format),
+        request.to_value(),
+    ]);
+    state.borrow_mut().write(spec);
+    match field_str(spec, "throws") {
+        Some("error") => return Err("export failed".to_owned()),
+        Some("string") => return Err("export failed as text".to_owned()),
+        _ => {}
     }
+    Ok(spec
+        .get("product")
+        .filter(|product| product.is_object())
+        .map(|product| HeadlessExportProduct {
+            paths: strings(product.get("paths")),
+            detail: product.get("detail").cloned(),
+        }))
 }
 
-struct FakePlaceholders {
-    state: Rc<RefCell<FsState>>,
-    spec: Value,
-    log: Log,
-}
-
-impl HeadlessPlaceholderExport for FakePlaceholders {
-    fn export(&mut self, input: &str, out_path: &str, format: &str) -> Result<(), String> {
-        self.log.push(vec![
-            text("placeholders"),
-            text(input),
-            text(out_path),
-            text(format),
-        ]);
-        self.state.borrow_mut().write(&self.spec);
-        if field_str(&self.spec, "throws") == Some("error") {
-            return Err("placeholder failed".to_owned());
-        }
-        Ok(())
+/// `placeholders(input, outPath, format)` of the spec
+fn run_fake_placeholders(
+    state: &Rc<RefCell<FsState>>,
+    log: &Log,
+    spec: &Value,
+    input: &str,
+    out_path: &str,
+    format: &str,
+) -> Result<Option<HeadlessExportProduct>, String> {
+    log.push(vec![
+        text("placeholders"),
+        text(input),
+        text(out_path),
+        text(format),
+    ]);
+    state.borrow_mut().write(spec);
+    if field_str(spec, "throws") == Some("error") {
+        return Err("placeholder failed".to_owned());
     }
+    Ok(None)
 }
 
 /// `fileHoldsHiddenContent` of the spec's stub: a text holding `HIDDEN` holds
@@ -538,30 +534,54 @@ fn run_call(args: &[Value], cx: &mut Context) -> Answer {
         state: state.clone(),
         log: log.clone(),
     };
-    let mut exporters = FakeExporters {
-        state: state.clone(),
-        spec: world.get("exporter").cloned().unwrap_or(Value::Null),
-        log: log.clone(),
-    };
-    let mut placeholders = world
-        .get("placeholders")
-        .filter(|spec| !spec.is_null())
-        .map(|spec| FakePlaceholders {
-            state: state.clone(),
-            spec: spec.clone(),
-            log: log.clone(),
-        });
     let mut hidden = FakeHidden { log: log.clone() };
-    let outcome = run_headless_export(
+    let has_placeholders = world
+        .get("placeholders")
+        .is_some_and(|spec| !spec.is_null());
+    let begun = begin_headless_export(
         &request,
-        &mut exporters,
         &mut fs,
-        placeholders
-            .as_mut()
-            .map(|p| p as &mut dyn HeadlessPlaceholderExport),
         &mut hidden,
+        has_placeholders,
         &mut move || now,
     );
+    let outcome = match begun {
+        Err(message) => Err(message),
+        Ok(HeadlessStep::Done(outcome)) => Ok(outcome),
+        Ok(HeadlessStep::Export(pending)) => {
+            // the caller's part: run the hidden-window export and report back
+            let product = match &pending.run {
+                HeadlessRun::Exporter {
+                    module,
+                    input,
+                    out_path,
+                    format,
+                } => run_fake_exporter(
+                    &state,
+                    &log,
+                    world.get("exporter").unwrap_or(&NULL),
+                    module,
+                    input,
+                    out_path,
+                    format,
+                    &pending.request,
+                ),
+                HeadlessRun::Placeholders {
+                    input,
+                    out_path,
+                    format,
+                } => run_fake_placeholders(
+                    &state,
+                    &log,
+                    world.get("placeholders").unwrap_or(&NULL),
+                    input,
+                    out_path,
+                    format,
+                ),
+            };
+            Ok(finish_headless_export(pending, product, &mut fs))
+        }
+    };
     log.flush_into(cx);
     match outcome {
         Ok(outcome) => Ok(Some(outcome_value(&outcome))),
