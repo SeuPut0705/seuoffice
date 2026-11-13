@@ -14,7 +14,19 @@ use shell_contract::ids::{ViewId, WindowId};
 use shell_contract::provided::Provided;
 use shell_ipc_w::tabs::TabsState;
 
-#[allow(dead_code)] // called by batch M's menu and print hosts
+/// The document behind a view, as the crash prompt reads it (`documentOf`,
+/// `untitledCopyOf` of `startCrashWatch`): a tab of the strip or a detached window
+#[allow(dead_code)] // read by batch U's crash host
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct CrashedDocument {
+    pub kind: TabKind,
+    pub title: String,
+    pub file_path: Option<String>,
+    /// the tab's id, or the detached window's (`detached-<id>`)
+    pub tab_id: Option<String>,
+}
+
+#[allow(dead_code)] // called by batch M's menu and print hosts and batch U's crash host
 pub(crate) trait ShellTabs {
     /// `activeEditorTarget`: the focused detached window's view when it shows
     /// a document of `kind`, else the active tab's view when that tab is of
@@ -46,27 +58,28 @@ pub(crate) trait ShellTabs {
     /// `changeUiScale(APP_SETTINGS_PATH(), direction)`: 1 bigger, -1 smaller,
     /// 0 reset. Saved, stamped on every page, and the tab strip relaid out.
     fn change_ui_scale(&self, direction: i32);
-    // The document links' facts (`document-links-shell.ts`'s deps). Batch W
-    // implements them over TabsState; until then the document-link entries
-    // find no document.
-    /// `linkedDocumentForWebContents(wc)`: the tab describing this view, else
-    /// the focused detached window holding it; its title and file path
-    fn describe_view(&self, _view: ViewId) -> Option<(String, Option<String>)> {
-        None
-    }
-    /// `linkMenuKind()`: the focused detached window's kind, else the active
-    /// tab's (a Present html tab shows the Home menu)
-    fn menu_kind(&self) -> Option<TabKind> {
-        None
-    }
-    /// `tabManager.tabIdForWebContents(id)`: the hand-off store's `tabIdFor`
-    fn tab_id_for(&self, _view: ViewId) -> Option<String> {
-        None
-    }
-    /// `detachedWindowForWebContents(id) ?? shellWindow`: the make window's parent
-    fn parent_window_for(&self, _view: ViewId) -> Option<WindowId> {
-        None
-    }
+
+    // ---- document links (batch M) ----
+    /// `linkedDocumentForWebContents`: the title and file path of the document
+    /// `view` shows as a shell tab, or as the focused detached window
+    fn describe_view(&self, view: ViewId) -> Option<(String, Option<String>)>;
+    /// `linkMenuKind`: the focused detached window's kind, else the active
+    /// tab's (a Present html tab counts as Home)
+    fn menu_kind(&self) -> Option<TabKind>;
+    /// `tabManager.tabIdForWebContents(view)`
+    fn tab_id_for(&self, view: ViewId) -> Option<String>;
+    /// `detachedWindowForWebContents(view) ?? shellWindow`
+    fn parent_window_for(&self, view: ViewId) -> Option<WindowId>;
+
+    // ---- the crash prompt (batch U); reopening is `open_path` ----
+    /// `webContents.reload()`; `false` when the view is gone
+    fn reload_view(&self, view: ViewId) -> bool;
+    /// `documentOf(wc)`: the document `view` shows, `None` for no document,
+    /// Home and Help
+    fn crashed_document(&self, view: ViewId) -> Option<CrashedDocument>;
+    /// `closeDocument(wc)`: the tab or detached window of `view` closes
+    /// without the unsaved-changes prompt; `false` when there is none
+    fn close_document(&self, view: ViewId) -> bool;
 }
 
 struct OverTabs(Rc<TabsState>);
@@ -106,6 +119,43 @@ impl ShellTabs for OverTabs {
 
     fn open_in_new_window(&self, kind: TabKind) {
         self.0.open_active_in_new_window(kind);
+    }
+
+    fn describe_view(&self, view: ViewId) -> Option<(String, Option<String>)> {
+        self.0.linked_document(view)
+    }
+
+    fn menu_kind(&self) -> Option<TabKind> {
+        self.0.menu_kind()
+    }
+
+    fn tab_id_for(&self, view: ViewId) -> Option<String> {
+        self.0.tab_id_for(view)
+    }
+
+    fn parent_window_for(&self, view: ViewId) -> Option<WindowId> {
+        self.0.dialog_parent(view)
+    }
+
+    fn reload_view(&self, view: ViewId) -> bool {
+        super::window::windows().is_some_and(|w| w.reload(view))
+    }
+
+    fn crashed_document(&self, view: ViewId) -> Option<CrashedDocument> {
+        let d = self.0.details_of(view)?;
+        if matches!(d.kind, TabKind::Home | TabKind::Help) {
+            return None;
+        }
+        Some(CrashedDocument {
+            kind: d.kind,
+            title: d.title,
+            file_path: d.file_path,
+            tab_id: d.tab_id,
+        })
+    }
+
+    fn close_document(&self, view: ViewId) -> bool {
+        self.0.close_document_without_prompt(view)
     }
 
     fn change_ui_scale(&self, direction: i32) {
