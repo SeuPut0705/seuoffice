@@ -27,7 +27,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         diagram::routes(services, &registry.provided())?,
         mindmap::routes(services, &registry.provided())?,
         sheets::routes(services, &registry.provided())?,
-        slides::routes(services)?,
+        slides::routes(services, &registry.provided())?,
     ];
     for route in apps.into_iter().flatten() {
         registry.register(Batch::D1, route.channel, route.kind, route.handler)?;
@@ -43,7 +43,7 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts) {
     diagram::insert_fakes(hosts, &serde_json::Value::Null);
     mindmap::insert_fakes(hosts, &serde_json::Value::Null);
     sheets::insert_fakes(hosts, &serde_json::Value::Null);
-    slides::insert_fakes(hosts);
+    slides::insert_fakes(hosts, &serde_json::Value::Null);
 }
 
 /// Inserts the fakes of this batch's hosts, answering from the case's
