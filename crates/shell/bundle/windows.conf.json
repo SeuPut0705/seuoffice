@@ -1,0 +1,139 @@
+{
+  "bundle": {
+    "resources": {
+      "../../LICENSE": "resources/LICENSE.txt",
+      "../../LICENSE-APACHE": "resources/LICENSE-APACHE.txt",
+      "../../NOTICE": "resources/NOTICE.txt",
+      "../../LICENSE-UNICODE.txt": "resources/LICENSE-UNICODE.txt",
+      "../../apps/shell/build/THIRD-PARTY-NOTICES.txt": "resources/THIRD-PARTY-NOTICES.txt",
+      "../../apps/docs/out": "resources/modules/docs",
+      "../../apps/sheets/out": "resources/modules/sheets",
+      "../../apps/slides/out": "resources/modules/slides",
+      "../../apps/pdf/out": "resources/modules/pdf",
+      "../../apps/markdown/out": "resources/modules/markdown",
+      "../../apps/html/out": "resources/modules/html",
+      "../../apps/mindmap/out": "resources/modules/mindmap",
+      "../../apps/hwp/out": "resources/modules/hwp",
+      "../../apps/epub/out": "resources/modules/epub",
+      "../../apps/diagram/out": "resources/modules/diagram",
+      "../../apps/shell/out/renderer": "resources/modules/shell/renderer",
+      "../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm": "resources/wasm/pdfium.wasm",
+      "../../apps/pdf/node_modules/harfbuzzjs/hb-subset.wasm": "resources/wasm/hb-subset.wasm",
+      "../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm": "resources/wasm/qpdf.wasm",
+      "../../node_modules/@rhwp/core/rhwp_bg.wasm": "resources/wasm/rhwp_bg.wasm",
+      "../../packages/cli/dist/seuoffice.cjs": "resources/cli/seuoffice.cjs",
+      "../../packages/cli/bin/seuoffice": "resources/cli/seuoffice",
+      "../../packages/cli/bin/seuoffice.cmd": "resources/cli/seuoffice.cmd",
+      "../../packages/cli/bin/old-names/genoffice.cjs": "resources/cli/genoffice.cjs",
+      "../../packages/cli/bin/old-names/ieumoffice": "resources/cli/ieumoffice",
+      "../../packages/cli/bin/old-names/ieumoffice.cmd": "resources/cli/ieumoffice.cmd",
+      "../../packages/cli/package.json": "resources/cli/package.json",
+      "../../skills/seuoffice/SKILL.md": "resources/cli/skills/seuoffice/SKILL.md",
+      "../../packages/cli/dist/node_modules": "resources/cli/node_modules",
+      "bundle/out/node": "resources/cli/node",
+      "../../packages/ui/template-fonts": "resources/template-fonts",
+      "../../apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/xlsx-sidecar.exe": "resources/native/xlsx-sidecar.exe",
+      "../../packages/pdf2docx/ocr-helper/win-ocr.exe": "resources/ocr/win-ocr.exe",
+      "../../apps/shell/src/main/quick-look/win-quicklook.exe": "resources/quicklook/win-quicklook.exe",
+      "../../apps/shell/build/shell-new": "resources/shell-new",
+      "../../apps/shell/build/docx.ico": "resources/docx.ico",
+      "../../apps/shell/build/xlsx.ico": "resources/xlsx.ico",
+      "../../apps/shell/build/pptx.ico": "resources/pptx.ico",
+      "../../apps/shell/build/pdf.ico": "resources/pdf.ico",
+      "../../apps/shell/build/md.ico": "resources/md.ico",
+      "../../apps/shell/build/html.ico": "resources/html.ico",
+      "../../apps/shell/build/txt.ico": "resources/txt.ico",
+      "../../apps/shell/build/json.ico": "resources/json.ico",
+      "../../apps/shell/build/hwp.ico": "resources/hwp.ico",
+      "../../apps/shell/build/mindmap.ico": "resources/mindmap.ico",
+      "../../apps/shell/build/epub.ico": "resources/epub.ico",
+      "../../apps/shell/build/diagram.ico": "resources/diagram.ico"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "seuoffice.WordDocument",
+        "description": "Word Document",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      },
+      {
+        "ext": ["xlsx"],
+        "name": "seuoffice.ExcelWorkbook",
+        "description": "Excel Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      {
+        "ext": ["xlsm"],
+        "name": "seuoffice.ExcelMacroEnabledWorkbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.ms-excel.sheet.macroEnabled.12",
+        "description": "Excel Macro-Enabled Workbook"
+      },
+      {
+        "ext": ["pptx"],
+        "name": "seuoffice.PowerPointPresentation",
+        "description": "PowerPoint Presentation",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      },
+      {
+        "ext": ["xls"],
+        "name": "seuoffice.Excel972003Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.ms-excel",
+        "description": "Excel 97-2003 Workbook"
+      },
+      {
+        "ext": ["csv"],
+        "name": "seuoffice.CSVDocument",
+        "role": "Editor",
+        "mimeType": "text/csv",
+        "description": "CSV Document"
+      },
+      {
+        "ext": ["tsv"],
+        "name": "seuoffice.TSVDocument",
+        "role": "Editor",
+        "mimeType": "text/tab-separated-values",
+        "description": "TSV Document"
+      },
+      {
+        "ext": ["pdf"],
+        "name": "seuoffice.PDFDocument",
+        "role": "Editor",
+        "mimeType": "application/pdf",
+        "description": "PDF Document"
+      },
+      {
+        "ext": ["md", "markdown"],
+        "name": "seuoffice.MarkdownDocument",
+        "role": "Editor",
+        "mimeType": "text/markdown",
+        "description": "Markdown Document"
+      },
+      {
+        "ext": ["html", "htm"],
+        "name": "seuoffice.HTMLDocument",
+        "role": "Editor",
+        "mimeType": "text/html",
+        "description": "HTML Document"
+      },
+      {
+        "ext": ["drawio", "dio"],
+        "name": "seuoffice.Diagram",
+        "description": "Diagram",
+        "role": "Editor",
+        "mimeType": "application/vnd.jgraph.mxfile"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "bundle/hooks.nsh",
+        "installerIcon": "../../apps/shell/build/icon.ico"
+      }
+    }
+  }
+}

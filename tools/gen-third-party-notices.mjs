@@ -1065,6 +1065,23 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 out += sub('Feather (the Lucide icons derived from it, among them circle) — MIT License')
 out += `Copyright (c) 2013-present Cole Bemis\n\n${MIT_PERMISSION}\n`
 
+// the CEF build's installer carries a Node runtime for the seuoffice command
+// line (crates/shell/bundle/node-runtime.mjs leaves it, with its LICENSE, in
+// crates/shell/bundle/out/node); SEUOFFICE_SHELL_BUNDLE=1 is that build
+const nodeRuntime = join(ROOT, 'crates/shell/bundle/out/node')
+if (existsSync(join(nodeRuntime, 'LICENSE'))) {
+  const version = readFileSync(join(nodeRuntime, 'VERSION'), 'utf8').trim()
+  out += hr('10. Node.js (the runtime of the seuoffice command line)')
+  out += `
+The installer carries Node.js ${version} under resources/cli/node, which runs
+the seuoffice command line. Its license, as Node.js ships it, follows.
+`
+  out += sub('Node.js — LICENSE')
+  out += `${readFileSync(join(nodeRuntime, 'LICENSE'), 'utf8').trim()}\n`
+} else if (envFlag('SEUOFFICE_SHELL_BUNDLE')) {
+  gap('the Node runtime of the command line is missing (node crates/shell/bundle/node-runtime.mjs)')
+}
+
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {
     throw new Error(`generated third-party notice is missing PDFium term: ${term}`)

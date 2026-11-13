@@ -1,0 +1,210 @@
+{
+  "bundle": {
+    "resources": {
+      "../../LICENSE": "LICENSE.txt",
+      "../../LICENSE-APACHE": "LICENSE-APACHE.txt",
+      "../../NOTICE": "NOTICE.txt",
+      "../../LICENSE-UNICODE.txt": "LICENSE-UNICODE.txt",
+      "../../apps/shell/build/THIRD-PARTY-NOTICES.txt": "THIRD-PARTY-NOTICES.txt",
+      "../../apps/docs/out": "modules/docs",
+      "../../apps/sheets/out": "modules/sheets",
+      "../../apps/slides/out": "modules/slides",
+      "../../apps/pdf/out": "modules/pdf",
+      "../../apps/markdown/out": "modules/markdown",
+      "../../apps/html/out": "modules/html",
+      "../../apps/mindmap/out": "modules/mindmap",
+      "../../apps/hwp/out": "modules/hwp",
+      "../../apps/epub/out": "modules/epub",
+      "../../apps/diagram/out": "modules/diagram",
+      "../../apps/shell/out/renderer": "modules/shell/renderer",
+      "../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm": "wasm/pdfium.wasm",
+      "../../apps/pdf/node_modules/harfbuzzjs/hb-subset.wasm": "wasm/hb-subset.wasm",
+      "../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm": "wasm/qpdf.wasm",
+      "../../node_modules/@rhwp/core/rhwp_bg.wasm": "wasm/rhwp_bg.wasm",
+      "../../packages/cli/dist/seuoffice.cjs": "cli/seuoffice.cjs",
+      "../../packages/cli/bin/seuoffice": "cli/seuoffice",
+      "../../packages/cli/bin/seuoffice.cmd": "cli/seuoffice.cmd",
+      "../../packages/cli/bin/old-names/genoffice.cjs": "cli/genoffice.cjs",
+      "../../packages/cli/bin/old-names/ieumoffice": "cli/ieumoffice",
+      "../../packages/cli/bin/old-names/ieumoffice.cmd": "cli/ieumoffice.cmd",
+      "../../packages/cli/package.json": "cli/package.json",
+      "../../skills/seuoffice/SKILL.md": "cli/skills/seuoffice/SKILL.md",
+      "../../packages/cli/dist/node_modules": "cli/node_modules",
+      "bundle/out/node": "cli/node",
+      "../../packages/ui/template-fonts": "template-fonts",
+      "../../apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar": "native/xlsx-sidecar",
+      "../../packages/pdf2docx/ocr-helper/vision-ocr": "ocr/vision-ocr"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "Word Document",
+        "description": "Word Document",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      },
+      {
+        "ext": ["doc"],
+        "name": "Word 97-2003 Document",
+        "role": "Editor",
+        "mimeType": "application/msword",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["dot"],
+        "name": "Word 97-2003 Template",
+        "role": "Editor",
+        "mimeType": "application/msword",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["xlsx"],
+        "name": "Excel Workbook",
+        "description": "Excel Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      {
+        "ext": ["xlsm"],
+        "name": "Excel Macro-Enabled Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.ms-excel.sheet.macroEnabled.12"
+      },
+      {
+        "ext": ["pptx"],
+        "name": "PowerPoint Presentation",
+        "description": "PowerPoint Presentation",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      },
+      {
+        "ext": ["xls"],
+        "name": "Excel 97-2003 Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.ms-excel"
+      },
+      {
+        "ext": ["csv"],
+        "name": "CSV Document",
+        "role": "Editor",
+        "mimeType": "text/csv"
+      },
+      {
+        "ext": ["tsv"],
+        "name": "TSV Document",
+        "role": "Editor",
+        "mimeType": "text/tab-separated-values"
+      },
+      {
+        "ext": ["ods"],
+        "name": "OpenDocument Spreadsheet",
+        "description": "OpenDocument Spreadsheet",
+        "role": "Editor",
+        "mimeType": "application/vnd.oasis.opendocument.spreadsheet",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["odp"],
+        "name": "OpenDocument Presentation",
+        "role": "Editor",
+        "mimeType": "application/vnd.oasis.opendocument.presentation",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["otp"],
+        "name": "OpenDocument Presentation Template",
+        "role": "Editor",
+        "mimeType": "application/vnd.oasis.opendocument.presentation-template",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["ppt"],
+        "name": "PowerPoint 97-2003 Presentation",
+        "role": "Editor",
+        "mimeType": "application/vnd.ms-powerpoint",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["pdf"],
+        "name": "PDF Document",
+        "role": "Editor",
+        "mimeType": "application/pdf"
+      },
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown Document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": ["txt"],
+        "name": "Text Document",
+        "description": "Text Document",
+        "role": "Editor",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": ["json"],
+        "name": "JSON Document",
+        "description": "JSON Document",
+        "role": "Editor",
+        "mimeType": "application/json"
+      },
+      {
+        "ext": ["html", "htm"],
+        "name": "HTML Document",
+        "role": "Editor",
+        "mimeType": "text/html"
+      },
+      {
+        "ext": ["xmind"],
+        "name": "Mind Map",
+        "description": "Mind Map",
+        "role": "Editor",
+        "mimeType": "application/vnd.xmind.workbook",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["hwp"],
+        "name": "HWP Document",
+        "role": "Editor",
+        "mimeType": "application/x-hwp"
+      },
+      {
+        "ext": ["hwpx"],
+        "name": "HWPX Document",
+        "role": "Editor",
+        "mimeType": "application/hwp+zip"
+      },
+      {
+        "ext": ["epub"],
+        "name": "EPUB Book",
+        "description": "EPUB Book",
+        "role": "Editor",
+        "mimeType": "application/epub+zip",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["drawio", "dio"],
+        "name": "Diagram",
+        "description": "Diagram",
+        "role": "Editor",
+        "mimeType": "application/vnd.jgraph.mxfile"
+      },
+      {
+        "ext": ["vsdx"],
+        "name": "VSDX Drawing",
+        "description": "VSDX Drawing",
+        "role": "Viewer",
+        "mimeType": "application/vnd.ms-visio.drawing.main+xml",
+        "rank": "Alternate"
+      }
+    ],
+    "category": "public.app-category.productivity",
+    "macOS": {
+      "hardenedRuntime": true,
+      "entitlements": "../../apps/shell/build/entitlements.mac.plist",
+      "infoPlist": "bundle/Info.plist"
+    }
+  }
+}

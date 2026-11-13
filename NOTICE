@@ -342,6 +342,12 @@ The HWP/HWPX engine in vendor/rhwp-core is rhwp, Copyright (c) 2025-2026
 Edward Kim, MIT License (vendor/rhwp-core/LICENSE), with the IeumOffice
 patches in vendor/rhwp-core/patches.
 
+The installer of the Rust shell carries Node.js (https://nodejs.org),
+Copyright Node.js contributors, MIT License with the licenses of the
+components Node.js bundles (its LICENSE, shipped as
+resources/cli/node/LICENSE and in THIRD-PARTY-NOTICES.txt), as the runtime of
+the seuoffice command line.
+
 seuoffice does not include GenOffice's ee/ directory or anything under the
 GenOffice Enterprise License.
 
