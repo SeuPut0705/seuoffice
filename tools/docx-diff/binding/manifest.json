@@ -2904,7 +2904,7 @@
         }
       ],
       "ret": {
-        "type": "{ styles: Map<string, import(\"/private/tmp/b4-mm2/tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"/private/tmp/b4-mm2/tools/docx-diff/reference/types\").DocDefaults; }",
+        "type": "{ styles: Map<string, import(\"tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"tools/docx-diff/reference/types\").DocDefaults; }",
         "null": false,
         "undef": false,
         "shape": {
@@ -8576,15 +8576,16 @@
       },
       "required": [],
       "rust": {
-        "path": "pptx_engine::own_value::own_value",
-        "file": "crates/pptx-engine/src/own_value.rs",
-        "name": "own_value",
+        "path": "docx_engine::generate::drawing_build::line_kind",
+        "file": "crates/docx-engine/src/generate/drawing_build.rs",
+        "name": "line_kind",
         "vis": "pub",
-        "params": ["table: &'a JsMap<V>", "key: &str"],
-        "ret": "Option<&'a V>",
+        "params": ["kind: &str"],
+        "ret": "Option<LineKind>",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "arity differs: TypeScript 2 (table, key), Rust 1"
     },
     {
       "module": "own-value",
@@ -8623,16 +8624,16 @@
       },
       "required": [],
       "rust": {
-        "path": "pptx_engine::own_value::set_own",
-        "file": "crates/pptx-engine/src/own_value.rs",
-        "name": "set_own",
-        "vis": "pub",
-        "params": ["record: &mut JsMap<V>", "key: &str", "value: V"],
-        "ret": "",
+        "path": "docx_engine::vml::shape::parse_tag_attrs",
+        "file": "crates/docx-engine/src/vml/shape.rs",
+        "name": "parse_tag_attrs",
+        "vis": "",
+        "params": ["tag: &str"],
+        "ret": "JsObject<String>",
         "reachable": true
       },
       "route": "ts",
-      "reason": "its Rust signature is not one a row can read: (record: &mut JsMap<V>, key: &str, value: V) -> "
+      "reason": "the port is not public (private, reachable): docx_engine::vml::shape::parse_tag_attrs"
     },
     {
       "module": "parse-block-passes",
@@ -10942,7 +10943,7 @@
         }
       ],
       "ret": {
-        "type": "import(\"/private/tmp/b4-mm2/tools/docx-diff/reference/types\").TabStop[] | undefined",
+        "type": "import(\"tools/docx-diff/reference/types\").TabStop[] | undefined",
         "null": false,
         "undef": true,
         "shape": null,
@@ -10975,7 +10976,7 @@
         }
       ],
       "ret": {
-        "type": "import(\"/private/tmp/b4-mm2/tools/docx-diff/reference/types\").TabStop[]",
+        "type": "import(\"tools/docx-diff/reference/types\").TabStop[]",
         "null": false,
         "undef": false,
         "shape": null,
@@ -11985,7 +11986,7 @@
         }
       ],
       "ret": {
-        "type": "import(\"/private/tmp/b4-mm2/tools/docx-diff/reference/types\").TableLook",
+        "type": "import(\"tools/docx-diff/reference/types\").TableLook",
         "null": false,
         "undef": false,
         "shape": null,
@@ -21176,9 +21177,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::with_redact_root",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "with_redact_root",
+        "vis": "pub",
+        "params": ["part_xml: &str"],
+        "ret": "Cow<'_, str>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -22198,10 +22206,10 @@
       },
       "required": ["test"],
       "rust": {
-        "path": "pptx_engine::xml_utils::escape_xml_text",
-        "file": "crates/pptx-engine/src/xml_utils.rs",
+        "path": "docx_engine::blank::escape_xml_text",
+        "file": "crates/docx-engine/src/blank.rs",
         "name": "escape_xml_text",
-        "vis": "pub",
+        "vis": "",
         "params": ["text: &str"],
         "ret": "String",
         "reachable": true
@@ -22232,10 +22240,10 @@
       },
       "required": [],
       "rust": {
-        "path": "pptx_engine::xml_utils::escape_xml_attr",
-        "file": "crates/pptx-engine/src/xml_utils.rs",
+        "path": "docx_engine::generate::escape_xml_attr",
+        "file": "crates/docx-engine/src/generate/mod.rs",
         "name": "escape_xml_attr",
-        "vis": "pub",
+        "vis": "pub(crate)",
         "params": ["text: &str"],
         "ret": "String",
         "reachable": true
@@ -22368,15 +22376,7 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "pptx_engine::zip::assert_zip_within_limits",
-        "file": "crates/pptx-engine/src/zip.rs",
-        "name": "assert_zip_within_limits",
-        "vis": "pub",
-        "params": ["files: &[DeclaredPart<'_>]"],
-        "ret": "Result<(), String>",
-        "reachable": true
-      },
+      "rust": null,
       "route": "ts",
       "reason": "stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)"
     },

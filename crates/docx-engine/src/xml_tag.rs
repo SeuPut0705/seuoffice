@@ -29,7 +29,7 @@ pub enum TagName<'a> {
 }
 
 /// `NAME_CHAR`: `[\w.:-]` without the `u` flag
-fn is_name_char(byte: u8) -> bool {
+pub(crate) fn is_name_char(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b':' | b'-')
 }
 

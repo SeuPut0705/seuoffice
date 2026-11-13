@@ -1,6 +1,7 @@
 //! The write half of notes.ts: `buildNotesXml` and the constants the save
 //! reads for the footnotes and endnotes parts.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 use jscompat::{number_to_string, try_js_regex};
@@ -10,7 +11,7 @@ use crate::generate::{escape_xml_attr as attr, escape_xml_text as text};
 use crate::model::{NoteInfo, NoteRun};
 use crate::notes::{NoteKind, entry_text, note_entries_of, note_slices_of, root_attributes};
 use crate::save::parts::text_patch::patch_paragraph_texts;
-use crate::withheld::{first_mark_label, has_withheld_trace, over_withheld, with_redact_namespace};
+use crate::withheld::{first_mark_label, has_withheld_trace, over_withheld, with_redact_root};
 
 /// `NOTE_PART_PATH`
 pub fn note_part_path(kind: NoteKind) -> &'static str {
@@ -358,11 +359,11 @@ pub fn build_notes_xml(
     }
     let root = root_of(kind);
     let attrs = root_attributes(original_xml, root, NOTE_NS, &[]).map_err(|e| e.to_string())?;
-    with_redact_namespace(
-        &format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<{root} {attrs}>{structural}{body}</{root}>"
-        ),
-        root,
-    )
-    .map_err(|e| e.to_string())
+    let mut xml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<{root} {attrs}>{structural}{body}</{root}>"
+    );
+    if let Cow::Owned(marked) = with_redact_root(&xml) {
+        xml = marked;
+    }
+    Ok(xml)
 }

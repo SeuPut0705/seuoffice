@@ -805,13 +805,52 @@ const markedField = (instr: string, result: string): string =>
 const SEEN_RUN = '<w:r><w:rPr><w:i/></w:rPr><w:t>seen</w:t></w:r>'
 const HIDDEN_RUN = '<w:r><w:rPr><w:b/><go:redact w:label="secret"/></w:rPr><w:t>hid</w:t></w:r>'
 
+/** A complex field whose instruction run carries `rPr` (a mark hidden from AI among its properties, or none). */
+const instrMarkedField = (instrRun: string, rPr: string, result: string): string =>
+  `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${rPr}${instrRun}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const HIDDEN_RPR = '<w:rPr><w:b/><go:redact w:label="secret"/></w:rPr>'
+const INSTR = (text: string): string => `<w:instrText xml:space="preserve">${text}</w:instrText>`
+
+/** Field instructions hidden from AI: the field's cached result is hidden with it, whatever the field. */
+const HIDDEN_INSTR_FIELD_XMLS: string[] = [
+  `<w:p>${instrMarkedField(INSTR(' REF bm \\h '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, SEEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, HIDDEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, '')}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><w:b/></w:rPr>', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' PAGE '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' AUTHOR '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' HYPERLINK "http://example.com" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' HYPERLINK \\l "anchor" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' TOC \\o "1-3" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' XE "term" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><redact xmlns="urn:r" w:label="a"/></w:rPr>', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><w:b/><go:redact/></w:rPr>', SEEN_RUN)}</w:p>`,
+  // the second instruction run is the hidden one; the first mark wins when both are
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${INSTR(' REF ')}</w:r><w:r>${HIDDEN_RPR}${INSTR(' bm ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${SEEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><go:redact w:label="one"/></w:rPr>${INSTR(' REF ')}</w:r><w:r>${HIDDEN_RPR}${INSTR(' bm ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${SEEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  // a field after a hidden one is not hidden with it
+  `<w:p>${instrMarkedField(INSTR(' REF a '), HIDDEN_RPR, SEEN_RUN)}${instrMarkedField(INSTR(' REF b '), '', SEEN_RUN)}</w:p>`,
+  // nested: the hidden instruction sits in the inner field
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${INSTR(' IF ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, SEEN_RUN)}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+]
+
 /** Field results with a run marked hidden from AI, among others and alone: the result carries the mark. */
 const MARKED_FIELD_XMLS: string[] = [
+  ...HIDDEN_INSTR_FIELD_XMLS,
   `<w:p>${markedField(' REF bm \\h ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
   `<w:p>${markedField(' REF bm ', HIDDEN_RUN)}</w:p>`,
   `<w:p>${markedField(' REF bm ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
   `<w:p>${markedField(' REF bm ', '')}</w:p>`,
   `<w:p>${markedField(' REF bm ', SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', HIDDEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', SEEN_RUN + HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK \\l "anchor" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' FILLIN "who" ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' TOC \\o "1-3" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' MERGEFIELD name ', SEEN_RUN + HIDDEN_RUN + SEEN_RUN)}</w:p>`,
   `<w:p>${markedField(' PAGE ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
   `<w:p>${markedField(' PAGE ', HIDDEN_RUN)}</w:p>`,
   `<w:p>${markedField(' AUTHOR ', HIDDEN_RUN)}</w:p>`,

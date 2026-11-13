@@ -2,13 +2,14 @@
 //! markup between them, the content-control wraps, the generated blocks, the
 //! trailing sectPr and the edits made to the document root afterwards.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 use jscompat::{js_regex, number_to_string, slice_utf16, try_js_regex};
 
 use super::external::{ControlShell, build_content_control_shell, next_content_control_id};
 use super::helpers::{insert_before_closing_tag, mark_paragraph_revision, retarget_image_blip};
-use super::js::{dynamic, len16, limit, replace_first};
+use super::js::{dynamic, len16, limit};
 use super::saver::{MediaSource, NewRel, Saver, slice16};
 use super::section_write::{
     apply_page_num_type, apply_section_settings, apply_section_start_type, apply_title_pg,
@@ -27,7 +28,7 @@ use crate::save::parts::hf_parts::{
 };
 use crate::section::HfKind;
 use crate::section::{hf_reference_r_id, hf_reference_tags, hf_reference_type};
-use crate::withheld::{REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS, REDACT_PREFIX};
+use crate::withheld::with_redact_root;
 use crate::xml_tag::{TagName, find_start_tag};
 
 /// `UnwrapSlice`: the bytes of a control shell on one block, by their place in it.
@@ -660,7 +661,10 @@ impl Saver<'_> {
             );
         }
 
-        new_document_xml = redact_namespace(new_document_xml)?;
+        // the root declares the mark's namespace and keeps it through a re-save
+        if let Cow::Owned(marked) = with_redact_root(&new_document_xml) {
+            new_document_xml = marked;
+        }
 
         if new_document_xml.contains(" w16du:dateUtc=")
             && let Some(root) = find_start_tag(&new_document_xml, TagName::Exact("w:document"), 0)
@@ -844,95 +848,4 @@ impl Saver<'_> {
             .map_err(limit)?;
         Ok(new_document_xml)
     }
-}
-
-/// The "withheld from the model" marker's namespace on the document root: an
-/// undeclared prefix is a parse error, so the root declares it, lists it in
-/// `mc:Ignorable` and asks a re-save to preserve it.
-fn redact_namespace(new_document_xml: String) -> Result<String, String> {
-    let Some(root) = find_start_tag(&new_document_xml, TagName::Exact("w:document"), 0) else {
-        return Ok(new_document_xml);
-    };
-    if !new_document_xml.contains(&format!("<{REDACT_EL}"))
-        || root.text.contains(&format!("xmlns:{REDACT_PREFIX}="))
-    {
-        return Ok(new_document_xml);
-    }
-    let mut next = root.text.to_owned();
-    if !js_regex!(r"xmlns:mc=").test(&next) {
-        next = jscompat::replace_first_string(
-            &next,
-            "<w:document",
-            "<w:document xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"",
-        );
-    }
-    next = jscompat::replace_first_string(
-        &next,
-        "<w:document",
-        &format!("<w:document xmlns:{REDACT_PREFIX}=\"{REDACT_NS}\""),
-    );
-    let word_re = |word: &str| dynamic(&format!(r"\b{word}\b"), "");
-    let ignorable = js_regex!(r#"mc:Ignorable="([^"]*)""#)
-        .exec(&next)
-        .map(|f| f.get(1).unwrap_or("").to_owned());
-    match ignorable {
-        Some(list) => {
-            if !word_re(REDACT_PREFIX)?.try_test(&list).map_err(limit)? {
-                let existing = jscompat::trim(&list);
-                let value = if existing.is_empty() {
-                    REDACT_PREFIX.to_owned()
-                } else {
-                    format!("{existing} {REDACT_PREFIX}")
-                };
-                next = replace_first(
-                    try_js_regex!(r#"mc:Ignorable="[^"]*""#),
-                    0,
-                    &next,
-                    &format!("mc:Ignorable=\"{value}\""),
-                )?;
-            }
-        }
-        None => {
-            next = jscompat::replace_first_string(
-                &next,
-                "<w:document",
-                &format!("<w:document mc:Ignorable=\"{REDACT_PREFIX}\""),
-            );
-        }
-    }
-    // a Word re-save drops every element whose namespace it does not process unless the root
-    // preserves it verbatim
-    let preserve = js_regex!(r#"mc:PreserveElements="([^"]*)""#)
-        .exec(&next)
-        .map(|f| f.get(1).unwrap_or("").to_owned());
-    match preserve {
-        Some(list) => {
-            if !word_re(REDACT_EL)?.try_test(&list).map_err(limit)? {
-                let existing = jscompat::trim(&list);
-                let value = if existing.is_empty() {
-                    REDACT_EL.to_owned()
-                } else {
-                    format!("{existing} {REDACT_EL}")
-                };
-                next = replace_first(
-                    try_js_regex!(r#"mc:PreserveElements="[^"]*""#),
-                    0,
-                    &next,
-                    &format!("mc:PreserveElements=\"{value}\""),
-                )?;
-            }
-        }
-        None => {
-            next = jscompat::replace_first_string(
-                &next,
-                "<w:document",
-                &format!("<w:document mc:PreserveElements=\"{REDACT_EL}\""),
-            );
-        }
-    }
-    Ok(format!(
-        "{}{next}{}",
-        &new_document_xml[..root.start],
-        &new_document_xml[root.end..]
-    ))
 }
