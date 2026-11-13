@@ -13,6 +13,7 @@ function neutral(method: string): unknown {
   switch (method) {
     case 'listTranslations':
     case 'unfinishedJobs':
+    case 'readAiReadPages':
     case 'readPassages':
     case 'listHighlightRuns':
     case 'readHighlightBlocks':

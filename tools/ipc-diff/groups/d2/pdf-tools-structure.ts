@@ -65,6 +65,7 @@ const cases: Case[] = [
     calls: [
       call('pdf:store-doc-hash', A),
       call('pdf:store-doc-hash', 5),
+      call('pdf:store-ai-read-pages', HA),
       call('pdf:store-translations', HA),
       call('pdf:store-translation', HA, 'en'),
       call('pdf:store-unfinished-jobs', HA),
@@ -96,6 +97,12 @@ const cases: Case[] = [
         null,
       ],
       'store.unfinishedJobs': [[{ kind: 'translate', state: 'running' }]],
+      'store.readAiReadPages': [
+        [
+          { fingerprint: 'f1', page: 1, blocks: [{ key: 'b', text: 'x' }] },
+          { fingerprint: 'f2', page: 2, blocks: [] },
+        ],
+      ],
       'store.readPassages': [[{ id: 'c1' }]],
       'store.listHighlightRuns': [
         [
@@ -113,6 +120,9 @@ const cases: Case[] = [
     calls: [
       grant,
       docHash,
+      call('pdf:store-ai-read-pages', HA),
+      call('pdf:store-ai-read-pages', HA),
+      from(6, 'pdf:store-ai-read-pages', HA),
       call('pdf:store-translations', HA),
       call('pdf:store-translations', HA, 'easy'),
       call('pdf:store-translations', HA, 'plain'),
@@ -182,6 +192,7 @@ const cases: Case[] = [
       'store.writeJob': [{ $error: 'write', message: 'disk full' }],
       'store.writePassage': [{ $error: 'type', message: 'bad card' }],
       'store.readInsights': [{ $error: 'other', message: 'boom' }],
+      'store.readAiReadPages': [{ $error: 'type', message: 'bad page' }],
     }),
     calls: [
       grant,
@@ -189,6 +200,7 @@ const cases: Case[] = [
       write({ kind: 'job', job: {} }),
       write({ kind: 'passage', card: {} }),
       call('pdf:store-insights', HA, 'en'),
+      call('pdf:store-ai-read-pages', HA),
     ],
   },
   {
