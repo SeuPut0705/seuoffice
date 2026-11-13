@@ -1013,5 +1013,54 @@
     "find": "size: meta.len() as f64,",
     "replace": "size: 0.0,",
     "groups": ["a/generate"]
+  },
+  {
+    "name": "snapshot restore takes the next id",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "Some(IpcValue::Number(id)) => *id,",
+    "replace": "Some(IpcValue::Number(id)) => *id + 1.0,",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "a TypeError is named Error",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "name: Some(if type_error { \"TypeError\" } else { \"Error\" }.into()),",
+    "replace": "name: Some(\"Error\".into()),",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "the invalid template name text changes",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "\"템플릿 이름이 잘못되었습니다\"",
+    "replace": "\"템플릿 이름이 잘못됨\"",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "reject answers the opposite",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": ".is_some_and(|sessions| sessions.proposal_reject(cx.sender.view));",
+    "replace": ".is_some_and(|sessions| !sessions.proposal_reject(cx.sender.view));",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "accept never finds a proposal",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": ".and_then(|sessions| sessions.proposal_accept(cx.sender.view));",
+    "replace": ".and_then(|_sessions| None::<(IpcValue, u64)>);",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "media roots ignore the deck's folder",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "let session_path = core.session_path(view);",
+    "replace": "let session_path: Option<String> = None;",
+    "groups": ["a/slides-ai"]
+  },
+  {
+    "name": "the failure log's clock is one millisecond late",
+    "file": "shell-ipc/a/src/slides_ai.rs",
+    "find": "(self.core.now)());",
+    "replace": "(self.core.now)() + 1.0);",
+    "groups": ["a/slides-ai"]
   }
 ]
