@@ -19,6 +19,7 @@ pub mod image_edit;
 pub mod node_io;
 pub mod note_link;
 pub mod ocr;
+pub mod pdf_recovery;
 pub mod pdfium;
 pub mod read_text;
 pub mod redaction;

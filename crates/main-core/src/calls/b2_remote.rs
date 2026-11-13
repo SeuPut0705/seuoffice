@@ -66,7 +66,9 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "safe-remote-url.isBlockedAddress" => {
             str_arg(args, 0).map(|ip| Some(Value::Bool(is_blocked_address(ip))))
         }
-        "safe-remote-url.isIP" => str_arg(args, 0).map(|ip| Some(Value::from(is_ip(ip)))),
+        "safe-remote-url.isIP" => str_arg(args, 0)
+            .and_then(|ip| is_ip(ip).map_err(|limit| CallError::plain(limit.to_string())))
+            .map(|family| Some(Value::from(family))),
         "safe-remote-url.resolveSafeRemoteTarget" => resolve_target_call(args, cx),
         "safe-remote-url.isSafeRemoteUrl" => is_safe_call(args, cx),
         "safe-remote-url.pinnedLookup" => pinned_lookup_call(args),

@@ -1,0 +1,455 @@
+[
+  {
+    "name": "context: the instructions limit is the wrong number",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "pub const INSTRUCTIONS_LIMIT_CHARS: u64 = 32_000;",
+    "replace": "pub const INSTRUCTIONS_LIMIT_CHARS: u64 = 31_000;",
+    "fn": ["context.INSTRUCTIONS_LIMIT_CHARS"]
+  },
+  {
+    "name": "context: a cut keeps the high half of a pair",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "&& (0xd800..=0xdbff).contains(&code)",
+    "replace": "&& (0xdc00..=0xdfff).contains(&code)",
+    "fn": ["context.cutAt", "context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: instructions.md is named without its data folder separator",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "format!(\"{data_dir}/{}\", project_folder_name(\"instructionsFile\"))",
+    "replace": "format!(\"{data_dir}\\\\{}\", project_folder_name(\"instructionsFile\"))",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: an empty memory header counts as a changed memory",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "memory_changed = memory_has_content(Some(text))",
+    "replace": "memory_changed = true",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: a file as recorded is a changed file",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if Some(&hash) == known {",
+    "replace": "if false {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: a file that was never recorded drops a hash",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if known.is_some() {",
+    "replace": "if true {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: the root files are read while the switch is off",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if source != ProjectInstructionsSource::Instructions && !switches.read_agents_files {",
+    "replace": "if source != ProjectInstructionsSource::Instructions && switches.read_agents_files {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: parts are joined by one line feed",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": ".join(\"\\n\\n\");",
+    "replace": ".join(\"\\n\");",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: a part that begins at the cut is a source",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if offset < text_length {",
+    "replace": "if offset <= text_length {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: the separator between parts is one character wide",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "offset += length(part) + 2;",
+    "replace": "offset += length(part) + 1;",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: text as long as its cut is truncated",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if text_length < full_length {",
+    "replace": "if text_length <= full_length {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "context: memory at its limit is long",
+    "file": "main-core/src/shell/projects/context.rs",
+    "find": "if chars > memory_limit_chars {",
+    "replace": "if chars >= memory_limit_chars {",
+    "fn": ["context.assembleTrustedContext"]
+  },
+  {
+    "name": "identity: a re-pick of another project is taken",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "if file.is_some_and(|file| file.id != relocate_id)",
+    "replace": "if file.is_some_and(|file| file.id == relocate_id)",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: a re-pick of a folder listed under another id is taken",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "|| at_path.is_some_and(|item| item.id != relocate_id)",
+    "replace": "|| false",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: a re-pick keeps no id",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "id: Some(relocate_id.to_owned()),",
+    "replace": "id: None,",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: a re-pick takes over no entry",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": ".find(|item| item.id == relocate_id)",
+    "replace": ".find(|_| false)",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: a folder with another id at its path is the listed one",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "&& file.is_none_or(|file| file.id == item.id)",
+    "replace": "&& file.is_none_or(|file| file.id != item.id)",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: a copy is told from a move the wrong way round",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "if id_at(&known.path).as_deref() == Some(file.id.as_str()) {",
+    "replace": "if id_at(&known.path).as_deref() != Some(file.id.as_str()) {",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: the stale entry at the path is forgotten",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "let stale_at_path = at_path.map(|item| item.id.clone());",
+    "replace": "let stale_at_path: Option<ProjectId> = None;",
+    "fn": ["identity.classifyFolder"]
+  },
+  {
+    "name": "identity: records of another project follow the move",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "if project_id != id {",
+    "replace": "if project_id == id {",
+    "fn": ["identity.rebaseOptOuts"]
+  },
+  {
+    "name": "identity: a moved record stays at its old path",
+    "file": "main-core/src/shell/projects/identity.rs",
+    "find": "delete_key(&mut settings.opted_out_documents, &doc);",
+    "replace": "let _kept = &doc;",
+    "fn": ["identity.rebaseOptOuts"]
+  },
+  {
+    "name": "selection: the farthest container wins",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "if best.is_none_or(|best| path_length(item) > path_length(best)) {",
+    "replace": "if best.is_none_or(|best| path_length(item) < path_length(best)) {",
+    "fn": ["selection.containerOf", "selection.selectionFor", "selection.recordSelection"]
+  },
+  {
+    "name": "selection: a project folder holds itself",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "if same_path(&item.path, doc_key, platform) {",
+    "replace": "if false {",
+    "fn": ["selection.containerOf", "selection.selectionFor"]
+  },
+  {
+    "name": "selection: a project that is not listed is chosen",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": ".filter(|id| settings.list.iter().any(|item| item.id == *id))",
+    "replace": ".filter(|_| true)",
+    "fn": ["selection.selectionFor"]
+  },
+  {
+    "name": "selection: a chat comes back without its project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "(Some(_), Some(chat)) => Some(chat.to_owned()),",
+    "replace": "(_, Some(chat)) => Some(chat.to_owned()),",
+    "fn": ["selection.selectionFor"]
+  },
+  {
+    "name": "selection: a document set to no project stays in its project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "let project_id = if truthy(opted_out.as_deref()).is_some() {",
+    "replace": "let project_id = if false {",
+    "fn": ["selection.selectionFor"]
+  },
+  {
+    "name": "selection: the exact key does not win over an earlier spelling",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "if record.get(path).is_some() {",
+    "replace": "if false {",
+    "fn": ["selection.findPathKey"]
+  },
+  {
+    "name": "selection: a choice of another project undoes the mark",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "Some(id) if id == container_id && has_key => {",
+    "replace": "Some(id) if id == container_id || has_key => {",
+    "fn": ["selection.recordSelection"]
+  },
+  {
+    "name": "selection: a chat is kept for another project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "(Some(id), Some(before)) if before.project_id.as_deref() == Some(id) => {",
+    "replace": "(Some(_), Some(before)) => {",
+    "fn": ["selection.recordSelection"]
+  },
+  {
+    "name": "selection: a chat is recorded for a document inside a project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "if container_of(doc_key, settings, platform).is_some() {",
+    "replace": "if false {",
+    "fn": ["selection.recordOutsideChat"]
+  },
+  {
+    "name": "selection: the home choice survives removing its project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "settings.home_project_id = Some(None);",
+    "replace": "let _kept = 0;",
+    "fn": ["selection.dropFromList"]
+  },
+  {
+    "name": "selection: a protected folder is offered as a project",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "&& location_refusal(&dir, ctx).is_none()",
+    "replace": "&& true",
+    "fn": ["selection.findUnregisteredProject"]
+  },
+  {
+    "name": "selection: the search goes past the registered folder",
+    "file": "main-core/src/shell/projects/selection.rs",
+    "find": "&& same_path(&dir, stop_at, platform)",
+    "replace": "&& false",
+    "fn": ["selection.findUnregisteredProject"]
+  },
+  {
+    "name": "write-guard: only a missing entry is absent",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "Err(error) if error.code == Some(\"ENOENT\") => Ok(None),",
+    "replace": "Err(error) if error.code == Some(\"ENOTDIR\") => Ok(None),",
+    "fn": [
+      "write-guard.writeData",
+      "write-guard.appendData",
+      "write-guard.updateData",
+      "write-guard.removeData",
+      "write-guard.writeNewDocument",
+      "write-guard.createProjectFolder"
+    ]
+  },
+  {
+    "name": "write-guard: the hard-link reason is spelled another way",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "Self::HardLink => \"hard-link\",",
+    "replace": "Self::HardLink => \"hardlink\",",
+    "fn": ["write-guard.ProjectWriteRefused"]
+  },
+  {
+    "name": "write-guard: a file with two names is appended to",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "link_count(&info) > 1",
+    "replace": "link_count(&info) > 2",
+    "fn": ["write-guard.appendData"]
+  },
+  {
+    "name": "write-guard: a target with a dot segment passes",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": ".any(|segment| *segment == \"..\" || *segment == \".\")",
+    "replace": ".any(|segment| *segment == \"..\")",
+    "fn": ["write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a new document may go into the data folder",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "if is_data_dir_name(segments[0]) {",
+    "replace": "if false {",
+    "fn": ["write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a missing folder is not a folder",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "ProjectWriteRefusal::MissingFolder, dir",
+    "replace": "ProjectWriteRefusal::NotAFolder, dir",
+    "fn": ["write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a name that is taken is a link",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "ProjectWriteRefusal::Exists, final_path).into()",
+    "replace": "ProjectWriteRefusal::Link, final_path).into()",
+    "fn": ["write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a reserved or illegal name is taken when it is plain",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "if !is_valid_rename_name(name) || !is_plain_segment(name) {",
+    "replace": "if !is_valid_rename_name(name) && !is_plain_segment(name) {",
+    "fn": ["write-guard.createProjectFolder"]
+  },
+  {
+    "name": "write-guard: the parent's real path is not composed",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "let real_parent = nfc(&realpath(parent)?);",
+    "replace": "let real_parent = realpath(parent)?;",
+    "fn": ["write-guard.createProjectFolder"]
+  },
+  {
+    "name": "write-guard: a moved root is a folder problem",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "ProjectWriteRefusal::RootMoved, root",
+    "replace": "ProjectWriteRefusal::NotAFolder, root",
+    "fn": ["write-guard.writeData", "write-guard.appendData", "write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a relative root is resolved from the working folder",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "if !looks_absolute(root) {",
+    "replace": "if false {",
+    "fn": ["write-guard.writeData", "write-guard.writeNewDocument"]
+  },
+  {
+    "name": "write-guard: a folder where a file should be is written to",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "if !info.is_file() {",
+    "replace": "if info.is_file() {",
+    "fn": [
+      "write-guard.writeData",
+      "write-guard.appendData",
+      "write-guard.updateData",
+      "write-guard.removeData"
+    ]
+  },
+  {
+    "name": "write-guard: an update that changes nothing says it wrote",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "written: false,",
+    "replace": "written: true,",
+    "fn": ["write-guard.updateData"]
+  },
+  {
+    "name": "write-guard: a file is not removed",
+    "file": "main-core/src/shell/projects/write_guard.rs",
+    "find": "unlink(&target)?;",
+    "replace": "let _kept = &target;",
+    "fn": ["write-guard.removeData"]
+  },
+  {
+    "name": "new-documents: the number of names tried is one short",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "pub const NEW_DOCUMENT_NAME_ATTEMPTS: u32 = 1000;",
+    "replace": "pub const NEW_DOCUMENT_NAME_ATTEMPTS: u32 = 999;",
+    "fn": ["new-documents.NEW_DOCUMENT_NAME_ATTEMPTS", "new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: the document's own name stays in the folder",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "segments.pop();",
+    "replace": "let _kept = &segments;",
+    "fn": ["new-documents.newDocumentFolder", "new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a document in the data folder sets the folder",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if is_data_dir_name(first) {",
+    "replace": "if false {",
+    "fn": ["new-documents.newDocumentFolder", "new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a colon is allowed in a file name",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "!js_regex!(r\"[\\\\/:]\").test(file_name)",
+    "replace": "!js_regex!(r\"[\\\\/]\").test(file_name)",
+    "fn": ["new-documents.isBareFileName"]
+  },
+  {
+    "name": "new-documents: two dots are a file name",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if file_name.is_empty() || file_name == \".\" || file_name == \"..\" {",
+    "replace": "if file_name.is_empty() || file_name == \".\" {",
+    "fn": ["new-documents.isBareFileName"]
+  },
+  {
+    "name": "new-documents: the first name is numbered too",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if n <= 1.0 {",
+    "replace": "if n < 1.0 {",
+    "fn": ["new-documents.numberedFileName", "new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a name that starts with a dot has no extension to keep",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "Some(dot) if dot > 0 =>",
+    "replace": "Some(dot) if dot >= 0 =>",
+    "fn": ["new-documents.numberedFileName", "new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a placement not asked for is not checked for an empty project id",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "let Some(project_id) = truthy(project_id.as_deref()) else {",
+    "replace": "let Some(project_id) = project_id.as_deref() else {",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a preset of another project is used",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "&& preset.project_id == project_id",
+    "replace": "&& true",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a preset of a root that changed is used",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "&& preset.root == root",
+    "replace": "&& true",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a placement that was given is not kept",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": ".insert(web_contents_id, placement.ok().flatten());",
+    "replace": ".insert(web_contents_id, None);",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a closed tab keeps its preset",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "self.presets.remove(&web_contents_id);",
+    "replace": "let _kept = web_contents_id;",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a preset names a project that is not listed",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "truthy(root.as_deref()).map(|_| preset.project_id)",
+    "replace": "Some(preset.project_id)",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a name that is taken is not skipped before the guide is asked",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if entry_exists(&target) {",
+    "replace": "if false {",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: another refusal than a taken name goes on to the next name",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if refused.reason == ProjectWriteRefusal::Exists => {}",
+    "replace": "if refused.reason != ProjectWriteRefusal::Outside => {}",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  },
+  {
+    "name": "new-documents: a name with a folder part is written",
+    "file": "main-core/src/shell/projects/new_documents.rs",
+    "find": "if !is_bare_file_name(file_name) {",
+    "replace": "if false {",
+    "fn": ["new-documents.NewDocumentPlacer"]
+  }
+]

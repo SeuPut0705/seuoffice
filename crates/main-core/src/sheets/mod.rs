@@ -10,6 +10,7 @@ pub mod document_locale;
 pub mod import_registry;
 pub mod pdf_page_variants;
 pub mod print_options;
+pub mod recovery_policy;
 pub mod save_as_formats;
 pub mod save_edits_transfer;
 pub mod save_failure_log;
