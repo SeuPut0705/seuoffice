@@ -36,7 +36,9 @@ use crate::inline_opaque::part_namespaces;
 use crate::model::{Block, Bytes, ParsedDoc, ParsedDocFull};
 use crate::notes::NoteKind;
 use crate::numbering::{NumberingDef, parse_numbering};
-use crate::package::{Thrown, parse_rels, rels_path_of, resolve_main_document_path};
+use crate::package::{
+    Thrown, canonical_part_text, parse_rels, rels_path_of, resolve_main_document_path,
+};
 use crate::props::part_xml_space_preserve;
 use crate::resolve::{ResolveDoc, resolve_ctx_of};
 use crate::scan::{BodyElement, scan_body};
@@ -174,8 +176,8 @@ fn parse_docx_with(
             Value::Object(empty)
         }
     };
-    let font_table = match zip.text(FONT_TABLE_PART_PATH).map_err(|e| e.to_string())? {
-        Some(text) => parse_font_table(text),
+    let font_table = match canonical_part_text(&zip, FONT_TABLE_PART_PATH)? {
+        Some(text) => parse_font_table(&text),
         None => Vec::new(),
     };
     let embedded_fonts = read_embedded_fonts(&zip, &font_table)?;

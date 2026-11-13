@@ -103,6 +103,58 @@ export const PROPS_TEXTS: Record<string, string[]> = {
       ),
     ),
   ],
+  // the same document in other valid spellings: markup hidden in a comment, CDATA or
+  // an instruction, spaced end tags, a `>` in an attribute value, single quotes
+  'markup spellings': [
+    p(
+      `<w:bookmarkStart w:id="1" w:name = 'single quoted'/><w:bookmarkStart w:id="2" w:descr="a>b" w:name="after gt"/>` +
+        `<w:bookmarkStart w:id = "3" w:name = "_Toc9" />`,
+    ),
+    p(`<!-- <w:bookmarkStart w:id="3" w:name="in comment"/> --><w:bookmarkStart w:id="4" w:name="own"/>`),
+    p(`<![CDATA[<w:bookmarkStart w:id="3" w:name="in cdata"/>]]><w:bookmarkStart w:id="4" w:name='_hid den'/>`),
+    `<w:p w:rsidR=">"><w:pPr><w:keepNext/></w:pPr>${r(t('x'))}</w:p>`,
+    `<w:p w:rsidR='>'>\n<w:pPr><w:jc w:val="center"/></w:pPr ></w:p>`,
+    `<w:p><!-- <w:pPr><w:jc w:val="left"/></w:pPr> --><w:pPr><w:jc w:val="right"/></w:pPr></w:p>`,
+    `<w:p><w:pPr><w:keepNext/><!-- </w:pPr> --><w:keepLines/></w:pPr>${r(t('x'))}</w:p>`,
+    `<w:p><w:pPr><w:keepNext/><![CDATA[</w:pPr>]]></w:pPr></w:p>`,
+    `<w:p><w:pPr><w:keepNext/><?probe </w:pPr>?></w:pPr></w:p>`,
+    `<w:p><w:pPr a=">"/>x</w:p>`,
+    `<w:p><w:pPr a='/>'><w:keepNext/></w:pPr></w:p>`,
+    `<w:p><![CDATA[<w:pPr/>]]></w:p>`,
+    `<w:p><?probe <w:pPr/>?></w:p>`,
+    `<w:p><w:pPr><w:pPrChange w:id="1"><w:pPr/></w:pPrChange ></w:pPr ><w:r/></w:p>`,
+    p(r(`<w:drawing><wp:extent cx = '5000000' cy = "0"/></w:drawing>`)),
+    p(r(`<w:drawing><!-- <wp:extent cx="1" cy="1"/> --><wp:extent cx="5000000" cy="0"/></w:drawing>`)),
+    p(
+      r(
+        `<w:drawing><wp:extent cx="14287" cy="10"/><a:ln w = '19050'><a:solidFill><a:srgbClr val = 'AABBCC'/></a:solidFill></a:ln ></w:drawing>`,
+      ),
+    ),
+    p(
+      r(
+        `<w:drawing><wp:extent cx="4762" cy="10" descr="a>b"/><a:ln w="100"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:ln></w:drawing>`,
+      ),
+    ),
+    p(
+      r(
+        `<w:drawing><![CDATA[<a:ln w="999"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>]]><wp:extent cx="4762" cy="10"/></w:drawing>`,
+      ),
+    ),
+    pict(`<v:shape style = 'visibility:hidden'/>`),
+    pict(`<v:rect fillcolor = 'white' stroked = 'f'/>`),
+    pict(`<!-- <v:imagedata r:id="rId1"/> --><v:shape style="visibility:hidden"/>`),
+    pict(`<v:shape style="visibility:hidden"/><![CDATA[<w:txbxContent/>]]>`),
+    pict(`<v:shape style="visibility:hidden" descr="a>b"/>`),
+    p(r(`<w:t>before</w:t><w:txbxContent a="1"><w:p>${t('in')}</w:p></w:txbxContent ><w:t>after</w:t>`)),
+    p(`<w:txbxContent><w:p><!-- </w:txbxContent> -->${r(t('in'))}</w:p></w:txbxContent>${r(t('after'))}`),
+    p(`<w:txbxContent a=">"><w:p/></w:txbxContent>${r('<w:br w:type="page"/>')}`),
+    p(`<w:txbxContent><w:p/></w:txbxContent >${r('<w:br w:type="page"/>')}`),
+    p(`<w:r><w:t xml:space = 'preserve'>a</w:t ></w:r><w:r><w:t>b</w:t ></w:r>`),
+    p(`<w:r><w:t><![CDATA[a<b&c]]></w:t></w:r>`),
+    p(`<w:r><w:t>a<!--x-->b</w:t></w:r><!-- <w:t>hidden</w:t> -->`),
+    p(`<w:r><w:t>a</w:t></w:r><![CDATA[<w:t>fake</w:t>]]><?probe </w:t>?>`),
+    `<w:tbl><w:tr><w:tc>${p(r(t('c1')))}</w:tc ><w:tc>${p(r(t('c2')))}</w:tc ></w:tr ></w:tbl>`,
+  ],
   'shapes that draw nothing': [
     p(r(shape('<a:noFill/><a:ln><a:noFill/></a:ln>'))),
     p(r(shape('<a:noFill/><a:ln><a:noFill/></a:ln><a:effectLst/>'))),

@@ -581,6 +581,45 @@ fn hf_table_row_paragraphs(text: &str, args: &Value) -> Returned {
     })
 }
 
+/// Header and footer text boxes take their `id` from a counter of the process
+/// (`++hfTextBoxSeq`), which the two sides do not advance alike across the
+/// calls of the gate: the ids are numbered from 1 in order of appearance, in
+/// the answers of both sides (`renumberedBoxIds` of calls-parse-tables.ts).
+fn renumber_box_ids(answer: &mut Value, seen: &mut Vec<Value>) {
+    match answer {
+        Value::Array(items) => {
+            for item in items {
+                renumber_box_ids(item, seen);
+            }
+        }
+        Value::Object(map) => {
+            let id = map
+                .get_mut("box")
+                .and_then(|text_box| text_box.get_mut("id"))
+                .filter(|id| id.is_number());
+            if let Some(id) = id {
+                let at = seen
+                    .iter()
+                    .position(|known| known == id)
+                    .unwrap_or_else(|| {
+                        seen.push(id.clone());
+                        seen.len() - 1
+                    });
+                *id = Value::from(at + 1);
+            }
+            for child in map.values_mut() {
+                renumber_box_ids(child, seen);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn renumbered(mut answer: Value) -> Value {
+    renumber_box_ids(&mut answer, &mut Vec::new());
+    answer
+}
+
 fn hf_paragraphs(text: &str, args: &Value) -> Returned {
     let package = package(args)?;
     let compat_mode: f64 = number(args, "compatibilityMode")?;
@@ -596,11 +635,11 @@ fn hf_paragraphs(text: &str, args: &Value) -> Returned {
         )?;
         let mut run_image_ids: Vec<&String> = list.run_image_ids.iter().collect();
         run_image_ids.sort();
-        value(json!({
+        value(renumbered(json!({
             "paras": list.paras,
             "rowAnchorIds": list.row_anchor_ids,
             "runImageIds": run_image_ids,
-        }))
+        })))
     })
 }
 
@@ -628,13 +667,13 @@ fn hf_content(text: &str, args: &Value) -> Returned {
             compat_mode,
             ctx.media,
         )?;
-        value(json!({
+        value(renumbered(json!({
             "text": content.text,
             "hasPageNumber": content.has_page_number,
             "watermark": content.watermark,
             "watermarkPicture": content.watermark_picture,
             "paras": content.paras,
-        }))
+        })))
     })
 }
 
