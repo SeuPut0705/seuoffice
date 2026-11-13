@@ -523,26 +523,30 @@ impl App {
         self.emit(view, "slides:close-save-request", Vec::new());
         // failure/timeout = false: the renderer gets two minutes
         self.after(CLOSE_SAVE_TIMEOUT, move |app| {
-            let (own, current) = {
-                let mut state = app.state.borrow_mut();
-                let own = state
-                    .close_waiters
-                    .iter()
-                    .position(|w| w.1 == ticket)
-                    .map(|at| state.close_waiters.remove(at).2);
-                // `closeSaveWaiters.delete(contents.id)`: the view's current waiter goes too
-                let current = state
-                    .close_waiters
-                    .iter()
-                    .rposition(|w| w.0 == view)
-                    .map(|at| state.close_waiters.remove(at));
-                (own, current)
-            };
-            drop(current);
-            if let Some(own) = own {
-                own(false);
-            }
+            app.close_save_expired(view, ticket)
         });
+    }
+
+    /// The two minutes of save `ticket` are over. A save already answered
+    /// (or ended with its view) has no timer in the TypeScript, which clears
+    /// it on the answer: nothing happens then.
+    pub(crate) fn close_save_expired(&self, view: ViewId, ticket: u64) {
+        let (own, current) = {
+            let mut state = self.state.borrow_mut();
+            let Some(at) = state.close_waiters.iter().position(|w| w.1 == ticket) else {
+                return;
+            };
+            let own = state.close_waiters.remove(at).2;
+            // `closeSaveWaiters.delete(contents.id)`: the view's current waiter goes too
+            let current = state
+                .close_waiters
+                .iter()
+                .rposition(|w| w.0 == view)
+                .map(|at| state.close_waiters.remove(at));
+            (own, current)
+        };
+        drop(current);
+        own(false);
     }
 
     /// `requestSlidesClose(contents, parent)`

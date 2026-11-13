@@ -297,6 +297,48 @@ fn the_close_round_trip_waits_for_the_renderer_without_blocking() {
     assert_eq!(*answer.borrow(), Some(Ok(true)));
 }
 
+/// An answered save's timer is spent (the TypeScript clears it): when it
+/// fires anyway it leaves the view's newer save waiting for its own answer
+#[test]
+fn an_answered_saves_timer_leaves_the_next_save_waiting() {
+    let (_kit, registry, sender, _dir) = setup("slides-save-timer");
+    invoke(&registry, sender, "slides:new-blank", vec![num(960.0)]);
+    add_text(&registry, sender, "x");
+    let editor = slides_editor(&registry);
+    let app = super::APPS.with(|apps| apps.borrow().last().cloned().unwrap());
+    let save = |editor: &Rc<dyn DocumentEditors>| {
+        let answer: Rc<RefCell<Option<Result<bool, _>>>> = Rc::default();
+        let got = answer.clone();
+        editor.request_save(
+            ViewId(1),
+            SaveMode::Save,
+            Box::new(move |r| *got.borrow_mut() = Some(r)),
+        );
+        answer
+    };
+
+    let first = save(&editor);
+    let first_ticket = app.state.borrow().next_ticket;
+    invoke(
+        &registry,
+        sender,
+        "slides:close-save-result",
+        vec![IpcValue::Bool(true)],
+    );
+    assert_eq!(*first.borrow(), Some(Ok(true)));
+
+    let second = save(&editor);
+    app.close_save_expired(ViewId(1), first_ticket);
+    assert!(second.borrow().is_none(), "the next save still waits");
+    invoke(
+        &registry,
+        sender,
+        "slides:close-save-result",
+        vec![IpcValue::Bool(true)],
+    );
+    assert_eq!(*second.borrow(), Some(Ok(true)));
+}
+
 #[test]
 fn a_view_that_goes_ends_its_session_and_resumes_a_waiting_close() {
     let (kit, registry, sender, _dir) = setup("slides-gone");
