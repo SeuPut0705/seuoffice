@@ -30,7 +30,7 @@ shell, work = sys.argv[1:3]
 manifest = open(os.path.join(shell, "Cargo.toml")).read()
 # path dependencies and the regress patch point out of the folder
 manifest = manifest.replace('path = "../', 'path = "' + os.path.normpath(os.path.join(shell, "..")) + "/")
-manifest = manifest.replace("[dependencies]\n", '[dependencies]\ncef = { version = "=154.5.0", features = ["dox"] }\n', 1)
+manifest = manifest.replace('cef = "=154.5.0"', 'cef = { version = "=154.5.0", features = ["dox"] }', 1)
 open(os.path.join(work, "Cargo.toml"), "w").write(manifest)
 conf = json.load(open(os.path.join(shell, "tauri.conf.json")))
 conf["bundle"]["icon"] = [os.path.normpath(os.path.join(shell, i)) for i in conf["bundle"]["icon"]]

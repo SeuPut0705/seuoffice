@@ -4279,6 +4279,7 @@ name = "seuoffice-shell"
 version = "0.13.0"
 dependencies = [
  "base64 0.22.1",
+ "cef",
  "clipboard-rs",
  "dirs 6.0.0",
  "main-core",
