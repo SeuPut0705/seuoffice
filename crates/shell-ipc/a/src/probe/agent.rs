@@ -20,6 +20,13 @@
 //! `hosts.a.lang` is the UI language (`ko` by default). `randomUUID()` counts:
 //! the n-th is `00000000-0000-4000-8000-<n, 12 digits>`.
 //!
+//! Two triggers reach the events a session's MCP tools show in the window
+//! (`agent-window:skill-proposal`, `agent-window:install-proposal`), which no
+//! call of a renderer makes: `a/agent-propose-skill` `[sessionId, projectRoot,
+//! input]` and `a/agent-propose-install` `[sessionId, projectRoot, address]`
+//! call the session's skill hooks as `propose_skill` / `propose_skill_install`
+//! do. The answer is undefined, or the message the hook refused with.
+//!
 //! The host log gets one line per call, named after the TypeScript call it
 //! stands for: `["routeDocumentPath", path]`, `["userSkills.list"]`,
 //! `["userSkills.enabledForAgent", folder]`, `["buildAgentSkillBundle", [name]]`,
@@ -28,16 +35,22 @@
 //! `["session.send", text]`, `["session.answer", id, allow, scope]`,
 //! `["session.setOpenDocuments", paths]`, `["session.stop"]`.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use jscompat::{JsonValue, json_value_from_serde};
 use main_core::shell::agent::agent_session_folders::ExecRequest;
 use main_core::shell::agent::agent_sessions::{AgentSessionOptions, AgentSkillBundle};
-use main_core::shell::agent::agent_skills::{AgentSkillEntry, AgentSkillListEntry, DeckEntry};
+use main_core::shell::agent::agent_skills::{
+    AgentSkillEntry, AgentSkillListEntry, AgentSkillProposalInput, DeckEntry,
+};
 use main_core::shell::agent::agent_window::{TemplatePreviewInput, TemplatePreviewOutcome};
 use serde_json::{Value, json};
-use shell_contract::ViewId;
+use shell_contract::editors::Then;
+use shell_contract::runtime::Services;
+use shell_contract::{IpcError, IpcValue, ViewId};
 
 use super::{Log, push};
 use crate::agent::{
@@ -146,7 +159,15 @@ fn skill_entry(value: &Value) -> AgentSkillEntry {
     }
 }
 
+/// the skill hooks of each session started in the case, by session id: what a trigger calls
+#[derive(Clone, Default)]
+pub struct SessionHooks(Arc<Mutex<Vec<StartedHooks>>>);
+
+/// a session's id and its hooks
+type StartedHooks = (String, Arc<dyn SkillHooks>);
+
 struct Svc {
+    hooks: SessionHooks,
     world: Value,
     lang: String,
     log: Option<Log>,
@@ -281,13 +302,18 @@ impl AgentServices for Svc {
     fn start_app_mcp(
         &self,
         project_root: &str,
-        _session: &SessionRef,
-        _hooks: Arc<dyn SkillHooks>,
+        session: &SessionRef,
+        hooks: Arc<dyn SkillHooks>,
     ) -> Result<AppMcpStarted, Fault> {
         if self.world["mcpRuntime"] == json!(false) {
             return Err(Fault::new("the MCP runtime is not configured"));
         }
         push(&self.log, json!(["startAgentMcpServer", project_root]));
+        self.hooks
+            .0
+            .lock()
+            .expect("the hooks")
+            .push((session.session_id.clone(), hooks));
         let log = self.log.clone();
         Ok(AppMcpStarted {
             url: "http://127.0.0.1:1/mcp".into(),
@@ -370,14 +396,99 @@ impl AgentServices for Svc {
 pub fn insert(hosts: &mut shell_contract::Hosts, case: &Value, log: Option<Log>) {
     let world = &case["agent"];
     hosts.insert(crate::agent::factory());
+    let hooks = SessionHooks::default();
+    hosts.insert(hooks.clone());
     hosts.insert::<AgentWindowFrameHost>(Arc::new(Frame {
         view: Mutex::new(world["window"].as_u64().map(|view| ViewId(view as u32))),
         log: log.clone(),
     }));
     hosts.insert::<AgentServicesHost>(Arc::new(Svc {
+        hooks,
         world: world.clone(),
         lang: case["lang"].as_str().unwrap_or("ko").to_owned(),
         log,
         uuids: AtomicU64::new(0),
     }));
+}
+
+thread_local! {
+    /// the triggers waiting for their hook, by key (the core thread's)
+    static WAITING: RefCell<HashMap<u64, Then<IpcValue>>> = RefCell::new(HashMap::new());
+}
+
+static NEXT_WAIT: AtomicU64 = AtomicU64::new(1);
+
+fn text_of(value: &Value, key: &str) -> String {
+    value[key].as_str().unwrap_or_default().to_owned()
+}
+
+/// Runs the named trigger: `a/agent-propose-skill` `[sessionId, projectRoot, input]` and
+/// `a/agent-propose-install` `[sessionId, projectRoot, address]`; `false` for another name.
+/// The session is one started in the case; the answer is what the hook resolves to
+pub fn trigger(
+    name: &str,
+    _view: ViewId,
+    args: &Value,
+    services: &Services,
+    _provided: &std::rc::Rc<shell_contract::Provided>,
+    then: Then<IpcValue>,
+) -> bool {
+    if !matches!(name, "a/agent-propose-skill" | "a/agent-propose-install") {
+        return false;
+    }
+    let Some(store) = services.hosts.get::<SessionHooks>() else {
+        return false;
+    };
+    let session = args[0].as_str().unwrap_or_default();
+    let hooks = store
+        .0
+        .lock()
+        .expect("the hooks")
+        .iter()
+        .rev()
+        .find(|(id, _)| id == session)
+        .map(|(_, hooks)| hooks.clone());
+    let Some(hooks) = hooks else {
+        then(Err(IpcError {
+            name: Some("Error".into()),
+            message: format!("no session {session} was started"),
+        }));
+        return true;
+    };
+    let key = NEXT_WAIT.fetch_add(1, Ordering::Relaxed);
+    WAITING.with(|waiting| waiting.borrow_mut().insert(key, then));
+    let core = services.core.clone();
+    let done: Box<dyn FnOnce(Result<(), String>) + Send> = Box::new(move |result| {
+        core.post(Box::new(move || {
+            let then = WAITING.with(|waiting| waiting.borrow_mut().remove(&key));
+            if let Some(then) = then {
+                then(match result {
+                    Ok(()) => Ok(IpcValue::Undefined),
+                    Err(message) => Err(IpcError {
+                        name: Some("Error".into()),
+                        message,
+                    }),
+                });
+            }
+        }));
+    });
+    if name == "a/agent-propose-skill" {
+        let input = &args[2];
+        hooks.propose_skill(
+            AgentSkillProposalInput {
+                title: text_of(input, "title"),
+                name: text_of(input, "name"),
+                description: text_of(input, "description"),
+                body: text_of(input, "body"),
+                wants_template: input["wantsTemplate"] == json!(true),
+                target_id: text_of(input, "targetId"),
+                suggested_template_path: text_of(input, "suggestedTemplatePath"),
+            },
+            Vec::new(),
+            done,
+        );
+    } else {
+        hooks.propose_install(args[2].as_str().unwrap_or_default().to_owned(), done);
+    }
+    true
 }

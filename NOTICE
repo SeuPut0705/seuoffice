@@ -195,6 +195,19 @@ and this permission notice:
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
+Ajv, jsonschema
+
+The desktop shell checks an MCP tool's output against its outputSchema
+(crates/shell/src/host/net/tools/schema.rs) with the jsonschema crate
+(https://github.com/Stranger6667/jsonschema), and words what fails the way
+Ajv 8.20.0 (https://github.com/ajv-validator/ajv), which the MCP SDK used,
+words it: the message texts of its errorsText are restated there. Both are
+under the MIT License (the permission notice above), with these copyright
+lines:
+
+  Ajv: Copyright (c) 2015-2021 Evgeny Poberezkin
+  jsonschema: Copyright (c) 2020-2026 Dmitry Dygalo
+
 SeuOffice brand artwork
 
 The SeuOffice app icon and logo lockup are original compositions for this

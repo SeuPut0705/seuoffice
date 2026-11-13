@@ -22,11 +22,11 @@
  * (`webSearch`, `imageSearch` of `@seuoffice/ai-search`, replaced where
  * `search-tools.ts` imports them), `readUrlTool`, `aiToolCapabilities`,
  * `fetchRemoteImage` with `readBodyCapped`, `sharedSubscriptionStatuses` and
- * `isHeadlessMode`. `hosts.a.lang` is the UI language.
+ * `isHeadlessMode`. `hosts.a.lang` is the UI language. `hosts.a.now` pins
+ * `Date.now()` for the case, as the probe pins the Rust runtime's clock
+ * (`checkedAt` and `elapsedMs` of `ai:local-test`).
  *
  * Not compared (the unit tests of the Rust port cover them):
- * - `ai:local-test`: its answer carries `checkedAt` and `elapsedMs`, the clock
- *   of each side; the probe has no clock to fix on the Rust side;
  * - a stream's cancel and a closed view (the gate cannot end a view), the
  *   keepalive of a local server (5 second timer), the first listing of the key
  *   providers' models 5 seconds after start;
@@ -255,15 +255,24 @@ function scripted(answer: Scripted): unknown {
 const unhex = (hex: string): Uint8Array =>
   Uint8Array.from(hex.match(/../g) ?? [], (byte) => Number.parseInt(byte, 16))
 
+const REAL_DATE_NOW = Date.now
+
 async function load(cx: LoadContext): Promise<void> {
   const hostsA = (cx.case.hosts?.a ?? {}) as {
     aiCore?: World
     net?: { fetch?: FetchRule[] }
     lang?: string
+    now?: number
   }
   const world = hostsA.aiCore ?? {}
   const log = cx.electron.log
   globalThis.fetch = fakeFetch(hostsA.net?.fetch ?? [], log)
+  if (hostsA.now !== undefined) {
+    const now = hostsA.now
+    Date.now = () => now
+  } else {
+    Date.now = REAL_DATE_NOW
+  }
   setHeadlessMode(world.headless === true)
   const electron = cx.electron as unknown as {
     ipcMain: unknown
@@ -549,6 +558,51 @@ const cases: Case[] = [
       shell('ai:local-test-cancel', { testId: 't1' }),
       shell('ai:local-test-cancel', 't1'),
       shell('ai:local-test-cancel'),
+    ],
+  },
+  {
+    note: 'a local test: a malformed input is skipped; a server that answers 404 everywhere fails each check in turn',
+    views,
+    hosts: {
+      a: {
+        now: 1_700_000_000_000,
+        net: { fetch: [{ status: 404, body: ['no'], times: 'always' }] },
+      },
+    },
+    calls: [
+      shell('ai:local-test', {}),
+      shell('ai:local-test', { baseUrl: 'ftp://x', model: 'm' }),
+      shell('ai:local-test', { baseUrl: 'http://local.test:11434/v1', model: 'm', testId: 't1' }),
+    ],
+  },
+  {
+    note: 'a local test: the server lists other models, the picked one is missing unless typed; chat and tools refused',
+    views,
+    hosts: {
+      a: {
+        now: 1_700_000_000_000,
+        net: {
+          fetch: [
+            { urlIncludes: '/api/tags', status: 404, body: ['no'], times: 'always' },
+            {
+              urlIncludes: '/v1/models',
+              body: ['{"data":[{"id":"other"}]}'],
+              headers: { 'content-type': 'application/json' },
+              times: 'always',
+            },
+            {
+              method: 'POST',
+              status: 401,
+              body: ['{"error":{"message":"no key"}}'],
+              times: 'always',
+            },
+          ],
+        },
+      },
+    },
+    calls: [
+      shell('ai:local-test', { baseUrl: 'http://local.test:1234/v1', model: 'm' }),
+      shell('ai:local-test', { baseUrl: 'http://local.test:1234/v1', model: 'm', typed: true }),
     ],
   },
   {
