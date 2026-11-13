@@ -296,9 +296,7 @@ pub struct PdfTools {
     convert: convert::Convert,
 }
 
-// called by other areas (menus, Save As, the editor's ribbon) through the
-// provided table; unused until lib.rs re-exports the type for the shell
-#[allow(dead_code)]
+// called by other areas (menus, Save As, the editor's ribbon) through the provided table
 impl PdfTools {
     /// `requestPdfConvertDialog(contents, format, outPath)`
     pub fn request_convert_dialog(
@@ -405,8 +403,6 @@ pub(crate) fn entries(
 /// ipc-probe's `trigger` steps name them (`d2/pdf-tools:<what>`). `args` are
 /// the step's arguments; `then` gets the outcome. False for an unknown `what`.
 #[cfg(feature = "probe")]
-// lib.rs routes `d2/pdf-tools:` steps here once the lead wires triggers in
-#[allow(dead_code)]
 pub(crate) fn probe_trigger(
     what: &str,
     view: ViewId,
