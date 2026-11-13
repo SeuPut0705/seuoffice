@@ -713,8 +713,8 @@
   {
     "name": "win-probe-log",
     "file": "main-core/src/packages/electron_utils/print_window.rs",
-    "find": "ExecOutcome::Rejected(message) => log_probe_error(&message),",
-    "replace": "ExecOutcome::Rejected(_) => {}",
+    "find": "log_probe_error(&message);",
+    "replace": "let _ = message;",
     "fn": ["print-window.loadPrintHtml", "print-window.printHtmlDocument"]
   },
   {
@@ -1196,8 +1196,8 @@
   {
     "name": "print: the system dialog is asked to print silently",
     "file": "main-core/src/packages/electron_utils/print_window.rs",
-    "find": "silent: false,",
-    "replace": "silent: true,",
+    "find": "options.insert(\"silent\".into(), Value::Bool(false));",
+    "replace": "options.insert(\"silent\".into(), Value::Bool(true));",
     "fn": ["print-window.printHtmlDocument"]
   },
   {
@@ -1206,5 +1206,12 @@
     "find": "win.show().and_then(|()| win.focus())",
     "replace": "win.show()",
     "fn": ["print-window.printHtmlDocument"]
+  },
+  {
+    "name": "print-html-pdf: the job ends without releasing the window",
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": "WindowStep::Done(released.and(pdf))",
+    "replace": "WindowStep::Done(pdf)",
+    "fn": ["print-html-pdf.printHtmlToPdf"]
   }
 ]

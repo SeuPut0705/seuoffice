@@ -14,7 +14,7 @@ use jscompat::node_path::host::join;
 use jscompat::{js_regex, number_to_string, value_truthy};
 use serde_json::{Map, Number, Value};
 
-use super::super::fakes::{FakePrintRenderer, drive_print};
+use super::super::fakes::{FakeRenderer, drive_print};
 use super::super::{Answer, CallError, Context, arg, print_js, str_arg};
 use crate::packages::electron_utils::drop_open::{DropPartition, partition_drop_payload};
 use crate::packages::electron_utils::generate_handoff::{
@@ -24,7 +24,7 @@ use crate::packages::electron_utils::headless_export::{
     HeadlessExportOutcome, HeadlessExportRequest,
 };
 use crate::packages::electron_utils::print_window::{
-    ExecOutcome, JsError, PrintDialogWindow, PrintReport,
+    ExecOutcome, JsError, PrintDialogWindow, PrintReport, RendererAnswer, RendererCall,
 };
 use crate::packages::electron_utils::recovery_store::{
     RecoveryFileIdentity, RecoveryIdentity, RecoveryUntitledIdentity,
@@ -647,7 +647,24 @@ impl PrintWin<'_> {
     }
 }
 
-impl FakePrintRenderer for PrintWin<'_> {
+impl FakeRenderer for PrintWin<'_> {
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => RendererAnswer::Loaded(self.load_file(path)),
+            RendererCall::ExecuteJavaScript {
+                script,
+                user_gesture,
+                ..
+            } => RendererAnswer::Executed(self.execute_javascript(script, *user_gesture)),
+            RendererCall::Print { options } => RendererAnswer::Printed(self.print(options)),
+            RendererCall::PrintToPdf { .. } => {
+                RendererAnswer::Pdf(Err(JsError::plain("the slides print window prints no PDF")))
+            }
+        }
+    }
+}
+
+impl PrintWin<'_> {
     fn load_file(&mut self, path: &str) -> Result<(), JsError> {
         // the folder's random part is cut off, so both sides log the same
         let (dir, base) = path.rsplit_once('/').unwrap_or(("", path));
@@ -680,11 +697,8 @@ impl FakePrintRenderer for PrintWin<'_> {
         }
     }
 
-    fn print(&mut self, silent: bool, print_background: bool) -> Result<PrintReport, JsError> {
-        let mut options = Map::new();
-        options.insert("silent".into(), Value::Bool(silent));
-        options.insert("printBackground".into(), Value::Bool(print_background));
-        self.log.push(vec![text("print"), Value::Object(options)]);
+    fn print(&mut self, options: &Value) -> Result<PrintReport, JsError> {
+        self.log.push(vec![text("print"), options.clone()]);
         if self.mode("print") == Some("throws") {
             return Err(JsError::plain("print threw"));
         }

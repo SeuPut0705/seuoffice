@@ -8,74 +8,63 @@ use std::collections::VecDeque;
 use serde_json::Value;
 
 use crate::packages::electron_utils::message_box::{MessageBox, MessageBoxOptions, ParentWindow};
+use crate::packages::electron_utils::print_html_pdf::{PdfStep, PrintWindow};
 use crate::packages::electron_utils::print_window::{
-    ExecOutcome, JsError, LoadStep, PrintDialogOutcome, PrintDialogWindow, PrintReport, PrintStep,
+    JsError, LoadStep, PrintDialogOutcome, PrintDialogWindow, PrintStep, RendererAnswer,
+    RendererCall, WindowStep,
 };
 
-/// What a print window does when the renderer is awaited: a scenario's fake
-/// answers at once, so [`drive_print`] plays the Electron adapter and carries
-/// out each step of a print on it.
-pub(super) trait FakePrintRenderer {
-    /// `win.loadFile(path)`
-    fn load_file(&mut self, path: &str) -> Result<(), JsError>;
-    /// `webContents.executeJavaScript(script, userGesture)` as the race with
-    /// the timer came out
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome;
-    /// `webContents.print(options, callback)`: what the callback got
-    fn print(&mut self, silent: bool, print_background: bool) -> Result<PrintReport, JsError>;
+/// A window whose renderer a scenario scripts: it answers each call at once,
+/// so the drivers below play the Electron adapter and carry out every step of
+/// a job on it.
+pub(super) trait FakeRenderer {
+    /// what `call` comes to; a call the scenario lets hang until the job's
+    /// watchdog fires is [`RendererAnswer::TimedOut`]
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer;
 }
 
 /// Every step of `loadPrintHtml` carried out on the fake, up to its end.
-pub(super) fn drive_load<W: FakePrintRenderer>(
+pub(super) fn drive_load<W: FakeRenderer>(
     mut step: LoadStep,
     win: &mut W,
     log_probe_error: &mut dyn FnMut(&str),
 ) -> Result<String, JsError> {
     loop {
         step = match step {
-            LoadStep::Load { path, load } => load.on_loaded(win.load_file(&path)),
-            LoadStep::Probe {
-                script,
-                user_gesture,
-                load,
-            } => load.on_probe(
-                win.execute_javascript(script, user_gesture),
-                log_probe_error,
-            ),
-            LoadStep::Done(loaded) => return loaded,
+            WindowStep::Await { call, job } => job.resume(win.answer(&call), log_probe_error),
+            WindowStep::Done(loaded) => return loaded,
         }
     }
 }
 
 /// Every step of `printHtmlDocument` carried out on the fake, up to its end.
-pub(super) fn drive_print<W: PrintDialogWindow + FakePrintRenderer>(
+pub(super) fn drive_print<W: PrintDialogWindow + FakeRenderer>(
     mut step: PrintStep,
     win: &mut W,
     log_probe_error: &mut dyn FnMut(&str),
 ) -> Result<PrintDialogOutcome, JsError> {
     loop {
         step = match step {
-            PrintStep::Load { path, job } => {
-                let loaded = win.load_file(&path);
-                job.on_loaded(win, loaded)
+            WindowStep::Await { call, job } => {
+                let answer = win.answer(&call);
+                job.resume(win, answer, log_probe_error)
             }
-            PrintStep::Probe {
-                script,
-                user_gesture,
-                job,
-            } => {
-                let outcome = win.execute_javascript(script, user_gesture);
-                job.on_probe(win, outcome, log_probe_error)
+            WindowStep::Done(outcome) => return outcome,
+        }
+    }
+}
+
+/// Every step of a PDF job carried out on the window it made, up to its end.
+pub(super) fn drive_pdf<W: PrintWindow + FakeRenderer>(
+    mut step: PdfStep<W>,
+) -> Result<Vec<u8>, JsError> {
+    loop {
+        step = match step {
+            WindowStep::Await { call, mut job } => {
+                let answer = job.window().answer(&call);
+                job.resume(answer)
             }
-            PrintStep::Dialog {
-                silent,
-                print_background,
-                job,
-            } => {
-                let printed = win.print(silent, print_background);
-                job.on_printed(win, printed)
-            }
-            PrintStep::Done(outcome) => return outcome,
+            WindowStep::Done(pdf) => return pdf,
         }
     }
 }

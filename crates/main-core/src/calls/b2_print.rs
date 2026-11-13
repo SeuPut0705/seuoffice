@@ -12,7 +12,7 @@
 //! comparison's own: `emitDestroyed`, `setPlatform`), then the function itself
 //! with the remaining arguments, and answers `{ result?, state }`.
 
-use super::fakes::{FakePrintRenderer, drive_load, drive_print};
+use super::fakes::{FakeRenderer, drive_load, drive_pdf, drive_print};
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::packages::electron_utils::generate_handoff::{
     self, GenerateConvertKind, GenerateConvertTarget, GenerateHandoff, GenerateHandoffTarget,
@@ -37,13 +37,13 @@ use crate::packages::electron_utils::print_cups::{
     print_pdf_via_cups, print_to_pdf_options_for,
 };
 use crate::packages::electron_utils::print_html_pdf::{
-    PrintWindow, build_printable_html, parse_and_serialize, print_html_to_pdf,
+    PrintWindow, begin_print_html_to_pdf, build_printable_html, parse_and_serialize,
     sanitize_printable_body,
 };
 use crate::packages::electron_utils::print_job::{print_job_options, print_outcome};
 use crate::packages::electron_utils::print_window::{
     ExecOutcome, JsError, PRINT_READY_SCRIPT, PrintDialogWindow, PrintDocumentOptions, PrintReport,
-    begin_load_print_html, begin_print, rm_recursive_force,
+    RendererAnswer, RendererCall, begin_load_print_html, begin_print, rm_recursive_force,
 };
 use crate::packages::electron_utils::printer_options::{
     CommandOutcome, DRIVER_OPTION_NAMES, is_valid_option_name, is_valid_option_value,
@@ -480,12 +480,8 @@ impl<'a> FakeWindow<'a> {
     }
 }
 
-impl FakePrintRenderer for FakeWindow<'_> {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.load(path)
-    }
-
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome {
+impl FakeWindow<'_> {
+    fn execute(&mut self, script: &str, user_gesture: bool) -> ExecOutcome {
         self.log(vec![
             Value::from("executeJavaScript"),
             Value::from(script),
@@ -499,11 +495,8 @@ impl FakePrintRenderer for FakeWindow<'_> {
         }
     }
 
-    fn print(&mut self, silent: bool, print_background: bool) -> Result<PrintReport, JsError> {
-        let mut options = Map::new();
-        options.insert("silent".into(), Value::Bool(silent));
-        options.insert("printBackground".into(), Value::Bool(print_background));
-        self.log(vec![Value::from("print"), Value::Object(options)]);
+    fn print_dialog(&mut self, options: &Value) -> Result<PrintReport, JsError> {
+        self.log(vec![Value::from("print"), options.clone()]);
         if self.mode("print") == Some("throws") {
             return Err(JsError::plain("print threw"));
         }
@@ -519,6 +512,30 @@ impl FakePrintRenderer for FakeWindow<'_> {
                 .unwrap_or("")
                 .to_owned(),
         })
+    }
+
+    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError> {
+        self.log(vec![Value::from("printToPDF"), options.clone()]);
+        if self.mode("printToPDF") == Some("throws") {
+            return Err(JsError::plain("printToPDF threw"));
+        }
+        let pdf = self.mode("pdfHex").unwrap_or("");
+        unhex(pdf).map_err(|e| JsError::plain(e.message))
+    }
+}
+
+impl FakeRenderer for FakeWindow<'_> {
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => RendererAnswer::Loaded(self.load(path)),
+            RendererCall::ExecuteJavaScript {
+                script,
+                user_gesture,
+                ..
+            } => RendererAnswer::Executed(self.execute(script, *user_gesture)),
+            RendererCall::PrintToPdf { options } => RendererAnswer::Pdf(self.print_to_pdf(options)),
+            RendererCall::Print { options } => RendererAnswer::Printed(self.print_dialog(options)),
+        }
     }
 }
 
@@ -558,19 +575,6 @@ impl PrintDialogWindow for FakeWindow<'_> {
 }
 
 impl PrintWindow for FakeWindow<'_> {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.load(path)
-    }
-
-    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError> {
-        self.log(vec![Value::from("printToPDF"), options.clone()]);
-        if self.mode("printToPDF") == Some("throws") {
-            return Err(JsError::plain("printToPDF threw"));
-        }
-        let pdf = self.mode("pdfHex").unwrap_or("");
-        unhex(pdf).map_err(|e| JsError::plain(e.message))
-    }
-
     fn destroy(&mut self) -> Result<(), JsError> {
         PrintDialogWindow::destroy(self)
     }
@@ -712,7 +716,7 @@ fn print_html_to_pdf_call(args: &[Value], cx: &mut Context) -> Answer {
         }
         Ok(FakeWindow::new(script, &logs, Some(&work_dir)))
     };
-    let result = print_html_to_pdf(html, create, &tmp);
+    let result = drive_pdf(begin_print_html_to_pdf(html, create, &tmp));
     if let Some(dir) = work_dir.borrow().as_deref() {
         let _ = rm_recursive_force(dir);
     }
