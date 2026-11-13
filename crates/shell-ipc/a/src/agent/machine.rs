@@ -179,6 +179,60 @@ pub(super) fn uuid_v4() -> String {
     )
 }
 
+/// The object `owner.send(skillProposal, {...})` builds has `selected`, the proposal's `target`
+/// and the target's `editors` as keys whose value is `undefined` when not set; JSON leaves them
+/// out, so they are put back here (last in their object, as the literals order them)
+fn with_unset_card_keys(payload: &mut IpcValue) {
+    fn add_unset(entries: &mut Vec<(String, IpcValue)>, key: &str) {
+        if !entries.iter().any(|(name, _)| name == key) {
+            entries.push((key.to_owned(), IpcValue::Undefined));
+        }
+    }
+    let IpcValue::Object(card) = payload else {
+        return;
+    };
+    add_unset(card, "selected");
+    let Some((_, IpcValue::Object(proposal))) =
+        card.iter_mut().find(|(name, _)| name == "proposal")
+    else {
+        return;
+    };
+    add_unset(proposal, "target");
+    if let Some((_, IpcValue::Object(target))) =
+        proposal.iter_mut().find(|(name, _)| name == "target")
+    {
+        add_unset(target, "editors");
+    }
+}
+
+/// `agentSessionSkillsOf` builds each skill as `{id, name, source, plugin, title, description,
+/// invoke, skillMd, template}`, `plugin` and `template` being `undefined` when there is none;
+/// JSON leaves them out, so they are put back in their places in the start's `skills`
+fn with_unset_skill_keys(answer: &mut IpcValue) {
+    let IpcValue::Object(entries) = answer else {
+        return;
+    };
+    let Some((_, IpcValue::Array(skills))) = entries.iter_mut().find(|(name, _)| name == "skills")
+    else {
+        return;
+    };
+    for skill in skills {
+        let IpcValue::Object(fields) = skill else {
+            continue;
+        };
+        if !fields.iter().any(|(name, _)| name == "plugin") {
+            let at = fields
+                .iter()
+                .position(|(name, _)| name == "source")
+                .map_or(fields.len(), |source| source + 1);
+            fields.insert(at, ("plugin".to_owned(), IpcValue::Undefined));
+        }
+        if !fields.iter().any(|(name, _)| name == "template") {
+            fields.push(("template".to_owned(), IpcValue::Undefined));
+        }
+    }
+}
+
 /// `rm(dir, { recursive, force, maxRetries, retryDelay })`: whether it succeeded
 fn remove_with_retries(dir: &str, options: &RemoveOptions) -> bool {
     for attempt in 0..=options.max_retries {
@@ -1109,7 +1163,9 @@ impl Inner {
     fn start_step(self: &Rc<Self>, step: AgentWindowStartStep, reply: Responder) {
         match step {
             AgentWindowStartStep::Done(response) => {
-                reply.reply(Ok(from_json(&json_value_from_serde(&response))))
+                let mut answer = from_json(&json_value_from_serde(&response));
+                with_unset_skill_keys(&mut answer);
+                reply.reply(Ok(answer))
             }
             AgentWindowStartStep::Await { call, job } => {
                 let id = {
@@ -1349,11 +1405,15 @@ impl AgentSkillToolsDeps for SkillDeps<'_> {
         else {
             return;
         };
-        self.host.sh.services.events.emit(
-            Target::View(self.owner),
-            channel,
-            vec![from_json(&json_value_from_serde(payload))],
-        );
+        let mut payload = from_json(&json_value_from_serde(payload));
+        if Some(channel) == main_core::shell::agent::agent_api::agent_channel("skillProposal") {
+            with_unset_card_keys(&mut payload);
+        }
+        self.host
+            .sh
+            .services
+            .events
+            .emit(Target::View(self.owner), channel, vec![payload]);
     }
 
     fn list_skills(&mut self) -> Option<Result<Vec<AgentSkillListEntry>, Failure>> {

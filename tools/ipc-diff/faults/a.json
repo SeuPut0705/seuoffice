@@ -611,8 +611,8 @@
   {
     "name": "picked-paths-dropped",
     "file": "shell-ipc/a/src/user_skills.rs",
-    "find": "result.set(\"filePaths\", JsonValue::Array(paths));",
-    "replace": "result.set(\"filePaths\", JsonValue::Array(Vec::new()));",
+    "find": ".collect();\n        result.set(\"filePaths\", JsonValue::Array(paths));",
+    "replace": ".collect::<Vec<JsonValue>>();\n        result.set(\"filePaths\", JsonValue::Array(Vec::new()));",
     "groups": ["a/user-skills"]
   },
   {
@@ -721,10 +721,10 @@
     "groups": ["a/generate"]
   },
   {
-    "name": "generate-window-contents-id-zero",
+    "name": "generate-window-contents-id-offset",
     "file": "shell-ipc/a/src/generate/bridge.rs",
     "find": ".map_or(f64::NAN, |ViewId(id)| f64::from(id))",
-    "replace": ".map_or(0.0, |ViewId(id)| f64::from(id))",
+    "replace": ".map_or(f64::NAN, |ViewId(id)| f64::from(id) + 1.0)",
     "groups": ["a/generate"]
   },
   {
@@ -877,8 +877,15 @@
   {
     "name": "mcp-bridge-payload-dropped",
     "file": "shell-ipc/a/src/mcp/bridges.rs",
-    "find": "message.set(\"payload\", payload.clone());",
-    "replace": "let _ = payload;",
+    "find": "payload.map_or(IpcValue::Undefined, from_json),",
+    "replace": "IpcValue::Undefined,",
+    "groups": ["a/mcp-bridges"]
+  },
+  {
+    "name": "mcp-bridge-payload-key-omitted",
+    "file": "shell-ipc/a/src/mcp/bridges.rs",
+    "find": "            (\n                \"payload\".to_owned(),\n                payload.map_or(IpcValue::Undefined, from_json),\n            ),\n",
+    "replace": "",
     "groups": ["a/mcp-bridges"]
   },
   {
@@ -1325,15 +1332,36 @@
   {
     "name": "a skill card or install proposal is sent without its payload",
     "file": "shell-ipc/a/src/agent/machine.rs",
-    "find": "            vec![from_json(&json_value_from_serde(payload))],",
-    "replace": "            vec![IpcValue::Null],",
+    "find": "        let mut payload = from_json(&json_value_from_serde(payload));",
+    "replace": "        let mut payload = IpcValue::Null;",
     "groups": ["a/agent-window"]
   },
   {
     "name": "a skill card or install proposal is sent on the session event channel",
     "file": "shell-ipc/a/src/agent/machine.rs",
-    "find": "            Target::View(self.owner),\n            channel,\n",
-    "replace": "            Target::View(self.owner),\n            \"agent-window:event\",\n",
+    "find": ".emit(Target::View(self.owner), channel, vec![payload]);",
+    "replace": ".emit(Target::View(self.owner), \"agent-window:event\", vec![payload]);",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a skill card is sent without its undefined selected key",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "    add_unset(card, \"selected\");\n",
+    "replace": "",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a started session's skills carry no undefined template key",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            fields.push((\"template\".to_owned(), IpcValue::Undefined));\n",
+    "replace": "",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a card for a new skill is sent with an undefined target key left out",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "    add_unset(proposal, \"target\");\n",
+    "replace": "",
     "groups": ["a/agent-window"]
   }
 ]
