@@ -169,6 +169,7 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     probe::ai_core::insert(hosts, case, log.clone());
     probe::app_ai_image::insert(hosts, case, log.clone());
     probe::subscription::insert(hosts, case, log.clone());
+    probe::template_selection::insert(hosts, case);
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
         case, log,
     )));

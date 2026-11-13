@@ -1293,5 +1293,33 @@
     "find": "Some(RuntimeClock(clock)) => Box::new(move || clock()),",
     "replace": "Some(RuntimeClock(_)) => Box::new(now_ms),",
     "groups": ["a/ai-core"]
+  },
+  {
+    "name": "template selection: a set is not stored",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "                .set(&document, arg(&args, 0).as_ref())",
+    "replace": "                .get(&document)",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: a window without a deck reads the first deck",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": ".find_map(|documents| documents.document(view))",
+    "replace": ".find_map(|documents| documents.document(view).or_else(|| documents.document(ViewId(1))))",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: updatedAt is not sent",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "    object.set(\"updatedAt\", JsonValue::Number(selection.updated_at));",
+    "replace": "",
+    "groups": ["a/template-selection"]
+  },
+  {
+    "name": "template selection: the store ignores the pinned clock",
+    "file": "shell-ipc/a/src/template_selection.rs",
+    "find": "                        now: self.clock.clone().map(|RuntimeClock(clock)| {",
+    "replace": "                        now: None::<RuntimeClock>.map(|RuntimeClock(clock)| {",
+    "groups": ["a/template-selection"]
   }
 ]
