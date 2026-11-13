@@ -17,7 +17,10 @@
  */
 import { BrowserWindow } from 'electron'
 import { rm } from 'node:fs/promises'
-import { printPdfViaCups, printToPdfOptionsFor } from '../../../../packages/electron-utils/src/print-cups.ts'
+import {
+  printPdfViaCups,
+  printToPdfOptionsFor,
+} from '../../../../packages/electron-utils/src/print-cups.ts'
 import { printJobOptions, printOutcome } from '../../../../packages/electron-utils/src/print-job.ts'
 import { loadPrintHtml } from '../../../../packages/electron-utils/src/print-window.ts'
 import {
@@ -64,14 +67,30 @@ const advertised = [
 ].join('\n')
 
 const cases: Case[] = [
-  { note: 'printers: the case names none, so the probe offers "office"', views: slides, calls: [printers] },
+  {
+    note: 'printers: the case names none, so the probe offers "office"',
+    views: slides,
+    calls: [printers],
+  },
   {
     note: 'printers: an empty display name shows the name',
     views: slides,
-    hosts: { m: { printers: [{ name: 'q', displayName: '' }, { name: 'r', displayName: 'Room R' }] } },
+    hosts: {
+      m: {
+        printers: [
+          { name: 'q', displayName: '' },
+          { name: 'r', displayName: 'Room R' },
+        ],
+      },
+    },
     calls: [printers],
   },
-  { note: 'printers: none installed', views: slides, hosts: { m: { printers: [] } }, calls: [printers] },
+  {
+    note: 'printers: none installed',
+    views: slides,
+    hosts: { m: { printers: [] } },
+    calls: [printers],
+  },
   {
     note: 'printer-options: the groups the dialog presents, in the order the driver lists them',
     views: slides,
@@ -182,11 +201,43 @@ const cases: Case[] = [
     views: slides,
     files,
     calls: [
-      print({ ...deck, layout: 'notes', notes: ['<script>x</script> & "q"', 'two\nlines', ''], frame: true }),
-      print({ pngsBase64: ['a"b', '<x>', 'a b'], widthPx: 100, heightPx: 1000, layout: 'handout6', order: 'vertical', orientation: 'landscape' }),
-      print({ pngsBase64: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], widthPx: 10000, heightPx: 100, layout: 'handout4', order: 'vertical' }),
-      print({ pngsBase64: ['A', 'B'], widthPx: 1024, heightPx: 768, layout: 'handout9', notes: ['n'] }),
-      print({ pngsBase64: ['A'], widthPx: 800, heightPx: 600, layout: 'full', orientation: 'portrait', order: 'vertical', frame: false }),
+      print({
+        ...deck,
+        layout: 'notes',
+        notes: ['<script>x</script> & "q"', 'two\nlines', ''],
+        frame: true,
+      }),
+      print({
+        pngsBase64: ['a"b', '<x>', 'a b'],
+        widthPx: 100,
+        heightPx: 1000,
+        layout: 'handout6',
+        order: 'vertical',
+        orientation: 'landscape',
+      }),
+      print({
+        pngsBase64: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+        widthPx: 10000,
+        heightPx: 100,
+        layout: 'handout4',
+        order: 'vertical',
+      }),
+      print({
+        pngsBase64: ['A', 'B'],
+        widthPx: 1024,
+        heightPx: 768,
+        layout: 'handout9',
+        notes: ['n'],
+      }),
+      print({
+        pngsBase64: ['A'],
+        widthPx: 800,
+        heightPx: 600,
+        layout: 'full',
+        orientation: 'portrait',
+        order: 'vertical',
+        frame: false,
+      }),
       print({ pngsBase64: ['A'], widthPx: 1280, heightPx: 720, layout: 'handout3', notes: [] }),
       print({ pngsBase64: ['A'], widthPx: 1, heightPx: 3 }),
     ],
@@ -220,9 +271,26 @@ const cases: Case[] = [
           ],
         },
       }),
-      print({ ...deck, layout: 'notes', notes: ['a'], orientation: 'portrait', job: { deviceName: '' } }),
-      print({ ...deck, widthPx: 1000, heightPx: 1000, job: { deviceName: 'q', copies: 0, duplex: 'x' } }),
-      print({ ...deck, widthPx: 100, heightPx: 1000, layout: 'handout2', job: { deviceName: 'q' } }),
+      print({
+        ...deck,
+        layout: 'notes',
+        notes: ['a'],
+        orientation: 'portrait',
+        job: { deviceName: '' },
+      }),
+      print({
+        ...deck,
+        widthPx: 1000,
+        heightPx: 1000,
+        job: { deviceName: 'q', copies: 0, duplex: 'x' },
+      }),
+      print({
+        ...deck,
+        widthPx: 100,
+        heightPx: 1000,
+        layout: 'handout2',
+        job: { deviceName: 'q' },
+      }),
     ],
   },
   {
@@ -263,7 +331,13 @@ const cases: Case[] = [
     note: 'print: a silent job whose printToPDF rejects (macOS) or whose print fails with a reason (elsewhere)',
     views: slides,
     files,
-    hosts: { m: { pdfError: 'Printing failed', print: { success: false, failureReason: 'no paper' }, ...lp(0) } },
+    hosts: {
+      m: {
+        pdfError: 'Printing failed',
+        print: { success: false, failureReason: 'no paper' },
+        ...lp(0),
+      },
+    },
     calls: [print({ ...deck, job: { deviceName: 'q' } })],
   },
   {
@@ -304,7 +378,14 @@ export const group: Group = {
       ipcMain: {
         handle(
           channel: string,
-          fn: (event: { sender: Parameters<typeof BrowserWindow.fromWebContents>[0] & { getPrintersAsync(): Promise<{ name: string; displayName: string }[]> } }, ...args: never[]) => unknown,
+          fn: (
+            event: {
+              sender: Parameters<typeof BrowserWindow.fromWebContents>[0] & {
+                getPrintersAsync(): Promise<{ name: string; displayName: string }[]>
+              }
+            },
+            ...args: never[]
+          ) => unknown,
         ): void
       }
     }
@@ -377,8 +458,9 @@ export const group: Group = {
             }
             const result = await new Promise<{ success: boolean; failureReason: string }>(
               (resolve) => {
-                win.webContents.print({ ...opts, printBackground: true }, (success, failureReason) =>
-                  resolve({ success, failureReason }),
+                win.webContents.print(
+                  { ...opts, printBackground: true },
+                  (success, failureReason) => resolve({ success, failureReason }),
                 )
               },
             )

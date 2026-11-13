@@ -65,7 +65,13 @@ const cases: Case[] = [
     note: 'print: requests the schema would reject answer the same: the sender is checked first',
     views: sheets,
     files: { temp: { dir: true as const } },
-    calls: [print({ $: 'u' }), print(null), print({}), print({ ...request, scale: 9 }), print({ ...request, extra: 1 })],
+    calls: [
+      print({ $: 'u' }),
+      print(null),
+      print({}),
+      print({ ...request, scale: 9 }),
+      print({ ...request, extra: 1 }),
+    ],
   },
   {
     note: 'print: from a docs view the shell refuses the channel itself',
@@ -80,7 +86,10 @@ export const group: Group = {
     installPrintHosts(cx)
     const { ipcMain } = cx.electron as unknown as {
       ipcMain: {
-        handle(channel: string, fn: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void
+        handle(
+          channel: string,
+          fn: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown,
+        ): void
       }
     }
 

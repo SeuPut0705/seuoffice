@@ -64,7 +64,8 @@ function command(cx: LoadContext, file: string, args: unknown, stdinLength: numb
 
 /** The profile probe.rs's `PrintProfile` names for the web preferences a window was made with */
 function profileOf(options: unknown): string {
-  const prefs = (options as { webPreferences?: Record<string, unknown> } | undefined)?.webPreferences ?? {}
+  const prefs =
+    (options as { webPreferences?: Record<string, unknown> } | undefined)?.webPreferences ?? {}
   if (prefs.javascript === false) return 'static'
   if (prefs.partition !== undefined) return 'diagram'
   if (prefs.session !== undefined) return 'mindmap-export'
@@ -86,8 +87,13 @@ export function installPrintHosts(cx: LoadContext): void {
   os.tmpdir = () => (existsSync(temp) ? temp : realTmpdir())
 
   // the `lp` and `lpoptions` of CUPS; any other command is the harness's own
-  ;(childProcess as { spawn: unknown }).spawn = (file: string, args: string[], ...rest: unknown[]) => {
-    if (file !== '/usr/bin/lp') return (realSpawn as (...a: unknown[]) => unknown)(file, args, ...rest)
+  ;(childProcess as { spawn: unknown }).spawn = (
+    file: string,
+    args: string[],
+    ...rest: unknown[]
+  ) => {
+    if (file !== '/usr/bin/lp')
+      return (realSpawn as (...a: unknown[]) => unknown)(file, args, ...rest)
     const child = new EventEmitter() as EventEmitter & Record<string, unknown>
     child.stdout = new EventEmitter()
     child.stderr = new EventEmitter()
@@ -119,7 +125,8 @@ export function installPrintHosts(cx: LoadContext): void {
     const out = command(cx, file, args, 0)
     setImmediate(() => {
       if (!out) callback(new Error(`spawn ${file} ENOENT`), '', '')
-      else if (out.code !== 0) callback(new Error('Command failed'), out.stdout ?? '', out.stderr ?? '')
+      else if (out.code !== 0)
+        callback(new Error('Command failed'), out.stdout ?? '', out.stderr ?? '')
       else callback(null, out.stdout ?? '', out.stderr ?? '')
     })
     return undefined

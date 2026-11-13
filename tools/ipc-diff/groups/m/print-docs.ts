@@ -51,7 +51,14 @@ const cases: Case[] = [
   {
     note: 'printers: an empty display name shows the name, none at all gives an empty list',
     views: docs,
-    hosts: { m: { printers: [{ name: 'q', displayName: '' }, { name: 'r', displayName: 'Room R' }] } },
+    hosts: {
+      m: {
+        printers: [
+          { name: 'q', displayName: '' },
+          { name: 'r', displayName: 'Room R' },
+        ],
+      },
+    },
     calls: [printers],
   },
   {
@@ -119,12 +126,26 @@ const cases: Case[] = [
     note: 'print: out-of-range copies and an unknown duplex are dropped, not clamped',
     views: docs,
     hosts: { ...contents({ pdf: '25504446' }), m: lp(0) },
-    calls: [print(undef, job({ copies: 1000, duplex: 'diagonal', collate: 'yes', pageSizeIn: { width: 0, height: 5 } }), undef)],
+    calls: [
+      print(
+        undef,
+        job({
+          copies: 1000,
+          duplex: 'diagonal',
+          collate: 'yes',
+          pageSizeIn: { width: 0, height: 5 },
+        }),
+        undef,
+      ),
+    ],
   },
   {
     note: 'print: lp refuses and says why on stderr',
     views: docs,
-    hosts: { ...contents({ pdf: '25504446', print: false }), m: lp(1, 'out', 'lp: Unknown printer\n') },
+    hosts: {
+      ...contents({ pdf: '25504446', print: false }),
+      m: lp(1, 'out', 'lp: Unknown printer\n'),
+    },
     calls: [print(undef, job(), A4)],
   },
   {

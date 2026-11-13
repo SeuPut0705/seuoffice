@@ -74,7 +74,14 @@ const cases: Case[] = [
     note: 'requests that are no map page, before any window is made',
     views: mind,
     files,
-    calls: [print({ $: 'u' }), print(null), print('html'), print({}), print({ html: '' }), print({ html: 4 })],
+    calls: [
+      print({ $: 'u' }),
+      print(null),
+      print('html'),
+      print({}),
+      print({ html: '' }),
+      print({ html: 4 }),
+    ],
   },
 ]
 

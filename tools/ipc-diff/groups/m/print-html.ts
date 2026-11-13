@@ -19,7 +19,10 @@ import {
   printHtmlDocument,
   type PrintDialogOutcome,
 } from '../../../../packages/electron-utils/src/print-window.ts'
-import { assetBaseHref, buildPreviewDocument } from '../../../../apps/html/src/main/preview-document.ts'
+import {
+  assetBaseHref,
+  buildPreviewDocument,
+} from '../../../../apps/html/src/main/preview-document.ts'
 import { BrowserWindow } from 'electron'
 import type { Case, Group } from '../../types.ts'
 import { installPrintHosts } from './print/host.ts'

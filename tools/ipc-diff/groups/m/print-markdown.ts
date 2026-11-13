@@ -45,7 +45,7 @@ const cases: Case[] = [
     calls: [preview({ html })],
   },
   {
-    note: 'preview: Letter and landscape are taken, the margin is always the preview\'s',
+    note: "preview: Letter and landscape are taken, the margin is always the preview's",
     views: md,
     files,
     hosts: m({ pdf: '%PDF-1.4 md' }),
@@ -98,7 +98,11 @@ const cases: Case[] = [
     views: md,
     files,
     calls: [
-      document({ html, pages: { from: 2, to: 4 }, options: { pageSize: 'Letter', landscape: true } }),
+      document({
+        html,
+        pages: { from: 2, to: 4 },
+        options: { pageSize: 'Letter', landscape: true },
+      }),
       document({ html, pages: { from: 3, to: 3 }, options: { landscape: false } }),
     ],
   },
@@ -172,7 +176,10 @@ export const group: Group = {
     installPrintHosts(cx)
     const { ipcMain } = cx.electron as unknown as {
       ipcMain: {
-        handle(channel: string, fn: (event: { sender: { id: number } }, ...args: never[]) => unknown): void
+        handle(
+          channel: string,
+          fn: (event: { sender: { id: number } }, ...args: never[]) => unknown,
+        ): void
       }
     }
 

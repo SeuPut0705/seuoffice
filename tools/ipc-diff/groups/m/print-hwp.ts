@@ -35,13 +35,17 @@ import {
 } from '../../../../apps/hwp/src/main/print-document.ts'
 import type { PrintJob, PrintResult } from '../../../../apps/hwp/src/shared/ipc.ts'
 import { showSaveDialogWithMemory } from '../../../../packages/electron-utils/src/dialog-memory.ts'
-import { isHeadlessMode, setHeadlessMode } from '../../../../packages/electron-utils/src/headless-mode.ts'
+import {
+  isHeadlessMode,
+  setHeadlessMode,
+} from '../../../../packages/electron-utils/src/headless-mode.ts'
 import type { Case, Group } from '../../types.ts'
 import { hostConfig, installPrintHosts } from './print/host.ts'
 
 const hwp = [{ view: 1, window: 1, surface: 'Hwp' }]
 const files = { temp: { dir: true as const }, out: { dir: true as const } }
-const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path id="a" d="M0 0"/></svg>'
+const svg =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path id="a" d="M0 0"/></svg>'
 const page = { svg, width: 794, height: 1123 }
 const job = (extra: Record<string, unknown> = {}) => ({
   mode: 'pdf',
@@ -114,27 +118,42 @@ const cases: Case[] = [
         job({
           mode: 'print',
           images: ['data:image/png;base64,iVBORw0KGgo=', 'data:text/plain;base64,AAAA', 'x'],
-          pages: [{ svg: svg.replace('<path', '<image href="ieum-image:0"/><path'), width: 210, height: 297 }],
+          pages: [
+            {
+              svg: svg.replace('<path', '<image href="ieum-image:0"/><path'),
+              width: 210,
+              height: 297,
+            },
+          ],
         }),
       ),
     ],
   },
   {
-    note: 'print: pages the editor draws for print: ids made the page\'s own, pictures by file or data URL, sides snapped to paper',
+    note: "print: pages the editor draws for print: ids made the page's own, pictures by file or data URL, sides snapped to paper",
     views: hwp,
     files,
     calls: [
       print(
         job({
           mode: 'print',
-          images: ['data:image/jpeg;base64,/9j/4AA=', 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=', 'data:image/tiff;base64,AAAA', 'not a data url'],
+          images: [
+            'data:image/jpeg;base64,/9j/4AA=',
+            'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+            'data:image/tiff;base64,AAAA',
+            'not a data url',
+          ],
           pages: [
             {
               svg: '<svg><defs><clipPath id="c1"><rect/></clipPath></defs><g clip-path="url(#c1)" id="g"><use href="#g"/><image href="ieum-image:0"/><image href="ieum-image:2"/><image href="ieum-image:9"/></g></svg>',
               width: 793.7,
               height: 1122.52,
             },
-            { svg: '<svg id="c1"><text>한글 &amp; <b>x</b></text></svg>', width: 816, height: 1056 },
+            {
+              svg: '<svg id="c1"><text>한글 &amp; <b>x</b></text></svg>',
+              width: 816,
+              height: 1056,
+            },
             { svg: ' \n<svg/>', width: 0.5, height: 99999.5 },
             { svg: '<svg id="a" id="b"/>', width: 1122.52, height: 793.7 },
           ],
@@ -185,7 +204,7 @@ const cases: Case[] = [
     calls: [print(job())],
   },
   {
-    note: 'pdf: the stored language wins over the locale, the default folder is the case\'s',
+    note: "pdf: the stored language wins over the locale, the default folder is the case's",
     views: hwp,
     files: { ...files, 'userData/app-settings.json': '{"language":"ko"}' },
     hosts: { ...saves(null), m: { appLocale: 'en-US', defaultSaveDir: '$DIR/documents' } },
@@ -294,45 +313,48 @@ export const group: Group = {
 
     // hwp-main.ts:619-662
     const printing = new Set<number>()
-    ipcMain.handle('hwp:print-pages', async (e, job: unknown, options?: unknown): Promise<PrintResult> => {
-      const wcId = e.sender.id
-      const bad = badJob(job)
-      if (bad) return { ok: false, error: `hwp: ${bad}` }
-      const given =
-        options && typeof options === 'object' ? (options as { path?: unknown }).path : undefined
-      if (given !== undefined) {
-        const granted = pdfSaveAsByWc.get(wcId) ?? headlessPdfByWc.get(wcId)
-        if (typeof given !== 'string' || given !== granted || (job as PrintJob).mode !== 'pdf') {
-          return { ok: false, error: 'hwp: this PDF path was not picked in Save As' }
+    ipcMain.handle(
+      'hwp:print-pages',
+      async (e, job: unknown, options?: unknown): Promise<PrintResult> => {
+        const wcId = e.sender.id
+        const bad = badJob(job)
+        if (bad) return { ok: false, error: `hwp: ${bad}` }
+        const given =
+          options && typeof options === 'object' ? (options as { path?: unknown }).path : undefined
+        if (given !== undefined) {
+          const granted = pdfSaveAsByWc.get(wcId) ?? headlessPdfByWc.get(wcId)
+          if (typeof given !== 'string' || given !== granted || (job as PrintJob).mode !== 'pdf') {
+            return { ok: false, error: 'hwp: this PDF path was not picked in Save As' }
+          }
+          pdfSaveAsByWc.delete(wcId)
+          headlessPdfByWc.delete(wcId)
         }
-        pdfSaveAsByWc.delete(wcId)
-        headlessPdfByWc.delete(wcId)
-      }
-      if (printing.has(wcId)) return { ok: false, error: 'hwp: already printing' }
-      printing.add(wcId)
-      try {
-        const printJob = job as PrintJob
-        if (printJob.mode === 'print') {
-          await printJobToPrinter(printJob, printWindow)
-          return { ok: true }
-        }
-        const target = given ?? (await pickPdfTarget(e.sender))
-        if (!target) return { ok: true, canceled: true }
-        const pdf = await printJobToPdf(printJob, printWindow)
-        await atomicWriteFile(target, pdf)
-        if (isHeadlessMode()) return { ok: true, path: target }
+        if (printing.has(wcId)) return { ok: false, error: 'hwp: already printing' }
+        printing.add(wcId)
         try {
-          if (!runtime.openGeneratedPath?.(target)) shell.showItemInFolder(target)
+          const printJob = job as PrintJob
+          if (printJob.mode === 'print') {
+            await printJobToPrinter(printJob, printWindow)
+            return { ok: true }
+          }
+          const target = given ?? (await pickPdfTarget(e.sender))
+          if (!target) return { ok: true, canceled: true }
+          const pdf = await printJobToPdf(printJob, printWindow)
+          await atomicWriteFile(target, pdf)
+          if (isHeadlessMode()) return { ok: true, path: target }
+          try {
+            if (!runtime.openGeneratedPath?.(target)) shell.showItemInFolder(target)
+          } catch (err) {
+            console.warn('[hwp] could not open the exported PDF:', err)
+          }
+          return { ok: true, path: target }
         } catch (err) {
-          console.warn('[hwp] could not open the exported PDF:', err)
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        } finally {
+          printing.delete(wcId)
         }
-        return { ok: true, path: target }
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) }
-      } finally {
-        printing.delete(wcId)
-      }
-    })
+      },
+    )
   },
   cases,
 }

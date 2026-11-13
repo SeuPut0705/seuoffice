@@ -144,7 +144,7 @@ const cases: Case[] = [
   },
   {
     note: 'diag: a line is appended with the clock; an over-long or non-string line is dropped',
-    files: { userData: { dir: true } },
+    files: { userData: { dir: true as const } },
     calls: [
       call('docs:spell-diag', ['toggle on'], 'send'),
       call('docs:spell-diag', ['kick'], 'send'),
@@ -155,7 +155,7 @@ const cases: Case[] = [
   },
   {
     note: 'diag with another clock reading',
-    files: { userData: { dir: true } },
+    files: { userData: { dir: true as const } },
     hosts: { m: { now: 1234567890123 } },
     calls: [call('docs:spell-diag', ['later'], 'send')],
   },
@@ -404,8 +404,7 @@ export const group: Group = {
   },
   cases,
   single: {
-    'docs:spell-diag':
-      'a send answers nothing; what it does is the log file the cases compare',
+    'docs:spell-diag': 'a send answers nothing; what it does is the log file the cases compare',
     'docs:context-menu-claim':
       'answers true whatever the argument; the claim only matters to the native context-menu hook, which no channel call reaches',
   },
