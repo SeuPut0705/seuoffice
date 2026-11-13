@@ -5,14 +5,14 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use rfd::{MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
+use rfd::{MessageButtons, MessageDialog, MessageLevel};
 use shell_contract::hosts::{Dialogs, FileDialog, MessageBox, MessageBoxAnswer};
 use shell_contract::ids::WindowId;
 use shell_contract::runtime::Thread;
 use shell_contract::{DialogsHost, Hosts};
 use tauri::{AppHandle, Manager, Window};
 
-use super::{HostContext, on_ui};
+use super::{HostContext, message_box, on_ui};
 use crate::views::ViewTable;
 
 pub struct ShellDialogs {
@@ -74,71 +74,6 @@ fn file_dialog(options: &FileDialog, parent: Option<&Window>) -> rfd::FileDialog
     dialog
 }
 
-fn level_of(kind: Option<&str>) -> MessageLevel {
-    match kind {
-        Some("error") => MessageLevel::Error,
-        Some("warning") => MessageLevel::Warning,
-        _ => MessageLevel::Info,
-    }
-}
-
-/// `rfd` shows one to three buttons and no checkbox. A box outside that is
-/// answered as its cancel button (the last one when it names none) and logged:
-/// an in-page dialog for them is the batches' to build when a handler needs it.
-fn answer(options: &MessageBox, parent: Option<&Window>) -> MessageBoxAnswer {
-    let buttons = &options.buttons;
-    let cancelled = |why: &str| {
-        let index = options.cancel_id.unwrap_or(buttons.len().saturating_sub(1));
-        eprintln!(
-            "shell: dialog.showMessageBox: {why}; answered as button {index}: '{}'",
-            options.message
-        );
-        MessageBoxAnswer {
-            response: index,
-            checkbox_checked: false,
-        }
-    };
-    if options.checkbox_label.is_some() {
-        return cancelled("a checkbox is not supported by the native dialog");
-    }
-    let custom = match buttons.as_slice() {
-        [] => MessageButtons::Ok,
-        [a] => MessageButtons::OkCustom(a.clone()),
-        [a, b] => MessageButtons::OkCancelCustom(a.clone(), b.clone()),
-        [a, b, c] => MessageButtons::YesNoCancelCustom(a.clone(), b.clone(), c.clone()),
-        _ => return cancelled("more than three buttons are not supported by the native dialog"),
-    };
-    let mut dialog = MessageDialog::new()
-        .set_level(level_of(options.kind.as_deref()))
-        .set_buttons(custom)
-        .set_description(match &options.detail {
-            Some(detail) if !options.message.is_empty() => {
-                format!("{}\n\n{detail}", options.message)
-            }
-            Some(detail) => detail.clone(),
-            None => options.message.clone(),
-        });
-    if let Some(title) = &options.title {
-        dialog = dialog.set_title(title);
-    }
-    if let Some(parent) = parent {
-        dialog = dialog.set_parent(parent);
-    }
-    let response = match dialog.show() {
-        MessageDialogResult::Custom(label) => buttons.iter().position(|b| *b == label),
-        MessageDialogResult::Ok | MessageDialogResult::Yes => Some(0),
-        MessageDialogResult::Cancel | MessageDialogResult::No => {
-            Some(options.cancel_id.unwrap_or(buttons.len().saturating_sub(1)))
-        }
-    };
-    MessageBoxAnswer {
-        // a closed dialog (Escape, the close box) is the cancel button
-        response: response
-            .unwrap_or_else(|| options.cancel_id.unwrap_or(buttons.len().saturating_sub(1))),
-        checkbox_checked: false,
-    }
-}
-
 impl Dialogs for ShellDialogs {
     fn open(&self, parent: Option<WindowId>, options: &FileDialog) -> Option<Vec<PathBuf>> {
         let (app, views, options) = (self.app.clone(), self.views.clone(), options.clone());
@@ -169,7 +104,7 @@ impl Dialogs for ShellDialogs {
         let (app, views, options) = (self.app.clone(), self.views.clone(), options.clone());
         on_ui(&self.ui, move || {
             let window = parent_window(&app, &views, parent);
-            answer(&options, window.as_ref())
+            message_box::show(&options, window.as_ref())
         })
     }
 
