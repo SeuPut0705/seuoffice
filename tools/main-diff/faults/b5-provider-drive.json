@@ -1,0 +1,682 @@
+[
+  {
+    "name": "api: 401 is not \"not connected\" (control)",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "status == 401.0",
+    "replace": "status == 402.0",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.file"]
+  },
+  {
+    "name": "api: 404 is not \"not found\"",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "status == 404.0",
+    "replace": "status == 405.0",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.file", "drive-api.DriveApi.download"]
+  },
+  {
+    "name": "api: 429 is not a rate limit",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "status == 429.0",
+    "replace": "status == 428.0",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.download"]
+  },
+  {
+    "name": "api: export size limit is not too large",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "is(r, \"exportSizeLimitExceeded\")",
+    "replace": "is(r, \"exportSizeLimitExceededX\")",
+    "fn": ["drive-api.DriveApi.download", "drive-api.DriveApi.export"]
+  },
+  {
+    "name": "api: a rate limit reason that is not the user one is forbidden",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": " || is(r, \"rateLimitExceeded\")",
+    "replace": "",
+    "fn": ["drive-api.DriveApi.account"]
+  },
+  {
+    "name": "api: an unreadable 403 body is forbidden, not network",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": ".unwrap_or(DriveErrorKind::Network));",
+    "replace": ".unwrap_or(DriveErrorKind::Forbidden));",
+    "fn": ["drive-api.DriveApi.account"]
+  },
+  {
+    "name": "api: a redirect answer is taken for a success",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "if !response.ok() {",
+    "replace": "if response.status() >= 400.0 {",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.download"]
+  },
+  {
+    "name": "api: an empty token is a token",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "let Some(token) = token.filter(|t| !t.is_empty()) else {",
+    "replace": "let Some(token) = token else {",
+    "fn": ["drive-api.DriveApi.account"]
+  },
+  {
+    "name": "api: a header value may hold a character past 255",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "u32::from(c) > 255",
+    "replace": "u32::from(c) > 256",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a tab at the end of a header value stays",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "matches!(c, '\\t' | '\\n' | '\\r' | ' ')",
+    "replace": "matches!(c, '\\n' | '\\r' | ' ')",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a line feed inside a header value is allowed",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "value.contains(['\\0', '\\r', '\\n'])",
+    "replace": "value.contains(['\\0', '\\r'])",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: headers are not sorted",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "entries.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));",
+    "replace": "",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: header names keep their case",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "let name = name.to_lowercase();",
+    "replace": "let name = name.clone();",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a declared length equal to the cap is too large",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "declared.is_finite() && declared > max_bytes",
+    "replace": "declared.is_finite() && declared >= max_bytes",
+    "fn": ["drive-api.DriveApi.download", "drive-api.DriveApi.export"]
+  },
+  {
+    "name": "api: a body as large as the cap is too large",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "if total > max_bytes {",
+    "replace": "if total >= max_bytes {",
+    "fn": ["drive-api.DriveApi.download", "drive-api.DriveApi.export"]
+  },
+  {
+    "name": "api: a stream that fails is too large",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "Err(_) => return Err(DriveErrorKind::Network.into()),",
+    "replace": "Err(_) => return Err(DriveErrorKind::TooLarge.into()),",
+    "fn": ["drive-api.DriveApi.download", "drive-api.DriveApi.export"]
+  },
+  {
+    "name": "api: default page size",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "options.page_size.unwrap_or(100.0)",
+    "replace": "options.page_size.unwrap_or(50.0)",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: page size floor",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": ".unwrap_or(100.0), 1.0)",
+    "replace": ".unwrap_or(100.0), 0.0)",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: an empty page token is sent",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "if let Some(token) = options.page_token.as_deref().filter(|t| !t.is_empty()) {",
+    "replace": "if let Some(token) = options.page_token.as_deref() {",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: an upload session on another host is followed",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "session.starts_with(&format!(\"{DRIVE_UPLOAD_API}/\"))",
+    "replace": "session.starts_with(\"https://\")",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: an empty parent id is sent",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "parent_id.as_deref().filter(|p| !p.is_empty())",
+    "replace": "parent_id.as_deref()",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: an existing file is replaced with PUT",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "\"PATCH\",",
+    "replace": "\"PUT\",",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a new file is made with PATCH",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "\"POST\",",
+    "replace": "\"PATCH\",",
+    "fn": ["drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a request timeout of 20 s",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "const REQUEST_TIMEOUT_MS: f64 = 30_000.0;",
+    "replace": "const REQUEST_TIMEOUT_MS: f64 = 20_000.0;",
+    "fn": ["drive-api.DriveApi.account", "drive-api.DriveApi.file"]
+  },
+  {
+    "name": "api: a transfer timeout of 5 minutes",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "const TRANSFER_TIMEOUT_MS: f64 = 10.0 * 60.0 * 1000.0;",
+    "replace": "const TRANSFER_TIMEOUT_MS: f64 = 5.0 * 60.0 * 1000.0;",
+    "fn": ["drive-api.DriveApi.download", "drive-api.DriveApi.upload"]
+  },
+  {
+    "name": "api: a download asks for json",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "(\"alt\", \"media\")",
+    "replace": "(\"alt\", \"json\")",
+    "fn": ["drive-api.DriveApi.download"]
+  },
+  {
+    "name": "api: an export asks for text",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "query(&[(\"mimeType\", mime)])",
+    "replace": "query(&[(\"mimeType\", \"text/plain\")])",
+    "fn": ["drive-api.DriveApi.export"]
+  },
+  {
+    "name": "api: a size of 0 is no size",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "size.is_finite() && size >= 0.0",
+    "replace": "size.is_finite() && size > 0.0",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: a file that is no shortcut has a target",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "if file.mime_type == SHORTCUT_MIME",
+    "replace": "if !file.mime_type.is_empty()",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: any canEdit is true",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "member(&capabilities, \"canEdit\")? == Some(JsonValue::Bool(true))",
+    "replace": "member(&capabilities, \"canEdit\")?.is_some()",
+    "fn": ["drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: a missing modified time is not empty",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "string_of(member(raw, \"modifiedTime\")?).unwrap_or_default()",
+    "replace": "string_of(member(raw, \"modifiedTime\")?).unwrap_or(\"x\".into())",
+    "fn": ["drive-api.DriveApi.list", "drive-api.DriveApi.file"]
+  },
+  {
+    "name": "api: recent listing order",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "\"viewedByMeTime desc\"",
+    "replace": "\"modifiedTime desc\"",
+    "fn": ["drive-api.listingQuery", "drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: recent listing includes folders",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "\"mimeType != {} and trashed = false\"",
+    "replace": "\"mimeType = {} and trashed = false\"",
+    "fn": ["drive-api.listingQuery", "drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: a search matches names only",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": " or fullText contains {text}",
+    "replace": "",
+    "fn": ["drive-api.listingQuery", "drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: a quote is escaped before a backslash",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "value.replace('\\\\', \"\\\\\\\\\").replace('\\'', \"\\\\'\")",
+    "replace": "value.replace('\\'', \"\\\\'\").replace('\\\\', \"\\\\\\\\\")",
+    "fn": ["drive-api.queryLiteral", "drive-api.DriveApi.list"]
+  },
+  {
+    "name": "api: the Drive address",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "pub const DRIVE_API: &str = \"https://www.googleapis.com/drive/v3\";",
+    "replace": "pub const DRIVE_API: &str = \"http://www.googleapis.com/drive/v3\";",
+    "fn": ["drive-api.DRIVE_API", "drive-api.DriveApi.account"]
+  },
+  {
+    "name": "api: the open cap",
+    "file": "main-core/src/packages/google_drive/drive_api.rs",
+    "find": "pub const MAX_OPEN_BYTES: f64 = 300.0 * 1024.0 * 1024.0;",
+    "replace": "pub const MAX_OPEN_BYTES: f64 = 30.0 * 1024.0 * 1024.0;",
+    "fn": ["drive-api.MAX_OPEN_BYTES"]
+  },
+  {
+    "name": "formats: Google native needs the dot",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "mime_type.starts_with(\"application/vnd.google-apps.\")",
+    "replace": "mime_type.starts_with(\"application/vnd.google-apps\")",
+    "fn": ["formats.isGoogleNative"]
+  },
+  {
+    "name": "formats: a dot at the start is an extension",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "Some(dot) if dot > 0 =>",
+    "replace": "Some(dot) =>",
+    "fn": ["formats.extensionOf", "formats.openPlan"]
+  },
+  {
+    "name": "formats: the extension keeps its case",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "name[dot..].to_lowercase()",
+    "replace": "name[dot..].to_owned()",
+    "fn": ["formats.extensionOf", "formats.uploadMime"]
+  },
+  {
+    "name": "formats: an inherited property name is no export",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "if INHERITED.contains(&mime_type) {",
+    "replace": "if false {",
+    "fn": ["formats.openPlan"]
+  },
+  {
+    "name": "formats: a Google shortcut with an openable name is opened",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "if is_google_native(mime_type) {",
+    "replace": "if false {",
+    "fn": ["formats.openPlan"]
+  },
+  {
+    "name": "formats: an unknown upload type",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": ".map_or(\"application/octet-stream\", |(_, mime)| *mime)",
+    "replace": ".map_or(\"text/plain\", |(_, mime)| *mime)",
+    "fn": ["formats.uploadMime"]
+  },
+  {
+    "name": "formats: control characters stay in a local name",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "|?*\\p{Cc}]",
+    "replace": "|?*]",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: only dots are stripped from the end",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "r\"[. ]+$\"",
+    "replace": "r\"[.]+$\"",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: a local name is not trimmed",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "let cleaned = trim(&stripped);",
+    "replace": "let cleaned = stripped.as_str();",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: one unit too many is cut with the extension",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "Some(-(length as f64))",
+    "replace": "Some(-(length as f64) - 1.0)",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: lpt is not reserved",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "|com\\d|lpt\\d)$",
+    "replace": "|com\\d)$",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: a local name of 121 units",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "slice_to(&named, 120)",
+    "replace": "slice_to(&named, 121)",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: an empty local name is called doc",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "safe = \"document\".to_owned();",
+    "replace": "safe = \"doc\".to_owned();",
+    "fn": ["formats.localFileName"]
+  },
+  {
+    "name": "formats: an office copy name tests the end of the text",
+    "file": "main-core/src/packages/google_drive/formats.rs",
+    "find": "if extension_of(drive_name) == extension {",
+    "replace": "if drive_name.ends_with(extension) {",
+    "fn": ["formats.officeCopyName"]
+  },
+  {
+    "name": "oauth: an offline access type is online",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "(\"access_type\", \"offline\"),",
+    "replace": "(\"access_type\", \"online\"),",
+    "fn": ["oauth.googleAuthUrl", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the consent is not asked each time",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "(\"prompt\", \"consent\"),",
+    "replace": "(\"prompt\", \"none\"),",
+    "fn": ["oauth.googleAuthUrl", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a multiple pick is single",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "pairs.push((\"allow_multiple\", \"true\"));",
+    "replace": "pairs.push((\"allow_multiple\", \"false\"));",
+    "fn": ["oauth.googleAuthUrl", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the redirect names localhost",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "\"http://127.0.0.1:{}/callback\"",
+    "replace": "\"http://localhost:{}/callback\"",
+    "fn": ["oauth.redirectUri", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: one picked id too many",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "if out.len() >= MAX_PICKED_FILES {",
+    "replace": "if out.len() > MAX_PICKED_FILES {",
+    "fn": ["oauth.pickedFileIds"]
+  },
+  {
+    "name": "oauth: picked ids keep their duplicates",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "&& !out.iter().any(|seen| seen == trimmed)",
+    "replace": "",
+    "fn": ["oauth.pickedFileIds", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: an id of 201 characters is an id",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "{1,200}$\"",
+    "replace": "{1,201}$\"",
+    "fn": ["oauth.pickedFileIds"]
+  },
+  {
+    "name": "oauth: the PKCE verifier has 31 bytes",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "rt.random_bytes(32)",
+    "replace": "rt.random_bytes(31)",
+    "fn": ["oauth.pkcePair", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the state has 15 bytes",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "rt.random_bytes(16)",
+    "replace": "rt.random_bytes(15)",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: base64url keeps its padding",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": ".trim_end_matches('=')",
+    "replace": "",
+    "fn": ["oauth.pkcePair", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a POST is not needed to answer",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "if request.method != \"GET\"",
+    "replace": "if false",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: another path answers too",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "|| url.path() != \"/callback\"",
+    "replace": "",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a missing scope is not granted",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": ".is_none_or(|scope| scope.split(' ').any(|part| part == DRIVE_SCOPE))",
+    "replace": ".is_some_and(|scope| scope.split(' ').any(|part| part == DRIVE_SCOPE))",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: closing the picker is a refusal",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "None => self.settle.settle(CodeOutcome::Failed(if self.pick {",
+    "replace": "None => self.settle.settle(CodeOutcome::Failed(if !self.pick {",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the page cache header",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "(\"Cache-Control\".to_owned(), \"no-store\".to_owned())",
+    "replace": "(\"Cache-Control\".to_owned(), \"no-cache\".to_owned())",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the sign-in waits one minute",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "options.timeout_ms.unwrap_or(GOOGLE_SIGN_IN_TIMEOUT_MS)",
+    "replace": "options.timeout_ms.unwrap_or(60_000.0)",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a browser that did not open is fine",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "if !opened.truthy() {",
+    "replace": "if false {",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: the wait timer is left running",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "rt.clear_timeout(Some(timer));",
+    "replace": "",
+    "fn": ["oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a refused code is a network failure",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "return Ok(Err(GoogleSignInFailure::Denied));",
+    "replace": "return Ok(Err(GoogleSignInFailure::Network));",
+    "fn": ["oauth.exchangeGoogleCode", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: a scope without Drive passes",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "&& !scope.split(' ').any(|part| part == DRIVE_SCOPE)",
+    "replace": "&& scope.is_empty()",
+    "fn": ["oauth.exchangeGoogleCode", "oauth.signInWithGoogle"]
+  },
+  {
+    "name": "oauth: no margin on the expiry",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "seconds - 60.0",
+    "replace": "seconds - 30.0",
+    "fn": ["oauth.exchangeGoogleCode", "oauth.refreshGoogleToken"]
+  },
+  {
+    "name": "oauth: a revoked grant is another error",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "\"invalid_grant\".to_owned()",
+    "replace": "\"invalid_client\".to_owned()",
+    "fn": ["oauth.refreshGoogleToken"]
+  },
+  {
+    "name": "oauth: a revoke answer is always true",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "Ok(response.ok())",
+    "replace": "Ok(true)",
+    "fn": ["oauth.revokeGoogleToken"]
+  },
+  {
+    "name": "oauth: the token address",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "pub const GOOGLE_TOKEN_URL: &str = \"https://oauth2.googleapis.com/token\";",
+    "replace": "pub const GOOGLE_TOKEN_URL: &str = \"https://oauth2.googleapis.com/tokens\";",
+    "fn": ["oauth.GOOGLE_TOKEN_URL", "oauth.refreshGoogleToken"]
+  },
+  {
+    "name": "oauth: the sign-in cap of picked files",
+    "file": "main-core/src/packages/google_drive/oauth.rs",
+    "find": "pub const MAX_PICKED_FILES: usize = 50;",
+    "replace": "pub const MAX_PICKED_FILES: usize = 25;",
+    "fn": ["oauth.MAX_PICKED_FILES", "oauth.pickedFileIds"]
+  },
+  {
+    "name": "connection: a build without a client is disconnected",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "return DriveConnectionState::Unavailable;",
+    "replace": "return DriveConnectionState::Disconnected { expired: false };",
+    "fn": [
+      "connection.DriveConnection.state",
+      "connection.DriveConnection.connected",
+      "connection.DriveConnection.load"
+    ]
+  },
+  {
+    "name": "connection: the state says it was not kept",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "persisted: st.persisted,",
+    "replace": "persisted: true,",
+    "fn": ["connection.DriveConnection.connect", "connection.DriveConnection.state"]
+  },
+  {
+    "name": "connection: a kept token is not persisted",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "st.persisted = true;",
+    "replace": "st.persisted = false;",
+    "fn": ["connection.DriveConnection.load", "connection.DriveConnection.state"]
+  },
+  {
+    "name": "connection: a second load reads the vault again",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "self.core.st.borrow_mut().loaded = true;",
+    "replace": "",
+    "fn": ["connection.DriveConnection.load"]
+  },
+  {
+    "name": "connection: an empty kept token is a token",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "Ok(JsonValue::String(token)) if !token.is_empty() => Some(token),",
+    "replace": "Ok(JsonValue::String(token)) => Some(token),",
+    "fn": ["connection.DriveConnection.load"]
+  },
+  {
+    "name": "connection: a token that was not kept is persisted",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "Ok(kept) => kept.truthy(),",
+    "replace": "Ok(_) => true,",
+    "fn": ["connection.DriveConnection.connect"]
+  },
+  {
+    "name": "connection: a forgotten token is not expired",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "st.expired = expired;",
+    "replace": "st.expired = false;",
+    "fn": [
+      "connection.DriveConnection.load",
+      "connection.DriveConnection.state",
+      "connection.DriveConnection.onChange"
+    ]
+  },
+  {
+    "name": "connection: a revoked grant is not shown as expired",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "core.forget(true);",
+    "replace": "core.forget(false);",
+    "fn": ["connection.DriveConnection.load", "connection.DriveConnection.api"]
+  },
+  {
+    "name": "connection: a revoked grant stays in the vault",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "core.forget(true);\n            vault_clear(rt).await;",
+    "replace": "core.forget(true);",
+    "fn": ["connection.DriveConnection.load"]
+  },
+  {
+    "name": "connection: a token is reused only when it ran out",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "core.now(&rt) < st.expires_at",
+    "replace": "core.now(&rt) > st.expires_at",
+    "fn": ["connection.DriveConnection.api"]
+  },
+  {
+    "name": "connection: a finished refresh is shared by the next caller",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "core.st.borrow_mut().refreshing = None;",
+    "replace": "",
+    "fn": ["connection.DriveConnection.api"]
+  },
+  {
+    "name": "connection: a disconnect during a refresh does not win",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "if core.st.borrow().refresh_token.as_deref() != Some(refresh_token.as_str()) {",
+    "replace": "if false {",
+    "fn": ["connection.DriveConnection.disconnect"]
+  },
+  {
+    "name": "connection: a listener removed twice says so twice",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "Some(slot) => slot.take().is_some(),",
+    "replace": "Some(slot) => {\n                slot.take();\n                true\n            }",
+    "fn": ["connection.DriveConnection.onChange"]
+  },
+  {
+    "name": "connection: a second sign-in does not replace the first",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "previous.abort(None);",
+    "replace": "",
+    "fn": ["connection.DriveConnection.connect"]
+  },
+  {
+    "name": "connection: the account is always read again",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "if account.is_none() {",
+    "replace": "if true {",
+    "fn": ["connection.DriveConnection.pick"]
+  },
+  {
+    "name": "connection: the account is not kept through a pick",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "self.core.st.borrow_mut().account = Some(account.clone());",
+    "replace": "",
+    "fn": ["connection.DriveConnection.pick"]
+  },
+  {
+    "name": "connection: a token that was not kept stays in the vault",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "if !persisted {",
+    "replace": "if false {",
+    "fn": ["connection.DriveConnection.connect"]
+  },
+  {
+    "name": "connection: cancel does nothing",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "current.abort(None);",
+    "replace": "",
+    "fn": ["connection.DriveConnection.cancelConnect"]
+  },
+  {
+    "name": "connection: a disconnect is shown as expired",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "self.core.forget(false);",
+    "replace": "self.core.forget(true);",
+    "fn": ["connection.DriveConnection.disconnect"]
+  },
+  {
+    "name": "connection: the unavailable reason",
+    "file": "main-core/src/packages/google_drive/connection.rs",
+    "find": "ConnectFailure::Unavailable => \"unavailable\",",
+    "replace": "ConnectFailure::Unavailable => \"unavail\",",
+    "fn": ["connection.DriveConnection.connect", "connection.DriveConnection.pick"]
+  }
+]
