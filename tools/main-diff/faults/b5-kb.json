@@ -1,0 +1,874 @@
+[
+  {
+    "name": "kb: a page is one character more",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "pub const KB_READ_CHUNK_CHARS: f64 = 24_000.0;",
+    "replace": "pub const KB_READ_CHUNK_CHARS: f64 = 24_001.0;",
+    "fn": ["knowledge-base.KB_READ_CHUNK_CHARS", "knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb: the query cap is one more",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "const KB_QUERY_MAX_CHARS: f64 = 200.0;",
+    "replace": "const KB_QUERY_MAX_CHARS: f64 = 201.0;",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb: the query cap is one less",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "const KB_QUERY_MAX_CHARS: f64 = 200.0;",
+    "replace": "const KB_QUERY_MAX_CHARS: f64 = 199.0;",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb: the search pool is one less",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "const KB_SEARCH_POOL: f64 = 200.0;",
+    "replace": "const KB_SEARCH_POOL: f64 = 199.0;",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb: the text cache keeps nine",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "const KB_TEXT_CACHE_MAX: usize = 8;",
+    "replace": "const KB_TEXT_CACHE_MAX: usize = 9;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb: the text cache keeps seven",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "const KB_TEXT_CACHE_MAX: usize = 8;",
+    "replace": "const KB_TEXT_CACHE_MAX: usize = 7;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb: seventeen scopes are held",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "pub const KB_SCOPES_MAX: f64 = 16.0;",
+    "replace": "pub const KB_SCOPES_MAX: f64 = 17.0;",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb: fifteen scopes are held",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "pub const KB_SCOPES_MAX: f64 = 16.0;",
+    "replace": "pub const KB_SCOPES_MAX: f64 = 15.0;",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb: a created document may be one character longer",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "pub const KB_CREATE_MAX_CHARS: f64 = 2_000_000.0;",
+    "replace": "pub const KB_CREATE_MAX_CHARS: f64 = 2_000_001.0;",
+    "fn": ["knowledge-base.KB_CREATE_MAX_CHARS", "knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb: the not-in-base message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"path is not in the knowledge base\";",
+    "replace": "\"path is not in the knowledge-base\";",
+    "fn": ["knowledge-base.KB_NOT_IN_BASE", "knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb: the unknown-scope message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"knowledge-base scope is not open\";",
+    "replace": "\"knowledge-base scope is closed\";",
+    "fn": ["knowledge-base.KB_SCOPE_UNKNOWN", "knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb: the empty-group message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"knowledge-base group has no starred files\";",
+    "replace": "\"knowledge-base group has no files\";",
+    "fn": ["knowledge-base.KB_GROUP_EMPTY", "knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb: the declined-download message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"the person declined to download this file, which is not on this PC\";",
+    "replace": "\"the person declined to download this file\";",
+    "fn": ["knowledge-base.KB_DOWNLOAD_DECLINED", "knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb list: the extension keeps a name without a dot",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "replace_first(js_regex!(r\"^[^.]*.\"), 0, name, \"\")",
+    "replace": "replace_first(js_regex!(r\"^[^.]*\\.\"), 0, name, \"\")",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb list: the extension keeps its case",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "0, name, \"\").to_lowercase()",
+    "replace": "0, name, \"\")",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb list: a folder is listed",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if !stat.is_file() {",
+    "replace": "if false {",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb list: the folder is the file name",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "folder: basename(&folder_path, None),",
+    "replace": "folder: basename(path, None),",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb list: the name is the folder",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "name: basename(path, None),",
+    "replace": "name: dirname(path),",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb list: the size is one more",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "size_bytes: stat.len(),",
+    "replace": "size_bytes: stat.len() + 1,",
+    "fn": ["knowledge-base.listKnowledgeFiles"]
+  },
+  {
+    "name": "kb search: the query is not trimmed",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Result<Vec<KbSearchHit>, Thrown> {\n    let q = slice_utf16(trim(query), 0.0, Some(KB_QUERY_MAX_CHARS));",
+    "replace": "Result<Vec<KbSearchHit>, Thrown> {\n    let q = slice_utf16(query, 0.0, Some(KB_QUERY_MAX_CHARS));",
+    "fn": ["knowledge-base.searchKnowledgeBase", "knowledge-base.searchSavedKnowledgeBase"]
+  },
+  {
+    "name": "kb search: a blank query searches",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if q.is_empty() {\n        return Ok(Vec::new());\n    }\n    let starred",
+    "replace": "if false {\n        return Ok(Vec::new());\n    }\n    let starred",
+    "fn": ["knowledge-base.searchKnowledgeBase", "knowledge-base.searchSavedKnowledgeBase"]
+  },
+  {
+    "name": "kb search: the query is sent whole",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let pool = search(&q, KB_SEARCH_POOL)?;",
+    "replace": "let pool = search(query, KB_SEARCH_POOL)?;",
+    "fn": ["knowledge-base.searchKnowledgeBase"]
+  },
+  {
+    "name": "kb search: a hit outside the starred set is kept",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if !starred.contains(hit.path.as_str()) || seen.contains(hit.path.as_str()) {",
+    "replace": "if seen.contains(hit.path.as_str()) {",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb search: a path is kept twice",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if !starred.contains(hit.path.as_str()) || seen.contains(hit.path.as_str()) {",
+    "replace": "if !starred.contains(hit.path.as_str()) {",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb search: one hit more than the limit",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if out.len() as f64 >= limit {",
+    "replace": "if out.len() as f64 > limit {",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb search: the folder is the whole folder path",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "folder: basename(&dirname(&hit.path), None),",
+    "replace": "folder: dirname(&hit.path),",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb search: a missing snippet is a dash",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "snippet: hit.snippet_text.clone().unwrap_or_default(),",
+    "replace": "snippet: hit.snippet_text.clone().unwrap_or(\"-\".to_owned()),",
+    "fn": [
+      "knowledge-base.searchKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeBase",
+      "knowledge-base.searchSavedKnowledgeWithProject"
+    ]
+  },
+  {
+    "name": "kb search: unsaved files are searched",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "search_knowledge_base(search, query, &saved, limit)",
+    "replace": "search_knowledge_base(search, query, starred_paths, limit)",
+    "fn": ["knowledge-base.searchSavedKnowledgeBase"]
+  },
+  {
+    "name": "kb search with project: the query is not trimmed",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "};\n    let q = slice_utf16(trim(query), 0.0, Some(KB_QUERY_MAX_CHARS));",
+    "replace": "};\n    let q = slice_utf16(query, 0.0, Some(KB_QUERY_MAX_CHARS));",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: a blank query searches",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if q.is_empty() {\n        return Ok(Vec::new());\n    }\n    let saved",
+    "replace": "if false {\n        return Ok(Vec::new());\n    }\n    let saved",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: the query is sent whole",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "search(&q, KB_SEARCH_POOL, Some(&mut narrowed))?",
+    "replace": "search(query, KB_SEARCH_POOL, Some(&mut narrowed))?",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: no project asks the index for a narrowed query",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "&mut |q: &str, n: f64| search(q, n, None),",
+    "replace": "&mut |q: &str, n: f64| search(q, n, Some(&mut |_path: &str| -> Result<bool, Thrown> { Ok(true) })),",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: unsaved starred files are searched",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "    let saved = without_unsaved_files(open_files, starred_paths, |path| path.clone());\n    let starred",
+    "replace": "    let saved = without_unsaved_files(&OpenFilesHolder::new(), starred_paths, |path| path.clone());\n    let starred",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: a starred file needs the project to see it",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if starred.contains(path) {",
+    "replace": "if false {",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: starred files go to the on-disk check",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".filter(|hit| !starred.contains(hit.path.as_str()))",
+    "replace": ".filter(|hit| starred.contains(hit.path.as_str()))",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: project files open with changes are searched",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "without_unsaved_files(open_files, &indexed_as_on_disk(&from_project), |path| {",
+    "replace": "without_unsaved_files(&OpenFilesHolder::new(), &indexed_as_on_disk(&from_project), |path| {",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: project files need not be indexed as on disk",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".filter(|path| starred.contains(path) || project_ok.contains(path))",
+    "replace": ".filter(|path| starred.contains(path) || project_ok.contains(path) || true)",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: project hits are dropped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".filter(|path| starred.contains(path) || project_ok.contains(path))",
+    "replace": ".filter(|path| starred.contains(path))",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: starred hits are dropped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".filter(|path| starred.contains(path) || project_ok.contains(path))",
+    "replace": ".filter(|path| project_ok.contains(path))",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb search with project: the page is filtered by the starred set only",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Ok(filter_pool(&pool, &allowed, limit))",
+    "replace": "Ok(filter_pool(&pool, &starred, limit))",
+    "fn": ["knowledge-base.searchSavedKnowledgeWithProject"]
+  },
+  {
+    "name": "kb read: the page ignores the offset",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "text: slice_utf16(&text, start, Some(start + KB_READ_CHUNK_CHARS)),",
+    "replace": "text: slice_utf16(&text, start, Some(KB_READ_CHUNK_CHARS)),",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: the offset is not floored",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "math_max(0.0, offset.floor())",
+    "replace": "math_max(0.0, offset)",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: a negative offset counts from the end",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "math_max(0.0, offset.floor())",
+    "replace": "offset.floor()",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: an infinite offset is kept",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if offset.is_finite() {",
+    "replace": "if !offset.is_nan() {",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: the length counts characters",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let length = text.encode_utf16().count();",
+    "replace": "let length = text.chars().count();",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: an empty page reports no total",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            text: String::new(),\n            total_chars: length as u64,",
+    "replace": "            text: String::new(),\n            total_chars: 0,",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: a page reports the total of the page",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "        total_chars: length as u64,\n        offset: start,\n    })\n}\n\n// ----",
+    "replace": "        total_chars: 1,\n        offset: start,\n    })\n}\n\n// ----",
+    "fn": ["knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: a cached file is read before the unsaved check",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "    assert_file_saved(open_files, file_path).map_err(|message| Thrown(message.to_owned()))?;",
+    "replace": "    if let Some(cached) = cache.entries.get(file_path) {\n        return Ok(cached.text.clone());\n    }\n    assert_file_saved(open_files, file_path).map_err(|message| Thrown(message.to_owned()))?;",
+    "fn": ["knowledge-base.readKnowledgeFileText", "knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: a file with unsaved changes is read",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "    assert_file_saved(open_files, file_path).map_err(|message| Thrown(message.to_owned()))?;",
+    "replace": "    let _ = assert_file_saved(open_files, file_path);",
+    "fn": ["knowledge-base.readKnowledgeFileText", "knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: the stat error is an lstat",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "node_error(&error, \"stat\", file_path).message",
+    "replace": "node_error(&error, \"lstat\", file_path).message",
+    "fn": ["knowledge-base.readKnowledgeFileText", "knowledge-base.readKnowledgeFilePage"]
+  },
+  {
+    "name": "kb read: the stamp has no mtime",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "number_to_string(stat.mtime_ms),",
+    "replace": "\"0\".to_owned(),",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the stamp has no size",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "        number_to_string(stat.size as f64)\n    );",
+    "replace": "        \"0\".to_owned()\n    );",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a stale entry is returned",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "&& cached.stamp == stamp",
+    "replace": "&& true",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: nothing is cached",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "cache.insert(file_path, stamp, text.clone());",
+    "replace": "let _ = &stamp;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the newest entry is evicted",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let oldest = self.entries.keys().next().map(str::to_owned);",
+    "replace": "let oldest = self.entries.keys().last().map(str::to_owned);",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the cache evicts at the limit",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if self.entries.len() > KB_TEXT_CACHE_MAX {",
+    "replace": "if self.entries.len() >= KB_TEXT_CACHE_MAX {",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a refreshed entry goes to the end",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "self.entries.set(path, CachedText { stamp, text });",
+    "replace": "self.entries.delete(path);\n        self.entries.set(path, CachedText { stamp, text });",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a file of the cap is refused",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if stat.size as f64 > cap {",
+    "replace": "if stat.size as f64 >= cap {",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: every format has the knowledge cap",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let cap = kb_read_max_bytes(file_path);",
+    "replace": "let cap = KB_READ_MAX_BYTES;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the size is not rounded",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "number_to_string(math_round(stat.size as f64 / 1024.0 / 1024.0)),",
+    "replace": "number_to_string(stat.size as f64 / 1024.0 / 1024.0),",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the cap is in kilobytes",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "number_to_string(cap / 1024.0 / 1024.0)",
+    "replace": "number_to_string(cap / 1024.0)",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: the too-large message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"file too large to read ({}MB, cap {}MB)\"",
+    "replace": "\"file too large to read ({}MB, max {}MB)\"",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a parser that throws is unreadable",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".map_err(|failure| Thrown(failure.0))?;",
+    "replace": ".map_err(|_failure| Thrown(\"unreadable file\".to_owned()))?;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a refused parse with text is read",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let readable = parsed.ok && parsed.kind.as_deref() == Some(\"text\");",
+    "replace": "let readable = parsed.kind.as_deref() == Some(\"text\");",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: a parse with no kind is read",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let readable = parsed.ok && parsed.kind.as_deref() == Some(\"text\");",
+    "replace": "let readable = parsed.ok;",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb read: an unreadable file has another message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "parsed.error.unwrap_or_else(|| \"unreadable file\".to_owned())",
+    "replace": "parsed.error.unwrap_or_else(|| \"unreadable\".to_owned())",
+    "fn": ["knowledge-base.readKnowledgeFileText"]
+  },
+  {
+    "name": "kb scopes: the default ids are 12 bytes",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Self::new(Box::new(|| random_hex(24)), KB_SCOPES_MAX)",
+    "replace": "Self::new(Box::new(|| random_hex(12)), KB_SCOPES_MAX)",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a group name may be empty",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(group) if !group.is_empty() && group_of.values().any(|held| held == group) => {",
+    "replace": "Some(group) if group_of.values().any(|held| held == group) => {",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: any group name is taken",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(group) if !group.is_empty() && group_of.values().any(|held| held == group) => {",
+    "replace": "Some(group) if !group.is_empty() => {",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a project scope takes any group",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbStarredReach::Group(checked_group_name(Some(&group), group_of)?)",
+    "replace": "KbStarredReach::Group(group)",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a scope opened for a group names a project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            starred: KbStarredReach::Group(group),\n            project_id: None,",
+    "replace": "            starred: KbStarredReach::Group(group),\n            project_id: Some(String::new()),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a project scope names no project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            starred: reach,\n            project_id: Some(project_id.to_owned()),",
+    "replace": "            starred: reach,\n            project_id: None,",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the tools scope reads every starred file",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            starred: KbStarredReach::None,\n            project_id: Some(project_id.to_owned()),",
+    "replace": "            starred: KbStarredReach::All,\n            project_id: Some(project_id.to_owned()),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the oldest is dropped at the limit",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "while self.scopes.len() as f64 > self.max {",
+    "replace": "while self.scopes.len() as f64 >= self.max {",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the newest is dropped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let Some(oldest) = self.scopes.keys().next().map(str::to_owned) else {",
+    "replace": "let Some(oldest) = self.scopes.keys().last().map(str::to_owned) else {",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: another window can use a scope",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(held) if held.owner == owner => Ok(Some(held)),",
+    "replace": "Some(held) => Ok(Some(held)),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: another window can close a scope",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".is_some_and(|held| held.owner == owner)",
+    "replace": ".is_some()",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: an unknown scope is unscoped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "_ => Err(Thrown(KB_SCOPE_UNKNOWN.to_owned())),",
+    "replace": "_ => Ok(None),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a call without a scope is refused",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let Some(scope) = scope else {\n            return Ok(None);\n        };",
+    "replace": "let Some(scope) = scope else {\n            return Err(Thrown(KB_SCOPE_UNKNOWN.to_owned()));\n        };",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: an unscoped call narrows to nothing",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "None => return Ok(paths.to_vec()),",
+    "replace": "None => return Ok(Vec::new()),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the all scope narrows to nothing",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbStarredReach::All => Ok(paths.to_vec()),",
+    "replace": "KbStarredReach::All => Ok(Vec::new()),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the none scope narrows to everything",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbStarredReach::None => Ok(Vec::new()),",
+    "replace": "KbStarredReach::None => Ok(paths.to_vec()),",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a group scope narrows to the other groups",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".filter(|path| groups.get(path).is_some_and(|held| held == group))",
+    "replace": ".filter(|path| groups.get(path).is_some_and(|held| held != group))",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: a scope names no project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": ".and_then(|held| held.project_id.clone()))",
+    "replace": ".and_then(|_held| None))",
+    "fn": ["knowledge-base.KbRunScopes"]
+  },
+  {
+    "name": "kb scopes: the tools scope is not closed",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbRunScopes::close(self, owner, scope);",
+    "replace": "let _ = (owner, scope);",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "kb scopes: the tools scope names no project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbRunScopes::project_of(self, owner, Some(raw))",
+    "replace": "KbRunScopes::project_of(self, owner, None)",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "kb scopes: the tools scope opens with no project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            starred: KbStarredReach::None,\n            project_id: Some(project_id.to_owned()),",
+    "replace": "            starred: KbStarredReach::None,\n            project_id: Some(String::new()),",
+    "fn": ["project-tools.ProjectFolderTools"]
+  },
+  {
+    "name": "kb open scope: a missing group is undefined",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "group: Some(req.get(\"group\").cloned().unwrap_or(JsonValue::Null)),",
+    "replace": "group: req.get(\"group\").cloned(),",
+    "fn": ["knowledge-base.parseKbOpenScope"]
+  },
+  {
+    "name": "kb open scope: an empty project id is a project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(JsonValue::String(id)) if !id.is_empty() => Some(id.clone()),",
+    "replace": "Some(JsonValue::String(id)) => Some(id.clone()),",
+    "fn": ["knowledge-base.parseKbOpenScope"]
+  },
+  {
+    "name": "kb open scope: a group alone is null",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "group: raw.cloned(),",
+    "replace": "group: Some(JsonValue::Null),",
+    "fn": ["knowledge-base.parseKbOpenScope"]
+  },
+  {
+    "name": "kb create request: the format is case blind",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(JsonValue::String(format)) if format == \"md\" => KbCreateFormat::Md,",
+    "replace": "Some(JsonValue::String(format)) if format.eq_ignore_ascii_case(\"md\") => KbCreateFormat::Md,",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the docx format is case blind",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(JsonValue::String(format)) if format == \"docx\" => KbCreateFormat::Docx,",
+    "replace": "Some(JsonValue::String(format)) if format.eq_ignore_ascii_case(\"docx\") => KbCreateFormat::Docx,",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the format message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"format must be \\\"md\\\" or \\\"docx\\\"\".to_owned()",
+    "replace": "\"format must be md or docx\".to_owned()",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the empty message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"content must not be empty\".to_owned()",
+    "replace": "\"content is empty\".to_owned()",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the length message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"content is too long\".to_owned()",
+    "replace": "\"content is too large\".to_owned()",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: white space is content",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if trim(content).is_empty() {",
+    "replace": "if content.is_empty() {",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the length counts characters",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "content.encode_utf16().count() as f64 > KB_CREATE_MAX_CHARS",
+    "replace": "content.chars().count() as f64 > KB_CREATE_MAX_CHARS",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the maximum is refused",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "content.encode_utf16().count() as f64 > KB_CREATE_MAX_CHARS",
+    "replace": "content.encode_utf16().count() as f64 >= KB_CREATE_MAX_CHARS",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the title is dropped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "Some(JsonValue::String(title)) => title.clone(),",
+    "replace": "Some(JsonValue::String(_title)) => String::new(),",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create request: the content is trimmed",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "content: content.to_owned(),",
+    "replace": "content: trim(content).to_owned(),",
+    "fn": ["knowledge-base.parseKbCreateRequest"]
+  },
+  {
+    "name": "kb create: the title is not sanitized",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "deps.sanitize_base(&req.title)?,\n        req.format.as_str()",
+    "replace": "req.title.clone(),\n        req.format.as_str()",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: the project is ignored",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if let Some(project) = deps.project() {",
+    "replace": "if let Some(project) = deps.project().filter(|_| false) {",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: a project gets no markdown bytes",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbCreateFormat::Md => project.write(&file_name, req.content.as_bytes())?,",
+    "replace": "KbCreateFormat::Md => project.write(&file_name, &[])?,",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: a project makes word from nothing",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let bytes = project.docx_bytes(&req.content)?;",
+    "replace": "let bytes = project.docx_bytes(\"\")?;",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: a project record failure is ignored",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "deps.record_recent(&written)?;",
+    "replace": "let _ = deps.record_recent(&written);",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: a project answers the file name",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "return Ok(KbCreated { path: written });",
+    "replace": "return Ok(KbCreated { path: file_name });",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: the folder is never asked",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let dir = deps.dir()?;",
+    "replace": "let dir = String::new();",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: the path is not made unique",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "let path = deps.unique_path(&dir, &file_name)?;",
+    "replace": "let path = format!(\"{dir}/{file_name}\");",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: markdown is converted",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbCreateFormat::Md => deps.write_text(&path, &req.content)?,",
+    "replace": "KbCreateFormat::Md => deps.markdown_to_docx(&req.content, &path)?,",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: word is written as text",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "KbCreateFormat::Docx => deps.markdown_to_docx(&req.content, &path)?,",
+    "replace": "KbCreateFormat::Docx => deps.write_text(&path, &req.content)?,",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb create: a record failure is ignored",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "deps.record_recent(&path)?;",
+    "replace": "let _ = deps.record_recent(&path);",
+    "fn": ["knowledge-base.createKnowledgeDocument"]
+  },
+  {
+    "name": "kb project read: a starred file is read through the project",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "if starred_allowed {",
+    "replace": "if false {",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: the offset is dropped",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "offset: offset.0,",
+    "replace": "offset: 0.0,",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: a declined download reads as outside",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "ProjectReadResult::Declined => Err(Thrown(KB_DOWNLOAD_DECLINED.to_owned())),",
+    "replace": "ProjectReadResult::Declined => Err(Thrown(KB_NOT_IN_BASE.to_owned())),",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: the unsaved message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "ProjectReadRefusal::Unsaved => UNSAVED_CHANGES_MESSAGE.to_owned(),",
+    "replace": "ProjectReadRefusal::Unsaved => \"unsaved\".to_owned(),",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: the cap is in kilobytes",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "number_to_string(kb_read_max_bytes(path) / 1024.0 / 1024.0)",
+    "replace": "number_to_string(kb_read_max_bytes(path) / 1024.0)",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: the too-large message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "\"file too large to read (cap {}MB)\"",
+    "replace": "\"file too large to read (max {}MB)\"",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: the unreadable message",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "ProjectReadRefusal::Unreadable => \"unreadable file\".to_owned(),",
+    "replace": "ProjectReadRefusal::Unreadable => \"unreadable\".to_owned(),",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: any other refusal is unreadable",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "            _ => KB_NOT_IN_BASE.to_owned(),",
+    "replace": "            _ => \"unreadable file\".to_owned(),",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  },
+  {
+    "name": "kb project read: no project reads as unreadable",
+    "file": "main-core/src/shell/knowledge_base.rs",
+    "find": "return Err(Thrown(KB_NOT_IN_BASE.to_owned()));\n    };\n    match read_project",
+    "replace": "return Err(Thrown(\"unreadable file\".to_owned()));\n    };\n    match read_project",
+    "fn": ["knowledge-base.readKnowledgeOrProjectPage"]
+  }
+]
