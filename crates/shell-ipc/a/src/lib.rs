@@ -5,6 +5,7 @@
 //! ([`ports`]). The shell inserts a [`Factory`] for every port in its hosts;
 //! a shell built without one refuses to start, naming it.
 
+pub mod drive;
 pub mod integrations;
 pub mod knowledge_base;
 pub mod outbound;
