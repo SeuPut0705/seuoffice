@@ -2034,6 +2034,39 @@ extractCases.push(
   ),
 )
 
+/**
+ * Two central directory entries of one name: JSZip keeps the last under the
+ * place of the first and never inflates the first. The first payload is made
+ * undecodable, so an extraction that inflates it fails.
+ */
+async function duplicateNameZipHex(): Promise<string> {
+  const bytes = Buffer.from(
+    await zipHex([
+      { name: `${R}/a.txt`, data: 'first payload, never read' },
+      { name: `${R}/c.txt`, data: 'between' },
+      { name: `${R}/b.txt`, data: 'last payload wins' },
+    ]),
+    'hex',
+  )
+  // the local header of the first entry: its data starts after the name and
+  // the extra field, and is its compressed size long
+  const size = bytes.readUInt32LE(18)
+  const start = 30 + bytes.readUInt16LE(26) + bytes.readUInt16LE(28)
+  bytes.fill(0xff, start, start + size)
+  // rename b.txt to a.txt in its local header and in the central directory
+  const from = Buffer.from(`${R}/b.txt`)
+  const to = Buffer.from(`${R}/a.txt`)
+  for (let at = bytes.indexOf(from); at >= 0; at = bytes.indexOf(from, at + 1)) to.copy(bytes, at)
+  return bytes.toString('hex')
+}
+extractCases.push(
+  c(
+    ['$DIR/archive.bin', 'zip', R, '$DIR/out'],
+    'zip: a name given twice: the last entry replaces the first, which is never inflated',
+    archiveFile(await duplicateNameZipHex()),
+  ),
+)
+
 // ---------------------------------------------------------------------------
 // local launch
 // ---------------------------------------------------------------------------
