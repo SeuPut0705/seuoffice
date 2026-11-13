@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
+import { XMLValidator } from 'fast-xml-parser'
 import { describe, expect, it } from 'vitest'
 import { clearHiddenMarks, docxHoldsHiddenContent, parseDocx } from '../src'
 import { buildDocx } from './helpers/build-docx'
@@ -133,5 +134,26 @@ describe('clearHiddenMarks', () => {
     const bytes = await buildDocx({ bodyXml: '<w:p><w:r><w:t>Hi</w:t></w:r></w:p>' })
     const out = await JSZip.loadAsync(await clearHiddenMarks(bytes))
     expect(await out.file('word/document.xml')!.async('string')).toContain('<w:t>Hi</w:t>')
+  })
+
+  it('keeps every character reference of the rest of the part, and the part well-formed', async () => {
+    // a mark spelled with references in its namespace and label, beside text
+    // and attributes that hold references of their own
+    const ns = OWN_REDACT_NS.replace(/\//g, '&#47;')
+    const marked = `<go:redact xmlns:go="${ns}" w:label="client&#32;phone"/>`
+    const plain =
+      '<w:bookmarkStart w:id="0" w:name="a&#38;b"/><w:r><w:t xml:space="preserve">A &#38; B &#60;tag&#62; &#x26; C</w:t></w:r><w:bookmarkEnd w:id="0"/>'
+    const bytes = await buildDocx({
+      bodyXml: `<w:p>${plain}<w:r><w:rPr>${marked}</w:rPr><w:t>${SECRET}</w:t></w:r></w:p>`,
+    })
+    const before = await (await JSZip.loadAsync(bytes)).file('word/document.xml')!.async('string')
+    const cleared = await clearHiddenMarks(bytes)
+    const after = await (await JSZip.loadAsync(cleared)).file('word/document.xml')!.async('string')
+    expect(XMLValidator.validate(after)).toBe(true)
+    expect(after).toBe(before.replace(marked, ''))
+    expect(await docxHoldsHiddenContent(cleared)).toBe(false)
+    const doc = await parseDocx(cleared)
+    const text = doc.blocks.map((b) => b.runs?.map((r) => r.text).join('') ?? '').join('\n')
+    expect(text).toContain(`A & B <tag> & C${SECRET}`)
   })
 })
