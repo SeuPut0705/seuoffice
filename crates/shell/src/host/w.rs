@@ -22,7 +22,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use shell_contract::Hosts;
 use shell_contract::ipc::{RegisterError, Registry};
 use shell_contract::provided::Provided;
-use shell_contract::runtime::{Services, Thread, run_on};
+use shell_contract::runtime::{Services, run_on};
 use shell_ipc_w::doc_picker::{DocPickerSourcesHost, DocPickerWindowHost};
 use shell_ipc_w::editor_files::{
     Clock, ClockHost, DocsTabsHost, FileParseHost, OpenFilesHost, SheetsTabsHost, UiLanguageHost,
@@ -89,8 +89,8 @@ thread_local! {
     static CORE_PROVIDED: RefCell<Option<Rc<Provided>>> = const { RefCell::new(None) };
 }
 
-/// The core thread, once the batches registered on it
-static CORE: OnceLock<Arc<dyn Thread>> = OnceLock::new();
+/// The shell's services, once the batches registered with them
+static SERVICES: OnceLock<Services> = OnceLock::new();
 
 /// Runs `job` with the core thread's [`Provided`]: at once on the core
 /// thread, else through `run_on(core, ..)`. `None` before the batches registered.
@@ -98,7 +98,7 @@ static CORE: OnceLock<Arc<dyn Thread>> = OnceLock::new();
 pub(crate) fn on_core<R: Send + 'static>(
     job: impl FnOnce(&Provided) -> R + Send + 'static,
 ) -> Option<R> {
-    let core = CORE.get()?;
+    let core = SERVICES.get()?.core.clone();
     let run = move || CORE_PROVIDED.with(|p| p.borrow().as_deref().map(job));
     if core.is_current() {
         run()
@@ -109,11 +109,27 @@ pub(crate) fn on_core<R: Send + 'static>(
 
 /// The batch that comes before the six: it adds what the shell provides on
 /// the core thread. `tabs::register` takes the first `TabHooks` it finds.
+/// Posts `job` to the core thread with its Provided and the shell's
+/// Services; never waits. Dropped before the batches registered.
+#[allow(dead_code)]
+pub(crate) fn post_core(job: impl FnOnce(&Provided, &Services) + Send + 'static) {
+    let Some(services) = SERVICES.get() else {
+        return;
+    };
+    services.core.post(Box::new(move || {
+        CORE_PROVIDED.with(|p| {
+            if let (Some(provided), Some(services)) = (p.borrow().as_deref(), SERVICES.get()) {
+                job(provided, services);
+            }
+        })
+    }));
+}
+
 pub fn register_hooks(
     registry: &mut dyn Registry,
     services: &Services,
 ) -> Result<(), RegisterError> {
-    let _ = CORE.set(services.core.clone());
+    let _ = SERVICES.set(services.clone());
     let provided = registry.provided();
     let hooks: Rc<dyn TabHooks> = Rc::new(Unbuilt);
     provided.add::<dyn TabHooks>(hooks);
