@@ -40,6 +40,9 @@ use crate::kit::{self, Entry, IntoIpc};
 
 const NOT_OPENED: &str = "save target is not an opened document";
 
+/// `MARKED_EXPORT_FORMATS`: the formats that ask before marked content is written
+const MARKED_EXPORT_FORMATS: [&str; 6] = ["odt", "pdf", "hwp", "html", "md", "png"];
+
 /// What a write left: what landed, the plain document, the absorbed picture
 /// hashes, and the disk state to remember
 pub(crate) struct Written {
@@ -843,18 +846,48 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
         },
     ));
 
+    // docs:confirm-marked-export replaced docs:confirm-marked-odt in the
+    // TypeScript; until the channel table lists it, the old name stays
+    // registered and asks as an ODT write did
+    let renamed = shell_contract::CHANNELS
+        .iter()
+        .any(|s| s.name == "docs:confirm-marked-export");
+    let (channel, fixed) = if renamed {
+        ("docs:confirm-marked-export", None)
+    } else {
+        ("docs:confirm-marked-odt", Some("odt"))
+    };
     let d = docs.clone();
-    all.push(kit::invoke("docs:confirm-marked-odt", move |cx, _args| {
+    all.push(kit::invoke(channel, move |cx, args| {
         let view = cx.sender.view;
         if d.is_torn_down(view) {
             return Ok("cancel".into_ipc());
         }
+        let Some(format) = fixed
+            .or(args.str(0))
+            .filter(|f| MARKED_EXPORT_FORMATS.contains(f))
+        else {
+            return Ok("cancel".into_ipc());
+        };
+        let odt = format == "odt";
         let b = marked_odt_box(&MarkedOdtText {
-            title: d.tm("markedOdtTitle"),
-            message: d.tm("markedOdtMessage"),
-            detail: d.tm("markedOdtDetail"),
-            save_docx: Some(d.tm("markedOdtDocx")),
-            clear_marks: d.tm("markedOdtClear"),
+            title: d.tm("markedTitle"),
+            message: d.tm(if odt {
+                "markedOdtMessage"
+            } else {
+                "markedExportMessage"
+            }),
+            detail: d.tm(if odt {
+                "markedOdtDetail"
+            } else {
+                "markedExportDetail"
+            }),
+            save_docx: Some(d.tm("markedDocx")),
+            clear_marks: d.tm(if odt {
+                "markedOdtClear"
+            } else {
+                "markedExportClear"
+            }),
             cancel: d.tm("btnCancel"),
         });
         let response = d.message(

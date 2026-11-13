@@ -38,6 +38,19 @@ fn obj(entries: &[(&str, IpcValue)]) -> IpcValue {
     )
 }
 
+/// the marked-content box's channel and arguments for `format`: the
+/// renamed channel once the table lists it
+fn marked(format: &str) -> (&'static str, Vec<IpcValue>) {
+    if shell_contract::CHANNELS
+        .iter()
+        .any(|c| c.name == "docs:confirm-marked-export")
+    {
+        ("docs:confirm-marked-export", vec![s(format)])
+    } else {
+        ("docs:confirm-marked-odt", vec![])
+    }
+}
+
 struct T {
     rt: Rt,
     fake: Fake,
@@ -784,7 +797,13 @@ fn a_torn_down_tab_loses_its_writes() {
         t.call("docs:save-as-pick", vec![s("n.docx")]),
         IpcValue::Null
     );
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("cancel"));
+    assert_eq!(
+        {
+            let (ch, args) = marked("odt");
+            t.call(ch, args)
+        },
+        s("cancel")
+    );
 }
 
 #[test]
@@ -1177,9 +1196,21 @@ fn analyze_media_rejects_a_missing_request_and_answers_the_tool() {
 fn marked_odt_answers_the_button_pressed() {
     let mut t = T::new(json!({}));
     t.rt.script().message.push_back(1);
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("clear"));
+    assert_eq!(
+        {
+            let (ch, args) = marked("odt");
+            t.call(ch, args)
+        },
+        s("clear")
+    );
     t.rt.script().message.push_back(0);
-    assert_eq!(t.call("docs:confirm-marked-odt", vec![]), s("docx"));
+    assert_eq!(
+        {
+            let (ch, args) = marked("odt");
+            t.call(ch, args)
+        },
+        s("docx")
+    );
 }
 
 #[test]

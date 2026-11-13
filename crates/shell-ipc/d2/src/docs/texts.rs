@@ -29,11 +29,7 @@ const TEXTS: &[(&str, &str, &str)] = &[
         "원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.",
     ),
     ("dlgSaveAs", "Save As", "다른 이름으로 저장"),
-    (
-        "markedOdtTitle",
-        "Content hidden from AI",
-        "AI에게 숨긴 내용",
-    ),
+    ("markedTitle", "Content hidden from AI", "AI에게 숨긴 내용"),
     (
         "markedOdtMessage",
         "This document has content hidden from AI, and an ODT file cannot keep that.",
@@ -44,10 +40,21 @@ const TEXTS: &[(&str, &str, &str)] = &[
         "Written as ODT, the hidden content would read as plain text to everyone, AI included. Save as Word (.docx) to keep it hidden, or clear the marks and save as ODT: the hidden content then becomes visible to AI in the new file. This document keeps its marks either way.",
         "ODT로 저장하면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 숨김을 유지하려면 Word(.docx)로 저장하거나, 표시를 지우고 ODT로 저장하세요. 표시를 지우면 새 파일에서 숨긴 내용이 AI에게 보입니다. 어느 쪽이든 현재 문서의 표시는 그대로 남습니다.",
     ),
+    ("markedDocx", "Save as Word (.docx)", "Word(.docx)로 저장"),
     (
-        "markedOdtDocx",
-        "Save as Word (.docx)",
-        "Word(.docx)로 저장",
+        "markedExportMessage",
+        "This document has content hidden from AI, and the exported file cannot keep that.",
+        "이 문서에는 AI에게 숨긴 내용이 있는데, 내보낸 파일에는 이를 담을 수 없습니다.",
+    ),
+    (
+        "markedExportDetail",
+        "The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Save as Word (.docx) to keep the marks, or export without them. This document keeps its marks either way.",
+        "내보낸 파일에는 AI에게 숨긴 표시가 없습니다. 이 파일을 읽는 모든 것은 AI를 포함해 숨긴 내용을 그대로 봅니다. 표시를 유지하려면 Word(.docx)로 저장하거나, 표시 없이 내보내세요. 어느 쪽이든 현재 문서의 표시는 그대로 남습니다.",
+    ),
+    (
+        "markedExportClear",
+        "Export without the marks",
+        "표시 없이 내보내기",
     ),
     (
         "markedOdtClear",
