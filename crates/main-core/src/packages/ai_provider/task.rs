@@ -411,6 +411,13 @@ pub enum Cmd {
     /// aborted); nothing answers it, and an answer already on its way is
     /// dropped.
     Cancel { id: Id },
+    /// The program dropped its last handle to the body `body` (the fetch's or
+    /// a clone's) before reading it to its end or cancelling it, which
+    /// JavaScript leaves to the garbage collector: free that branch's
+    /// buffered bytes. `stop`: no branch reads the stream of that fetch any
+    /// more and it has not ended; stop it as for [`Cmd::Cancel`]. Nothing
+    /// answers it, and an answer already on its way is dropped.
+    Release { body: Id, stop: Option<Id> },
     /// `setTimeout(..., ms)`: feed [`Event::Timer`] when it is due
     SetTimer { id: Id, ms: f64 },
     /// `clearTimeout`: the timer `id` is not fed
@@ -2073,5 +2080,96 @@ mod tests {
         assert_eq!(call.take().expect("the read ended").unwrap(), None);
         copy.cancel();
         assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+    }
+
+    /// A fetched response, its headers answered; the fetch id.
+    fn fetched(runtime: &mut Runtime) -> (Response, Id) {
+        let rt = runtime.rt().clone();
+        let call = runtime.start(async move {
+            rt.fetch(
+                Fetcher::Node,
+                "https://x.example/",
+                Request::default(),
+                None,
+            )
+            .await
+            .unwrap()
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        (call.take().expect("the fetch answered"), fetch)
+    }
+
+    #[test]
+    fn a_response_dropped_unread_lets_the_host_stop_its_stream() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+    }
+
+    #[test]
+    fn a_clone_dropped_unread_is_freed_while_the_other_branch_reads_on() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        let copy = response.clone_response();
+        let cmds = runtime.poll();
+        let Some(Cmd::CloneBody { to, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        drop(copy);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: to,
+                stop: None
+            }]
+        );
+        // the last branch goes too: now the stream stops
+        drop(response);
+        assert_eq!(
+            runtime.poll(),
+            vec![Cmd::Release {
+                body: fetch,
+                stop: Some(fetch)
+            }]
+        );
+    }
+
+    #[test]
+    fn a_response_read_to_its_end_or_cancelled_is_not_released_again() {
+        let mut runtime = Runtime::new(host());
+        let (response, fetch) = fetched(&mut runtime);
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        drop(response);
+        assert!(runtime.poll().is_empty());
+
+        let (response, _) = fetched(&mut runtime);
+        let response = Rc::new(response);
+        let reader = response.clone();
+        let read = runtime.start(async move { reader.read().await });
+        let id = read_of(&runtime.poll());
+        runtime.feed(Event::Done {
+            id,
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(read.take().unwrap().unwrap(), None);
+        drop(response);
+        assert!(runtime.poll().is_empty());
     }
 }
