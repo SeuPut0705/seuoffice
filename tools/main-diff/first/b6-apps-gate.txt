@@ -1,0 +1,269 @@
+element-clipboard.ELEMENT_CLIPBOARD_FORMAT: 1 checks, 0 differences, 0 listed, 1 distinct
+element-clipboard.isElementClipboardToken: 12 checks, 0 differences, 0 listed, 2 distinct
+element-clipboard.elementClipboardMarkerMatches: 15 checks, 12 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+element-clipboard.canWriteElementClipboardImage: 8 checks, 3 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+element-clipboard.writeElementClipboardImage: 21 checks, 12 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+slides/font-store.fontStoreDir: 5 checks, 0 differences, 0 listed, 5 distinct
+slides/font-store.initFontStore: 3 checks, 0 differences, 0 listed, 3 distinct
+slides/font-store.installLocalFontFiles: 4 checks, 0 differences, 0 listed, 4 distinct
+sheets/template-fonts.sheetsTemplateFontsDir: 3 checks, 3 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+sheets/template-fonts.installStandaloneTemplateFontProtocol: 2 checks, 2 differences, 0 listed, 2 distinct
+sheets/template-fonts.templateFontFaceCss: 7 checks, 0 differences, 0 listed, 7 distinct
+sheets/template-fonts.withTemplateFontFaces: 9 checks, 0 differences, 0 listed, 9 distinct
+preview-protocol.registerPrivilegedSchemes: 3 checks, 0 differences, 0 listed, 2 distinct
+preview-protocol.registerPreviewProtocol: 2 checks, 0 differences, 0 listed, 2 distinct
+markdown/print-document.printMarkdownDocument: 19 checks, 19 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+markdown/print-pdf.printMarkdownPdf: 9 checks, 9 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+docs/updater.initDocsAutoUpdater: 14 checks, 0 differences, 0 listed, 11 distinct
+diagram-session.scenario: 10 checks, 0 differences, 0 listed, 10 distinct
+docs/lazy-media.scenario: 17 checks, 0 differences, 0 listed, 16 distinct
+image-edit.matchImage: 10 checks, 0 differences, 0 listed, 2 distinct
+image-edit.imageMatrix: 10 checks, 0 differences, 0 listed, 5 distinct
+image-edit.applyImageGeometry: 13 checks, 0 differences, 0 listed, 8 distinct
+image-edit.decodeImage: 7 checks, 0 differences, 0 listed, 7 distinct
+image-edit.applyImageEdits: 27 checks, 0 differences, 0 listed, 24 distinct
+image-edit.listPageImages: 4 checks, 0 differences, 0 listed, 4 distinct
+image-edit.verifyImageEdits: 3 checks, 0 differences, 0 listed, 3 distinct
+slides/session-state.scenario: 25 checks, 0 differences, 0 listed, 25 distinct
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 0 (the buffer matches: the HTML is not read)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 1 (the HTML matches)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 2 (neither)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 3 (the buffer read throws)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 4 (both throw)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 7 (a token of 256)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 9 (the token is URI-encoded in the HTML)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 10 (case and spaces around the equals sign)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 11 (another attribute name)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 12 (single quotes do not count)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 13 (the tag stops at the first bracket)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.elementClipboardMarkerMatches case 14 (the second image carries it)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.canWriteElementClipboardImage case 0 (allowed)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"]]}","files":{}}
+
+DIFF element-clipboard.canWriteElementClipboardImage case 5 (the clipboard moved on)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.canWriteElementClipboardImage case 6 (the HTML marker)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 0 (written)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"tok\\\">\"}]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 1 (padding)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"createFromBuffer\",\"41\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"tok\\\">\"}]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 2 (one padding character)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"createFromBuffer\",\"4142\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"tok\\\">\"}]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 3 (the whole alphabet)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"createFromBuffer\",\"666f6fffef\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"tok\\\">\"}]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 13 (createFromBuffer throws)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 14 (the decoded image is empty)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 15 (isEmpty throws)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 16 (toPNG is empty)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 17 (toPNG throws)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 18 (the clipboard changed meanwhile)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"readHTML\"]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 19 (write throws)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":false,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"tok\\\">\"}]]}","files":{}}
+
+DIFF element-clipboard.writeElementClipboardImage case 20 (a token that needs encoding)
+  typescript: {"answer":"{\"value\":false}","files":{}}
+  rust:       {"answer":"{\"value\":true,\"logs\":[[\"createFromBuffer\",\"89504e470d0a\"],[\"isEmpty\"],[\"toPNG\"],[\"readBuffer\",\"io.seuoffice.slides.elements\"],[\"write\",{\"image\":\"img\",\"html\":\"<img src=\\\"data:image/png;base64,iVBORw==\\\" data-seuoffice-slides-elements=\\\"a%20b%26c%2F%C3%A9\\\">\"}]]}","files":{}}
+
+DIFF sheets/template-fonts.sheetsTemplateFontsDir case 0 (installed)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Cannot read properties of undefined (reading 'isPackaged')\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"/res/template-fonts\"}","files":{}}
+
+DIFF sheets/template-fonts.sheetsTemplateFontsDir case 1 (a checkout)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Cannot read properties of undefined (reading 'isPackaged')\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"/repo/packages/ui/template-fonts\",\"logs\":[[\"getAppPath\"]]}","files":{}}
+
+DIFF sheets/template-fonts.sheetsTemplateFontsDir case 2 (the app path is asked only when not packaged)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Cannot read properties of undefined (reading 'isPackaged')\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"/repo/apps/shell/packages/ui/template-fonts\",\"logs\":[[\"getAppPath\"]]}","files":{}}
+
+DIFF sheets/template-fonts.installStandaloneTemplateFontProtocol case 0 (listed files, a listed file that is missing, others)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Cannot read properties of undefined (reading 'isPackaged')\"}}","files":{"res":"dir 755","res/template-fonts":"dir 755","res/template-fonts/BlackHanSans-Regular.ttf":"file 644 hex:0001000000aa","res/template-fonts/PlayfairDisplay[wght].ttf":"file 644 hex:00010000ff","res/template-fonts/Pretendard-Regular.otf":"file 644 \"OTTO\\u0000\\u0001\\u0002\\u0003\""}}
+  rust:       {"answer":"{\"value\":[{\"status\":200,\"headers\":{\"access-control-allow-origin\":\"*\",\"content-length\":\"8\",\"content-type\":\"font/otf\"},\"body\":\"4f54544f00010203\"},{\"status\":200,\"headers\":{\"access-control-allow-origin\":\"*\",\"content-length\":\"6\",\"content-type\":\"font/ttf\"},\"body\":\"0001000000aa\"},{\"status\":200,\"headers\":{\"access-control-allow-origin\":\"*\",\"content-length\":\"5\",\"content-type\":\"font/ttf\"},\"body\":\"00010000ff\"},{\"status\":404,\"headers\":{},\"body\":\"\"},{\"status\":404,\"headers\":{},\"body\":\"\"},{\"status\":404,\"headers\":{},\"body\":\"\"},{\"status\":404,\"headers\":{},\"body\":\"\"},{\"status\":404,\"headers\":{},\"body\":\"\"}],\"logs\":[[\"handle\",\"seuoffice-docx-media\"]]}","files":{"res":"dir 755","res/template-fonts":"dir 755","res/template-fonts/BlackHanSans-Regular.ttf":"file 644 hex:0001000000aa","res/template-fonts/PlayfairDisplay[wght].ttf":"file 644 hex:00010000ff","res/template-fonts/Pretendard-Regular.otf":"file 644 \"OTTO\\u0000\\u0001\\u0002\\u0003\""}}
+
+DIFF sheets/template-fonts.installStandaloneTemplateFontProtocol case 1 (the checkout folder)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Cannot read properties of undefined (reading 'isPackaged')\"}}","files":{"repo":"dir 755","repo/packages":"dir 755","repo/packages/ui":"dir 755","repo/packages/ui/template-fonts":"dir 755","repo/packages/ui/template-fonts/Pretendard-Regular.otf":"file 644 \"OTTO\""}}
+  rust:       {"answer":"{\"value\":[{\"status\":200,\"headers\":{\"access-control-allow-origin\":\"*\",\"content-length\":\"4\",\"content-type\":\"font/otf\"},\"body\":\"4f54544f\"}],\"logs\":[[\"getAppPath\"],[\"handle\",\"seuoffice-docx-media\"]]}","files":{"repo":"dir 755","repo/packages":"dir 755","repo/packages/ui":"dir 755","repo/packages/ui/template-fonts":"dir 755","repo/packages/ui/template-fonts/Pretendard-Regular.otf":"file 644 \"OTTO\""}}
+
+DIFF markdown/print-document.printMarkdownDocument case 0
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>hi</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 1
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>hi</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 2
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>hi</p>\"],[\"show\"],[\"focus\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 3
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>café 😀</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"Letter\",\"landscape\":true,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\",\"pageRanges\":[{\"from\":2,\"to\":5}]}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 4
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"\"],[\"print\",{\"silent\":false,\"printBackground\":false,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.25,\"bottom\":0.25,\"left\":0.25,\"right\":0.25},\"header\":\"\",\"footer\":\"\",\"pageRanges\":[{\"from\":1,\"to\":1}]}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 5
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true,\"canceled\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 6
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true,\"canceled\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 7
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"Driver failure\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 8
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"print failed\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 9
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"print failed\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 10
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"print failed\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 11
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"print threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 12
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"createWindow threw\"},\"logs\":[[\"createWindow\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 13
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"load failed\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 14
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"show threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"show\"],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 15
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":false,\"error\":\"focus threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"show\"],[\"focus\"],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 16
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":{\"ok\":true},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 17
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"destroy threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"print\",{\"silent\":false,\"printBackground\":true,\"pageSize\":\"A4\",\"landscape\":false,\"margins\":{\"marginType\":\"custom\",\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6},\"header\":\"\",\"footer\":\"\"}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-document.printMarkdownDocument case 18
+  typescript: {"answer":"{\"value\":{\"ok\":false,\"error\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"destroy threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 0
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"255044462d\",\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<html><body>x</body></html>\"],[\"printToPDF\",{\"pageSize\":\"A4\",\"printBackground\":true,\"landscape\":false,\"margins\":{\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 1
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"\",\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"\"],[\"printToPDF\",{\"pageSize\":\"A4\",\"printBackground\":true,\"landscape\":false,\"margins\":{\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 2
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"00ff10\",\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>café 😀</p>\"],[\"printToPDF\",{\"pageSize\":\"Letter\",\"printBackground\":true,\"landscape\":true,\"margins\":{\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 3
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"value\":\"01\",\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"printToPDF\",{\"pageSize\":\"A4\",\"printBackground\":false,\"landscape\":false,\"margins\":{\"top\":0.25,\"bottom\":0.25,\"left\":0.25,\"right\":0.25}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 4
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"createWindow threw\"},\"logs\":[[\"createWindow\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 5
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"load failed\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 6
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"printToPDF threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"printToPDF\",{\"pageSize\":\"A4\",\"printBackground\":true,\"landscape\":false,\"margins\":{\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 7
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"destroy threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"printToPDF\",{\"pageSize\":\"A4\",\"printBackground\":true,\"landscape\":false,\"margins\":{\"top\":0.6,\"bottom\":0.6,\"left\":0.6,\"right\":0.6}}],[\"destroy\"]]}","files":{}}
+
+DIFF markdown/print-pdf.printMarkdownPdf case 8
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"import_electron.BrowserWindow is not a constructor\"}}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"destroy threw\"},\"logs\":[[\"createWindow\"],[\"loadFile\",\"seuoffice-md-print-\",\"print.html\",\"<p>x</p>\"],[\"destroy\"]]}","files":{}}
+
+263 checks, 203 equal, 60 differences, 0 listed, 27 functions
