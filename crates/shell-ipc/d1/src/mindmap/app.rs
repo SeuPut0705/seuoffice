@@ -144,10 +144,13 @@ impl WaitTable {
         self.pending.remove(&gen_id)
     }
 
-    /// the timer of `gen_id` ran out: `saveWaiters.delete(wcId)` and resolve its own
+    /// the timer of `gen_id` ran out: `saveWaiters.delete(wcId)` and resolve its own.
+    /// An answered wait has no timer in the TypeScript (it is cleared on the
+    /// answer): nothing happens then.
     fn expire(&mut self, view: ViewId, gen_id: u64) -> Option<Waiter> {
+        let waiter = self.pending.remove(&gen_id)?;
         self.current.remove(&view);
-        self.pending.remove(&gen_id)
+        Some(waiter)
     }
 }
 
@@ -1033,4 +1036,31 @@ fn spawn_wake(core: Arc<dyn shell_contract::runtime::Thread>) -> Option<mpsc::Se
         })
         .ok()
         .map(|_| tx)
+}
+
+#[cfg(test)]
+mod wait_table_tests {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use super::*;
+
+    /// TypeScript clears a save's timer when the renderer answers: the timer
+    /// of an answered save leaves the view's next save waiting for its reply
+    #[test]
+    fn an_answered_waits_timer_leaves_the_next_wait() {
+        let mut table = WaitTable::default();
+        let view = ViewId(1);
+        let answered = Rc::new(Cell::new(0));
+        let count = |n: u32| {
+            let answered = answered.clone();
+            Box::new(move |_: Wait| answered.set(answered.get() + n)) as Waiter
+        };
+        table.set(view, 1, count(1));
+        table.take(view).expect("the first wait")(Wait::Timeout);
+        table.set(view, 2, count(10));
+        assert!(table.expire(view, 1).is_none());
+        table.take(view).expect("the next wait")(Wait::Timeout);
+        assert_eq!(answered.get(), 11);
+    }
 }
