@@ -66,8 +66,8 @@ pub type AppMenuItems = Vec<(Vec<String>, MenuAction)>;
 const MENU_COMMAND: &str = "menu:command";
 const MENU_ACTION: &str = "menu:action";
 
-/// `menuFile`, `menuPrint` and `menuExportPdf` of the shell's own dictionary
-/// (`tMain` in apps/shell/src/main/index.ts): key, English, Korean
+/// the keys of the shell's own menus (`tMain` in apps/shell/src/main/index.ts):
+/// key, English, Korean
 const SHELL_LABELS: &[(&str, &str, &str)] = &[
     ("menuFile", "File", "\u{D30C}\u{C77C}"),
     ("menuPrint", "Print\u{2026}", "\u{C778}\u{C1C4}\u{2026}"),
@@ -75,6 +75,131 @@ const SHELL_LABELS: &[(&str, &str, &str)] = &[
         "menuExportPdf",
         "Export as PDF\u{2026}",
         "PDF\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    ("menuOpen", "Open\u{2026}", "\u{C5F4}\u{AE30}\u{2026}"),
+    ("menuClose", "Close", "\u{B2EB}\u{AE30}"),
+    ("menuView", "View", "\u{BCF4}\u{AE30}"),
+    ("menuHelp", "Help", "\u{B3C4}\u{C6C0}\u{B9D0}"),
+    (
+        "menuUserGuide",
+        "User Guide",
+        "\u{C0AC}\u{C6A9}\u{C790} \u{AC00}\u{C774}\u{B4DC}",
+    ),
+    (
+        "thirdPartyNotices",
+        "Third-Party Notices",
+        "\u{D0C0}\u{C0AC} \u{C18C}\u{D504}\u{D2B8}\u{C6E8}\u{C5B4} \u{ACE0}\u{C9C0}",
+    ),
+    (
+        "backToHome",
+        "Back to Home",
+        "\u{D648}\u{C73C}\u{B85C} \u{B3CC}\u{C544}\u{AC00}\u{AE30}",
+    ),
+    ("menuSave", "Save", "\u{C800}\u{C7A5}"),
+    (
+        "menuSaveAs",
+        "Save As\u{2026}",
+        "\u{B2E4}\u{B978} \u{C774}\u{B984}\u{C73C}\u{B85C} \u{C800}\u{C7A5}\u{2026}",
+    ),
+    (
+        "menuExportDocx",
+        "Export as Word\u{2026}",
+        "Word\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportOdt",
+        "Export as ODT\u{2026}",
+        "ODT\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportImages",
+        "Export as Images\u{2026}",
+        "\u{C774}\u{BBF8}\u{C9C0}\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportHtml",
+        "Export as Single-File HTML\u{2026}",
+        "\u{B2E8}\u{C77C} \u{D30C}\u{C77C} HTML\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuOpenInDocs",
+        "Convert and Open in Docs",
+        "Docs \u{BB38}\u{C11C}\u{B85C} \u{BCC0}\u{D658}\u{D558}\u{C5EC} \u{C5F4}\u{AE30}",
+    ),
+    (
+        "menuExportMd",
+        "Export as Markdown\u{2026}",
+        "Markdown\u{C73C}\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportEpub",
+        "Export as EPUB\u{2026}",
+        "EPUB\u{C73C}\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuPreview",
+        "Print Preview\u{2026}",
+        "\u{BBF8}\u{B9AC} \u{BCF4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuTranslateBook",
+        "Translate Book\u{2026}",
+        "\u{CC45} \u{BC88}\u{C5ED}\u{2026}",
+    ),
+    ("menuFind", "Find\u{2026}", "\u{CC3E}\u{AE30}\u{2026}"),
+    (
+        "menuReplace",
+        "Replace\u{2026}",
+        "\u{BC14}\u{AFB8}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuZoomFit",
+        "Fit to Window",
+        "\u{CC3D}\u{C5D0} \u{B9DE}\u{CD94}\u{AE30}",
+    ),
+    (
+        "menuExportMapImage",
+        "Export as Image (PNG)\u{2026}",
+        "\u{C774}\u{BBF8}\u{C9C0}(PNG)\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportSvg",
+        "Export as SVG\u{2026}",
+        "SVG\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportMapSvg",
+        "Export as Image (SVG)\u{2026}",
+        "\u{C774}\u{BBF8}\u{C9C0}(SVG)\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportMapOutline",
+        "Export as Markdown Outline\u{2026}",
+        "\u{B9C8}\u{D06C}\u{B2E4}\u{C6B4} \u{AC1C}\u{C694}\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    ("menuHome", "Home", "\u{D648}"),
+    // The titles AppKit gives the macOS application and Window menus' roles
+    // (Electron's `role: 'services'` and the like were localized by the OS;
+    // Tauri's predefined items are English unless given a title). `{app}` is
+    // the application's name. These are not `tm` keys.
+    ("roleServices", "Services", "\u{C11C}\u{BE44}\u{C2A4}"),
+    ("roleHide", "Hide {app}", "{app} \u{AC00}\u{B9AC}\u{AE30}"),
+    (
+        "roleHideOthers",
+        "Hide Others",
+        "\u{B2E4}\u{B978} \u{D56D}\u{BAA9} \u{AC00}\u{B9AC}\u{AE30}",
+    ),
+    (
+        "roleUnhide",
+        "Show All",
+        "\u{BAA8}\u{B450} \u{BCF4}\u{AE30}",
+    ),
+    ("roleQuit", "Quit {app}", "{app} \u{C885}\u{B8CC}"),
+    ("roleZoom", "Zoom", "\u{D655}\u{B300}/\u{CD95}\u{C18C}"),
+    (
+        "roleFront",
+        "Bring All to Front",
+        "\u{BAA8}\u{B450} \u{C55E}\u{C73C}\u{B85C} \u{AC00}\u{C838}\u{C624}\u{AE30}",
     ),
 ];
 
@@ -324,6 +449,35 @@ const DOCS_LABELS: &[(&str, &str, &str)] = &[
         "Keyboard Shortcuts",
         "\u{D0A4}\u{BCF4}\u{B4DC} \u{BC14}\u{B85C} \u{AC00}\u{AE30}",
     ),
+    (
+        "menuOpenRecent",
+        "Open Recent",
+        "\u{CD5C}\u{ADFC} \u{BB38}\u{C11C} \u{C5F4}\u{AE30}",
+    ),
+    (
+        "menuNoRecent",
+        "No Recent Documents",
+        "\u{CD5C}\u{ADFC} \u{BB38}\u{C11C} \u{C5C6}\u{C74C}",
+    ),
+    ("menuClose", "Close", "\u{B2EB}\u{AE30}"),
+    ("menuCut", "Cut", "\u{C798}\u{B77C}\u{B0B4}\u{AE30}"),
+    ("menuCopy", "Copy", "\u{BCF5}\u{C0AC}"),
+    ("menuPaste", "Paste", "\u{BD99}\u{C5EC}\u{B123}\u{AE30}"),
+    (
+        "menuPasteMatch",
+        "Paste and Match Style",
+        "\u{C11C}\u{C2DD} \u{B9DE}\u{CDB0} \u{BD99}\u{C5EC}\u{B123}\u{AE30}",
+    ),
+    (
+        "menuSelectAll",
+        "Select All",
+        "\u{BAA8}\u{B450} \u{C120}\u{D0DD}",
+    ),
+    (
+        "menuFullscreen",
+        "Enter Full Screen",
+        "\u{C804}\u{CCB4} \u{D654}\u{BA74} \u{C2DC}\u{C791}",
+    ),
 ];
 
 /// the keys `SHEETS_ACTIONS` names, from `sheets-main.ts`'s dictionary: key, English, Korean
@@ -359,6 +513,51 @@ const SHEETS_LABELS: &[(&str, &str, &str)] = &[
     ("menuEdit", "Edit", "\u{D3B8}\u{C9D1}"),
     ("menuUndo", "Undo", "\u{C2E4}\u{D589} \u{CDE8}\u{C18C}"),
     ("menuRedo", "Redo", "\u{B2E4}\u{C2DC} \u{C2E4}\u{D589}"),
+    ("menuClose", "Close", "\u{B2EB}\u{AE30}"),
+];
+
+/// the keys of `buildSlidesMenu` (`apps/slides/src/main/i18n-main.ts`): key,
+/// English, Korean
+const SLIDES_LABELS: &[(&str, &str, &str)] = &[
+    ("menuFile", "File", "\u{D30C}\u{C77C}"),
+    ("menuOpen", "Open\u{2026}", "\u{C5F4}\u{AE30}\u{2026}"),
+    ("menuSave", "Save", "\u{C800}\u{C7A5}"),
+    (
+        "menuSaveAs",
+        "Save As\u{2026}",
+        "\u{B2E4}\u{B978} \u{C774}\u{B984}\u{C73C}\u{B85C} \u{C800}\u{C7A5}\u{2026}",
+    ),
+    (
+        "menuExportPdf",
+        "Export as PDF\u{2026}",
+        "PDF\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportImages",
+        "Export as PNG\u{2026}",
+        "PNG\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportImagesJpg",
+        "Export as JPG\u{2026}",
+        "JPG\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    ("menuPrint", "Print\u{2026}", "\u{C778}\u{C1C4}\u{2026}"),
+    ("menuClose", "Close", "\u{B2EB}\u{AE30}"),
+    ("menuEdit", "Edit", "\u{D3B8}\u{C9D1}"),
+    ("menuUndo", "Undo", "\u{C2E4}\u{D589} \u{CDE8}\u{C18C}"),
+    ("menuRedo", "Redo", "\u{B2E4}\u{C2DC} \u{C2E4}\u{D589}"),
+    ("menuCut", "Cut", "\u{C798}\u{B77C}\u{B0B4}\u{AE30}"),
+    ("menuCopy", "Copy", "\u{BCF5}\u{C0AC}"),
+    ("menuPaste", "Paste", "\u{BD99}\u{C5EC}\u{B123}\u{AE30}"),
+    ("menuView", "View", "\u{BCF4}\u{AE30}"),
+    ("menuZoomIn", "Zoom In", "\u{D655}\u{B300}"),
+    ("menuZoomOut", "Zoom Out", "\u{CD95}\u{C18C}"),
+    (
+        "menuActualSize",
+        "Actual Size",
+        "\u{C2E4}\u{C81C} \u{D06C}\u{AE30}",
+    ),
 ];
 
 /// `docs-main.ts`'s `tm` keys of every static `sendCommand` item of
@@ -555,6 +754,27 @@ fn translate(table: &[(&str, &str, &str)], lang: Lang, key: &str) -> String {
         .to_owned()
 }
 
+/// The dictionaries the menus' own labels come from: the shell's `tm` and
+/// each editor's
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MenuDict {
+    Shell,
+    Docs,
+    Sheets,
+    Slides,
+}
+
+/// `tm(key)` of the dictionary in `lang`: the key itself when it has none
+pub fn menu_label(dict: MenuDict, lang: Lang, key: &str) -> String {
+    let table = match dict {
+        MenuDict::Shell => SHELL_LABELS,
+        MenuDict::Docs => DOCS_LABELS,
+        MenuDict::Sheets => SHEETS_LABELS,
+        MenuDict::Slides => SLIDES_LABELS,
+    };
+    translate(table, lang, key)
+}
+
 fn event(channel: &'static str, args: Vec<IpcValue>) -> MenuAction {
     MenuAction::Event { channel, args }
 }
@@ -636,7 +856,7 @@ pub fn app_menu_items(kind: &str, lang: Lang) -> AppMenuItems {
 }
 
 /// The language the process holds, as the TypeScript menus' `tm` read it
-fn current_lang(services: &Services) -> Result<Lang, String> {
+pub fn current_lang(services: &Services) -> Result<Lang, String> {
     let (Some(state), Some(host)) = (
         services.hosts.get::<MStateRef>(),
         services.hosts.get::<MHostRef>(),
@@ -915,6 +1135,35 @@ mod tests {
                 "menu:command",
                 vec![text("name-with-ai"), IpcValue::Undefined]
             )
+        );
+    }
+
+    #[test]
+    fn the_menus_own_labels_come_from_their_dictionary_in_the_language() {
+        assert_eq!(
+            menu_label(MenuDict::Shell, Lang::En, "backToHome"),
+            "Back to Home"
+        );
+        assert_eq!(
+            menu_label(MenuDict::Shell, Lang::Ko, "menuHelp"),
+            "\u{B3C4}\u{C6C0}\u{B9D0}"
+        );
+        assert_eq!(
+            menu_label(MenuDict::Slides, Lang::En, "menuExportImages"),
+            "Export as PNG\u{2026}"
+        );
+        assert_eq!(
+            menu_label(MenuDict::Docs, Lang::En, "menuNoRecent"),
+            "No Recent Documents"
+        );
+        assert_eq!(
+            menu_label(MenuDict::Sheets, Lang::Ko, "menuClose"),
+            "\u{B2EB}\u{AE30}"
+        );
+        // a key the dictionary has none of is the key, as `createI18n` answers
+        assert_eq!(
+            menu_label(MenuDict::Slides, Lang::En, "menuNothing"),
+            "menuNothing"
         );
     }
 

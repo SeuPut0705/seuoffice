@@ -30,7 +30,7 @@ use shell_contract::value::IpcValue;
 use shell_ipc_m::hosts::{PrintProfile, PrintSurface, PrintWindowSpec, Printer};
 use tauri::webview::PageLoadEvent;
 use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tauri_runtime_cef::{WebviewWindowBuilderCefExt, WebviewCefExt};
+use tauri_runtime_cef::{WebviewCefExt, WebviewWindowBuilderCefExt};
 
 use super::contents::{cdp, cdp_bytes, forget_webview, pdf_params};
 use super::{HostContext, on_ui};
@@ -215,7 +215,10 @@ impl PrintWindow {
     }
 
     fn build(&self, url: Url) -> Result<WebviewWindow, String> {
-        let label = format!("print-{}", NEXT_LABEL.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+        let label = format!(
+            "print-{}",
+            NEXT_LABEL.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
         let app = self.app.clone();
         let spec = self.spec.clone();
         let loaded = self.loaded.clone();
@@ -268,7 +271,11 @@ impl PrintWindow {
         let script = format!(
             "window.{AFTERPRINT_FLAG} = false; addEventListener('afterprint', () => {{ window.{AFTERPRINT_FLAG} = true }})"
         );
-        let _ = cdp(&webview, "Runtime.evaluate", json!({ "expression": script }));
+        let _ = cdp(
+            &webview,
+            "Runtime.evaluate",
+            json!({ "expression": script }),
+        );
     }
 
     /// Opens Chrome's print preview and waits until it closed: the page's
@@ -386,7 +393,11 @@ impl PrintSurface for PrintWindow {
     }
 
     fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, String> {
-        cdp_bytes(&self.webview()?, "Page.printToPDF", pdf_params(&ipc_value(options)))
+        cdp_bytes(
+            &self.webview()?,
+            "Page.printToPDF",
+            pdf_params(&ipc_value(options)),
+        )
     }
 
     fn show(&mut self) {
@@ -440,7 +451,10 @@ pub(crate) fn print_silently(webview: &tauri::Webview, options: &Value) -> Resul
 
 /// [`print_silently`] with the options as a handler passed them to
 /// `Contents::print`
-pub(crate) fn print_silently_ipc(webview: &tauri::Webview, options: &IpcValue) -> Result<(), String> {
+pub(crate) fn print_silently_ipc(
+    webview: &tauri::Webview,
+    options: &IpcValue,
+) -> Result<(), String> {
     print_silently(webview, &json_of(options))
 }
 
@@ -457,7 +471,9 @@ fn json_of(value: &IpcValue) -> Value {
                 .map(|(k, v)| (k.clone(), json_of(v)))
                 .collect(),
         ),
-        IpcValue::Undefined | IpcValue::Null | IpcValue::Bytes(..) | IpcValue::Date(_) => Value::Null,
+        IpcValue::Undefined | IpcValue::Null | IpcValue::Bytes(..) | IpcValue::Date(_) => {
+            Value::Null
+        }
     }
 }
 
@@ -601,11 +617,9 @@ fn ipc_value(value: &Value) -> IpcValue {
         Value::Number(n) => IpcValue::Number(n.as_f64().unwrap_or(f64::NAN)),
         Value::String(s) => IpcValue::String(s.clone()),
         Value::Array(items) => IpcValue::Array(items.iter().map(ipc_value).collect()),
-        Value::Object(map) => IpcValue::Object(
-            map.iter()
-                .map(|(k, v)| (k.clone(), ipc_value(v)))
-                .collect(),
-        ),
+        Value::Object(map) => {
+            IpcValue::Object(map.iter().map(|(k, v)| (k.clone(), ipc_value(v))).collect())
+        }
     }
 }
 
@@ -641,7 +655,8 @@ mod tests {
         assert!((pdf["pageSize"]["width"].as_f64().unwrap() - 8.2677).abs() < 1e-3);
         assert_eq!(pdf["margins"]["top"], 1.0);
         assert_eq!(pdf["margins"]["bottom"], 0.5);
-        let none = print_as_pdf_options(&json!({ "margins": { "marginType": "none" }, "pageSize": "A4" }));
+        let none =
+            print_as_pdf_options(&json!({ "margins": { "marginType": "none" }, "pageSize": "A4" }));
         assert_eq!(none["margins"]["left"], 0);
         assert_eq!(none["pageSize"], "A4");
     }

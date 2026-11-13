@@ -12,6 +12,7 @@
 //! The application menu ([`apply_menu_for`]) and the context menus live in
 //! the submodules.
 
+mod app;
 mod cef_ops;
 mod context;
 
@@ -31,8 +32,7 @@ use shell_contract::Hosts;
 use shell_contract::ids::ViewId;
 use shell_contract::runtime::{AppPaths, PathName, Thread};
 use shell_ipc_m::hosts::{
-    FontQueries, FontQueriesRef, KeyInput, MHost, MHostRef, PrintSurface, PrintWindowSpec,
-    Printer,
+    FontQueries, FontQueriesRef, KeyInput, MHost, MHostRef, PrintSurface, PrintWindowSpec, Printer,
 };
 use shell_ipc_m::state::{MState, MStateRef};
 use shell_ipc_w::quick_look::QuickLookHost;
@@ -40,11 +40,11 @@ use tauri::{AppHandle, Manager, Theme};
 use tauri_runtime_cef::WebviewCefExt;
 
 use super::shell_tabs::shell_tabs;
-use super::window::Windows;
 use super::w::on_core;
+use super::window::Windows;
 use super::{HostContext, on_ui, print};
-use crate::views::ViewTable;
 use crate::paths::ShellPaths;
+use crate::views::ViewTable;
 
 /// How long a call into a view's browser may take before it counts as lost
 const BROWSER_TIMEOUT: Duration = Duration::from_secs(10);
@@ -54,11 +54,61 @@ const BROWSER_TIMEOUT: Duration = Duration::from_secs(10);
 /// spellcheck_common.cc), which is what Electron's
 /// `session.availableSpellCheckerLanguages` lists where the OS checker is not used
 const HUNSPELL_LANGUAGES: &[&str] = &[
-    "af", "bg", "ca", "cs", "cy", "da", "de", "de-DE", "el", "en-AU", "en-CA", "en-GB",
-    "en-GB-oxendict", "en-US", "es", "es-419", "es-AR", "es-ES", "es-MX", "es-US", "et", "fa",
-    "fo", "fr", "fr-FR", "he", "hi", "hr", "hu", "hy", "id", "it", "it-IT", "ko", "lt", "lv",
-    "nb", "nl", "pl", "pt", "pt-BR", "pt-PT", "ro", "ru", "sh", "sk", "sl", "sq", "sr", "sv",
-    "ta", "tg", "tr", "uk", "vi",
+    "af",
+    "bg",
+    "ca",
+    "cs",
+    "cy",
+    "da",
+    "de",
+    "de-DE",
+    "el",
+    "en-AU",
+    "en-CA",
+    "en-GB",
+    "en-GB-oxendict",
+    "en-US",
+    "es",
+    "es-419",
+    "es-AR",
+    "es-ES",
+    "es-MX",
+    "es-US",
+    "et",
+    "fa",
+    "fo",
+    "fr",
+    "fr-FR",
+    "he",
+    "hi",
+    "hr",
+    "hu",
+    "hy",
+    "id",
+    "it",
+    "it-IT",
+    "ko",
+    "lt",
+    "lv",
+    "nb",
+    "nl",
+    "pl",
+    "pt",
+    "pt-BR",
+    "pt-PT",
+    "ro",
+    "ru",
+    "sh",
+    "sk",
+    "sl",
+    "sq",
+    "sr",
+    "sv",
+    "ta",
+    "tg",
+    "tr",
+    "uk",
+    "vi",
 ];
 
 struct ShellM {
@@ -78,6 +128,7 @@ static APP: OnceLock<AppHandle> = OnceLock::new();
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let _ = APP.set(cx.app.clone());
     context::install(&cx.app, cx.views.clone(), cx.windows.clone());
+    app::install(cx);
     let host: MHostRef = Arc::new(ShellM {
         app: cx.app.clone(),
         ui: cx.ui.clone(),
@@ -102,15 +153,17 @@ pub(crate) fn apply_menu(kind: TabKind) {
 /// `applyMenuFor(kind)`: the application menu of the active editor. Callable
 /// from any thread; the menu is set on the UI thread.
 pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
-    let _ = (app, kind);
+    app::apply_menu_for(app, kind);
 }
 
 /// The first language of the profile's accept languages: the locale Chromium
 /// runs the app in, which is what Electron's `app.getLocale()` reported
 fn first_accept_language(ui: &Arc<dyn Thread>) -> Option<String> {
-    on_ui(ui, || cef_ops::string_list_preference("intl.accept_languages"))
-        .into_iter()
-        .next()
+    on_ui(ui, || {
+        cef_ops::string_list_preference("intl.accept_languages")
+    })
+    .into_iter()
+    .next()
 }
 
 impl ShellM {
@@ -254,8 +307,12 @@ impl MHost for ShellM {
 
     fn default_save_dir(&self) -> String {
         let mut state = self.save_dir.lock().unwrap();
-        configured_default_save_dir(&self.paths, &mut state, self.now_ms())
-            .unwrap_or_else(|_| self.paths.path(PathName::Documents).to_string_lossy().into_owned())
+        configured_default_save_dir(&self.paths, &mut state, self.now_ms()).unwrap_or_else(|_| {
+            self.paths
+                .path(PathName::Documents)
+                .to_string_lossy()
+                .into_owned()
+        })
     }
 
     fn spell_add_word(&self, view: ViewId, word: &str) -> bool {
@@ -276,7 +333,9 @@ impl MHost for ShellM {
     }
 
     fn spell_languages(&self, _view: ViewId) -> Vec<String> {
-        on_ui(&self.ui, || cef_ops::string_list_preference("spellcheck.dictionaries"))
+        on_ui(&self.ui, || {
+            cef_ops::string_list_preference("spellcheck.dictionaries")
+        })
     }
 
     /// macOS checks with the system's own spellchecker, which picks the
@@ -318,7 +377,12 @@ impl MHost for ShellM {
     }
 
     fn print_window(&self, spec: &PrintWindowSpec) -> Box<dyn PrintSurface> {
-        print::window(self.app.clone(), self.ui.clone(), self.views.clone(), spec.clone())
+        print::window(
+            self.app.clone(),
+            self.ui.clone(),
+            self.views.clone(),
+            spec.clone(),
+        )
     }
 
     fn run_command(&self, file: &str, args: &[String], stdin: Option<&[u8]>) -> CommandOutcome {

@@ -11,6 +11,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use jscompat::{JsObject, JsonValue};
 use main_core::packages::electron_utils::context_menu::{
     ContextMenuParams, EditAction, EditFlags, MenuCommand, MenuEntry, context_menu_labels,
     context_menu_template,
@@ -18,7 +19,6 @@ use main_core::packages::electron_utils::context_menu::{
 use main_core::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
 use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
-use jscompat::{JsObject, JsonValue};
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
 use shell_contract::ids::{ViewId, WindowId};
@@ -232,7 +232,9 @@ fn run(
                 return;
             };
             let parent = services.views.sender_of(view).map(|s| s.window);
-            let url = src_url.or_else(|| params.src_url.clone()).unwrap_or_default();
+            let url = src_url
+                .or_else(|| params.src_url.clone())
+                .unwrap_or_default();
             services.workers.spawn(Box::new(move || {
                 let mut dialog = SaveDialog(dialogs);
                 let mut fetch = |url: &str| page_fetch(&webview, url);
@@ -331,7 +333,9 @@ fn page_fetch(webview: &tauri::Webview, url: &str) -> Result<Box<dyn Response>, 
     Ok(Box::new(Fetched {
         status: value["status"].as_u64().unwrap_or(0) as u16,
         content_type: value["type"].as_str().map(str::to_owned),
-        body: Some(jscompat::buffer_from_base64(value["body"].as_str().unwrap_or(""))),
+        body: Some(jscompat::buffer_from_base64(
+            value["body"].as_str().unwrap_or(""),
+        )),
     }))
 }
 

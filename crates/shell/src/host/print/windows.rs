@@ -146,7 +146,11 @@ pub(crate) fn devmode_request(job: &SilentJob, plan: &CopyPlan) -> DevmodeReques
     }
     let color = job.color.map(|color| {
         fields |= DM_COLOR;
-        if color { DMCOLOR_COLOR } else { DMCOLOR_MONOCHROME }
+        if color {
+            DMCOLOR_COLOR
+        } else {
+            DMCOLOR_MONOCHROME
+        }
     });
     let duplex = job.duplex.map(|duplex| {
         fields |= DM_DUPLEX;
@@ -159,7 +163,11 @@ pub(crate) fn devmode_request(job: &SilentJob, plan: &CopyPlan) -> DevmodeReques
     });
     DevmodeRequest {
         fields,
-        orientation: if job.landscape { DMORIENT_LANDSCAPE } else { DMORIENT_PORTRAIT },
+        orientation: if job.landscape {
+            DMORIENT_LANDSCAPE
+        } else {
+            DMORIENT_PORTRAIT
+        },
         copies: plan.driver_copies as i16,
         collate: plan.driver_collate,
         color,
@@ -171,7 +179,10 @@ pub(crate) fn devmode_request(job: &SilentJob, plan: &CopyPlan) -> DevmodeReques
 /// is read forwards, `0` counts as 1, and a range past the end is cut at the last page.
 /// An empty list is every page; a list that selects none is an error rather than an
 /// empty job.
-pub(crate) fn expand_page_ranges(ranges: &[(u32, u32)], page_count: u32) -> Result<Vec<u32>, String> {
+pub(crate) fn expand_page_ranges(
+    ranges: &[(u32, u32)],
+    page_count: u32,
+) -> Result<Vec<u32>, String> {
     if page_count == 0 {
         return Err("the PDF has no pages".into());
     }
@@ -187,9 +198,13 @@ pub(crate) fn expand_page_ranges(ranges: &[(u32, u32)], page_count: u32) -> Resu
             selected[page as usize - 1] = true;
         }
     }
-    let pages: Vec<u32> = (1..=page_count).filter(|page| selected[*page as usize - 1]).collect();
+    let pages: Vec<u32> = (1..=page_count)
+        .filter(|page| selected[*page as usize - 1])
+        .collect();
     if pages.is_empty() {
-        return Err(format!("the page ranges select no page of the {page_count} in the document"));
+        return Err(format!(
+            "the page ranges select no page of the {page_count} in the document"
+        ));
     }
     Ok(pages)
 }
@@ -223,7 +238,12 @@ pub(crate) fn fit_in_area(natural: (f64, f64), area: (i32, i32)) -> Option<Rect>
     let scale = (f64::from(area_w) / natural_w).min(f64::from(area_h) / natural_h);
     let width = ((natural_w * scale).round() as i32).clamp(1, area_w);
     let height = ((natural_h * scale).round() as i32).clamp(1, area_h);
-    Some(Rect { x: (area_w - width) / 2, y: (area_h - height) / 2, width, height })
+    Some(Rect {
+        x: (area_w - width) / 2,
+        y: (area_h - height) / 2,
+        width,
+        height,
+    })
 }
 
 /// The bitmap WinRT renders for a page that lands in `dest`: capped at `render_dpi`
@@ -248,7 +268,11 @@ pub(crate) fn render_size(dest: Rect, dpi_x: i32, dpi_y: i32, render_dpi: u32) -
 pub(crate) fn to_grayscale_bgra(pixels: &mut [u8]) {
     let (pixels, _) = pixels.as_chunks_mut::<4>();
     for pixel in pixels {
-        let (b, g, r) = (u32::from(pixel[0]), u32::from(pixel[1]), u32::from(pixel[2]));
+        let (b, g, r) = (
+            u32::from(pixel[0]),
+            u32::from(pixel[1]),
+            u32::from(pixel[2]),
+        );
         let luma = ((r * 299 + g * 587 + b * 114) / 1000) as u8;
         pixel[0] = luma;
         pixel[1] = luma;
@@ -258,7 +282,9 @@ pub(crate) fn to_grayscale_bgra(pixels: &mut [u8]) {
 
 /// `None` and `""` name the default printer
 pub(crate) fn requested_printer(name: &Option<String>) -> Option<&str> {
-    name.as_deref().map(str::trim).filter(|name| !name.is_empty())
+    name.as_deref()
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
 }
 
 #[cfg(windows)]
@@ -274,9 +300,9 @@ mod native {
     use ::windows::UI::Color;
     use ::windows::Win32::Foundation::RPC_E_CHANGED_MODE;
     use ::windows::Win32::Graphics::Gdi::{
-        self, BITMAPINFO, BI_RGB, CreateDCW, DEVMODEW, DeleteDC,
-        DIB_RGB_COLORS, GetDeviceCaps, HALFTONE, HDC, HORZRES, LOGPIXELSX, LOGPIXELSY, SRCCOPY,
-        SetStretchBltMode, StretchDIBits, VERTRES,
+        self, BI_RGB, BITMAPINFO, CreateDCW, DEVMODEW, DIB_RGB_COLORS, DeleteDC, GetDeviceCaps,
+        HALFTONE, HDC, HORZRES, LOGPIXELSX, LOGPIXELSY, SRCCOPY, SetStretchBltMode, StretchDIBits,
+        VERTRES,
     };
     use ::windows::Win32::Graphics::Printing::{
         ClosePrinter, DocumentPropertiesW, EnumPrintersW, GetDefaultPrinterW, OpenPrinterW,
@@ -337,7 +363,10 @@ mod native {
 
     impl AlignedBuf {
         fn zeroed(len: usize) -> Self {
-            Self { words: vec![0; len.div_ceil(8).max(1)], len }
+            Self {
+                words: vec![0; len.div_ceil(8).max(1)],
+                len,
+            }
         }
 
         fn bytes_mut(&mut self) -> &mut [u8] {
@@ -456,9 +485,12 @@ mod native {
                         // SAFETY: the call filled `returned` consecutive PRINTER_INFO_4W,
                         // whose name pointers point into the same buffer
                         let name = unsafe { (*infos.add(index)).pPrinterName.to_string() }
-                            .map_err(|error| format!("EnumPrinters: a printer name is not UTF-16: {error}"))?;
-                        let is_default =
-                            default.as_ref().is_some_and(|default| default.to_lowercase() == name.to_lowercase());
+                            .map_err(|error| {
+                                format!("EnumPrinters: a printer name is not UTF-16: {error}")
+                            })?;
+                        let is_default = default
+                            .as_ref()
+                            .is_some_and(|default| default.to_lowercase() == name.to_lowercase());
                         // Windows has one name per queue; a description would need the
                         // slower level 2
                         printers.push((name.clone(), name, is_default));
@@ -466,7 +498,10 @@ mod native {
                     return Ok(printers);
                 }
                 // the list grew: size it again
-                Err(error) if error.code() == ::windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER.to_hresult() => {}
+                Err(error)
+                    if error.code()
+                        == ::windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER.to_hresult() => {
+                }
                 Err(error) => return Err(os_err("EnumPrinters", error)),
             }
         }
@@ -486,7 +521,10 @@ mod native {
         if !ok.as_bool() {
             return None;
         }
-        let end = buffer.iter().position(|unit| *unit == 0).unwrap_or(buffer.len());
+        let end = buffer
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(buffer.len());
         Some(String::from_utf16_lossy(&buffer[..end]))
     }
 
@@ -499,7 +537,9 @@ mod native {
         // Open the document first: a PDF Windows cannot read fails before the printer
         // is touched.
         let document = load_pdf(pdf)?;
-        let page_count = document.PageCount().map_err(|error| os_err("PDF page count", error))?;
+        let page_count = document
+            .PageCount()
+            .map_err(|error| os_err("PDF page count", error))?;
         let pages = expand_page_ranges(&job.page_ranges, page_count)?;
 
         let name = match requested_printer(&job.device_name) {
@@ -510,7 +550,12 @@ mod native {
 
         let driver_max_copies = device_capability(&name_w, DC_COPIES);
         let driver_can_collate = device_capability(&name_w, DC_COLLATE) == 1;
-        let plan = plan_copies(job.copies, job.collate, driver_max_copies, driver_can_collate);
+        let plan = plan_copies(
+            job.copies,
+            job.collate,
+            driver_max_copies,
+            driver_can_collate,
+        );
         let request = devmode_request(job, &plan);
 
         let mut devmode = {
@@ -541,7 +586,9 @@ mod native {
             )
         };
         if dpi_x <= 0 || dpi_y <= 0 || area_w <= 0 || area_h <= 0 {
-            return Err(format!("\"{name}\" reports no printable area ({area_w} x {area_h} at {dpi_x} x {dpi_y} dpi)"));
+            return Err(format!(
+                "\"{name}\" reports no printable area ({area_w} x {area_h} at {dpi_x} x {dpi_y} dpi)"
+            ));
         }
 
         let doc_name_w = wide(doc_name);
@@ -557,7 +604,10 @@ mod native {
         if started <= 0 {
             return Err(last_error("StartDoc", started));
         }
-        let mut job_doc = Document { dc: &dc, finished: false };
+        let mut job_doc = Document {
+            dc: &dc,
+            finished: false,
+        };
 
         let grayscale = job.color == Some(false);
         for _ in 0..plan.document_passes {
@@ -565,20 +615,34 @@ mod native {
                 let page = document
                     .GetPage(page_number - 1)
                     .map_err(|error| os_err(&format!("PDF page {page_number}"), error))?;
-                let size = page.Size().map_err(|error| os_err("PDF page size", error))?;
+                let size = page
+                    .Size()
+                    .map_err(|error| os_err("PDF page size", error))?;
                 let natural = natural_size_px((size.Width, size.Height), dpi_x, dpi_y);
                 let target = fit_in_area(natural, (area_w, area_h))
                     .ok_or_else(|| format!("PDF page {page_number} has no size"))?;
                 let (render_w, render_h) = render_size(target, dpi_x, dpi_y, job.dpi.max(1));
 
-                let options = PdfPageRenderOptions::new().map_err(|error| os_err("PDF render options", error))?;
-                options.SetDestinationWidth(render_w).map_err(|error| os_err("PDF render options", error))?;
-                options.SetDestinationHeight(render_h).map_err(|error| os_err("PDF render options", error))?;
+                let options = PdfPageRenderOptions::new()
+                    .map_err(|error| os_err("PDF render options", error))?;
+                options
+                    .SetDestinationWidth(render_w)
+                    .map_err(|error| os_err("PDF render options", error))?;
+                options
+                    .SetDestinationHeight(render_h)
+                    .map_err(|error| os_err("PDF render options", error))?;
                 // paper is white, and a high-contrast theme must not recolour a print
                 options
-                    .SetBackgroundColor(Color { A: 255, R: 255, G: 255, B: 255 })
+                    .SetBackgroundColor(Color {
+                        A: 255,
+                        R: 255,
+                        G: 255,
+                        B: 255,
+                    })
                     .map_err(|error| os_err("PDF render options", error))?;
-                options.SetIsIgnoringHighContrast(true).map_err(|error| os_err("PDF render options", error))?;
+                options
+                    .SetIsIgnoringHighContrast(true)
+                    .map_err(|error| os_err("PDF render options", error))?;
 
                 let (mut pixels, width, height) = render_page(&page, &options, page_number)?;
                 if grayscale {
@@ -610,16 +674,24 @@ mod native {
     }
 
     fn load_pdf(pdf: &[u8]) -> Result<PdfDocument, String> {
-        let stream = InMemoryRandomAccessStream::new().map_err(|error| os_err("PDF stream", error))?;
-        let writer = DataWriter::CreateDataWriter(&stream).map_err(|error| os_err("PDF stream", error))?;
-        writer.WriteBytes(pdf).map_err(|error| os_err("PDF stream", error))?;
+        let stream =
+            InMemoryRandomAccessStream::new().map_err(|error| os_err("PDF stream", error))?;
+        let writer =
+            DataWriter::CreateDataWriter(&stream).map_err(|error| os_err("PDF stream", error))?;
+        writer
+            .WriteBytes(pdf)
+            .map_err(|error| os_err("PDF stream", error))?;
         writer
             .StoreAsync()
             .and_then(|operation| operation.join())
             .map_err(|error| os_err("PDF stream", error))?;
         // the stream is the writer's until it is detached
-        writer.DetachStream().map_err(|error| os_err("PDF stream", error))?;
-        stream.Seek(0).map_err(|error| os_err("PDF stream", error))?;
+        writer
+            .DetachStream()
+            .map_err(|error| os_err("PDF stream", error))?;
+        stream
+            .Seek(0)
+            .map_err(|error| os_err("PDF stream", error))?;
         PdfDocument::LoadFromStreamAsync(&stream)
             .and_then(|operation| operation.join())
             .map_err(|error| os_err("Windows could not open the PDF", error))
@@ -640,8 +712,12 @@ mod native {
         let decoder = BitmapDecoder::CreateAsync(&encoded)
             .and_then(|operation| operation.join())
             .map_err(|error| os_err(&context, error))?;
-        let width = decoder.PixelWidth().map_err(|error| os_err(&context, error))?;
-        let height = decoder.PixelHeight().map_err(|error| os_err(&context, error))?;
+        let width = decoder
+            .PixelWidth()
+            .map_err(|error| os_err(&context, error))?;
+        let height = decoder
+            .PixelHeight()
+            .map_err(|error| os_err(&context, error))?;
         let transform = BitmapTransform::new().map_err(|error| os_err(&context, error))?;
         let provider = decoder
             .GetPixelDataTransformedAsync(
@@ -653,16 +729,29 @@ mod native {
             )
             .and_then(|operation| operation.join())
             .map_err(|error| os_err(&context, error))?;
-        let pixels = provider.DetachPixelData().map_err(|error| os_err(&context, error))?.to_vec();
+        let pixels = provider
+            .DetachPixelData()
+            .map_err(|error| os_err(&context, error))?
+            .to_vec();
         if width == 0 || height == 0 || pixels.len() < width as usize * height as usize * 4 {
-            return Err(format!("{context}: the bitmap is {width} x {height} with {} bytes", pixels.len()));
+            return Err(format!(
+                "{context}: the bitmap is {width} x {height} with {} bytes",
+                pixels.len()
+            ));
         }
         Ok((pixels, width as i32, height as i32))
     }
 
-    fn draw_bitmap(dc: &PrinterDc, target: Rect, bgra: &[u8], width: i32, height: i32) -> Result<(), String> {
+    fn draw_bitmap(
+        dc: &PrinterDc,
+        target: Rect,
+        bgra: &[u8],
+        width: i32,
+        height: i32,
+    ) -> Result<(), String> {
         let mut info = BITMAPINFO::default();
-        info.bmiHeader.biSize = size_of::<::windows::Win32::Graphics::Gdi::BITMAPINFOHEADER>() as u32;
+        info.bmiHeader.biSize =
+            size_of::<::windows::Win32::Graphics::Gdi::BITMAPINFOHEADER>() as u32;
         info.bmiHeader.biWidth = width;
         // a negative height is a top-down DIB, which is how the decoder lays rows out
         info.bmiHeader.biHeight = -height;
@@ -700,13 +789,23 @@ mod native {
         // SAFETY: `name` is NUL-terminated; with no output buffer the call returns the
         // capability's count or flag (-1 when the driver does not know it)
         unsafe {
-            DeviceCapabilitiesW(PCWSTR(name.as_ptr()), PCWSTR::null(), capability, None, None)
+            DeviceCapabilitiesW(
+                PCWSTR(name.as_ptr()),
+                PCWSTR::null(),
+                capability,
+                None,
+                None,
+            )
         }
     }
 
     /// The driver's DEVMODE for the printer with this job's members merged in. The driver
     /// is the one that knows which values it supports, so it validates the merge.
-    fn merged_devmode(printer: &Printer, name: &[u16], request: &DevmodeRequest) -> Result<AlignedBuf, String> {
+    fn merged_devmode(
+        printer: &Printer,
+        name: &[u16],
+        request: &DevmodeRequest,
+    ) -> Result<AlignedBuf, String> {
         let name = PCWSTR(name.as_ptr());
         // SAFETY: with no output the call returns the size of the driver's DEVMODE
         let size = unsafe { DocumentPropertiesW(None, printer.0, name, None, None, 0) };
@@ -738,7 +837,14 @@ mod native {
         let merge = Gdi::DM_IN_BUFFER.0 | Gdi::DM_OUT_BUFFER.0;
         // SAFETY: the same buffer is the input and the output, which the API allows
         let merged = unsafe {
-            DocumentPropertiesW(None, printer.0, name, Some(devmode), Some(devmode.cast_const()), merge)
+            DocumentPropertiesW(
+                None,
+                printer.0,
+                name,
+                Some(devmode),
+                Some(devmode.cast_const()),
+                merge,
+            )
         };
         if merged != IDOK {
             return Err(last_error("DocumentProperties (merge)", merged));
@@ -756,9 +862,17 @@ mod tests {
         let plan = plan_copies(1, true, -1, false);
         assert_eq!(
             plan,
-            CopyPlan { driver_copies: 1, driver_collate: false, document_passes: 1, page_repeats: 1 }
+            CopyPlan {
+                driver_copies: 1,
+                driver_collate: false,
+                document_passes: 1,
+                page_repeats: 1
+            }
         );
-        assert_eq!(plan_copies(0, false, 0, false), plan_copies(1, false, 0, false));
+        assert_eq!(
+            plan_copies(0, false, 0, false),
+            plan_copies(1, false, 0, false)
+        );
     }
 
     #[test]
@@ -766,13 +880,23 @@ mod tests {
         let plan = plan_copies(3, true, 99, true);
         assert_eq!(
             plan,
-            CopyPlan { driver_copies: 3, driver_collate: true, document_passes: 1, page_repeats: 1 }
+            CopyPlan {
+                driver_copies: 3,
+                driver_collate: true,
+                document_passes: 1,
+                page_repeats: 1
+            }
         );
         // uncollated copies need no collate support
         let plan = plan_copies(3, false, 99, false);
         assert_eq!(
             plan,
-            CopyPlan { driver_copies: 3, driver_collate: false, document_passes: 1, page_repeats: 1 }
+            CopyPlan {
+                driver_copies: 3,
+                driver_collate: false,
+                document_passes: 1,
+                page_repeats: 1
+            }
         );
     }
 
@@ -783,11 +907,21 @@ mod tests {
         for max in [1, -1, 0] {
             assert_eq!(
                 plan_copies(3, true, max, true),
-                CopyPlan { driver_copies: 1, driver_collate: false, document_passes: 3, page_repeats: 1 }
+                CopyPlan {
+                    driver_copies: 1,
+                    driver_collate: false,
+                    document_passes: 3,
+                    page_repeats: 1
+                }
             );
             assert_eq!(
                 plan_copies(3, false, max, false),
-                CopyPlan { driver_copies: 1, driver_collate: false, document_passes: 1, page_repeats: 3 }
+                CopyPlan {
+                    driver_copies: 1,
+                    driver_collate: false,
+                    document_passes: 1,
+                    page_repeats: 3
+                }
             );
         }
         // copies beyond the driver's maximum, or collating without driver support
@@ -797,12 +931,18 @@ mod tests {
 
     #[test]
     fn copies_past_the_devmode_range_are_clamped() {
-        assert_eq!(plan_copies(100_000, false, i32::MAX, false).driver_copies, i16::MAX as u32);
+        assert_eq!(
+            plan_copies(100_000, false, i32::MAX, false).driver_copies,
+            i16::MAX as u32
+        );
     }
 
     #[test]
     fn the_devmode_carries_each_setting_and_only_those_asked_for() {
-        let job = SilentJob { landscape: true, ..SilentJob::default() };
+        let job = SilentJob {
+            landscape: true,
+            ..SilentJob::default()
+        };
         let plan = plan_copies(1, false, 1, false);
         let request = devmode_request(&job, &plan);
         assert_eq!(request.fields, DM_ORIENTATION | DM_COPIES);
@@ -835,13 +975,27 @@ mod tests {
     fn duplex_and_colour_map_to_the_wingdi_values() {
         let plan = plan_copies(1, false, 1, false);
         let duplex = |duplex| {
-            devmode_request(&SilentJob { duplex: Some(duplex), ..SilentJob::default() }, &plan).duplex
+            devmode_request(
+                &SilentJob {
+                    duplex: Some(duplex),
+                    ..SilentJob::default()
+                },
+                &plan,
+            )
+            .duplex
         };
         assert_eq!(duplex(Duplex::Simplex), Some(1));
         assert_eq!(duplex(Duplex::LongEdge), Some(2));
         assert_eq!(duplex(Duplex::ShortEdge), Some(3));
         let colour = |color| {
-            devmode_request(&SilentJob { color: Some(color), ..SilentJob::default() }, &plan).color
+            devmode_request(
+                &SilentJob {
+                    color: Some(color),
+                    ..SilentJob::default()
+                },
+                &plan,
+            )
+            .color
         };
         assert_eq!(colour(true), Some(2));
         assert_eq!(colour(false), Some(1));
@@ -854,7 +1008,10 @@ mod tests {
 
     #[test]
     fn ranges_are_ascending_distinct_and_cut_to_the_document() {
-        assert_eq!(expand_page_ranges(&[(5, 6), (1, 2), (2, 3)], 10), Ok(vec![1, 2, 3, 5, 6]));
+        assert_eq!(
+            expand_page_ranges(&[(5, 6), (1, 2), (2, 3)], 10),
+            Ok(vec![1, 2, 3, 5, 6])
+        );
         assert_eq!(expand_page_ranges(&[(3, 99)], 5), Ok(vec![3, 4, 5]));
         // written backwards, and from page 0
         assert_eq!(expand_page_ranges(&[(4, 2)], 5), Ok(vec![2, 3, 4]));
@@ -874,7 +1031,15 @@ mod tests {
         assert!((natural.0 - 4960.6).abs() < 1.0 && (natural.1 - 7015.6).abs() < 1.0);
         // the width limits, so the height shrinks by the same factor and is centred
         let rect = fit_in_area(natural, (4800, 6800)).unwrap();
-        assert_eq!(rect, Rect { x: 0, y: 6, width: 4800, height: 6788 });
+        assert_eq!(
+            rect,
+            Rect {
+                x: 0,
+                y: 6,
+                width: 4800,
+                height: 6788
+            }
+        );
     }
 
     #[test]
@@ -882,17 +1047,32 @@ mod tests {
         // a wide page into a tall area: width limits
         assert_eq!(
             fit_in_area((200.0, 100.0), (100, 400)),
-            Some(Rect { x: 0, y: 175, width: 100, height: 50 })
+            Some(Rect {
+                x: 0,
+                y: 175,
+                width: 100,
+                height: 50
+            })
         );
         // a tall page into a wide area: height limits
         assert_eq!(
             fit_in_area((100.0, 200.0), (400, 100)),
-            Some(Rect { x: 175, y: 0, width: 50, height: 100 })
+            Some(Rect {
+                x: 175,
+                y: 0,
+                width: 50,
+                height: 100
+            })
         );
         // a small page grows to the area
         assert_eq!(
             fit_in_area((10.0, 10.0), (100, 100)),
-            Some(Rect { x: 0, y: 0, width: 100, height: 100 })
+            Some(Rect {
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100
+            })
         );
     }
 
@@ -903,7 +1083,12 @@ mod tests {
         assert_eq!(natural, (600.0, 300.0));
         assert_eq!(
             fit_in_area(natural, (1200, 1200)),
-            Some(Rect { x: 0, y: 300, width: 1200, height: 600 })
+            Some(Rect {
+                x: 0,
+                y: 300,
+                width: 1200,
+                height: 600
+            })
         );
     }
 
@@ -916,14 +1101,29 @@ mod tests {
 
     #[test]
     fn rendering_never_exceeds_the_printers_resolution_or_the_cap() {
-        let dest = Rect { x: 0, y: 0, width: 4800, height: 6800 };
+        let dest = Rect {
+            x: 0,
+            y: 0,
+            width: 4800,
+            height: 6800,
+        };
         // 600 dpi device rendered at 300: half the pixels each way
         assert_eq!(render_size(dest, 600, 600, 300), (2400, 3400));
         // a 300 dpi device asked for 600: its own resolution
-        let dest = Rect { x: 0, y: 0, width: 2480, height: 3508 };
+        let dest = Rect {
+            x: 0,
+            y: 0,
+            width: 2480,
+            height: 3508,
+        };
         assert_eq!(render_size(dest, 300, 300, 600), (2480, 3508));
         // an absurd request is clamped to MAX_DPI, then to the side cap
-        let dest = Rect { x: 0, y: 0, width: 40_000, height: 20_000 };
+        let dest = Rect {
+            x: 0,
+            y: 0,
+            width: 40_000,
+            height: 20_000,
+        };
         let (w, h) = render_size(dest, 1200, 1200, 99_999);
         assert_eq!((w, h), (16_384, 8_192));
     }
@@ -933,7 +1133,10 @@ mod tests {
         // BGRA: pure red, pure green, white
         let mut pixels = [0, 0, 255, 255, 0, 255, 0, 255, 255, 255, 255, 7];
         to_grayscale_bgra(&mut pixels);
-        assert_eq!(pixels, [76, 76, 76, 255, 149, 149, 149, 255, 255, 255, 255, 7]);
+        assert_eq!(
+            pixels,
+            [76, 76, 76, 255, 149, 149, 149, 255, 255, 255, 255, 7]
+        );
     }
 
     #[test]

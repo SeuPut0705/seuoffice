@@ -37,7 +37,10 @@ use state::MStateRef;
 
 #[cfg(feature = "probe")]
 pub use menu::probe_trigger;
-pub use menu::{AppMenuItems, MenuAction, app_menu_items, click_app_menu, click_context_menu};
+pub use menu::{
+    AppMenuItems, MenuAction, MenuDict, app_menu_items, click_app_menu, click_context_menu,
+    current_lang, menu_label,
+};
 pub use print::take_diagram_print_document;
 pub use spell::{context_menu_command, intercept_context_menu};
 
