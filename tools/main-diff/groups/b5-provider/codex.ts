@@ -1637,10 +1637,17 @@ const streams: Group = {
         w([ok('turned back on').spec()]),
         steps({ off: true }, { off: false }, stream({ sessionId: 'on' })),
       ),
-      // the login changed after the first run: the idle process ends, the next run starts another
+      // the login changed after the first run: the idle process ends, the next run starts another.
+      // The ended process's folder goes by a real `rm` the next run's `mkdtemp` would race, so
+      // the folders are cleared first
       c(
         w([ok('first').spec(), ok('second').spec()]),
-        steps(stream({ sessionId: 'a' }), { login: true }, stream({ sessionId: 'b' })),
+        steps(
+          stream({ sessionId: 'a' }),
+          { login: true },
+          { forget: true },
+          stream({ sessionId: 'b' }),
+        ),
       ),
       // the pool: one process serves two runs
       c(

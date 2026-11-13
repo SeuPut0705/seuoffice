@@ -875,6 +875,8 @@ fn run_fs(op: &FsOp) -> Result<FsAnswer, NodeError> {
             if let Some(mode) = mode {
                 std::os::unix::fs::OpenOptionsExt::mode(&mut options, *mode as u32);
             }
+            #[cfg(not(unix))]
+            let _ = mode;
             if flag.as_deref() == Some("wx") {
                 options.create_new(true);
             } else {

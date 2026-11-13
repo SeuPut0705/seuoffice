@@ -5708,5 +5708,47 @@
     "find": "        files.set(entry.name.clone(), entry);",
     "replace": "        files.set(format!(\"{}#{}\", files.len(), entry.name), entry);",
     "fn": ["runtime-archive.extractRuntimeArchive"]
+  },
+  {
+    "name": "the connecting count notice is coalesced with the next",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "                    self.notify();\n                    self.flush();\n                }",
+    "replace": "                    self.notify();\n                }",
+    "fn": ["hub.scenario"]
+  },
+  {
+    "name": "the connecting notice waits for the list",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "        // the connecting count (or of what an earlier step left) fires here\n        self.flush();\n",
+    "replace": "        // the connecting count (or of what an earlier step left) fires here\n",
+    "fn": ["hub.scenario"]
+  },
+  {
+    "name": "the end of change does not fire its notice",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "        // the end of an async function: whoever awaits it continues after the notice\n        self.flush();\n",
+    "replace": "        // the end of an async function: whoever awaits it continues after the notice\n",
+    "fn": ["hub.scenario"]
+  },
+  {
+    "name": "a store write does not let the notice fire first",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "        // `await store.update(...)`: a pending notice fires before the write lands\n        self.flush();\n",
+    "replace": "        // `await store.update(...)`: a pending notice fires before the write lands\n",
+    "fn": ["hub.scenario"]
+  },
+  {
+    "name": "the notice still queued at the end of a step is lost",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "    pub fn take_changed(&mut self) -> Vec<ChangedNotice> {\n        self.flush();\n",
+    "replace": "    pub fn take_changed(&mut self) -> Vec<ChangedNotice> {\n",
+    "fn": ["hub.scenario"]
+  },
+  {
+    "name": "a notice fires at once instead of coalescing",
+    "file": "main-core/src/shell/mcp_client/hub.rs",
+    "find": "    fn notify(&mut self) {\n        self.notify_queued = true;\n    }",
+    "replace": "    fn notify(&mut self) {\n        self.notify_queued = true;\n        self.flush();\n    }",
+    "fn": ["hub.scenario"]
   }
 ]
