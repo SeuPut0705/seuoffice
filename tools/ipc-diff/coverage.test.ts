@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { channelAnswers } from './coverage.ts'
+import { type ChannelReport, type GroupReport, channelAnswers, coverage } from './coverage.ts'
 import type { Call } from './types.ts'
 
 const call = (channel: string, extra: Partial<Call> = {}): Call => ({
@@ -48,5 +48,52 @@ describe('coverage of deferred invokes', () => {
     expect(channelAnswers(calls, [DEFERRED, value(1)])).toEqual([
       { channel: 'x', withArgs: true, answer: undefined },
     ])
+  })
+})
+
+describe('coverage of a required batch', () => {
+  const specs = [
+    { name: 'w:call', kinds: ['invoke'], batch: 'W', surfaces: [] },
+    { name: 'w:event', kinds: ['event'], batch: 'W', surfaces: [] },
+  ]
+  const report = (batch: string, over: Partial<GroupReport> = {}): GroupReport => ({
+    batch,
+    channels: {},
+    events: [],
+    single: {},
+    ...over,
+  })
+  const answered: ChannelReport = { calls: 2, answers: ['"a"', '"b"'], withArgs: true }
+
+  it("counts another batch's group emitting the event", () => {
+    const reports = [
+      report('W', { channels: { 'w:call': answered } }),
+      report('M', { events: ['w:event'] }),
+    ]
+    expect(coverage('W', reports, specs)).toEqual([])
+  })
+
+  it('reports an event no group emits', () => {
+    const reports = [report('W', { channels: { 'w:call': answered } }), report('M')]
+    expect(coverage('W', reports, specs)).toEqual(['w:event: no case emits this event'])
+  })
+
+  it("does not let another batch's calls cover a channel", () => {
+    const reports = [
+      report('W', { events: ['w:event'] }),
+      report('M', { channels: { 'w:call': answered } }),
+    ]
+    expect(coverage('W', reports, specs)).toEqual(['w:call: no case calls it'])
+  })
+
+  it("does not let another batch's single-answer note excuse a channel", () => {
+    const one: ChannelReport = { calls: 1, answers: ['"a"'], withArgs: true }
+    const reports = [
+      report('W', { channels: { 'w:call': one }, events: ['w:event'] }),
+      report('M', { single: { 'w:call': 'one answer only' } }),
+    ]
+    expect(coverage('W', reports, specs)).toEqual(['w:call: fewer than two distinct answers'])
+    reports[0].single = { 'w:call': 'one answer only' }
+    expect(coverage('W', reports, specs)).toEqual([])
   })
 })
