@@ -3419,6 +3419,16 @@ const planCases: Case[] = [
     { previous: sessionOf([]), lists: [[], []] },
     'an empty strip and no copy: a plain launch',
   ),
+  planCase(
+    {
+      previous: sessionOf([planNew('epub', 'Book', 'e1', '.epub')]),
+      lists: [
+        [lcNew('e1', { identity: idU('e1', 'epub', '.epub'), kind: 'epub', title: 'Book copy' })],
+        [],
+      ],
+    },
+    'an untitled tab of a kind that keeps no copies is dropped even when a copy of that name is listed',
+  ),
 ]
 
 interface ResolveScenario {
@@ -3928,6 +3938,19 @@ const launchGateCases: Case[] = [
     args: [{ steps: [{ finish: 'resolve' }, { submit: GATE_RAW }, { get: true }] }],
     note: 'an answer before the rows are known',
   },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'async' },
+          { submit: GATE_RAW },
+          { submit: GATE_RAW },
+          { finish: 'resolve' },
+        ],
+      },
+    ],
+    note: 'an answer sent twice while the first is applied: applied once, both calls settle with it',
+  },
 ]
 
 // ---- the OS ending the session ----
@@ -4103,6 +4126,8 @@ interface LiveScenario {
   detached: Json[]
   /** the answer of `untitledOf`, by tab id */
   untitled: Record<string, { untitledId: string; ext: string } | null>
+  /** by tab title, before the id: tabs that share an id can still answer differently */
+  untitledByTitle?: Record<string, { untitledId: string; ext: string }>
   probes: string[]
 }
 
@@ -4112,7 +4137,11 @@ function runLive(o: LiveScenario, cx: TsContext): unknown {
     detached: o.detached as never,
     untitledOf: (tab) => {
       cx.log('untitledOf', tab)
-      return o.untitled[tab.id] ?? undefined
+      return (
+        o.untitledByTitle?.[(tab as { title?: string }).title ?? ''] ??
+        o.untitled[tab.id] ??
+        undefined
+      )
     },
   })
   return {
@@ -4204,6 +4233,21 @@ const liveCases: Case[] = [
       probes: ['a'],
     },
     'the editor says nothing: the tab is as it was',
+  ),
+  liveCase(
+    {
+      strip: {
+        tabs: [sTab('a', 'docs', 'One', '/tmp/1.docx'), sTab('a', 'docs', 'Two', '/tmp/2.docx')],
+        activeId: 'a',
+        split: null,
+      },
+      untitledByTitle: {
+        One: { untitledId: 'u1', ext: '.docx' },
+        Two: { untitledId: 'u2', ext: '.docx' },
+      },
+      probes: ['a'],
+    },
+    'two tabs with one id answer differently: the later answer is the one kept',
   ),
 ]
 

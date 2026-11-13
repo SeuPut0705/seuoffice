@@ -496,11 +496,18 @@ impl CliLinkHost for FakeCliHost {
     fn app_home_dir(&self, home_dir: &str) -> String {
         app_home_dir(home_dir)
     }
-    fn install_cli_link(&self, _launcher: &str) -> Result<InstallOutcome, String> {
+    fn install_cli_link(&self, launcher: &str) -> Result<InstallOutcome, String> {
         // installCliLink answers `unsupported` where it has no way to link;
         // the specs stop there so nothing reaches the machine
         match self.platform().as_str() {
-            "darwin" | "linux" | "win32" => Err("the case would reach the machine".to_owned()),
+            // no `powershell.exe` on the machines the cases run on: the registry
+            // edit cannot start, and the outcome names the launcher's folder
+            "win32" => Ok(InstallOutcome {
+                status: "unwritable".to_owned(),
+                location: Some(jscompat::node_path::win32::dirname(launcher)),
+                ..InstallOutcome::default()
+            }),
+            "darwin" | "linux" => Err("the case would reach the machine".to_owned()),
             _ => Ok(InstallOutcome {
                 status: "unsupported".to_owned(),
                 ..InstallOutcome::default()
@@ -1076,6 +1083,8 @@ struct CrashWc {
     name: String,
     id: i64,
     spec: Value,
+    /// `spec.destroyed`, which a `destroy` event sets while a box is up
+    destroyed: Rc<Cell<bool>>,
     log: Log,
 }
 
@@ -1084,7 +1093,7 @@ impl CrashContents for CrashWc {
         self.id
     }
     fn is_destroyed(&self) -> bool {
-        field_bool(&self.spec, "destroyed")
+        self.destroyed.get()
     }
     fn reload(&self) -> Result<(), Failure> {
         log_line(&self.log, vec![text("reload"), text(&self.name)]);
@@ -1308,6 +1317,7 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
             name: name.clone(),
             id: field_f64(wc, "id").unwrap_or(0.0) as i64,
             spec: wc.clone(),
+            destroyed: Rc::new(Cell::new(field_bool(wc, "destroyed"))),
             log: Rc::clone(&log),
         })
         .collect();
@@ -1366,6 +1376,10 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
                 Ok(None) => {}
                 Err(CrashWatchError::InvalidTime(_) | CrashWatchError::Rejected(_)) => {}
             }
+        } else if let Some(name) = event.get("destroy").and_then(Value::as_str) {
+            if let Some(wc) = find(name) {
+                wc.destroyed.set(true);
+            }
         } else if let Some(answer) = event.get("answer") {
             if pending.is_empty() {
                 continue;
@@ -1390,6 +1404,8 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
 struct DogWc {
     name: String,
     spec: Value,
+    /// how many times `isDestroyed` was asked: `destroyedAfter` counts them
+    destroyed_calls: Rc<Cell<f64>>,
     log: Log,
 }
 
@@ -1398,7 +1414,10 @@ impl WatchdogContents for DogWc {
         field_f64(&self.spec, "id").unwrap_or(0.0) as i64
     }
     fn is_destroyed(&self) -> bool {
+        let calls = self.destroyed_calls.get() + 1.0;
+        self.destroyed_calls.set(calls);
         field_bool(&self.spec, "destroyed")
+            || field_f64(&self.spec, "destroyedAfter").is_some_and(|after| calls > after)
     }
     fn get_os_process_id(&self) -> i64 {
         field_f64(&self.spec, "pid").unwrap_or(0.0) as i64
@@ -1571,6 +1590,7 @@ fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
         .map(|(name, wc)| DogWc {
             name: name.clone(),
             spec: wc.clone(),
+            destroyed_calls: Rc::new(Cell::new(0.0)),
             log: Rc::clone(&log),
         })
         .collect();

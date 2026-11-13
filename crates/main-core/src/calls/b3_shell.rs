@@ -2512,8 +2512,16 @@ fn live_call(args: &[Value], cx: &mut Context) -> Answer {
     let source = live_session_source(strip.as_ref(), &detached, &mut |tab| {
         let shown = json_value_to_serde(tab);
         let id = field_str(&shown, "id").map(str::to_owned);
+        let title = field_str(&shown, "title").map(str::to_owned);
         log.push(vec![text("untitledOf"), shown]);
-        let answer = field(answers, id.as_deref()?)?;
+        // `o.untitledByTitle?.[tab.title] ?? o.untitled[tab.id]`
+        let by_title = title
+            .as_deref()
+            .and_then(|title| spec.get("untitledByTitle").and_then(|m| field(m, title)));
+        let answer = match by_title {
+            Some(answer) => answer,
+            None => field(answers, id.as_deref()?)?,
+        };
         Some(SessionUntitledCopy {
             untitled_id: field_str(answer, "untitledId")?.to_owned(),
             ext: field_str(answer, "ext")?.to_owned(),
