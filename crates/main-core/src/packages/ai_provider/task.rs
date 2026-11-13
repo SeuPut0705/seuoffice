@@ -1875,4 +1875,113 @@ mod tests {
         drop(runtime);
         assert!(weak.upgrade().is_none());
     }
+
+    fn head() -> ResponseHead {
+        ResponseHead {
+            status: 200.0,
+            status_text: String::new(),
+            headers: Vec::new(),
+            url: String::new(),
+            redirected: false,
+            kind: "basic".into(),
+            has_body: true,
+        }
+    }
+
+    /// The id of the only `Cmd::Read` in `cmds`.
+    fn read_of(cmds: &[Cmd]) -> Id {
+        let reads: Vec<Id> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(reads.len(), 1, "{cmds:?}");
+        reads[0]
+    }
+
+    #[test]
+    fn cancelling_a_body_ends_the_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let held: Rc<RefCell<Option<Rc<Response>>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            );
+            *slot.borrow_mut() = Some(response.clone());
+            let first = response.read().await;
+            let second = response.read().await;
+            (first, second)
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        let read = read_of(&runtime.poll());
+        runtime.feed(Event::Done {
+            id: read,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        read_of(&runtime.poll());
+        // the stream stalls; `reader.cancel()` while the second read waits
+        held.borrow().as_ref().unwrap().cancel();
+        let cmds = runtime.poll();
+        assert_eq!(cmds, vec![Cmd::Cancel { id: fetch }]);
+        let (first, second) = call.take().expect("the second read ended");
+        assert_eq!(first.unwrap(), Some(b"one".to_vec()));
+        assert_eq!(second.unwrap(), None);
+    }
+
+    #[test]
+    fn a_branch_cancelled_mid_read_leaves_its_clone_to_cancel_the_stream() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let held: Rc<RefCell<Option<(Rc<Response>, Rc<Response>)>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = rt
+                .fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap();
+            let copy = Rc::new(response.clone_response());
+            let response = Rc::new(response);
+            *slot.borrow_mut() = Some((response.clone(), copy));
+            response.read().await
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        read_of(&runtime.poll());
+        let (response, copy) = held.borrow().clone().unwrap();
+        response.cancel();
+        // the clone still reads the stream: it is not cancelled yet
+        assert!(runtime.poll().is_empty());
+        assert_eq!(call.take().expect("the read ended").unwrap(), None);
+        copy.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+    }
 }
