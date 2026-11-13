@@ -430,6 +430,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                         stdio: [Stdio::Pipe; 3],
                         detached: false,
                         windows_hide: false,
+                        shell: None,
                     })
                     .await?;
                 child.end_stdin();

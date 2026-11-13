@@ -1,0 +1,408 @@
+[
+  {
+    "name": "logout succeeds only on exit code 0",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "Ok(result) if result.code == Some(0.0) => SubscriptionLaunchResult::ok(),",
+    "replace": "Ok(result) if result.code != Some(0.0) => SubscriptionLaunchResult::ok(),",
+    "fn": ["subscription/launch.launchSubscriptionLogout"]
+  },
+  {
+    "name": "wait for a child without a pid",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "const START_FAILURE_WAIT_MS: f64 = 300.0;",
+    "replace": "const START_FAILURE_WAIT_MS: f64 = 301.0;",
+    "fn": [
+      "subscription/launch.launchSubscriptionLogin",
+      "subscription/launch.launchSubscriptionInstall"
+    ]
+  },
+  {
+    "name": "default logout time",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "pub const SUBSCRIPTION_LOGOUT_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "pub const SUBSCRIPTION_LOGOUT_TIMEOUT_MS: f64 = 20_001.0;",
+    "fn": ["subscription/launch.launchSubscriptionLogout", "subscription/launch.constants"]
+  },
+  {
+    "name": "claude login arguments",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "\"claude-code\" => vec![\"auth\".into(), \"login\".into()],",
+    "replace": "\"claude-code\" => vec![\"auth\".into(), \"logon\".into()],",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "claude logout arguments",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "\"claude-code\" => vec![\"auth\".into(), \"logout\".into()],",
+    "replace": "\"claude-code\" => vec![\"auth\".into(), \"signout\".into()],",
+    "fn": ["subscription/launch.launchSubscriptionLogout"]
+  },
+  {
+    "name": "login starts in the temp folder",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "cwd: Some(rt.tmpdir()),",
+    "replace": "cwd: None,",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "the hidden login window style",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "login_window_script(\"Hidden\")",
+    "replace": "login_window_script(\"Normal\")",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "the guided script names the window",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "\"if ($title) { $Host.UI.RawUI.WindowTitle = $title }\".to_owned(),",
+    "replace": "\"if ($title) { $Host.UI.RawUI.WindowTitle = $guide }\".to_owned(),",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "the words are sent to a hidden window",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "if options.window.as_deref() != Some(\"hidden\") {",
+    "replace": "if options.window.as_deref() != Some(\"visible\") {",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "backslashes before a quote are doubled",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "format!(\"{slashes}{slashes}\\\\\\\"\")",
+    "replace": "format!(\"{slashes}\\\\\\\"\")",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "a trailing backslash is doubled",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "format!(\"{slashes}{slashes}\")",
+    "replace": "format!(\"{slashes}\")",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "the update program for claude",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "args: vec![\"update\".to_owned()],",
+    "replace": "args: vec![\"upgrade\".to_owned()],",
+    "fn": [
+      "subscription/launch.subscriptionUpdatePlan",
+      "subscription/launch.launchSubscriptionUpdate"
+    ]
+  },
+  {
+    "name": "an npm copy is found without regard to case",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "@openai[\\\\/]codex\", \"i\")",
+    "replace": "@openai[\\\\/]codex\", \"\")",
+    "fn": ["subscription/launch.subscriptionUpdatePlan"]
+  },
+  {
+    "name": "the winget update command",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "pub const SUBSCRIPTION_CODEX_UPDATE_COMMAND_WINGET: &str = \"winget upgrade --id OpenAI.Codex -e\";",
+    "replace": "pub const SUBSCRIPTION_CODEX_UPDATE_COMMAND_WINGET: &str = \"winget upgrade OpenAI.Codex\";",
+    "fn": [
+      "subscription/launch.subscriptionUpdateCommandLine",
+      "subscription/launch.launchSubscriptionUpdate",
+      "subscription/launch.constants"
+    ]
+  },
+  {
+    "name": "the window shell",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "shell: Some(windows_system_tool(get, &[\"cmd.exe\"])),",
+    "replace": "shell: None,",
+    "fn": [
+      "subscription/launch.launchSubscriptionInstall",
+      "subscription/launch.launchSubscriptionUpdate"
+    ]
+  },
+  {
+    "name": "a login listener that throws stops the others",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "let _ = listener(provider);",
+    "replace": "if listener(provider).is_err() {\n            return;\n        }",
+    "fn": [
+      "subscription/launch.notifySubscriptionLoginChange",
+      "subscription/launch.onSubscriptionLoginChange"
+    ]
+  },
+  {
+    "name": "a login listener added twice is told twice",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "if !st.login_change.iter().any(|known| same(known, &listener)) {",
+    "replace": "if true {",
+    "fn": [
+      "subscription/launch.onSubscriptionLoginChange",
+      "subscription/launch.notifySubscriptionLoginChange"
+    ]
+  },
+  {
+    "name": "an off listener added twice is told twice",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "if !st.off_change.iter().any(|known| same(known, &listener)) {",
+    "replace": "if true {",
+    "fn": [
+      "subscription/launch.onSubscriptionOffChange",
+      "subscription/launch.notifySubscriptionOffChange"
+    ]
+  },
+  {
+    "name": "an off listener that throws stops the others",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "let _ = listener(change);",
+    "replace": "if listener(change).is_err() {\n            return;\n        }",
+    "fn": [
+      "subscription/launch.notifySubscriptionOffChange",
+      "subscription/launch.onSubscriptionOffChange"
+    ]
+  },
+  {
+    "name": "a logout tells the listeners",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "    notify_subscription_login_change(state, provider);\n    result",
+    "replace": "    result",
+    "fn": ["subscription/launch.launchSubscriptionLogout"]
+  },
+  {
+    "name": "the exit of a login is told",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "if matches!(event, ChildEvent::Exit { .. }) && !fired.replace(true) {\n                notify_subscription_login_change(&state, &provider);",
+    "replace": "if matches!(event, ChildEvent::Close { .. }) && !fired.replace(true) {\n                notify_subscription_login_change(&state, &provider);",
+    "fn": ["subscription/launch.launchSubscriptionLogin"]
+  },
+  {
+    "name": "the install on a system without windows",
+    "file": "main-core/src/packages/ai_provider/subscription_launch.rs",
+    "find": "let platform = options.platform.clone().unwrap_or_else(|| rt.platform());\n    if platform != \"win32\" {\n        return SubscriptionLaunchResult::with_url(\"unsupported\", install_url);",
+    "replace": "let platform = options.platform.clone().unwrap_or_else(|| rt.platform());\n    if platform == \"win32\" {\n        return SubscriptionLaunchResult::with_url(\"unsupported\", install_url);",
+    "fn": ["subscription/launch.launchSubscriptionInstall"]
+  },
+  {
+    "name": "a timeout names the seconds",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "number_to_string(math_round(timeout_ms / 1000.0))",
+    "replace": "number_to_string(timeout_ms / 1000.0)",
+    "fn": [
+      "subscription/status.detectSubscriptionLogin",
+      "subscription/status.detectSubscriptionLogins"
+    ]
+  },
+  {
+    "name": "an API key login is metered",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "[\"api_key\", \"api_key_helper\", \"third_party\"]",
+    "replace": "[\"api_key\", \"api_key_helper\"]",
+    "fn": [
+      "subscription/status.detectSubscriptionLogin",
+      "subscription/status.parseClaudeAuthStatus"
+    ]
+  },
+  {
+    "name": "another backend is a paid route",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "name != \"firstParty\"",
+    "replace": "name != \"bedrock\"",
+    "fn": ["subscription/status.parseClaudeAuthStatus"]
+  },
+  {
+    "name": "the account source and the CLI disagree",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "    if cli_method == \"unknown\" {\n        cli\n    } else {\n        account\n    }",
+    "replace": "    if cli_method == \"unknown\" {\n        account\n    } else {\n        cli\n    }",
+    "fn": ["subscription/status.detectSubscriptionLogin"]
+  },
+  {
+    "name": "an unknown plan type is not shown",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": ".filter(|plan| plan != \"unknown\")",
+    "replace": ".filter(|plan| plan != \"none\")",
+    "fn": ["subscription/status.codexAccountInfo"]
+  },
+  {
+    "name": "an unexpected argument is an old CLI",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "|unrecognized (subcommand|option)|unexpected argument",
+    "replace": "|unrecognized (subcommand|option)",
+    "fn": ["subscription/status.detectSubscriptionLogin"]
+  },
+  {
+    "name": "an access token login",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "how == \"access token\"",
+    "replace": "how == \"access-token\"",
+    "fn": ["subscription/status.parseCodexLoginStatus"]
+  },
+  {
+    "name": "the error code of a failure",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "js_regex!(r\"^E[A-Z0-9_]{1,30}$\")",
+    "replace": "js_regex!(r\"^E[A-Z0-9_]{1,3}$\")",
+    "fn": ["subscription/status.detectSubscriptionLogin"]
+  },
+  {
+    "name": "a path per provider replaces the common one",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "options.configured_path = paths.get(provider).cloned().flatten();",
+    "replace": "options.configured_path = paths.get(provider).cloned().flatten().or(options.configured_path.clone());",
+    "fn": ["subscription/status.detectSubscriptionLogins"]
+  },
+  {
+    "name": "the version before the status",
+    "file": "main-core/src/packages/ai_provider/subscription_status.rs",
+    "find": "if !subscription_version_at_least(&reported, minimum) {",
+    "replace": "if subscription_version_at_least(&reported, minimum) {",
+    "fn": ["subscription/status.detectSubscriptionLogin"]
+  },
+  {
+    "name": "a metered login is usable once accepted",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "state == \"ready\" || (state == \"metered\" && metered_accepted)",
+    "replace": "state == \"ready\"",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "accepting needs a metered login",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "if accepted && (detection.is_none() || fingerprint.is_none()) {",
+    "replace": "if accepted && detection.is_none() {",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "changes wait for the one before",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "if let Some(previous) = previous {\n            previous.await;\n        }",
+    "replace": "",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "a fresh check waits for the one under way",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "if fresh {\n                        let running",
+    "replace": "if false {\n                        let running",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "back on asks again",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "if result.ok && !off {",
+    "replace": "if false && !off {",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "a check under way is shared",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "if let Some(running) = self.st.borrow().in_flight.get(provider) {\n            return running.clone();\n        }",
+    "replace": "",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "an acceptance that cannot be read back",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": ".unwrap_or(false);",
+    "replace": ".unwrap_or(true);",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "signing in hides an unfinished login",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "            if st.signing_in.has(provider) {\n                continue;\n            }",
+    "replace": "",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "the bridges are told of a switch",
+    "file": "main-core/src/packages/ai_provider/subscription_service.rs",
+    "find": "                notify_subscription_off_change(\n                    &self.launch,",
+    "replace": "                let _ = (\n                    &self.launch,",
+    "fn": ["subscription/service.createSubscriptionStatusService"]
+  },
+  {
+    "name": "a CLI turned off is refused",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if check_off && self.deps.service.is_off(&provider).await {",
+    "replace": "if false && self.deps.service.is_off(&provider).await {",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "use anyway for a CLI turned off",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if service.is_off(&provider).await {",
+    "replace": "if false && service.is_off(&provider).await {",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "only a CLI can be turned off",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if !is_subscription_cli(Some(&text(provider.clone()))) {",
+    "replace": "if false {",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "a logout looks again",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "deps.service.check(Some(&[provider][..]), true).await;",
+    "replace": "",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "the hidden login time",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "pub const HIDDEN_LOGIN_TIMEOUT_MS: f64 = 10.0 * 60_000.0;",
+    "replace": "pub const HIDDEN_LOGIN_TIMEOUT_MS: f64 = 9.0 * 60_000.0;",
+    "fn": ["subscription/ipc.HIDDEN_LOGIN_TIMEOUT_MS"]
+  },
+  {
+    "name": "a press while a login runs on posix",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if current.is_some() && self.platform != \"win32\" {",
+    "replace": "if current.is_some() && self.platform == \"win32\" {",
+    "fn": ["subscription/ipc.createSubscriptionIpcDeps"]
+  },
+  {
+    "name": "a login stopped before it started",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if login.borrow().stopped {",
+    "replace": "if false {",
+    "fn": ["subscription/ipc.createSubscriptionIpcDeps"]
+  },
+  {
+    "name": "the first call registers once",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "if let Some((deps, _)) = &shared.borrow().registration {\n        return deps.clone();\n    }",
+    "replace": "",
+    "fn": [
+      "subscription/ipc.ensureSubscriptionIpc",
+      "subscription/ipc.sharedSubscriptionStatuses",
+      "subscription/ipc.resetSharedSubscriptionIpc"
+    ]
+  },
+  {
+    "name": "the account is left out of the shared statuses",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "copy = super::jsval::without(&copy, &[\"account\"]);",
+    "replace": "",
+    "fn": ["subscription/ipc.sharedSubscriptionStatuses"]
+  },
+  {
+    "name": "only window is a login mode",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": "Some(JsonValue::String(mode)) if mode == \"window\" => Some(\"window\".to_owned()),",
+    "replace": "Some(JsonValue::String(mode)) => Some(mode.clone()),",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "a recheck takes known providers only",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": ".filter(|p| is_subscription_provider(Some(p)))",
+    "replace": ".filter(|p| p.as_str().is_some())",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  },
+  {
+    "name": "the consent given",
+    "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
+    "find": ".set_metered_accepted(&provider, *accepted)",
+    "replace": ".set_metered_accepted(&provider, !*accepted)",
+    "fn": ["subscription/ipc.registerSubscriptionIpc"]
+  }
+]

@@ -487,6 +487,7 @@ impl KillHost for RtKillHost {
             stdio: [Stdio::Ignore, Stdio::Ignore, Stdio::Ignore],
             detached: false,
             windows_hide: options.windows_hide,
+            shell: None,
         };
         self.rt.spawn_local(async move {
             match rt.spawn(request).await {

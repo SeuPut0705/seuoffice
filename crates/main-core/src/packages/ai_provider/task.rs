@@ -441,7 +441,8 @@ pub enum Cmd {
     /// `server.close()`
     CloseServer { server: Id },
     /// a function the caller passed in (`openBrowser`, `onExit`...), by its
-    /// name in the ported module: answer [`Answer::Value`]
+    /// name in the ported module: answer [`Answer::Value`], or
+    /// [`Answer::Unit`] for `undefined`
     Call {
         id: Id,
         name: String,
@@ -803,8 +804,19 @@ impl Rt {
         }
     }
 
-    /// `await fn(...args)` of a function the caller passed in, by its name
+    /// `await fn(...args)` of a function the caller passed in, by its name;
+    /// `undefined` reads as `null` (see [`Rt::call_exact`] where the two differ)
     pub async fn call(&self, name: &str, args: JsonValue) -> Result<JsonValue, JsError> {
+        Ok(self
+            .call_exact(name, args)
+            .await?
+            .unwrap_or(JsonValue::Null))
+    }
+
+    /// `await fn(...args)`: `None` is `undefined` (the host answers
+    /// [`Answer::Unit`]), `Some(JsonValue::Null)` is `null`
+    /// ([`Answer::Value`] of null).
+    pub async fn call_exact(&self, name: &str, args: JsonValue) -> Result<Option<JsonValue>, JsError> {
         match self
             .op(None, |id| Cmd::Call {
                 id,
@@ -813,8 +825,8 @@ impl Rt {
             })
             .await?
         {
-            Answer::Value(value) => Ok(value),
-            _ => Ok(JsonValue::Null),
+            Answer::Value(value) => Ok(Some(value)),
+            _ => Ok(None),
         }
     }
 

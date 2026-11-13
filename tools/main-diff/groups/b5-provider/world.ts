@@ -43,7 +43,8 @@
  * Log lines: `['fetch', i, via, url, method, headers, body, redirect]` (via
  * `node`, `net` or `embed`; the body a string, `{ hex }`, `{ form }` or null),
  * `['cancel', i]`, `['timer', n, ms]`, `['clear', n]`, `['spawn', i, command,
- * args, options]`, `['stdin', i, text]`, `['end', i]`, `['kill', i, signal]`,
+ * args, options]` (`options`: `cwd`, `env`, `stdio`, `detached`, `windowsHide`,
+ * `shell`: the shell's path or null), `['stdin', i, text]`, `['end', i]`, `['kill', i, signal]`,
  * `['killpid', pid, signal]`, `['call', name, args]`, `['log', level,
  * ...args]`, `['listen', host, port]`, `['respond', n, status, headers,
  * body]` (the n-th request, from 0), `['close-server']`; fetches, timers
@@ -597,7 +598,19 @@ export class WorldRun {
       ;(childProcess as Any).spawn = this.spawn
       ;(http as Any).createServer = this.createServer
       ;(process as Any).kill = this.kill
-      process.env = env
+      // Node's own process.env reads names without case on Windows, as Rt::env does
+      process.env =
+        this.world.platform === 'win32'
+          ? new Proxy(env, {
+              get: (target, key) =>
+                typeof key === 'string'
+                  ? target[
+                      Object.keys(target).find((k) => k.toLowerCase() === key.toLowerCase()) ??
+                        key
+                    ]
+                  : undefined,
+            })
+          : env
       Object.defineProperty(process, 'platform', {
         value: this.world.platform ?? 'linux',
         configurable: true,
