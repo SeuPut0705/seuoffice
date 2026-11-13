@@ -8,8 +8,9 @@
 //! the hub when the step's quiet point is pumped), a held one waits for a
 //! `release` step or an abort, and the events of the fakes (a changed tool
 //! list, a changed local state) are delivered before the answers. After each
-//! step the hub's `changed` is taken once and the windows are told, as
-//! `registerMcpHubIpc`'s listener does.
+//! step (and the batch of events it produced) the hub's notices are taken, each
+//! is logged with the settings view it holds and the windows are told of each,
+//! as `registerMcpHubIpc`'s listener does.
 //!
 //! `hub-app.scenario` is the app wiring (`AppHubHost`, `AppIpcHost`) over fake
 //! windows; `hub.redirectSafeFetch` is the guard over a fake network.
@@ -1524,13 +1525,13 @@ fn scenario(args: &[Value]) -> Answer {
                 entry.value = printed(value);
             }
         }
-        let mut changed = false;
-        if world.ipc.take_changed() {
-            changed = true;
+        let mut notice_views: Vec<JsonValue> = Vec::new();
+        for notice in world.ipc.take_changed() {
+            notice_views.push(sort_keys(&notice.view));
             let mut host = IpcHost {
                 sh: world.sh.clone(),
             };
-            world.ipc.on_changed(&mut host);
+            world.ipc.on_changed(&mut host, &notice);
         }
         let mut record = JsObject::new();
         record.set("i", number(index as f64));
@@ -1584,16 +1585,14 @@ fn scenario(args: &[Value]) -> Answer {
                 JsonValue::Array(calls.iter().map(|c| text(c.as_str())).collect()),
             );
         }
-        if changed {
-            record.set("changed", JsonValue::Bool(true));
+        if !notice_views.is_empty() {
+            record.set("notices", JsonValue::Array(notice_views));
         }
         if !sent.is_empty() {
-            let from = sent.len().saturating_sub(3);
             record.set(
                 "sent",
                 JsonValue::Array(
-                    sent[from..]
-                        .iter()
+                    sent.iter()
                         .map(|(to, channel)| {
                             JsonValue::Array(vec![number(*to as f64), text(channel.as_str())])
                         })
@@ -1852,10 +1851,10 @@ fn app_scenario(args: &[Value]) -> Answer {
             _ => {}
         }
         pump(&mut ipc, &sh);
-        let mut changed = false;
-        if ipc.take_changed() {
-            changed = true;
-            ipc.on_changed(&mut AppIpcHost { app: &*app });
+        let mut notices = 0usize;
+        for notice in ipc.take_changed() {
+            notices += 1;
+            ipc.on_changed(&mut AppIpcHost { app: &*app }, &notice);
         }
         let calls: Vec<String> = logs.borrow()[start_logs..].to_vec();
         if !calls.is_empty() {
@@ -1864,8 +1863,8 @@ fn app_scenario(args: &[Value]) -> Answer {
                 JsonValue::Array(calls.iter().map(|c| text(c.as_str())).collect()),
             );
         }
-        if changed {
-            record.set("changed", JsonValue::Bool(true));
+        if notices > 0 {
+            record.set("notices", number(notices as f64));
         }
         let fresh: Vec<(f64, String, Vec<JsonValue>)> = sent.borrow()[start_sent..].to_vec();
         let is_batch = |s: &(f64, String, Vec<JsonValue>)| {
@@ -1874,19 +1873,10 @@ fn app_scenario(args: &[Value]) -> Answer {
         let batch: Vec<&(f64, String, Vec<JsonValue>)> =
             fresh.iter().filter(|s| is_batch(s)).collect();
         if !batch.is_empty() {
-            let keep = if batch
-                .iter()
-                .any(|s| s.0 == 1.0 && s.1 == "mcp-servers:changed")
-            {
-                3
-            } else {
-                2
-            };
-            let from = batch.len().saturating_sub(keep);
             record.set(
                 "sent",
                 JsonValue::Array(
-                    batch[from..]
+                    batch
                         .iter()
                         .map(|s| JsonValue::Array(vec![number(s.0), text(s.1.as_str())]))
                         .collect(),

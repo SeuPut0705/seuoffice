@@ -33,9 +33,22 @@
 //!   rejected. Methods that write the store return `Err` where the
 //!   TypeScript's promise rejects.
 //! - `notify()` of the TypeScript queues a microtask that tells the listeners
-//!   once. The caller asks [`McpHub::take_changed`] after every step it
-//!   drove (a method call, one event) and tells its listeners when it is
-//!   `true`. Listeners, `onChanged` and its unsubscribe are the caller's.
+//!   once, when the stack next empties or at the next `await`, with the view
+//!   as it is then. The hub models that: `notify()` only queues, and the hub
+//!   *flushes* (turns the queued notice into a [`ChangedNotice`] holding
+//!   `settings_view()` at that moment) at every point the TypeScript lets
+//!   microtasks run while a notice is queued: before each awaited store write,
+//!   `plannedLaunch` or `store.load`; after starting an awaited connection
+//!   operation (`listTools`, `ensure`, `callTool`, `signIn`, `revoke`, `stop`);
+//!   after the `finally` of `readListing`; at the end of `relist` and of
+//!   `change`. The notice a continuation leaves queued at its end
+//!   ([`McpHub::on_settled`], a connection event, a public method) stays queued:
+//!   another continuation of the same microtask drain may add to it. Whatever
+//!   is still queued when the caller asks [`McpHub::take_changed`] fires too,
+//!   so the caller asks once after every step it drove (a method call, and
+//!   the batch of events the connections produced) and tells its listeners
+//!   of each notice, in order.
+//!   Listeners, `onChanged` and its unsubscribe are the caller's.
 //!
 //! What has no counterpart: the `AbortSignal` handed to `deps.kit.resolveCommand`
 //! (a plain host call is not cancelled), the `AbortSignal` handed to
@@ -833,6 +846,14 @@ struct HeldPaste {
 /// `HubResult`: a method that writes the store; `Err` is the rejection
 pub type HubResult<T> = Result<T, NodeError>;
 
+/// One run of the microtask `notify()` queues: what the `onChanged` listeners
+/// read when it ran. `view` is `settingsView()` at that moment (the listener of
+/// `hub-ipc` sends it to the shell window and broadcasts `mcp-tools:changed`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChangedNotice {
+    pub view: JsonValue,
+}
+
 /// The hub: state of `createMcpHub(deps)`
 pub struct McpHub<'h> {
     host: Rc<dyn McpHubHost<'h> + 'h>,
@@ -854,6 +875,8 @@ pub struct McpHub<'h> {
     stopping: JsMap<StopKind>,
     app_aborted: bool,
     notify_queued: bool,
+    /// the notices that fired and wait for [`McpHub::take_changed`]
+    notices: Vec<ChangedNotice>,
     pending: HashMap<OpId, Pending>,
     settled: Vec<(Ticket, HubAnswer)>,
     stop_alls: HashMap<Ticket, usize>,
@@ -881,6 +904,7 @@ impl<'h> McpHub<'h> {
             stopping: JsMap::new(),
             app_aborted: false,
             notify_queued: false,
+            notices: Vec::new(),
             pending: HashMap::new(),
             settled: Vec::new(),
             stop_alls: HashMap::new(),
@@ -927,15 +951,33 @@ impl<'h> McpHub<'h> {
 
     // ---- notifying ----
 
-    /// `notify()`
+    /// `notify()`: queue the notice (coalesced with one already queued)
     fn notify(&mut self) {
         self.notify_queued = true;
     }
 
-    /// The microtask of `notify()`: `true` when the listeners are to be told
-    /// (once) of what changed since the last time
-    pub fn take_changed(&mut self) -> bool {
-        std::mem::take(&mut self.notify_queued)
+    /// The microtask `notify()` queued runs: the listeners read the view as it is
+    /// now. Called at every point the TypeScript lets microtasks run (an `await`,
+    /// the end of an async function, the end of a continuation).
+    fn flush(&mut self) {
+        if std::mem::take(&mut self.notify_queued) {
+            let view = self.settings_view();
+            self.notices.push(ChangedNotice { view });
+        }
+    }
+
+    /// `plannedLaunch(server)` of the deps, awaited
+    fn plan_of(&mut self, server: &McpServerConfig) -> PlannedLaunch {
+        self.flush();
+        self.host.planned_launch(server)
+    }
+
+    /// The notices the listeners of `onChanged` heard, in order, after the step the
+    /// caller drove (a public method, then the events its connections produced
+    /// while it ran): the notice still queued at the end of the step fires too.
+    pub fn take_changed(&mut self) -> Vec<ChangedNotice> {
+        self.flush();
+        std::mem::take(&mut self.notices)
     }
 
     // ---- store helpers ----
@@ -944,7 +986,9 @@ impl<'h> McpHub<'h> {
         self.store.borrow().server(id)
     }
 
-    fn store_update(&self, change: &mut dyn FnMut(&mut McpServersFile)) -> HubResult<()> {
+    fn store_update(&mut self, change: &mut dyn FnMut(&mut McpServersFile)) -> HubResult<()> {
+        // `await store.update(...)`: a pending notice fires before the write lands
+        self.flush();
         self.store
             .borrow_mut()
             .update(&mut |file| {
@@ -1251,6 +1295,9 @@ impl<'h> McpHub<'h> {
                 }
             }
         }
+        // `await conn.listTools(...)` / `await readListing(...)`: the notice of
+        // the connecting count (or of what an earlier step left) fires here
+        self.flush();
         if signal_app && self.app_aborted {
             self.abort_op(target, op);
         }
@@ -1297,6 +1344,8 @@ impl<'h> McpHub<'h> {
 
     /// the end of a `relist`: to whoever started it
     fn relist_done(&mut self, owner: ListingOwner, id: &str, outcome: HubResult<Option<Trouble>>) {
+        // the end of `relist`: whoever awaits it continues after the notice
+        self.flush();
         match owner {
             ListingOwner::Shared => {
                 let waiters = self.listings.delete(id).unwrap_or_default();
@@ -1348,7 +1397,11 @@ impl<'h> McpHub<'h> {
 
     // ---- the answers of the connections ----
 
-    /// An operation of a connection ended
+    /// An operation of a connection ended: the continuation of the TypeScript that
+    /// awaited it. It leaves its last notice queued: another continuation the
+    /// TypeScript would have run in the same microtask drain may add to it, so the
+    /// caller asks [`McpHub::take_changed`] once after the batch it delivers (after
+    /// each event when they arrive in turns of the event loop).
     pub fn on_settled(&mut self, op: OpId, outcome: ConnOutcome) {
         let Some(pending) = self.pending.remove(&op) else {
             return;
@@ -1370,7 +1423,10 @@ impl<'h> McpHub<'h> {
                     if let Some(live) = self.lives.get_mut(&id) {
                         live.connecting -= 1;
                     }
+                    // the `finally` of `readListing`: its notice fires before
+                    // `relist` goes on with what was read
                     self.notify();
+                    self.flush();
                 }
                 let outcome = match result {
                     Err(error) => {
@@ -1786,6 +1842,8 @@ impl<'h> McpHub<'h> {
             if let Some(c) = self.locals.get_mut(&conn) {
                 c.ensure(op);
             }
+            // `await conn.ensure(...)`
+            self.flush();
             return;
         }
         let conn = self.remote_of(server);
@@ -1803,6 +1861,8 @@ impl<'h> McpHub<'h> {
         if let Some(c) = self.remotes.get_mut(&conn) {
             c.call_tool(op, &tool, &input);
         }
+        // `await conn.callTool(...)`
+        self.flush();
     }
 
     /// local: `await conn.callTool(tool, input, signal)` after `ensure`
@@ -1823,6 +1883,8 @@ impl<'h> McpHub<'h> {
         if let Some(c) = self.locals.get_mut(&conn) {
             c.call_tool(op, &tool, &input);
         }
+        // `await conn.callTool(...)`
+        self.flush();
         if aborted {
             self.abort_op(Target::Local(conn), op);
         }
@@ -2492,6 +2554,8 @@ impl<'h> McpHub<'h> {
             if let Some(c) = self.remotes.get_mut(&conn) {
                 c.revoke(op);
             }
+            // `await revoker.revoke()`
+            self.flush();
             return Reply::Later(ticket);
         }
         self.remove_after_revoke(ticket, id, None);
@@ -2507,6 +2571,8 @@ impl<'h> McpHub<'h> {
 
     /// `remove` after the revocation: forget the server, then its connections
     fn remove_after_revoke(&mut self, ticket: Ticket, id: &str, revoker: Option<ConnId>) {
+        // `await store.removeServer(id)`: a pending notice fires before the write lands
+        self.flush();
         let removed = self.store.borrow_mut().remove_server(id);
         self.stop_calls(Some(id), StopReason::Removed);
         self.stopping.delete(id);
@@ -2534,6 +2600,8 @@ impl<'h> McpHub<'h> {
             if let Some(c) = self.locals.get_mut(&conn) {
                 c.stop(op);
             }
+            // `await live.local.stop()`
+            self.flush();
             return;
         }
         self.finish_remove(ticket, id, revoker);
@@ -2665,14 +2733,14 @@ impl<'h> McpHub<'h> {
     }
 
     /// `plannedLaunch(id)`: `McpPlannedLaunchAnswer`
-    pub fn planned_launch(&self, id: &str) -> JsonValue {
+    pub fn planned_launch(&mut self, id: &str) -> JsonValue {
         let Some(server) = self.server(id) else {
             return invalid_problem("not-found");
         };
         if server.kind != McpServerKind::Local {
             return invalid_problem("not-local");
         }
-        let plan = self.host.planned_launch(&server);
+        let plan = self.plan_of(&server);
         object(vec![
             ("ok", JsonValue::Bool(true)),
             ("launch", self.launch_view(&server, &plan)),
@@ -2692,7 +2760,7 @@ impl<'h> McpHub<'h> {
             if launch_review_needed(&server.to_json()) {
                 return Reply::Now(Ok(failed_problem("launch-not-approved")));
             }
-            let plan = self.host.planned_launch(&server);
+            let plan = self.plan_of(&server);
             if let PlannedLaunch::Blocked(blocked) = &plan {
                 let question = if blocked.problem == LocalLaunchProblem::RuntimeMissing {
                     self.runtime_question(&server.command, blocked.runtime.as_ref())
@@ -2837,6 +2905,8 @@ impl<'h> McpHub<'h> {
         if let Some(c) = self.remotes.get_mut(&conn) {
             c.sign_in(op, options);
         }
+        // `await ...signIn(...)`
+        self.flush();
         if self.app_aborted {
             self.abort_sign_in(id);
         }
@@ -2855,6 +2925,8 @@ impl<'h> McpHub<'h> {
         }
         self.follow(id);
         self.notify();
+        // the end of an async function: whoever awaits it continues after the notice
+        self.flush();
         Ok(ok_json())
     }
 
@@ -2912,7 +2984,7 @@ impl<'h> McpHub<'h> {
             return Ok(invalid_problem("not-local"));
         }
         if download {
-            let plan = self.host.planned_launch(&server);
+            let plan = self.plan_of(&server);
             let missing = match &plan {
                 PlannedLaunch::Blocked(b) if b.problem == LocalLaunchProblem::RuntimeMissing => {
                     b.runtime.clone()
@@ -2956,7 +3028,7 @@ impl<'h> McpHub<'h> {
             return Ok(invalid("not-local", None));
         }
         let shape = server_launch_fingerprint(&server.to_json());
-        let plan = self.host.planned_launch(&server);
+        let plan = self.plan_of(&server);
         let PlannedLaunch::Ready(ready) = &plan else {
             return Ok(invalid("launch-changed", None));
         };
@@ -3120,6 +3192,8 @@ impl<'h> McpHub<'h> {
 
     /// `load()`: read `mcp-servers.json` (once, at start)
     pub fn load(&mut self) {
+        // `await store.load()`
+        self.flush();
         self.store.borrow_mut().load();
         self.notify();
     }
