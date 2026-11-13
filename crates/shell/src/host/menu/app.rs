@@ -20,21 +20,18 @@
 //! with `m-app-` and runs their [`Act`] on the core thread, where the tab
 //! state lives.
 //!
-//! What Electron's menus had and this one does not, because the shell has no
-//! seam for it yet (each is a missing `ShellTabs` or host method, not a choice):
+//! What Electron's menus had and this one does not:
 //!
-//! - New document / New Window items (`newDocumentMenuItems`, `newDiagramTab`,
-//!   `newMindmapTab`, Docs' New Window, Slides' Open in New Window): `NewKind`
-//!   of the W batch's tabs is private to it.
-//! - Import PDF (Hangul), Export as Word / PowerPoint / Excel (PDF): the
-//!   shell's own conversions are not ported.
-//! - the document-link entries of File (`documentLinkFileMenuItems`) and the
-//!   interface-zoom items of View (`changeUiScale`): their state is not ported.
-//! - Check for Updates: batch U's updater is not in the shell yet. When it is,
-//!   `check_updates_menu_item` goes into Help and the About box (it offers the
-//!   check when `about_box` is told it can) beside About.
-//! - the Dock menu (`installDockMenu`): Tauri 3 alpha.6 and its CEF runtime
-//!   have no dock-menu API.
+//! - the document-link entries of File (`documentLinkFileMenuItems`): stage 2
+//!   ports `main_core::shell::document_links_shell`; the shell wires it later.
+//! - the Dock menu (`installDockMenu`): `host/menu/dock.rs`.
+//! - the icons of the New entries (`menuIcons()`): Tauri's menu items take an
+//!   icon, but the shell has no icon set for them yet.
+//!
+//! Items whose action another batch provides are built from what `Provided`
+//! holds at the time ([`Seams`]) and left out when nobody provides it: Check
+//! for Updates and the About box's check (U's `UpdateCheck`), Export as Word /
+//! PowerPoint / Excel and Import PDF (D2's `DocumentConversions`).
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -42,14 +39,16 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use main_core::packages::electron_utils::app_menu::{
     AboutAnswer, AppMenuLabels, MenuClick, MenuItem, ViewMenuOptions, about_answer, about_box,
-    about_menu_item, app_menu_labels, app_menu_template, edit_menu_template, help_menu_template,
-    settings_menu_item, toggle_dev_tools_item, view_menu_template, window_menu_template,
+    about_menu_item, app_menu_labels, app_menu_template, edit_menu_template,
+    help_check_updates_items, help_menu_template, settings_menu_item, toggle_dev_tools_item,
+    view_menu_template, window_menu_template,
 };
 use main_core::packages::i18n::Lang;
 use main_core::shell::feedback::{
     FEEDBACK_SURVEY_URL, FeedbackEnvironment, feedback_details, feedback_text, platform_label,
 };
 use main_core::shell::tab_manager::TabKind;
+use shell_contract::app_actions::{PdfExport, document_conversions, update_check};
 use shell_contract::editors::{SaveMode, editor_for};
 use shell_contract::hosts::MessageBox;
 use shell_contract::ipc::Target;
@@ -102,6 +101,18 @@ enum Act {
     Open,
     /// File > Open Recent: `openDocumentPath(path)`
     OpenRecent(String),
+    /// A new document of this home kind (`docx`, `xlsx`, ...): `newDocTab` and its kin
+    NewDocument(String),
+    /// Docs' New Window and Slides' Open in New Window
+    OpenInNewWindow(TabKind),
+    /// `changeUiScale(.., direction)`: 1 bigger, -1 smaller, 0 reset
+    UiScale(i32),
+    /// Help > Check for Updates (`checkForUpdatesNow`)
+    CheckUpdates,
+    /// PDF > Export as Word / PowerPoint / Excel (`exportPdfAs*Local`)
+    ExportPdfAs(PdfExport),
+    /// Hangul > Import PDF
+    ImportPdf,
     /// `tabManager.openHomeTab()`
     BackToHome,
     /// `closeFocusedEditor`
@@ -337,6 +348,18 @@ impl RoleLabels {
     }
 }
 
+/// What other batches provide, read from `Provided` on the core thread each
+/// time a menu is built: an item whose action nobody provides is left out
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct Seams {
+    /// `visibleHomeKinds(readHomeKinds())` without `pdfTools`, in home's order
+    new_kinds: Vec<String>,
+    /// `UpdateCheck::available`
+    can_check_updates: bool,
+    /// `DocumentConversions` is provided
+    conversions: bool,
+}
+
 struct Ctx {
     os: Os,
     lang: Lang,
@@ -346,6 +369,7 @@ struct Ctx {
     /// Docs' File > Open Recent (`recent.json`, the first ten)
     recent: Vec<String>,
     docs_view: DocsViewState,
+    seams: Seams,
     labels: AppMenuLabels,
     roles: RoleLabels,
 }
@@ -358,6 +382,7 @@ impl Ctx {
         dev_tools: bool,
         recent: Vec<String>,
         docs_view: DocsViewState,
+        seams: Seams,
     ) -> Ctx {
         let labels = app_menu_labels(lang.as_str());
         Ctx {
@@ -367,6 +392,7 @@ impl Ctx {
             dev_tools,
             recent,
             docs_view,
+            seams,
             roles: RoleLabels::of(&labels),
             labels,
         }
@@ -437,7 +463,7 @@ impl Ctx {
             MenuClick::CloseWindow => Act::CloseWindow,
             MenuClick::ToggleDevTools if self.dev_tools => Act::ToggleDevTools,
             MenuClick::ToggleDevTools => return None,
-            // see the module's list of what is left out
+            MenuClick::CheckUpdates if self.seams.can_check_updates => Act::CheckUpdates,
             MenuClick::CheckUpdates => return None,
             MenuClick::About => Act::About,
             MenuClick::Settings(_) => Act::Settings,
@@ -552,6 +578,70 @@ impl Ctx {
         self.node(&about_menu_item(&self.labels))
             .unwrap_or(Node::Separator)
     }
+
+    /// Help > Check for Updates, in Help on macOS only (`helpCheckUpdatesItems`)
+    fn check_updates_items(&self) -> Vec<Node> {
+        help_check_updates_items::<Act>(&self.labels, self.os.node())
+            .iter()
+            .filter_map(|template| self.node(template))
+            .collect()
+    }
+
+    /// `uiScaleMenuItems`: the interface zoom of View, which every tab kind has
+    fn ui_scale_items(&self) -> Vec<Node> {
+        vec![
+            item(
+                &self.tm("menuUiZoomIn"),
+                Some("CmdOrCtrl+Alt+="),
+                Act::UiScale(1),
+            ),
+            item(
+                &self.tm("menuUiZoomOut"),
+                Some("CmdOrCtrl+Alt+-"),
+                Act::UiScale(-1),
+            ),
+            Node::Separator,
+            item(
+                &self.tm("menuUiZoomReset"),
+                Some("CmdOrCtrl+Alt+0"),
+                Act::UiScale(0),
+            ),
+        ]
+    }
+
+    /// `newDocumentMenuItems({ section: true, accelerator })`: the New header,
+    /// an entry for each kind Settings shows in home's order (the first with
+    /// `accelerator`), and a separator; nothing when every kind is hidden. The
+    /// header is a disabled item, as where a platform has no `header`. The
+    /// icons are left out (module docs).
+    fn new_document_items(&self, accelerator: Option<&str>) -> Vec<Node> {
+        let entries: Vec<(&str, &str)> = self
+            .seams
+            .new_kinds
+            .iter()
+            .filter_map(|kind| Some((kind.as_str(), new_kind_label_key(kind)?)))
+            .collect();
+        if entries.is_empty() {
+            return Vec::new();
+        }
+        let mut items = vec![Node::Item(Item {
+            id: None,
+            label: self.tm("menuSectionNew"),
+            accelerator: None,
+            enabled: false,
+            checked: None,
+            act: None,
+        })];
+        for (index, (kind, key)) in entries.into_iter().enumerate() {
+            items.push(item(
+                &self.tm(key),
+                accelerator.filter(|_| index == 0),
+                Act::NewDocument(kind.to_owned()),
+            ));
+        }
+        items.push(Node::Separator);
+        items
+    }
 }
 
 // ---- the menus of the shell's own kinds ----
@@ -602,6 +692,22 @@ fn shell_file(ctx: &Ctx, parts: Vec<Vec<Node>>) -> Node {
     submenu(&ctx.tm("menuFile"), items)
 }
 
+/// `NEW_KIND_MENU`'s label key of a home kind
+fn new_kind_label_key(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "docx" => "menuNewDoc",
+        "xlsx" => "menuNewSheet",
+        "pptx" => "menuNewSlide",
+        "md" => "menuNewMarkdown",
+        "html" => "menuNewHtml",
+        "xmind" => "menuNewMindmap",
+        "drawio" => "menuNewDiagram",
+        "hwp" => "menuNewHwp",
+        "pdf" => "menuNewPdf",
+        _ => return None,
+    })
+}
+
 fn shell_help(ctx: &Ctx, user_guide: bool) -> Node {
     let mut items = Vec::new();
     if user_guide {
@@ -614,6 +720,7 @@ fn shell_help(ctx: &Ctx, user_guide: bool) -> Node {
         Act::ThirdPartyNotices,
     ));
     items.push(Node::Separator);
+    items.extend(ctx.check_updates_items());
     items.push(ctx.about());
     Node::Menu {
         label: ctx.tm("menuHelp"),
@@ -632,20 +739,21 @@ fn shell_menus(ctx: &Ctx, file: Node, middle: Vec<Node>, user_guide: bool) -> Ve
     menus
 }
 
-/// Home's File menu closes the window (`role: 'close'`), not an editor; the
-/// new-document entries before Open are left out (module docs)
+/// Home's File menu closes the window (`role: 'close'`), not an editor, and
+/// starts with the New entries (Ctrl+N makes the first one); View holds only
+/// the interface zoom
 fn home_menus(ctx: &Ctx) -> Vec<Node> {
-    let file = submenu(
-        &ctx.tm("menuFile"),
-        vec![
-            shell_open(ctx),
-            Node::Separator,
-            role(Role::CloseWindow, &ctx.tm("menuClose")),
-            Node::Separator,
-            ctx.settings(),
-        ],
-    );
-    shell_menus(ctx, file, vec![ctx.edit_menu()], true)
+    let mut file = ctx.new_document_items(Some("CmdOrCtrl+N"));
+    file.extend([
+        shell_open(ctx),
+        Node::Separator,
+        role(Role::CloseWindow, &ctx.tm("menuClose")),
+        Node::Separator,
+        ctx.settings(),
+    ]);
+    let file = submenu(&ctx.tm("menuFile"), file);
+    let view = submenu(&ctx.tm("menuView"), ctx.ui_scale_items());
+    shell_menus(ctx, file, vec![view, ctx.edit_menu()], true)
 }
 
 fn pdf_menus(ctx: &Ctx) -> Vec<Node> {
@@ -667,13 +775,26 @@ fn pdf_menus(ctx: &Ctx) -> Vec<Node> {
                 Node::Separator,
             ],
             shell_save(ctx, true).into(),
-            vec![
-                Node::Separator,
-                convert("md", "menuExportMd"),
-                convert("epub", "menuExportEpub"),
-                Node::Separator,
-                shell_print(ctx),
-            ],
+            {
+                let mut export = vec![Node::Separator];
+                // PDF > Word / PowerPoint / Excel: D2's local conversions
+                if ctx.seams.conversions {
+                    for (key, format) in [
+                        ("menuExportDocx", PdfExport::Docx),
+                        ("menuExportPptx", PdfExport::Pptx),
+                        ("menuExportXlsx", PdfExport::Xlsx),
+                    ] {
+                        export.push(item(&ctx.tm(key), None, Act::ExportPdfAs(format)));
+                    }
+                }
+                export.extend([
+                    convert("md", "menuExportMd"),
+                    convert("epub", "menuExportEpub"),
+                    Node::Separator,
+                    shell_print(ctx),
+                ]);
+                export
+            },
         ],
     );
     shell_menus(ctx, file, vec![ctx.edit_menu()], false)
@@ -717,12 +838,14 @@ fn hwp_menus(ctx: &Ctx) -> Vec<Node> {
     let file = shell_file(
         ctx,
         vec![
-            vec![
-                shell_open(ctx),
-                Node::Separator,
-                ctx.back_to_home(),
-                Node::Separator,
-            ],
+            {
+                let mut start = vec![shell_open(ctx)];
+                if ctx.seams.conversions {
+                    start.push(item(&ctx.tm("menuImportPdf"), None, Act::ImportPdf));
+                }
+                start.extend([Node::Separator, ctx.back_to_home(), Node::Separator]);
+                start
+            },
             shell_save(ctx, false).into(),
             vec![
                 Node::Separator,
@@ -852,6 +975,12 @@ fn diagram_menus(ctx: &Ctx) -> Vec<Node> {
         ctx,
         vec![
             vec![
+                // File > New (`newDiagramTab`)
+                item(
+                    &ctx.tm("menuSectionNew"),
+                    Some("CmdOrCtrl+N"),
+                    Act::NewDocument("drawio".into()),
+                ),
                 shell_open(ctx),
                 Node::Separator,
                 ctx.back_to_home(),
@@ -908,6 +1037,12 @@ fn mindmap_menus(ctx: &Ctx) -> Vec<Node> {
         ctx,
         vec![
             vec![
+                // File > New (`newMindmapTab`)
+                item(
+                    &ctx.tm("menuSectionNew"),
+                    Some("CmdOrCtrl+N"),
+                    Act::NewDocument("xmind".into()),
+                ),
                 shell_open(ctx),
                 Node::Separator,
                 ctx.back_to_home(),
@@ -958,6 +1093,12 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
         &d("menuFile"),
         vec![
             unbound(&d("menuNewDoc"), Some("CmdOrCtrl+N")),
+            // `shellHooks.openTab(undefined, { newBlank: true })`: a blank docs tab
+            item(
+                &d("menuNewWindow"),
+                Some("Shift+CmdOrCtrl+N"),
+                Act::NewDocument("docx".into()),
+            ),
             unbound(&d("menuOpen"), Some("CmdOrCtrl+O")),
             submenu(&d("menuOpenRecent"), recent),
             Node::Separator,
@@ -1138,14 +1279,16 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
     tools.push(Node::Separator);
     tools.push(plain("menuAiProofread"));
     let tools = submenu(&d("menuTools"), tools);
+    let mut help_items = vec![
+        unbound(&d("menuShortcuts"), Some("CmdOrCtrl+/")),
+        Node::Separator,
+    ];
+    help_items.extend(ctx.check_updates_items());
+    help_items.push(ctx.about());
     let help = Node::Menu {
         label: d("menuHelp"),
         role: MenuRole::Help,
-        items: vec![
-            unbound(&d("menuShortcuts"), Some("CmdOrCtrl+/")),
-            Node::Separator,
-            ctx.about(),
-        ],
+        items: help_items,
     };
     let mut menus: Vec<Node> = ctx.app_menu().into_iter().collect();
     menus.extend([file, edit, view, insert, format, table, tools]);
@@ -1222,6 +1365,12 @@ fn slides_menus(ctx: &Ctx) -> Vec<Node> {
         &s("menuFile"),
         vec![
             menu("menuOpen", Some("CmdOrCtrl+O"), "open"),
+            // a second window on the saved file (`createSlidesWindow(path)`)
+            item(
+                &s("menuOpenNewWindow"),
+                None,
+                Act::OpenInNewWindow(TabKind::Slides),
+            ),
             Node::Separator,
             ctx.back_to_home(),
             Node::Separator,
@@ -1379,6 +1528,48 @@ fn tidy(nodes: Vec<Node>) -> Vec<Node> {
     out
 }
 
+/// `withViewMenu`: the interface zoom in the View menu of every kind: after a
+/// separator in the one it has, else in a View menu before Help
+fn with_view_menu(ctx: &Ctx, menus: &mut Vec<Node>) {
+    let scale = |entry: &Node| {
+        matches!(
+            entry,
+            Node::Item(Item {
+                act: Some(Act::UiScale(_)),
+                ..
+            })
+        )
+    };
+    let has_scale = menus
+        .iter()
+        .any(|menu| matches!(menu, Node::Menu { items, .. } if items.iter().any(scale)));
+    if has_scale {
+        return;
+    }
+    let label = ctx.tm("menuView");
+    if let Some(Node::Menu { items, .. }) = menus
+        .iter_mut()
+        .find(|menu| matches!(menu, Node::Menu { label: found, .. } if *found == label))
+    {
+        items.push(Node::Separator);
+        items.extend(ctx.ui_scale_items());
+        return;
+    }
+    let view = submenu(&label, ctx.ui_scale_items());
+    match menus.iter().position(|menu| {
+        matches!(
+            menu,
+            Node::Menu {
+                role: MenuRole::Help,
+                ..
+            }
+        )
+    }) {
+        Some(help) => menus.insert(help, view),
+        None => menus.push(view),
+    }
+}
+
 /// `applyMenuFor(kind)`'s menus: what the kind shows, in `ctx`'s language
 fn menu_for(kind: TabKind, ctx: &Ctx) -> Vec<Node> {
     let mut menus = match kind {
@@ -1396,6 +1587,7 @@ fn menu_for(kind: TabKind, ctx: &Ctx) -> Vec<Node> {
         TabKind::Home | TabKind::Help => home_menus(ctx),
     };
     with_help_items(ctx, &mut menus);
+    with_view_menu(ctx, &mut menus);
     let bound = bind_events(&mut menus, &app_menu_items(kind.as_str(), ctx.lang));
     for path in &bound.missing {
         eprintln!("shell: the {kind:?} menu item {path:?} has no event in batch M's table");
@@ -1621,6 +1813,7 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
                 Vec::new()
             },
             docs_view,
+            seams_of(provided),
         );
         let menus = menu_for(kind, &ctx);
         let on_ui = app.clone();
@@ -1628,6 +1821,16 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
             eprintln!("shell: the {kind:?} menu: {error}");
         }
     });
+}
+
+/// What the batches provide now: the New kinds (`ShellTabs`), the update
+/// check (U) and the document conversions (D2)
+fn seams_of(provided: &Provided) -> Seams {
+    Seams {
+        new_kinds: shell_tabs(provided).map_or_else(Vec::new, |tabs| tabs.new_document_kinds()),
+        can_check_updates: update_check(provided).is_some_and(|check| check.available()),
+        conversions: document_conversions(provided).is_some(),
+    }
 }
 
 /// A docs view reported the state of its View and Insert menus
@@ -1754,11 +1957,30 @@ fn run(act: Act, kind: TabKind, provided: &Provided, services: &Services) {
             }
         }
         Act::About => {
+            let can_check = update_check(provided).is_some_and(|check| check.available());
             let services = services.clone();
             services
                 .workers
                 .clone()
-                .spawn(Box::new(move || show_about(&services)));
+                .spawn(Box::new(move || show_about(&services, can_check)));
+        }
+        Act::NewDocument(kind) => {
+            tabs.new_document(&kind);
+        }
+        Act::OpenInNewWindow(of) => tabs.open_in_new_window(of),
+        Act::UiScale(direction) => tabs.change_ui_scale(direction),
+        Act::CheckUpdates => check_for_updates(provided),
+        Act::ExportPdfAs(format) => {
+            let Some(view) = editor() else { return };
+            if let Some(conversions) = document_conversions(provided) {
+                conversions.export_pdf_as(view, format);
+            }
+        }
+        Act::ImportPdf => {
+            let Some(view) = editor() else { return };
+            if let Some(conversions) = document_conversions(provided) {
+                conversions.import_pdf_into_hwp(view);
+            }
         }
         Act::Feedback => {
             let services = services.clone();
@@ -1842,8 +2064,16 @@ fn on_webview(
     });
 }
 
-/// Help > About. Runs on a worker: the box waits for the answer
-fn show_about(services: &Services) {
+/// `checkForUpdatesNow`, when U provides it. On the core thread.
+fn check_for_updates(provided: &Provided) {
+    if let Some(check) = update_check(provided) {
+        check.check_now();
+    }
+}
+
+/// Help > About. Runs on a worker: the box waits for the answer. `can_check`:
+/// the box offers the update check as its third button.
+fn show_about(services: &Services, can_check: bool) {
     let (Some(shell), Ok(lang)) = (SHELL.get(), current_lang(services)) else {
         return;
     };
@@ -1855,8 +2085,7 @@ fn show_about(services: &Services) {
     };
     let version = shell.app.package_info().version.to_string();
     let labels = app_menu_labels(lang.as_str());
-    // `can_check` is false: the updater is not in the shell (module docs)
-    let options = about_box(&labels, &version, lang.as_str(), false);
+    let options = about_box(&labels, &version, lang.as_str(), can_check);
     let answer = dialogs.message(
         None,
         &MessageBox {
@@ -1870,8 +2099,10 @@ fn show_about(services: &Services) {
             checkbox_label: None,
         },
     );
-    if let AboutAnswer::CopyText(copied) = about_answer(answer.response as f64, &version) {
-        clipboard.write_text(&copied);
+    match about_answer(answer.response as f64, &version) {
+        AboutAnswer::Nothing => {}
+        AboutAnswer::CopyText(copied) => clipboard.write_text(&copied),
+        AboutAnswer::CheckUpdates => post_core(|provided, _| check_for_updates(provided)),
     }
 }
 
@@ -1925,6 +2156,8 @@ fn open_feedback_survey(services: &Services) {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use super::*;
 
     fn ctx(os: Os, lang: Lang) -> Ctx {
@@ -1935,6 +2168,15 @@ mod tests {
             true,
             Vec::new(),
             DocsViewState::default(),
+            Seams {
+                new_kinds: [
+                    "docx", "xlsx", "pptx", "md", "html", "xmind", "drawio", "hwp", "pdf",
+                ]
+                .map(String::from)
+                .to_vec(),
+                can_check_updates: true,
+                conversions: true,
+            },
         )
     }
 
@@ -2091,7 +2333,10 @@ mod tests {
         assert_eq!(mac[0], "SeuOffice >");
         assert_eq!(mac[1], "  <About> About SeuOffice");
         let linux = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
-        assert_eq!(top_labels(&linux), ["File", "Edit", "Window", "Help"]);
+        assert_eq!(
+            top_labels(&linux),
+            ["File", "Edit", "Window", "View", "Help"]
+        );
         // Settings is in File where the application menu is not
         assert!(items(&linux).iter().any(|i| i.act == Some(Act::Settings)));
     }
@@ -2119,7 +2364,11 @@ mod tests {
         );
         assert_eq!(
             tops(TabKind::Mindmap, Os::Linux),
-            ["File", "Edit", "Window", "Help"]
+            ["File", "Edit", "Window", "View", "Help"]
+        );
+        assert_eq!(
+            tops(TabKind::Home, Os::Linux),
+            ["File", "View", "Edit", "Window", "Help"]
         );
         assert_eq!(tops(TabKind::Help, Os::Mac)[0], "SeuOffice");
         assert_eq!(
@@ -2132,7 +2381,7 @@ mod tests {
     fn the_pdf_file_menu_in_english_and_korean() {
         let en = lines_of(TabKind::Pdf, Os::Linux, Lang::En);
         assert_eq!(
-            &en[..17],
+            &en[..19],
             [
                 "File >",
                 "  Open\u{2026} [CmdOrCtrl+O]",
@@ -2142,6 +2391,9 @@ mod tests {
                 "  Save [CmdOrCtrl+S]",
                 "  Save As\u{2026} [CmdOrCtrl+Shift+S]",
                 "  ---",
+                "  Export as Word\u{2026}",
+                "  Export as PowerPoint\u{2026}",
+                "  Export as Excel\u{2026}",
                 "  Export as Markdown\u{2026}",
                 "  Export as EPUB\u{2026}",
                 "  ---",
@@ -2150,7 +2402,6 @@ mod tests {
                 "  Close [CmdOrCtrl+W]",
                 "  ---",
                 "  Settings\u{2026} [CmdOrCtrl+,]",
-                "Edit >",
             ]
         );
         let ko = lines_of(TabKind::Pdf, Os::Linux, Lang::Ko);
@@ -2195,22 +2446,302 @@ mod tests {
         }
     }
 
+    /// `ctx` with the seams `seams` leaves open
+    fn ctx_with(os: Os, seams: Seams) -> Ctx {
+        Ctx {
+            seams,
+            ..ctx(os, Lang::En)
+        }
+    }
+
+    fn lines_with(kind: TabKind, os: Os, seams: Seams) -> Vec<String> {
+        describe(&menu_for(kind, &ctx_with(os, seams)))
+    }
+
     #[test]
-    fn check_for_updates_is_left_out_everywhere() {
+    fn check_for_updates_is_in_help_on_the_mac_only_and_only_when_it_is_provided() {
+        let label = |lang| app_menu_labels(lang).check_updates();
         for kind in KINDS {
-            for os in [Os::Mac, Os::Windows, Os::Linux] {
-                for lang in [Lang::En, Lang::Ko] {
-                    let labels = app_menu_labels(lang.as_str());
-                    let menus = menu_for(kind, &ctx(os, lang));
-                    assert!(
-                        items(&menus)
-                            .iter()
-                            .all(|i| i.label != labels.check_updates()),
-                        "{kind:?} {os:?}"
-                    );
-                }
+            for lang in [Lang::En, Lang::Ko] {
+                let has = |os, can_check_updates| {
+                    let c = Ctx {
+                        seams: Seams {
+                            can_check_updates,
+                            ..ctx(os, lang).seams
+                        },
+                        ..ctx(os, lang)
+                    };
+                    let menus = menu_for(kind, &c);
+                    let found: Vec<_> = items(&menus)
+                        .into_iter()
+                        .filter(|i| i.label == label(lang.as_str()))
+                        .collect();
+                    assert!(found.iter().all(|i| i.act == Some(Act::CheckUpdates)));
+                    // it is inside Help
+                    let help = menus
+                        .iter()
+                        .find_map(|m| match m {
+                            Node::Menu {
+                                role: MenuRole::Help,
+                                items: inner,
+                                ..
+                            } => Some(inner),
+                            _ => None,
+                        })
+                        .unwrap();
+                    assert!(self::items(help).len() > found.len() || found.is_empty());
+                    found.len()
+                };
+                assert_eq!(has(Os::Mac, true), 1, "{kind:?}");
+                assert_eq!(has(Os::Mac, false), 0, "{kind:?}");
+                assert_eq!(has(Os::Linux, true), 0, "{kind:?}");
+                assert_eq!(has(Os::Windows, true), 0, "{kind:?}");
             }
         }
+    }
+
+    #[test]
+    fn the_help_menu_puts_check_for_updates_before_about_on_the_mac() {
+        let lines = lines_with(TabKind::Pdf, Os::Mac, ctx(Os::Mac, Lang::En).seams);
+        let at = lines.iter().position(|l| l == "Help >").unwrap();
+        assert_eq!(
+            lines[at..],
+            [
+                "Help >",
+                "  User Guide [F1]",
+                "  ---",
+                "  Send feedback",
+                "  ---",
+                "  Third-Party Notices",
+                "  ---",
+                "  Check for Updates\u{2026}",
+                "  About SeuOffice",
+            ]
+        );
+    }
+
+    #[test]
+    fn the_new_entries_of_home_follow_the_kinds_settings_show() {
+        let all = lines_with(TabKind::Home, Os::Linux, ctx(Os::Linux, Lang::En).seams);
+        assert_eq!(
+            &all[..13],
+            [
+                "File >",
+                "  New (disabled)",
+                "  AI Docs [CmdOrCtrl+N]",
+                "  AI Sheets",
+                "  AI Slides",
+                "  AI Markdown",
+                "  AI HTML",
+                "  Mind Map",
+                "  Diagram",
+                "  AI HWP",
+                "  AI PDF",
+                "  ---",
+                "  Open\u{2026} [CmdOrCtrl+O]",
+            ]
+        );
+        // a hidden kind is not listed, and Ctrl+N goes to the first one left
+        let some = lines_with(
+            TabKind::Home,
+            Os::Linux,
+            Seams {
+                new_kinds: vec!["pdf".into(), "md".into(), "pdfTools".into()],
+                ..Seams::default()
+            },
+        );
+        assert_eq!(
+            &some[..6],
+            [
+                "File >",
+                "  New (disabled)",
+                "  AI PDF [CmdOrCtrl+N]",
+                "  AI Markdown",
+                "  ---",
+                "  Open\u{2026} [CmdOrCtrl+O]",
+            ]
+        );
+        // every kind hidden: no header and no separator either
+        let none = lines_with(TabKind::Home, Os::Linux, Seams::default());
+        assert_eq!(&none[..2], ["File >", "  Open\u{2026} [CmdOrCtrl+O]"]);
+        // a click makes the kind's document
+        let menus = menu_for(TabKind::Home, &ctx(Os::Linux, Lang::En));
+        let made: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match &i.act {
+                Some(Act::NewDocument(kind)) => Some(kind.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            made,
+            [
+                "docx", "xlsx", "pptx", "md", "html", "xmind", "drawio", "hwp", "pdf"
+            ]
+        );
+    }
+
+    #[test]
+    fn new_in_diagram_and_mindmap_and_the_new_windows_of_docs_and_slides() {
+        let act_of = |kind, os, label: &str| {
+            let menus = menu_for(kind, &ctx(os, Lang::En));
+            items(&menus)
+                .into_iter()
+                .find(|i| i.label == label)
+                .map(|i| (i.act.clone(), i.accelerator.clone()))
+        };
+        assert_eq!(
+            act_of(TabKind::Diagram, Os::Linux, "New"),
+            Some((
+                Some(Act::NewDocument("drawio".into())),
+                Some("CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Mindmap, Os::Linux, "New"),
+            Some((
+                Some(Act::NewDocument("xmind".into())),
+                Some("CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Docs, Os::Linux, "New Window"),
+            Some((
+                Some(Act::NewDocument("docx".into())),
+                Some("Shift+CmdOrCtrl+N".into())
+            ))
+        );
+        assert_eq!(
+            act_of(TabKind::Slides, Os::Linux, "Open in New Window"),
+            Some((Some(Act::OpenInNewWindow(TabKind::Slides)), None))
+        );
+        // the other kinds have none of these
+        assert_eq!(act_of(TabKind::Pdf, Os::Linux, "New"), None);
+        assert_eq!(act_of(TabKind::Docs, Os::Linux, "Open in New Window"), None);
+    }
+
+    #[test]
+    fn the_interface_zoom_is_in_the_view_menu_of_every_kind() {
+        for kind in KINDS {
+            for os in [Os::Mac, Os::Linux] {
+                let menus = menu_for(kind, &ctx(os, Lang::En));
+                let zoom: Vec<_> = items(&menus)
+                    .into_iter()
+                    .filter_map(|i| match i.act {
+                        Some(Act::UiScale(direction)) => {
+                            Some((direction, i.label.as_str(), i.accelerator.as_deref()))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(
+                    zoom,
+                    [
+                        (1, "Interface Zoom In", Some("CmdOrCtrl+Alt+=")),
+                        (-1, "Interface Zoom Out", Some("CmdOrCtrl+Alt+-")),
+                        (0, "Reset Interface Zoom", Some("CmdOrCtrl+Alt+0")),
+                    ],
+                    "{kind:?}"
+                );
+                // all three sit in one menu, called View
+                let holders: Vec<_> = menus
+                    .iter()
+                    .filter_map(|m| match m {
+                        Node::Menu {
+                            label,
+                            items: inner,
+                            ..
+                        } if self::items(inner)
+                            .iter()
+                            .any(|i| matches!(i.act, Some(Act::UiScale(_)))) =>
+                        {
+                            Some(label.as_str())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(holders, ["View"], "{kind:?}");
+            }
+        }
+        // after the menu's own entries and a separator, before Help in a menu made for it
+        let docs = lines_of(TabKind::Docs, Os::Linux, Lang::En);
+        let at = docs
+            .iter()
+            .position(|l| l == "  Interface Zoom In [CmdOrCtrl+Alt+=]");
+        assert!(at.is_some_and(|at| docs[at - 1] == "  ---"));
+        let pdf = lines_of(TabKind::Pdf, Os::Linux, Lang::En);
+        let view = pdf.iter().position(|l| l == "View >").unwrap();
+        assert_eq!(pdf[view + 5], "Help >");
+    }
+
+    #[test]
+    fn conversions_are_in_the_menus_only_when_d2_provides_them() {
+        let with = ctx(Os::Linux, Lang::En).seams;
+        let without = Seams {
+            conversions: false,
+            ..with.clone()
+        };
+        let pdf = |seams| lines_with(TabKind::Pdf, Os::Linux, seams);
+        for label in [
+            "  Export as Word\u{2026}",
+            "  Export as PowerPoint\u{2026}",
+            "  Export as Excel\u{2026}",
+        ] {
+            assert!(pdf(with.clone()).contains(&label.to_owned()), "{label}");
+            assert!(!pdf(without.clone()).contains(&label.to_owned()), "{label}");
+        }
+        let hwp = |seams| lines_with(TabKind::Hwp, Os::Linux, seams);
+        assert_eq!(hwp(with.clone())[2], "  Import PDF\u{2026}");
+        assert!(!hwp(without).contains(&"  Import PDF\u{2026}".to_owned()));
+        // each is the conversion the label names
+        let menus = menu_for(TabKind::Pdf, &ctx(Os::Linux, Lang::En));
+        let formats: Vec<_> = items(&menus)
+            .into_iter()
+            .filter_map(|i| match i.act {
+                Some(Act::ExportPdfAs(format)) => Some(format),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(formats, [PdfExport::Docx, PdfExport::Pptx, PdfExport::Xlsx]);
+    }
+
+    #[test]
+    fn what_the_batches_provide_is_read_each_time() {
+        use shell_contract::app_actions::{DocumentConversions, UpdateCheck};
+
+        struct Update(bool);
+        impl UpdateCheck for Update {
+            fn available(&self) -> bool {
+                self.0
+            }
+            fn check_now(&self) {}
+        }
+        struct Conversions;
+        impl DocumentConversions for Conversions {
+            fn export_pdf_as(&self, _: ViewId, _: PdfExport) {}
+            fn import_pdf_into_hwp(&self, _: ViewId) {}
+        }
+
+        let provided = Provided::default();
+        assert_eq!(seams_of(&provided), Seams::default());
+
+        provided.add::<dyn UpdateCheck>(Rc::new(Update(false)));
+        assert_eq!(seams_of(&provided), Seams::default());
+
+        let provided = Provided::default();
+        provided.add::<dyn UpdateCheck>(Rc::new(Update(true)));
+        provided.add::<dyn DocumentConversions>(Rc::new(Conversions));
+        let seams = seams_of(&provided);
+        assert!(seams.can_check_updates && seams.conversions);
+        // and the menu follows
+        let menus = menu_for(
+            TabKind::Hwp,
+            &Ctx {
+                seams,
+                ..ctx(Os::Linux, Lang::En)
+            },
+        );
+        assert!(items(&menus).iter().any(|i| i.act == Some(Act::ImportPdf)));
     }
 
     #[test]

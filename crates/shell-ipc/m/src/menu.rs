@@ -201,6 +201,50 @@ const SHELL_LABELS: &[(&str, &str, &str)] = &[
         "Bring All to Front",
         "\u{BAA8}\u{B450} \u{C55E}\u{C73C}\u{B85C} \u{AC00}\u{C838}\u{C624}\u{AE30}",
     ),
+    (
+        "menuSectionNew",
+        "New",
+        "\u{C0C8}\u{B85C} \u{B9CC}\u{B4E4}\u{AE30}",
+    ),
+    ("menuNewDoc", "AI Docs", "AI Docs"),
+    ("menuNewSheet", "AI Sheets", "AI Sheets"),
+    ("menuNewSlide", "AI Slides", "AI Slides"),
+    ("menuNewMarkdown", "AI Markdown", "AI Markdown"),
+    ("menuNewHtml", "AI HTML", "AI HTML"),
+    (
+        "menuNewMindmap",
+        "Mind Map",
+        "\u{B9C8}\u{C778}\u{B4DC}\u{B9F5}",
+    ),
+    (
+        "menuNewDiagram",
+        "Diagram",
+        "\u{B2E4}\u{C774}\u{C5B4}\u{ADF8}\u{B7A8}",
+    ),
+    ("menuNewHwp", "AI HWP", "AI \u{D55C}\u{AE00}"),
+    ("menuNewPdf", "AI PDF", "AI PDF"),
+    (
+        "menuExportPptx",
+        "Export as PowerPoint\u{2026}",
+        "PowerPoint\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuExportXlsx",
+        "Export as Excel\u{2026}",
+        "Excel\u{B85C} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{2026}",
+    ),
+    (
+        "menuImportPdf",
+        "Import PDF\u{2026}",
+        "PDF \u{AC00}\u{C838}\u{C624}\u{AE30}\u{2026}",
+    ),
+    ("menuUiZoomIn", "Interface Zoom In", "UI \u{D655}\u{B300}"),
+    ("menuUiZoomOut", "Interface Zoom Out", "UI \u{CD95}\u{C18C}"),
+    (
+        "menuUiZoomReset",
+        "Reset Interface Zoom",
+        "UI \u{BC30}\u{C728}\u{C744} 100%\u{B85C} \u{B2E4}\u{C2DC} \u{C124}\u{C815}",
+    ),
 ];
 
 /// the keys `DOCS_COMMANDS` names, from `docs-main.ts`'s dictionary: key, English, Korean
@@ -478,6 +522,7 @@ const DOCS_LABELS: &[(&str, &str, &str)] = &[
         "Enter Full Screen",
         "\u{C804}\u{CCB4} \u{D654}\u{BA74} \u{C2DC}\u{C791}",
     ),
+    ("menuNewWindow", "New Window", "\u{C0C8} \u{CC3D}"),
 ];
 
 /// the keys `SHEETS_ACTIONS` names, from `sheets-main.ts`'s dictionary: key, English, Korean
@@ -557,6 +602,11 @@ const SLIDES_LABELS: &[(&str, &str, &str)] = &[
         "menuActualSize",
         "Actual Size",
         "\u{C2E4}\u{C81C} \u{D06C}\u{AE30}",
+    ),
+    (
+        "menuOpenNewWindow",
+        "Open in New Window",
+        "\u{C0C8} \u{CC3D}\u{C5D0}\u{C11C} \u{C5F4}\u{AE30}",
     ),
 ];
 
