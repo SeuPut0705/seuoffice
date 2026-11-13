@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 
 use jscompat::{JsonValue, buffer_from_base64};
 use main_core::slides::export_images::build_export_image_paths;
+use shell_contract::hosts::MessageBox;
 use shell_contract::ipc::Target;
 use shell_contract::ipc::{CallContext, Responder};
 use shell_contract::{IpcError, IpcValue, ViewId};
@@ -36,6 +37,37 @@ pub fn pick_export_dir(app: &App, _cx: &CallContext, _args: Args) -> Reply {
         ("properties", jstrs(&["openDirectory", "createDirectory"])),
     ]));
     Ok(picked.map_or(IpcValue::Null, string))
+}
+
+/// `slides:ask-withheld-export`: a PDF or image copy records no mark, so the
+/// person chooses before anything is written; the renderer acts on the answer
+pub fn ask_withheld_export(app: &App, _cx: &CallContext, args: Args) -> Reply {
+    let format = match args.str(0) {
+        Some(format @ ("PDF" | "PNG" | "JPG")) => format,
+        _ => return Err(thrown("Invalid export format.")),
+    };
+    let with_format = [("format", JsonValue::String(format.to_owned()))];
+    let options = MessageBox {
+        kind: Some("warning".into()),
+        title: None,
+        message: app.tm("withheldExportMsg", &with_format),
+        detail: Some(app.tm("withheldExportDetail", &with_format)),
+        buttons: vec![
+            app.tm("withheldExportKeepPptxBtn", &[]),
+            app.tm("withheldExportWithoutMarksBtn", &with_format),
+            app.tm("btnCancel", &[]),
+        ],
+        default_id: Some(0),
+        cancel_id: Some(2),
+        checkbox_label: None,
+    };
+    Ok(string(
+        match app.message_box(app.shell.dialog_parent(), &options) {
+            0 => "pptx",
+            1 => "export",
+            _ => "cancel",
+        },
+    ))
 }
 
 pub fn pick_export_pdf_path(app: &App, _cx: &CallContext, args: Args) -> Reply {

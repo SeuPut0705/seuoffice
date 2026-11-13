@@ -360,6 +360,11 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
             export::pick_export_pdf_path,
         ),
         later(&app, "slides:export-images", export::export_images),
+        now(
+            &app,
+            "slides:ask-withheld-export",
+            export::ask_withheld_export,
+        ),
         later(&app, "slides:export-pdf", export::export_pdf),
         now(&app, "slides:save-picture", export::save_picture),
         now(

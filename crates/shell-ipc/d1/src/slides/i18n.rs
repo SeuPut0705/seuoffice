@@ -28,6 +28,22 @@ const STRINGS: &[(&str, &str, &str)] = &[
     ("dlgExportPdf", "Export as PDF", "PDF로 내보내기"),
     ("dlgSavePicture", "Save as Picture", "그림으로 저장"),
     (
+        "withheldExportMsg",
+        "A copy as {format} can't keep the content hidden from the AI",
+        "{format} 사본에는 AI에서 숨긴 내용의 표시를 담을 수 없습니다",
+    ),
+    (
+        "withheldExportDetail",
+        "{format} has nowhere to record what is hidden from the AI, so the exported file would show those pictures and words to anyone who opens it, an AI included.\n\nSave as .pptx keeps the marks. Export without the marks writes everything as it appears on the slides. The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Nothing has been written yet.",
+        "{format}에는 AI에서 숨긴 그림과 글을 기록할 곳이 없어, 내보낸 파일을 여는 누구에게나(AI 포함) 그대로 보입니다.\n\n.pptx로 저장하면 숨김 표시가 유지됩니다. 표시 없이 내보내기는 슬라이드에 보이는 그대로 저장합니다. 내보낸 파일에는 AI 숨김 표시가 없습니다. 그 파일을 읽는 모든 것(AI 포함)이 숨긴 내용을 그대로 봅니다. 아직 아무것도 저장하지 않았습니다.",
+    ),
+    ("withheldExportKeepPptxBtn", "Save as .pptx", ".pptx로 저장"),
+    (
+        "withheldExportWithoutMarksBtn",
+        "Export {format} without the marks",
+        "표시 없이 {format} 내보내기",
+    ),
+    (
         "filterPngSlides",
         "PNG images (one per slide)",
         "PNG 그림 (슬라이드마다 한 장)",
