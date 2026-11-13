@@ -406,7 +406,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:get-split-role",
         &[Invoke],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Hwp, Markdown, Mindmap, Pdf, Sheets, Slides,
         ],
@@ -430,7 +430,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:open-dropped-files",
         &[Send],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Hwp, Markdown, Mindmap, Pdf, Sheets, Shell, Slides,
         ],
@@ -477,7 +477,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:view-focused",
         &[Send],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Hwp, Markdown, Mindmap, Pdf, Sheets, Slides,
         ],
@@ -1205,7 +1205,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("pdf:store-insights", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-latest-highlight", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-migrate", &[Invoke], D2, &[Pdf]),
-    spec("pdf:store-page-fingerprints", &[Invoke], M, &[Pdf]),
+    spec("pdf:store-page-fingerprints", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-passages", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-translation", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-translation-recency", &[Invoke], D2, &[Pdf]),
@@ -2055,7 +2055,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("slides:ai-tool-capabilities", &[Invoke], A, &[Slides]),
     spec("slides:apply-edit-script", &[Invoke], D1, &[Slides]),
     spec("slides:apply-header-footer", &[Invoke], D1, &[Slides]),
-    spec("slides:apply-theme", &[Invoke], M, &[Slides]),
+    spec("slides:apply-theme", &[Invoke], D1, &[Slides]),
     spec("slides:apply-txn", &[Invoke], D1, &[Slides]),
     spec("slides:audience-nav", &[Send, Event], D1, &[Slides]),
     spec("slides:audience-ready", &[Invoke], D1, &[Slides]),
@@ -2173,8 +2173,8 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("slides:print", &[Invoke], M, &[Slides]),
     spec("slides:printer-options", &[Invoke], M, &[Slides]),
     spec("slides:printers", &[Invoke], M, &[Slides]),
-    spec("slides:private-font-data", &[Invoke], M, &[Slides]),
-    spec("slides:private-font-faces", &[Invoke], M, &[Slides]),
+    spec("slides:private-font-data", &[Invoke], D1, &[Slides]),
+    spec("slides:private-font-faces", &[Invoke], D1, &[Slides]),
     spec("slides:recent", &[Invoke], D1, &[Slides]),
     spec("slides:redo", &[Invoke], D1, &[Slides]),
     spec("slides:remove-section", &[Invoke], D1, &[Slides]),
@@ -2192,7 +2192,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("slides:set-advance-times", &[Invoke], D1, &[Slides]),
     spec("slides:set-animations", &[Invoke], D1, &[Slides]),
     spec("slides:set-effects", &[Invoke], D1, &[Slides]),
-    spec("slides:set-element-font", &[Invoke], M, &[Slides]),
+    spec("slides:set-element-font", &[Invoke], D1, &[Slides]),
     spec("slides:set-element-hidden", &[Invoke], D1, &[Slides]),
     spec("slides:set-element-name", &[Invoke], D1, &[Slides]),
     spec(
