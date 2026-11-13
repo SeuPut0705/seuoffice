@@ -35,6 +35,8 @@ import {
   type ZipFile,
 } from './reference/zip-splice'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
+import { commentEntries } from './reference/comment-slices'
+import { COMMENT_PARTS, editsOf, entrySlices } from './withheld-inputs'
 import { saveInternals } from './save-internals'
 
 // ---------------------------------------------------------------- the copy of patch.ts
@@ -1614,6 +1616,15 @@ export const SAVE_PARTS: CallSpec[] = [
           args: { comments, ...(originalXml === null ? {} : { originalXml }) },
         })),
       ),
+      // hidden from AI: every spelling of the mark and every tag mutation, each comment with the edits a person can make
+      ...COMMENT_PARTS.flatMap((originalXml): Input[] => {
+        const entries = commentEntries(originalXml).slice(0, 2)
+        return entries.flatMap(({ id, xml }) =>
+          editsOf(call('commentPlainText')(xml) as string).map((text) => ({
+            args: { comments: [{ id, author: 'Kim', text }, { id: '99', author: 'Kim', text: 'new' }], originalXml },
+          })),
+        )
+      }),
       ...IMAGE_RUNS.flatMap((imageRuns): Input[] =>
         [COMMENT_SETS[2]!, COMMENT_SETS[3]!, COMMENT_SETS[5]!].flatMap((comments) =>
           [undefined, [['0', '<w:r><w:t>kept</w:t></w:r>']] as Array<[string, string]>].map(
@@ -1661,6 +1672,8 @@ export const SAVE_PARTS: CallSpec[] = [
       '<w:p><w:r><w:tab/><w:t>x</w:t><w:t>y</w:t></w:r></w:p><w:p></w:p>',
       '<w:pp>text</w:pp><w:p>a</w:p>',
       '<w:p><w:r><w:t>é 😀</w:t></w:r></w:p>',
+      // a comment as the parser reads it: marks, CDATA, a comment faking an end tag
+      ...COMMENT_PARTS.flatMap((part) => entrySlices(part, 'w:comment')),
     ].map((text): Input => ({ text })),
   },
   {

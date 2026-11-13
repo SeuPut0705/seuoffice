@@ -24,6 +24,7 @@ import type {
 import { parseNotesXml, type NoteKind, type NoteParagraphReader } from './reference/notes'
 import { nameOf, serializeXNode, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
+import { ENTRIES, hiddenRun, marks, NOTE_PARTS, plainRun, STORIES } from './withheld-inputs'
 import { parseInternals } from './parse-internals'
 
 const internals = await parseInternals()
@@ -1408,8 +1409,11 @@ const PARSE_TEXT_B2: CallSpec[] = [
         args.kind as NoteKind,
         internals.standaloneNoteParagraphReader!() as NoteParagraphReader,
       ),
-    built: NOTES_PARTS.flatMap((text) =>
-      (['footnote', 'endnote'] as const).map((kind) => ({ text, args: { kind } })),
+    built: [...NOTES_PARTS, ...NOTE_PARTS].flatMap((text) =>
+      (['footnote', 'endnote'] as const).map((kind) => ({
+        text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
+        args: { kind },
+      })),
     ),
   },
 ]
@@ -1653,6 +1657,23 @@ export const PARSE_TEXT: CallSpec[] = [
       '<w:p><w:sdt><w:sdtPr><w:id w:val="-1"/></w:sdtPr><w:sdtContent></w:sdtContent></w:sdt><w:sdt><w:sdtPr/></w:sdt></w:p>',
       '<w:p><w:sdt><w:sdtContent><w:r><w:t>unclosed</w:t></w:r></w:sdtContent></w:p>',
       '<w:p><w:sdt><w:sdtPr><w:alias w:val="\u{1F600}"/></w:sdtPr><w:sdtContent><w:r><w:t>\u{1F601}x</w:t></w:r><w:r><w:tab/></w:r></w:sdtContent></w:sdt></w:p>',
+      // hidden from AI: a control holding hidden runs, in every spelling of the mark
+      ...marks().map(
+        (mark) =>
+          `<w:p><w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>${plainRun('Call ')}${hiddenRun('138', mark)}${hiddenRun('000', mark)}${plainRun(' now')}</w:sdtContent></w:sdt></w:p>`,
+      ),
+      // a mark no run accounts for, one outside the control, a control inside a hidden run
+      `<w:p><w:sdt><w:sdtContent><w:r><w:t>a</w:t><go:redact w:label="x"/></w:r></w:sdtContent></w:sdt></w:p>`,
+      `<w:p>${hiddenRun('outside', '<go:redact w:label="x"/>')}<w:sdt><w:sdtContent>${plainRun('inside')}</w:sdtContent></w:sdt></w:p>`,
+      `<w:p><w:sdt><w:sdtContent><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:sdt><w:sdtContent>${plainRun('nested')}</w:sdtContent></w:sdt></w:r></w:sdtContent></w:sdt></w:p>`,
+      // tags a pattern reads differently from the parser
+      `<w:p><w:sdt w:x="a>b"><w:sdtPr><w:tag w:val='a&amp;b'/><w:alias w:val = "T"/></w:sdtPr><w:sdtContent>${plainRun('a&#65;b')}</w:sdtContent></w:sdt></w:p>`,
+      `<w:p><w:sdt><w:sdtContent><w:r><w:t><![CDATA[<w:sdt><w:sdtContent><w:r><w:t>fake</w:t></w:r></w:sdtContent></w:sdt>]]></w:t></w:r></w:sdtContent></w:sdt></w:p>`,
+      `<w:p><!-- <w:sdt><w:sdtContent><w:r><w:t>fake</w:t></w:r></w:sdtContent></w:sdt> --><w:sdt><w:sdtContent>${plainRun('real')}</w:sdtContent></w:sdt></w:p>`,
+      '<w:p><w:sdt><w:sdtPr><w:tag/><w:alias w:val=""/><w:lock/><w:id w:val="1"/></w:sdtPr><w:sdtContent/></w:sdt><w:sdt/></w:p>',
+      '<w:p><w:r><w:t>unclosed',
+      ...ENTRIES,
+      ...STORIES.map((story) => story.document),
     ].map((text) => ({ text })),
   },
   {
@@ -2147,7 +2168,16 @@ export const PARSE_TEXT: CallSpec[] = [
       input: ([run, base]) =>
         run && base ? { args: { run: json(run), base: json(base) } } : undefined,
     },
-    built: RUNS.flatMap((run, index) =>
+    built: [
+      ...RUNS,
+      // hidden from AI: the label the run's rPr carries, read the way the serialiser spells it
+      ...marks().map((mark) => ({ text: 'secret', rawRPr: `<w:rPr>${mark}</w:rPr>` })),
+      { text: 'a', rawRPr: '<w:rPr><go:redact/></w:rPr>' },
+      { text: 'b', rawRPr: '<w:rPr><go:redact w:label=""/></w:rPr>', bold: true },
+      { text: 'c', rawRPr: '<w:rPr><go:redact w:label="a &amp; b"/></w:rPr>', del: { author: 'Ann' } },
+      { text: 'd', rawRPr: '<w:rPr><w:b/></w:rPr>' },
+      { text: 'e', rawRPr: '' },
+    ].flatMap((run, index) =>
       [BASES[index % BASES.length]!, BASES[(index + 1) % BASES.length]!].map((base) => ({
         args: { run, base },
       })),

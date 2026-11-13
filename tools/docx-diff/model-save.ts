@@ -15,6 +15,7 @@ import type { Block, GeneratedBlock } from './reference/types'
 import { failed } from './engine'
 import { Comparison, describeTextDifference, engine } from './harness'
 import { modelJson } from './model-wire'
+import { editsOf, STORIES } from './withheld-inputs'
 
 const encode = new TextEncoder()
 
@@ -26,6 +27,7 @@ const DOCUMENT_FLOOR = 183
 const documents = new Comparison('(i) saveDocx, corpus documents saved', DOCUMENT_FLOOR)
 const variantsRun = new Map<string, Comparison>()
 const blankVariants = new Map<string, Comparison>()
+const hiddenVariants = new Map<string, Comparison>()
 const refusals: string[] = []
 
 function population(into: Map<string, Comparison>, label: string): Comparison {
@@ -441,6 +443,7 @@ const BLANK_OPTIONS = [
 
 /** Edited models of blank documents: what the corpus does not hold. */
 export async function saveAfterCorpus(): Promise<void> {
+  await saveHiddenStories()
   for (const [index, options] of BLANK_OPTIONS.entries()) {
     const docx = await buildBlankDocx({
       ...options,
@@ -472,6 +475,44 @@ export async function saveAfterCorpus(): Promise<void> {
         reopened,
         variant,
       )
+    }
+  }
+}
+
+/**
+ * Hidden from AI: the documents of hidden-stories.ts (every spelling of the
+ * mark, every tag mutation) saved with each comment and note as it reads, and
+ * with each edit a person can make to its text.
+ */
+async function saveHiddenStories(): Promise<void> {
+  for (const story of STORIES) {
+    const doc = (await parseDocx(story.docx)) as ParsedDocFull
+    const where = `hidden stories ${story.name}`
+    const model = modelWithoutBytes(doc)
+    const base = originals(doc)
+    const edits = Math.max(
+      ...[...(doc.comments ?? []), ...(doc.footnotes ?? [])].map((entry) => editsOf(entry.text).length),
+      1,
+    )
+    for (let edit = 0; edit < edits; edit++) {
+      const edited = <T extends { text: string }>(entry: T): T => ({
+        ...entry,
+        text: editsOf(entry.text)[edit] ?? entry.text,
+      })
+      const variant: Variant = {
+        name: `comments and notes edited (${edit})`,
+        blocks: base,
+        options: {
+          savedAt: SAVED_AT,
+          comments: doc.comments?.map(edited),
+          footnotes: doc.footnotes?.map(edited),
+          endnotes: doc.endnotes?.map(edited),
+        },
+      }
+      await compareVariant(population(hiddenVariants, variant.name), where, doc, story.docx, model, variant)
+    }
+    for (const variant of variantsOf(doc)) {
+      await compareVariant(population(hiddenVariants, variant.name), where, doc, story.docx, model, variant)
     }
   }
 }
