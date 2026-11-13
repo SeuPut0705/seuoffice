@@ -211,3 +211,64 @@ export function redactionCount(node: RedactableNode): number {
   visit(node)
   return n
 }
+
+/** A word of a run hidden from AI, with the run's label. */
+export interface HiddenWord {
+  word: string
+  label: string
+}
+
+/**
+ * The words a document hides from AI: each run of hidden text whole, and each
+ * of its words (letters or digits, however short: a Korean word is often two
+ * syllables), lower-cased. A protected block hidden from AI keeps its words
+ * in its XML, not in runs: every word of its visible text counts as hidden.
+ */
+export function hiddenWordsOf(node: RedactableNode): HiddenWord[] {
+  const out: HiddenWord[] = []
+  const add = (text: string, label: string) => {
+    const whole = text.trim().toLowerCase()
+    if (whole) out.push({ word: whole, label })
+    for (const word of whole.match(/[\p{L}\p{N}]+/gu) ?? []) out.push({ word, label })
+  }
+  const visit = (n: RedactableNode) => {
+    const blockLabel = withheldBlockLabel(n)
+    if (blockLabel !== undefined) {
+      const display = n.attrs?.fieldDisplay as { left?: unknown; right?: unknown } | null
+      for (const text of [n.attrs?.previewText, display?.left, display?.right])
+        if (typeof text === 'string') add(text, blockLabel)
+    }
+    if (!Array.isArray(n.content)) return
+    // the hidden text nodes that touch read as one run: formatting may split it
+    let run = ''
+    let runLabel: string | null = null
+    for (const child of n.content) {
+      const label = isWithheld(child) && typeof child.text === 'string' ? labelOf(child) : null
+      if (label !== null && label === runLabel) run += child.text
+      else {
+        if (runLabel !== null) add(run, runLabel)
+        run = label !== null ? (child.text as string) : ''
+        runLabel = label
+      }
+      visit(child)
+    }
+    if (runLabel !== null) add(run, runLabel)
+  }
+  visit(node)
+  return out
+}
+
+/**
+ * The label a field instruction is withheld under when it repeats a word a
+ * person hid from AI (case aside), else undefined. A MERGEFIELD or HYPERLINK
+ * naming the hidden words would hand them over though its result reads as a
+ * placeholder; a short word that happens to occur in the instruction withholds
+ * more, never less.
+ */
+export function repeatedHiddenLabel(
+  instr: string,
+  words: readonly HiddenWord[],
+): string | undefined {
+  const lower = instr.toLowerCase()
+  return words.find((w) => lower.includes(w.word))?.label
+}

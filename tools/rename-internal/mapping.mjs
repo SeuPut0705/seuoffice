@@ -168,11 +168,6 @@ export const KEEP_TOKENS = [
     why: "the original app's home folder: this product never wrote there (its own was ~/.ieumoffice), so every mention is a guard against touching the other program's data",
   },
   {
-    id: 'bundled-font-pattern',
-    re: /(?<=\^)genoffice (?=\/)|(?<=\|)genoffice (?=\()/g,
-    why: 'regular expressions that match the kept bundled font family names case-insensitively (apps/docs line-metrics.ts, marks.ts)',
-  },
-  {
     id: 'upstream-repo-url',
     re: /(?:genspark-ai\/genoffice|pblsketch\/ieumoffice|ieumoffice\.com|ieumoffice\.vercel\.app|io\.github\.pblsketch\.ieumoffice|pblsketch@gmail\.com)/gi,
     why: "addresses of the original works, the fork's site and its installer id; contacts are replaced by hand (decision 0024 item 5)",
@@ -251,21 +246,6 @@ export const KEEP_TOKENS = [
   },
 ]
 
-/**
- * Font faces bundled under names that carry the old product name. The names sit
- * inside the binary font files (name table), in OFL rename notes and in the
- * third-party notices, so they are kept until the fonts are rebuilt. The list is
- * read from the tree (every `font-family: 'GenOffice …'` in a CSS file), plus
- * these that never appear in an @font-face rule.
- */
-// 'GenOffice Hangul Space' appears only as a key of the generated metric table
-// apps/docs/src/renderer/fonts/stand-in-boxes.json, which is never hand-edited.
-export const EXTRA_FONT_FAMILIES = [
-  'GenOffice UI Kana JP',
-  'GenOffice Grid Strut',
-  'GenOffice Hangul Space',
-]
-
 /** Lines kept whole in the named files: code that names another program or the original work on purpose */
 export const KEEP_LINES = [
   {
@@ -321,11 +301,6 @@ export const KEEP_LINES = [
     files: ['apps/shell/tests/settings-about.test.ts'],
     line: /Based on the open-source project GenOffice|text\.match\(\/GenOffice\/g\)/,
     why: 'test that the acknowledgement names the original work, and that nothing else on the page does',
-  },
-  {
-    files: ['apps/docs/src/renderer/line-metrics.ts', 'apps/docs/src/renderer/html-export.ts'],
-    line: /\/\^GenOffice \/\.test\(family\)|INTERNAL_FONTS = \//,
-    why: "patterns that match the bundled font families by their 'GenOffice ' prefix; the families keep their names (bundled-font), so the prefix stays",
   },
   {
     files: ['packages/cli/tests/mcp-dsh.test.ts'],

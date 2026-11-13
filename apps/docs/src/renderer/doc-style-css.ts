@@ -246,7 +246,7 @@ function blankFontFaceSrc(): string | null {
         const ff = rule as CSSFontFaceRule
         if (
           rule.type === CSSRule.FONT_FACE_RULE &&
-          ff.style.getPropertyValue('font-family').includes('GenOffice PUA Blank')
+          ff.style.getPropertyValue('font-family').includes('SeuOffice PUA Blank')
         ) {
           blankSrcCache = ff.style.getPropertyValue('src') || null
         }
@@ -259,7 +259,7 @@ function blankFontFaceSrc(): string | null {
     // jsdom drops @font-face rules from the CSSOM: scan raw <style> text
     try {
       for (const el of Array.from(document.querySelectorAll('style'))) {
-        const m = /@font-face\s*{[^}]*GenOffice PUA Blank[^}]*?src:\s*([^;}]+)/.exec(
+        const m = /@font-face\s*{[^}]*SeuOffice PUA Blank[^}]*?src:\s*([^;}]+)/.exec(
           el.textContent ?? '',
         )
         if (m) blankSrcCache = m[1].trim()
@@ -617,7 +617,7 @@ export function docStyleCss(parsed: ParsedDocFull): string {
         gridStrut = true
         eaStrut = !!aliasFace || standIn
         rules.push(
-          `@font-face { font-family:'GenOffice Grid Strut'; src:${blankSrc}; ` +
+          `@font-face { font-family:'SeuOffice Grid Strut'; src:${blankSrc}; ` +
             `ascent-override:${metrics.ascentPct}%; descent-override:${metrics.descentPct}%; ` +
             `line-gap-override:0% }`,
         )
@@ -1286,7 +1286,7 @@ export function docStyleCss(parsed: ParsedDocFull): string {
     // the tail keeps each context's own inherited chain rendering the glyphs
     rules.push(
       // !important: a declared-face CJK paragraph carries its chain inline (blockAttrs)
-      `.doc-page :is(${eaStrut ? '.doc-grid-strut,.doc-ea-strut' : '.doc-grid-strut'}) { font-family:'GenOffice Grid Strut',var(--doc-grid-strut-tail,serif) !important }`,
+      `.doc-page :is(${eaStrut ? '.doc-grid-strut,.doc-ea-strut' : '.doc-grid-strut'}) { font-family:'SeuOffice Grid Strut',var(--doc-grid-strut-tail,serif) !important }`,
     )
     // declared-run and CJK-stretch spans keep their own primary face, whose box
     // sits offset from the strut's; Chromium unions the offset boxes and the
@@ -1299,8 +1299,8 @@ export function docStyleCss(parsed: ParsedDocFull): string {
     // 20261021 sample 004: 23 instead of 25 lines per page, +8 pages)
     const eaSpanBlocks = eaStrut ? ':is(.doc-grid-strut,.doc-ea-strut)' : '.doc-grid-strut'
     rules.push(
-      `.doc-page .doc-grid-strut span[style*='--doc-run-ff'] { font-family:'GenOffice Grid Strut',var(--doc-run-ff) !important }`,
-      `.doc-page ${eaSpanBlocks} .doc-east-asian-font { font-family:'GenOffice Grid Strut',var(--doc-east-asian-font,var(--doc-grid-strut-tail,serif)) !important }`,
+      `.doc-page .doc-grid-strut span[style*='--doc-run-ff'] { font-family:'SeuOffice Grid Strut',var(--doc-run-ff) !important }`,
+      `.doc-page ${eaSpanBlocks} .doc-east-asian-font { font-family:'SeuOffice Grid Strut',var(--doc-east-asian-font,var(--doc-grid-strut-tail,serif)) !important }`,
     )
   }
   if (darkRules.length > 0) rules.push(`@media screen {\n${darkRules.join('\n')}\n}`)

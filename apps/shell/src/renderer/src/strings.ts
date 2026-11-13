@@ -447,7 +447,7 @@ export const strings = {
     setReadUrlClear: 'Clear',
     setAiSharedKeyHint:
       "A vendor's key and base URL are shared across capabilities; enter them once.",
-    setGithub: 'Open Source',
+    setGithub: 'Source code',
     setBasedOn: 'Based on the open-source project {upstream} (Apache License 2.0).',
     setLicenses: 'Open-source licenses',
     setLicensesDesc:
@@ -458,7 +458,7 @@ export const strings = {
     setHwpNotice:
       "The HWP/HWPX editor is built on the open-source project rhwp (MIT License). This product was developed with reference to Hancom's published document on the Hangul document file format (.hwp).",
     setDisclaimer:
-      'SeuOffice is provided as is, without warranties of any kind, under the Apache License 2.0. AI-generated content can be wrong: check it before you use it. Making sure you have the right to use it is up to you.',
+      'SeuOffice is provided as is, without warranties of any kind, under the Functional Source License 1.1 with the Apache 2.0 future license (FSL-1.1-ALv2). AI-generated content can be wrong: check it before you use it. Making sure you have the right to use it is up to you.',
     viewOnGitHub: 'View on GitHub',
     setFeedback: 'Send feedback',
     setFeedbackDesc:
@@ -476,7 +476,7 @@ export const strings = {
     splitHintBottom: 'Split below',
     // First-run onboarding
     onbTitle1: 'Welcome to SeuOffice',
-    onbWelcomeSubtitle: 'An open-source office suite',
+    onbWelcomeSubtitle: 'A source-available office suite',
     onbWelcomeBody:
       'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or ChatGPT subscription you already have, or through a free AI connection.',
     onbSkip: 'Skip',
@@ -1049,7 +1049,7 @@ export const strings = {
     setReadUrlClear: '지우기',
     setAiSharedKeyHint:
       '같은 제공업체의 키와 Base URL은 모든 기능에서 공유되므로 한 번만 입력하면 됩니다.',
-    setGithub: '오픈 소스',
+    setGithub: '소스 코드',
     setBasedOn: '오픈 소스 프로젝트 {upstream}(Apache License 2.0)를 바탕으로 만들었습니다.',
     setLicenses: '오픈소스 라이선스',
     setLicensesDesc: '이 앱에 함께 들어 있는 프로그램과 글꼴의 라이선스, 저작권 고지를 봅니다.',
@@ -1059,7 +1059,7 @@ export const strings = {
     setHwpNotice:
       '한글(HWP·HWPX) 편집기는 오픈소스 프로젝트 rhwp(MIT 라이선스)를 바탕으로 만들었습니다. 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.',
     setDisclaimer:
-      'SeuOffice는 Apache License 2.0에 따라 있는 그대로 제공되며, 어떤 보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그 내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.',
+      'SeuOffice는 Functional Source License 1.1(Apache 2.0 미래 라이선스 포함, FSL-1.1-ALv2)에 따라 있는 그대로 제공되며, 어떤 보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그 내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.',
     viewOnGitHub: 'GitHub에서 보기',
     setFeedback: '의견 보내기',
     setFeedbackDesc:
@@ -1079,7 +1079,7 @@ export const strings = {
     splitHintBottom: '아래에 나누기',
     // First-run onboarding
     onbTitle1: 'SeuOffice에 오신 것을 환영합니다',
-    onbWelcomeSubtitle: '오픈소스 오피스 프로그램',
+    onbWelcomeSubtitle: '소스 공개 오피스 프로그램',
     onbWelcomeBody:
       'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude·ChatGPT 구독이나 무료 AI 연결로 동작합니다.',
     onbSkip: '건너뛰기',

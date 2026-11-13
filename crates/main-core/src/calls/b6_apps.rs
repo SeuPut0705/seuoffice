@@ -1998,6 +1998,11 @@ fn session_state_call(args: &[Value], cx: &mut Context) -> Answer {
                 session.push_history();
                 Value::Null
             }
+            "pushRedo" => {
+                let snapshot = session.take_snapshot();
+                session.redo_stack.push(snapshot);
+                Value::Null
+            }
             "begin" => {
                 session.begin_history_batch();
                 Value::Null

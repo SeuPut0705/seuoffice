@@ -15,16 +15,17 @@ use serde_json::{Map, Value, json};
 use super::{Answer, CallError, Context, arg};
 use crate::packages::electron_utils::renderer_scheme::RendererUrlError;
 use crate::shell::detached_windows::{
-    DetachedHost, DetachedWindowOptions, DetachedWindows, RecId, ShellWindowState, WindowOptions,
-    dock_band_for,
+    DetachedCloseStep, DetachedHost, DetachedOpenDocumentsRun, DetachedWindowOptions,
+    DetachedWindows, RecId, ShellWindowState, WindowOptions, dock_band_for,
 };
 use crate::shell::split_layout::{Pane, Rect, SplitDropIntent, SplitOrientation};
 use crate::shell::tab_manager::{
-    Deferred, DetachedTab, DiagramIdentity, EditorCalls, HwpCopy, HwpUntitledCopy, LiveTab,
-    LoadedTabView, OpenDocsOptions, Opener, Ready, RestoredSession, RestoredSplit, SplitViewState,
-    TabHost, TabKind, TabLoadResult, TabManager, TabResult, TemplateCopy, UnloadedTabOpenContext,
-    UnloadedTabSpec, ViewSpec, canonical_path, create_plain_editor_view, help_topic_param,
-    help_view_url, help_window_open,
+    Deferred, DetachedTab, DiagramIdentity, EditorCalls, EnsureAfterReady, EnsureStep, HwpCopy,
+    HwpUntitledCopy, LiveTab, LoadedTabView, OpenDocsOptions, OpenDocumentsRun, OpenDocumentsStep,
+    Opener, Ready, RestoredSession, RestoredSplit, SplitViewState, TabCloseStep, TabHost, TabKind,
+    TabLoadResult, TabManager, TabResult, TemplateCopy, UnloadedTabOpenContext, UnloadedTabSpec,
+    ViewSpec, canonical_path, create_plain_editor_view, help_topic_param, help_view_url,
+    help_window_open,
 };
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
@@ -80,6 +81,8 @@ struct WcState {
     pending: f64,
     memo: bool,
     destroyed: bool,
+    /// `docsQueryDirty` rejects
+    query_fails: bool,
     identity: Option<DiagramIdentity>,
 }
 
@@ -115,6 +118,35 @@ enum TimerKind {
 enum CloseAnswer {
     Answer(bool),
     Throws,
+}
+
+/// Where the value of an operation that may wait for an answer goes when it
+/// is done: the operation's own result, a slot `join` reads (`bg`), or
+/// nowhere (a promise nobody reads).
+#[derive(Clone, Copy, PartialEq)]
+enum Sink {
+    Op,
+    Bg(usize),
+    Discard,
+}
+
+/// A run suspended on an answer the world holds back (`hold`, `release`).
+enum Held {
+    TabClose {
+        id: String,
+        sink: Sink,
+    },
+    OpenDocs {
+        run: OpenDocumentsRun<View>,
+        sink: Sink,
+    },
+    DetachedClose {
+        rec: RecId,
+    },
+    DetachedOpenDocs {
+        run: DetachedOpenDocumentsRun,
+        sink: Sink,
+    },
 }
 
 #[derive(Clone, PartialEq)]
@@ -172,6 +204,13 @@ struct World {
     dock_index: Option<f64>,
     pending_docks: Vec<DetachedTab<View>>,
     held: Vec<Option<DetachedTab<View>>>,
+    /// `holding`: a `docsQueryDirty` or a close prompt waits for `release`
+    hold: bool,
+    held_steps: VecDeque<Held>,
+    /// the results `join` reads, by `bg` slot
+    bgs: Vec<Option<Value>>,
+    /// `ensureTabLoaded` runs waiting on a `ready` that has not settled
+    ensure_waits: Vec<(u64, EnsureAfterReady<View>, Sink)>,
 }
 
 fn rect_json(r: &Rect) -> Value {
@@ -253,6 +292,10 @@ impl World {
             dock_index: None,
             pending_docks: Vec::new(),
             held: Vec::new(),
+            hold: false,
+            held_steps: VecDeque::new(),
+            bgs: Vec::new(),
+            ensure_waits: Vec::new(),
         }
     }
 
@@ -293,10 +336,39 @@ impl World {
         }
     }
 
-    fn next_close_answer(&mut self) -> CloseAnswer {
-        self.close_answers
+    /// the answer of a `docsQueryDirty` that is not held
+    fn query_answer(&mut self, wc: i64) -> Result<bool, String> {
+        let state = self.state(wc);
+        if state.query_fails {
+            Err("query failed".to_owned())
+        } else {
+            Ok(state.dirty)
+        }
+    }
+
+    /// the answer of a close prompt that is not held
+    fn prompt_answer(&mut self) -> Result<bool, String> {
+        match self
+            .close_answers
             .pop_front()
             .unwrap_or(CloseAnswer::Answer(true))
+        {
+            CloseAnswer::Answer(answer) => Ok(answer),
+            CloseAnswer::Throws => Err("prompt failed".to_owned()),
+        }
+    }
+
+    /// the value of an operation that is done goes to its sink; what the
+    /// operation answers is returned
+    fn settle(&mut self, sink: Sink, value: Value) -> Value {
+        match sink {
+            Sink::Op => value,
+            Sink::Bg(slot) => {
+                self.bgs[slot] = Some(value);
+                Value::Null
+            }
+            Sink::Discard => Value::Null,
+        }
     }
 
     fn start_timer(&mut self, kind: TimerKind, delay_ms: f64) -> u64 {
@@ -364,6 +436,20 @@ impl World {
             self.reported.insert(token);
             tm.ready_settled(Ready(token));
         }
+        // the `ensureTabLoaded` runs that waited on a ready that settled go on
+        let waits = std::mem::take(&mut self.ensure_waits);
+        for (token, next, sink) in waits {
+            let answer = match self.readies.get(&token) {
+                Some(ReadyState::Resolved) => Ok(()),
+                Some(ReadyState::Rejected(message)) => Err(message.clone()),
+                _ => {
+                    self.ensure_waits.push((token, next, sink));
+                    continue;
+                }
+            };
+            let step = tm.resume_ensure_ready(self, next, answer);
+            drive_ensure(self, tm, step, sink);
+        }
         while !self.closed_queue.is_empty() {
             let n = self.closed_queue.remove(0);
             if let Some(Some(rec)) = self.win_rec.get(n - 1).copied() {
@@ -423,11 +509,6 @@ impl EditorCalls<View> for World {
             Value::from(wc_id),
         ]);
         self.state(wc_id).dirty
-    }
-
-    fn docs_query_dirty(&mut self, view: &View) -> bool {
-        self.log(vec![Value::from("docsQueryDirty"), Value::from(view.0)]);
-        self.state(view.0).dirty
     }
 
     fn hwp_memo_modal_open(&mut self, wc_id: i64) -> bool {
@@ -799,20 +880,6 @@ impl TabHost<View> for World {
         self.state(wc_id).identity.clone()
     }
 
-    fn request_close(&mut self, kind: TabKind, view: &View) -> bool {
-        self.log(vec![
-            Value::from("requestClose"),
-            Value::from(kind.as_str()),
-            Value::from(view.0),
-            Value::from("shell"),
-        ]);
-        match self.next_close_answer() {
-            CloseAnswer::Answer(answer) => answer,
-            // a prompt of the shell window that throws is not a scenario
-            CloseAnswer::Throws => false,
-        }
-    }
-
     fn opener_open(
         &mut self,
         opener: &Opener,
@@ -850,26 +917,6 @@ impl TabHost<View> for World {
             view,
             ready: Some(Ready(opener.id)),
         })
-    }
-
-    fn opener_needs_user(&mut self, opener: &Opener, context: &UnloadedTabOpenContext) -> bool {
-        self.log(vec![
-            Value::from("opener.needsUser"),
-            Value::from(opener.id),
-            context.to_value(),
-        ]);
-        self.openers
-            .get(&opener.id)
-            .and_then(|spec| spec.needs_user)
-            .unwrap_or(false)
-    }
-
-    fn await_ready(&mut self, ready: &Ready) -> Result<(), String> {
-        match self.readies.get(&ready.0) {
-            Some(ReadyState::Resolved) => Ok(()),
-            Some(ReadyState::Rejected(message)) => Err(message.clone()),
-            _ => Err("ready pending".to_owned()),
-        }
     }
 
     fn warn(&mut self, message: &str, error: &str) {
@@ -1076,19 +1123,6 @@ impl DetachedHost<View, Win> for World {
         self.immediates.push(Immediate::Win(rec));
     }
 
-    fn request_close_in(&mut self, kind: TabKind, view: &View, win: &Win) -> Result<bool, String> {
-        self.log(vec![
-            Value::from("requestClose"),
-            Value::from(kind.as_str()),
-            Value::from(view.0),
-            Value::from(format!("window:{}", win.0)),
-        ]);
-        match self.next_close_answer() {
-            CloseAnswer::Answer(answer) => Ok(answer),
-            CloseAnswer::Throws => Err("prompt failed".to_owned()),
-        }
-    }
-
     fn reset_sheets_shutting_down(&mut self) {
         self.log(vec![Value::from("resetSheetsShuttingDown")]);
     }
@@ -1242,6 +1276,245 @@ fn identity_of(value: &Value) -> DiagramIdentity {
     }
 }
 
+// ---------------------------------------------------------------------------
+// the steps the managers ask the adapter for
+// ---------------------------------------------------------------------------
+
+fn log_docs_query(w: &mut World, view: View) {
+    w.log(vec![Value::from("docsQueryDirty"), Value::from(view.0)]);
+}
+
+fn log_close_prompt(w: &mut World, kind: TabKind, view: View, window: &str) {
+    w.log(vec![
+        Value::from("requestClose"),
+        Value::from(kind.as_str()),
+        Value::from(view.0),
+        Value::from(window),
+    ]);
+}
+
+/// Carry out the steps of a `closeTab` run: each `docsQueryDirty` and prompt
+/// is logged as the TypeScript fake logs it, then answered at once or, while
+/// the world holds, left waiting for `release`.
+fn drive_tab_close(
+    w: &mut World,
+    tm: &mut TabManager<View>,
+    mut step: TabCloseStep<View>,
+    sink: Sink,
+) -> Value {
+    loop {
+        match step {
+            TabCloseStep::Done => return w.settle(sink, Value::Null),
+            TabCloseStep::Rejected(message) => return w.settle(sink, error_value(&message)),
+            TabCloseStep::QueryDocsDirty { id, view } => {
+                log_docs_query(w, view);
+                if w.hold {
+                    w.held_steps.push_back(Held::TabClose { id, sink });
+                    return Value::Null;
+                }
+                let answer = w.query_answer(view.0);
+                step = tm.resume_close(w, &id, answer);
+            }
+            TabCloseStep::RequestClose { id, kind, view } => {
+                log_close_prompt(w, kind, view, "shell");
+                if w.hold {
+                    w.held_steps.push_back(Held::TabClose { id, sink });
+                    return Value::Null;
+                }
+                let answer = w.prompt_answer();
+                step = tm.resume_close(w, &id, answer);
+            }
+        }
+    }
+}
+
+/// the same for `openDocuments`
+fn drive_open_docs(
+    w: &mut World,
+    tm: &mut TabManager<View>,
+    mut step: OpenDocumentsStep<View, OpenDocumentsRun<View>>,
+    sink: Sink,
+) -> Value {
+    loop {
+        match step {
+            OpenDocumentsStep::Done(list) => {
+                let list = Value::Array(list.iter().map(|t| t.to_value()).collect());
+                return w.settle(sink, list);
+            }
+            OpenDocumentsStep::Rejected(message) => {
+                return w.settle(sink, error_value(&message));
+            }
+            OpenDocumentsStep::QueryDocsDirty { view, next } => {
+                log_docs_query(w, view);
+                if w.hold {
+                    w.held_steps.push_back(Held::OpenDocs { run: next, sink });
+                    return Value::Null;
+                }
+                let answer = w.query_answer(view.0);
+                step = tm.resume_open_documents(w, next, answer);
+            }
+        }
+    }
+}
+
+/// the same for `detachedOpenDocuments`
+fn drive_detached_open_docs(
+    w: &mut World,
+    dw: &mut DetachedWindows<View, Win>,
+    mut step: OpenDocumentsStep<View, DetachedOpenDocumentsRun>,
+    sink: Sink,
+) -> Value {
+    loop {
+        match step {
+            OpenDocumentsStep::Done(list) => {
+                let list = Value::Array(list.iter().map(|t| t.to_value()).collect());
+                return w.settle(sink, list);
+            }
+            OpenDocumentsStep::Rejected(message) => {
+                return w.settle(sink, error_value(&message));
+            }
+            OpenDocumentsStep::QueryDocsDirty { view, next } => {
+                log_docs_query(w, view);
+                if w.hold {
+                    w.held_steps
+                        .push_back(Held::DetachedOpenDocs { run: next, sink });
+                    return Value::Null;
+                }
+                let answer = w.query_answer(view.0);
+                step = dw.resume_detached_open_documents(w, next, answer);
+            }
+        }
+    }
+}
+
+/// the same for the close prompt of a detached window
+fn drive_detached_close(
+    w: &mut World,
+    dw: &mut DetachedWindows<View, Win>,
+    rec: RecId,
+    mut step: DetachedCloseStep<View, Win>,
+) {
+    loop {
+        match step {
+            DetachedCloseStep::Idle => return,
+            DetachedCloseStep::QueryDocsDirty(view) => {
+                log_docs_query(w, view);
+                if w.hold {
+                    w.held_steps.push_back(Held::DetachedClose { rec });
+                    return;
+                }
+                let answer = w.query_answer(view.0);
+                step = dw.resume_close(w, rec, answer);
+            }
+            DetachedCloseStep::RequestClose(kind, view, win) => {
+                log_close_prompt(w, kind, view, &format!("window:{}", win.0));
+                if w.hold {
+                    w.held_steps.push_back(Held::DetachedClose { rec });
+                    return;
+                }
+                let answer = w.prompt_answer();
+                step = dw.resume_close(w, rec, answer);
+            }
+        }
+    }
+}
+
+/// the same for `ensureTabLoaded`: an opener's `needsUser` is answered from
+/// the scenario, and a `ready` that has not settled leaves the run waiting
+/// (the operation itself answers `ready pending`, as the TypeScript helper
+/// that waits a few turns does)
+fn drive_ensure(
+    w: &mut World,
+    tm: &mut TabManager<View>,
+    mut step: EnsureStep<View>,
+    sink: Sink,
+) -> Value {
+    loop {
+        match step {
+            EnsureStep::Done(result) => {
+                let shown = match result {
+                    TabLoadResult::Ready(view) => json!({ "status": "ready", "wc": view.0 }),
+                    TabLoadResult::NeedsUser => json!({ "status": "needs-user" }),
+                    TabLoadResult::Missing => json!({ "status": "missing" }),
+                };
+                return w.settle(sink, shown);
+            }
+            EnsureStep::Rejected(message) => return w.settle(sink, error_value(&message)),
+            EnsureStep::NeedsUser {
+                opener,
+                context,
+                next,
+            } => {
+                w.log(vec![
+                    Value::from("opener.needsUser"),
+                    Value::from(opener.id),
+                    context.to_value(),
+                ]);
+                let answer = w
+                    .openers
+                    .get(&opener.id)
+                    .and_then(|spec| spec.needs_user)
+                    .unwrap_or(false);
+                step = tm.resume_ensure_needs_user(w, next, Ok(answer));
+            }
+            EnsureStep::AwaitReady { ready, next } => {
+                let answer = match w.readies.get(&ready.0) {
+                    Some(ReadyState::Resolved) => Ok(()),
+                    Some(ReadyState::Rejected(message)) => Err(message.clone()),
+                    _ => {
+                        // the run goes on when the ready settles, and then
+                        // answers to its sink; an operation that waits for its
+                        // own answer gave up on it
+                        let waiting = if sink == Sink::Op {
+                            Sink::Discard
+                        } else {
+                            sink
+                        };
+                        w.ensure_waits.push((ready.0, next, waiting));
+                        return if sink == Sink::Op {
+                            error_value("ready pending")
+                        } else {
+                            Value::Null
+                        };
+                    }
+                };
+                step = tm.resume_ensure_ready(w, next, answer);
+            }
+        }
+    }
+}
+
+/// `release`: answer the oldest run the world holds back
+fn release(
+    w: &mut World,
+    tm: &mut TabManager<View>,
+    dw: &mut DetachedWindows<View, Win>,
+    answer: Result<bool, String>,
+) -> Value {
+    let Some(held) = w.held_steps.pop_front() else {
+        return Value::Bool(false);
+    };
+    match held {
+        Held::TabClose { id, sink } => {
+            let step = tm.resume_close(w, &id, answer);
+            drive_tab_close(w, tm, step, sink);
+        }
+        Held::OpenDocs { run, sink } => {
+            let step = tm.resume_open_documents(w, run, answer);
+            drive_open_docs(w, tm, step, sink);
+        }
+        Held::DetachedClose { rec } => {
+            let step = dw.resume_close(w, rec, answer);
+            drive_detached_close(w, dw, rec, step);
+        }
+        Held::DetachedOpenDocs { run, sink } => {
+            let step = dw.resume_detached_open_documents(w, run, answer);
+            drive_detached_open_docs(w, dw, step, sink);
+        }
+    }
+    Value::Bool(true)
+}
+
 fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).ok_or_else(|| CallError::plain("scenario"))?;
     let mut w = World::new(spec);
@@ -1256,7 +1529,7 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
         .flatten()
     {
         let name = str_of(op, "op").unwrap_or("");
-        let value = run_op(name, op, &mut w, &mut tm, &mut dw, &platform);
+        let value = run_op(name, op, &mut w, &mut tm, &mut dw, &platform, Sink::Op);
         w.after_op(&mut tm, &mut dw);
         results.push(json!([name, value]));
     }
@@ -1279,6 +1552,7 @@ fn run_op(
     tm: &mut TabManager<View>,
     dw: &mut DetachedWindows<View, Win>,
     platform: &str,
+    sink: Sink,
 ) -> Value {
     let id = str_of(o, "id").unwrap_or("");
     match name {
@@ -1316,6 +1590,9 @@ fn run_op(
             if let Some(v) = bool_of(o, "destroyed") {
                 state.destroyed = v;
             }
+            if let Some(v) = bool_of(o, "queryFails") {
+                state.query_fails = v;
+            }
             if let Some(identity) = o.get("identity") {
                 state.identity = Some(identity_of(identity));
             }
@@ -1335,6 +1612,32 @@ fn run_op(
             }
             Value::Null
         }
+        "hold" => {
+            w.hold = bool_of(o, "on").unwrap_or(false);
+            Value::Null
+        }
+        "release" => {
+            let answer = match o.get("answer") {
+                Some(Value::String(_)) => Err("released failure".to_owned()),
+                other => Ok(other.and_then(Value::as_bool).unwrap_or(false)),
+            };
+            release(w, tm, dw, answer)
+        }
+        "bg" => {
+            // the operation runs on; its result is read by `join`
+            let slot = w.bgs.len();
+            w.bgs.push(None);
+            let inner = o.get("do").unwrap_or(&Value::Null);
+            let inner_name = str_of(inner, "op").unwrap_or("");
+            run_op(inner_name, inner, w, tm, dw, platform, Sink::Bg(slot));
+            Value::Null
+        }
+        "join" => Value::Array(
+            w.bgs
+                .iter()
+                .map(|slot| slot.clone().unwrap_or(Value::Null))
+                .collect(),
+        ),
         "fail" => {
             let create = str_of(o, "create").unwrap_or("").to_owned();
             if bool_of(o, "on") == Some(false) {
@@ -1561,12 +1864,10 @@ fn run_op(
             };
             Value::from(tm.hydrate_session(w, &session))
         }
-        "ensure" => match tm.ensure_tab_loaded(w, id) {
-            Ok(TabLoadResult::Ready(view)) => json!({ "status": "ready", "wc": view.0 }),
-            Ok(TabLoadResult::NeedsUser) => json!({ "status": "needs-user" }),
-            Ok(TabLoadResult::Missing) => json!({ "status": "missing" }),
-            Err(error) => error_value(&error.0),
-        },
+        "ensure" => {
+            let step = tm.ensure_tab_loaded(w, id);
+            drive_ensure(w, tm, step, sink)
+        }
         "unloaded" => Value::Bool(tm.is_tab_unloaded(id)),
         // ---- the split ----
         "splitWith" => {
@@ -1617,12 +1918,13 @@ fn run_op(
         },
         // ---- closing, detaching ----
         "closeTab" => {
-            tm.close_tab(w, id);
-            Value::Null
+            let step = tm.close_tab(w, id);
+            drive_tab_close(w, tm, step, sink)
         }
         "closeActive" => {
-            tm.close_active_tab(w);
-            Value::Null
+            // `void closeTab(...)`: nobody reads how it ends
+            let step = tm.close_active_tab(w);
+            drive_tab_close(w, tm, step, Sink::Discard)
         }
         "closeNoPrompt" => Value::Bool(tm.close_tab_without_prompt(w, id)),
         "detach" => {
@@ -1646,7 +1948,8 @@ fn run_op(
         "session" => tm.session_tabs().to_value(),
         "paths" => json!(tm.open_file_paths()),
         "openDocuments" => {
-            Value::Array(tm.open_documents(w).iter().map(|t| t.to_value()).collect())
+            let step = tm.open_documents(w);
+            drive_open_docs(w, tm, step, sink)
         }
         "describe" => match tm.describe_web_contents(w, i64_of(o, "wc")) {
             Some((kind, title, file_path)) => {
@@ -1722,7 +2025,10 @@ fn run_op(
         "winState" => {
             let n = o.get("window").and_then(Value::as_u64).unwrap_or(1) as usize;
             // a window destroyed from outside closes, as Electron's does
-            if bool_of(o, "destroyed") == Some(true) && !w.win_state(&Win(n)).destroyed {
+            if bool_of(o, "destroyed") == Some(true)
+                && !w.win_state(&Win(n)).destroyed
+                && bool_of(o, "silent") != Some(true)
+            {
                 w.closed_queue.push(n);
             }
             let win = w.win_state(&Win(n));
@@ -1819,12 +2125,10 @@ fn run_op(
         "detachedWc" => dw
             .detached_web_contents_for(w, id)
             .map_or(Value::Null, |v| Value::from(v.0)),
-        "detachedOpenDocuments" => Value::Array(
-            dw.detached_open_documents(w)
-                .iter()
-                .map(|t| t.to_value())
-                .collect(),
-        ),
+        "detachedOpenDocuments" => {
+            let step = dw.detached_open_documents(w);
+            drive_detached_open_docs(w, dw, step, sink)
+        }
         "detachedSessionTabs" => Value::Array(
             dw.detached_session_tabs(w)
                 .iter()
@@ -1886,12 +2190,13 @@ fn window_event(
     };
     match str_of(o, "event").unwrap_or("") {
         "close" => {
-            let prevented = dw.on_close(w, rec);
-            if !prevented && !w.win_state(&Win(n)).destroyed {
+            let event = dw.on_close(w, rec);
+            drive_detached_close(w, dw, rec, event.step);
+            if !event.prevent_default && !w.win_state(&Win(n)).destroyed {
                 w.win_state(&Win(n)).destroyed = true;
                 w.closed_queue.push(n);
             }
-            json!({ "prevented": prevented })
+            json!({ "prevented": event.prevent_default })
         }
         "closed" => {
             dw.on_closed(w, rec);

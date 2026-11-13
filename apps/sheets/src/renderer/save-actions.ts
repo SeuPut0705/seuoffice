@@ -742,7 +742,7 @@ export async function handleSave(
         active.sheet.getSheetName(),
       )
     ) {
-      const withheld = await window.desktopApi.askWithheldCsv()
+      const withheld = await window.desktopApi.askWithheldExport('CSV')
       if (withheld === 'xlsx') return await handleSave(ctx, 'save-as', quiet, explicitTarget)
       if (withheld === 'cancel') {
         ctx.setMessage(t('appSaveCanceled'))

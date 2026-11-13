@@ -2,7 +2,7 @@
   "name": "@seuoffice/epub",
   "productName": "SeuOffice EPUB",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "EPUB editor module: reads books, edits their text in place without re-serializing what it does not touch, and translates them into new books, hosted by shell tabs",
   "main": "out/main/index.js",

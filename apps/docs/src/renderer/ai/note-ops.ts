@@ -164,7 +164,7 @@ export function noteInsertPos(
     }
     return { pos: end }
   }
-  return posAfterText(block, start + 1, afterText, `block ${blockIndex}`)
+  return posAfterText(doc, block, start + 1, afterText, `block ${blockIndex}`)
 }
 
 /** Rewrite every reference mark of `kind` in `tr` to its 1-based document-order number. */
@@ -186,8 +186,8 @@ export function insertNoteRef(editor: Editor, kind: NoteKind, id: string, pos: n
   editor.view.dispatch(tr)
 }
 
-/** remove every reference mark of that note; returns how many were removed */
-export function removeNoteRefs(editor: Editor, kind: NoteKind, id: string): number {
+/** remove every reference mark of that note; returns how many were removed, null when the editor refused the change */
+export function removeNoteRefs(editor: Editor, kind: NoteKind, id: string): number | null {
   const tr = editor.state.tr
   const hits: Array<{ pos: number; size: number }> = []
   editor.state.doc.descendants((node, pos) => {
@@ -198,8 +198,10 @@ export function removeNoteRefs(editor: Editor, kind: NoteKind, id: string): numb
   })
   for (const hit of hits.reverse()) tr.delete(hit.pos, hit.pos + hit.size)
   renumber(tr, kind)
-  if (tr.steps.length > 0) editor.view.dispatch(tr)
-  return hits.length
+  if (tr.steps.length === 0) return hits.length
+  const before = editor.state.doc
+  editor.view.dispatch(tr)
+  return hits.length > 0 && editor.state.doc === before ? null : hits.length
 }
 
 /** reference marks inside protected blocks live only in the block XML */
