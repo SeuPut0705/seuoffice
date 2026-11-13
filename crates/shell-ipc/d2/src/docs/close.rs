@@ -273,7 +273,6 @@ impl Docs {
 
     /// `writeDocsCopiesNow()`: every live, booted renderer writes its copy
     /// now; `then` runs when each answered or its 5 s passed
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn write_copies_now(self: &Rc<Self>, then: Box<dyn FnOnce()>) {
         let targets: Vec<ViewId> = self
             .booted
@@ -288,7 +287,7 @@ impl Docs {
         let left = Rc::new(Cell::new(targets.len()));
         let then = Rc::new(RefCell::new(Some(then)));
         for view in targets {
-            let token = jscompat::random_uuid();
+            let token = self.shell.random_uuid();
             let (l, t) = (left.clone(), then.clone());
             let one_done = move || {
                 l.set(l.get() - 1);
@@ -322,7 +321,6 @@ impl Docs {
 
     /// `teardownDocsRenderer(contents)`: the closed tab loses its writes and
     /// its recovery copies settle by how the close was decided
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn teardown(&self, view: ViewId, crashed: bool) {
         self.torn_down.borrow_mut().insert(view);
         self.engine.forget_lazy_media_owner(view);
