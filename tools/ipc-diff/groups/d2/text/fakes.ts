@@ -14,7 +14,7 @@ import { createRequire, registerHooks } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import type * as ElectronUtils from '@seuoffice/electron-utils'
 import type * as I18n from '@seuoffice/i18n'
-import type { LoadContext } from '../../../types.ts'
+import type { Call, Group, LoadContext, TriggerContext } from '../../../types.ts'
 import { inert, withInert } from '../../w/shell-index.ts'
 
 /**
@@ -98,11 +98,14 @@ export function fileText(path: string): string {
 }
 
 /**
- * The engines behind the Rust host traits, by the specifier or the resolved
- * file the editors import, each replaced by the module of that name in
+ * The engines behind the Rust host traits, by the specifier, the resolved
+ * file or the importing file, each replaced by the module of that name in
  * this folder for every case of the group
  */
-const REPLACED: { test: (specifier: string, url: string) => boolean; module: string }[] = [
+const REPLACED: {
+  test: (specifier: string, url: string, parent: string) => boolean
+  module: string
+}[] = [
   { test: (s) => s === '@seuoffice/file-parse', module: 'file-parse.ts' },
   { test: (s) => s === '@seuoffice/odt-engine', module: 'odt-engine.ts' },
   {
@@ -117,7 +120,20 @@ const REPLACED: { test: (specifier: string, url: string) => boolean; module: str
     test: (_s, url) => url.endsWith('/packages/html2docx/src/drivers/electron.ts'),
     module: 'html2docx-driver.ts',
   },
+  // the ids of the page image exports and the Docs conversions (`MarkdownShell::random_uuid`)
+  {
+    test: (s, _u, parent) => s === 'node:crypto' && COUNTED.some((f) => parent.endsWith(f)),
+    module: 'counted-crypto.ts',
+  },
+  {
+    test: (s, _u, parent) => s === 'node:fs/promises' && parent.endsWith(COUNTED[0]),
+    module: 'image-export-fs.ts',
+  },
 ]
+const COUNTED = [
+  '/apps/markdown/src/main/image-export.ts',
+  '/apps/markdown/src/main/conversion-lifecycle.ts',
+] as const
 
 let hooked = false
 function hookEngines(): void {
@@ -127,13 +143,24 @@ function hookEngines(): void {
   registerHooks({
     resolve(specifier, context, next) {
       const resolved = next(specifier, context)
+      const parent = context.parentURL ?? ''
       // a fake re-exports what it keeps of the module it replaces
-      if (context.parentURL?.startsWith(folder)) return resolved
-      const hit = REPLACED.find((r) => r.test(specifier, resolved.url))
+      if (parent.startsWith(folder)) return resolved
+      const hit = REPLACED.find((r) => r.test(specifier, resolved.url, parent))
       if (!hit) return resolved
       return { url: new URL(hit.module, folder).href, format: 'module', shortCircuit: true }
     },
   })
+}
+
+const IDS = Symbol.for('ipc-diff.d2.text.ids')
+
+/** the n-th `randomUUID()` of the case's image exports, as the Rust fake counts them */
+export function countedUuid(): string {
+  const holder = globalThis as unknown as Record<symbol, number>
+  const n = (holder[IDS] ?? 0) + 1
+  holder[IDS] = n
+  return `${String(n).padStart(6, '0')}aa-0000-4000-8000-000000000000`
 }
 
 const RealDate = Date
@@ -186,6 +213,44 @@ export interface TextEditorElectron {
 }
 
 /**
+ * The outbound calls into an editor by `<what>`: each runs on what the case
+ * loaded, for a view, with the step's arguments
+ */
+export type Outbound<L> = Record<string, (loaded: L, view: number, args: unknown[]) => unknown>
+
+/**
+ * A `d2/<app>:<what>` trigger step (the shell's or another area's call into
+ * the editor); `defer` when it waits for the renderer's answer, taken by a
+ * later `awaitStep`
+ */
+export function triggerStep(
+  app: 'html' | 'markdown',
+  what: string,
+  args: unknown[] = [],
+  more: { view?: number; defer?: true } = {},
+): Call {
+  const name = `d2/${app}:${what}`
+  return { channel: name, kind: 'trigger', name, view: 1, args, ...more }
+}
+
+/** the reply of the deferred step at `index` */
+export const awaitStep = (index: number): Call => ({ channel: '', args: [], await: index })
+
+/** `Group.triggers` for `outbound`, each run on what the current case loaded */
+export function groupTriggers<L>(
+  app: 'html' | 'markdown',
+  outbound: Outbound<L>,
+  loaded: () => L,
+): NonNullable<Group['triggers']> {
+  return Object.fromEntries(
+    Object.entries(outbound).map(([what, run]) => [
+      `d2/${app}:${what}`,
+      (_cx: TriggerContext, view: number, args: unknown[]) => run(loaded(), view, args),
+    ]),
+  )
+}
+
+/**
  * Sets up one case for a text editor: the answers of `hosts.d2.<app>`, the
  * process state, the clock, the recovery store's run id, and the Electron
  * names the entry module reaches. Returns what the group's triggers steer.
@@ -207,6 +272,14 @@ export function setUpTextCase(cx: LoadContext, app: 'html' | 'markdown'): TextEd
     })),
   )
   globalThis.Date = typeof c.now === 'number' ? fixedDate(c.now) : RealDate
+  ;(globalThis as unknown as Record<symbol, number>)[IDS] = 0
+  // the image host upload's request (`upload_fetch`): `{status, text}` answers, else it fails
+  globalThis.fetch = async (_url: unknown, init?: { method?: string }) => {
+    cx.electron.log.push(['fetch', init?.method ?? 'GET'])
+    const answer = a.answer('upload_fetch') as { status?: number; text?: string } | undefined
+    if (answer === null || typeof answer !== 'object') throw new TypeError('fetch failed')
+    return new Response(answer.text ?? '', { status: answer.status ?? 200 })
+  }
   // the store's process state starts afresh, with the probe's run id
   const holder = globalThis as unknown as Record<symbol, unknown>
   delete holder[RECOVERY]

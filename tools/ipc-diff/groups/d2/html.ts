@@ -13,12 +13,18 @@ import { join } from 'node:path'
 import type * as HtmlMainModule from '../../../../apps/html/src/main/html-main.ts'
 import { queueHtmlSeedFor } from '../../../../apps/html/src/main/seed-main.ts'
 import type { Case, Group, LoadContext } from '../../types.ts'
-import { type TextEditorElectron, answers, setUpTextCase } from './text/fakes.ts'
+import {
+  type Outbound,
+  type TextEditorElectron,
+  answers,
+  awaitStep,
+  groupTriggers,
+  setUpTextCase,
+  triggerStep,
+} from './text/fakes.ts'
 
 const ENTRY = 'apps/html/src/main/html-main.ts'
 type HtmlMain = typeof HtmlMainModule
-/** an outbound call by trigger name: the view it runs for and its arguments */
-type Triggers = Record<string, (view: number, args: unknown[]) => Promise<unknown>>
 
 const H = [{ view: 1, surface: 'Html' }]
 const TWO = [
@@ -567,19 +573,24 @@ const cases: Case[] = [
   },
 ]
 
+/** a `d2/html:<what>` step: the shell's or another area's call into the editor */
+const trigger = (what: string, args: unknown[] = [], more: { view?: number; defer?: true } = {}) =>
+  triggerStep('html', what, args, more)
+
 /**
- * Steps that run the shell's and the other areas' calls into the editor
- * (`d2/html:<what>`, crates/shell-ipc/d2/src/html `probe_trigger`); they wait
- * for the gate's `trigger` step kind.
+ * The cases of the shell's and the other areas' calls into the editor
+ * (`d2/html:<what>`, crates/shell-ipc/d2/src/html `probe_trigger`). A call
+ * that waits for the renderer is deferred, answered, then awaited. They run
+ * once ipc-probe routes `d2/` triggers.
  */
-export const triggerCases: unknown[] = [
+export const triggerCases: Case[] = [
   // needs trigger: open-view (createHtmlView on a file), the per-view grant
   {
     note: 'a view the shell opened on a file reads it and saves to it',
     views: H,
     files: { 'documents/o.html': '<p>o</p>' },
     calls: [
-      { kind: 'trigger', name: 'd2/html:open-view', view: 1, args: [docs('o.html')] },
+      trigger('open-view', [docs('o.html')]),
       call('html:consume-pending'),
       call('html:read-file', docs('o.html')),
       save({ text: '<p>saved</p>' }),
@@ -587,39 +598,45 @@ export const triggerCases: unknown[] = [
   },
   // needs trigger: request-save, the save-request event and its two answers
   {
-    note: 'a menu save waits for the renderer; the ack declines',
+    note: 'a menu save waits for the renderer: the ack declines, the save resolves',
     views: H,
     files: { 'documents/m.html': 'm' },
     calls: [
-      { kind: 'trigger', name: 'd2/html:open-view', view: 1, args: [docs('m.html')] },
+      trigger('open-view', [docs('m.html')]),
       dirty,
-      { kind: 'trigger', name: 'd2/html:request-save', view: 1, args: ['saveAs'] },
+      trigger('request-save', ['saveAs'], { defer: true }),
       send('html:save-request-ack', false),
-      { kind: 'trigger', name: 'd2/html:request-save', view: 1, args: ['save'] },
+      awaitStep(2),
+      trigger('request-save', ['save'], { defer: true }),
       save({ text: 'saved' }),
+      awaitStep(5),
+      trigger('request-save', ['save']),
     ],
   },
   // needs trigger: request-close, the close-save-request event
   {
-    note: 'closing a dirty page asks; Save waits for the renderer',
+    note: 'closing a dirty page asks; Save waits for the renderer, Cancel keeps it',
     views: H,
     hosts: { shared: { dialogs: { message: [{ response: 0 }, { response: 2 }] } } },
     calls: [
       dirty,
-      { kind: 'trigger', name: 'd2/html:request-close', view: 1, args: [] },
+      trigger('request-close', [], { defer: true }),
       send('html:close-save-result', true),
-      { kind: 'trigger', name: 'd2/html:request-close', view: 1, args: [] },
+      awaitStep(1),
+      trigger('request-close'),
     ],
   },
   // needs trigger: read-text, the read-text-request event
   {
-    note: 'MCP reads the live text',
+    note: 'MCP reads the live text: an odd answer is text, none is an error',
     views: H,
     calls: [
-      { kind: 'trigger', name: 'd2/html:read-text', view: 1, args: [] },
+      trigger('read-text', [], { defer: true }),
       send('html:read-text-result', { text: 42 }),
-      { kind: 'trigger', name: 'd2/html:read-text', view: 1, args: [] },
+      awaitStep(0),
+      trigger('read-text', [], { defer: true }),
       send('html:read-text-result', null),
+      awaitStep(3),
     ],
   },
   // needs trigger: save-to-path, file-renamed, export-request, the file-renamed and export-request events
@@ -628,16 +645,13 @@ export const triggerCases: unknown[] = [
     views: H,
     files: { 'documents/r.html': 'r' },
     calls: [
-      { kind: 'trigger', name: 'd2/html:open-view', view: 1, args: [docs('r.html')] },
-      { kind: 'trigger', name: 'd2/html:save-to-path', view: 1, args: [docs('mcp.html')] },
+      trigger('open-view', [docs('r.html')]),
+      trigger('save-to-path', [docs('mcp.html')], { defer: true }),
       save({ text: 'via mcp' }),
-      {
-        kind: 'trigger',
-        name: 'd2/html:file-renamed',
-        view: 1,
-        args: [docs('mcp.html'), docs('moved.html')],
-      },
-      { kind: 'trigger', name: 'd2/html:export-request', view: 1, args: ['pdf'] },
+      awaitStep(1),
+      trigger('file-renamed', [docs('mcp.html'), docs('moved.html')]),
+      trigger('export-request', ['pdf']),
+      trigger('is-dirty'),
     ],
   },
   // needs trigger: write-copies-now, the recovery-flush-request event
@@ -648,8 +662,10 @@ export const triggerCases: unknown[] = [
     calls: [
       call('html:recovery-open'),
       dirty,
-      { kind: 'trigger', name: 'd2/html:write-copies-now', view: 1, args: [] },
+      trigger('write-copies-now', [], { defer: true }),
       call('html:recovery-write', 'flushed'),
+      awaitStep(2),
+      trigger('discard-pending-assets'),
     ],
   },
   // needs trigger: queue-seed, export-headless
@@ -658,57 +674,60 @@ export const triggerCases: unknown[] = [
     views: TWO,
     files: { 'documents/h.html': 'h', out: { dir: true } },
     calls: [
-      { kind: 'trigger', name: 'd2/html:queue-seed', view: 1, args: ['<p>seed</p>'] },
+      trigger('queue-seed', ['<p>seed</p>']),
       call('html:seed-take'),
       call('html:seed-take'),
-      {
-        kind: 'trigger',
-        name: 'd2/html:export-headless',
+      trigger('export-headless', [docs('h.html'), '$DIR/out/h.pdf', 'pdf', 5000], {
         view: 2,
-        args: [docs('h.html'), '$DIR/out/h.pdf', 'pdf', 5000],
-      },
+        defer: true,
+      }),
       { ...call('html:consume-headless-export'), view: 2 },
       { ...send('html:headless-export-done', { ok: false, error: 'boom' }), view: 2 },
+      awaitStep(3),
     ],
   },
 ]
 
-/** the outbound calls by trigger name, on the module the case loaded */
-function triggers(mod: HtmlMain, cx: LoadContext, steer: TextEditorElectron): Triggers {
-  const wc = (view: number) => cx.electron.contents(view) as never
-  const str = (v: unknown) => String(v ?? '')
-  return {
-    'open-view': async (view, [path]) => {
-      steer.nextView = view
-      mod.createHtmlView(typeof path === 'string' ? path : null)
-    },
-    'request-save': (view, [mode]) =>
-      mod.requestHtmlSave(wc(view), mode === 'saveAs' ? 'saveAs' : 'save'),
-    'request-close': (view) => {
-      const windows = cx.electron.BrowserWindow as { fromWebContents(wc: unknown): unknown }
-      return mod.requestHtmlClose(wc(view), windows.fromWebContents(wc(view)) as never)
-    },
-    'read-text': (view) => mod.htmlReadText(wc(view)),
-    'save-to-path': (view, [path]) => mod.htmlSaveToPath(wc(view), str(path)),
-    'file-renamed': async (view, [from, to]) => mod.htmlFileRenamed(wc(view), str(from), str(to)),
-    'export-request': async (view, [format]) =>
-      mod.sendHtmlExportRequest(wc(view), str(format) as never),
-    'discard-pending-assets': (view) => mod.htmlDiscardPendingAssets(wc(view)),
-    'is-dirty': async (view) => mod.htmlIsDirty(view),
-    'write-copies-now': () => mod.htmlRecoveryEditor.writeCopiesNow(),
-    'queue-seed': async (view, [text]) => queueHtmlSeedFor(wc(view), str(text)),
-    'export-headless': (view, [input, out, format, timeout]) => {
-      steer.nextHidden = view
-      return mod.exportHtmlHeadless(str(input), str(out), str(format) as never, Number(timeout))
-    },
-  }
+/** what a case loaded: the module, its context, the views it steers */
+interface Loaded {
+  mod: HtmlMain
+  cx: LoadContext
+  steer: TextEditorElectron
 }
 
-let current: Triggers = {}
+const wc = (l: Loaded, view: number) => l.cx.electron.contents(view) as never
+const str = (v: unknown) => String(v ?? '')
 
-export const group: Group & {
-  trigger(name: string, view: number, args: unknown[]): Promise<unknown>
-} = {
+/** the shell's and the other areas' calls into the editor, by trigger `<what>` */
+const OUTBOUND: Outbound<Loaded> = {
+  'open-view': (l, view, [path]) => {
+    l.steer.nextView = view
+    l.mod.createHtmlView(typeof path === 'string' ? path : null)
+  },
+  'request-save': (l, view, [mode]) =>
+    l.mod.requestHtmlSave(wc(l, view), mode === 'saveAs' ? 'saveAs' : 'save'),
+  'request-close': (l, view) => {
+    const windows = l.cx.electron.BrowserWindow as { fromWebContents(wc: unknown): unknown }
+    return l.mod.requestHtmlClose(wc(l, view), windows.fromWebContents(wc(l, view)) as never)
+  },
+  'read-text': (l, view) => l.mod.htmlReadText(wc(l, view)),
+  'save-to-path': (l, view, [path]) => l.mod.htmlSaveToPath(wc(l, view), str(path)),
+  'file-renamed': (l, view, [from, to]) => l.mod.htmlFileRenamed(wc(l, view), str(from), str(to)),
+  'export-request': (l, view, [format]) =>
+    l.mod.sendHtmlExportRequest(wc(l, view), str(format) as never),
+  'discard-pending-assets': (l, view) => l.mod.htmlDiscardPendingAssets(wc(l, view)),
+  'is-dirty': (l, view) => l.mod.htmlIsDirty(view),
+  'write-copies-now': (l) => l.mod.htmlRecoveryEditor.writeCopiesNow(),
+  'queue-seed': (l, view, [text]) => queueHtmlSeedFor(wc(l, view), str(text)),
+  'export-headless': (l, view, [input, out, format, timeout]) => {
+    l.steer.nextHidden = view
+    return l.mod.exportHtmlHeadless(str(input), str(out), str(format) as never, Number(timeout))
+  },
+}
+
+let loaded: Loaded | null = null
+
+export const group: Group = {
   batch: 'D2',
   async load(cx) {
     const steer = setUpTextCase(cx, 'html')
@@ -758,13 +777,12 @@ export const group: Group & {
     })
     // the shell's first HTML tab registers the editor's handlers
     mod.createHtmlView(null)
-    current = triggers(mod, cx, steer)
+    loaded = { mod, cx, steer }
   },
-  async trigger(name, view, args) {
-    const run = current[name.replace(/^d2\/html:/, '')]
-    if (!run) throw new Error(`no trigger ${name}`)
-    return run(view, args)
-  },
+  triggers: groupTriggers('html', OUTBOUND, () => {
+    if (!loaded) throw new Error('no d2/html case is loaded')
+    return loaded
+  }),
   cases,
   single: {
     'html:fetch-image':
