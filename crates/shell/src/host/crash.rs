@@ -40,6 +40,7 @@ use shell_ipc_w::editor_files::UiLanguageHost;
 use shell_ipc_w::tabs::TabsState;
 
 use super::HostContext;
+use super::shell_tabs::{ShellTabs, shell_tabs};
 use super::w::post_core;
 
 pub fn install(_hosts: &mut Hosts, _cx: &HostContext) {
@@ -118,11 +119,15 @@ fn gone(view: ViewId, provided: &Provided, services: &Services) {
     let Some(tabs) = provided.all::<TabsState>().into_iter().next() else {
         return;
     };
+    let Some(shell) = shell_tabs(provided) else {
+        return;
+    };
     let Some(lang) = services.hosts.get::<UiLanguageHost>().cloned() else {
         return;
     };
     let host = Watch {
         tabs,
+        shell: shell.clone(),
         lang,
         user_data: user_data(services),
         prompt: !std::env::args().any(|a| a == "--headless" || a.starts_with("--export")),
@@ -131,7 +136,7 @@ fn gone(view: ViewId, provided: &Provided, services: &Services) {
     WATCH.with(|w| {
         let mut w = w.borrow_mut();
         let watch = w.get_or_insert_with(|| CrashWatch::start(host));
-        let wc = View(view);
+        let wc = View { view, shell };
         let details = RenderGone {
             reason: "crashed".to_owned(),
             exit_code: 0.0,
@@ -172,17 +177,24 @@ fn gone(view: ViewId, provided: &Provided, services: &Services) {
 }
 
 /// The view a renderer ended in
-struct View(ViewId);
+struct View {
+    view: ViewId,
+    shell: Rc<dyn ShellTabs>,
+}
 
 impl CrashContents for View {
     fn id(&self) -> i64 {
-        i64::from(self.0.0)
+        i64::from(self.view.0)
     }
     fn is_destroyed(&self) -> bool {
         false
     }
     fn reload(&self) -> Result<(), Failure> {
-        Err(Failure("reloading a view is not built yet".into()))
+        if self.shell.reload_view(self.view) {
+            Ok(())
+        } else {
+            Err(Failure("the view is gone".into()))
+        }
     }
 }
 
@@ -197,6 +209,7 @@ impl ParentWindow for Parent {
 /// `startCrashWatch`'s options, as `index.ts` gives them
 struct Watch {
     tabs: Rc<TabsState>,
+    shell: Rc<dyn ShellTabs>,
     lang: UiLanguageHost,
     user_data: String,
     prompt: bool,
@@ -220,43 +233,29 @@ impl CrashWatchHost for Watch {
             .map_or(0.0, |d| d.as_secs_f64() * 1000.0)
     }
     fn editor_of(&self, wc: &View) -> Result<String, Failure> {
-        if self.tabs.shell_window().is_some_and(|s| s.view == wc.0) {
+        if self.tabs.shell_window().is_some_and(|s| s.view == wc.view) {
             return Ok("home".to_owned());
         }
         Ok(self
             .tabs
-            .document_of(wc.0)
+            .document_of(wc.view)
             .map_or_else(|| "other".to_owned(), |d| kind_name(d.kind)))
     }
     fn document_of(&self, wc: &View) -> Result<Option<CrashedDocument>, Failure> {
-        Ok(self.tabs.document_of(wc.0).and_then(|d| {
-            let kind = kind_name(d.kind);
-            (kind != "home" && kind != "help").then(|| CrashedDocument {
-                title: d
-                    .file_path
-                    .as_deref()
-                    .and_then(|p| std::path::Path::new(p).file_name())
-                    .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
-                kind,
-                file_path: d.file_path,
-            })
+        Ok(self.shell.crashed_document(wc.view).map(|d| CrashedDocument {
+            kind: kind_name(d.kind),
+            title: d.title,
+            file_path: d.file_path,
         }))
     }
     fn parent_window(&self, wc: &View) -> Result<Option<Parent>, Failure> {
-        Ok(self.tabs.dialog_parent(wc.0).map(|_: WindowId| Parent))
+        Ok(self.shell.parent_window_for(wc.view).map(|_: WindowId| Parent))
     }
     fn close_document(&self, wc: &View) -> Result<bool, Failure> {
-        let wc_id = i64::from(wc.0.0);
-        Ok(self
-            .tabs
-            .with_manager(|m, host| {
-                m.tab_id_for_web_contents(host, wc_id)
-                    .is_some_and(|id| m.close_tab_without_prompt(host, &id))
-            })
-            .unwrap_or(false))
+        Ok(self.shell.close_document(wc.view))
     }
     fn reopen(&self, file_path: &str) -> Result<(), Failure> {
-        self.tabs.open_document_path(file_path);
+        self.shell.open_path(file_path);
         Ok(())
     }
     fn untitled_copy_of(&self, _wc: &View) -> Result<Option<()>, Failure> {
