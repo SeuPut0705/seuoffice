@@ -243,7 +243,8 @@ jobs:
   pptx-faults:
     if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
