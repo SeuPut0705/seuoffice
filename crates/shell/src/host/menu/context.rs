@@ -18,9 +18,7 @@ use main_core::packages::electron_utils::context_menu::{
 };
 use main_core::packages::electron_utils::dialog_memory::Dialog;
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
-use main_core::packages::electron_utils::save_image::{
-    SaveImageOptions, fetch_image_for_save, save_fetched_image,
-};
+use main_core::packages::electron_utils::save_image::{SaveImageOptions, fetch_image_for_save};
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
 use shell_contract::ids::{ViewId, WindowId};
@@ -37,6 +35,7 @@ use tauri_runtime_cef::WebviewCefExt;
 use super::super::contents::cdp;
 use super::super::w::post_core;
 use super::super::window::Windows;
+use super::save_unlocked;
 use crate::views::ViewTable;
 
 /// Menu ids of this module start with this; the app menu's with `m-app-`
@@ -246,21 +245,23 @@ fn run(
                     Ok(image) => image,
                     Err(error) => return eprintln!("shell: save image: {error}"),
                 };
-                let mut dialog = SaveDialog(dialogs);
-                let mut memory = memory
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                let result = save_fetched_image(
-                    &mut memory,
-                    &mut dialog,
+                let opts = SaveImageOptions {
+                    title: &title,
+                    fallback_dir: None,
+                };
+                // the shared memory is locked only to read and to record:
+                // never while the user picks
+                let options = save_unlocked::anchored_options(
+                    &memory,
                     parent.as_ref(),
                     &url,
-                    image,
-                    &SaveImageOptions {
-                        title: &title,
-                        fallback_dir: None,
-                    },
+                    image.mime.clone(),
+                    &opts,
                 );
+                let answer = SaveDialog(dialogs).show_save_dialog(parent.as_ref(), &options);
+                let result =
+                    save_unlocked::save_picked(parent.as_ref(), &url, image, &opts, &answer);
+                save_unlocked::remember_pick(&memory, parent.as_ref(), &options, &answer);
                 if let Some(error) = result.error {
                     eprintln!("shell: save image: {error}");
                 }
