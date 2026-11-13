@@ -18,7 +18,6 @@
  */
 import { createHash } from 'node:crypto'
 import { readFileSync, statSync } from 'node:fs'
-import { register } from 'node:module'
 import { connect } from 'node:net'
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -87,23 +86,11 @@ import {
   setGenerateTabIdResolver,
   takeGenerateHandoff,
 } from '../../../packages/electron-utils/src/generate-handoff.ts'
+import '../electron-fake.ts'
 import type { Case, FileSpec, Group } from '../types.ts'
 
 // pdf-note-tabs.ts reaches `ipcMain` of 'electron' through the Markdown note
-// queue; outside Electron that import has no such export, so a resolve hook
-// answers 'electron' with a stub module before the file is loaded.
-const ELECTRON_STUB = `data:text/javascript,${encodeURIComponent(
-  'export const ipcMain = { handle() {}, removeHandler() {}, on() {} }',
-)}`
-register(
-  `data:text/javascript,${encodeURIComponent(
-    `export async function resolve(specifier, context, next) {
-      if (specifier === 'electron') return { url: ${JSON.stringify(ELECTRON_STUB)}, shortCircuit: true }
-      return next(specifier, context)
-    }`,
-  )}`,
-  import.meta.url,
-)
+// queue: the shared fake answers it (electron-fake.ts, imported above)
 const { insertIntoNoteTab, isNoteFile, openNoteTab } =
   await import('../../../apps/shell/src/main/pdf-note-tabs.ts')
 
