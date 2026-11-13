@@ -2,6 +2,7 @@
 //! comment list (unchanged comments keep their bytes), `commentsExtended.xml`
 //! and the body markers of the comments that are gone.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 use jscompat::js_regex;
@@ -14,7 +15,7 @@ use crate::model::CommentInfo;
 use crate::notes::root_attributes;
 use crate::withheld::{
     comment_entries, first_mark_label, has_withheld_trace, over_withheld, parse_entry, runs_text,
-    with_redact_namespace,
+    with_redact_root,
 };
 
 const COMMENTS_NS: &str = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"";
@@ -140,13 +141,13 @@ pub fn build_comments_xml(
         ));
     }
     let ns = root_attributes(original_xml, "w:comments", COMMENTS_NS, &required).map_err(thrown)?;
-    with_redact_namespace(
-        &format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:comments {ns}>{body}</w:comments>"
-        ),
-        "w:comments",
-    )
-    .map_err(thrown)
+    let mut xml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:comments {ns}>{body}</w:comments>"
+    );
+    if let Cow::Owned(marked) = with_redact_root(&xml) {
+        xml = marked;
+    }
+    Ok(xml)
 }
 
 /// `buildCommentsExtendedXml`: one commentEx per comment (reply parent-child and resolved flag).

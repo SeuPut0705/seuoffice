@@ -26,7 +26,7 @@ macro_rules! int_attr {
     ($tag:expr, $name:literal, $fallback:expr) => {
         int_attr(
             $tag,
-            js_regex!(concat!($name, r#"=["'](-?\d+(?:\.\d+)?)["']"#)),
+            js_regex!(concat!($name, r#"\s*=\s*["'](-?\d+(?:\.\d+)?)["']"#)),
             $fallback,
         )
     };

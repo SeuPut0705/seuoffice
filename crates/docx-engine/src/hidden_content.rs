@@ -10,12 +10,7 @@
 use jscompat::{Radix, js_regex, parse_int, try_js_regex};
 use ooxml_pkg::{DEFAULT_ZIP_LIMITS, Package, load_package, write::generate};
 
-use crate::withheld::REDACT_NS_WRITTEN;
-
-/// `OWN_REDACT_NS` of packages/agent-core/src/redact-range.ts.
-const OWN_REDACT_NS: &str = "https://github.com/SeuPut0705/seuoffice/redaction/2026";
-/// `REDACT_NAMESPACES`: every namespace a saved label may be under.
-const REDACT_NAMESPACES: [&str; 2] = [OWN_REDACT_NS, REDACT_NS_WRITTEN];
+use crate::withheld::REDACT_NAMESPACES;
 
 /// `spelledOut`: the numeric character references that name a character
 /// written out as it, so that a mark spelled with references is read as one.

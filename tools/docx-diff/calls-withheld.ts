@@ -36,6 +36,7 @@ import {
   LABELS,
   marks,
   NOTE_PARTS,
+  OWN_REDACT_NS,
   plainRun,
 } from './withheld-inputs'
 
@@ -98,6 +99,9 @@ const GENERATED_ENTRIES: string[] = [
   'no runs',
 ]
 
+const MC_NS = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
+const OLD_NS = 'https://genspark.ai/genoffice/redaction/2026'
+
 /** The ways a root can be written, for the namespace the mark needs declared. */
 const NAMESPACE_PARTS: Array<[string, string]> = [
   ['w:comments', '<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>'],
@@ -126,6 +130,56 @@ const NAMESPACE_PARTS: Array<[string, string]> = [
   ['w:a$&', '<w:a$& xmlns:w="w"><go:redact/></w:a$&>'],
   ['w:a$1', '<w:a$1 xmlns:w="w"><go:redact/></w:a$1>'],
   ['', '<a><go:redact/></a>'],
+  // the markup-compatibility prefix: one bound to the namespace is used, one bound elsewhere gets `mce`
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="x"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="x" xmlns:mce="${MC_NS}"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:m="${MC_NS}"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="http&#58;//schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14"><go:redact/></w:comments>`],
+  // a part whose only mark declares its own namespace gets a root prefix for it
+  ['w:comments', `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w"><w:comment><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OLD_NS}" w:label="x"/></w:rPr></w:r></w:p></w:comment></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w"><redact xmlns="${OWN_REDACT_NS}" w:label="x"/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w"><go:redact/><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:gx="${OWN_REDACT_NS}"><gx:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="${OLD_NS}"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  // a root that declares the namespace but lists neither the prefix nor the element
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="${OLD_NS}"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="w:x"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" xmlns:go="${OLD_NS}" mc:Ignorable="w14\u00A0go" mc:PreserveElements="\tw:x\n  go:redact "><go:redact/></w:comments>`],
+  // a namespace written with character references is the namespace, and written as it was
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="https&#58;//genspark.ai/genoffice/redaction/2026"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="https&#x3A;//genspark.ai/genoffice/redaction/2026" xmlns:mc="${MC_NS}" mc:Ignorable="go" mc:PreserveElements="go:redact"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w"><gx:redact xmlns:gx="https&#58;//github.com/SeuPut0705/seuoffice/redaction/2026"/></w:comments>`],
+  // the root prefix `go1` taken, or `go` and `go1` both
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:go="another" xmlns:go1="other" xmlns:go2="more"><gx:redact xmlns:gx="${OWN_REDACT_NS}"/><redact xmlns="${OLD_NS}"/></w:comments>`],
+  // single quotes, white space around `=`, a name written twice
+  ['w:comments', `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' mc:Ignorable='w14'><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w='w' xmlns:mc='${MC_NS}' xmlns:go='${OLD_NS}' mc:Ignorable='go' mc:PreserveElements='w:x'><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w = "w" xmlns:mc\n=\n'${MC_NS}' mc:Ignorable\t=  "w14"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:go="another" xmlns:go="${OLD_NS}"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14" mc:Ignorable="w15"><go:redact/></w:comments>`],
+  // other roots: a header, a footer, a document, a comments part, a footnotes part
+  ['w:hdr', '<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>'],
+  ['w:ftr', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:ftr>`],
+  ['w:hdr', `<w:hdr xmlns:w="w"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr><w:t>a</w:t></w:r></w:p></w:hdr>`],
+  ['w:document', '<w:document xmlns:w="w"><w:body><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:body></w:document>'],
+  ['w:comments', '<w:comments xmlns:w="w"><w:comment w:id="0"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:comment></w:comments>'],
+  ['w:footnotes', '<w:footnotes xmlns:w="w"><w:footnote w:id="1"><w:p><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:t>a</w:t></w:r></w:p></w:footnote></w:footnotes>'],
+  ['w:endnotes', `<w:endnotes xmlns:w="w"><w:endnote w:id="1"><w:p><w:r><w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr></w:r></w:p></w:endnote></w:endnotes>`],
+  // a root found past a comment, a processing instruction and a CDATA section, and not found inside them
+  ['w:comments', `<!-- <w:fake xmlns:mc="y"> --><?pi <w:fake2 xmlns:mc="y"> ?><w:comments xmlns:w="w"><go:redact/></w:comments>`],
+  ['w:comments', `<![CDATA[<w:fake xmlns:mc="y">]]><w:comments xmlns:w="w"><go:redact/></w:comments>`],
+  ['w:comments', `<!DOCTYPE x [ <!ENTITY a "b"> ]><w:comments xmlns:w="w"><go:redact/></w:comments>`],
+  ['w:comments', `<w:comments w:x="\u00E9\u{1F600}>" xmlns:w="w" xmlns:mc="${MC_NS}" mc:Ignorable="w14"><go:redact/></w:comments>`],
+  ['w:comments', '<w:comments xmlns:w="w" w:x="<go:redact"/>'],
+  ['w:comments', '<w:comments xmlns:w="w" w:x="<go:redact">'],
+  ['w:comments', '<w:comments xmlns:w="w"'],
+  ['w:comments', '<w:p><w:r><w:rPr><go:redact/></w:rPr></w:r></w:p>'],
   ['w:comments', ''],
 ]
 
