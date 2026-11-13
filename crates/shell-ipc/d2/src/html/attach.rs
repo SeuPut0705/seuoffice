@@ -300,8 +300,8 @@ fn prune_pasted(dir: &Path) {
 }
 
 /// `new Date().toISOString().slice(0, 19)` without `-` and `:`, `T` as `-`
-fn paste_stamp() -> String {
-    let iso = jscompat::to_iso_string(crate::text_recovery::ui::now_ms()).unwrap_or_default();
+fn paste_stamp(now_ms: f64) -> String {
+    let iso = jscompat::to_iso_string(now_ms).unwrap_or_default();
     iso.chars()
         .take(19)
         .filter(|c| *c != '-' && *c != ':')
@@ -401,7 +401,11 @@ pub(super) fn entries(
             ]));
             let prune = !ps.pruned.replace(true);
             ps.seq.set(ps.seq.get() + 1);
-            let name = format!("pasted-{}-{}.{ext}", paste_stamp(), ps.seq.get());
+            let name = format!(
+                "pasted-{}-{}.{ext}",
+                paste_stamp(e.docs.now_ms()),
+                ps.seq.get()
+            );
             let en = en.clone();
             kit::on_worker(
                 &sv,

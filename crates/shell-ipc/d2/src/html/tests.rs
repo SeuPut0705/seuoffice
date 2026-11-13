@@ -389,7 +389,7 @@ fn present_full_screen_snaps_and_releases_after_a_delay() {
 #[test]
 fn seeds_and_handoffs_go_only_to_untitled_views_once() {
     let mut rt = rt_with(json!({
-        "take_generate_handoff": { "id": "h1", "text": "make", "materials": [{ "path": "/a.pdf", "name": "a.pdf" }] },
+        "take_generate_handoff": { "2": { "id": "h1", "text": "make", "materials": [{ "path": "/a.pdf", "name": "a.pdf" }] } },
         "report_generate_run_started": true
     }));
     let path = doc(&rt, "f.html", "x");
@@ -775,4 +775,63 @@ fn the_shells_calls_see_the_renderers_state() {
     rt.destroy(v.view);
     assert_eq!(h.preview_text(v.view), None);
     assert!(!h.is_dirty(v.view));
+}
+
+/// runs `d2/html:<what>` as ipc-probe's trigger step does
+fn trigger(rt: &mut Rt, what: &str, view: u32, args: serde_json::Value) -> Got<IpcValue> {
+    let (got, then) = catch();
+    let known = super::probe_trigger(
+        what,
+        ViewId(view),
+        &args,
+        &rt.services,
+        &rt.provided(),
+        then,
+    );
+    assert!(known, "{what}");
+    rt.drain();
+    got
+}
+
+#[test]
+fn triggers_run_the_shells_calls_and_report_their_outcome() {
+    let mut rt = rt();
+    let path = doc(&rt, "t.html", "x");
+    let v = rt.view(1, Surface::Html);
+    assert!(
+        !super::probe_trigger(
+            "no-such",
+            v.view,
+            &json!([]),
+            &rt.services,
+            &rt.provided(),
+            Box::new(|_| {})
+        ),
+        "an unknown name"
+    );
+    trigger(&mut rt, "open-view", 1, json!([path]));
+    assert_eq!(
+        rt.invoke_now("html:consume-pending", v, vec![]),
+        Ok(s(&path))
+    );
+    rt.send("html:dirty-changed", v, vec![true.into_ipc()]);
+    let saved = trigger(&mut rt, "request-save", 1, json!(["saveAs"]));
+    assert_eq!(rt.events()[0].args, vec![s("saveAs")]);
+    rt.send("html:save-request-ack", v, vec![true.into_ipc()]);
+    assert_eq!(*saved.borrow(), Some(Ok(true.into_ipc())));
+    let text = trigger(&mut rt, "read-text", 1, json!([]));
+    rt.send("html:read-text-result", v, vec![obj([("text", s("live"))])]);
+    assert_eq!(*text.borrow(), Some(Ok(s("live"))));
+    let fresh = rt.view(2, Surface::Html);
+    trigger(&mut rt, "queue-seed", 2, json!(["seed"]));
+    assert_eq!(
+        rt.invoke_now("html:seed-take", fresh, vec![]),
+        Ok(s("seed"))
+    );
+    let failed = trigger(&mut rt, "save-to-path", 1, json!(["/elsewhere.html"]));
+    rt.send("html:save-request-ack", v, vec![false.into_ipc()]);
+    let error = failed.borrow().clone().unwrap().unwrap_err();
+    assert_eq!(error.message, "could not save the document");
+    let dirty = trigger(&mut rt, "is-dirty", 1, json!([]));
+    assert_eq!(*dirty.borrow(), Some(Ok(true.into_ipc())));
 }

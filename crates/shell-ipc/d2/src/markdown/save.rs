@@ -51,7 +51,7 @@ use crate::html::text_doc::{
     tr,
 };
 use crate::kit::{self, Entry, IntoIpc, ViewMap, field, obj};
-use crate::text_recovery::ui::{Files, Parent, now_ms};
+use crate::text_recovery::ui::{Files, Parent};
 
 /// `MAX_PASTED_IMAGE_BYTES` of `apps/markdown/src/shared/ipc.ts`
 const MAX_PASTED_IMAGE_BYTES: usize = 50 * 1024 * 1024;
@@ -225,8 +225,9 @@ impl Md {
         tr(&self.lang(), "Untitled", "제목 없음")
     }
 
+    /// `tmpdir()`: the OS temp folder, as `os.tmpdir()` (not the app's `temp` path)
     fn temp(&self) -> std::path::PathBuf {
-        self.services.paths.path(PathName::Temp)
+        std::env::temp_dir()
     }
 
     fn settings_path(&self) -> String {
@@ -646,7 +647,7 @@ impl Md {
             create_markdown_conversion_session(
                 &root,
                 &SessionOptions::default(),
-                now_ms(),
+                self.e.docs.now_ms(),
                 &jscompat::random_uuid,
             )
             .map_err(|e| e.message)
@@ -874,7 +875,7 @@ pub(super) fn entries(
             if !is_image_host_usable(config.as_ref()) {
                 return responder.reply(Ok(fail("no usable image host configured")));
             }
-            let engine = m.engine.clone();
+            let (engine, now) = (m.engine.clone(), m.e.docs.now_ms());
             kit::on_worker(
                 &m.services,
                 move || {
@@ -886,7 +887,7 @@ pub(super) fn entries(
                         &bytes,
                         &ext,
                         &mut fetch,
-                        now_ms(),
+                        now,
                         &mut jscompat::math_random,
                     );
                     to_ipc(&result)

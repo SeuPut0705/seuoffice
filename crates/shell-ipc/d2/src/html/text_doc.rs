@@ -78,6 +78,8 @@ pub(crate) struct DocHooks {
     pub is_headless: Box<dyn Fn() -> bool>,
     /// `contents.reload()`
     pub reload: Box<dyn Fn(ViewId)>,
+    /// `Date.now()`
+    pub now_ms: Box<dyn Fn() -> f64>,
     /// `isPathOpenElsewhere(path)`: the shell's split-pane probe
     pub open_elsewhere: Box<dyn Fn(&str) -> bool>,
     /// `discardPendingOwnedAssets(documentPath)`: the errors it reports
@@ -190,7 +192,8 @@ impl TextDocs {
                 let me = me.clone();
                 Box::new(move |v| me.upgrade().and_then(|d| f(&d, v)))
             };
-            let (dirty, adopt, restored, lang, headless, reload, title_lang) = (
+            let (dirty, adopt, restored, lang, headless, reload, title_lang, clock) = (
+                me.clone(),
                 me.clone(),
                 me.clone(),
                 me.clone(),
@@ -234,6 +237,7 @@ impl TextDocs {
                         (d.hooks.reload)(v)
                     }
                 }),
+                now_ms: Box::new(move || clock.upgrade().map_or(0.0, |d| d.now_ms())),
             };
             let recovery = TextRecovery::new(services, host, recovery_hosts);
             TextDocs {
@@ -288,9 +292,14 @@ impl TextDocs {
         configured_default_save_dir(
             &AppPathProvider(self.services.paths.as_ref()),
             &mut self.save_dir.borrow_mut(),
-            crate::text_recovery::ui::now_ms(),
+            self.now_ms(),
         )
         .map_err(|e| kit::error(e.0))
+    }
+
+    /// `Date.now()` as the shell gives it
+    pub(crate) fn now_ms(&self) -> f64 {
+        (self.hooks.now_ms)()
     }
 
     /// the dialog memory, for a dialog shown from a worker
@@ -1241,4 +1250,70 @@ pub(crate) fn export_name(suggested: &IpcValue, untitled: &str) -> String {
     } else {
         base
     }
+}
+
+/// The outbound calls both text editors answer for tools/ipc-diff's
+/// `trigger` steps (`d2/<app>:<what>`): the calls other areas make into an
+/// editor, run on the probe's core thread, their outcome handed to `then`.
+/// False for a name this state does not know.
+#[cfg(any(test, feature = "probe"))]
+pub(crate) fn probe_trigger(
+    docs: &Rc<TextDocs>,
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    let arg = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
+    let done = |v: IpcValue| -> Result<IpcValue, IpcError> { Ok(v) };
+    match what {
+        "open-view" => {
+            docs.track(view, arg(0));
+            then(done(IpcValue::Undefined))
+        }
+        "request-save" => {
+            let mode = if arg(0) == Some("saveAs") {
+                SaveMode::SaveAs
+            } else {
+                SaveMode::Save
+            };
+            docs.request_save(view, mode, Box::new(|r| then(r.map(IntoIpc::into_ipc))))
+        }
+        "request-close" => {
+            let parent = docs.services.views.sender_of(view).map(|s| s.window);
+            docs.request_close(view, parent, Box::new(|r| then(r.map(IntoIpc::into_ipc))))
+        }
+        "read-text" => docs.read_text(view, Box::new(|r| then(r.map(IntoIpc::into_ipc)))),
+        "save-to-path" => docs.save_to_path(
+            view,
+            PathBuf::from(arg(0).unwrap_or_default()),
+            Box::new(|r| then(r.map(|()| IpcValue::Undefined))),
+        ),
+        "file-renamed" => {
+            docs.file_renamed(
+                view,
+                Path::new(arg(0).unwrap_or_default()),
+                Path::new(arg(1).unwrap_or_default()),
+            );
+            then(done(IpcValue::Undefined))
+        }
+        "export-request" => {
+            docs.export_request(view, arg(0).unwrap_or_default());
+            then(done(IpcValue::Undefined))
+        }
+        "discard-pending-assets" => {
+            docs.discard_pending_assets(view);
+            then(done(IpcValue::Undefined))
+        }
+        "is-dirty" => then(done(docs.is_dirty(view).into_ipc())),
+        "write-copies-now" => docs
+            .recovery
+            .write_copies_now(move || then(done(IpcValue::Undefined))),
+        "renderer-gone" => {
+            docs.renderer_gone(view, arg(0).unwrap_or_default());
+            then(done(IpcValue::Undefined))
+        }
+        _ => return false,
+    }
+    true
 }

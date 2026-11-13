@@ -88,6 +88,8 @@ pub trait HtmlShell: Send + Sync {
     fn is_headless(&self) -> bool;
     /// `getUiLang()`
     fn ui_lang(&self) -> String;
+    /// `Date.now()` (recovery copies, pasted picture names)
+    fn now_ms(&self) -> f64;
     /// `contents.reload()` (recovery's open decisions)
     fn reload(&self, view: ViewId);
     /// `isPathOpenElsewhere(path)`: the split-pane probe
@@ -237,12 +239,13 @@ pub(crate) fn entries(
     let os = services.hosts.need::<OsShellHost>(Batch::D2)?;
     let contents = services.hosts.need::<ContentsHost>(Batch::D2)?;
     let state: Rc<RefCell<HtmlState>> = Rc::default();
-    let (s1, s2, s3, s4, s5) = (
+    let (s1, s2, s3, s4, s5, s6) = (
         shell.clone(),
         shell.clone(),
         shell.clone(),
         shell.clone(),
         Rc::clone(&state),
+        shell.clone(),
     );
     let docs = TextDocs::new(
         services,
@@ -251,6 +254,7 @@ pub(crate) fn entries(
             lang: Box::new(move || s1.ui_lang()),
             is_headless: Box::new(move || s2.is_headless()),
             reload: Box::new(move |v| s3.reload(v)),
+            now_ms: Box::new(move || s6.now_ms()),
             open_elsewhere: Box::new(move |p| s4.is_path_open_elsewhere(p)),
             discard_pending_assets: |path| discard_pending_owned_assets(path).errors,
             rename_assets: |old, new| rename_owned_asset_document(old, new).map_err(|e| e.message),
@@ -478,7 +482,8 @@ fn present_full_screen(
 /// This app's host fakes, answering from `case` (`hosts.d2.html`): see [`fake::FakeHtml`]
 #[cfg(any(test, feature = "probe"))]
 pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
-    let fake = Arc::new(fake::FakeHtml::new(case));
+    let probe = hosts.get::<fake::ProbeLog>().cloned();
+    let fake = Arc::new(fake::FakeHtml::new(case, probe));
     hosts.insert::<HtmlEngineHost>(fake.clone());
     hosts.insert::<HtmlShellHost>(fake.clone());
     hosts.insert::<Arc<fake::FakeHtml>>(fake);
@@ -486,3 +491,46 @@ pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
 
 #[cfg(any(test, feature = "probe"))]
 pub(crate) mod fake;
+
+/// tools/ipc-diff's `trigger` steps for this editor (`d2/html:<what>`):
+/// the shell's and the other areas' calls into it. The TypeScript side of
+/// groups/d2/html.ts maps the same names to `html-main.ts`'s exports. False
+/// for a name this editor does not know (`then` is dropped).
+#[cfg(any(test, feature = "probe"))]
+pub(crate) fn probe_trigger(
+    what: &str,
+    view: ViewId,
+    args: &serde_json::Value,
+    _services: &Services,
+    provided: &Rc<Provided>,
+    then: shell_contract::editors::Then<IpcValue>,
+) -> bool {
+    let Some(editors) = provided.all::<HtmlEditors>().into_iter().next() else {
+        return false;
+    };
+    let arg = |i: usize| args.get(i).and_then(serde_json::Value::as_str);
+    match what {
+        // `queueHtmlSeedFor(contents, text)`
+        "queue-seed" => {
+            editors.queue_seed(view, arg(0).unwrap_or_default());
+            then(Ok(IpcValue::Undefined))
+        }
+        // `exportHtmlHeadless(input, outPath, format, timeoutMs)`
+        "export-headless" => {
+            let timeout = args
+                .get(3)
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(180_000);
+            editors.export_headless(
+                view,
+                arg(0).unwrap_or_default(),
+                arg(1).unwrap_or_default(),
+                arg(2).unwrap_or("pdf"),
+                Duration::from_millis(timeout),
+                Box::new(|r| then(r.map(|()| IpcValue::Undefined).map_err(kit::error))),
+            )
+        }
+        _ => return text_doc::probe_trigger(&editors.docs, what, view, args, then),
+    }
+    true
+}

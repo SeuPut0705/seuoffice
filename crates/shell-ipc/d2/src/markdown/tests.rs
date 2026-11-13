@@ -733,3 +733,50 @@ fn registers_every_text_editor_channel_and_nothing_else() {
         .collect();
     assert_eq!(got, want);
 }
+
+/// runs `d2/markdown:<what>` as ipc-probe's trigger step does
+fn trigger(rt: &mut Rt, what: &str, view: u32, args: serde_json::Value) -> Got<IpcValue> {
+    let (got, then) = catch();
+    let known = super::probe_trigger(
+        what,
+        shell_contract::ViewId(view),
+        &args,
+        &rt.services,
+        &rt.provided(),
+        then,
+    );
+    assert!(known, "{what}");
+    rt.drain();
+    got
+}
+
+#[test]
+fn triggers_queue_note_appends_and_run_headless_exports() {
+    let mut rt = rt();
+    let path = note(&rt, "t.md", "x");
+    let v = rt.view(1, Surface::Markdown);
+    trigger(&mut rt, "open-view", 1, json!([path]));
+    trigger(&mut rt, "queue-note-append", 1, json!([path, "quote"]));
+    assert_eq!(rt.events()[0].channel, "markdown:note-append-ready");
+    assert_eq!(
+        rt.invoke_now("markdown:note-append-take", v, vec![]),
+        Ok(IpcValue::Array(vec![s("quote")]))
+    );
+    let w = rt.view(2, Surface::Markdown);
+    let done = trigger(
+        &mut rt,
+        "export-pdf-headless",
+        2,
+        json!([path, "/o.pdf", 1000]),
+    );
+    assert_eq!(
+        rt.invoke_now("markdown:consume-headless-export", w, vec![]),
+        Ok(s("/o.pdf"))
+    );
+    rt.advance(Duration::from_millis(1000));
+    let error = done.borrow().clone().unwrap().unwrap_err();
+    assert_eq!(error.message, "markdown export timed out after 1000ms");
+    let renamed = vault(&rt).join("u.md");
+    trigger(&mut rt, "file-renamed", 1, json!([path, renamed]));
+    assert_eq!(rt.events().last().unwrap().channel, "markdown:file-renamed");
+}

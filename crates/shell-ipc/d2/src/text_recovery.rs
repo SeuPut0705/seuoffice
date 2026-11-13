@@ -86,6 +86,8 @@ pub(crate) struct TextRecoveryHost {
     pub untitled_fallback_title: Box<dyn Fn() -> String>,
     /// `contents.reload()`
     pub reload: Box<dyn Fn(ViewId)>,
+    /// `Date.now()`, the time a copy records
+    pub now_ms: Box<dyn Fn() -> f64>,
 }
 
 /// what a copy write answered (`TextRecoveryWriteResult`)
@@ -225,7 +227,7 @@ impl TextRecovery {
     fn with_store<R>(&self, f: impl FnOnce(&RecoveryStore<'_>) -> R) -> R {
         let user_data = self.services.paths.path(PathName::UserData);
         let user_data_dir = || user_data.to_string_lossy().into_owned();
-        let now_ms = ui::now_ms;
+        let now_ms = || (self.host.now_ms)();
         let random_uuid = jscompat::random_uuid;
         // the core thread is the only one that writes copies: the lock is never contended
         let shared = self.shared.lock().unwrap_or_else(|e| e.into_inner());
@@ -1028,6 +1030,7 @@ mod tests {
             restored_file: Box::new(move |v, p| r.borrow_mut().restored.push((v, p.into()))),
             untitled_fallback_title: Box::new(|| "Untitled".into()),
             reload: Box::new(move |v| l.borrow_mut().reloaded.push(v)),
+            now_ms: Box::new(super::ui::now_ms),
         };
         let hosts = super::RecoveryHosts::need(&rt.services).unwrap();
         (TextRecovery::new(&rt.services, host, hosts), ed)
