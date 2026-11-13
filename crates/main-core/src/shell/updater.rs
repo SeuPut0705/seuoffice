@@ -13,10 +13,13 @@
 //! the flow state `initAutoUpdater` closes over, ...) is an [`Updater`] the
 //! caller owns. Promises are plain calls, with these differences:
 //!
-//! - what electron-updater emits during a call (a check, a download) comes
-//!   back in the answer of that call ([`CheckReturn`], [`DownloadReturn`])
-//!   and is handled before the call's own result, as the emit order is; what
-//!   it emits on its own goes to [`Updater::on_event`];
+//! - a check and a download are awaited for as long as the network takes, so
+//!   they are [`UpdaterStep`]s the shell runs on a worker: the method that
+//!   starts one answers [`UpdaterStep::StartCheck`] or
+//!   [`UpdaterStep::StartDownload`], what electron-updater emits meanwhile
+//!   (progress, `update-available`, errors) goes to [`Updater::on_event`] on
+//!   the core thread as it happens, and the end of the call goes to
+//!   [`Updater::resume_check`] or [`Updater::resume_download`];
 //! - the timers are [`Timer`]s the host schedules and runs through
 //!   [`Updater::check`], [`Updater::clear_installed_cache`],
 //!   [`Updater::fake_show_again`] and [`Updater::fake_progress`];
@@ -324,19 +327,24 @@ pub struct CheckResult {
     pub update_version: Option<String>,
 }
 
-/// `await autoUpdater.checkForUpdates()`: what it emitted, then how it ended
-/// (`Ok(None)` is a `null` result)
-#[derive(Debug, Clone, PartialEq)]
-pub struct CheckReturn {
-    pub events: Vec<UpdaterEvent>,
-    pub result: Result<Option<CheckResult>, UpdateError>,
-}
-
-/// `autoUpdater.downloadUpdate(token)`: what it emitted, then its rejection if any
-#[derive(Debug, Clone, PartialEq)]
-pub struct DownloadReturn {
-    pub events: Vec<UpdaterEvent>,
-    pub rejection: Option<UpdateError>,
+/// What the shell does next: the awaits of the TypeScript that take time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpdaterStep {
+    /// nothing to run
+    Idle,
+    /// `await autoUpdater.checkForUpdates()`: run it on a worker. Whatever the
+    /// updater emits meanwhile goes to [`Updater::on_event`], on the core
+    /// thread, as it happens. Its end goes to [`Updater::resume_check`] with
+    /// this `ticket`: `Ok(Some(result))`, `Ok(None)` for a `null` result,
+    /// `Err` where it rejected.
+    StartCheck { ticket: u32 },
+    /// `new CancellationToken()` and `await autoUpdater.downloadUpdate(token)`:
+    /// run it on a worker; the token belongs to this `generation` (a channel
+    /// switch cancels the token of the running one). Its events go to
+    /// [`Updater::on_event`], on the core thread, as they happen (progress
+    /// included); its end goes to [`Updater::resume_download`] with this
+    /// `generation`: `None` where it resolved, the rejection otherwise.
+    StartDownload { generation: u64 },
 }
 
 /// each assignment `initAutoUpdater` makes on the updater, in order
@@ -434,9 +442,6 @@ pub trait UpdaterHost {
     fn install_resume_download(&mut self);
     /// whether `updateDownloaded` and `dispatchUpdateDownloaded` are both functions
     fn has_mac_staging_methods(&self) -> (bool, bool);
-    fn check_for_updates(&mut self) -> CheckReturn;
-    /// `new CancellationToken()` and `autoUpdater.downloadUpdate(token)`
-    fn download_update(&mut self) -> DownloadReturn;
     /// `updater.install(isSilent, isForceRunAfter)`: `None` where the updater has no `install` function
     fn install(&mut self, silent: bool, force_run_after: bool) -> Option<bool>;
     /// `cacheOwner.getOrCreateDownloadHelper?.()` and its `cacheDir`: `Ok(None)`
@@ -526,6 +531,10 @@ struct Flow {
     phase: UpdatePhase,
     percent: f64,
     download_gen: u64,
+    /// the generation of the download that is running (`downloadUpdate` not yet settled)
+    running_download: Option<u64>,
+    /// what the Mac staging rejected with during that download: it ends there
+    staging_error: Option<UpdateError>,
     failed_install: Option<InstallAttempt>,
     install_failures: u8,
     install_dir_ok: Option<bool>,
@@ -540,6 +549,14 @@ struct FakeUpdate {
     pct: HashMap<u32, f64>,
 }
 
+/// which call a started check belongs to
+enum PendingCheck {
+    /// `checkNow`, with the `lang` it read before its `await`
+    Manual(Lang),
+    /// `check`
+    Scheduled,
+}
+
 /// the module state of updater.ts
 pub struct Updater {
     logger: Rc<Logger>,
@@ -550,6 +567,9 @@ pub struct Updater {
     dismissed_version: Option<String>,
     fake: Option<FakeUpdate>,
     manual_check_in_flight: bool,
+    /// the checks that were started and have not ended, by ticket
+    pending_checks: Vec<(u32, PendingCheck)>,
+    next_check_ticket: u32,
     /// true once the packaged-run updater is configured
     updater_active: bool,
     flow: Option<Flow>,
@@ -595,6 +615,8 @@ impl Updater {
             dismissed_version: None,
             fake: None,
             manual_check_in_flight: false,
+            pending_checks: Vec::new(),
+            next_check_ticket: 0,
             updater_active: false,
             flow: None,
         }
@@ -681,15 +703,19 @@ impl Updater {
         }
     }
 
-    /// `checkForUpdatesNow`: the user-triggered check; every outcome gets
-    /// explicit feedback
-    pub fn check_for_updates_now(&mut self, host: &mut dyn UpdaterHost) {
+    /// `checkForUpdatesNow` up to its `await`: the user-triggered check; every
+    /// outcome gets explicit feedback. [`Updater::resume_check`] has the rest.
+    pub fn check_for_updates_now(&mut self, host: &mut dyn UpdaterHost) -> UpdaterStep {
         if self.manual_check_in_flight {
-            return;
+            return UpdaterStep::Idle;
         }
         self.manual_check_in_flight = true;
-        self.check_now(host);
-        self.manual_check_in_flight = false;
+        let step = self.check_now(host);
+        // the `finally`: a check that was started keeps the flag until it ends
+        if step == UpdaterStep::Idle {
+            self.manual_check_in_flight = false;
+        }
+        step
     }
 
     fn info_box(
@@ -711,11 +737,11 @@ impl Updater {
         }
     }
 
-    fn check_now(&mut self, host: &mut dyn UpdaterHost) {
+    fn check_now(&mut self, host: &mut dyn UpdaterHost) -> UpdaterStep {
         let lang = host.ui_lang();
         if self.fake.is_some() {
             self.fake_show_again(host);
-            return;
+            return UpdaterStep::Idle;
         }
         if !self.updater_active {
             let options = self.info_box(
@@ -728,16 +754,59 @@ impl Updater {
             if response == 1.0 {
                 host.open_external(GITHUB_LATEST_RELEASE_URL);
             }
-            return;
+            return UpdaterStep::Idle;
         }
         self.dismissed_version = None;
         self.logger.step("check-start", &[("by", text("user"))]);
-        let returned = host.check_for_updates();
-        self.dispatch_events(host, returned.events);
+        self.start_check(PendingCheck::Manual(lang))
+    }
+
+    /// `autoUpdater.checkForUpdates()` is called: the check waits for its ticket
+    fn start_check(&mut self, kind: PendingCheck) -> UpdaterStep {
+        self.next_check_ticket += 1;
+        let ticket = self.next_check_ticket;
+        self.pending_checks.push((ticket, kind));
+        UpdaterStep::StartCheck { ticket }
+    }
+
+    /// The end of a check [`UpdaterStep::StartCheck`] asked for: its result
+    /// (`Ok(None)` is a `null` result), or its rejection. Everything the
+    /// updater emitted meanwhile has gone to [`Updater::on_event`] already.
+    pub fn resume_check(
+        &mut self,
+        host: &mut dyn UpdaterHost,
+        ticket: u32,
+        outcome: Result<Option<CheckResult>, UpdateError>,
+    ) {
+        let Some(at) = self.pending_checks.iter().position(|(t, _)| *t == ticket) else {
+            return;
+        };
+        match self.pending_checks.remove(at).1 {
+            PendingCheck::Manual(lang) => {
+                self.finish_manual_check(host, lang, outcome);
+                self.manual_check_in_flight = false;
+            }
+            PendingCheck::Scheduled => match outcome {
+                Ok(answer) => self.logger.step("check-end", &check_end_fields(&answer)),
+                Err(error) => {
+                    self.logger.step("check-end", &[("found", text("failed"))]);
+                    self.logger.log(&["check failed:", &error.message]);
+                }
+            },
+        }
+    }
+
+    /// `checkNow` after `await autoUpdater.checkForUpdates()`
+    fn finish_manual_check(
+        &mut self,
+        host: &mut dyn UpdaterHost,
+        lang: Lang,
+        outcome: Result<Option<CheckResult>, UpdateError>,
+    ) {
         // `result` stays undefined (None) when the check threw
         let mut result: Option<Option<CheckResult>> = None;
         let mut failure: Option<UpdateError> = None;
-        match returned.result {
+        match outcome {
             Ok(answer) => {
                 self.logger.step("check-end", &check_end_fields(&answer));
                 if answer.is_none() {
@@ -959,6 +1028,8 @@ impl Updater {
             phase: UpdatePhase::Available,
             percent: 0.0,
             download_gen: 0,
+            running_download: None,
+            staging_error: None,
             failed_install,
             install_failures,
             install_dir_ok: None,
@@ -1162,21 +1233,21 @@ impl Updater {
     }
 
     /// the window's callbacks (`actions`), or the fake preview's
-    pub fn on_action(&mut self, host: &mut dyn UpdaterHost, action: UpdateAction) {
+    pub fn on_action(&mut self, host: &mut dyn UpdaterHost, action: UpdateAction) -> UpdaterStep {
         if self.flow.is_none() {
             self.on_fake_action(host, action);
-            return;
+            return UpdaterStep::Idle;
         }
         match action {
-            UpdateAction::Download => self.on_download(host),
+            UpdateAction::Download => return self.on_download(host),
             UpdateAction::Install => {
                 host.close_update_window();
                 let flow = self.flow();
                 let Some(version) = flow.latest_seen_version.clone() else {
-                    return;
+                    return UpdaterStep::Idle;
                 };
                 if flow.phase != UpdatePhase::Downloaded {
-                    return;
+                    return UpdaterStep::Idle;
                 }
                 self.logger
                     .step("quit-requested", &[("version", text(&version))]);
@@ -1194,20 +1265,22 @@ impl Updater {
                 host.open_external(&url);
             }
         }
+        UpdaterStep::Idle
     }
 
-    fn on_download(&mut self, host: &mut dyn UpdaterHost) {
+    /// `onDownload` up to its `await`
+    fn on_download(&mut self, host: &mut dyn UpdaterHost) -> UpdaterStep {
         let flow = self.flow();
         if matches!(
             flow.phase,
             UpdatePhase::Downloading | UpdatePhase::Downloaded
         ) {
-            return;
+            return UpdaterStep::Idle;
         }
         if !flow.self_updates {
             let url = manual_download_url_for(flow.latest_seen_version.as_deref());
             host.open_external(&url);
-            return;
+            return UpdaterStep::Idle;
         }
         let version = flow.latest_seen_version.clone();
         let flow = self.flow_mut();
@@ -1227,17 +1300,33 @@ impl Updater {
         );
         let flow = self.flow_mut();
         flow.download_gen += 1;
-        let gen_now = flow.download_gen;
-        let returned = host.download_update();
-        let mut rejection = returned.rejection;
-        for event in returned.events {
-            if let Err(error) = self.handle_event(host, event) {
-                rejection = Some(error);
-                break;
-            }
+        let generation = flow.download_gen;
+        flow.running_download = Some(generation);
+        flow.staging_error = None;
+        UpdaterStep::StartDownload { generation }
+    }
+
+    /// The end of a download [`UpdaterStep::StartDownload`] asked for:
+    /// `None` where `downloadUpdate` resolved, its rejection otherwise. The
+    /// events it emitted have gone to [`Updater::on_event`] already; one
+    /// whose handler rejected (the Mac staging) is the rejection when it came
+    /// first, as it ends the download there.
+    pub fn resume_download(
+        &mut self,
+        host: &mut dyn UpdaterHost,
+        generation: u64,
+        rejection: Option<UpdateError>,
+    ) {
+        if self.flow.is_none() {
+            return;
         }
+        let flow = self.flow_mut();
+        if flow.running_download == Some(generation) {
+            flow.running_download = None;
+        }
+        let rejection = flow.staging_error.take().or(rejection);
         if let Some(error) = rejection {
-            if gen_now != self.flow().download_gen {
+            if generation != self.flow().download_gen {
                 return;
             }
             self.logger.log(&["download failed:", &error.message]);
@@ -1245,15 +1334,22 @@ impl Updater {
         }
     }
 
-    /// what electron-updater emits on its own
+    /// what electron-updater emits, when it does: during a check or a download
+    /// or on its own
     pub fn on_event(&mut self, host: &mut dyn UpdaterHost, event: UpdaterEvent) {
-        // nothing awaits an event that arrives on its own: a rejection has nowhere to go
-        let _ = self.handle_event(host, event);
-    }
-
-    fn dispatch_events(&mut self, host: &mut dyn UpdaterHost, events: Vec<UpdaterEvent>) {
-        for event in events {
-            let _ = self.handle_event(host, event);
+        if self.flow.is_none() {
+            return;
+        }
+        // a download that was rejected emits nothing more
+        let flow = self.flow();
+        if flow.running_download.is_some() && flow.staging_error.is_some() {
+            return;
+        }
+        if let Err(error) = self.handle_event(host, event)
+            && self.flow().running_download.is_some()
+        {
+            // the handler's rejection is the running download's
+            self.flow_mut().staging_error = Some(error);
         }
     }
 
@@ -1530,26 +1626,18 @@ impl Updater {
     }
 
     /// `check`: the scheduled background check
-    pub fn check(&mut self, host: &mut dyn UpdaterHost) {
+    pub fn check(&mut self, host: &mut dyn UpdaterHost) -> UpdaterStep {
         // turned off: only an explicit check asks the feed
         if !host.auto_check_enabled() {
-            return;
+            return UpdaterStep::Idle;
         }
         // a newer release found now would wait anyway, and the request only
         // competes with the download for the network
         if self.flow().download_in_flight || self.flow().phase == UpdatePhase::Downloaded {
-            return;
+            return UpdaterStep::Idle;
         }
         self.logger.step("check-start", &[("by", text("schedule"))]);
-        let returned = host.check_for_updates();
-        self.dispatch_events(host, returned.events);
-        match returned.result {
-            Ok(answer) => self.logger.step("check-end", &check_end_fields(&answer)),
-            Err(error) => {
-                self.logger.step("check-end", &[("found", text("failed"))]);
-                self.logger.log(&["check failed:", &error.message]);
-            }
-        }
+        self.start_check(PendingCheck::Scheduled)
     }
 
     // ---- the dev preview ----

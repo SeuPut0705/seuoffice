@@ -92,7 +92,7 @@ impl ZoteroFrameDecoder {
 }
 
 /// `parseRequest(payload)`: the message of what it throws.
-fn parse_request(payload: &str) -> Result<ZoteroWireRequest, String> {
+pub fn parse_request(payload: &str) -> Result<ZoteroWireRequest, String> {
     let value = json_parse(payload).map_err(|error| error.message().to_owned())?;
     if let JsonValue::Array(items) = &value
         && let (Some(JsonValue::String(command)), Some(JsonValue::Array(args))) =
@@ -106,7 +106,8 @@ fn parse_request(payload: &str) -> Result<ZoteroWireRequest, String> {
     Err("Invalid Zotero integration request".to_owned())
 }
 
-fn error_payload(message: &str) -> String {
+/// `errorPayload(message)`
+pub fn error_payload(message: &str) -> String {
     format!("ERR:{message}")
 }
 
