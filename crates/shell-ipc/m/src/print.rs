@@ -56,7 +56,7 @@ use shell_contract::{BytesKind, IpcError, IpcValue, ViewId, WindowId};
 
 use crate::Ctx;
 use crate::handler::{error, invoke_later};
-use crate::hosts::{MHostRef, PeersRef, PrintProfile, PrintSurface, PrintWindowSpec, Printer};
+use crate::hosts::{MHostRef, PrintProfile, PrintSurface, PrintWindowSpec, Printer};
 use crate::state::MStateRef;
 use crate::value::{arg, as_number, as_str, field, from_serde, is_object, to_json, to_serde};
 
@@ -84,7 +84,6 @@ static DIAGRAM_DOCUMENTS: LazyLock<Mutex<PrintDocuments>> =
 
 /// `takePrintDocument(token)`: what the diagram session's protocol answers a
 /// request for `drawio-app://editor/__ieum/print/<token>` with, once
-#[allow(dead_code)] // re-exported for the shell's diagram protocol by lib.rs
 pub fn take_diagram_print_document(token: &str) -> Option<String> {
     DIAGRAM_DOCUMENTS.lock().unwrap().take_print_document(token)
 }
@@ -93,7 +92,6 @@ pub fn take_diagram_print_document(token: &str) -> Option<String> {
 #[derive(Clone)]
 struct Env {
     host: MHostRef,
-    peers: PeersRef,
     state: MStateRef,
     contents: ContentsHost,
     dialogs: DialogsHost,
@@ -107,7 +105,6 @@ impl Env {
     fn of(cx: &Ctx, platform: &'static str) -> Env {
         Env {
             host: cx.host.clone(),
-            peers: cx.peers.clone(),
             state: cx.state.clone(),
             contents: cx.contents.clone(),
             dialogs: cx.dialogs.clone(),
@@ -462,7 +459,7 @@ fn register_on(
     let env = Env::of(cx, platform);
     printers(registry, &env)?;
     docs(registry, &env)?;
-    html(registry, &env)?;
+    html(registry, cx, &env)?;
     hwp(registry, cx, &env)?;
     markdown(registry, &env)?;
     mindmap(registry, &env)?;
@@ -626,17 +623,17 @@ fn render_print_pdf(
     printed
 }
 
-fn html(registry: &mut dyn Registry, env: &Env) -> Result<(), RegisterError> {
-    let e = env.clone();
+fn html(registry: &mut dyn Registry, cx: &Rc<Ctx>, env: &Env) -> Result<(), RegisterError> {
+    let (c, e) = (cx.clone(), env.clone());
     invoke_later(registry, "html:print-preview", move |call, args, reply| {
         let view = call.sender.view;
+        let doc_path = c.docs.document_path(view);
         let Some(html) = as_str(field(arg(&args, 0), "html")).map(str::to_owned) else {
             return reply.reply(Ok(IpcValue::Null));
         };
         e.later(reply, move |env| {
             let work_dir = mkdtemp_random(&join(&[&env.tmp(), "seuoffice-html-preview-"]))
                 .map_err(|e| thrown(e.into()))?;
-            let doc_path = env.peers.html_document_path(view);
             let pdf = render_print_pdf(env, &html, doc_path.as_deref(), &work_dir);
             let _ = rm_recursive_force(&work_dir);
             match pdf {
@@ -649,14 +646,14 @@ fn html(registry: &mut dyn Registry, env: &Env) -> Result<(), RegisterError> {
         });
     })?;
 
-    let e = env.clone();
+    let (c, e) = (cx.clone(), env.clone());
     invoke_later(registry, "html:print-html", move |call, args, reply| {
         let view = call.sender.view;
+        let doc_path = c.docs.document_path(view);
         let Some(html) = as_str(field(arg(&args, 0), "html")).map(str::to_owned) else {
             return reply.reply(failed("html: bad print request"));
         };
         e.later(reply, move |env| {
-            let doc_path = env.peers.html_document_path(view);
             let base = doc_path
                 .filter(|p| !p.is_empty())
                 .map(|p| asset_base_href(&dirname(&p)));
@@ -706,11 +703,10 @@ fn pdf_name(current: Option<&str>, lang: Lang) -> String {
 /// `pickPdfTarget(contents)` without the remembered last folder
 /// (`showSaveDialogWithMemory`): the shared dialog memory is not reachable
 /// from this batch
-fn pick_pdf_target(env: &Env, view: ViewId, lang: Lang) -> Option<String> {
-    let current = env.peers.hwp_document_path(view);
+fn pick_pdf_target(env: &Env, view: ViewId, current: Option<String>, lang: Lang) -> Option<String> {
     let dir = match current.as_deref().filter(|c| !c.is_empty()) {
         Some(current) => dirname(current),
-        None => env.peers.default_save_dir(),
+        None => env.host.default_save_dir(),
     };
     let default_path = join(&[&dir, &pdf_name(current.as_deref(), lang)]);
     let picked = env.dialogs.save(
@@ -770,6 +766,7 @@ fn hwp_print(
     job: &PrintJob,
     pdf: bool,
     given: Option<String>,
+    current: Option<String>,
     lang: Lang,
 ) -> Reply {
     let tmp = env.tmp();
@@ -782,7 +779,7 @@ fn hwp_print(
         }
         let target = match given {
             Some(target) => target,
-            None => match pick_pdf_target(env, view, lang) {
+            None => match pick_pdf_target(env, view, current, lang) {
                 Some(target) => target,
                 None => return Ok(json!({ "ok": true, "canceled": true })),
             },
@@ -793,7 +790,7 @@ fn hwp_print(
         let bytes = print_job_to_pdf(job, &tmp, &mut create)?;
         atomic_write_file(&target, &bytes).map_err(JsError::from)?;
         // a headless export stays silent: no tab, no file manager window
-        if !env.peers.headless() && !env.peers.open_generated_path(&target) {
+        if !env.host.headless() && !env.host.open_generated_path(&target) {
             env.os.show_item_in_folder(std::path::Path::new(&target));
         }
         Ok(json!({ "ok": true, "path": target }))
@@ -824,7 +821,7 @@ fn hwp(registry: &mut dyn Registry, cx: &Rc<Ctx>, env: &Env) -> Result<(), Regis
         let mut given_path = None;
         if !matches!(given, IpcValue::Undefined) {
             let granted = match given {
-                IpcValue::String(_) if pdf => e.peers.hwp_take_pdf_grant(view),
+                IpcValue::String(_) if pdf => cx.docs.take_pdf_grant(view),
                 _ => None,
             };
             match (given, granted) {
@@ -839,8 +836,9 @@ fn hwp(registry: &mut dyn Registry, cx: &Rc<Ctx>, env: &Env) -> Result<(), Regis
         }
         let lang = cx.state.language(&*cx.host, &cx.settings_path()).lang;
         let job = hwp_job(&job);
+        let current = cx.docs.document_path(view);
         e.later(reply, move |env| {
-            let answer = hwp_print(env, view, &job, pdf, given_path, lang);
+            let answer = hwp_print(env, view, &job, pdf, given_path, current, lang);
             env.state.end_print(true, view);
             answer
         });
@@ -1237,19 +1235,11 @@ fn slides_print(
 
 // ---- workbook ----
 
-/// `sheetsTemplateFontsDir()` of an installed app: `<resources>/template-fonts`.
-/// Resources sit beside the executable (`Contents/Resources` on macOS).
+/// `sheetsTemplateFontsDir()`
 fn template_fonts_dir(env: &Env) -> String {
-    let exe = env.paths.path(PathName::Exe);
-    let resources = if env.platform == "darwin" {
-        exe.ancestors()
-            .nth(2)
-            .map(|contents| contents.join("Resources"))
-    } else {
-        exe.parent().map(|dir| dir.join("resources"))
-    }
-    .unwrap_or_default();
-    join(&[&resources.to_string_lossy(), "template-fonts"])
+    main_core::packages::electron_utils::template_fonts_dir::template_fonts_dir(
+        &crate::settings::TemplateFonts(&*env.host),
+    )
 }
 
 /// `printWorkbook(event, request)` of pdf-export.ts
@@ -1319,7 +1309,7 @@ fn workbook(registry: &mut dyn Registry, cx: &Rc<Ctx>, env: &Env) -> Result<(), 
     invoke_later(registry, "workbook:print", move |call, args, reply| {
         let view = call.sender.view;
         // sessionFor(event), then the schema: both throw
-        if !print_cx.peers.sheets_session(view) {
+        if !print_cx.docs.sheets_session(view) {
             return reply.reply(Err(untrusted()));
         }
         let request = match zod::parse_print_request(arg(&args, 0)) {
@@ -1336,7 +1326,7 @@ fn workbook(registry: &mut dyn Registry, cx: &Rc<Ctx>, env: &Env) -> Result<(), 
         "workbook:list-printers",
         move |call, _args, reply| {
             let view = call.sender.view;
-            if !cx.peers.sheets_session(view) {
+            if !cx.docs.sheets_session(view) {
                 return reply.reply(Err(untrusted()));
             }
             e.later(reply, move |env| {
@@ -1370,9 +1360,19 @@ mod tests {
 
     /// A probe whose print handlers think they run on `platform`
     fn probe_on(platform: &'static str, config: Value) -> Probe {
-        let mut probe = Probe::new(config, vec![sender(VIEW, Surface::Docs)]);
-        let cx = Rc::new(Ctx::new(&probe.services).unwrap());
-        let mut registry = FakeRegistry::default();
+        // a sheets case (`sheetsViews`) calls from a sheets view
+        let surface = if config.get("sheetsViews").is_some() {
+            Surface::Sheets
+        } else {
+            Surface::Docs
+        };
+        let mut probe = Probe::new(config, vec![sender(VIEW, surface)]);
+        let provided = probe.registry.provided.clone();
+        let cx = Rc::new(Ctx::new(&probe.services, provided.clone()).unwrap());
+        let mut registry = FakeRegistry {
+            provided,
+            ..FakeRegistry::default()
+        };
         register_on(&mut registry, &cx, platform).unwrap();
         probe.registry = registry;
         probe
@@ -1389,7 +1389,8 @@ mod tests {
                 }
             })
             .collect();
-        probe.call(sender(VIEW, Surface::Docs), channel, args)
+        let from = probe.services.views.sender_of(ViewId(VIEW)).unwrap();
+        probe.call(from, channel, args)
     }
 
     fn answer_of(reply: Reply) -> Value {
@@ -1422,7 +1423,7 @@ mod tests {
 
     /// The host calls so far, without forgetting them
     fn peek(probe: &Probe) -> Vec<String> {
-        probe.fake.calls.lock().unwrap().clone()
+        probe.peek_calls()
     }
 
     fn temp_is_empty(probe: &Probe) -> bool {
@@ -1551,7 +1552,7 @@ mod tests {
             calls,
             vec![
                 format!("contentsPrintToPDF 1 {pdf:?}"),
-                "run /usr/bin/lp -d office -n 2 -o sides=two-sided-long-edge stdin=9".to_owned(),
+                "execFile /usr/bin/lp -d office -n 2 -o sides=two-sided-long-edge 9".to_owned(),
             ]
         );
 
@@ -1572,7 +1573,7 @@ mod tests {
         // not silent: the system dialog, not lp
         let (probe, reply) = run("darwin", cups(json!({})), "docs:print", vec![]);
         assert_eq!(reply, json!({ "ok": true }));
-        assert!(!has(&probe.take_calls(), "run "));
+        assert!(!has(&probe.take_calls(), "execFile "));
 
         // printToPDF rejecting rejects the invoke
         let probe = probe_on(
@@ -1680,14 +1681,14 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow Scripted");
-        assert!(calls[1].starts_with("loadFile ") && calls[1].contains("seuoffice-html-print-"));
-        assert_eq!(calls[2], "executeJavaScript");
+        assert_eq!(calls[0], "new BrowserWindow scripted");
+        assert_eq!(calls[1], "win.loadFile print.html");
+        assert_eq!(calls[2], "win.webContents.executeJavaScript");
         assert_eq!(
-            logged(&calls, "print "),
+            logged(&calls, "win.webContents.print "),
             json!({ "silent": false, "printBackground": true })
         );
-        assert_eq!(calls.last().unwrap(), "destroy");
+        assert_eq!(calls.last().unwrap(), "win.destroy");
         assert!(temp_is_empty(&probe));
     }
 
@@ -1727,8 +1728,17 @@ mod tests {
         );
         let calls = probe.take_calls();
         let at = |name: &str| calls.iter().position(|c| c == name).unwrap();
-        assert!(at("executeJavaScript") < at("show") && at("show") < at("focus"));
-        assert!(at("focus") < calls.iter().position(|c| c.starts_with("print ")).unwrap());
+        assert!(
+            at("win.webContents.executeJavaScript") < at("win.show")
+                && at("win.show") < at("win.focus")
+        );
+        assert!(
+            at("win.focus")
+                < calls
+                    .iter()
+                    .position(|c| c.starts_with("win.webContents.print "))
+                    .unwrap()
+        );
 
         for request in [json!({ "html": 5 }), json!({}), json!("<p>"), Value::Null] {
             let (probe, reply) = run("linux", json!({}), "html:print-html", vec![request]);
@@ -1761,16 +1771,16 @@ mod tests {
             vec![json!({ "html": "<p>x</p>" })],
         );
         let probe_calls = probe.take_calls();
-        assert_eq!(probe_calls[0], "printWindow Static");
+        assert_eq!(probe_calls[0], "new BrowserWindow static");
         assert_eq!(
-            logged(&probe_calls, "printToPDF "),
+            logged(&probe_calls, "win.webContents.printToPDF "),
             json!({
                 "pageSize": "A4",
                 "printBackground": true,
                 "margins": { "top": 0.6, "bottom": 0.6, "left": 0.6, "right": 0.6 },
             })
         );
-        assert_eq!(probe_calls.last().unwrap(), "destroy");
+        assert_eq!(probe_calls.last().unwrap(), "win.destroy");
         assert!(temp_is_empty(&probe));
     }
 
@@ -1786,7 +1796,7 @@ mod tests {
         let probe = probe_on("linux", json!({ "pdfError": "no pdf" }));
         let failed = call(&probe, "html:print-preview", vec![json!({ "html": "x" })]).unwrap();
         assert_eq!(failed, IpcValue::Null);
-        assert!(has(&probe.take_calls(), "destroy"));
+        assert!(has(&probe.take_calls(), "win.destroy"));
         assert!(temp_is_empty(&probe));
 
         for request in [json!({ "html": 1 }), json!({}), Value::Null] {
@@ -1846,11 +1856,11 @@ mod tests {
             calls.contains(&"saveDialog /docs/Report.pdf".to_owned()),
             "{calls:?}"
         );
-        assert!(calls.contains(&format!("openGenerated {target}")));
+        assert!(calls.contains(&format!("openGeneratedPath {target}")));
         // the runtime did not open it, so the file manager does
         assert!(calls.contains(&format!("showItemInFolder {target}")));
         assert_eq!(
-            logged(&calls, "printToPDF "),
+            logged(&calls, "win.webContents.printToPDF "),
             json!({
                 "preferCSSPageSize": true,
                 "printBackground": true,
@@ -1880,7 +1890,7 @@ mod tests {
         let (probe, reply) = run("linux", config, "hwp:print-pages", vec![hwp_job("pdf")]);
         assert_eq!(reply, json!({ "ok": true, "path": out.path("report.PDF") }));
         let calls = probe.take_calls();
-        assert!(!has(&calls, "openGenerated") && !has(&calls, "showItemInFolder"));
+        assert!(!has(&calls, "openGeneratedPath") && !has(&calls, "showItemInFolder"));
     }
 
     #[test]
@@ -1947,7 +1957,7 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         assert_eq!(
-            logged(&probe.take_calls(), "print "),
+            logged(&probe.take_calls(), "win.webContents.print "),
             json!({ "silent": false, "printBackground": true, "margins": { "marginType": "none" } })
         );
         let (_, canceled) = run(
@@ -2023,9 +2033,9 @@ mod tests {
         let (probe, reply) = run("linux", json!({}), "markdown:print-preview", vec![request]);
         assert_eq!(reply["ok"], true);
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow Static");
+        assert_eq!(calls[0], "new BrowserWindow static");
         assert_eq!(
-            logged(&calls, "printToPDF "),
+            logged(&calls, "win.webContents.printToPDF "),
             json!({
                 "pageSize": "Letter",
                 "printBackground": true,
@@ -2050,7 +2060,7 @@ mod tests {
                 ),
             ])
         );
-        let defaults = logged(&probe.take_calls(), "printToPDF ");
+        let defaults = logged(&probe.take_calls(), "win.webContents.printToPDF ");
         assert_eq!(defaults["pageSize"], "A4");
         assert_eq!(defaults["landscape"], false);
     }
@@ -2082,7 +2092,7 @@ mod tests {
             vec![json!({ "html": "x" })],
         );
         assert_eq!(failed, json!({ "ok": false, "error": "no pdf" }));
-        assert!(has(&probe.take_calls(), "destroy") && temp_is_empty(&probe));
+        assert!(has(&probe.take_calls(), "win.destroy") && temp_is_empty(&probe));
     }
 
     #[test]
@@ -2118,7 +2128,7 @@ mod tests {
         let (probe, reply) = run("linux", json!({}), "markdown:print-document", vec![request]);
         assert_eq!(reply, json!({ "ok": true }));
         assert_eq!(
-            logged(&probe.take_calls(), "print "),
+            logged(&probe.take_calls(), "win.webContents.print "),
             json!({
                 "silent": false,
                 "printBackground": true,
@@ -2138,7 +2148,7 @@ mod tests {
         );
         assert_eq!(all, json!({ "ok": true }));
         assert!(
-            logged(&probe.take_calls(), "print ")
+            logged(&probe.take_calls(), "win.webContents.print ")
                 .get("pageRanges")
                 .is_none()
         );
@@ -2217,7 +2227,7 @@ mod tests {
             vec![json!({ "html": "x", "pages": null })],
         );
         let calls = probe.take_calls();
-        assert!(has(&calls, "show") && has(&calls, "focus"));
+        assert!(has(&calls, "win.show") && has(&calls, "win.focus"));
         let (probe, failed) = run(
             "linux",
             json!({ "loadError": "ERR_FAILED" }),
@@ -2225,7 +2235,7 @@ mod tests {
             vec![json!({ "html": "x", "pages": null })],
         );
         assert_eq!(failed, json!({ "ok": false, "error": "ERR_FAILED" }));
-        assert!(has(&probe.take_calls(), "destroy") && temp_is_empty(&probe));
+        assert!(has(&probe.take_calls(), "win.destroy") && temp_is_empty(&probe));
     }
 
     // ---- mindmap ----
@@ -2240,10 +2250,10 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow MindmapExport");
-        assert!(calls[1].contains("seuoffice-mindmap-print-") && calls[1].ends_with("map.html"));
+        assert_eq!(calls[0], "new BrowserWindow mindmap-export");
+        assert_eq!(calls[1], "win.loadFile map.html");
         assert_eq!(
-            logged(&calls, "print "),
+            logged(&calls, "win.webContents.print "),
             json!({
                 "silent": false,
                 "printBackground": true,
@@ -2293,23 +2303,14 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow Diagram");
-        let url = calls[1].strip_prefix("loadURL ").unwrap();
-        let token = url
-            .strip_prefix("drawio-app://editor/__ieum/print/")
-            .unwrap();
-        assert_eq!(token.len(), 32);
-        assert!(
-            token
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-        );
-        assert_eq!(take_diagram_print_document(token), None);
+        assert_eq!(calls[0], "new BrowserWindow diagram");
+        // the token after the last slash is random
+        assert_eq!(calls[1], "win.loadURL drawio-app://editor/__ieum/print");
         assert_eq!(
-            logged(&calls, "print "),
+            logged(&calls, "win.webContents.print "),
             json!({ "silent": false, "printBackground": true })
         );
-        assert_eq!(calls.last().unwrap(), "destroy");
+        assert_eq!(calls.last().unwrap(), "win.destroy");
 
         // what the shell's protocol takes is served once
         DIAGRAM_DOCUMENTS
@@ -2379,7 +2380,7 @@ mod tests {
         );
         assert_eq!(failed, json!({ "ok": false, "error": "ERR_ABORTED" }));
         let calls = probe.take_calls();
-        assert!(has(&calls, "destroy") && !has(&calls, "print "));
+        assert!(has(&calls, "win.destroy") && !has(&calls, "win.webContents.print "));
     }
 
     #[test]
@@ -2391,7 +2392,7 @@ mod tests {
             vec![json!({ "pages": [page()] })],
         );
         let calls = probe.take_calls();
-        assert!(has(&calls, "show") && has(&calls, "focus"));
+        assert!(has(&calls, "win.show") && has(&calls, "win.focus"));
     }
 
     // ---- slides ----
@@ -2417,7 +2418,7 @@ mod tests {
         );
         assert_eq!(
             probe.take_calls(),
-            vec!["run /usr/bin/lpoptions -p office_1 -l stdin=0".to_owned()]
+            vec!["execFile /usr/bin/lpoptions -p office_1 -l 0".to_owned()]
         );
     }
 
@@ -2482,9 +2483,9 @@ mod tests {
         let (probe, reply) = run("linux", json!({}), "slides:print", vec![op(json!({}))]);
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow Scripted");
+        assert_eq!(calls[0], "new BrowserWindow scripted");
         assert_eq!(
-            logged(&calls, "print "),
+            logged(&calls, "win.webContents.print "),
             json!({ "silent": false, "printBackground": true })
         );
         assert!(temp_is_empty(&probe));
@@ -2520,7 +2521,7 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         assert_eq!(
-            logged(&probe.take_calls(), "print "),
+            logged(&probe.take_calls(), "win.webContents.print "),
             json!({
                 "silent": true,
                 "deviceName": "office",
@@ -2555,17 +2556,17 @@ mod tests {
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
         assert_eq!(
-            logged(&calls, "printToPDF "),
+            logged(&calls, "win.webContents.printToPDF "),
             json!({
                 "printBackground": true,
                 "margins": { "top": 0, "bottom": 0, "left": 0, "right": 0 },
                 "pageSize": { "width": 13.333, "height": 7.5 },
             })
         );
-        assert!(calls.contains(&"run /usr/bin/lp -d office -n 2 stdin=9".to_owned()));
-        assert!(!has(&calls, "print "));
+        assert!(calls.contains(&"execFile /usr/bin/lp -d office -n 2 9".to_owned()));
+        assert!(!has(&calls, "win.webContents.print "));
         assert!(temp_is_empty(&probe));
-        assert_eq!(calls.last().unwrap(), "destroy");
+        assert_eq!(calls.last().unwrap(), "win.destroy");
 
         // a handout sheet is A4 in the chosen orientation
         let handout = op(
@@ -2573,7 +2574,7 @@ mod tests {
         );
         let (probe, _) = run("darwin", cups(json!({})), "slides:print", vec![handout]);
         assert_eq!(
-            logged(&probe.take_calls(), "printToPDF ")["pageSize"],
+            logged(&probe.take_calls(), "win.webContents.printToPDF ")["pageSize"],
             json!({ "width": 11.69, "height": 8.27 })
         );
 
@@ -2598,7 +2599,7 @@ mod tests {
             vec![op(json!({ "job": job }))],
         );
         assert_eq!(load_failed, json!({ "ok": false, "error": "ERR_FAILED" }));
-        assert!(has(&probe.take_calls(), "destroy") && temp_is_empty(&probe));
+        assert!(has(&probe.take_calls(), "win.destroy") && temp_is_empty(&probe));
     }
 
     #[test]
@@ -2682,10 +2683,10 @@ mod tests {
         );
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        assert_eq!(calls[0], "printWindow Static");
-        assert!(calls[1].contains("ai-excel-print-") && calls[1].ends_with("print.html"));
+        assert_eq!(calls[0], "new BrowserWindow static");
+        assert_eq!(calls[1], "win.loadFile print.html");
         assert_eq!(
-            logged(&calls, "print "),
+            logged(&calls, "win.webContents.print "),
             json!({
                 "silent": false,
                 "printBackground": true,
@@ -2695,7 +2696,7 @@ mod tests {
                 "scaleFactor": 150,
             })
         );
-        assert_eq!(calls.last().unwrap(), "destroy");
+        assert_eq!(calls.last().unwrap(), "win.destroy");
         assert!(temp_is_empty(&probe));
     }
 
@@ -2735,7 +2736,7 @@ mod tests {
         let (probe, reply) = run("linux", sheets(json!({})), "workbook:print", vec![named]);
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
-        let options = logged(&calls, "print ");
+        let options = logged(&calls, "win.webContents.print ");
         assert_eq!(options["silent"], true);
         assert_eq!(options["deviceName"], "office");
         assert_eq!(options["copies"], 3);
@@ -2743,7 +2744,7 @@ mod tests {
             options["pageSize"],
             json!({ "width": 215900, "height": 279400 })
         );
-        assert!(!has(&calls, "show"));
+        assert!(!has(&calls, "win.show"));
     }
 
     #[test]
@@ -2759,7 +2760,7 @@ mod tests {
         assert_eq!(reply, json!({ "ok": true }));
         let calls = probe.take_calls();
         assert_eq!(
-            logged(&calls, "printToPDF "),
+            logged(&calls, "win.webContents.printToPDF "),
             json!({
                 "printBackground": true,
                 "margins": { "top": 0.5, "bottom": 0.5, "left": 0.25, "right": 0.25 },
@@ -2768,8 +2769,8 @@ mod tests {
                 "preferCSSPageSize": true,
             })
         );
-        assert!(calls.contains(&"run /usr/bin/lp -d office -n 3 stdin=9".to_owned()));
-        assert!(!has(&calls, "print "));
+        assert!(calls.contains(&"execFile /usr/bin/lp -d office -n 3 9".to_owned()));
+        assert!(!has(&calls, "win.webContents.print "));
         assert!(temp_is_empty(&probe));
 
         // the system default queue is '' and takes no -d
@@ -2782,7 +2783,7 @@ mod tests {
         assert!(
             probe
                 .take_calls()
-                .contains(&"run /usr/bin/lp  stdin=9".to_owned())
+                .contains(&"execFile /usr/bin/lp  9".to_owned())
         );
 
         let failing = sheets(cups(
@@ -2803,7 +2804,7 @@ mod tests {
             "workbook:print",
             vec![request(json!({}))],
         );
-        assert!(!has(&probe.take_calls(), "run "));
+        assert!(!has(&probe.take_calls(), "execFile "));
     }
 
     #[test]
@@ -2815,14 +2816,14 @@ mod tests {
             vec![request(json!({}))],
         );
         let calls = probe.take_calls();
-        assert!(has(&calls, "show") && has(&calls, "focus"));
+        assert!(has(&calls, "win.show") && has(&calls, "win.focus"));
         let (probe, _) = run(
             "win32",
             sheets(json!({})),
             "workbook:print",
             vec![request(json!({ "deviceName": "office" }))],
         );
-        assert!(!has(&probe.take_calls(), "show"));
+        assert!(!has(&probe.take_calls(), "win.show"));
     }
 
     #[test]
@@ -2834,7 +2835,7 @@ mod tests {
             vec![request(json!({}))],
         );
         assert_eq!(reply, json!({ "ok": false, "error": "ERR_FAILED" }));
-        assert!(has(&probe.take_calls(), "destroy"));
+        assert!(has(&probe.take_calls(), "win.destroy"));
         assert!(temp_is_empty(&probe));
     }
 
@@ -2863,26 +2864,24 @@ mod tests {
     }
 
     #[test]
-    fn the_template_fonts_folder_sits_in_the_resources_beside_the_executable() {
-        let probe = probe_on("linux", json!({}));
-        let env = Env::of(&Ctx::new(&probe.services).unwrap(), "linux");
-        let exe = probe.root().join("exe");
+    fn the_template_fonts_folder_is_in_the_resources_once_packaged() {
+        let probe = probe_on(
+            "linux",
+            json!({ "isPackaged": true, "resourcesPath": "/opt/seu/resources" }),
+        );
+        let env = Env::of(
+            &Ctx::new(&probe.services, probe.registry.provided.clone()).unwrap(),
+            "linux",
+        );
         assert_eq!(
             template_fonts_dir(&env),
-            join(&[
-                &probe.root().to_string_lossy(),
-                "resources",
-                "template-fonts"
-            ])
+            "/opt/seu/resources/template-fonts"
         );
-        let mac = Env {
-            platform: "darwin",
-            ..env
-        };
-        let contents = exe.ancestors().nth(2).unwrap().join("Resources");
-        assert_eq!(
-            template_fonts_dir(&mac),
-            join(&[&contents.to_string_lossy(), "template-fonts"])
+        let probe = probe_on("linux", json!({ "appPath": "/repo/apps/shell" }));
+        let env = Env::of(
+            &Ctx::new(&probe.services, probe.registry.provided.clone()).unwrap(),
+            "linux",
         );
+        assert_eq!(template_fonts_dir(&env), "/repo/packages/ui/template-fonts");
     }
 }

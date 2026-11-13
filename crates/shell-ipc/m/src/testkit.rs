@@ -8,8 +8,9 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use shell_contract::channels::{Batch, CHANNELS, Surface};
+use shell_contract::editors::{DocumentEditors, SaveMode, Then};
 use shell_contract::hosts::{
     Contents, ContentsHost, Dialogs, DialogsHost, FileDialog, MainWindow, MainWindowHost,
     MessageBox, MessageBoxAnswer, OsShell, OsShellHost,
@@ -22,7 +23,7 @@ use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, CancelToken, PathName, Services, Thread, Views, Workers};
 use shell_contract::{Hosts, IpcValue, RequestId, ViewId, WindowId};
 
-use crate::probe::{self, Fake};
+use crate::probe::{self, ProbeLog};
 
 /// The shared hosts (batch W's in the shell), faked from the same config:
 /// `savePath` answers a save dialog (null cancels), `contentsPrint`
@@ -30,12 +31,12 @@ use crate::probe::{self, Fake};
 /// `mainView` the shell window's view
 struct Shared {
     config: Value,
-    calls: Arc<Mutex<Vec<String>>>,
+    log: ProbeLog,
 }
 
 impl Shared {
-    fn log(&self, line: String) {
-        self.calls.lock().unwrap().push(line)
+    fn log(&self, line: Value) {
+        self.log.lock().unwrap().push(line)
     }
 }
 
@@ -45,14 +46,12 @@ impl Dialogs for Shared {
     }
 
     fn save(&self, _parent: Option<WindowId>, options: &FileDialog) -> Option<PathBuf> {
-        self.log(format!(
-            "saveDialog {}",
-            options
-                .default_path
-                .as_deref()
-                .map(|p| p.display().to_string())
-                .unwrap_or_default()
-        ));
+        let default_path = options
+            .default_path
+            .as_deref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        self.log(json!(["saveDialog", default_path]));
         self.config
             .get("savePath")
             .and_then(Value::as_str)
@@ -60,7 +59,7 @@ impl Dialogs for Shared {
     }
 
     fn message(&self, _parent: Option<WindowId>, options: &MessageBox) -> MessageBoxAnswer {
-        self.log(format!("messageBox {}", options.message));
+        self.log(json!(["messageBox", options.message]));
         MessageBoxAnswer {
             response: 0,
             checkbox_checked: false,
@@ -68,23 +67,27 @@ impl Dialogs for Shared {
     }
 
     fn error(&self, title: &str, content: &str) {
-        self.log(format!("errorBox {title} {content}"))
+        self.log(json!(["errorBox", title, content]))
     }
 }
 
 impl OsShell for Shared {
     fn open_external(&self, url: &str) -> Result<(), String> {
-        self.log(format!("openExternal {url}"));
+        self.log(json!(["openExternal", url]));
         Ok(())
     }
 
     fn open_path(&self, path: &Path) -> String {
-        self.log(format!("openPath {}", path.display()));
-        String::new()
+        self.log(json!(["openPath", path.display().to_string()]));
+        self.config
+            .get("openPath")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_owned()
     }
 
     fn show_item_in_folder(&self, path: &Path) {
-        self.log(format!("showItemInFolder {}", path.display()))
+        self.log(json!(["showItemInFolder", path.display().to_string()]))
     }
 
     fn trash_item(&self, _path: &Path) -> Result<(), String> {
@@ -102,7 +105,11 @@ impl Contents for Shared {
     }
 
     fn print_to_pdf(&self, view: ViewId, options: IpcValue) -> Result<Vec<u8>, String> {
-        self.log(format!("contentsPrintToPDF {} {options:?}", view.0));
+        self.log(json!([
+            "contentsPrintToPDF",
+            view.0,
+            format!("{options:?}")
+        ]));
         match self.config.get("pdfError").and_then(Value::as_str) {
             Some(error) => Err(error.to_owned()),
             None => Ok(b"%PDF-fake".to_vec()),
@@ -110,7 +117,7 @@ impl Contents for Shared {
     }
 
     fn print(&self, view: ViewId, options: IpcValue) -> Result<bool, String> {
-        self.log(format!("contentsPrint {} {options:?}", view.0));
+        self.log(json!(["contentsPrint", view.0, format!("{options:?}")]));
         let print = self.config.get("print");
         let success = print
             .and_then(|p| p.get("success"))
@@ -134,7 +141,7 @@ impl Contents for Shared {
     fn set_zoom_factor(&self, _view: ViewId, _factor: f64) {}
 
     fn focus(&self, view: ViewId) {
-        self.log(format!("focus {}", view.0))
+        self.log(json!(["focus", view.0]))
     }
 
     fn close_window(&self, _window: WindowId) {}
@@ -150,6 +157,76 @@ impl MainWindow for Shared {
 
     fn window(&self) -> Option<WindowId> {
         self.view().map(|v| WindowId(v.0))
+    }
+}
+
+/// The document batches' editors as the tests need them, from the config:
+/// `sheetsViews` (views with a workbook), `htmlPaths` and `hwpPaths` (a
+/// view's document file), `hwpGrants` (a view's Save As PDF path, taken
+/// once) and `tornDown` (docs views whose writer is gone)
+struct FakeEditors(Value, std::cell::RefCell<Vec<u32>>);
+
+impl FakeEditors {
+    fn by_view(&self, key: &str, view: ViewId) -> Option<&Value> {
+        self.0.get(key)?.get(view.0.to_string())
+    }
+
+    fn listed(&self, key: &str, view: ViewId) -> bool {
+        self.0
+            .get(key)
+            .and_then(Value::as_array)
+            .is_some_and(|items| items.iter().any(|v| v.as_u64() == Some(u64::from(view.0))))
+    }
+}
+
+impl DocumentEditors for FakeEditors {
+    fn owns(&self, view: ViewId) -> bool {
+        self.listed("sheetsViews", view)
+            || self.listed("tornDown", view)
+            || ["htmlPaths", "hwpPaths", "hwpGrants"]
+                .iter()
+                .any(|key| self.by_view(key, view).is_some())
+    }
+
+    fn request_save(&self, _view: ViewId, _mode: SaveMode, then: Then<bool>) {
+        then(Ok(true))
+    }
+
+    fn request_close(&self, _view: ViewId, _parent: Option<WindowId>, then: Then<bool>) {
+        then(Ok(true))
+    }
+
+    fn read_text(&self, _view: ViewId, then: Then<String>) {
+        then(Ok(String::new()))
+    }
+
+    fn save_to_path(&self, _view: ViewId, _path: PathBuf, then: Then<()>) {
+        then(Ok(()))
+    }
+
+    fn file_renamed(&self, _view: ViewId, _old_path: &Path, _new_path: &Path) {}
+
+    fn export_request(&self, _view: ViewId, _format: &str) {}
+
+    fn document_path(&self, view: ViewId) -> Option<PathBuf> {
+        ["htmlPaths", "hwpPaths"]
+            .iter()
+            .find_map(|key| self.by_view(key, view)?.as_str())
+            .map(PathBuf::from)
+    }
+
+    fn take_pdf_grant(&self, view: ViewId) -> Option<PathBuf> {
+        let mut taken_views = self.1.borrow_mut();
+        let taken = taken_views.contains(&view.0);
+        taken_views.push(view.0);
+        if taken {
+            return None;
+        }
+        self.by_view("hwpGrants", view)?.as_str().map(PathBuf::from)
+    }
+
+    fn torn_down(&self, view: ViewId) -> bool {
+        self.listed("tornDown", view)
     }
 }
 
@@ -283,8 +360,8 @@ pub struct Probe {
     pub registry: FakeRegistry,
     pub events: Arc<Recorder>,
     pub services: Services,
-    /// the M hosts' fake: its `calls`, and the shared hosts' calls too
-    pub fake: Arc<Fake>,
+    /// the case's host log: the M fakes' lines and the shared hosts'
+    pub log: ProbeLog,
     core: Arc<Inline>,
     dir: PathBuf,
 }
@@ -314,10 +391,10 @@ impl Probe {
             std::fs::create_dir_all(dir.join(sub)).unwrap();
         }
         let mut hosts = Hosts::default();
-        let fake = probe::insert(&mut hosts, &config);
+        let log = probe::insert(&mut hosts, &config);
         let shared = Arc::new(Shared {
-            config,
-            calls: fake.calls.clone(),
+            config: config.clone(),
+            log: log.clone(),
         });
         hosts.insert::<DialogsHost>(shared.clone());
         hosts.insert::<OsShellHost>(shared.clone());
@@ -341,22 +418,57 @@ impl Probe {
             hosts: Arc::new(hosts),
         };
         let mut registry = FakeRegistry::default();
+        registry
+            .provided
+            .add::<dyn DocumentEditors>(Rc::new(FakeEditors(config, Default::default())));
         crate::register(&mut registry, &services).expect("batch M registers");
         Probe {
             registry,
             events,
             services,
-            fake,
+            log,
             core,
             dir,
         }
     }
 
-    /// The host calls so far, and forget them
+    /// The host log so far, one line per call, and forget it: a line's
+    /// strings as they are, a list of strings joined by spaces, any other
+    /// value as JSON, all joined by spaces
     pub fn take_calls(&self) -> Vec<String> {
-        std::mem::take(&mut *self.fake.calls.lock().unwrap())
+        let lines = std::mem::take(&mut *self.log.lock().unwrap());
+        render(&lines)
     }
 
+    /// As [`Probe::take_calls`], keeping the log
+    pub fn peek_calls(&self) -> Vec<String> {
+        render(&self.log.lock().unwrap())
+    }
+}
+
+fn render(lines: &[Value]) -> Vec<String> {
+    lines
+        .iter()
+        .map(|line| {
+            let items = line.as_array().cloned().unwrap_or_default();
+            items
+                .iter()
+                .map(|item| match item {
+                    Value::String(s) => s.clone(),
+                    Value::Array(list) if list.iter().all(Value::is_string) => list
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                    other => other.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect()
+}
+
+impl Probe {
     pub fn user_data(&self) -> PathBuf {
         self.dir.join("userData")
     }

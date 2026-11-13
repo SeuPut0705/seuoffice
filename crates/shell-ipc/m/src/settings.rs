@@ -12,6 +12,9 @@ use main_core::packages::electron_utils::author_name::{
     AUTHOR_NAME_KEY, configured_author_name, read_author_name_setting, sanitize_author_name,
     system_author_name,
 };
+use main_core::packages::electron_utils::template_fonts_dir::{
+    TemplateFontsHost, template_fonts_dir,
+};
 use main_core::packages::i18n::{self, LANGS, Lang};
 use main_core::shell::app_settings::{
     read_app_settings, write_app_setting, write_app_setting_then,
@@ -23,7 +26,7 @@ use shell_contract::ipc::{RegisterError, Registry, Reply, Target};
 use shell_contract::{IpcError, IpcValue};
 
 use crate::Ctx;
-use crate::handler::{error, invoke, invoke_later, send};
+use crate::handler::{error, invoke, invoke_later};
 use crate::state::{DOC_THEMES, UI_THEMES};
 use crate::value::{arg, as_str, object, string, to_json, to_serde};
 
@@ -37,6 +40,23 @@ const MARKDOWN_THEME_IDS: [&str; 7] = [
     "nord",
     "newsprint",
 ];
+
+/// `templateFontsDir({ isPackaged, getAppPath, resourcesPath })`
+pub(crate) struct TemplateFonts<'a>(pub &'a dyn crate::hosts::MHost);
+
+impl TemplateFontsHost for TemplateFonts<'_> {
+    fn is_packaged(&self) -> bool {
+        self.0.is_packaged()
+    }
+
+    fn get_app_path(&self) -> String {
+        self.0.app_path()
+    }
+
+    fn resources_path(&self) -> String {
+        self.0.resources_path()
+    }
+}
 
 fn node_error(e: main_core::node_fs::NodeError) -> IpcError {
     error(e.message)
@@ -282,7 +302,7 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
     })?;
     let c = cx.clone();
     invoke(registry, "user:display-name", move |call, _| {
-        if !c.peers.sheets_session(call.sender.view) {
+        if !c.docs.sheets_session(call.sender.view) {
             return Err(error("Untrusted IPC sender."));
         }
         let user_data = c.user_data().to_string_lossy().into_owned();
@@ -343,9 +363,11 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
         "slides:open-template-fonts-folder",
         move |_, _, reply| {
             let host = c.host.clone();
+            let os = c.os.clone();
             c.services.workers.spawn(Box::new(move || {
+                let folder = template_fonts_dir(&TemplateFonts(&*host));
                 reply.reply(Ok(IpcValue::Bool(
-                    host.open_template_fonts_folder().is_empty(),
+                    os.open_path(std::path::Path::new(&folder)).is_empty(),
                 )))
             }))
         },
@@ -407,7 +429,10 @@ mod tests {
             Ok(IpcValue::Undefined)
         );
         assert_eq!(settings(&p)["language"], "ko");
-        assert_eq!(p.take_calls(), vec!["menus", "tray"]);
+        assert_eq!(
+            p.take_calls(),
+            vec!["rebuildMenusForLanguage", "syncTrayMenu"]
+        );
         let events = p.take_events();
         assert_eq!(
             events,
@@ -475,7 +500,11 @@ mod tests {
         assert_eq!(settings(&p)["theme"], "dark");
         assert_eq!(
             p.take_calls(),
-            vec!["nativeTheme dark", "titleBarOverlay", "tray"]
+            vec![
+                "nativeTheme.themeSource dark",
+                "refreshTitleBarOverlay",
+                "syncTrayMenu"
+            ]
         );
         assert_eq!(
             p.take_events().last().unwrap(),

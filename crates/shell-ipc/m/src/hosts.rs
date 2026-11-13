@@ -1,14 +1,14 @@
 //! What batch M's handlers reach beyond `shell_contract::Services` and the
-//! shared hosts. Three traits, by who implements them in `crates/shell`:
+//! shared hosts. Two traits, by who implements them in `crates/shell`:
 //!
 //! - [`MHost`]: M's own area (the app's locale, the native theme, menus, the
-//!   spellchecker, printers and print windows); M's host files
-//!   (`host/menu.rs`, `host/print.rs`).
-//! - [`Peers`]: state other batches own that some M channels read (the tab
-//!   manager's split panes, the sheets sessions, a document's path, the
-//!   slides sessions, the PDF structure jobs). Each method names its owner.
+//!   spellchecker, printers and print windows) and a few shell-wide facts;
+//!   M's host files (`host/menu.rs`, `host/print.rs`).
 //! - [`FontQueries`]: `main-core` gaps, the font-metrics package and the PDF
 //!   editor's fonts; implemented once stage 2 ports them.
+//!
+//! What another batch's documents hold (a document's path, the hwp PDF
+//! grant, a docs view's end) comes through `shell_contract::editors`.
 //!
 //! Every method runs on the thread that calls it and returns when done; an
 //! implementation that needs the UI thread uses `run_on`. Methods whose
@@ -19,7 +19,6 @@ use std::sync::Arc;
 use main_core::packages::electron_utils::print_window::{ExecOutcome, PrintReport};
 use main_core::packages::electron_utils::printer_options::CommandOutcome;
 use serde_json::Value;
-use shell_contract::ipc::Responder;
 use shell_contract::{ViewId, WindowId};
 
 /// `{ name, displayName }` of `webContents.getPrintersAsync()`
@@ -105,8 +104,18 @@ pub trait MHost: Send + Sync {
     /// `slides:open-font-settings`: restore, show and focus the shell window,
     /// then open the home tab; false when there is no shell window
     fn reveal_home(&self) -> bool;
-    /// `shell.openPath` of the template fonts folder; `""` on success
-    fn open_template_fonts_folder(&self) -> String;
+    /// `app.isPackaged`, `app.getAppPath()`, `process.resourcesPath`: where
+    /// `templateFontsDir` finds the template fonts
+    fn is_packaged(&self) -> bool;
+    fn app_path(&self) -> String;
+    fn resources_path(&self) -> String;
+    /// `isHeadlessMode()`
+    fn headless(&self) -> bool;
+    /// `runtime.openGeneratedPath?.(path)`: false when the runtime has none
+    /// or did not open it
+    fn open_generated_path(&self, path: &str) -> bool;
+    /// `configuredDefaultSaveDir(app)`
+    fn default_save_dir(&self) -> String;
 
     /// `session.addWordToSpellCheckerDictionary` of the view's session
     fn spell_add_word(&self, view: ViewId, word: &str) -> bool;
@@ -129,64 +138,6 @@ pub trait MHost: Send + Sync {
     fn run_command(&self, file: &str, args: &[String], stdin: Option<&[u8]>) -> CommandOutcome;
 }
 
-/// Which pane of a split a view is
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SplitRole {
-    Focus,
-    Secondary,
-}
-
-impl SplitRole {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            SplitRole::Focus => "focus",
-            SplitRole::Secondary => "secondary",
-        }
-    }
-}
-
-pub trait Peers: Send + Sync {
-    /// W, the tab manager: `splitRoleOf(view)`
-    fn split_role_of(&self, view: ViewId) -> Option<SplitRole>;
-    /// W, the tab manager: `focusPaneByWebContents(view)`
-    fn focus_pane_of(&self, view: ViewId);
-    /// W: `handleDroppedFiles(raw, droppedFilesDeps())` (opens documents,
-    /// imports skills, warns); main-core gap: `partitionDropPayload`,
-    /// `handleDroppedFiles`
-    fn open_dropped_files(&self, raw: &Value);
-
-    /// D1: the view is a sheets tab (`sheetsTabs.get(view)` of `sessionFor`)
-    fn sheets_session(&self, view: ViewId) -> bool;
-    /// D2: `savePathByWc.get(view)` of the html app
-    fn html_document_path(&self, view: ViewId) -> Option<String>;
-    /// D2: `savePathByWc.get(view)` of the hwp app
-    fn hwp_document_path(&self, view: ViewId) -> Option<String>;
-    /// D2: the PDF path the view picked in Save As or was handed headless
-    /// (`pdfSaveAsByWc ?? headlessPdfByWc`), taken once
-    fn hwp_take_pdf_grant(&self, view: ViewId) -> Option<String>;
-    /// D2: the view's document writer was dropped (`tornDownWcIds`)
-    fn docs_torn_down(&self, view: ViewId) -> bool;
-    /// `isHeadlessMode()`
-    fn headless(&self) -> bool;
-    /// `runtime.openGeneratedPath?.(path)`: false when the runtime has none
-    /// or did not open it
-    fn open_generated_path(&self, path: &str) -> bool;
-    /// `configuredDefaultSaveDir(app)`
-    fn default_save_dir(&self) -> String;
-
-    /// D2, shell/pdf-structure: `storePageFingerprints(context(view), req)`;
-    /// answers when the job ends
-    fn store_page_fingerprints(&self, view: ViewId, request: Value, reply: Responder);
-    /// D1, slides sessions: `listPrivateFontFaces()`
-    fn slides_private_font_faces(&self) -> Value;
-    /// D1: `getPrivateFontData(id)`; `None` is `null`
-    fn slides_private_font_data(&self, id: &Value) -> Option<Vec<u8>>;
-    /// D1: the `slides:set-element-font` body over the view's session
-    fn slides_set_element_font(&self, view: ViewId, op: &Value) -> Value;
-    /// D1: the `slides:apply-theme` body over the view's session
-    fn slides_apply_theme(&self, view: ViewId, op: &Value) -> Value;
-}
-
 /// main-core gaps: packages/font-metrics and apps/pdf/src/main/text-edit.ts
 pub trait FontQueries: Send + Sync {
     /// `familyInfoFor(families)`
@@ -200,5 +151,4 @@ pub trait FontQueries: Send + Sync {
 }
 
 pub type MHostRef = Arc<dyn MHost>;
-pub type PeersRef = Arc<dyn Peers>;
 pub type FontQueriesRef = Arc<dyn FontQueries>;

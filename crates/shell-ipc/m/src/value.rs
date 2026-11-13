@@ -35,6 +35,7 @@ pub fn to_json(value: &IpcValue) -> Option<JsonValue> {
     })
 }
 
+#[cfg(test)]
 pub fn from_json(value: &JsonValue) -> IpcValue {
     match value {
         JsonValue::Null => IpcValue::Null,

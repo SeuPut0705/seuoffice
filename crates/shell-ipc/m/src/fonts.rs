@@ -11,10 +11,9 @@ use std::rc::Rc;
 use jscompat::array_index;
 use shell_contract::IpcValue;
 use shell_contract::ipc::{RegisterError, Registry};
-use shell_contract::value::BytesKind;
 
 use crate::Ctx;
-use crate::handler::{invoke, invoke_later};
+use crate::handler::invoke_later;
 use crate::value::{arg, as_str, from_serde, strings, to_serde};
 
 /// `names.slice(0, 512)`
@@ -152,11 +151,7 @@ mod tests {
         call(&p, Surface::Docs, "app:font-family-info", vec![text("A")]);
         assert_eq!(
             p.take_calls(),
-            vec![
-                r#"familyInfo ["A","B"]"#,
-                "familyInfo null",
-                r#"familyInfo "A""#
-            ]
+            vec!["familyInfoFor A B", "familyInfoFor null", "familyInfoFor A"]
         );
     }
 

@@ -12,13 +12,15 @@ use main_core::packages::electron_utils::atomic_write::write_json_atomic;
 use main_core::packages::electron_utils::context_menu::{
     ContextMenuParams, MenuCommand, VIEW_IMAGE_CHANNEL,
 };
+use shell_contract::editors::editor_for;
 use shell_contract::ipc::{RegisterError, Registry, Target};
+use shell_contract::provided::Provided;
 use shell_contract::runtime::Services;
 use shell_contract::{IpcError, IpcValue, ViewId};
 
 use crate::Ctx;
 use crate::handler::{error, invoke, invoke_later, send, send_sync};
-use crate::hosts::{KeyInput, MHost, MHostRef, PeersRef};
+use crate::hosts::{KeyInput, MHost, MHostRef};
 use crate::state::{MState, MStateRef};
 use crate::value::{arg, as_str, object, string, strings};
 
@@ -58,17 +60,18 @@ fn release_view(host: &dyn MHost, state: &MState, journal: &str, view: ViewId) {
 /// native menu: the renderer got the click's data and draws its own.
 pub fn intercept_context_menu(
     services: &Services,
+    provided: &Provided,
     view: ViewId,
     params: &ContextMenuParams,
 ) -> bool {
-    let (Some(state), Some(host), Some(peers)) = (
+    let (Some(state), Some(host)) = (
         services.hosts.get::<MStateRef>(),
         services.hosts.get::<MHostRef>(),
-        services.hosts.get::<PeersRef>(),
     ) else {
         return false;
     };
-    if peers.docs_torn_down(view) || services.views.sender_of(view).is_none() {
+    let torn_down = editor_for(provided, view).is_some_and(|e| e.torn_down(view));
+    if torn_down || services.views.sender_of(view).is_none() {
         return false;
     }
     let Some(seq) = state.take_context_menu_claim(view, host.now_ms()) else {
@@ -289,7 +292,7 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
         let cx = cx.clone();
         move |call, _, reply| {
             let view = call.sender.view;
-            if cx.peers.docs_torn_down(view) || cx.services.views.sender_of(view).is_none() {
+            if cx.docs.torn_down(view) || cx.services.views.sender_of(view).is_none() {
                 return reply.reply(Ok(IpcValue::Undefined));
             }
             cx.contents.focus(view);
@@ -360,6 +363,7 @@ mod tests {
         p.call(docs(1), "docs:context-menu-arm", vec![]).unwrap();
         assert!(intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("teh", &["the", "ten"])
         ));
@@ -378,6 +382,7 @@ mod tests {
         // the claim is spent: the next right-click is the native menu's
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("", &[])
         ));
@@ -403,6 +408,7 @@ mod tests {
         for expected in [1.0, 2.0] {
             assert!(intercept_context_menu(
                 &p.services,
+                &p.registry.provided,
                 ViewId(1),
                 &params("", &[])
             ));
@@ -418,6 +424,7 @@ mod tests {
         }
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("", &[])
         ));
@@ -430,6 +437,7 @@ mod tests {
         state(&p).claim_context_menu(ViewId(1), 1.0, NOW - 2001.0);
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("", &[])
         ));
@@ -437,6 +445,7 @@ mod tests {
         state(&p).claim_context_menu(ViewId(1), 2.0, NOW - 2000.0);
         assert!(intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("", &[])
         ));
@@ -449,6 +458,7 @@ mod tests {
         .unwrap();
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(2),
             &params("", &[])
         ));
@@ -468,6 +478,7 @@ mod tests {
         }
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(1),
             &params("", &[])
         ));
@@ -476,11 +487,13 @@ mod tests {
         state(&p).claim_context_menu(ViewId(9), 1.0, NOW);
         assert!(!intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(9),
             &params("", &[])
         ));
         assert!(intercept_context_menu(
             &p.services,
+            &p.registry.provided,
             ViewId(2),
             &params("", &[])
         ));
@@ -524,7 +537,7 @@ mod tests {
             ),
             None
         );
-        assert_eq!(p.take_calls(), vec!["replaceMisspelling 2 the"]);
+        assert_eq!(p.take_calls(), vec!["webContents.replaceMisspelling 2 the"]);
         let copy = MenuCommand::CopyImageAt { x: 1.0, y: 2.0 };
         assert_eq!(
             context_menu_command(&p.services, ViewId(1), copy.clone()),
@@ -547,25 +560,35 @@ mod tests {
         assert_eq!(journal(&p), "[\n  \"qwx\",\n  \"zzv\"\n]");
         assert_eq!(
             p.take_calls(),
-            vec!["addWord 1 qwx", "addWord 2 qwx", "addWord 2 zzv"]
+            vec![
+                "session.addWordToSpellCheckerDictionary 1 qwx",
+                "session.addWordToSpellCheckerDictionary 2 qwx",
+                "session.addWordToSpellCheckerDictionary 2 zzv"
+            ]
         );
 
         release_view(
-            &*p.fake,
+            &**p.services.hosts.get::<MHostRef>().unwrap(),
             state(&p),
             &p.user_data().join("spell-ignored.json").to_string_lossy(),
             ViewId(2),
         );
         // qwx is still held by view 1; only zzv leaves
-        assert_eq!(p.take_calls(), vec!["removeWord zzv"]);
+        assert_eq!(
+            p.take_calls(),
+            vec!["session.removeWordFromSpellCheckerDictionary zzv"]
+        );
         assert_eq!(journal(&p), "[\n  \"qwx\"\n]");
         release_view(
-            &*p.fake,
+            &**p.services.hosts.get::<MHostRef>().unwrap(),
             state(&p),
             &p.user_data().join("spell-ignored.json").to_string_lossy(),
             ViewId(1),
         );
-        assert_eq!(p.take_calls(), vec!["removeWord qwx"]);
+        assert_eq!(
+            p.take_calls(),
+            vec!["session.removeWordFromSpellCheckerDictionary qwx"]
+        );
         assert_eq!(journal(&p), "[]");
     }
 
@@ -602,7 +625,7 @@ mod tests {
         assert_eq!(journal(&p), "[]");
         p.take_calls();
         release_view(
-            &*p.fake,
+            &**p.services.hosts.get::<MHostRef>().unwrap(),
             state(&p),
             &p.user_data().join("spell-ignored.json").to_string_lossy(),
             ViewId(1),
@@ -625,9 +648,15 @@ mod tests {
         let removed: Vec<String> = first
             .take_calls()
             .into_iter()
-            .filter(|c| c.starts_with("removeWord"))
+            .filter(|c| c.starts_with("session.removeWord"))
             .collect();
-        assert_eq!(removed, vec!["removeWord aaa", "removeWord bbb"]);
+        assert_eq!(
+            removed,
+            vec![
+                "session.removeWordFromSpellCheckerDictionary aaa",
+                "session.removeWordFromSpellCheckerDictionary bbb"
+            ]
+        );
         // rewritten with what this process holds: nothing
         assert_eq!(journal(&first), "[]");
     }
@@ -646,7 +675,10 @@ mod tests {
             );
         }
         // not trimmed
-        assert_eq!(p.take_calls(), vec!["replaceMisspelling 2 the "]);
+        assert_eq!(
+            p.take_calls(),
+            vec!["webContents.replaceMisspelling 2 the "]
+        );
     }
 
     #[test]
@@ -687,7 +719,10 @@ mod tests {
             );
         }
         // the fake keeps the language set in its call log: one set, no later ones
-        assert_eq!(p.take_calls(), vec!["setLanguages ko,ko"]);
+        assert_eq!(
+            p.take_calls(),
+            vec!["session.setSpellCheckerLanguages 1 ko ko"]
+        );
     }
 
     fn diag_path(p: &Probe) -> std::path::PathBuf {
@@ -773,9 +808,9 @@ mod tests {
             p.take_calls(),
             vec![
                 "focus 1",
-                "sendInput 1 KeyDown",
-                "sendInput 1 Char",
-                "sendInput 1 KeyUp"
+                "webContents.sendInputEvent 1 {\"type\":\"keyDown\",\"keyCode\":\"Space\"}",
+                "webContents.sendInputEvent 1 {\"type\":\"char\",\"keyCode\":\" \"}",
+                "webContents.sendInputEvent 1 {\"type\":\"keyUp\",\"keyCode\":\"Space\"}"
             ]
         );
     }

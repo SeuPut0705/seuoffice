@@ -23,22 +23,25 @@ mod testkit;
 
 use std::rc::Rc;
 
-use shell_contract::IpcValue;
-use shell_contract::channels::Batch;
+use shell_contract::channels::{Batch, Surface};
+use shell_contract::editors::{DocumentEditors, editor_for};
 use shell_contract::hosts::{ContentsHost, DialogsHost, MainWindowHost, OsShellHost};
 use shell_contract::ipc::{RegisterBatch, RegisterError, Registry, Target};
+use shell_contract::provided::Provided;
 use shell_contract::runtime::{PathName, Services};
+use shell_contract::{IpcValue, ViewId};
 
-use hosts::{FontQueriesRef, MHostRef, PeersRef};
+use hosts::{FontQueriesRef, MHostRef};
 use state::MStateRef;
 
+pub use print::take_diagram_print_document;
 pub use spell::{context_menu_command, intercept_context_menu};
 
 /// What every handler of the batch holds
 pub(crate) struct Ctx {
     pub services: Services,
     pub host: MHostRef,
-    pub peers: PeersRef,
+    pub docs: Docs,
     pub fonts: FontQueriesRef,
     pub state: MStateRef,
     pub contents: ContentsHost,
@@ -48,12 +51,15 @@ pub(crate) struct Ctx {
 }
 
 impl Ctx {
-    fn new(services: &Services) -> Result<Self, RegisterError> {
+    fn new(services: &Services, provided: Rc<Provided>) -> Result<Self, RegisterError> {
         let hosts = &services.hosts;
         Ok(Ctx {
             services: services.clone(),
             host: hosts.need(Batch::M)?,
-            peers: hosts.need(Batch::M)?,
+            docs: Docs {
+                provided,
+                services: services.clone(),
+            },
             fonts: hosts.need(Batch::M)?,
             state: hosts.need(Batch::M)?,
             contents: hosts.need(Batch::M)?,
@@ -83,8 +89,50 @@ impl Ctx {
     }
 }
 
+/// What the document batches' editors know about a view, looked up when a
+/// handler runs (`shell_contract::editors`); core thread only
+pub(crate) struct Docs {
+    provided: Rc<Provided>,
+    services: Services,
+}
+
+impl Docs {
+    fn editor(&self, view: ViewId) -> Option<Rc<dyn DocumentEditors>> {
+        editor_for(&self.provided, view)
+    }
+
+    /// `savePathByWc.get(view)` of the app that shows the view
+    pub fn document_path(&self, view: ViewId) -> Option<String> {
+        self.editor(view)?
+            .document_path(view)
+            .map(|p| p.to_string_lossy().into_owned())
+    }
+
+    /// hwp: `pdfSaveAsByWc ?? headlessPdfByWc`, taken once
+    pub fn take_pdf_grant(&self, view: ViewId) -> Option<String> {
+        self.editor(view)?
+            .take_pdf_grant(view)
+            .map(|p| p.to_string_lossy().into_owned())
+    }
+
+    /// docs: `tornDownWcIds.has(view)`
+    pub fn torn_down(&self, view: ViewId) -> bool {
+        self.editor(view).is_some_and(|e| e.torn_down(view))
+    }
+
+    /// `sessionFor(event)` of sheets-main: a sheets view with an open
+    /// workbook (`sheetsTabs.get(view)`)
+    pub fn sheets_session(&self, view: ViewId) -> bool {
+        self.services
+            .views
+            .sender_of(view)
+            .is_some_and(|s| s.surface == Surface::Sheets)
+            && self.editor(view).is_some()
+    }
+}
+
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
-    let cx = Rc::new(Ctx::new(services)?);
+    let cx = Rc::new(Ctx::new(services, registry.provided())?);
     settings::register(registry, &cx)?;
     spell::register(registry, &cx)?;
     fonts::register(registry, &cx)?;
