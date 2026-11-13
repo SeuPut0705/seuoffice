@@ -590,6 +590,39 @@ const CHARTS: Array<{ name: string; spTree: string; ctx?: Record<string, unknown
       spTree: many(gf(CHART_URI, chartRef('rId12')), gf(CHARTEX_URI, cxRef('rId8'))),
       ctx: { ...CHART_CTX, theme: undefined },
     },
+    {
+      name: 'charts hidden from AI by their own text or their overlay text',
+      spTree: many(
+        gf(CHART_URI, chartRef('rId20'), { cNvPr: '<p:cNvPr id="9" name="Overlay hidden"/>' }),
+        gf(CHART_URI, chartRef('rId21'), { cNvPr: '<p:cNvPr id="10" name="Both hidden"/>' }),
+        gf(CHART_URI, chartRef('rId22'), { cNvPr: '<p:cNvPr id="11" name="Plain"/>' }),
+      ),
+      ctx: {
+        ...CHART_CTX,
+        chartXmls: [
+          ['rId20', BAR],
+          [
+            'rId21',
+            BAR.replace(
+              '<c:autoTitleDeleted val="1"/>',
+              `<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr lang="en-US">${REDACT}</a:rPr><a:t>T</a:t></a:r></a:p></c:rich></c:tx></c:title>`,
+            ),
+          ],
+          ['rId22', BAR],
+        ],
+        chartUserShapes: ['rId20', 'rId21'].map((rid) => [
+          rid,
+          userShapes(
+            abs(
+              from('0.5', '0.1') +
+                cdrSp('<a:prstGeom prst="rect"/>', {
+                  tx: `<cdr:txBody><a:bodyPr/><a:p><a:r><a:rPr lang="en-US">${REDACT.replace('face', 'overlay')}</a:rPr><a:t>Note</a:t></a:r></a:p></cdr:txBody>`,
+                }),
+            ),
+          ),
+        ]),
+      },
+    },
   ]
 
 // ── tables, unknown and OLE ────────────────────────────────────────────
@@ -928,6 +961,34 @@ const SMARTART: Array<{
     name: 'smartart drawing without a theme',
     spTree: gf(DIAGRAM_URI, RELS),
     ctx: { ...SMARTART_CTX, theme: undefined },
+  },
+  {
+    // every run and picture drawn for the diagram is withheld under the data's first label
+    name: 'smartart whose data part holds a hidden run, drawn and laid out',
+    spTree: many(
+      gf(DIAGRAM_URI, relIds('r:dm="rId2" r:lo="rId3" r:cs="rId5"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing" r:lo="rId3" r:cs="rId5"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdStub" r:lo="rIdSlash"')),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdEmptyData"')),
+    ),
+    ctx: {
+      ...SMARTART_CTX,
+      diagramDatas: [
+        ['rId2', DATA.replace('<a:rPr lang="en-US"/>', `<a:rPr lang="en-US">${REDACT}</a:rPr>`)],
+        [
+          'rIdNoDrawing',
+          DATA.replace(
+            '<a:rPr lang="en-US"/>',
+            `<a:rPr>${REDACT.replace('label="face"', "label=''")}</a:rPr>`,
+          ),
+        ],
+        [
+          'rIdStub',
+          DATA.replace('</dgm:ptLst>', '<!-- &#60;x:redact label="ref"/> --></dgm:ptLst>'),
+        ],
+        ['rIdEmptyData', ''],
+      ],
+    },
   },
 ]
 

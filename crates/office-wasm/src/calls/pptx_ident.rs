@@ -18,8 +18,9 @@ use pptx_engine::model3d::{
     sync_model3d_frame,
 };
 use pptx_engine::redaction_xml::{
-    REDACT_EL, REDACT_EXT_URI, REDACT_NS_WRITTEN, REDACT_PREFIX, has_redact_ext_in,
-    read_redact_label, redact_ext_xml, set_redact_ext, strip_redact_ext, sync_redact_ext,
+    REDACT_EL, REDACT_EXT_URI, REDACT_NS_WRITTEN, REDACT_PREFIX, diagram_data_redact_label,
+    has_redact_ext_in, read_redact_label, redact_ext_xml, set_redact_ext, strip_redact_ext,
+    sync_redact_ext,
 };
 use pptx_engine::types::{ByteAnchor, Slide, SlideElement, TextElement};
 use pptx_engine::xml_utils::xml_parse_object as parse_object;
@@ -160,6 +161,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "redaction-xml.hasRedactExtIn" => {
             value(has_redact_ext_in(text).map_err(|error| error.to_string())?)
         }
+        "redaction-xml.diagramDataRedactLabel" => optional(diagram_data_redact_label(Some(text))?),
         "redaction-xml.syncRedactExt" => {
             let label: Option<String> = arg(args, "label")?;
             value(

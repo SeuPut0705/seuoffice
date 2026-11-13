@@ -19,8 +19,8 @@ import {
   storedZip,
   XLSX_CONTENT_TYPE,
   type ChartWorkbookData,
-} from '../../packages/pptx-engine/src/chart-workbook'
-import { glbBounds, glbJson } from '../../packages/pptx-engine/src/glb-bounds'
+} from './reference/chart-workbook'
+import { glbBounds, glbJson } from './reference/glb-bounds'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 

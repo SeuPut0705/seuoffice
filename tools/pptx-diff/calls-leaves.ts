@@ -3,20 +3,20 @@
 // Rust side answers in crates/office-wasm/src/calls/pptx_leaves.rs to
 // `pptxLeaves.<module>.<TypeScript name>`.
 import { XMLParser } from 'fast-xml-parser'
-import { crc32 } from '../../packages/pptx-engine/src/crc32'
+import { crc32 } from './reference/crc32'
 import {
   namedActionAttr,
   namedActionOf,
   NAMED_ACTIONS,
-} from '../../packages/pptx-engine/src/named-action'
-import { scanSlide } from '../../packages/pptx-engine/src/scan'
+} from './reference/named-action'
+import { scanSlide } from './reference/scan'
 import {
   canListSlide,
   nextSlideId,
   withSlideListed,
   withSlideUnlisted,
-} from '../../packages/pptx-engine/src/slide-ids'
-import { tableRowGridCols } from '../../packages/pptx-engine/src/table-grid'
+} from './reference/slide-ids'
+import { tableRowGridCols } from './reference/table-grid'
 import {
   asXmlNode,
   attributeOf,
@@ -27,6 +27,7 @@ import {
   defaultContentTypeFor,
   elementRange,
   percentFraction,
+  canonicalXml,
   escapeXmlAttr,
   escapeXmlText,
   hasContentTypeOverride,
@@ -35,7 +36,7 @@ import {
   rootPrefixOf,
   withRelationshipIds,
   xmlArray,
-} from '../../packages/pptx-engine/src/xml-utils'
+} from './reference/xml-utils'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 /**
@@ -237,6 +238,31 @@ const DECODE_TEXTS = [
   '\u{1F600}&#x1f600;\uD55C',
 ]
 
+/** Comments, CDATA sections and end tags with white space before their `>`, among other markup. */
+const CANONICAL_TEXTS = [
+  '',
+  '<a:p><a:r><a:t>plain</a:t></a:r></a:p>',
+  '<a:p><!-- </a:p> --><a:r><a:t>x</a:t></a:r></a:p>',
+  '<a:p><a:r><a:t><![CDATA[<b> & </a:r> "q"]]></a:t></a:r></a:p>',
+  '<a:t><![CDATA[]]></a:t>',
+  '<a:t><![CDATA[a]]><![CDATA[b]]]]></a:t>',
+  '<a:p><a:r><a:t>x</a:t></a:r ></a:p\t>',
+  '<a:p><a:r><a:t>x</a:t></a:r\r\n></a:p \u00A0\uFEFF>',
+  '<a:p></a:p\u0085>',
+  '<a:p x=">" y=\'>\'></a:p >',
+  '<a:p x="</a:p >"></a:p>',
+  '<!-- unterminated <a:p></a:p >',
+  '<![CDATA[ unterminated </a:p >',
+  '<a:t>a</a:t><!--x--><!--y-->',
+  '<!---->',
+  '<?xml version="1.0"?><!DOCTYPE x><a:p></a:p >',
+  '<a:t>\u{1F600}<![CDATA[\u{1F600}<]]></a:t></a:t >',
+  '< /a:p>',
+  '</ >',
+  '</a:p >< ',
+  '<a:t>"unclosed</a:t >',
+]
+
 const ESCAPE_TEXTS = [
   '',
   'plain',
@@ -294,7 +320,7 @@ const P_NS = 'http://schemas.openxmlformats.org/presentationml/2006/main'
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
 const ATTRIBUTE_ELEMENTS = [
   '<a a="1" b="2"/>',
-  "<a a='1' b=\"2\">",
+  '<a a=\'1\' b="2">',
   '<a\ta\n=\r"1"/>',
   '<a a = "x&amp;y&#38;z&#x26;"/>',
   '<a a="1" a="2"/>',
@@ -326,7 +352,7 @@ const ROOT_XMLS = [
   '<?xml version="1.0"?>',
   '<sld',
   '',
-  '<p:sld xmlns:p=\'a"b\'>',
+  "<p:sld xmlns:p='a\"b'>",
   `<sld xmlns:="${P_NS}" xmlnsp="${P_NS}" xmlns:p:q="${P_NS}"/>`,
   `<p:sld xmlns:p="${P_NS}" xmlns:p="urn:x"/>`,
   `<s:sld xmlns:s="">`,
@@ -365,7 +391,7 @@ const REL_XMLS = [
   '<a:blip xr:embed="rId1" r:embed2="rId1"/>',
   '<a:blip r:embed="r&amp;1"/>',
   '<a:blip r:embed="constructor" r:id="__proto__"/>',
-  '<a:blip r:embed=\'it"s\'/>',
+  "<a:blip r:embed='it\"s'/>",
   '<a:blip r:embed="rId1" a:embed="rId1"/>',
   '<a:blip r:embed=""/>',
   '<a:blip r:embed=rId1/>',
@@ -470,7 +496,12 @@ const LISTED_PRESENTATIONS = [
   presentation(sldIds('<p:sldId id="256" r:id="rId2"/>', '<p:sldId id="257" r:id="rId3"/>')),
   presentation(sldIds("<p:sldId id='256' r:id='rId2'/>", '<p:sldId id="257" r:id = "rId3"/>')),
   presentation(sldIds('<p:sldId id="256" r:id="rId&#50;"/>', '<p:sldId id="257" r:id="rId3"/>')),
-  presentation(sldIds('<p:sldId id="256" r:id="rId2"><p:extLst/></p:sldId>', '<p:sldId id="257" r:id="rId3"/>')),
+  presentation(
+    sldIds(
+      '<p:sldId id="256" r:id="rId2"><p:extLst/></p:sldId>',
+      '<p:sldId id="257" r:id="rId3"/>',
+    ),
+  ),
   presentation(sldIds('<p:sldId id="256" r:id="rId2"><p:ext>$&</p:ext></p:sldId >')),
   presentation('<p:sldIdLst />'),
   presentation('<p:sldIdLst></p:sldIdLst >'),
@@ -478,9 +509,13 @@ const LISTED_PRESENTATIONS = [
   presentation('<sldIdLst><sldId id="256" r:id="rId2"/></sldIdLst>'),
   presentation('<x:sldIdLst><x:sldId id="256" r:id="rId2"/></x:sldIdLst>'),
   presentation('<p:sldIdLst><p:sldId id="256" r:id="rId2"/>'),
-  presentation(sldIds('<p:sldId id="256" r:id="rId2"/>') + sldIds('<p:sldId id="300" r:id="rId3"/>')),
+  presentation(
+    sldIds('<p:sldId id="256" r:id="rId2"/>') + sldIds('<p:sldId id="300" r:id="rId3"/>'),
+  ),
   presentation(sldIds('<p:sldId id="2147483647" r:id="rId2"/>', '<p:sldId id="2147483646"/>')),
-  presentation(sldIds('<p:sldId id="256" xr:id="rId2"/>', '<p:sldId id="257" r:id="rId2" r:id="rId3"/>')),
+  presentation(
+    sldIds('<p:sldId id="256" xr:id="rId2"/>', '<p:sldId id="257" r:id="rId2" r:id="rId3"/>'),
+  ),
   presentation(sldIds('<p:sldId id="256" r:id=\'a"b\'/>', '<p:sldId id="257" r:id="rId3"/>')),
   presentation(sldIds('<p:sldId id="256" r:id="r&amp;1"/>')),
   presentation(sldIds('<p:sldId id="256" r:id="constructor"/>')),
@@ -580,8 +615,24 @@ export const LEAVES: CallSpec[] = [
     call: (_text, args) => percentFraction(args.raw),
     mutation: 'none',
     built: [
-      ...['50%', '50000', '-25%', ' 7% ', '%', '', 'abc', '1e3', '1e999%', 'Infinity', '0', '-0', '100000', '12.5%', '50 %', '0x10']
-        .map((raw) => ({ args: { raw } })),
+      ...[
+        '50%',
+        '50000',
+        '-25%',
+        ' 7% ',
+        '%',
+        '',
+        'abc',
+        '1e3',
+        '1e999%',
+        'Infinity',
+        '0',
+        '-0',
+        '100000',
+        '12.5%',
+        '50 %',
+        '0x10',
+      ].map((raw) => ({ args: { raw } })),
       { args: { raw: 75000 } },
       { args: { raw: null } },
       { args: {} },
@@ -599,6 +650,12 @@ export const LEAVES: CallSpec[] = [
       })),
     ],
     built: DECODE_TEXTS.map((text) => ({ text })),
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.canonicalXml',
+    call: (text) => canonicalXml(text),
+    fromDocument: (parts) => [...partsMatching(parts, SLIDE_PART)].map((text) => ({ text })),
+    built: CANONICAL_TEXTS.map((text) => ({ text })),
   },
   {
     fn: 'pptxLeaves.xml-utils.escapeXmlText',
@@ -686,14 +743,24 @@ export const LEAVES: CallSpec[] = [
         args: { ext },
       }))
     },
-    built: [...EXTS, 'JPEG', 'Gif', 'pn&#103;', 'toString', '__proto__', 'constructor'].flatMap((ext) => [
-      { text: CONTENT_TYPES, args: { ext } },
-      { text: CT(''), args: { ext } },
-      { text: CT('<Default Extension="p&#110;g" ContentType="a&amp;b"/>'), args: { ext } },
-      { text: CT("<Default Extension='toString' ContentType='t'/><Default Extension=\"__proto__\"/>"), args: { ext } },
-      { text: CT('<Default Extension="PnG"/><Default Extension="png" ContentType="second"/>'), args: { ext } },
-      { text: CT('<Default Extension="png" ContentType="image/png"'), args: { ext } },
-    ]),
+    built: [...EXTS, 'JPEG', 'Gif', 'pn&#103;', 'toString', '__proto__', 'constructor'].flatMap(
+      (ext) => [
+        { text: CONTENT_TYPES, args: { ext } },
+        { text: CT(''), args: { ext } },
+        { text: CT('<Default Extension="p&#110;g" ContentType="a&amp;b"/>'), args: { ext } },
+        {
+          text: CT(
+            "<Default Extension='toString' ContentType='t'/><Default Extension=\"__proto__\"/>",
+          ),
+          args: { ext },
+        },
+        {
+          text: CT('<Default Extension="PnG"/><Default Extension="png" ContentType="second"/>'),
+          args: { ext },
+        },
+        { text: CT('<Default Extension="png" ContentType="image/png"'), args: { ext } },
+      ],
+    ),
   },
   {
     fn: 'pptxLeaves.xml-utils.attributeOf',
@@ -705,7 +772,10 @@ export const LEAVES: CallSpec[] = [
       })),
     built: [
       ...ATTRIBUTE_ELEMENTS.flatMap((text) =>
-        ['a', 'r:id', 'name', 'Id', 'x', 'id', 'xmlns:p', ''].map((name) => ({ text, args: { name } })),
+        ['a', 'r:id', 'name', 'Id', 'x', 'id', 'xmlns:p', ''].map((name) => ({
+          text,
+          args: { name },
+        })),
       ),
     ],
   },
@@ -727,7 +797,12 @@ export const LEAVES: CallSpec[] = [
     fromDocument: (parts) =>
       partsMatching(parts, SLIDE_PART)
         .slice(0, 3)
-        .flatMap((text) => ['p:spTree', 'p:sp', 'p:cSld', 'a:p', 'p:nvSpPr'].map((name) => ({ text, args: { name } }))),
+        .flatMap((text) =>
+          ['p:spTree', 'p:sp', 'p:cSld', 'a:p', 'p:nvSpPr'].map((name) => ({
+            text,
+            args: { name },
+          })),
+        ),
     built: RANGE_XMLS.flatMap((text) =>
       [
         { name: 'a:t' },
@@ -803,7 +878,8 @@ export const LEAVES: CallSpec[] = [
   },
   {
     fn: 'pptxLeaves.slide-ids.withSlideListed',
-    call: (text, args) => withSlideListed(text, args.rid as string, args.afterRid as string | undefined),
+    call: (text, args) =>
+      withSlideListed(text, args.rid as string, args.afterRid as string | undefined),
     fromDocument: (parts) => {
       const text = parts.get('ppt/presentation.xml')
       return text === undefined ? [] : [{ text, args: { rid: 'rId99' } }]

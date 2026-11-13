@@ -1,0 +1,3522 @@
+[
+ {
+  "mod": "align",
+  "name": "alignRects",
+  "kind": "function",
+  "params": [
+   "rects:AlignRect[]",
+   "kind:AlignKind",
+   "containerRect:AlignRect | null"
+  ],
+  "ret": "{ x: number; y: number; }[]"
+ },
+ {
+  "mod": "align",
+  "name": "distributeRects",
+  "kind": "function",
+  "params": [
+   "rects:AlignRect[]",
+   "kind:DistributeKind"
+  ],
+  "ret": "{ x: number; y: number; }[]"
+ },
+ {
+  "mod": "animation",
+  "name": "isMediaEffect",
+  "kind": "function",
+  "params": [
+   "effect:AnimEffectKind"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "animation",
+  "name": "animClassOf",
+  "kind": "function",
+  "params": [
+   "effect:AnimEffectKind"
+  ],
+  "ret": "AnimClass"
+ },
+ {
+  "mod": "animation",
+  "name": "elementSpid",
+  "kind": "function",
+  "params": [
+   "el:SlideElement"
+  ],
+  "ret": "number | null"
+ },
+ {
+  "mod": "animation",
+  "name": "buildTimingXml",
+  "kind": "function",
+  "params": [
+   "anims:SlideAnimation[]"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "animation",
+  "name": "patchSlideTimingXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string",
+   "anims:SlideAnimation[]"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "animation",
+  "name": "readSlideTimingXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string"
+  ],
+  "ret": "SlideAnimation[]"
+ },
+ {
+  "mod": "animation",
+  "name": "patchSlideTimingIncrementalXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string",
+   "anims:SlideAnimation[]"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "animation",
+  "name": "setSlideAnimations",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "anims:SlideAnimation[]"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "animation",
+  "name": "getSlideAnimations",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "SlideAnimation[]"
+ },
+ {
+  "mod": "animation",
+  "name": "pruneTimingForSpids",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "spids:ReadonlySet<number>"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "animation",
+  "name": "cNvPrIdsInXml",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "Set<number>"
+ },
+ {
+  "mod": "animation",
+  "name": "ANIM_DIRECTIONS",
+  "kind": "const",
+  "type": "readonly AnimDirection[]"
+ },
+ {
+  "mod": "animation",
+  "name": "ANIM_TRIGGERS",
+  "kind": "const",
+  "type": "readonly AnimTrigger[]"
+ },
+ {
+  "mod": "animation",
+  "name": "ANIM_EFFECTS",
+  "kind": "const",
+  "type": "readonly AnimEffectKind[]"
+ },
+ {
+  "mod": "animation",
+  "name": "DEFAULT_MOTION_PATH",
+  "kind": "const",
+  "type": "\"M 0 0 L 0.25 0\""
+ },
+ {
+  "mod": "background-promote",
+  "name": "promoteSlideBackground",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "size:SlideSize"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "background-promote",
+  "name": "isBackgroundLikeElement",
+  "kind": "function",
+  "params": [
+   "el:SlideElement",
+   "size:SlideSize"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "blank",
+  "name": "createBlankPptx",
+  "kind": "function",
+  "params": [],
+  "ret": "Promise<Uint8Array<ArrayBufferLike>>"
+ },
+ {
+  "mod": "blank",
+  "name": "BLANK_SLIDE_XML",
+  "kind": "const",
+  "type": "string"
+ },
+ {
+  "mod": "builtin-layouts",
+  "name": "shouldOfferBuiltinLayouts",
+  "kind": "function",
+  "params": [
+   "layouts:{ name: string; placeholders: unknown[]; }[]"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "builtin-layouts",
+  "name": "builtinLayoutInfos",
+  "kind": "function",
+  "params": [
+   "size:SlideSize",
+   "existingNames:Set<string>"
+  ],
+  "ret": "SlideLayoutInfo[]"
+ },
+ {
+  "mod": "builtin-layouts",
+  "name": "ensureBuiltinLayout",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "size:SlideSize",
+   "key:string"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "builtin-layouts",
+  "name": "BUILTIN_LAYOUT_PREFIX",
+  "kind": "const",
+  "type": "\"builtin:\""
+ },
+ {
+  "mod": "builtin-layouts",
+  "name": "BUILTIN_LAYOUTS",
+  "kind": "const",
+  "type": "BuiltinLayoutDef[]"
+ },
+ {
+  "mod": "chart-insert",
+  "name": "buildChartSpaceXml",
+  "kind": "function",
+  "params": [
+   "opts:NewChartOptions",
+   "externalDataRId:string | undefined"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "chart-insert",
+  "name": "writeChartWorkbook",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "chartPath:string",
+   "opts:Pick<NewChartOptions, \"kind\" | \"categories\" | \"series\">"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "chart-insert",
+  "name": "addChart",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:NewChartOptions"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "chartWorkbookParts",
+  "kind": "function",
+  "params": [
+   "__0:ChartWorkbookData"
+  ],
+  "ret": "Record<string, string>"
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "storedZip",
+  "kind": "function",
+  "params": [
+   "files:Record<string, string>"
+  ],
+  "ret": "Uint8Array<ArrayBufferLike>"
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "chartWorkbookXlsx",
+  "kind": "function",
+  "params": [
+   "data:ChartWorkbookData"
+  ],
+  "ret": "Uint8Array<ArrayBufferLike>"
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "CHART_WORKBOOK_REL_TYPE",
+  "kind": "const",
+  "type": "\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/package\""
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "XLSX_CONTENT_TYPE",
+  "kind": "const",
+  "type": "\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\""
+ },
+ {
+  "mod": "chart-workbook",
+  "name": "colLetter",
+  "kind": "function",
+  "params": [
+   "i:number"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "chart",
+  "name": "parseChartXml",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "theme:Theme | undefined",
+   "resolveFill:((spPr: unknown) => Fill | undefined) | undefined"
+  ],
+  "ret": "ChartModel | null"
+ },
+ {
+  "mod": "chartex",
+  "name": "parseChartExXml",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "theme:Theme | undefined"
+  ],
+  "ret": "ChartModel | null"
+ },
+ {
+  "mod": "color",
+  "name": "resolveColorNode",
+  "kind": "function",
+  "params": [
+   "node:unknown",
+   "theme:Theme | undefined",
+   "phClr:string | undefined"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "color",
+  "name": "applyColorMods",
+  "kind": "function",
+  "params": [
+   "hex:string",
+   "mods:XmlNode | undefined"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "color",
+  "name": "hexToRgb",
+  "kind": "function",
+  "params": [
+   "hex:string"
+  ],
+  "ret": "{ r: number; g: number; b: number; }"
+ },
+ {
+  "mod": "color",
+  "name": "scaleLuminance",
+  "kind": "function",
+  "params": [
+   "hex:string",
+   "factor:number"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "comments",
+  "name": "getSlideComments",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "slidePath:string"
+  ],
+  "ret": "SlideComment[]"
+ },
+ {
+  "mod": "comments",
+  "name": "addSlideComment",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:{ author: string; initials?: string | undefined; text: string; }"
+  ],
+  "ret": "SlideComment | null"
+ },
+ {
+  "mod": "comments",
+  "name": "deleteSlideComment",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "ref:{ authorId: number; idx: number; }"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "crc32",
+  "name": "crc32",
+  "kind": "function",
+  "params": [
+   "buf:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "custgeom",
+  "name": "evalGuides",
+  "kind": "function",
+  "params": [
+   "gds:{ name: string; fmla: string; }[]",
+   "w:number",
+   "h:number"
+  ],
+  "ret": "Record<string, number>"
+ },
+ {
+  "mod": "custgeom",
+  "name": "parseCustGeom",
+  "kind": "function",
+  "params": [
+   "shapeXml:string",
+   "shapeW:number",
+   "shapeH:number"
+  ],
+  "ret": "CustomGeometry | undefined"
+ },
+ {
+  "mod": "custgeom",
+  "name": "validCustGeomPath",
+  "kind": "function",
+  "params": [
+   "p:unknown"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "custgeom",
+  "name": "custGeomXml",
+  "kind": "function",
+  "params": [
+   "p:CustGeomPath"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "custgeom",
+  "name": "CUST_GEOM_PT_COUNT",
+  "kind": "const",
+  "type": "Record<\"M\" | \"L\" | \"C\" | \"Q\" | \"Z\", number>"
+ },
+ {
+  "mod": "dgm-hier",
+  "name": "parseHierConstraints",
+  "kind": "function",
+  "params": [
+   "layoutXml:string | undefined"
+  ],
+  "ret": "HierConstraints"
+ },
+ {
+  "mod": "dgm-hier",
+  "name": "layoutHierTree",
+  "kind": "function",
+  "params": [
+   "roots:HierTreeNode[]",
+   "cons:HierConstraints",
+   "frameCx:number",
+   "frameCy:number"
+  ],
+  "ret": "{ boxes: HierBox[]; lines: { x: number; y: number; cx: number; cy: number; to?: HierTreeNode | undefined; }[]; boxW: number; } | null"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "eotToSfnt",
+  "kind": "function",
+  "params": [
+   "bytes:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "Uint8Array<ArrayBufferLike> | null"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "demandKey",
+  "kind": "function",
+  "params": [
+   "typeface:string",
+   "style:EmbeddedFontStyle"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "editedGlyphDemand",
+  "kind": "function",
+  "params": [
+   "deck:{ slides: Slide[]; }"
+  ],
+  "ret": "GlyphDemand | null"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "sfntCmapLookup",
+  "kind": "function",
+  "params": [
+   "sfnt:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "((cp: number) => boolean) | null"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "staleEmbeddedTypefaces",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "demand:GlyphDemand"
+  ],
+  "ret": "string[]"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "stripEmbeddedFonts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "typefaces:ReadonlySet<string> | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "stripStaleEmbeddedFonts",
+  "kind": "function",
+  "params": [
+   "deck:{ slides: Slide[]; }",
+   "archive:PackageArchive"
+  ],
+  "ret": "string[]"
+ },
+ {
+  "mod": "embedded-fonts",
+  "name": "listEmbeddedFonts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive"
+  ],
+  "ret": "EmbeddedFontFace[]"
+ },
+ {
+  "mod": "format-brush",
+  "name": "extractFormat",
+  "kind": "function",
+  "params": [
+   "el:TextElement"
+  ],
+  "ret": "CopiedFormat"
+ },
+ {
+  "mod": "format-brush",
+  "name": "applyFormat",
+  "kind": "function",
+  "params": [
+   "fmt:CopiedFormat",
+   "targetType:\"text\" | \"shape\" | \"picture\""
+  ],
+  "ret": "FormatPatchResult"
+ },
+ {
+  "mod": "generate",
+  "name": "patchTextElementXml",
+  "kind": "function",
+  "params": [
+   "el:TextElement",
+   "originalXml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchParagraphPPrXml",
+  "kind": "function",
+  "params": [
+   "paraXml:string",
+   "p:Paragraph",
+   "which:PPrDirty"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchElementPPr",
+  "kind": "function",
+  "params": [
+   "el:TextElement",
+   "xml:string",
+   "which:PPrDirty"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "generate",
+  "name": "szAttr",
+  "kind": "function",
+  "params": [
+   "pt:number"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "clampInt",
+  "kind": "function",
+  "params": [
+   "v:number",
+   "min:number",
+   "max:number"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "generate",
+  "name": "hangulLang",
+  "kind": "function",
+  "params": [
+   "text:string"
+  ],
+  "ret": "\"ko-KR\" | undefined"
+ },
+ {
+  "mod": "generate",
+  "name": "tagHangulRun",
+  "kind": "function",
+  "params": [
+   "run:TextRun"
+  ],
+  "ret": "TextRun"
+ },
+ {
+  "mod": "generate",
+  "name": "tagHangulParagraphs",
+  "kind": "function",
+  "params": [
+   "paragraphs:Paragraph[]"
+  ],
+  "ret": "Paragraph[]"
+ },
+ {
+  "mod": "generate",
+  "name": "isConnectorXml",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "generate",
+  "name": "rebuildTxBody",
+  "kind": "function",
+  "params": [
+   "el:TextElement",
+   "originalXml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "generateParagraphXml",
+  "kind": "function",
+  "params": [
+   "p:Paragraph"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "alternateContentBranches",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "AlternateContentBranch[] | null"
+ },
+ {
+  "mod": "generate",
+  "name": "topLevelChildren",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "from:number",
+   "to:number"
+  ],
+  "ret": "{ name: string; start: number; end: number; }[]"
+ },
+ {
+  "mod": "generate",
+  "name": "patchElementFill",
+  "kind": "function",
+  "params": [
+   "originalXml:string",
+   "fill:FillPatch"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchElementStroke",
+  "kind": "function",
+  "params": [
+   "originalXml:string",
+   "stroke:StrokePatch | null"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchPictureSrcRect",
+  "kind": "function",
+  "params": [
+   "originalXml:string",
+   "srcRect:{ l: number; t: number; r: number; b: number; } | null"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchSlideBackgroundXml",
+  "kind": "function",
+  "params": [
+   "bodyPrefix:string",
+   "fill:BackgroundFillPatch"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "removeSlideBackgroundXml",
+  "kind": "function",
+  "params": [
+   "bodyPrefix:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchSlideShowMasterSpXml",
+  "kind": "function",
+  "params": [
+   "bodyPrefix:string",
+   "hidden:boolean"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchSlideTransitionXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string",
+   "kind:SlideTransitionKind"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "readSlideTransitionXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string"
+  ],
+  "ret": "SlideTransitionKind"
+ },
+ {
+  "mod": "generate",
+  "name": "patchSlideAdvanceTimeXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string",
+   "ms:number | null"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "readSlideAdvanceTimeXml",
+  "kind": "function",
+  "params": [
+   "bodySuffix:string"
+  ],
+  "ret": "number | null"
+ },
+ {
+  "mod": "generate",
+  "name": "patchSlideHiddenXml",
+  "kind": "function",
+  "params": [
+   "bodyPrefix:string",
+   "hidden:boolean"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "readSlideHiddenXml",
+  "kind": "function",
+  "params": [
+   "bodyPrefix:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "generate",
+  "name": "generateXfrmXml",
+  "kind": "function",
+  "params": [
+   "t:Transform",
+   "tag:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchElementXfrm",
+  "kind": "function",
+  "params": [
+   "el:SlideElement",
+   "originalXml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "patchBodyPrAutofit",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "fontScale:number",
+   "lnSpcReduction:number | undefined"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "generate",
+  "name": "COORD_MAX",
+  "kind": "const",
+  "type": "27273042316900"
+ },
+ {
+  "mod": "generate",
+  "name": "clampEmu",
+  "kind": "function",
+  "params": [
+   "v:number"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "generate",
+  "name": "clampPosEmu",
+  "kind": "function",
+  "params": [
+   "v:number"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "generate",
+  "name": "TRANSITION_KINDS",
+  "kind": "const",
+  "type": "readonly [\"none\", \"morph\", \"fade\", \"push\", \"wipe\", \"split\", \"circle\", \"cover\", \""
+ },
+ {
+  "mod": "glb-bounds",
+  "name": "glbJson",
+  "kind": "function",
+  "params": [
+   "bytes:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "GltfJson | null"
+ },
+ {
+  "mod": "glb-bounds",
+  "name": "glbBounds",
+  "kind": "function",
+  "params": [
+   "bytes:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "GlbBounds | null"
+ },
+ {
+  "mod": "headerfooter",
+  "name": "applyHeaderFooter",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "opts:HeaderFooterOptions",
+   "slideIndexes:number[] | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "headerfooter",
+  "name": "readHeaderFooter",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "{ footer: string | null; slideNum: boolean; date: string | null; }"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "setElementLink",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "elementId:string",
+   "target:LinkTarget | null"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "decodeRunLink",
+  "kind": "function",
+  "params": [
+   "s:string"
+  ],
+  "ret": "LinkTarget | null"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "encodeRunLink",
+  "kind": "function",
+  "params": [
+   "target:LinkTarget"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "ensureRunLinkRels",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "paragraphs:{ runs: { hyperlink?: string | undefined; hyperlinkRId?: string | undefined; hyperlinkAction?: string | undefined; }[]; }[]"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "getRunLinks",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number"
+  ],
+  "ret": "{ elementId: string; paraIndex: number; runIndex: number; target: LinkTarget; }[]"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "getElementLink",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "elementId:string"
+  ],
+  "ret": "LinkTarget | null"
+ },
+ {
+  "mod": "hyperlink",
+  "name": "getSlideLinks",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number"
+  ],
+  "ret": "{ elementId: string; target: LinkTarget; }[]"
+ },
+ {
+  "mod": "identity",
+  "name": "withFreshCreationIds",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "identity",
+  "name": "elementDurableId",
+  "kind": "function",
+  "params": [
+   "el:SlideElement"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "identity",
+  "name": "slideDurableId",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "identity",
+  "name": "elementCNvPrId",
+  "kind": "function",
+  "params": [
+   "el:SlideElement"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "identity",
+  "name": "matchesElementRef",
+  "kind": "function",
+  "params": [
+   "el:SlideElement",
+   "id:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "identity",
+  "name": "ensureCreationId",
+  "kind": "function",
+  "params": [
+   "el:SlideElement"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "identity",
+  "name": "groupChildDurableId",
+  "kind": "function",
+  "params": [
+   "grp:SlideElement",
+   "child:SlideElement"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "index",
+  "name": "openPptx",
+  "kind": "function",
+  "params": [
+   "bytes:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "Promise<OpenedPptx>"
+ },
+ {
+  "mod": "index",
+  "name": "reparseDeck",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx"
+  ],
+  "ret": "OpenedPptx"
+ },
+ {
+  "mod": "index",
+  "name": "savePptx",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx"
+  ],
+  "ret": "Promise<Uint8Array<ArrayBufferLike>>"
+ },
+ {
+  "mod": "index",
+  "name": "savePptxToFile",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "filePath:string"
+  ],
+  "ret": "Promise<void>"
+ },
+ {
+  "mod": "index",
+  "name": "commitSaved",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "patchSlideXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "index",
+  "name": "patchedElementXml",
+  "kind": "function",
+  "params": [
+   "el:SlideElement"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideBackground",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "fill:string | GradientFillPatch"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideBackgroundImage",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "source:{ bytes: Uint8Array<ArrayBufferLike>; ext: string; } | { mediaPath: string; }",
+   "tile:boolean | undefined"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "index",
+  "name": "resetSlideBackground",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideBgGraphicsHidden",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "hidden:boolean"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "editPictureSrcRect",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "sourceId:string",
+   "srcRect:{ l: number; t: number; r: number; b: number; } | null"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setShapePresetGeometry",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "prst:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setShapeCustomGeometry",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "geom:CustGeomPath"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setShapeAdjustValues",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "adjust:Record<string, number>"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementTextAnchor",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "anchor:\"top\" | \"bottom\" | \"middle\""
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "autofitGeneratedTextBoxes",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "index",
+  "name": "setElementTextBodyProps",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "patch:TextBodyPropsPatch"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementEffects",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "patch:EffectsPatch"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementFill",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "elementId:string",
+   "fill:string | GradientFillPatch",
+   "opts:{ groupId?: string | undefined; }"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementImageFill",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "elementId:string",
+   "source:{ bytes: Uint8Array<ArrayBufferLike>; ext: string; } | { mediaPath: string; }",
+   "opts:{ tile?: boolean | undefined; groupId?: string | undefined; }"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "index",
+  "name": "setElementRedaction",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "sourceId:string",
+   "label:string | null"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setPictureOpacity",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "sourceId:string",
+   "opacity:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "replacePictureBytes",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "sourceId:string",
+   "bytes:Uint8Array<ArrayBufferLike>",
+   "ext:string",
+   "opts:{ keepSrcRect?: boolean | undefined; } | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "duplicateSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "sourceIndex:number",
+   "opts:{ clearText?: boolean | undefined; } | undefined"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "copySlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "sourceIndex:number"
+  ],
+  "ret": "SlideBundle | null"
+ },
+ {
+  "mod": "index",
+  "name": "pasteSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "afterIndex:number",
+   "bundle:SlideBundle",
+   "opts:{ keepSourceFormatting?: boolean | undefined; } | undefined"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "insertBlankSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "sourceIndex:number"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "mergeSlideFromPptx",
+  "kind": "function",
+  "params": [
+   "target:OpenedPptx",
+   "sourceBytes:Uint8Array<ArrayBufferLike>",
+   "opts:MergeSlideOptions"
+  ],
+  "ret": "Promise<Slide | null>"
+ },
+ {
+  "mod": "index",
+  "name": "extractMergeSlideSource",
+  "kind": "function",
+  "params": [
+   "sourceBytes:Uint8Array<ArrayBufferLike>"
+  ],
+  "ret": "Promise<MergeSlideSource | null>"
+ },
+ {
+  "mod": "index",
+  "name": "mergeSlideFromSource",
+  "kind": "function",
+  "params": [
+   "target:OpenedPptx",
+   "source:MergeSlideSource",
+   "opts:MergeSlideOptions"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "insertSlideWithLayout",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "sourceIndex:number",
+   "layoutPath:string"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "deleteSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "index:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "reorderElement",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "dir:ReorderDirection"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "materializeSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "connectionSiteForSide",
+  "kind": "function",
+  "params": [
+   "el:SlideElement",
+   "side:ConnectionSide"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "index",
+  "name": "updateConnectorsForMoved",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "movedIds:string[]"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "index",
+  "name": "setElementConnection",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "patch:{ start?: { id: number; idx: number; } | null | undefined; end?: { id: number; idx: number; } | null | undefined; }"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideLayout",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "layoutPath:string"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "resetSlideLayout",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideSize",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "cx:number",
+   "cy:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "appendRawElements",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "xmls:string[]"
+  ],
+  "ret": "{ slide: Slide; elementIds: string[]; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "addTable",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:NewTableOptions"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "editTableCellText",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "row:number",
+   "col:number",
+   "paragraphs:Paragraph[]"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "editTableStyle",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "edit:TableStyleEdit"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "ensureTableStylePart",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "styleId:string",
+   "styleDefXml:string"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "editChartElement",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "elementId:string",
+   "patch:{ kind?: NewChartKind | undefined; barDir?: \"bar\" | \"col\" | undefined; categories?: string[] | undefined; series?: { name: string; values: number[]; }[] | undefined; title?: string | undefined; ... 9 more ...; pointColors?: Record<...> | undefined; }"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "markChartEditable",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementHidden",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "hidden:boolean"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setElementName",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "name:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "getChartElementData",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string"
+  ],
+  "ret": "{ kind: string; title: string; categories: string[]; series: { name: string; values: number[]; }[]; seriesColors: (string | undefined)[]; pointColors: ((string | undefined)[] | undefined)[]; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "setElementFont",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "patch:ElementFontPatch",
+   "sizeMap:FontSizeMap | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "replaceAllInDeck",
+  "kind": "function",
+  "params": [
+   "deck:SlideDeck",
+   "find:string",
+   "replace:string",
+   "opts:ReplaceOptions"
+  ],
+  "ret": "{ count: number; changedSlides: number[]; }"
+ },
+ {
+  "mod": "index",
+  "name": "applyParagraphFormat",
+  "kind": "function",
+  "params": [
+   "paragraphs:Paragraph[]",
+   "patch:ParagraphFormatPatch"
+  ],
+  "ret": "PPrDirty"
+ },
+ {
+  "mod": "index",
+  "name": "setElementParagraphFormat",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "patch:ParagraphFormatPatch",
+   "paraIndices:number[] | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setGroupChildParagraphFormat",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "patch:ParagraphFormatPatch",
+   "paraIndices:number[] | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "editTableStructure",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "elementId:string",
+   "op:TableStructureOp"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "mergeTableCells",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "elementId:string",
+   "op:TableMergeOp"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "setTableColWidth",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "col:number",
+   "wEmu:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setTableRowHeight",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "row:number",
+   "hEmu:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "resizeTable",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "cx:number",
+   "cy:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setTableCellAnchor",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "elementId:string",
+   "row:number",
+   "col:number",
+   "anchor:\"top\" | \"bottom\" | \"middle\""
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "copyElementData",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "el:SlideElement"
+  ],
+  "ret": "ElementClipboardItem"
+ },
+ {
+  "mod": "index",
+  "name": "pasteElements",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "items:ElementClipboardItem[]",
+   "shiftEmu:{ dx: number; dy: number; }"
+  ],
+  "ret": "{ slide: Slide; elementIds: string[]; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideTransition",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "kind:SlideTransitionKind"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "getSlideTransition",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "SlideTransitionKind"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideAdvanceTime",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "ms:number | null"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "getSlideAdvanceTime",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "number | null"
+ },
+ {
+  "mod": "index",
+  "name": "setSlideHidden",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "hidden:boolean"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "index",
+  "name": "getSlideHidden",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "reassembleSlideXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "index",
+  "name": "groupElements",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "sourceIds:string[]"
+  ],
+  "ret": "{ slide: Slide; groupId: string; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "ungroupElement",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "sourceId:string"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "index",
+  "name": "groupChildSlices",
+  "kind": "function",
+  "params": [
+   "grpXml:string"
+  ],
+  "ret": "GroupChildSlice[]"
+ },
+ {
+  "mod": "index",
+  "name": "patchGroupChildXml",
+  "kind": "function",
+  "params": [
+   "grp:GroupElement",
+   "child:SlideElement",
+   "patch:(xml: string) => string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "findGroupChild",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string"
+  ],
+  "ret": "{ grp: GroupElement; child: SlideElement; } | null"
+ },
+ {
+  "mod": "index",
+  "name": "editGroupChildTransform",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "offset:{ x: number; y: number; cx: number; cy: number; }",
+   "rotationDeg:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "patchGroupChildText",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "child:TextElement"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setGroupChildFont",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "patch:ElementFontPatch",
+   "sizeMap:FontSizeMap | undefined"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "editGroupChildFill",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "fill:string | GradientFillPatch"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "strokePatchToModel",
+  "kind": "function",
+  "params": [
+   "stroke:StrokePatch"
+  ],
+  "ret": "Stroke"
+ },
+ {
+  "mod": "index",
+  "name": "editGroupChildStroke",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "stroke:StrokePatch | null"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setGroupChildShapeAdjustValues",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "adjust:Record<string, number>"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setGroupChildShapePresetGeometry",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "prst:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "index",
+  "name": "setGroupChildShapeCustomGeometry",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "groupId:string",
+   "childId:string",
+   "geom:CustGeomPath"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "insert",
+  "name": "isLineKind",
+  "kind": "function",
+  "params": [
+   "kind:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "insert",
+  "name": "nextCNvPrId",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "insert",
+  "name": "buildSpXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "opts:NewElementOptions"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "insert",
+  "name": "addElement",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "opts:NewElementOptions"
+  ],
+  "ret": "TextElement"
+ },
+ {
+  "mod": "insert",
+  "name": "buildTableXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "opts:NewTableOptions"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "insert",
+  "name": "buildTableGridXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "opts:NewTableGridOptions"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "insert",
+  "name": "addImageMediaAndRel",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "bytes:Uint8Array<ArrayBufferLike>",
+   "extRaw:string"
+  ],
+  "ret": "{ rid: string; mediaPath: string; } | null"
+ },
+ {
+  "mod": "insert",
+  "name": "addPicture",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "opts:NewPictureOptions"
+  ],
+  "ret": "PictureElement | null"
+ },
+ {
+  "mod": "insert",
+  "name": "deleteElement",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "elementId:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "insert",
+  "name": "calcBoundingBox",
+  "kind": "function",
+  "params": [
+   "elements:SlideElement[]"
+  ],
+  "ret": "EmuRect"
+ },
+ {
+  "mod": "insert",
+  "name": "buildGrpSpXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "bbox:EmuRect",
+   "childrenXml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "insert",
+  "name": "MAX_INSERT_TABLE_DIM",
+  "kind": "const",
+  "type": "75"
+ },
+ {
+  "mod": "layout",
+  "name": "parseLayoutPlaceholders",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "LayoutPlaceholder[]"
+ },
+ {
+  "mod": "layout",
+  "name": "listSlideLayouts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive"
+  ],
+  "ret": "SlideLayoutInfo[]"
+ },
+ {
+  "mod": "layout",
+  "name": "placeholderSpXml",
+  "kind": "function",
+  "params": [
+   "ph:Pick<LayoutPlaceholder, \"type\" | \"idx\" | \"x\" | \"y\" | \"cx\" | \"cy\">",
+   "id:number"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "layout",
+  "name": "prepareInsertSlideWithLayout",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "deck:SlideDeck",
+   "sourceIndex:number",
+   "layoutPath:string"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "layout",
+  "name": "PH_HINT_MAP",
+  "kind": "const",
+  "type": "Record<string, string>"
+ },
+ {
+  "mod": "layout",
+  "name": "FUNCTION_TYPES",
+  "kind": "const",
+  "type": "Set<string>"
+ },
+ {
+  "mod": "layout",
+  "name": "LAYOUT_REL_TYPE",
+  "kind": "const",
+  "type": "\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout"
+ },
+ {
+  "mod": "master-edit",
+  "name": "listMasterParts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive"
+  ],
+  "ret": "MasterPartInfo[]"
+ },
+ {
+  "mod": "master-edit",
+  "name": "parseMasterPart",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "partPath:string"
+  ],
+  "ret": "Slide | null"
+ },
+ {
+  "mod": "media-insert",
+  "name": "solidPng",
+  "kind": "function",
+  "params": [
+   "w:number",
+   "h:number",
+   "rgb:[number, number, number]"
+  ],
+  "ret": "Buffer<ArrayBufferLike>"
+ },
+ {
+  "mod": "media-insert",
+  "name": "ensureDefaultContentType",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "ext:string",
+   "mime:string"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "media-insert",
+  "name": "addMedia",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:NewMediaOptions"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "media-insert",
+  "name": "addModel3d",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:NewModel3dOptions"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "media-insert",
+  "name": "setModel3dView",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slide:Slide",
+   "elementId:string",
+   "view:{ rot: Model3dRotation; poster?: { bytes: Uint8Array<ArrayBufferLike>; ext: string; } | undefined; }"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "media-insert",
+  "name": "model3dPartOf",
+  "kind": "function",
+  "params": [
+   "el:{ descr?: string | undefined; }"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "model3d",
+  "name": "model3dFraming",
+  "kind": "function",
+  "params": [
+   "bounds:GlbBounds | null"
+  ],
+  "ret": "{ meterPerModelUnit: { n: number; d: number; }; preTrans: [number, number, number]; cameraZ: number; }"
+ },
+ {
+  "mod": "model3d",
+  "name": "model3dXml",
+  "kind": "function",
+  "params": [
+   "o:Model3dXmlOptions"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "model3d",
+  "name": "syncModel3dFrame",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "model3d",
+  "name": "readModel3dRotation",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "Model3dRotation"
+ },
+ {
+  "mod": "model3d",
+  "name": "setModel3dRotationXml",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "rot:Model3dRotation"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "model3d",
+  "name": "AM3D_NS",
+  "kind": "const",
+  "type": "\"http://schemas.microsoft.com/office/drawing/2017/model3d\""
+ },
+ {
+  "mod": "model3d",
+  "name": "MODEL3D_REL_TYPE",
+  "kind": "const",
+  "type": "\"http://schemas.microsoft.com/office/2017/06/relationships/model3d\""
+ },
+ {
+  "mod": "model3d",
+  "name": "GLB_CONTENT_TYPE",
+  "kind": "const",
+  "type": "\"model/gltf.binary\""
+ },
+ {
+  "mod": "model3d",
+  "name": "MODEL3D_RATIO_ONE",
+  "kind": "const",
+  "type": "1000000"
+ },
+ {
+  "mod": "model3d",
+  "name": "MODEL3D_EMU_PER_METER",
+  "kind": "const",
+  "type": "36000000"
+ },
+ {
+  "mod": "model3d",
+  "name": "MODEL3D_FOV",
+  "kind": "const",
+  "type": "2700000"
+ },
+ {
+  "mod": "model3d",
+  "name": "NO_ROTATION",
+  "kind": "const",
+  "type": "Model3dRotation"
+ },
+ {
+  "mod": "model3d",
+  "name": "MODEL3D_LIGHTS",
+  "kind": "const",
+  "type": "{ readonly ambient: { readonly rgb: readonly [50000, 50000, 50000]; readonly ill"
+ },
+ {
+  "mod": "named-action",
+  "name": "namedActionOf",
+  "kind": "function",
+  "params": [
+   "action:string | null | undefined"
+  ],
+  "ret": "\"nextslide\" | \"previousslide\" | \"firstslide\" | \"lastslide\" | \"lastslideviewed\" | \"endshow\" | null"
+ },
+ {
+  "mod": "named-action",
+  "name": "namedActionAttr",
+  "kind": "function",
+  "params": [
+   "action:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "named-action",
+  "name": "NAMED_ACTIONS",
+  "kind": "const",
+  "type": "readonly [\"nextslide\", \"previousslide\", \"firstslide\", \"lastslide\", \"lastslidevie"
+ },
+ {
+  "mod": "narration",
+  "name": "narrationSpids",
+  "kind": "function",
+  "params": [
+   "slide:Slide"
+  ],
+  "ret": "number[]"
+ },
+ {
+  "mod": "narration",
+  "name": "clearNarration",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "narration",
+  "name": "addNarration",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "audio:NarrationAudio"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "narration",
+  "name": "setShowNarration",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "narration",
+  "name": "NARRATION_NAME",
+  "kind": "const",
+  "type": "\"Narration\""
+ },
+ {
+  "mod": "notes",
+  "name": "notesPathForSlide",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "slidePath:string"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "notes",
+  "name": "getSlideNotes",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "slidePath:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "notes",
+  "name": "setSlideNotes",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "text:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "notes",
+  "name": "addContentTypeOverride",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "partPath:string",
+   "contentType:string"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "notes",
+  "name": "appendRelationship",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "partPath:string",
+   "type:string",
+   "target:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "notes",
+  "name": "unescapeXml",
+  "kind": "function",
+  "params": [
+   "raw:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "own-value",
+  "name": "ownValue",
+  "kind": "function",
+  "params": [
+   "table:Readonly<Record<string, V>>",
+   "key:string"
+  ],
+  "ret": "V | undefined"
+ },
+ {
+  "mod": "own-value",
+  "name": "setOwn",
+  "kind": "function",
+  "params": [
+   "record:Record<string, V>",
+   "key:string",
+   "value:V"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "parse",
+  "name": "parseSlide",
+  "kind": "function",
+  "params": [
+   "input:SlideParseInput"
+  ],
+  "ret": "Slide"
+ },
+ {
+  "mod": "parse",
+  "name": "parseBackground",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "ctx:ParseContext"
+  ],
+  "ret": "Fill | undefined"
+ },
+ {
+  "mod": "parse",
+  "name": "sliceGroupChildXmls",
+  "kind": "function",
+  "params": [
+   "grpXml:string"
+  ],
+  "ret": "string[]"
+ },
+ {
+  "mod": "parse",
+  "name": "layoutDiagramFallback",
+  "kind": "function",
+  "params": [
+   "dataXml:string",
+   "ctx:ParseContext",
+   "frameCx:number",
+   "frameCy:number",
+   "layoutId:string | undefined",
+   "colorsXml:string | undefined",
+   "layoutXml:string | undefined"
+  ],
+  "ret": "SlideElement[]"
+ },
+ {
+  "mod": "parse",
+  "name": "parseDecorations",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "ctx:ParseContext",
+   "opts:DecorationOptions"
+  ],
+  "ret": "SlideElement[]"
+ },
+ {
+  "mod": "parse",
+  "name": "DEFAULT_BODY_INSETS",
+  "kind": "const",
+  "type": "{ l: number; t: number; r: number; b: number; }"
+ },
+ {
+  "mod": "parse",
+  "name": "EMU_PER_PT",
+  "kind": "const",
+  "type": "12700"
+ },
+ {
+  "mod": "placeholder",
+  "name": "parsePlaceholderMap",
+  "kind": "function",
+  "params": [
+   "layoutOrMasterXml:string",
+   "theme:Theme | undefined",
+   "mediaRels:Map<string, string> | undefined"
+  ],
+  "ret": "PlaceholderMap"
+ },
+ {
+  "mod": "placeholder",
+  "name": "parseDefRPrStyle",
+  "kind": "function",
+  "params": [
+   "defRPrRaw:unknown",
+   "theme:Theme | undefined",
+   "phClr:string | undefined"
+  ],
+  "ret": "LevelTextStyle | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "parseLstStyleLevels",
+  "kind": "function",
+  "params": [
+   "lst:unknown",
+   "theme:Theme | undefined",
+   "src:LstStyleSource | undefined"
+  ],
+  "ret": "TextStyleLevels | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "parseDefaultTextStyle",
+  "kind": "function",
+  "params": [
+   "presentationXml:string",
+   "theme:Theme | undefined"
+  ],
+  "ret": "TextStyleLevels | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "parseMasterTextStyles",
+  "kind": "function",
+  "params": [
+   "masterXml:string",
+   "theme:Theme | undefined",
+   "mediaRels:Map<string, string> | undefined"
+  ],
+  "ret": "MasterTextStyles"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderInsets",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "{ l?: number | undefined; t?: number | undefined; r?: number | undefined; b?: number | undefined; } | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderAnchor",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "\"top\" | \"bottom\" | \"middle\" | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderAnchorCtr",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "boolean | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "placeholderStyleChain",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "masterTx:MasterTextStyles | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "TextStyleLevels[]"
+ },
+ {
+  "mod": "placeholder",
+  "name": "mergeTextStyleChain",
+  "kind": "function",
+  "params": [
+   "chain:(TextStyleLevels | undefined)[]",
+   "level:number"
+  ],
+  "ret": "LevelTextStyle | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderFillSpPr",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "{ spPr: unknown; layer: \"layout\" | \"master\"; } | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderTransform",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "Transform | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "resolvePlaceholderPresetGeom",
+  "kind": "function",
+  "params": [
+   "layout:PlaceholderMap | undefined",
+   "master:PlaceholderMap | undefined",
+   "type:string | undefined",
+   "idx:string | undefined"
+  ],
+  "ret": "{ prst: string; avLstRaw?: unknown; } | undefined"
+ },
+ {
+  "mod": "placeholder",
+  "name": "MAX_AUTO_NUM_START",
+  "kind": "const",
+  "type": "32767"
+ },
+ {
+  "mod": "preset-shape-types",
+  "name": "isPresetShapeType",
+  "kind": "function",
+  "params": [
+   "name:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "preset-shape-types",
+  "name": "PRESET_SHAPE_TYPES",
+  "kind": "const",
+  "type": "readonly string[]"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "redactExtXml",
+  "kind": "function",
+  "params": [
+   "label:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "hasRedactExtIn",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "syncRedactExt",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "tag:string",
+   "label:string | undefined"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "readRedactLabel",
+  "kind": "function",
+  "params": [
+   "node:unknown"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "stripRedactExt",
+  "kind": "function",
+  "params": [
+   "xml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "setRedactExt",
+  "kind": "function",
+  "params": [
+   "propsXml:string",
+   "label:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "redaction-xml",
+  "name": "REDACT_EXT_URI",
+  "kind": "const",
+  "type": "\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\""
+ },
+ {
+  "mod": "resource-cleanup",
+  "name": "cleanupSupersededSlideResources",
+  "kind": "function",
+  "params": [
+   "opened:ResourceCleanupContext",
+   "slide:Slide",
+   "previousXml:string",
+   "currentXml:string"
+  ],
+  "ret": "ResourceCleanupStats"
+ },
+ {
+  "mod": "resource-cleanup",
+  "name": "cleanupDeletedElementResources",
+  "kind": "function",
+  "params": [
+   "opened:ResourceCleanupContext",
+   "slide:Slide",
+   "removedElementXml:string"
+  ],
+  "ret": "ResourceCleanupStats"
+ },
+ {
+  "mod": "resource-cleanup",
+  "name": "removeRelationshipAndCollectOwnedTarget",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "sourcePart:string",
+   "relationshipId:string"
+  ],
+  "ret": "ResourceCleanupStats"
+ },
+ {
+  "mod": "resource-cleanup",
+  "name": "removePartWithOwnedResources",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "partPath:string"
+  ],
+  "ret": "ResourceCleanupStats"
+ },
+ {
+  "mod": "scan",
+  "name": "scanSlide",
+  "kind": "function",
+  "params": [
+   "slideXml:string"
+  ],
+  "ret": "SlideScan"
+ },
+ {
+  "mod": "sections",
+  "name": "getSections",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx"
+  ],
+  "ret": "SectionInfo[]"
+ },
+ {
+  "mod": "sections",
+  "name": "setSections",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "sections:SectionInfo[]"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "sections",
+  "name": "normalizeSections",
+  "kind": "function",
+  "params": [
+   "sections:SectionInfo[]",
+   "total:number"
+  ],
+  "ret": "{ lead: number[]; starts: number[]; sections: SectionInfo[]; }"
+ },
+ {
+  "mod": "sections",
+  "name": "addSection",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "atSlideIndex:number",
+   "name:string"
+  ],
+  "ret": "SectionInfo[] | null"
+ },
+ {
+  "mod": "sections",
+  "name": "renameSection",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "id:string",
+   "name:string"
+  ],
+  "ret": "SectionInfo[] | null"
+ },
+ {
+  "mod": "sections",
+  "name": "removeSection",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "id:string",
+   "_opts:{ keepSlides?: boolean | undefined; } | undefined"
+  ],
+  "ret": "SectionInfo[] | null"
+ },
+ {
+  "mod": "sections",
+  "name": "moveSlide",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "fromIndex:number",
+   "toIndex:number"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "sections",
+  "name": "moveSection",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "id:string",
+   "dir:\"up\" | \"down\""
+  ],
+  "ret": "SectionInfo[] | null"
+ },
+ {
+  "mod": "slide-ids",
+  "name": "nextSlideId",
+  "kind": "function",
+  "params": [
+   "presXml:string"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "slide-ids",
+  "name": "canListSlide",
+  "kind": "function",
+  "params": [
+   "presXml:string | null"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "slide-ids",
+  "name": "withSlideListed",
+  "kind": "function",
+  "params": [
+   "presXml:string",
+   "rid:string",
+   "afterRid:string | undefined"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "slide-ids",
+  "name": "withSlideUnlisted",
+  "kind": "function",
+  "params": [
+   "presXml:string",
+   "rid:string"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "collectPart",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "partPath:string",
+   "parts:Record<string, string>",
+   "contentTypes:Record<string, string>"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "collectSlideBundle",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "slidePath:string",
+   "slideXml:string"
+  ],
+  "ret": "SlideBundle"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "listLayouts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive"
+  ],
+  "ret": "{ path: string; name?: string | undefined; }[]"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "importClipboardParts",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "parts:Readonly<Record<string, string>>",
+   "contentTypes:Readonly<Record<string, string>>"
+  ],
+  "ret": "Map<string, string>"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "materializeSlideBundle",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "bundle:SlideBundle",
+   "slidePath:string",
+   "layoutPath:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "importSourceLayout",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "bundle:SlideBundle"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "slide-transfer",
+  "name": "chooseLayout",
+  "kind": "function",
+  "params": [
+   "archive:PackageArchive",
+   "bundle:SlideBundle",
+   "neighbourSlidePath:string | undefined"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "smartart-layout",
+  "name": "layoutShapes",
+  "kind": "function",
+  "params": [
+   "layout:SmartArtLayout",
+   "items:string[]",
+   "cx:number",
+   "cy:number"
+  ],
+  "ret": "SmartArtChildShape[]"
+ },
+ {
+  "mod": "smartart-layout",
+  "name": "SMARTART_PALETTE",
+  "kind": "const",
+  "type": "string[]"
+ },
+ {
+  "mod": "smartart",
+  "name": "buildSmartArtXml",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "opts:NewSmartArtOptions"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "smartart",
+  "name": "addSmartArt",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "slideIndex:number",
+   "opts:NewSmartArtOptions"
+  ],
+  "ret": "{ slide: Slide; elementId: string; } | null"
+ },
+ {
+  "mod": "table-edit",
+  "name": "ensureTableStyleXml",
+  "kind": "function",
+  "params": [
+   "tableStylesXml:string | null | undefined",
+   "styleId:string",
+   "styleDefXml:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "table-edit",
+  "name": "patchTableStyleXml",
+  "kind": "function",
+  "params": [
+   "originalXml:string",
+   "edit:TableStyleEdit"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "table-edit",
+  "name": "findTableElementInSlide",
+  "kind": "function",
+  "params": [
+   "slide:Slide",
+   "sourceId:string"
+  ],
+  "ret": "TableElement | null"
+ },
+ {
+  "mod": "table-edit",
+  "name": "TABLE_STYLE_PRESETS",
+  "kind": "const",
+  "type": "Record<string, TableStylePreset>"
+ },
+ {
+  "mod": "table-grid",
+  "name": "tableRowGridCols",
+  "kind": "function",
+  "params": [
+   "row:{ gridSpan?: number | undefined; merged?: boolean | undefined; }[]"
+  ],
+  "ret": "number[]"
+ },
+ {
+  "mod": "table-style",
+  "name": "builtinTableStyleName",
+  "kind": "function",
+  "params": [
+   "styleId:string | undefined"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "table-style",
+  "name": "resolveBuiltinTableStyleId",
+  "kind": "function",
+  "params": [
+   "nameOrId:string"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "table-style",
+  "name": "resolveTableStyle",
+  "kind": "function",
+  "params": [
+   "styleId:string | undefined",
+   "tableStylesXml:string | undefined",
+   "theme:Theme | undefined"
+  ],
+  "ret": "TableStyleDef | undefined"
+ },
+ {
+  "mod": "table-style",
+  "name": "cellStyleBorders",
+  "kind": "function",
+  "params": [
+   "def:TableStyleDef",
+   "flags:TableStyleFlags",
+   "r:number",
+   "c:number",
+   "nRows:number",
+   "nCols:number"
+  ],
+  "ret": "{ l?: Stroke | undefined; r?: Stroke | undefined; t?: Stroke | undefined; b?: Stroke | undefined; }"
+ },
+ {
+  "mod": "table-style",
+  "name": "cellPartStyle",
+  "kind": "function",
+  "params": [
+   "def:TableStyleDef",
+   "flags:TableStyleFlags",
+   "r:number",
+   "c:number",
+   "nRows:number",
+   "nCols:number"
+  ],
+  "ret": "TablePartStyle"
+ },
+ {
+  "mod": "table-style",
+  "name": "BUILTIN_TABLE_STYLES",
+  "kind": "const",
+  "type": "readonly BuiltinTableStyle[]"
+ },
+ {
+  "mod": "table-style",
+  "name": "LEGACY_NO_STYLE",
+  "kind": "const",
+  "type": "\"{2D5ABB26-0587-4C30-8999-92F81FD0307D}\""
+ },
+ {
+  "mod": "theme-apply",
+  "name": "patchThemeXml",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "spec:ThemeSpec"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "theme-apply",
+  "name": "applyThemeToArchive",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "spec:ThemeSpec"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "theme-apply",
+  "name": "collectExplicitColors",
+  "kind": "function",
+  "params": [
+   "xmls:string[]"
+  ],
+  "ret": "Map<string, number>"
+ },
+ {
+  "mod": "theme-apply",
+  "name": "buildColorMap",
+  "kind": "function",
+  "params": [
+   "counts:Map<string, number>",
+   "spec:ThemeSpec"
+  ],
+  "ret": "Map<string, string>"
+ },
+ {
+  "mod": "theme-apply",
+  "name": "recolorXml",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "map:Map<string, string>"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "theme-apply",
+  "name": "remapDeckColors",
+  "kind": "function",
+  "params": [
+   "opened:OpenedPptx",
+   "spec:ThemeSpec"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "theme",
+  "name": "sysColorHex",
+  "kind": "function",
+  "params": [
+   "val:unknown",
+   "lastClr:unknown"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "theme",
+  "name": "parseTheme",
+  "kind": "function",
+  "params": [
+   "themeXml:string"
+  ],
+  "ret": "Theme"
+ },
+ {
+  "mod": "theme",
+  "name": "themeWithOverride",
+  "kind": "function",
+  "params": [
+   "base:Theme | undefined",
+   "overrideXml:string"
+  ],
+  "ret": "Theme"
+ },
+ {
+  "mod": "theme",
+  "name": "eaScriptOfLang",
+  "kind": "function",
+  "params": [
+   "tag:unknown"
+  ],
+  "ret": "\"ja\" | \"ko\" | \"sc\" | \"tc\" | undefined"
+ },
+ {
+  "mod": "theme",
+  "name": "resolveFontRef",
+  "kind": "function",
+  "params": [
+   "typeface:string | undefined",
+   "theme:Theme | undefined",
+   "eaScript:EaScript | undefined"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "theme",
+  "name": "resolveSchemeColor",
+  "kind": "function",
+  "params": [
+   "name:string",
+   "theme:Theme | undefined",
+   "phClr:string | undefined"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "theme",
+  "name": "parseClrMap",
+  "kind": "function",
+  "params": [
+   "masterXml:string | undefined",
+   "layoutXml:string | undefined",
+   "slideXml:string | undefined"
+  ],
+  "ret": "Record<string, string> | undefined"
+ },
+ {
+  "mod": "xml-parser",
+  "name": "xmlParser",
+  "kind": "function",
+  "params": [
+   "options:Omit<X2jOptions, \"entityDecoder\" | \"processEntities\" | \"htmlEntities\">"
+  ],
+  "ret": "XMLParser"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "asXmlNode",
+  "kind": "function",
+  "params": [
+   "v:unknown"
+  ],
+  "ret": "XmlNode"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "xmlArray",
+  "kind": "function",
+  "params": [
+   "v:unknown"
+  ],
+  "ret": "XmlNode[]"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "decodeXml",
+  "kind": "function",
+  "params": [
+   "raw:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "attributeOf",
+  "kind": "function",
+  "params": [
+   "element:string",
+   "name:string"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "rootPrefixOf",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "ns:string"
+  ],
+  "ret": "string | null"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "elementRange",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "name:string",
+   "from:number"
+  ],
+  "ret": "{ start: number; end: number; contentStart: number; contentEnd: number; } | null"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "cSldNameOf",
+  "kind": "function",
+  "params": [
+   "partXml:string"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "withRelationshipIds",
+  "kind": "function",
+  "params": [
+   "xml:string",
+   "names:readonly string[]",
+   "ids:ReadonlyMap<string, string>"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "percentFraction",
+  "kind": "function",
+  "params": [
+   "raw:unknown"
+  ],
+  "ret": "number | undefined"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "escapeXmlText",
+  "kind": "function",
+  "params": [
+   "text:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "escapeXmlAttr",
+  "kind": "function",
+  "params": [
+   "text:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "maxRelationshipIdNumber",
+  "kind": "function",
+  "params": [
+   "relsXml:string"
+  ],
+  "ret": "number"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "hasContentTypeOverride",
+  "kind": "function",
+  "params": [
+   "contentTypes:string",
+   "partPath:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "creationIdExtXml",
+  "kind": "function",
+  "params": [],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "creationIdXml",
+  "kind": "function",
+  "params": [],
+  "ret": "string"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "defaultContentTypeFor",
+  "kind": "function",
+  "params": [
+   "ct:string",
+   "ext:string"
+  ],
+  "ret": "string | undefined"
+ },
+ {
+  "mod": "xml-utils",
+  "name": "hasDefaultFor",
+  "kind": "function",
+  "params": [
+   "ct:string",
+   "ext:string"
+  ],
+  "ret": "boolean"
+ },
+ {
+  "mod": "zip",
+  "name": "assertZipWithinLimits",
+  "kind": "function",
+  "params": [
+   "zip:JSZip"
+  ],
+  "ret": "void"
+ },
+ {
+  "mod": "zip",
+  "name": "relsPathFor",
+  "kind": "function",
+  "params": [
+   "partPath:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "zip",
+  "name": "resolveTarget",
+  "kind": "function",
+  "params": [
+   "basePart:string",
+   "target:string"
+  ],
+  "ret": "string"
+ },
+ {
+  "mod": "zip",
+  "name": "PPTX_ZIP_LIMITS",
+  "kind": "const",
+  "type": "{ readonly maxParts: 10000; readonly maxPartBytes: number; readonly maxTotalByte"
+ },
+ {
+  "mod": "zip",
+  "name": "PackageArchive",
+  "kind": "class"
+ }
+]

@@ -8,18 +8,17 @@
 // Written by a script, never by hand: a hand decision lives in overrides.ts.
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as prettier from 'prettier'
 import ts from 'typescript'
-import { HOST_MODULES, isHandRoute, overrideOf } from './overrides'
+import { ROOT, config } from './config'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-export const ROOT = resolve(HERE, '../../..')
-export const REFERENCE = join(ROOT, 'tools/docx-diff/reference')
+export { ROOT }
+export const REFERENCE = join(ROOT, config.reference)
 const OUT = process.argv.includes('--out')
   ? process.argv[process.argv.indexOf('--out') + 1]!
-  : join(HERE, 'manifest.json')
+  : join(ROOT, config.manifest)
 
 // ---------------------------------------------------------------- TypeScript side
 
@@ -33,13 +32,15 @@ export interface ParamInfo {
 }
 
 export interface Shape {
-  /** map | set | arr | tuple | obj | rec */
+  /** map | set | arr | tuple | obj | rec | ref */
   k: string
   /** an array whose holes are undefined */
   u?: true
   v?: Shape
   items?: Array<Shape | null>
   f?: Record<string, Shape>
+  /** ref: the shape of this model type (`config.typeShapes`), which the binding hands the codec */
+  n?: string
 }
 
 export interface RustInfo {
@@ -68,6 +69,8 @@ export interface ExportInfo {
   route: 'table' | 'routes' | 'command' | 'hand' | 'ts' | 'none'
   /** what stops it from being a row, when it stays TypeScript */
   reason?: string
+  /** a remark on a routed export */
+  note?: string
 }
 
 function typescriptProgram(): { program: ts.Program; files: string[] } {
@@ -96,39 +99,72 @@ function nameOfSymbol(type: ts.Type): string {
   return type.aliasSymbol?.getName() ?? type.getSymbol()?.getName() ?? ''
 }
 
+/** The shape of a place a union fills: every member's Maps, Sets and holes, not the first member's. */
+function mergeShapes(a: Shape, b: Shape): Shape {
+  if (a.k !== b.k || a.n !== b.n) return a
+  const out: Shape = { ...a }
+  if (b.u) out.u = true
+  if (b.v) out.v = a.v ? mergeShapes(a.v, b.v) : b.v
+  if (b.f) {
+    const fields = { ...a.f }
+    for (const [name, shape] of Object.entries(b.f))
+      fields[name] = fields[name] ? mergeShapes(fields[name], shape) : shape
+    out.f = fields
+  }
+  if (b.items) {
+    const length = Math.max(a.items?.length ?? 0, b.items.length)
+    out.items = Array.from({ length }, (_, i) => {
+      const [x, y] = [a.items?.[i] ?? null, b.items![i] ?? null]
+      return x && y ? mergeShapes(x, y) : (x ?? y)
+    })
+  }
+  return out
+}
+
+const NO_REFS: ReadonlySet<string> = new Set()
+
+/**
+ * Where a Map, a Set or an array with holes sits in a value of `type`. Below the root, a type
+ * named in `refs` is a `ref` to its own shape (not as a union member, which is merged), so a
+ * type that holds itself, a group's children, is shaped at any depth.
+ */
 function shapeOf(
   checker: ts.TypeChecker,
   type: ts.Type,
   depth: number,
   stack: Set<number>,
+  limit = 7,
+  refs = NO_REFS,
+  member = false,
 ): Shape | null {
-  if (depth > 7) return null
+  if (depth > limit) return null
+  const name = nameOfSymbol(type)
+  if (depth > 0 && !member && refs.has(name)) return { k: 'ref', n: name }
+  const inner = (t: ts.Type, asMember = false): Shape | null =>
+    shapeOf(checker, t, asMember ? depth : depth + 1, stack, limit, refs, asMember)
   if (type.isUnion()) {
-    for (const member of type.types) {
-      if (member.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) continue
-      const shape = shapeOf(checker, member, depth, stack)
-      if (shape) return shape
+    let merged: Shape | null = null
+    for (const t of type.types) {
+      if (t.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) continue
+      const shape = inner(t, true)
+      if (shape) merged = merged ? mergeShapes(merged, shape) : shape
     }
-    return null
+    return merged
   }
   if (type.isIntersection()) {
     const fields: Record<string, Shape> = {}
-    for (const member of type.types) {
-      const shape = shapeOf(checker, member, depth, stack)
+    for (const t of type.types) {
+      const shape = inner(t, true)
       if (shape?.k === 'obj') Object.assign(fields, shape.f)
       else if (shape) return shape
     }
     return Object.keys(fields).length ? { k: 'obj', f: fields } : null
   }
-  const name = nameOfSymbol(type)
   const args = checker.getTypeArguments(type as ts.TypeReference)
-  if (name === 'Map' || name === 'ReadonlyMap')
-    return {
-      k: 'map',
-      ...(args[1] && shapeOf(checker, args[1], depth + 1, stack)
-        ? { v: shapeOf(checker, args[1], depth + 1, stack)! }
-        : {}),
-    }
+  if (name === 'Map' || name === 'ReadonlyMap') {
+    const value = args[1] && inner(args[1])
+    return { k: 'map', ...(value ? { v: value } : {}) }
+  }
   if (name === 'Set' || name === 'ReadonlySet') return { k: 'set' }
   if (name === 'Uint8Array' || name === 'ArrayBuffer') return null
   const id = (type as unknown as { id: number }).id
@@ -136,8 +172,8 @@ function shapeOf(
   stack.add(id)
   try {
     if (checker.isArrayType(type)) {
-      const element = checker.getTypeArguments(type as ts.TypeReference)[0]!
-      const item = shapeOf(checker, element, depth + 1, stack)
+      const element = args[0]!
+      const item = inner(element)
       // `Array<X | undefined>`: JSON writes the holes as null, the TypeScript held undefined
       const holes =
         element.isUnion() &&
@@ -147,9 +183,7 @@ function shapeOf(
       return { k: 'arr', ...(holes ? { u: true } : {}), ...(item ? { v: item } : {}) }
     }
     if (checker.isTupleType(type)) {
-      const items = checker
-        .getTypeArguments(type as ts.TypeReference)
-        .map((t) => shapeOf(checker, t, depth + 1, stack))
+      const items = args.map((t) => inner(t))
       return items.some(Boolean) ? { k: 'tuple', items } : null
     }
     if (type.flags & ts.TypeFlags.Object) {
@@ -157,17 +191,12 @@ function shapeOf(
       for (const prop of checker.getPropertiesOfType(type)) {
         const decl = prop.valueDeclaration ?? prop.declarations?.[0]
         if (!decl) continue
-        const shape = shapeOf(
-          checker,
-          checker.getTypeOfSymbolAtLocation(prop, decl),
-          depth + 1,
-          stack,
-        )
+        const shape = inner(checker.getTypeOfSymbolAtLocation(prop, decl))
         if (shape) fields[prop.getName()] = shape
       }
       const index = checker.getIndexInfoOfType(type, ts.IndexKind.String)
       if (index) {
-        const shape = shapeOf(checker, index.type, depth + 1, stack)
+        const shape = inner(index.type)
         if (shape && !Object.keys(fields).length) return { k: 'rec', v: shape }
       }
       return Object.keys(fields).length ? { k: 'obj', f: fields } : null
@@ -193,9 +222,43 @@ function codecOf(type: string): ParamInfo['codec'] {
   return 'json'
 }
 
+/** a printed type with the checkout's own path left out: the manifest is the same in every worktree */
+const repoRelative = (type: string): string => type.split(`${ROOT}/`).join('')
+
+/**
+ * The model types a shape may `ref`: those that have a shape of their own. A type whose shape is
+ * empty once the refs to the dropped ones are gone is dropped too, until none is left to drop.
+ */
+function shapedModelTypes(
+  program: ts.Program,
+  checker: ts.TypeChecker,
+  files: readonly string[],
+): ReadonlySet<string> {
+  const declared = new Map<string, ts.Type>()
+  for (const file of files) {
+    const moduleSymbol = checker.getSymbolAtLocation(program.getSourceFile(file)!)
+    if (!moduleSymbol) continue
+    for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
+      const name = symbol.getName()
+      if (!config.typeShapes?.includes(name) || declared.has(name)) continue
+      const target = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
+      declared.set(name, checker.getDeclaredTypeOfSymbol(target))
+    }
+  }
+  let refs: ReadonlySet<string> = new Set(declared.keys())
+  for (;;) {
+    const kept = new Set(
+      [...refs].filter((name) => shapeOf(checker, declared.get(name)!, 0, new Set(), 12, refs)),
+    )
+    if (kept.size === refs.size) return kept
+    refs = kept
+  }
+}
+
 function typescriptExports(): ExportInfo[] {
   const { program, files } = typescriptProgram()
   const checker = program.getTypeChecker()
+  const refs = shapedModelTypes(program, checker, files)
   const out: ExportInfo[] = []
   for (const file of files) {
     const source = program.getSourceFile(file)!
@@ -233,16 +296,29 @@ function typescriptExports(): ExportInfo[] {
         rust: null,
         route: 'none',
       }
+      // a model type whose values the binding writes back into the caller's objects:
+      // deeper than a reply, since a deck holds its charts four levels further down
+      if (kind === 'type' && config.typeShapes?.includes(info.name))
+        info.ret.shape = shapeOf(
+          checker,
+          checker.getDeclaredTypeOfSymbol(target),
+          0,
+          new Set(),
+          12,
+          refs,
+        )
       if (kind === 'function') {
         const signatures = checker.getTypeOfSymbolAtLocation(target, decl).getCallSignatures()
         const signature = signatures[0]
         if (signature) {
           info.params = signature.getParameters().map((p) => {
             const d = p.valueDeclaration as ts.ParameterDeclaration | undefined
-            const type = checker.typeToString(
-              checker.getTypeOfSymbolAtLocation(p, decl),
-              decl,
-              ts.TypeFormatFlags.NoTruncation,
+            const type = repoRelative(
+              checker.typeToString(
+                checker.getTypeOfSymbolAtLocation(p, decl),
+                decl,
+                ts.TypeFormatFlags.NoTruncation,
+              ),
             )
             return {
               name: p.getName(),
@@ -262,12 +338,12 @@ function typescriptExports(): ExportInfo[] {
             !!(ts.getCombinedModifierFlags(decl as ts.Declaration) & ts.ModifierFlags.Async)
           const members = returned.isUnion() ? returned.types : [returned]
           info.ret = {
-            type: checker
-              .typeToString(returned, decl, ts.TypeFormatFlags.NoTruncation)
-              .slice(0, 300),
+            type: repoRelative(
+              checker.typeToString(returned, decl, ts.TypeFormatFlags.NoTruncation),
+            ).slice(0, 300),
             null: members.some((m) => m.flags & ts.TypeFlags.Null),
             undef: members.some((m) => m.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Void)),
-            shape: shapeOf(checker, returned, 0, new Set()),
+            shape: shapeOf(checker, returned, 0, new Set(), 7, refs),
             bytes: /Uint8Array/.test(checker.typeToString(returned, decl)),
           }
         }
@@ -300,7 +376,7 @@ function rg(pattern: string, dirs: string[]): string[] {
         '-g',
         '!**/dist/**',
         '-g',
-        '!tools/docx-diff/reference/**',
+        `!${config.reference}/**`,
         pattern,
         ...dirs,
       ],
@@ -315,13 +391,17 @@ function rg(pattern: string, dirs: string[]): string[] {
 
 const IMPORT =
   /(?:import|export)\s+(type\s+)?(?:(\*\s+as\s+\w+)|\{([\s\S]*?)\})\s*from\s*['"]([^'"]+)['"]/g
-const DYNAMIC = /(?:import|vi\.mock|vi\.importActual)\(\s*['"]([^'"]*docx-engine[^'"]*)['"]/g
+const PACKAGE = config.packageDir.split('/').pop()!
+const DYNAMIC = new RegExp(
+  `(?:import|vi\\.mock|vi\\.importActual)\\(\\s*['"]([^'"]*${PACKAGE}[^'"]*)['"]`,
+  'g',
+)
 
-/** the module a specifier of docx-engine names, '' where it names the package index */
+/** the module a specifier of the package names, 'index' where it names the package index */
 function moduleOfSpecifier(specifier: string): string | null {
-  let m = /@seuoffice\/docx-engine(?:\/(.+))?$/.exec(specifier)
+  let m = new RegExp(`${config.packageName}(?:\\/(.+))?$`).exec(specifier)
   if (m) return m[1] ?? 'index'
-  m = /(?:^|\/)docx-engine\/(?:src|tests)\/(.+?)(?:\.(?:ts|mjs))?$/.exec(specifier)
+  m = new RegExp(`(?:^|\\/)${PACKAGE}\\/(?:src|tests)\\/(.+?)(?:\\.(?:ts|mjs))?$`).exec(specifier)
   if (m) return m[0].includes('/tests/') ? null : m[1]!
   return null
 }
@@ -359,7 +439,7 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
   }
   // package.json subpaths
   const pkg: { exports: Record<string, unknown> } = JSON.parse(
-    readFileSync(join(ROOT, 'packages/docx-engine/package.json'), 'utf8'),
+    readFileSync(join(ROOT, config.packageDir, 'package.json'), 'utf8'),
   )
   const targetsOf = (entry: unknown): string[] =>
     typeof entry === 'string'
@@ -370,24 +450,18 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
   for (const target of Object.values(pkg.exports).flatMap(targetsOf)) {
     const module = target.replace(/^\.\/src\//, '').replace(/\.ts$/, '')
     // the entries of the binding itself (node/, engine-*, init) are not engine modules
-    if (
-      module !== 'index' &&
-      !module.startsWith('node/') &&
-      !module.startsWith('engine-') &&
-      module !== 'init'
-    )
-      wholeModule(module, 'subpath')
+    if (!config.pluginModule(module)) wholeModule(module, 'subpath')
   }
   // everything else in the repository that imports a module of the package
-  const files = rg('docx-engine', ['apps', 'packages', 'tools', 'e2e']).filter(
+  const files = rg(PACKAGE, ['apps', 'packages', 'tools', 'e2e']).filter(
     (f) =>
-      !f.startsWith('packages/docx-engine/src/') &&
-      !f.startsWith('tools/docx-diff/reference/') &&
-      !f.startsWith('tools/docx-diff/binding/'),
+      !f.startsWith(`${config.packageDir}/src/`) &&
+      !f.startsWith(`${config.reference}/`) &&
+      !f.startsWith(`${config.bindingDir}/`),
   )
   for (const file of files) {
     const text = readFileSync(join(ROOT, file), 'utf8')
-    const why = file.startsWith('packages/docx-engine/tests/')
+    const why = file.startsWith(`${config.packageDir}/tests/`)
       ? 'test'
       : file.startsWith('tools/')
         ? 'tool'
@@ -416,7 +490,7 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
     }
   }
   // the tests of the package itself import `../src/<module>`
-  const tests = join(ROOT, 'packages/docx-engine/tests')
+  const tests = join(ROOT, config.packageDir, 'tests')
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((n) =>
       statSync(join(dir, n)).isDirectory()
@@ -468,12 +542,7 @@ interface RustFn {
   doc: string
 }
 
-/** The crates a port of this package may live in (the pptx engine's functions of the same name are its own). */
-const CRATES: Array<{ dir: string; crate: string }> = [
-  { dir: 'crates/docx-engine/src', crate: 'docx_engine' },
-  { dir: 'crates/omml/src', crate: 'omml' },
-  { dir: 'crates/ooxml-pkg/src', crate: 'ooxml_pkg' },
-]
+const CRATES = config.crates
 
 function splitTop(text: string): string[] {
   const out: string[] = []
@@ -600,16 +669,23 @@ export function pathOf(file: string, name: string): { path: string; reachable: b
 function rustMatch(fns: RustFn[], ts: ExportInfo): RustInfo | null {
   const mentioned = (f: RustFn): boolean => new RegExp('`' + ts.name + '(?:[`(:]|$)').test(f.doc)
   // the function that is named like the export, else the one whose doc names it
-  let c = fns.filter((f) => f.indent === 0 && f.name === snake(ts.name))
+  const named = config.rustName?.(ts.name) ?? snake(ts.name)
+  let c = fns.filter((f) => f.indent === 0 && f.name === named)
   if (!c.length) c = fns.filter((f) => f.indent === 0 && mentioned(f))
+  // the Rust module of the export's own TypeScript module first
+  const own = config.rustModule?.(ts.module)
+  if (own && c.length > 1) {
+    const there = c.filter((f) => f.file === own || f.file.startsWith(own.replace(/\.rs$/, '/')))
+    if (there.length) c = there
+  }
   if (c.length > 1) {
     // a module of the TypeScript names its own Rust module first; the save side's external.rs re-declares callees
     const own = c.filter((f) => !f.file.endsWith('/external.rs'))
     if (own.length) c = own
   }
   if (c.length > 1) {
-    const named = c.filter((f) => f.name === snake(ts.name))
-    if (named.length) c = named
+    const exact = c.filter((f) => f.name === named)
+    if (exact.length) c = exact
   }
   if (c.length > 1) {
     const open = c.filter((f) => f.vis === 'pub' && pathOf(f.file, f.name).reachable)
@@ -632,17 +708,29 @@ function rustMatch(fns: RustFn[], ts: ExportInfo): RustInfo | null {
 
 // ---------------------------------------------------------------- the manifest
 
-/** the Rust types a generated row can read from JSON and write back */
-export function decodable(type: string): boolean {
-  const t = type
-    .replace(/^(?:mut )?(?:r#)?_?[a-z][a-z_0-9]*\s*:\s*/, '')
-    .replace(/'[a-z_]+\s*/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (/^&(?:mut )?Package$/.test(t) || t === '&dyn MediaHost') return true
-  if (/&mut|dyn |impl |\bSelf\b|\bPackage\b|\bMediaHost\b|\bFnMut\b|\bFn\(/.test(t)) return false
-  if (/^[A-Z]$/.test(t)) return false
-  return true
+/** The wire arguments of the engine call a body spells (`$call(a, b)`); undefined where it has no explicit call. */
+function callArity(body: string | undefined): number | undefined {
+  const at = body?.indexOf('$call(') ?? -1
+  if (!body || at === -1) return undefined
+  let depth = 0
+  let count = 0
+  let any = false
+  let comma = false
+  for (let i = at + '$call'.length; i < body.length; i++) {
+    const c = body[i]!
+    const closing = ')]}'.includes(c)
+    if ('([{'.includes(c)) depth++
+    else if (closing && --depth === 0) break
+    if (/\s/.test(c) || depth < 1) continue
+    // a comma opens another argument only where something follows it (a trailing comma opens none)
+    if (comma && !closing) {
+      count++
+      comma = false
+    }
+    if (c === ',' && depth === 1) comma = true
+    else any = true
+  }
+  return any ? count + 1 : 0
 }
 
 export function build(): { exports: ExportInfo[] } {
@@ -669,8 +757,9 @@ export function build(): { exports: ExportInfo[] } {
     e.required = [...(needed.get(`${e.module}:${e.name}`) ?? [])].sort()
     if (e.kind !== 'function') continue
     e.rust = rustMatch(fns, e)
-    const override = overrideOf(e.name)
-    if (HOST_MODULES[e.module]) {
+    const override = config.overrideOf(e.name)
+    const wire = e.rust ? config.wireParams(e.rust.params) : []
+    if (config.hostModules[e.module]) {
       e.route = 'ts'
       e.reason = 'a module of the host side of the package: it stays TypeScript and engine-free'
     } else if (override?.reject) {
@@ -678,7 +767,7 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = override.reject
     } else if (override?.command) e.route = 'command'
     else if (override?.hand) e.route = 'hand'
-    else if (isHandRoute(e.name)) e.route = 'routes'
+    else if (config.isHandRoute(e.name)) e.route = 'routes'
     else if (!e.rust) {
       e.route = 'ts'
       e.reason = 'no Rust port names it'
@@ -687,18 +776,21 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = `the port is not public (${e.rust.vis || 'private'}, ${e.rust.reachable ? 'reachable' : 'in a private module'}): ${e.rust.path}`
     } else if (
       !override?.rust &&
-      (!e.rust.params.every(decodable) || /&mut|dyn |impl /.test(e.rust.ret))
+      !config.ownRow?.(override) &&
+      (!wire.every(config.decodable) || /&mut|dyn |impl /.test(e.rust.ret))
     ) {
       e.route = 'ts'
       e.reason = `its Rust signature is not one a row can read: (${e.rust.params.join(', ')}) -> ${e.rust.ret}`
     } else if (
       !override?.rust &&
-      e.rust.params.filter((p) => !/&dyn MediaHost/.test(p)).length !==
-        (override?.args?.length ?? e.params.length)
+      wire.length !== (override?.args?.length ?? callArity(override?.body) ?? e.params.length)
     ) {
       e.route = 'ts'
-      e.reason = `arity differs: TypeScript ${e.params.length} (${e.params.map((p) => p.name).join(', ')}), Rust ${e.rust.params.length}`
+      e.reason = `arity differs: TypeScript ${e.params.length} (${e.params.map((p) => p.name).join(', ')}), Rust ${wire.length}`
     } else e.route = 'table'
+    if (e.route === 'table' && config.dropUnused && !e.required.length)
+      e.note =
+        'nothing outside the package uses it: the module drops it unless a kept piece names it'
   }
   return { exports }
 }

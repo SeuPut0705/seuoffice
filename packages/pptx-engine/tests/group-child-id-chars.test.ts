@@ -19,6 +19,16 @@ const creationId = (guid: string) =>
 const childSp = (cNvPr: string) =>
   `<p:sp><p:nvSpPr>${cNvPr}<p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>`
 
+/** A whole element around `originalXml`: the engine reads a model, not a partial one. */
+const elementOf = (originalXml: string, nvId?: string): SlideElement => ({
+  id: 'el',
+  type: 'passthrough',
+  kind: 'unknown',
+  anchor: { spIndex: 0, originalXml, range: [0, originalXml.length] },
+  transform: { offset: { x: 0, y: 0, cx: 0, cy: 0 }, rot: 0, flipH: false, flipV: false },
+  ...(nvId === undefined ? {} : { nvId }),
+})
+
 /** A group holding a decoy child (GUID_X) ahead of the child under test (GUID_Y). */
 function groupWith(decoyCNvPr: string, childCNvPr: string): SlideElement {
   const originalXml =
@@ -26,10 +36,10 @@ function groupWith(decoyCNvPr: string, childCNvPr: string): SlideElement {
     childSp(decoyCNvPr) +
     childSp(childCNvPr) +
     '</p:grpSp>'
-  return { anchor: { originalXml } } as unknown as SlideElement
+  return elementOf(originalXml)
 }
 
-const child = (nvId: string | number) => ({ nvId }) as unknown as SlideElement
+const child = (nvId: string) => elementOf('', nvId)
 const idOf = (guid: string) => `e_${guid.slice(0, 8).toLowerCase()}`
 
 describe('groupChildDurableId looks an id up as text, not as a pattern', () => {
@@ -72,7 +82,7 @@ describe('groupChildDurableId looks an id up as text, not as a pattern', () => {
       `<p:cNvPr id="15" name="decoy">${creationId(GUID_X)}</p:cNvPr>`,
       `<p:cNvPr name="child" id='5'>${creationId(GUID_Y)}</p:cNvPr>`,
     )
-    expect(groupChildDurableId(grp, child(5))).toBe(idOf(GUID_Y))
-    expect(groupChildDurableId(grp, child(15))).toBe(idOf(GUID_X))
+    expect(groupChildDurableId(grp, child('5'))).toBe(idOf(GUID_Y))
+    expect(groupChildDurableId(grp, child('15'))).toBe(idOf(GUID_X))
   })
 })

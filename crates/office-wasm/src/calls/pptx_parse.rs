@@ -99,7 +99,9 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 master_path: master_path.as_deref(),
                 ctx: data.context(&uids),
             })?;
-            with_utf16_anchors(&slide, text)
+            // the anchors are offsets into the slide as it was read: its canonical spelling
+            let xml = slide.original_xml.as_deref().unwrap_or_default();
+            with_utf16_anchors(&slide, xml)
         }
         "parse.parseBackground" => {
             let data = context_data(args)?;

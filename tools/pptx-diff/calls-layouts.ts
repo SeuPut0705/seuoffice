@@ -5,19 +5,19 @@
 // A function on an archive: `args.parts` (`[name, text]` pairs) and the text under
 // `args.textPart`, as calls-package.ts builds them; the answer is `{ value, entries }`
 // with every entry of the archive after the call as `[name, text]`.
-import { BLANK_SLIDE_XML, createBlankPptx } from '../../packages/pptx-engine/src/blank'
+import { BLANK_SLIDE_XML, createBlankPptx } from './reference/blank'
 import {
   BUILTIN_LAYOUTS,
   builtinLayoutInfos,
   ensureBuiltinLayout,
   shouldOfferBuiltinLayouts,
-} from '../../packages/pptx-engine/src/builtin-layouts'
+} from './reference/builtin-layouts'
 import {
   listSlideLayouts,
   parseLayoutPlaceholders,
   placeholderSpXml,
   prepareInsertSlideWithLayout,
-} from '../../packages/pptx-engine/src/layout'
+} from './reference/layout'
 import {
   chooseLayout,
   collectPart,
@@ -27,8 +27,8 @@ import {
   listLayouts,
   materializeSlideBundle,
   type SlideBundle,
-} from '../../packages/pptx-engine/src/slide-transfer'
-import { PackageArchive } from '../../packages/pptx-engine/src/zip'
+} from './reference/slide-transfer'
+import { PackageArchive } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckNamed, deckOp } from './deck-ops'
 

@@ -18,6 +18,7 @@ use ooxml_xml::ObjectOptions;
 use serde_json::{Value, json};
 
 use crate::color::{apply_color_mods, resolve_color_node, scale_luminance};
+use crate::redaction_xml::read_redact_label;
 use crate::theme::{Theme, resolve_font_ref};
 use crate::types::Fill;
 
@@ -115,6 +116,34 @@ fn latin_of(tx_pr: Node<'_>, theme: Option<&Theme>) -> Option<String> {
 /// The plot nodes of one kind: `Array.isArray(n) ? n : n ? [n] : []`.
 fn plots(node: Node<'_>) -> &[Value] {
     list(node)
+}
+
+const MAX_REDACT_WALK_DEPTH: usize = 64;
+
+/// The label of the first run property in a parsed chart part that carries our
+/// "hidden from AI" mark: a depth-first walk in key order, the way
+/// `Object.values` reads the parsed part.
+fn hidden_label_in(node: &Value, depth: usize) -> Option<&str> {
+    if depth > MAX_REDACT_WALK_DEPTH {
+        return None;
+    }
+    match node {
+        Value::Array(items) => items
+            .iter()
+            .find_map(|item| hidden_label_in(item, depth + 1)),
+        Value::Object(map) => {
+            let own = map
+                .contains_key("a:extLst")
+                .then(|| read_redact_label(Some(node)))
+                .flatten()
+                .filter(|label| !label.is_empty());
+            own.or_else(|| {
+                map.values()
+                    .find_map(|child| hidden_label_in(child, depth + 1))
+            })
+        }
+        _ => None,
+    }
 }
 
 /// Parse one chartN.xml. `None` is the TypeScript's `null`: unrecognized plot
@@ -298,6 +327,11 @@ pub fn parse_chart_xml(
     model.kind.set(kind);
     model.categories.set(Vec::new());
     model.series.set(Vec::new());
+    // Chart text is drawn by the renderer and carried by no reader's text, so the chart as a
+    // whole is withheld: the parent element takes this as its own `redact`
+    if let Some(redact) = doc.and_then(|doc| hidden_label_in(doc, 0)) {
+        model.redact.set(redact.to_owned());
+    }
     if let Some(of_pie) = of_pie {
         model.of_pie.set(of_pie);
     }

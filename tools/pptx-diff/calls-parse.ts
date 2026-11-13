@@ -17,8 +17,8 @@
 // `<prefix>_<(k - next) in base 36>`, `next` the counter after the probe: the
 // ids a counter from 0 gives, which is how the Rust is called.
 import { readFileSync } from 'node:fs'
-import { listMasterParts, parseMasterPart } from '../../packages/pptx-engine/src/master-edit'
-import { MODEL3D_REL_TYPE } from '../../packages/pptx-engine/src/model3d'
+import { listMasterParts, parseMasterPart } from './reference/master-edit'
+import { MODEL3D_REL_TYPE } from './reference/model3d'
 import {
   type DecorationOptions,
   layoutDiagramFallback,
@@ -27,15 +27,15 @@ import {
   parseDecorations,
   parseSlide,
   sliceGroupChildXmls,
-} from '../../packages/pptx-engine/src/parse'
+} from './reference/parse'
 import {
   parseDefaultTextStyle,
   parseMasterTextStyles,
   parsePlaceholderMap,
-} from '../../packages/pptx-engine/src/placeholder'
-import { parseClrMap, parseTheme } from '../../packages/pptx-engine/src/theme'
-import type { Slide, SlideElement } from '../../packages/pptx-engine/src/types'
-import { PackageArchive, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/placeholder'
+import { parseClrMap, parseTheme } from './reference/theme'
+import type { Slide, SlideElement } from './reference/types'
+import { PackageArchive, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { SLIDES as DIAGRAM_SLIDES } from './parse-inputs/diagram'
 import { SLIDES as FILL_SLIDES } from './parse-inputs/fill'

@@ -2,8 +2,8 @@
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_placeholder.rs to
 // `pptxPlaceholder.placeholder.<TypeScript name>`.
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
-import { resolveColorNode } from '../../packages/pptx-engine/src/color'
+import { xmlParser } from './reference/xml-parser'
+import { resolveColorNode } from './reference/color'
 import {
   type LstStyleSource,
   MAX_AUTO_NUM_START,
@@ -23,10 +23,10 @@ import {
   resolvePlaceholderPresetGeom,
   resolvePlaceholderTransform,
   type TextStyleLevels,
-} from '../../packages/pptx-engine/src/placeholder'
-import { parseClrMap, parseTheme, type Theme } from '../../packages/pptx-engine/src/theme'
-import { xmlArray } from '../../packages/pptx-engine/src/xml-utils'
-import { relsPathFor, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/placeholder'
+import { parseClrMap, parseTheme, type Theme } from './reference/theme'
+import { xmlArray } from './reference/xml-utils'
+import { relsPathFor, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Args = Record<string, unknown>
@@ -37,7 +37,7 @@ type Node = Record<string, unknown>
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 /**
- * The parser of packages/pptx-engine/src/parse.ts, which parses the
+ * The parser of tools/pptx-diff/reference/parse.ts, which parses the
  * `a:lstStyle` and `a:defRPr` nodes parse.ts hands to placeholder.ts. The
  * Rust dispatch holds the same list.
  */

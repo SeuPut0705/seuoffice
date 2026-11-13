@@ -1,3 +1,7 @@
+// WebAssembly and BufferSource are declared by the DOM lib: a Node-only package
+// that type-checks this file through an engine binding gets them from here.
+/// <reference lib="dom" />
+
 // The one loader of the Rust engines' WASM build (crates/office-wasm), shared
 // by every engine binding (@seuoffice/pptx-engine, @seuoffice/docx-engine).
 // Host-agnostic: no Node built-in and no browser API beyond WebAssembly,

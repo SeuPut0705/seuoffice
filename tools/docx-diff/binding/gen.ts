@@ -6,19 +6,22 @@
 //      any more is dropped;
 //   2. crates/office-wasm/src/invoke/table.rs: the table `invoke` answers them by.
 // It is a tool, not a check: it overwrites its output and refuses to touch what
-// the switch plumbing owns (src/node/**, src/engine-*.ts, src/vendor/**).
+// the switch plumbing owns (src/node/**, src/engine-*.ts, src/vendor/**) but
+// the shape tables it writes itself (engine-shapes.ts, engine-type-shapes.ts).
 //
-//   npx tsx tools/docx-diff/binding/gen.ts [--dry]
+//   npx tsx tools/docx-diff/binding/gen.ts [--engine docx|pptx] [--dry]
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as prettier from 'prettier'
 import ts from 'typescript'
-import { type ExportInfo, REFERENCE, ROOT, build, writeManifest } from './manifest'
-import { APPEND, type Override, UNUSED_MODULES, overrideOf } from './overrides'
+import { config } from './config'
+import { type ExportInfo, REFERENCE, ROOT, type Shape, build, writeManifest } from './manifest'
+import type { Override } from './overrides'
 import { rustTable } from './rust-table'
 
-const SRC = join(ROOT, 'packages/docx-engine/src')
+const overrideOf = config.overrideOf
+const SRC = join(ROOT, config.packageDir, 'src')
 const DRY = process.argv.includes('--dry')
 
 const routed = (e: ExportInfo): boolean =>
@@ -51,6 +54,8 @@ interface Piece {
   refs: Set<string>
   /** the routed function this piece is, whose body was replaced */
   wrapped: ExportInfo | null
+  /** the piece's text is the config's hand-written replacement */
+  replaced: boolean
   /** what a re-export names of another module: its names, or '*' */
   reexports: Array<{ target: string; name: string }>
 }
@@ -62,10 +67,23 @@ interface Module {
   pieces: Piece[]
 }
 
-function identifiersOf(node: ts.Node, into: Set<string>): Set<string> {
-  if (ts.isIdentifier(node)) into.add(node.text)
+function identifiersOf(
+  node: ts.Node,
+  into: Set<string>,
+  shadowed: ReadonlySet<string> = new Set(),
+): Set<string> {
+  if (ts.isIdentifier(node) && !shadowed.has(node.text)) into.add(node.text)
+  // a parameter shadows a module-level name spelled alike, in the function that declares it
+  let inner = shadowed
+  if (config.dropReexportRefs && ts.isFunctionLike(node) && node.parameters.length) {
+    const names = new Set(shadowed)
+    for (const parameter of node.parameters)
+      bindingNames(parameter.name, []).forEach((name) => names.add(name))
+    inner = names
+  }
   ts.forEachChild(node, (child) => {
-    identifiersOf(child, into)
+    if (config.dropReexportRefs && ts.isParameter(node) && child === node.name) return
+    identifiersOf(child, into, inner)
   })
   return into
 }
@@ -90,10 +108,13 @@ function wrapperBody(
   fn: ts.FunctionDeclaration,
   override: Override | undefined,
 ): string | null {
-  if (override?.body) return override.body
   const params = fn.parameters
-  if (params.some((p) => !ts.isIdentifier(p.name))) return null
-  const names = params.map((p) => (p.name as ts.Identifier).text)
+  if (!config.wrapperBody && params.some((p) => !ts.isIdentifier(p.name)))
+    return override?.body ?? null
+  // a destructured parameter is passed whole, under the name `argN` that the signature is rewritten to
+  const names = params.map((p, i) => (ts.isIdentifier(p.name) ? p.name.text : `arg${i}`))
+  if (config.wrapperBody) return config.wrapperBody(info, names, override)
+  if (override?.body) return override.body
   if (info.route === 'command' || info.route === 'hand') {
     return `return hand.${info.name}(${params.map((p, i) => (p.dotDotDotToken ? '...' : '') + names[i]).join(', ')}) as never`
   }
@@ -200,6 +221,7 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
       text: stmt.getFullText(sf),
       refs: new Set(),
       wrapped: null,
+      replaced: false,
       reexports: [],
     }
     if (ts.isFunctionDeclaration(stmt)) {
@@ -210,12 +232,23 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
         if (body === null)
           throw new Error(`${name}.${info.name}: a parameter of this function is not a plain name`)
         let prefix = text.slice(stmt.getFullStart(), stmt.body.getStart(sf))
-        // a parameter the engine owns (a ContentControlPart) is not sent: named as unused
-        for (const param of [...stmt.parameters].reverse()) {
-          const id = param.name as ts.Identifier
-          if (new RegExp(`\\b${id.text}\\b`).test(body)) continue
-          const at = id.getStart(sf) - stmt.getFullStart()
-          prefix = `${prefix.slice(0, at)}_${prefix.slice(at)}`
+        if (stmt.parameters.some((p) => !ts.isIdentifier(p.name))) {
+          const first = stmt.parameters[0]!
+          const last = stmt.parameters[stmt.parameters.length - 1]!
+          const named = stmt.parameters.map((p, i) =>
+            ts.isIdentifier(p.name)
+              ? p.getText(sf)
+              : `arg${i}${p.questionToken ? '?' : ''}${p.type ? `: ${p.type.getText(sf)}` : ''}`,
+          )
+          prefix = `${text.slice(stmt.getFullStart(), first.getStart(sf))}${named.join(', ')}${text.slice(last.getEnd(), stmt.body.getStart(sf))}`
+        } else {
+          // a parameter the engine owns (a ContentControlPart) is not sent: named as unused
+          for (const param of [...stmt.parameters].reverse()) {
+            const id = param.name as ts.Identifier
+            if (new RegExp(`\\b${id.text}\\b`).test(body)) continue
+            const at = id.getStart(sf) - stmt.getFullStart()
+            prefix = `${prefix.slice(0, at)}_${prefix.slice(at)}`
+          }
         }
         if (!stmt.type && !OVERRIDES_KEEP_INFERRED.has(info.name)) {
           // the declared type of a function that infers it: spelled out, as the wrapper's `as never` has none
@@ -247,7 +280,14 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
         }
       }
     }
-    if (piece.wrapped) {
+    const replacement = piece.names
+      .map((n) => config.replace[name]?.[n])
+      .find((text) => text !== undefined)
+    if (replacement !== undefined) {
+      piece.text = `${text.slice(stmt.getFullStart(), stmt.getStart(sf))}${replacement}`
+      piece.replaced = true
+    }
+    if (piece.wrapped || piece.replaced) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
       // a parameter shadows an import of its name inside the wrapper (withheldText's `textOf`)
@@ -308,7 +348,7 @@ function generateModules(exportsAll: ExportInfo[]): {
     .filter((f) => f.endsWith('.ts'))
     .map((f) => f.replace(/\.ts$/, ''))
   const verbatim = everyModule.filter(
-    (m) => !rewritten.includes(m) && !Object.hasOwn(UNUSED_MODULES, m),
+    (m) => !rewritten.includes(m) && !Object.hasOwn(config.unusedModules ?? {}, m),
   )
 
   const mods = new Map<string, Module>()
@@ -453,25 +493,28 @@ function generateModules(exportsAll: ExportInfo[]): {
       if (line) lines.push(line)
     }
     const wrappers = kept
-      .filter((p) => p.wrapped)
+      .filter((p) => p.wrapped || p.replaced)
       .map((p) => p.text)
       .join('\n')
-    const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) =>
-      new RegExp(`\\b${n}\\(`).test(wrappers),
-    )
-    const fromEngine = core.filter((n) => n !== 'zipCall')
-    if (fromEngine.length) lines.push(`import { ${fromEngine.join(', ')} } from './engine'`)
-    if (core.includes('zipCall')) lines.push(`import { zipCall } from './engine-hand'`)
-    if (/\bhand\./.test(wrappers)) lines.push(`import * as hand from './engine-hand'`)
+    if (config.coreImports) lines.push(...config.coreImports(wrappers))
+    else {
+      const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) =>
+        new RegExp(`\\b${n}\\(`).test(wrappers),
+      )
+      const fromEngine = core.filter((n) => n !== 'zipCall')
+      if (fromEngine.length) lines.push(`import { ${fromEngine.join(', ')} } from './engine'`)
+      if (core.includes('zipCall')) lines.push(`import { zipCall } from './engine-hand'`)
+      if (/\bhand\./.test(wrappers)) lines.push(`import * as hand from './engine-hand'`)
+    }
     const body = kept.map((p) => p.text.replace(/^\n+/, '\n')).join('')
-    const append = APPEND[mod.name] ? `\n${APPEND[mod.name]}\n` : ''
+    const append = config.append[mod.name] ? `\n${config.append[mod.name]}\n` : ''
     const header = mod.header ? `${mod.header}\n` : ''
     outputs.push({
       module: mod.name,
       text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}`,
     })
   }
-  dropped.push(...Object.keys(UNUSED_MODULES))
+  dropped.push(...Object.keys(config.unusedModules ?? {}))
   return { outputs, verbatim, dropped, wrapped }
 }
 
@@ -591,14 +634,35 @@ for (const module of verbatim) {
   const text = readFileSync(join(REFERENCE, `${module}.ts`), 'utf8')
   if (await writeIfChanged(join(SRC, `${module}.ts`), text)) changed++
 }
+if (config.typeShapes) {
+  const typeShapes: Record<string, unknown> = {}
+  for (const name of config.typeShapes) {
+    const shape = all.find((e) => e.kind === 'type' && e.name === name)?.ret.shape
+    if (shape) typeShapes[name] = shape
+  }
+  // a `ref` the codec cannot resolve would throw on the reply that reaches it: refuse it here
+  const dangling = new Set<string>()
+  const visit = (shape: Shape | null | undefined): void => {
+    if (!shape) return
+    if (shape.k === 'ref' && !(shape.n! in typeShapes)) dangling.add(shape.n!)
+    visit(shape.v)
+    for (const item of shape.items ?? []) visit(item)
+    for (const field of Object.values(shape.f ?? {})) visit(field)
+  }
+  for (const e of all) visit(e.ret.shape)
+  if (dangling.size) throw new Error(`shapes name types without one: ${[...dangling].join(', ')}`)
+  const path = join(SRC, 'engine-type-shapes.ts')
+  const text = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map, a Set or an array with holes sits in the model values the engine writes back. A \`ref\` is the shape of the type it names here.\nimport type { Shape } from '@seuoffice/engine-wasm'\n\nexport const TYPE_SHAPES: Readonly<Record<string, Shape>> = ${JSON.stringify(typeShapes)}\n`
+  if (await writeIfChanged(path, text)) console.log('engine-type-shapes.ts written')
+}
 {
   const texts = new Map<string, string>()
   for (const module of verbatim)
     texts.set(module, readFileSync(join(REFERENCE, `${module}.ts`), 'utf8'))
   for (const out of outputs) texts.set(out.module, out.text)
-  texts.set('engine', readFileSync(join(SRC, 'engine.ts'), 'utf8'))
-  texts.set('engine-hand', readFileSync(join(SRC, 'engine-hand.ts'), 'utf8'))
-  texts.set('engine-shapes', 'export const SHAPES = {}')
+  for (const module of config.plumbing)
+    texts.set(module, readFileSync(join(SRC, `${module}.ts`), 'utf8'))
+  if (config.shapesModule) texts.set('engine-shapes', 'export const SHAPES = {}')
   for (const problem of checkImports(texts)) console.log(`  import check: ${problem}`)
 }
 console.log(
@@ -610,7 +674,7 @@ for (const e of all)
   if (e.kind === 'function' && e.ret.shape && e.route !== 'ts' && !shapes[e.name])
     shapes[e.name] = e.ret.shape
 const shapesText = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map or a Set sits in what an export returns.\nimport type { Shape } from './engine'\n\nexport const SHAPES: Record<string, Shape> = ${JSON.stringify(shapes, null, 2)}\n`
-if (await writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText))
+if (config.shapesModule && (await writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText)))
   console.log('engine-shapes.ts written')
 const table = rustTable(
   all.filter(
@@ -619,6 +683,6 @@ const table = rustTable(
       (e.route === 'routes' || (e.route === 'table' && wrapped.has(e.name))),
   ),
 )
-if (await writeIfChanged(join(ROOT, 'crates/office-wasm/src/invoke/table.rs'), table.text))
-  console.log(`table.rs written: ${table.rows} rows`)
+if (await writeIfChanged(join(ROOT, config.table.file), table.text))
+  console.log(`${config.table.module}.rs written: ${table.rows} rows`)
 for (const note of table.notes) console.log(`  note: ${note}`)
