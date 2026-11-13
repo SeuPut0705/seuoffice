@@ -11,6 +11,10 @@ import { invoke, xnodeArg } from './engine'
 export function withheldLabelOf(rPrXml: string | undefined): string | null {
   return invoke('withheldLabelOf', [rPrXml]) as never
 }
+/** Whether the raw XML holds anything that looks like the mark, comments and CDATA included. */
+export function hasWithheldTrace(xml: string): boolean {
+  return invoke('hasWithheldTrace', [xml]) as never
+}
 /** What a model reads for an entry whose marks cannot all be read: the whole entry is withheld. */
 export const WITHHELD_ENTRY_TEXT = placeholderSource('private')
 /**

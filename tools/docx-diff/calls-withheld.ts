@@ -20,7 +20,7 @@ import {
   withheldLabelOf,
   withheldNode,
   withheldText,
-  withRedactNamespace,
+  withRedactRoot,
 } from './reference/withheld'
 import type { XNode } from './reference/xml-utils'
 import { findChildren } from './reference/xml-utils'
@@ -281,9 +281,10 @@ export const WITHHELD: CallSpec[] = [
     built: GENERATED_ENTRIES.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
   },
   {
-    fn: 'withheld.withRedactNamespace',
-    call: (text, args) => withRedactNamespace(text, args.rootTag as string),
-    built: NAMESPACE_PARTS.map(([rootTag, text]) => ({ text, args: { rootTag } })),
+    // main replaced withRedactNamespace(part, rootTag) by withRedactRoot(part)
+    fn: 'withheld.withRedactRoot',
+    call: (text) => withRedactRoot(text),
+    built: NAMESPACE_PARTS.map(([, text]) => ({ text })),
   },
   {
     fn: 'withheld.commentEntries',

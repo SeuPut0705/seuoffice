@@ -40,7 +40,7 @@ function strAttr(tag: string, name: string): string | undefined {
  * paragraph spacing/indent readers do instead of dropping to the default.
  */
 function intAttr(tag: string, name: string, fallback: number): number {
-  const m = new RegExp(`${name}=["'](-?\\d+(?:\\.\\d+)?)["']`).exec(tag)
+  const m = new RegExp(`${name}\\s*=\\s*["'](-?\\d+(?:\\.\\d+)?)["']`).exec(tag)
   const v = m ? Math.round(parseFloat(m[1])) : NaN
   return Number.isFinite(v) ? v : fallback
 }
@@ -475,11 +475,11 @@ export function applySectionSettings(sectPrXml: string, settings: SectionSetting
   } else {
     xml = injectIntoSectPr(xml, pgSz)
   }
+  // an attribute as another producer may spell it: either quote, white space around `=`
   const replaceMarAttr = (tag: string, name: string, value: number): string => {
-    if (new RegExp(`${name}="`).test(tag)) {
-      return tag.replace(new RegExp(`${name}="-?[\\d.]+"`), `${name}="${value}"`)
-    }
-    return tag.replace(/\/>$/, ` ${name}="${value}"/>`)
+    const attr = new RegExp(`(\\s${name}\\s*=\\s*)(["'])[^"']*\\2`)
+    if (attr.test(tag)) return tag.replace(attr, `$1$2${value}$2`)
+    return tag.replace(/\s*\/>$/, ` ${name}="${value}"/>`)
   }
   const marMatch = /<w:pgMar[^>]*\/>/.exec(xml)
   if (marMatch) {

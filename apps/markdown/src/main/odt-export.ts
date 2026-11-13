@@ -20,9 +20,9 @@ import {
   markedOdtBox,
   markedOdtChoice,
   type MarkedOdtBox,
-  type MarkedOdtChoice,
 } from '@seuoffice/electron-utils/marked-odt'
 import type { MessageBoxOptions } from 'electron'
+import type { MarkedExportChoice, MarkedExportFormat } from '../shared/ipc'
 
 export type OdtExportOutcome =
   { ok: true; path: string } | { ok: true; canceled: true } | { ok: false; error: string }
@@ -99,28 +99,36 @@ export async function confirmOdtReport(
   return response === 0
 }
 
-/** The choice box for a document with content hidden from AI (one box, the two ways out). */
-export async function askMarkedOdt(
+const MARKED_KEYS: Record<MarkedExportFormat, { message: OdtKey; detail: OdtKey; clear: OdtKey }> =
+  {
+    odt: { message: 'markedMessage', detail: 'markedDetail', clear: 'markedClear' },
+    pdf: { message: 'markedMessagePdf', detail: 'markedDetailFile', clear: 'markedClearPdf' },
+    png: { message: 'markedMessagePng', detail: 'markedDetailFile', clear: 'markedClearPng' },
+  }
+
+/**
+ * The choice box for a document with content hidden from AI that is about to be
+ * exported as `format` (one box, the two ways out): Word, which keeps the mark,
+ * the export without the marks, or cancel.
+ */
+export async function askMarkedExport(
+  format: MarkedExportFormat,
   show: (options: MarkedOdtBox) => Promise<{ response: number }>,
   lang: Lang = getUiLang(),
-): Promise<MarkedOdtChoice> {
+): Promise<MarkedExportChoice> {
   const t = (key: OdtKey) => tOdt(lang, key)
+  const keys = MARKED_KEYS[format]
   const { response } = await show(
     markedOdtBox({
       title: t('markedTitle'),
-      message: t('markedMessage'),
-      detail: t('markedDetail'),
+      message: t(keys.message),
+      detail: t(keys.detail),
       saveDocx: t('markedDocx'),
-      clearMarks: t('markedClear'),
+      clearMarks: t(keys.clear),
       cancel: t('odtCancel'),
     }),
   )
   return markedOdtChoice(response)
-}
-
-/** Why a headless export of a marked document writes nothing. */
-export function markedOdtRefusal(lang: Lang = getUiLang()): string {
-  return tOdt(lang, 'markedRefused')
 }
 
 /** Name of the save-dialog filter for `.odt` */
@@ -165,8 +173,12 @@ const tOdt = createI18n({
       'Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, which keeps the hiding, or clear the marks for the ODT copy. This document keeps its marks either way.',
     markedDocx: 'Export as Word (.docx)',
     markedClear: 'Clear marks and export as ODT',
-    markedRefused:
-      'this document has content hidden from AI, and an ODT file cannot keep that; export it as Word, or clear the marks first',
+    markedMessagePdf: 'This document has content hidden from AI, and a PDF file cannot keep that.',
+    markedMessagePng: 'This document has content hidden from AI, and page images cannot keep that.',
+    markedDetailFile:
+      'The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Export as Word (.docx) instead, which keeps the marks, or export without them. This document keeps its marks either way.',
+    markedClearPdf: 'Export as PDF without the marks',
+    markedClearPng: 'Export images without the marks',
     featToc: 'Table of contents',
     featChart: 'Charts',
     featEquation: 'Equations',
@@ -201,8 +213,12 @@ const tOdt = createI18n({
       'ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 숨김이 유지되는 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.',
     markedDocx: 'Word(.docx)로 내보내기',
     markedClear: '표시 지우고 ODT로 내보내기',
-    markedRefused:
-      '이 문서에는 AI에게 숨긴 내용이 있어 ODT 파일에 담을 수 없습니다. Word로 내보내거나 표시를 먼저 지우세요',
+    markedMessagePdf: '이 문서에는 AI에게 숨긴 내용이 있는데, PDF 파일에는 이를 담을 수 없습니다.',
+    markedMessagePng: '이 문서에는 AI에게 숨긴 내용이 있는데, 쪽 이미지에는 이를 담을 수 없습니다.',
+    markedDetailFile:
+      '내보낸 파일에는 AI에게 숨김 표시가 없습니다. 그 파일을 읽는 모든 것은 AI를 포함해 숨긴 내용을 그대로 봅니다. 대신 숨김 표시가 유지되는 Word(.docx)로 내보내거나, 표시 없이 내보내세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.',
+    markedClearPdf: '표시 없이 PDF로 내보내기',
+    markedClearPng: '표시 없이 이미지로 내보내기',
     featToc: '목차',
     featChart: '차트',
     featEquation: '수식',

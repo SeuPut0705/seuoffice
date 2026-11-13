@@ -9,7 +9,12 @@ export {
   sfntLineMetrics,
 } from './font-table'
 export { decodeEntities } from './parse-xml-text'
-export { hiddenRunProperties, WITHHELD_ENTRY_TEXT, withheldLabelOf } from './withheld'
+export {
+  hasWithheldTrace,
+  hiddenRunProperties,
+  WITHHELD_ENTRY_TEXT,
+  withheldLabelOf,
+} from './withheld'
 export { clearHiddenMarks, docxHoldsHiddenContent } from './hidden-content'
 export { editedCommentModelText } from './parse-package'
 export { noteModelText } from './notes'
