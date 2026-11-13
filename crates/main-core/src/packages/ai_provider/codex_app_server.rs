@@ -41,8 +41,7 @@ use sha2::{Digest, Sha256};
 
 use super::effort::{ai_effort_of, ai_efforts_of};
 use super::jsval::{
-    Obj, as_record, as_str, assign, entries_of, length16, number, object, prop, spread, str_trim,
-    text,
+    Obj, as_record, as_str, assign, entries_of, length16, number, object, prop, spread, text,
 };
 use super::protocols_shared::{
     StreamCallbacks, parse_tool_input, throw_if_tool_count_over_budget,
@@ -62,13 +61,13 @@ use super::subscription_temp_dirs::{
     SubscriptionTempDirsState, TempDirOptions, create_tracked_temp_dir, remove_tracked_temp_dir,
 };
 use super::task::{
-    Child, ChildEvent, Id, JsError, LocalBoxFuture, Rt, Settle, SpawnRequest, Stdio, Wait,
+    Child, ChildEvent, Id, JsError, LocalBoxFuture, Rt, Settle, SpawnRequest, Stdio, StringDecoder,
+    Wait,
 };
 use super::task::{FsOp, Signal};
 use super::types::AiChatResponse;
 use super::watchdog::create_stream_watchdog;
 use crate::packages::i18n::PRODUCT_NAME;
-use crate::packages::mcp_sdk::streamable_http_client::Utf8Stream;
 
 const DIAGNOSTIC_LIMIT: usize = 16_000;
 const REQUEST_TIMEOUT_MS: f64 = 30_000.0;
@@ -257,7 +256,7 @@ fn as_error(error: JsError) -> JsError {
 /// `on_line` is reported through `on_overflow` the same way.
 pub struct BoundedRpcStdout {
     /// a multi-byte UTF-8 sequence that straddles two chunks stays intact
-    decoder: Utf8Stream,
+    decoder: StringDecoder,
     pending: String,
     /// UTF-8 bytes buffered for the current line, including any partial
     /// sequence held by the decoder
@@ -275,7 +274,7 @@ impl BoundedRpcStdout {
         on_overflow: impl FnMut(JsError) + 'static,
     ) -> BoundedRpcStdout {
         BoundedRpcStdout {
-            decoder: Utf8Stream::new(),
+            decoder: StringDecoder::new(),
             pending: String::new(),
             pending_bytes: 0,
             stopped: false,
@@ -305,7 +304,7 @@ impl BoundedRpcStdout {
             return;
         }
         self.stopped = true;
-        let tail = format!("{}{}", self.pending, self.decoder.decode(&[], true));
+        let tail = format!("{}{}", self.pending, self.decoder.end());
         self.pending.clear();
         self.pending_bytes = 0;
         if !tail.is_empty() {
@@ -318,7 +317,7 @@ impl BoundedRpcStdout {
         if self.stopped {
             return;
         }
-        let decoded = self.decoder.decode(chunk, false);
+        let decoded = self.decoder.write(chunk);
         self.pending.push_str(&decoded);
         let all = std::mem::take(&mut self.pending);
         let mut parts: Vec<String> = all.split('\n').map(str::to_owned).collect();
@@ -703,9 +702,12 @@ struct ClientInner {
     rt: Rt,
     app: CodexApp,
     key: String,
-    child: Child,
+    /// `None` while the process is being started
+    child: RefCell<Option<Child>>,
     st: RefCell<ClientState>,
-    initialized: RefCell<Option<Wait<Result<(), JsError>>>>,
+    /// `this.initialized`
+    initialized: Wait<Result<(), JsError>>,
+    init: Settle<Result<(), JsError>>,
 }
 
 /// `CodexAppServerClient`: one `codex app-server` process.
@@ -717,12 +719,28 @@ impl CodexAppServerClient {
     /// shell, registered so that quitting or crashing ends it. The temp dir as
     /// working directory keeps the project configuration of wherever the app
     /// was started out of the process.
-    async fn start(
-        rt: &Rt,
-        app: &CodexApp,
-        program: &SubscriptionProgram,
-        key: &str,
-    ) -> Result<CodexAppServerClient, JsError> {
+    fn starting(rt: &Rt, app: &CodexApp, key: &str) -> CodexAppServerClient {
+        let (init, initialized) = rt.deferred::<Result<(), JsError>>();
+        CodexAppServerClient(Rc::new(ClientInner {
+            rt: rt.clone(),
+            app: app.clone(),
+            key: key.to_owned(),
+            child: RefCell::new(None),
+            st: RefCell::new(ClientState {
+                next_id: 1.0,
+                ..ClientState::default()
+            }),
+            initialized,
+            init,
+        }))
+    }
+
+    /// The part of the constructor that starts the process. The TypeScript
+    /// spawns synchronously, so the client is in the pool before anything is
+    /// awaited; here the pool holds it from [`CodexAppServerClient::starting`]
+    /// on, and [`CodexAppServerClient::ready`] waits for the process.
+    async fn launch(&self, program: &SubscriptionProgram) -> Result<(), JsError> {
+        let rt = &self.0.rt;
         let child = spawn_subscription_program(
             rt,
             program,
@@ -734,17 +752,8 @@ impl CodexAppServerClient {
             },
         )
         .await?;
-        let client = CodexAppServerClient(Rc::new(ClientInner {
-            rt: rt.clone(),
-            app: app.clone(),
-            key: key.to_owned(),
-            child: child.clone(),
-            st: RefCell::new(ClientState {
-                next_id: 1.0,
-                ..ClientState::default()
-            }),
-            initialized: RefCell::new(None),
-        }));
+        *self.0.child.borrow_mut() = Some(child.clone());
+        let client = self.clone();
         let kill_client = client.clone();
         let line_client = client.clone();
         let overflow_client = client.clone();
@@ -788,7 +797,7 @@ impl CodexAppServerClient {
             _ => {}
         });
         client.begin_initialize();
-        Ok(client)
+        Ok(())
     }
 
     /// `this.initialized = this.initialize()`: the `initialize` request starts
@@ -813,11 +822,14 @@ impl CodexAppServerClient {
         ]);
         let started = self.request_wire_start("initialize", Some(&params), REQUEST_TIMEOUT_MS);
         let client = self.clone();
-        let initialized = self.0.rt.share(async move {
-            started?.await?;
-            client.notify("initialized", None)
+        self.0.rt.spawn_local(async move {
+            let outcome = async {
+                started?.await?;
+                client.notify("initialized", None)
+            }
+            .await;
+            client.0.init.settle(outcome);
         });
-        *self.0.initialized.borrow_mut() = Some(initialized);
     }
 
     /// `get isClosed()`
@@ -885,11 +897,7 @@ impl CodexAppServerClient {
 
     /// `ready()`
     pub async fn ready(&self) -> Result<(), JsError> {
-        let initialized = self.0.initialized.borrow().clone();
-        match initialized {
-            Some(initialized) => initialized.await,
-            None => Ok(()),
-        }
+        self.0.initialized.clone().await
     }
 
     /// `request(method, params)` with the default timeout.
@@ -1075,12 +1083,19 @@ impl CodexAppServerClient {
 
     /// `write(message)`
     fn write(&self, message: &JsonValue) -> Result<(), JsError> {
-        if self.is_closed() || !self.0.child.stdin_writable() {
+        if self.is_closed()
+            || !self
+                .0
+                .child
+                .borrow()
+                .as_ref()
+                .is_some_and(Child::stdin_writable)
+        {
             return Err(JsError::error("Codex app-server input is closed"));
         }
-        self.0
-            .child
-            .write(format!("{}\n", json_stringify(message)).as_bytes());
+        if let Some(child) = self.0.child.borrow().as_ref() {
+            child.write(format!("{}\n", json_stringify(message)).as_bytes());
+        }
         Ok(())
     }
 
@@ -1178,6 +1193,7 @@ impl CodexAppServerClient {
             (pending, sessions, close_listeners, idle_timer)
         };
         self.0.rt.clear_timeout(idle_timer);
+        self.0.init.settle(Err(error.clone()));
         for (_, pending) in pending {
             self.0.rt.clear_timeout(Some(pending.timer));
             pending.settle.settle(Err(error.clone()));
@@ -1207,9 +1223,12 @@ impl CodexAppServerClient {
     /// processes of its own.
     fn kill_tree(&self) {
         let hook = self.0.app.borrow().runtime.kill_tree.clone();
+        let Some(child) = self.0.child.borrow().clone() else {
+            return;
+        };
         match hook {
-            Some(hook) => hook(&self.0.rt, &self.0.child),
-            None => real_kill_tree(&self.0.rt, &self.0.child),
+            Some(hook) => hook(&self.0.rt, &child),
+            None => real_kill_tree(&self.0.rt, &child),
         }
     }
 
@@ -1349,12 +1368,17 @@ async fn client_for(
     {
         return Ok(existing);
     }
-    let client = CodexAppServerClient::start(rt, app, &program, &key).await?;
+    // the client is pooled before the process is awaited, as it is in the TypeScript
+    let client = CodexAppServerClient::starting(rt, app, &key);
     let off = app.borrow().codex_off;
     if off {
         client.stop_when_unused();
     } else {
         app.borrow_mut().clients.set(key, client.clone());
+    }
+    if let Err(error) = client.launch(&program).await {
+        client.fail(error.clone());
+        return Err(error);
     }
     Ok(client)
 }
@@ -1779,8 +1803,8 @@ pub fn codex_thread_start_params(
     temp_dir: &str,
     mode: &str,
     mcp_servers: &Obj,
-) -> JsonValue {
-    let model = str_trim(prop(config, "model"));
+) -> Result<JsonValue, JsError> {
+    let model = config_model_trimmed(config)?;
     let mut base = Obj::new();
     if !model.is_empty() {
         base.set("model", text(model));
@@ -1801,7 +1825,7 @@ pub fn codex_thread_start_params(
         if let Some(mcp) = mcp {
             base.set("config", JsonValue::Object(mcp));
         }
-        return JsonValue::Object(base);
+        return Ok(JsonValue::Object(base));
     }
     let mut filesystem = Obj::new();
     filesystem.set(":minimal", text("read"));
@@ -1820,7 +1844,31 @@ pub fn codex_thread_start_params(
         }
     }
     base.set("config", JsonValue::Object(config_out));
-    JsonValue::Object(base)
+    Ok(JsonValue::Object(base))
+}
+
+/// `config.model.trim()`, with the `TypeError` the TypeScript throws for a
+/// configuration without a string `model`.
+fn config_model_trimmed(config: &JsonValue) -> Result<String, JsError> {
+    match config {
+        JsonValue::Null => Err(JsError::type_error(
+            "Cannot read properties of null (reading 'model')",
+        )),
+        JsonValue::Object(o) => match o.get("model") {
+            Some(JsonValue::String(model)) => Ok(trim(model).to_owned()),
+            Some(JsonValue::Null) => Err(JsError::type_error(
+                "Cannot read properties of null (reading 'trim')",
+            )),
+            None => Err(JsError::type_error(
+                "Cannot read properties of undefined (reading 'trim')",
+            )),
+            Some(_) => Err(JsError::type_error("config.model.trim is not a function")),
+        },
+        // a property of a string, a number, a boolean or an array: `undefined`
+        _ => Err(JsError::type_error(
+            "Cannot read properties of undefined (reading 'trim')",
+        )),
+    }
 }
 
 /// `activePermissionProfileId(result)`
@@ -1958,8 +2006,12 @@ async fn start_thread_with_permissions(
     temp_dir: &str,
     mcp_servers: &Obj,
 ) -> Result<String, JsError> {
-    let params = codex_thread_start_params(config, temp_dir, "profile", mcp_servers);
-    let profile = match client.request("thread/start", Some(&params)).await {
+    let profile_params = codex_thread_start_params(config, temp_dir, "profile", mcp_servers);
+    let attempt = match profile_params {
+        Ok(params) => client.request("thread/start", Some(&params)).await,
+        Err(error) => Err(error),
+    };
+    let profile = match attempt {
         Ok(result) => {
             if active_permission_profile_id(&result).as_deref() == Some(CODEX_PERMISSION_PROFILE) {
                 if let Ok(thread_id) = thread_id_from(&result) {
@@ -1979,7 +2031,7 @@ async fn start_thread_with_permissions(
         let params = object(vec![("threadId", text(abandoned))]);
         let _ = client.request("thread/delete", Some(&params)).await;
     }
-    let params = codex_thread_start_params(config, temp_dir, "read-only", mcp_servers);
+    let params = codex_thread_start_params(config, temp_dir, "read-only", mcp_servers)?;
     thread_id_from(&client.request("thread/start", Some(&params)).await?)
 }
 
@@ -2623,7 +2675,7 @@ async fn run_codex_app_server(
         Some(&cb.signal),
         |client| async move {
             assert_runnable_account(&client).await?;
-            let configured_model = str_trim(prop(config, "model"));
+            let configured_model = config_model_trimmed(config)?;
             let model = if configured_model.is_empty() {
                 client.default_model_for().await?
             } else {

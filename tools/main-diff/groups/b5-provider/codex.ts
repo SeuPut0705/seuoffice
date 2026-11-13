@@ -15,7 +15,8 @@
  * sessionId } }`, `{ chat: { config, system, user } }`, `{ account: { cliPath,
  * signal, aborted } }`, `{ models: { cliPath } }`, `{ subModels: { cliPath,
  * signal, aborted } }` (`signal`: the world's caller signal; `aborted`: a
- * signal that is aborted already), `{ login: true }` (the app ran Codex's own
+ * signal that is aborted already), `{ all: [steps] }` (the steps start together,
+ * as `Promise.all` starts them), `{ login: true }` (the app ran Codex's own
  * login), `{ off: boolean }` (Codex turned off or on), `{ sleep: ms }`,
  * `{ shutdown: true }`. Every step answers `{ ok: true }`, `{ result }` or
  * `{ threw: { name, message, kind?, provider?, resetsAt? } }`; the
@@ -189,6 +190,7 @@ type Step =
   | { account: { cliPath?: string; signal?: boolean; aborted?: boolean } }
   | { models: { cliPath?: string } }
   | { subModels: { cliPath?: string; signal?: boolean; aborted?: boolean } }
+  | { all: Step[] }
   | { login: true }
   | { off: boolean }
   | { sleep: number }
@@ -244,6 +246,10 @@ function callbacks(cx: TsContext, signal: AbortSignal, sessionId?: string): Any 
 
 async function runStep(step: Step, cx: TsContext, signal: AbortSignal): Promise<unknown> {
   try {
+    if ('all' in step) {
+      // started together, as `Promise.all` does
+      return await Promise.all(step.all.map((one) => runStep(one, cx, signal)))
+    }
     if ('stream' in step) {
       const s = step.stream
       await mod.streamCodexAppServer(
@@ -487,6 +493,11 @@ const pure: Group = {
       c({ model: 'gpt-5' }, '/tmp/codex-1', 'read-only', {}),
       c({ model: 'm' }, '/tmp/codex-1', 'read-only', mcpOff),
       c({ model: 'm' }, ':minimal', 'profile', {}),
+      c({}, '/tmp/x', 'profile', {}),
+      c(null, '/tmp/x', 'read-only', {}),
+      c({ model: null }, '/tmp/x', 'profile', {}),
+      c({ model: 5 }, '/tmp/x', 'profile', {}),
+      c('text', '/tmp/x', 'profile', {}),
     ],
   },
   'codex.activePermissionProfileId': {
@@ -694,6 +705,8 @@ const attach = {
       c([{ data: { hex: '61e2' } }, { data: { hex: '82ac0a' } }, { end: true }]),
       c([{ data: { hex: '61e282' } }, { end: true }]),
       c([{ data: '' }, { end: true }]),
+      c([{ data: { hex: 'efbbbf610a' } }, { end: true }]),
+      c([{ data: { hex: 'efbb' } }, { data: { hex: 'bf620a63' } }, { end: true }]),
       c([{ data: 'x\ny\nz\n' }, { data: 'tail' }], ['y']),
       c([{ data: 'x\ny\nz\n' }, { end: true }], ['!x']),
       c([{ data: 'tail' }, { end: true }], ['tail']),
@@ -1690,6 +1703,33 @@ const mcpPages = (last: string | null): Kid => {
 const started = note('turn/started', { threadId: 'thread-1', turn: { id: 'turn-1' } })
 
 const moreStreamCases: Case[] = [
+  // a byte order mark at the start of stdout is part of the first line
+  c(w([ok('bom').spec({ stdout: [{ hex: 'efbbbf' }] })]), steps(stream())),
+  // two runs started together share one process
+  c(
+    w([
+      new Kid()
+        .start()
+        .req(CHATGPT)
+        .req(CHATGPT)
+        .req({ config: { mcp_servers: {} } })
+        .req({ config: { mcp_servers: {} } })
+        .req(thread('thread-1'))
+        .req(thread('thread-2'))
+        .req({ data: [] })
+        .req({ data: [] })
+        .turn(done('one', [], 'turn-1', 'thread-1'), 'turn-1')
+        .turn(done('two', [], 'turn-2', 'thread-2'), 'turn-2')
+        .spec(),
+    ]),
+    steps({ all: [stream({ sessionId: 'a' }), stream({ sessionId: 'b' })] }),
+  ),
+  c(
+    w([new Kid().start().req(CHATGPT).req(CHATGPT).req(MODEL_PAGE).req(MODEL_PAGE).spec()]),
+    steps({ all: [{ models: {} }, { models: {} }] }),
+  ),
+  // the process cannot be started: both runs fail
+  c(w([]), steps({ all: [stream({ sessionId: 'a' }), stream({ sessionId: 'b' })] })),
   // the idle timer is not up yet
   c(w([ok('idle').spec()]), steps(stream({ sessionId: 'a' }), { sleep: 115000 })),
   c(

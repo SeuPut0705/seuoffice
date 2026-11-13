@@ -439,5 +439,26 @@
     "find": "let off = app.borrow().codex_off;",
     "replace": "let off = false;",
     "fn": ["codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a byte order mark is dropped from stdout",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "self.decoder.write(chunk)",
+    "replace": "self.decoder.write(chunk).trim_start_matches('\\u{feff}').to_owned()",
+    "fn": ["codex.attachBoundedRpcStdout", "codex.streamCodexAppServer"]
+  },
+  {
+    "name": "codex a starting process is not pooled",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "app.borrow_mut().clients.set(key, client.clone());",
+    "replace": "let _ = &key;",
+    "fn": ["codex.streamCodexAppServer", "codex.listCodexModels"]
+  },
+  {
+    "name": "codex a model that is no string is another error",
+    "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
+    "find": "\"config.model.trim is not a function\"",
+    "replace": "\"config.model.trim is not callable\"",
+    "fn": ["codex.codexThreadStartParams"]
   }
 ]

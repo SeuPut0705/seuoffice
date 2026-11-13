@@ -354,6 +354,24 @@ async fn run_step(rt: &Rt, app: &CodexApp, signal: &Signal, sink: &Sink, step: &
             None
         }
     };
+    if let Some(Value::Array(steps)) = step.get("all") {
+        // started together, as `Promise.all` starts them
+        let futures: Vec<LocalBoxFuture<Value>> = steps
+            .iter()
+            .map(|one| {
+                let (rt, app, signal, sink, one) = (
+                    rt.clone(),
+                    app.clone(),
+                    signal.clone(),
+                    sink.clone(),
+                    one.clone(),
+                );
+                Box::pin(async move { run_step(&rt, &app, &signal, &sink, &one).await })
+                    as LocalBoxFuture<Value>
+            })
+            .collect();
+        return Value::Array(rt.join_all(futures).await);
+    }
     if let Some(s) = step.get("stream") {
         let user = jv_object(vec![
             ("role", JsonValue::String("user".into())),
@@ -554,12 +572,9 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 JsonValue::Object(o) => o,
                 _ => Obj::new(),
             };
-            value(&codex_thread_start_params(
-                &jv(args, 0),
-                &s(args, 1),
-                &s(args, 2),
-                &mcp,
-            ))
+            codex_thread_start_params(&jv(args, 0), &s(args, 1), &s(args, 2), &mcp)
+                .map(|v| Some(json_value_to_serde(&v)))
+                .map_err(|e| thrown(&e))
         }
         "codex.activePermissionProfileId" => Ok(Some(
             active_permission_profile_id(&jv(args, 0)).map_or(Value::Null, Value::String),
