@@ -12,6 +12,7 @@ import { createSaveGate } from '../src/renderer/save-scheduler'
 const SESSION = '00000000-0000-4000-b000-000000000001'
 const exportOds = vi.fn()
 const messages: string[] = []
+const requestSaveAs = vi.fn()
 
 function context(pendingEdits: () => Promise<unknown>) {
   return {
@@ -20,12 +21,14 @@ function context(pendingEdits: () => Promise<unknown>) {
       messages.push(message)
     },
     pendingEdits,
+    requestSaveAs,
   } as never
 }
 
 beforeEach(() => {
   exportOds.mockReset()
   messages.length = 0
+  requestSaveAs.mockReset()
   ;(globalThis as { window?: unknown }).window = { desktopApi: { exportOds } }
 })
 
@@ -45,6 +48,25 @@ describe('handleExportOds', () => {
       targetPath: '/docs/a.ods',
       workbook,
     })
+  })
+
+  it('takes the person into Save As when the refusal of a marked workbook offered .xlsx', async () => {
+    exportOds.mockResolvedValue({ canceled: true, reason: 'redacted', saveAsXlsxInstead: true })
+
+    const written = await handleExportOds(context(async () => ({ sessionId: SESSION })))
+
+    expect(written).toBe(false)
+    expect(requestSaveAs).toHaveBeenCalledTimes(1)
+  })
+
+  it('only says nothing was exported when the person leaves the refusal', async () => {
+    exportOds.mockResolvedValue({ canceled: true, reason: 'redacted' })
+
+    const written = await handleExportOds(context(async () => ({ sessionId: SESSION })))
+
+    expect(written).toBe(false)
+    expect(requestSaveAs).not.toHaveBeenCalled()
+    expect(messages).toHaveLength(1)
   })
 
   it('does not export when the edits could not be gathered', async () => {

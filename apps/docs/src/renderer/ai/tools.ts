@@ -49,6 +49,7 @@ import {
 } from './style-ops'
 import {
   applyRevisionSelection,
+  withheldNote as revisionWithheldNote,
   describePending,
   listRevisionEntries,
   validateSelector,
@@ -1932,8 +1933,10 @@ function executeSyncTool(
         r.locked.length > 0
           ? ` ${r.locked.length} tracked change(s) (${r.locked.map((e) => e.id).join(', ')}) were left as they are: they would change the text of a content control locked against editing. Do not retry them.`
           : ''
+      const withheldNote =
+        r.withheld.length > 0 ? ` ${revisionWithheldNote(r.withheld)}. Do not retry them.` : ''
       return {
-        output: `${verb} ${applied.length} tracked change(s) (${applied.map((e) => e.id).join(', ')}).${lockedNote} ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
+        output: `${verb} ${applied.length} tracked change(s) (${applied.map((e) => e.id).join(', ')}).${lockedNote}${withheldNote} ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
         mutated: applied.length > 0,
         summary,
       }

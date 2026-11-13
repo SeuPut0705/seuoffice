@@ -10,7 +10,7 @@ use serde::de::{Error as _, MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::wire::{self, FieldKey, Key, Seen, Bytes, False, MapEntries, NumberRecord, True};
+use super::wire::{self, FieldKey, Key, Seen, Bytes, False, MapEntries, NumberRecord, SharedStr, True};
 
 /// `PictureWatermarkInfo`
 #[derive(Debug, Clone, PartialEq)]
@@ -2679,7 +2679,7 @@ impl<'de> Deserialize<'de> for RunRuby {
 /// `Run.image`
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct RunImage {
-    pub data_url: String,
+    pub data_url: SharedStr,
     pub xml: String,
     pub width_px: Option<JsNum>,
     pub height_px: Option<JsNum>,
@@ -2887,7 +2887,7 @@ impl<'de> Deserialize<'de> for RunImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunImageKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<SharedStr>>()?.0,
                         RunImageKey::WidthPx => v_width_px = Some(map.next_value()?),
                         RunImageKey::HeightPx => v_height_px = Some(map.next_value()?),
                         RunImageKey::Xml => v_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
@@ -2912,7 +2912,7 @@ impl<'de> Deserialize<'de> for RunImage {
                         RunImageKey::Rule => v_rule = map.next_value::<wire::OrAbsent<RunImageRule>>()?.0,
                     }
                 }
-                Ok(RunImage { data_url: v_data_url.map_or_else(|| wire::absent("dataUrl").map(|()| Default::default()), Ok)?, width_px: v_width_px, height_px: v_height_px, xml: v_xml.map_or_else(|| wire::absent("xml").map(|()| Default::default()), Ok)?, wrap: v_wrap, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, rel_v: v_rel_v, rel_h: v_rel_h, pos_h: v_pos_h, pos_v: v_pos_v, wrap_dist_top_emu: v_wrap_dist_top_emu, wrap_dist_bottom_emu: v_wrap_dist_bottom_emu, wrap_dist_left_emu: v_wrap_dist_left_emu, wrap_dist_right_emu: v_wrap_dist_right_emu, no_overlap: v_no_overlap, border: v_border, line_center_v: v_line_center_v, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v, layers: v_layers, rule: v_rule })
+                Ok(RunImage { data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, width_px: v_width_px, height_px: v_height_px, xml: v_xml.map_or_else(|| wire::absent("xml").map(|()| Default::default()), Ok)?, wrap: v_wrap, offset_x_emu: v_offset_x_emu, offset_y_emu: v_offset_y_emu, rel_v: v_rel_v, rel_h: v_rel_h, pos_h: v_pos_h, pos_v: v_pos_v, wrap_dist_top_emu: v_wrap_dist_top_emu, wrap_dist_bottom_emu: v_wrap_dist_bottom_emu, wrap_dist_left_emu: v_wrap_dist_left_emu, wrap_dist_right_emu: v_wrap_dist_right_emu, no_overlap: v_no_overlap, border: v_border, line_center_v: v_line_center_v, rot_deg: v_rot_deg, flip_h: v_flip_h, flip_v: v_flip_v, layers: v_layers, rule: v_rule })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -3212,7 +3212,7 @@ impl<'de> Deserialize<'de> for RunImageBorder {
 /// `Run.image.layers[]`
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunImageLayersItem {
-    pub data_url: String,
+    pub data_url: SharedStr,
     pub x: JsNum,
     pub y: JsNum,
     pub w: JsNum,
@@ -3288,14 +3288,14 @@ impl<'de> Deserialize<'de> for RunImageLayersItem {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        RunImageLayersItemKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        RunImageLayersItemKey::DataUrl => v_data_url = map.next_value::<wire::OrAbsent<SharedStr>>()?.0,
                         RunImageLayersItemKey::X => v_x = Some(map.next_value()?),
                         RunImageLayersItemKey::Y => v_y = Some(map.next_value()?),
                         RunImageLayersItemKey::W => v_w = Some(map.next_value()?),
                         RunImageLayersItemKey::H => v_h = Some(map.next_value()?),
                     }
                 }
-                Ok(RunImageLayersItem { data_url: v_data_url.map_or_else(|| wire::absent("dataUrl").map(|()| Default::default()), Ok)?, x: v_x.map_or_else(|| wire::absent("x").map(|()| JsNum(f64::NAN)), Ok)?, y: v_y.map_or_else(|| wire::absent("y").map(|()| JsNum(f64::NAN)), Ok)?, w: v_w.map_or_else(|| wire::absent("w").map(|()| JsNum(f64::NAN)), Ok)?, h: v_h.map_or_else(|| wire::absent("h").map(|()| JsNum(f64::NAN)), Ok)? })
+                Ok(RunImageLayersItem { data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, x: v_x.map_or_else(|| wire::absent("x").map(|()| JsNum(f64::NAN)), Ok)?, y: v_y.map_or_else(|| wire::absent("y").map(|()| JsNum(f64::NAN)), Ok)?, w: v_w.map_or_else(|| wire::absent("w").map(|()| JsNum(f64::NAN)), Ok)?, h: v_h.map_or_else(|| wire::absent("h").map(|()| JsNum(f64::NAN)), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -9561,7 +9561,7 @@ jscompat::js_object! {
     /// `HfImage`: the keys go out in the order they were set
     #[derive(Debug, Clone, PartialEq)]
     pub struct HfImage {
-        pub data_url: String,
+        pub data_url: SharedStr,
         pub width_px: JsNum,
         pub height_px: JsNum,
         pub floating: bool,
@@ -9670,7 +9670,7 @@ impl<'de> Deserialize<'de> for HfImage {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfImageKey::DataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.data_url.set(value) },
+                        HfImageKey::DataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<SharedStr>>()?.0 { b_0.data_url.set(value) },
                         HfImageKey::WidthPx => b_0.width_px.set(map.next_value()?),
                         HfImageKey::HeightPx => b_0.height_px.set(map.next_value()?),
                         HfImageKey::Floating => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.floating.set(value) },
@@ -12073,6 +12073,7 @@ pub struct RevisionXmlFilter {
     pub before: Option<String>,
     pub date: Option<String>,
     pub ids: Option<Vec<String>>,
+    pub keep_hidden: Option<bool>,
 }
 
 /// The keys of `RevisionXmlFilter`, in declaration order.
@@ -12083,10 +12084,11 @@ pub enum RevisionXmlFilterKey {
     Before,
     Date,
     Ids,
+    KeepHidden,
 }
 
 impl FieldKey for RevisionXmlFilterKey {
-    const NAMES: &'static [&'static str] = &["author", "type", "before", "date", "ids"];
+    const NAMES: &'static [&'static str] = &["author", "type", "before", "date", "ids", "keepHidden"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -12095,6 +12097,7 @@ impl FieldKey for RevisionXmlFilterKey {
             "before" => Some(Self::Before),
             "date" => Some(Self::Date),
             "ids" => Some(Self::Ids),
+            "keepHidden" => Some(Self::KeepHidden),
             _ => None,
         }
     }
@@ -12124,6 +12127,9 @@ impl Serialize for RevisionXmlFilter {
         if let Some(value) = &self.ids {
             map.serialize_entry("ids", value)?;
         }
+        if let Some(value) = &self.keep_hidden {
+            map.serialize_entry("keepHidden", value)?;
+        }
         map.end()
     }
 }
@@ -12145,6 +12151,7 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                 let mut v_before = None;
                 let mut v_date = None;
                 let mut v_ids = None;
+                let mut v_keep_hidden = None;
                 while let Some(Key(key)) = map.next_key::<Key<RevisionXmlFilterKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -12159,9 +12166,10 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                         RevisionXmlFilterKey::Before => v_before = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RevisionXmlFilterKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RevisionXmlFilterKey::Ids => v_ids = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        RevisionXmlFilterKey::KeepHidden => v_keep_hidden = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(RevisionXmlFilter { author: v_author, r#type: v_type, before: v_before, date: v_date, ids: v_ids })
+                Ok(RevisionXmlFilter { author: v_author, r#type: v_type, before: v_before, date: v_date, ids: v_ids, keep_hidden: v_keep_hidden })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -13816,6 +13824,7 @@ jscompat::js_object! {
     /// `ChartDisplay`: the keys go out in the order they were set
     #[derive(Debug, Clone, PartialEq)]
     pub struct ChartDisplay {
+        pub redact: String,
         pub part_path: String,
         pub kind: ChartDisplayKind,
         pub horizontal: bool,
@@ -13845,6 +13854,7 @@ jscompat::js_object! {
 /// The keys of `ChartDisplay`, in declaration order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChartDisplayKey {
+    Redact,
     PartPath,
     Kind,
     Horizontal,
@@ -13871,10 +13881,11 @@ pub enum ChartDisplayKey {
 }
 
 impl FieldKey for ChartDisplayKey {
-    const NAMES: &'static [&'static str] = &["partPath", "kind", "horizontal", "grouping", "markers", "radarStyle", "holePct", "explosionPct", "dataLabels", "titleFontPt", "legendFontPt", "legendPos", "noLegend", "frameLine", "xAxis", "yAxis", "dataTable", "title", "categories", "series", "palette", "widthPx", "heightPx"];
+    const NAMES: &'static [&'static str] = &["redact", "partPath", "kind", "horizontal", "grouping", "markers", "radarStyle", "holePct", "explosionPct", "dataLabels", "titleFontPt", "legendFontPt", "legendPos", "noLegend", "frameLine", "xAxis", "yAxis", "dataTable", "title", "categories", "series", "palette", "widthPx", "heightPx"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
+            "redact" => Some(Self::Redact),
             "partPath" => Some(Self::PartPath),
             "kind" => Some(Self::Kind),
             "horizontal" => Some(Self::Horizontal),
@@ -13931,6 +13942,7 @@ impl<'de> Deserialize<'de> for ChartDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
+                        ChartDisplayKey::Redact => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.redact.set(value) },
                         ChartDisplayKey::PartPath => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.part_path.set(value) },
                         ChartDisplayKey::Kind => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayKind>>()?.0 { b_0.kind.set(value) },
                         ChartDisplayKey::Horizontal => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.horizontal.set(value) },
@@ -14371,7 +14383,7 @@ jscompat::js_object! {
         pub fill_hex: String,
         pub ln_hex: String,
         pub ln_w_px: JsNum,
-        pub image_data_url: String,
+        pub image_data_url: SharedStr,
         pub fill_rect: DiagramShapeFillRect,
         pub texts: Vec<String>,
         pub font_size_pt: JsNum,
@@ -14459,7 +14471,7 @@ impl<'de> Deserialize<'de> for DiagramShape {
                         DiagramShapeKey::FillHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill_hex.set(value) },
                         DiagramShapeKey::LnHex => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ln_hex.set(value) },
                         DiagramShapeKey::LnWPx => b_0.ln_w_px.set(map.next_value()?),
-                        DiagramShapeKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_data_url.set(value) },
+                        DiagramShapeKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<SharedStr>>()?.0 { b_0.image_data_url.set(value) },
                         DiagramShapeKey::FillRect => if let Some(value) = map.next_value::<wire::OrAbsent<DiagramShapeFillRect>>()?.0 { b_0.fill_rect.set(value) },
                         DiagramShapeKey::Texts => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0 { b_0.texts.set(value) },
                         DiagramShapeKey::FontSizePt => b_0.font_size_pt.set(map.next_value()?),
@@ -16750,7 +16762,7 @@ jscompat::js_object! {
         pub rot_deg: JsNum,
         pub border_width_px: JsNum,
         pub border_dash: TextboxDisplayBorderDash,
-        pub fill_image_data_url: String,
+        pub fill_image_data_url: SharedStr,
         pub fill_tile: bool,
         pub line_diag: bool,
         pub flip_h: bool,
@@ -16952,7 +16964,7 @@ impl<'de> Deserialize<'de> for TextboxDisplay {
                         TextboxDisplayKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                         TextboxDisplayKey::BorderWidthPx => b_0.border_width_px.set(map.next_value()?),
                         TextboxDisplayKey::BorderDash => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxDisplayBorderDash>>()?.0 { b_0.border_dash.set(value) },
-                        TextboxDisplayKey::FillImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.fill_image_data_url.set(value) },
+                        TextboxDisplayKey::FillImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<SharedStr>>()?.0 { b_0.fill_image_data_url.set(value) },
                         TextboxDisplayKey::FillTile => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.fill_tile.set(value) },
                         TextboxDisplayKey::LineDiag => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.line_diag.set(value) },
                         TextboxDisplayKey::FlipH => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.flip_h.set(value) },
@@ -17168,16 +17180,17 @@ impl<'de> Deserialize<'de> for TextboxDisplayVAlign {
     }
 }
 
-/// `TextboxParaDisplay`
+/// `TextboxParaDisplay`: the keys go out in the order they were set, those of
+/// `ParaFormat` among its own
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextboxParaDisplay {
     /// the fields of `ParaFormat`, which `TextboxParaDisplay` extends
     pub para_format: ParaFormat,
-    pub runs: Vec<Run>,
-    pub style_id: Option<String>,
-    pub list_marker: Option<TextboxListMarker>,
-    pub cells: Option<Vec<HfTableCell>>,
-    pub row: Option<HfTableRow>,
+    pub style_id: jscompat::Slot<String>,
+    pub runs: jscompat::Slot<Vec<Run>>,
+    pub list_marker: jscompat::Slot<TextboxListMarker>,
+    pub cells: jscompat::Slot<Vec<HfTableCell>>,
+    pub row: jscompat::Slot<HfTableRow>,
 }
 
 impl std::ops::Deref for TextboxParaDisplay {
@@ -17317,154 +17330,112 @@ const _: () = assert!(TextboxParaDisplayKey::NAMES.len() <= wire::MAX_KEYS);
 
 impl Serialize for TextboxParaDisplay {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut keys: Vec<(u64, TextboxParaDisplayKey)> = Vec::new();
+        if let Some(at) = self.para_format.align.set_at() { keys.push((at, TextboxParaDisplayKey::Align)); }
+        if let Some(at) = self.para_format.line_spacing.set_at() { keys.push((at, TextboxParaDisplayKey::LineSpacing)); }
+        if let Some(at) = self.para_format.line_rule.set_at() { keys.push((at, TextboxParaDisplayKey::LineRule)); }
+        if let Some(at) = self.para_format.line_raw_twips.set_at() { keys.push((at, TextboxParaDisplayKey::LineRawTwips)); }
+        if let Some(at) = self.para_format.indent_left.set_at() { keys.push((at, TextboxParaDisplayKey::IndentLeft)); }
+        if let Some(at) = self.para_format.indent_right.set_at() { keys.push((at, TextboxParaDisplayKey::IndentRight)); }
+        if let Some(at) = self.para_format.indent_first_line.set_at() { keys.push((at, TextboxParaDisplayKey::IndentFirstLine)); }
+        if let Some(at) = self.para_format.char_indents.set_at() { keys.push((at, TextboxParaDisplayKey::CharIndents)); }
+        if let Some(at) = self.para_format.direct_char_indents.set_at() { keys.push((at, TextboxParaDisplayKey::DirectCharIndents)); }
+        if let Some(at) = self.para_format.space_before.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceBefore)); }
+        if let Some(at) = self.para_format.space_after.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceAfter)); }
+        if let Some(at) = self.para_format.space_before_auto.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceBeforeAuto)); }
+        if let Some(at) = self.para_format.space_after_auto.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceAfterAuto)); }
+        if let Some(at) = self.para_format.page_break_before.set_at() { keys.push((at, TextboxParaDisplayKey::PageBreakBefore)); }
+        if let Some(at) = self.para_format.keep_next.set_at() { keys.push((at, TextboxParaDisplayKey::KeepNext)); }
+        if let Some(at) = self.para_format.keep_lines.set_at() { keys.push((at, TextboxParaDisplayKey::KeepLines)); }
+        if let Some(at) = self.para_format.suppress_line_numbers.set_at() { keys.push((at, TextboxParaDisplayKey::SuppressLineNumbers)); }
+        if let Some(at) = self.para_format.widow_control.set_at() { keys.push((at, TextboxParaDisplayKey::WidowControl)); }
+        if let Some(at) = self.para_format.snap_to_grid.set_at() { keys.push((at, TextboxParaDisplayKey::SnapToGrid)); }
+        if let Some(at) = self.para_format.auto_space.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpace)); }
+        if let Some(at) = self.para_format.auto_space_d_e.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpaceDE)); }
+        if let Some(at) = self.para_format.auto_space_d_n.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpaceDN)); }
+        if let Some(at) = self.para_format.word_wrap.set_at() { keys.push((at, TextboxParaDisplayKey::WordWrap)); }
+        if let Some(at) = self.para_format.overflow_punct.set_at() { keys.push((at, TextboxParaDisplayKey::OverflowPunct)); }
+        if let Some(at) = self.para_format.east_asia_lang.set_at() { keys.push((at, TextboxParaDisplayKey::EastAsiaLang)); }
+        if let Some(at) = self.para_format.contextual_spacing.set_at() { keys.push((at, TextboxParaDisplayKey::ContextualSpacing)); }
+        if let Some(at) = self.para_format.shading_fill.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingFill)); }
+        if let Some(at) = self.para_format.shading_display.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingDisplay)); }
+        if let Some(at) = self.para_format.shading_clear.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingClear)); }
+        if let Some(at) = self.para_format.borders.set_at() { keys.push((at, TextboxParaDisplayKey::Borders)); }
+        if let Some(at) = self.para_format.border_style.set_at() { keys.push((at, TextboxParaDisplayKey::BorderStyle)); }
+        if let Some(at) = self.para_format.border_lines.set_at() { keys.push((at, TextboxParaDisplayKey::BorderLines)); }
+        if let Some(at) = self.para_format.border_reset.set_at() { keys.push((at, TextboxParaDisplayKey::BorderReset)); }
+        if let Some(at) = self.para_format.border_pad.set_at() { keys.push((at, TextboxParaDisplayKey::BorderPad)); }
+        if let Some(at) = self.para_format.tab_stops.set_at() { keys.push((at, TextboxParaDisplayKey::TabStops)); }
+        if let Some(at) = self.para_format.drop_cap.set_at() { keys.push((at, TextboxParaDisplayKey::DropCap)); }
+        if let Some(at) = self.para_format.frame.set_at() { keys.push((at, TextboxParaDisplayKey::Frame)); }
+        if let Some(at) = self.para_format.frame_box.set_at() { keys.push((at, TextboxParaDisplayKey::FrameBox)); }
+        if let Some(at) = self.para_format.text_direction.set_at() { keys.push((at, TextboxParaDisplayKey::TextDirection)); }
+        if let Some(at) = self.para_format.bidi.set_at() { keys.push((at, TextboxParaDisplayKey::Bidi)); }
+        if let Some(at) = self.para_format.bidi_inherited.set_at() { keys.push((at, TextboxParaDisplayKey::BidiInherited)); }
+        if let Some(at) = self.para_format.empty_run_size_half_points.set_at() { keys.push((at, TextboxParaDisplayKey::EmptyRunSizeHalfPoints)); }
+        if let Some(at) = self.para_format.empty_run_font_family.set_at() { keys.push((at, TextboxParaDisplayKey::EmptyRunFontFamily)); }
+        if let Some(at) = self.para_format.mark_size_half_points.set_at() { keys.push((at, TextboxParaDisplayKey::MarkSizeHalfPoints)); }
+        if let Some(at) = self.para_format.effective.set_at() { keys.push((at, TextboxParaDisplayKey::Effective)); }
+        if let Some(at) = self.style_id.set_at() { keys.push((at, TextboxParaDisplayKey::StyleId)); }
+        if let Some(at) = self.runs.set_at() { keys.push((at, TextboxParaDisplayKey::Runs)); }
+        if let Some(at) = self.list_marker.set_at() { keys.push((at, TextboxParaDisplayKey::ListMarker)); }
+        if let Some(at) = self.cells.set_at() { keys.push((at, TextboxParaDisplayKey::Cells)); }
+        if let Some(at) = self.row.set_at() { keys.push((at, TextboxParaDisplayKey::Row)); }
+        keys.sort_unstable_by_key(|&(at, _)| at);
         let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &*self.para_format.east_asia_lang {
-            map.serialize_entry("eastAsiaLang", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_style {
-            map.serialize_entry("borderStyle", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_font_family {
-            map.serialize_entry("emptyRunFontFamily", value)?;
-        }
-        if let Some(value) = &*self.para_format.mark_size_half_points {
-            map.serialize_entry("markSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &*self.para_format.effective {
-            map.serialize_entry("effective", value)?;
-        }
-        map.serialize_entry("runs", &self.runs)?;
-        if let Some(value) = &*self.para_format.bidi {
-            map.serialize_entry("bidi", value)?;
-        }
-        if let Some(value) = &*self.para_format.bidi_inherited {
-            map.serialize_entry("bidiInherited", value)?;
-        }
-        if let Some(value) = &*self.para_format.align {
-            map.serialize_entry("align", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_raw_twips {
-            map.serialize_entry("lineRawTwips", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_spacing {
-            map.serialize_entry("lineSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_rule {
-            map.serialize_entry("lineRule", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before {
-            map.serialize_entry("spaceBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after {
-            map.serialize_entry("spaceAfter", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_left {
-            map.serialize_entry("indentLeft", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_right {
-            map.serialize_entry("indentRight", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_first_line {
-            map.serialize_entry("indentFirstLine", value)?;
-        }
-        if let Some(value) = &*self.para_format.page_break_before {
-            map.serialize_entry("pageBreakBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_next {
-            map.serialize_entry("keepNext", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_lines {
-            map.serialize_entry("keepLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.suppress_line_numbers {
-            map.serialize_entry("suppressLineNumbers", value)?;
-        }
-        if let Some(value) = &*self.para_format.snap_to_grid {
-            map.serialize_entry("snapToGrid", value)?;
-        }
-        if let Some(value) = &*self.para_format.widow_control {
-            map.serialize_entry("widowControl", value)?;
-        }
-        if let Some(value) = &*self.para_format.contextual_spacing {
-            map.serialize_entry("contextualSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_e {
-            map.serialize_entry("autoSpaceDE", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_n {
-            map.serialize_entry("autoSpaceDN", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space {
-            map.serialize_entry("autoSpace", value)?;
-        }
-        if let Some(value) = &*self.para_format.word_wrap {
-            map.serialize_entry("wordWrap", value)?;
-        }
-        if let Some(value) = &*self.para_format.overflow_punct {
-            map.serialize_entry("overflowPunct", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_fill {
-            map.serialize_entry("shadingFill", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_display {
-            map.serialize_entry("shadingDisplay", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_clear {
-            map.serialize_entry("shadingClear", value)?;
-        }
-        if let Some(value) = &*self.para_format.borders {
-            map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_lines {
-            map.serialize_entry("borderLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_reset {
-            map.serialize_entry("borderReset", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_pad {
-            map.serialize_entry("borderPad", value)?;
-        }
-        if let Some(value) = &*self.para_format.tab_stops {
-            map.serialize_entry("tabStops", value)?;
-        }
-        if let Some(value) = &*self.para_format.drop_cap {
-            map.serialize_entry("dropCap", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame_box {
-            map.serialize_entry("frameBox", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame {
-            map.serialize_entry("frame", value)?;
-        }
-        if let Some(value) = &*self.para_format.text_direction {
-            map.serialize_entry("textDirection", value)?;
-        }
-        if let Some(value) = &*self.para_format.char_indents {
-            map.serialize_entry("charIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.direct_char_indents {
-            map.serialize_entry("directCharIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_size_half_points {
-            map.serialize_entry("emptyRunSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &self.style_id {
-            map.serialize_entry("styleId", value)?;
-        }
-        if let Some(value) = &self.list_marker {
-            map.serialize_entry("listMarker", value)?;
-        }
-        if let Some(value) = &self.cells {
-            map.serialize_entry("cells", value)?;
-        }
-        if let Some(value) = &self.row {
-            map.serialize_entry("row", value)?;
+        for (_, key) in keys {
+            match key {
+                TextboxParaDisplayKey::Align => if let Some(value) = &*self.para_format.align { map.serialize_entry("align", value)?; },
+                TextboxParaDisplayKey::LineSpacing => if let Some(value) = &*self.para_format.line_spacing { map.serialize_entry("lineSpacing", value)?; },
+                TextboxParaDisplayKey::LineRule => if let Some(value) = &*self.para_format.line_rule { map.serialize_entry("lineRule", value)?; },
+                TextboxParaDisplayKey::LineRawTwips => if let Some(value) = &*self.para_format.line_raw_twips { map.serialize_entry("lineRawTwips", value)?; },
+                TextboxParaDisplayKey::IndentLeft => if let Some(value) = &*self.para_format.indent_left { map.serialize_entry("indentLeft", value)?; },
+                TextboxParaDisplayKey::IndentRight => if let Some(value) = &*self.para_format.indent_right { map.serialize_entry("indentRight", value)?; },
+                TextboxParaDisplayKey::IndentFirstLine => if let Some(value) = &*self.para_format.indent_first_line { map.serialize_entry("indentFirstLine", value)?; },
+                TextboxParaDisplayKey::CharIndents => if let Some(value) = &*self.para_format.char_indents { map.serialize_entry("charIndents", value)?; },
+                TextboxParaDisplayKey::DirectCharIndents => if let Some(value) = &*self.para_format.direct_char_indents { map.serialize_entry("directCharIndents", value)?; },
+                TextboxParaDisplayKey::SpaceBefore => if let Some(value) = &*self.para_format.space_before { map.serialize_entry("spaceBefore", value)?; },
+                TextboxParaDisplayKey::SpaceAfter => if let Some(value) = &*self.para_format.space_after { map.serialize_entry("spaceAfter", value)?; },
+                TextboxParaDisplayKey::SpaceBeforeAuto => if let Some(value) = &*self.para_format.space_before_auto { map.serialize_entry("spaceBeforeAuto", value)?; },
+                TextboxParaDisplayKey::SpaceAfterAuto => if let Some(value) = &*self.para_format.space_after_auto { map.serialize_entry("spaceAfterAuto", value)?; },
+                TextboxParaDisplayKey::PageBreakBefore => if let Some(value) = &*self.para_format.page_break_before { map.serialize_entry("pageBreakBefore", value)?; },
+                TextboxParaDisplayKey::KeepNext => if let Some(value) = &*self.para_format.keep_next { map.serialize_entry("keepNext", value)?; },
+                TextboxParaDisplayKey::KeepLines => if let Some(value) = &*self.para_format.keep_lines { map.serialize_entry("keepLines", value)?; },
+                TextboxParaDisplayKey::SuppressLineNumbers => if let Some(value) = &*self.para_format.suppress_line_numbers { map.serialize_entry("suppressLineNumbers", value)?; },
+                TextboxParaDisplayKey::WidowControl => if let Some(value) = &*self.para_format.widow_control { map.serialize_entry("widowControl", value)?; },
+                TextboxParaDisplayKey::SnapToGrid => if let Some(value) = &*self.para_format.snap_to_grid { map.serialize_entry("snapToGrid", value)?; },
+                TextboxParaDisplayKey::AutoSpace => if let Some(value) = &*self.para_format.auto_space { map.serialize_entry("autoSpace", value)?; },
+                TextboxParaDisplayKey::AutoSpaceDE => if let Some(value) = &*self.para_format.auto_space_d_e { map.serialize_entry("autoSpaceDE", value)?; },
+                TextboxParaDisplayKey::AutoSpaceDN => if let Some(value) = &*self.para_format.auto_space_d_n { map.serialize_entry("autoSpaceDN", value)?; },
+                TextboxParaDisplayKey::WordWrap => if let Some(value) = &*self.para_format.word_wrap { map.serialize_entry("wordWrap", value)?; },
+                TextboxParaDisplayKey::OverflowPunct => if let Some(value) = &*self.para_format.overflow_punct { map.serialize_entry("overflowPunct", value)?; },
+                TextboxParaDisplayKey::EastAsiaLang => if let Some(value) = &*self.para_format.east_asia_lang { map.serialize_entry("eastAsiaLang", value)?; },
+                TextboxParaDisplayKey::ContextualSpacing => if let Some(value) = &*self.para_format.contextual_spacing { map.serialize_entry("contextualSpacing", value)?; },
+                TextboxParaDisplayKey::ShadingFill => if let Some(value) = &*self.para_format.shading_fill { map.serialize_entry("shadingFill", value)?; },
+                TextboxParaDisplayKey::ShadingDisplay => if let Some(value) = &*self.para_format.shading_display { map.serialize_entry("shadingDisplay", value)?; },
+                TextboxParaDisplayKey::ShadingClear => if let Some(value) = &*self.para_format.shading_clear { map.serialize_entry("shadingClear", value)?; },
+                TextboxParaDisplayKey::Borders => if let Some(value) = &*self.para_format.borders { map.serialize_entry("borders", value)?; },
+                TextboxParaDisplayKey::BorderStyle => if let Some(value) = &*self.para_format.border_style { map.serialize_entry("borderStyle", value)?; },
+                TextboxParaDisplayKey::BorderLines => if let Some(value) = &*self.para_format.border_lines { map.serialize_entry("borderLines", value)?; },
+                TextboxParaDisplayKey::BorderReset => if let Some(value) = &*self.para_format.border_reset { map.serialize_entry("borderReset", value)?; },
+                TextboxParaDisplayKey::BorderPad => if let Some(value) = &*self.para_format.border_pad { map.serialize_entry("borderPad", value)?; },
+                TextboxParaDisplayKey::TabStops => if let Some(value) = &*self.para_format.tab_stops { map.serialize_entry("tabStops", value)?; },
+                TextboxParaDisplayKey::DropCap => if let Some(value) = &*self.para_format.drop_cap { map.serialize_entry("dropCap", value)?; },
+                TextboxParaDisplayKey::Frame => if let Some(value) = &*self.para_format.frame { map.serialize_entry("frame", value)?; },
+                TextboxParaDisplayKey::FrameBox => if let Some(value) = &*self.para_format.frame_box { map.serialize_entry("frameBox", value)?; },
+                TextboxParaDisplayKey::TextDirection => if let Some(value) = &*self.para_format.text_direction { map.serialize_entry("textDirection", value)?; },
+                TextboxParaDisplayKey::Bidi => if let Some(value) = &*self.para_format.bidi { map.serialize_entry("bidi", value)?; },
+                TextboxParaDisplayKey::BidiInherited => if let Some(value) = &*self.para_format.bidi_inherited { map.serialize_entry("bidiInherited", value)?; },
+                TextboxParaDisplayKey::EmptyRunSizeHalfPoints => if let Some(value) = &*self.para_format.empty_run_size_half_points { map.serialize_entry("emptyRunSizeHalfPoints", value)?; },
+                TextboxParaDisplayKey::EmptyRunFontFamily => if let Some(value) = &*self.para_format.empty_run_font_family { map.serialize_entry("emptyRunFontFamily", value)?; },
+                TextboxParaDisplayKey::MarkSizeHalfPoints => if let Some(value) = &*self.para_format.mark_size_half_points { map.serialize_entry("markSizeHalfPoints", value)?; },
+                TextboxParaDisplayKey::Effective => if let Some(value) = &*self.para_format.effective { map.serialize_entry("effective", value)?; },
+                TextboxParaDisplayKey::StyleId => if let Some(value) = &*self.style_id { map.serialize_entry("styleId", value)?; },
+                TextboxParaDisplayKey::Runs => if let Some(value) = &*self.runs { map.serialize_entry("runs", value)?; },
+                TextboxParaDisplayKey::ListMarker => if let Some(value) = &*self.list_marker { map.serialize_entry("listMarker", value)?; },
+                TextboxParaDisplayKey::Cells => if let Some(value) = &*self.cells { map.serialize_entry("cells", value)?; },
+                TextboxParaDisplayKey::Row => if let Some(value) = &*self.row { map.serialize_entry("row", value)?; },
+            }
         }
         map.end()
     }
@@ -17482,12 +17453,7 @@ impl<'de> Deserialize<'de> for TextboxParaDisplay {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TextboxParaDisplay, A::Error> {
                 let mut seen = Seen::default();
-                let mut b_1 = ParaFormat::default();
-                let mut v_style_id = None;
-                let mut v_runs = None;
-                let mut v_list_marker = None;
-                let mut v_cells = None;
-                let mut v_row = None;
+                let mut b_0 = TextboxParaDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<TextboxParaDisplayKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -17497,59 +17463,62 @@ impl<'de> Deserialize<'de> for TextboxParaDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxParaDisplayKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_1.align.set(value) },
-                        TextboxParaDisplayKey::LineSpacing => b_1.line_spacing.set(map.next_value()?),
-                        TextboxParaDisplayKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_1.line_rule.set(value) },
-                        TextboxParaDisplayKey::LineRawTwips => b_1.line_raw_twips.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentLeft => b_1.indent_left.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentRight => b_1.indent_right.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentFirstLine => b_1.indent_first_line.set(map.next_value()?),
-                        TextboxParaDisplayKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.char_indents.set(value) },
-                        TextboxParaDisplayKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_1.direct_char_indents.set(value) },
-                        TextboxParaDisplayKey::SpaceBefore => b_1.space_before.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceAfter => b_1.space_after.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_before_auto.set(value) },
-                        TextboxParaDisplayKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.space_after_auto.set(value) },
-                        TextboxParaDisplayKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.page_break_before.set(value) },
-                        TextboxParaDisplayKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_next.set(value) },
-                        TextboxParaDisplayKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.keep_lines.set(value) },
-                        TextboxParaDisplayKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.suppress_line_numbers.set(value) },
-                        TextboxParaDisplayKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.widow_control.set(value) },
-                        TextboxParaDisplayKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.snap_to_grid.set(value) },
-                        TextboxParaDisplayKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_1.auto_space.set(value) },
-                        TextboxParaDisplayKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_e.set(value) },
-                        TextboxParaDisplayKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.auto_space_d_n.set(value) },
-                        TextboxParaDisplayKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.word_wrap.set(value) },
-                        TextboxParaDisplayKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.overflow_punct.set(value) },
-                        TextboxParaDisplayKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.east_asia_lang.set(value) },
-                        TextboxParaDisplayKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.contextual_spacing.set(value) },
-                        TextboxParaDisplayKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_fill.set(value) },
-                        TextboxParaDisplayKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.shading_display.set(value) },
-                        TextboxParaDisplayKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.shading_clear.set(value) },
-                        TextboxParaDisplayKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.borders.set(value) },
-                        TextboxParaDisplayKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_1.border_style.set(value) },
-                        TextboxParaDisplayKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_1.border_lines.set(value) },
-                        TextboxParaDisplayKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.border_reset.set(value) },
-                        TextboxParaDisplayKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_1.border_pad.set(value) },
-                        TextboxParaDisplayKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_1.tab_stops.set(value) },
-                        TextboxParaDisplayKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_1.drop_cap.set(value) },
-                        TextboxParaDisplayKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_1.frame.set(value) },
-                        TextboxParaDisplayKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_1.frame_box.set(value) },
-                        TextboxParaDisplayKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_1.text_direction.set(value) },
-                        TextboxParaDisplayKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi.set(value) },
-                        TextboxParaDisplayKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_1.bidi_inherited.set(value) },
-                        TextboxParaDisplayKey::EmptyRunSizeHalfPoints => b_1.empty_run_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_1.empty_run_font_family.set(value) },
-                        TextboxParaDisplayKey::MarkSizeHalfPoints => b_1.mark_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_1.effective.set(value) },
-                        TextboxParaDisplayKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
-                        TextboxParaDisplayKey::Runs => v_runs = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0,
-                        TextboxParaDisplayKey::ListMarker => v_list_marker = map.next_value::<wire::OrAbsent<TextboxListMarker>>()?.0,
-                        TextboxParaDisplayKey::Cells => v_cells = map.next_value::<wire::OrAbsent<Vec<HfTableCell>>>()?.0,
-                        TextboxParaDisplayKey::Row => v_row = map.next_value::<wire::OrAbsent<HfTableRow>>()?.0,
+                        TextboxParaDisplayKey::Align => if let Some(value) = map.next_value::<wire::OrAbsent<ParaAlign>>()?.0 { b_0.para_format.align.set(value) },
+                        TextboxParaDisplayKey::LineSpacing => b_0.para_format.line_spacing.set(map.next_value()?),
+                        TextboxParaDisplayKey::LineRule => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatLineRule>>()?.0 { b_0.para_format.line_rule.set(value) },
+                        TextboxParaDisplayKey::LineRawTwips => b_0.para_format.line_raw_twips.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentLeft => b_0.para_format.indent_left.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentRight => b_0.para_format.indent_right.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentFirstLine => b_0.para_format.indent_first_line.set(map.next_value()?),
+                        TextboxParaDisplayKey::CharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.para_format.char_indents.set(value) },
+                        TextboxParaDisplayKey::DirectCharIndents => if let Some(value) = map.next_value::<wire::OrAbsent<CharIndents>>()?.0 { b_0.para_format.direct_char_indents.set(value) },
+                        TextboxParaDisplayKey::SpaceBefore => b_0.para_format.space_before.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceAfter => b_0.para_format.space_after.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceBeforeAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.space_before_auto.set(value) },
+                        TextboxParaDisplayKey::SpaceAfterAuto => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.space_after_auto.set(value) },
+                        TextboxParaDisplayKey::PageBreakBefore => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.page_break_before.set(value) },
+                        TextboxParaDisplayKey::KeepNext => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.keep_next.set(value) },
+                        TextboxParaDisplayKey::KeepLines => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.keep_lines.set(value) },
+                        TextboxParaDisplayKey::SuppressLineNumbers => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.suppress_line_numbers.set(value) },
+                        TextboxParaDisplayKey::WidowControl => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.widow_control.set(value) },
+                        TextboxParaDisplayKey::SnapToGrid => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.snap_to_grid.set(value) },
+                        TextboxParaDisplayKey::AutoSpace => if let Some(value) = map.next_value::<wire::OrAbsent<AutoSpace>>()?.0 { b_0.para_format.auto_space.set(value) },
+                        TextboxParaDisplayKey::AutoSpaceDE => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.auto_space_d_e.set(value) },
+                        TextboxParaDisplayKey::AutoSpaceDN => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.auto_space_d_n.set(value) },
+                        TextboxParaDisplayKey::WordWrap => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.word_wrap.set(value) },
+                        TextboxParaDisplayKey::OverflowPunct => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.overflow_punct.set(value) },
+                        TextboxParaDisplayKey::EastAsiaLang => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.east_asia_lang.set(value) },
+                        TextboxParaDisplayKey::ContextualSpacing => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.contextual_spacing.set(value) },
+                        TextboxParaDisplayKey::ShadingFill => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.shading_fill.set(value) },
+                        TextboxParaDisplayKey::ShadingDisplay => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.shading_display.set(value) },
+                        TextboxParaDisplayKey::ShadingClear => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.shading_clear.set(value) },
+                        TextboxParaDisplayKey::Borders => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.borders.set(value) },
+                        TextboxParaDisplayKey::BorderStyle => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderStyle>>()?.0 { b_0.para_format.border_style.set(value) },
+                        TextboxParaDisplayKey::BorderLines => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderLines>>()?.0 { b_0.para_format.border_lines.set(value) },
+                        TextboxParaDisplayKey::BorderReset => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.border_reset.set(value) },
+                        TextboxParaDisplayKey::BorderPad => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatBorderPad>>()?.0 { b_0.para_format.border_pad.set(value) },
+                        TextboxParaDisplayKey::TabStops => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<TabStop>>>()?.0 { b_0.para_format.tab_stops.set(value) },
+                        TextboxParaDisplayKey::DropCap => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFormatDropCap>>()?.0 { b_0.para_format.drop_cap.set(value) },
+                        TextboxParaDisplayKey::Frame => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrame>>()?.0 { b_0.para_format.frame.set(value) },
+                        TextboxParaDisplayKey::FrameBox => if let Some(value) = map.next_value::<wire::OrAbsent<ParaFrameBox>>()?.0 { b_0.para_format.frame_box.set(value) },
+                        TextboxParaDisplayKey::TextDirection => if let Some(value) = map.next_value::<wire::OrAbsent<TextFlowDirection>>()?.0 { b_0.para_format.text_direction.set(value) },
+                        TextboxParaDisplayKey::Bidi => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.bidi.set(value) },
+                        TextboxParaDisplayKey::BidiInherited => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.para_format.bidi_inherited.set(value) },
+                        TextboxParaDisplayKey::EmptyRunSizeHalfPoints => b_0.para_format.empty_run_size_half_points.set(map.next_value()?),
+                        TextboxParaDisplayKey::EmptyRunFontFamily => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.para_format.empty_run_font_family.set(value) },
+                        TextboxParaDisplayKey::MarkSizeHalfPoints => b_0.para_format.mark_size_half_points.set(map.next_value()?),
+                        TextboxParaDisplayKey::Effective => if let Some(value) = map.next_value::<wire::OrAbsent<EffectivePPr>>()?.0 { b_0.para_format.effective.set(value) },
+                        TextboxParaDisplayKey::StyleId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.style_id.set(value) },
+                        TextboxParaDisplayKey::Runs => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.runs.set(value) },
+                        TextboxParaDisplayKey::ListMarker => if let Some(value) = map.next_value::<wire::OrAbsent<TextboxListMarker>>()?.0 { b_0.list_marker.set(value) },
+                        TextboxParaDisplayKey::Cells => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<HfTableCell>>>()?.0 { b_0.cells.set(value) },
+                        TextboxParaDisplayKey::Row => if let Some(value) = map.next_value::<wire::OrAbsent<HfTableRow>>()?.0 { b_0.row.set(value) },
                     }
                 }
-                Ok(TextboxParaDisplay { para_format: b_1, style_id: v_style_id, runs: v_runs.map_or_else(|| wire::absent("runs").map(|()| Default::default()), Ok)?, list_marker: v_list_marker, cells: v_cells, row: v_row })
+                if !b_0.runs.has_key() && !jscompat::lenient() {
+                    return Err(A::Error::missing_field("runs"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -18485,7 +18454,7 @@ impl<'de> Deserialize<'de> for InkInfo {
                         InkInfoKey::Payload => v_payload = Some(map.next_value()?),
                     }
                 }
-                Ok(InkInfo { anchor_index: v_anchor_index.map_or_else(|| wire::absent("anchorIndex").map(|()| JsNum(f64::NAN)), Ok)?, offset_x_px: v_offset_x_px.map_or_else(|| wire::absent("offsetXPx").map(|()| JsNum(f64::NAN)), Ok)?, offset_y_px: v_offset_y_px.map_or_else(|| wire::absent("offsetYPx").map(|()| JsNum(f64::NAN)), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, data_url: v_data_url.flatten(), payload: v_payload.flatten() })
+                Ok(InkInfo { anchor_index: v_anchor_index.map_or_else(|| wire::absent("anchorIndex").map(|()| JsNum(f64::NAN)), Ok)?, offset_x_px: v_offset_x_px.map_or_else(|| wire::absent("offsetXPx").map(|()| JsNum(f64::NAN)), Ok)?, offset_y_px: v_offset_y_px.map_or_else(|| wire::absent("offsetYPx").map(|()| JsNum(f64::NAN)), Ok)?, width_px: v_width_px.map_or_else(|| wire::absent("widthPx").map(|()| JsNum(f64::NAN)), Ok)?, height_px: v_height_px.map_or_else(|| wire::absent("heightPx").map(|()| JsNum(f64::NAN)), Ok)?, data_url: v_data_url.map_or_else(|| wire::absent("dataUrl").map(|()| None), Ok)?, payload: v_payload.map_or_else(|| wire::absent("payload").map(|()| None), Ok)? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -18753,7 +18722,8 @@ jscompat::js_object! {
         pub runs: Vec<Run>,
         pub label: String,
         pub preview_text: String,
-        pub image_data_url: String,
+        pub redact: String,
+        pub image_data_url: SharedStr,
         pub ole_prog_id: String,
         pub image_width_px: JsNum,
         pub image_height_px: JsNum,
@@ -18856,6 +18826,7 @@ pub enum BlockKey {
     Runs,
     Label,
     PreviewText,
+    Redact,
     ImageDataUrl,
     OleProgId,
     ImageWidthPx,
@@ -18938,7 +18909,7 @@ pub enum BlockKey {
 }
 
 impl FieldKey for BlockKey {
-    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "ruleOverlays", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
+    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "redact", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "ruleOverlays", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -18960,6 +18931,7 @@ impl FieldKey for BlockKey {
             "runs" => Some(Self::Runs),
             "label" => Some(Self::Label),
             "previewText" => Some(Self::PreviewText),
+            "redact" => Some(Self::Redact),
             "imageDataUrl" => Some(Self::ImageDataUrl),
             "oleProgId" => Some(Self::OleProgId),
             "imageWidthPx" => Some(Self::ImageWidthPx),
@@ -19090,7 +19062,8 @@ impl<'de> Deserialize<'de> for Block {
                         BlockKey::Runs => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.runs.set(value) },
                         BlockKey::Label => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.label.set(value) },
                         BlockKey::PreviewText => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.preview_text.set(value) },
-                        BlockKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.image_data_url.set(value) },
+                        BlockKey::Redact => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.redact.set(value) },
+                        BlockKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<SharedStr>>()?.0 { b_0.image_data_url.set(value) },
                         BlockKey::OleProgId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ole_prog_id.set(value) },
                         BlockKey::ImageWidthPx => b_0.image_width_px.set(map.next_value()?),
                         BlockKey::ImageHeightPx => b_0.image_height_px.set(map.next_value()?),
@@ -24979,7 +24952,7 @@ impl<'de> Deserialize<'de> for ParsedDoc {
                         ParsedDocKey::Internal => v_internal = map.next_value::<wire::OrAbsent<ParsedDocInternal>>()?.0,
                     }
                 }
-                Ok(ParsedDoc { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.flatten(), write_protection: v_write_protection.flatten(), remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))? })
+                Ok(ParsedDoc { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.map_or_else(|| wire::absent("protection").map(|()| None), Ok)?, write_protection: v_write_protection.map_or_else(|| wire::absent("writeProtection").map(|()| None), Ok)?, remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))? })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -25636,7 +25609,7 @@ impl<'de> Deserialize<'de> for ParsedDocFull {
                         ParsedDocFullKey::Extras => v_extras = map.next_value::<wire::OrAbsent<ParseExtras>>()?.0,
                     }
                 }
-                Ok(ParsedDocFull { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.flatten(), write_protection: v_write_protection.flatten(), remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))?, extras: v_extras.ok_or_else(|| A::Error::missing_field("extras"))? })
+                Ok(ParsedDocFull { blocks: v_blocks.map_or_else(|| wire::absent("blocks").map(|()| Default::default()), Ok)?, zotero_document_data: v_zotero_document_data.map_or_else(|| wire::absent("zoteroDocumentData").map(|()| Default::default()), Ok)?, properties: v_properties.ok_or_else(|| A::Error::missing_field("properties"))?, comments: v_comments.map_or_else(|| wire::absent("comments").map(|()| Default::default()), Ok)?, footnotes: v_footnotes.map_or_else(|| wire::absent("footnotes").map(|()| Default::default()), Ok)?, endnotes: v_endnotes.map_or_else(|| wire::absent("endnotes").map(|()| Default::default()), Ok)?, footnote_props: v_footnote_props, endnote_props: v_endnote_props, note_numbers: v_note_numbers, sources: v_sources.map_or_else(|| wire::absent("sources").map(|()| Default::default()), Ok)?, inks: v_inks.map_or_else(|| wire::absent("inks").map(|()| Default::default()), Ok)?, theme_fonts: v_theme_fonts, font_table: v_font_table, embedded_fonts: v_embedded_fonts, theme_colors: v_theme_colors, protection: v_protection.map_or_else(|| wire::absent("protection").map(|()| None), Ok)?, write_protection: v_write_protection.map_or_else(|| wire::absent("writeProtection").map(|()| None), Ok)?, remove_personal_info: v_remove_personal_info.map_or_else(|| wire::absent("removePersonalInfo").map(|()| Default::default()), Ok)?, header_text: v_header_text, header_paras: v_header_paras, footer_paras: v_footer_paras, header_images: v_header_images, footer_images: v_footer_images, watermark_text: v_watermark_text, watermark_picture: v_watermark_picture, footer_text: v_footer_text, footer_has_page_number: v_footer_has_page_number, header_has_page_number: v_header_has_page_number, title_pg: v_title_pg, even_and_odd_headers: v_even_and_odd_headers, mirror_margins: v_mirror_margins, track_revisions: v_track_revisions, gutter_at_top: v_gutter_at_top, compatibility_mode: v_compatibility_mode, auto_hyphenation: v_auto_hyphenation, balance_dbcs_spacing: v_balance_dbcs_spacing, use_f_e_layout: v_use_f_e_layout, compress_punctuation: v_compress_punctuation, adjust_line_height_in_table: v_adjust_line_height_in_table, indent_not_numbering_tab_stop: v_indent_not_numbering_tab_stop, do_not_expand_shift_return: v_do_not_expand_shift_return, do_not_use_h_t_m_l_paragraph_auto_spacing: v_do_not_use_h_t_m_l_paragraph_auto_spacing, default_tab_stop_twips: v_default_tab_stop_twips, header_first: v_header_first, footer_first: v_footer_first, header_even: v_header_even, footer_even: v_footer_even, hf_parts: v_hf_parts, styles: v_styles.ok_or_else(|| A::Error::missing_field("styles"))?, doc_defaults: v_doc_defaults, heading_style_ids: v_heading_style_ids.ok_or_else(|| A::Error::missing_field("headingStyleIds"))?, list_paragraph_style_id: v_list_paragraph_style_id, numbering: v_numbering.ok_or_else(|| A::Error::missing_field("numbering"))?, internal: v_internal.ok_or_else(|| A::Error::missing_field("internal"))?, extras: v_extras.ok_or_else(|| A::Error::missing_field("extras"))? })
             }
         }
         deserializer.deserialize_map(Fields)

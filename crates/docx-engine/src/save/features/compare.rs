@@ -193,7 +193,7 @@ pub fn compare_blocks(
     revised: &ParsedDocFull,
     options: &CompareOptions,
     now: &str,
-) -> ComparePlan {
+) -> Result<ComparePlan, String> {
     compare_block_lists(
         &original.blocks,
         &revised.blocks,
@@ -211,7 +211,7 @@ pub fn compare_block_lists(
     revised_document_xml: &str,
     options: &CompareOptions,
     now: &str,
-) -> ComparePlan {
+) -> Result<ComparePlan, String> {
     let rules = Rules {
         ignore_case: options.ignore.contains(&CompareIgnore::Case),
         ignore_whitespace: options.ignore.contains(&CompareIgnore::Whitespace),
@@ -239,7 +239,7 @@ pub fn compare_block_lists(
 
     let left = units_of(original);
     let right = units_of(revised);
-    let aligned = align_units(&left, &right, &rules);
+    let aligned = align_units(&left, &right, &rules)?;
 
     let mut blocks = Vec::new();
     let mut summary = CompareSummary::default();
@@ -254,7 +254,7 @@ pub fn compare_block_lists(
                 {
                     let left_runs = comparable_runs(left_runs);
                     let right_runs = comparable_runs(right_runs);
-                    let chunks = paragraph_chunks(&left_runs, &right_runs, granularity, &rules);
+                    let chunks = paragraph_chunks(&left_runs, &right_runs, granularity, &rules)?;
                     if !has_revision(&chunks) {
                         summary.unchanged_paragraphs += 1;
                         blocks.push(original_passthrough(right_block));
@@ -331,11 +331,11 @@ pub fn compare_block_lists(
         }
     }
 
-    ComparePlan {
+    Ok(ComparePlan {
         blocks,
         summary,
         next_revision_id: JsNum(ids.peek()),
-    }
+    })
 }
 
 /// `unitsOf`: the comparable units of a document, in body order
@@ -400,7 +400,11 @@ fn content_signature(block: &Block) -> String {
 /// sequence, and the paragraphs between two anchors are paired by how much
 /// they have in common, so an edited paragraph reads as an edit and a
 /// paragraph that really was deleted stays a deletion.
-fn align_units(left: &[Unit<'_>], right: &[Unit<'_>], rules: &Rules) -> Vec<Aligned> {
+fn align_units(
+    left: &[Unit<'_>],
+    right: &[Unit<'_>],
+    rules: &Rules,
+) -> Result<Vec<Aligned>, String> {
     let anchors = anchor_pairs(
         &left
             .iter()
@@ -410,18 +414,18 @@ fn align_units(left: &[Unit<'_>], right: &[Unit<'_>], rules: &Rules) -> Vec<Alig
             .iter()
             .map(|unit| comparable_text(&unit.text, rules))
             .collect::<Vec<_>>(),
-    );
+    )?;
     let mut out = Vec::new();
     let mut li = 0;
     let mut ri = 0;
     for (l, r) in anchors {
-        out.extend(pair_region(left, li..l, right, ri..r));
+        out.extend(pair_region(left, li..l, right, ri..r)?);
         out.push(Aligned::Pair(l, r));
         li = l + 1;
         ri = r + 1;
     }
-    out.extend(pair_region(left, li..left.len(), right, ri..right.len()));
-    out
+    out.extend(pair_region(left, li..left.len(), right, ri..right.len())?);
+    Ok(out)
 }
 
 /// `anchorPairs`: the unchanged paragraphs that anchor the alignment:
@@ -429,7 +433,7 @@ fn align_units(left: &[Unit<'_>], right: &[Unit<'_>], rules: &Rules) -> Vec<Alig
 /// order is the longest increasing subsequence), and the gaps between them are
 /// aligned by LCS. That keeps the LCS table to the gaps instead of the whole
 /// document.
-fn anchor_pairs(left: &[String], right: &[String]) -> Vec<(usize, usize)> {
+fn anchor_pairs(left: &[String], right: &[String]) -> Result<Vec<(usize, usize)>, String> {
     fn count(texts: &[String]) -> HashMap<&str, usize> {
         let mut counts = HashMap::new();
         for text in texts {
@@ -456,24 +460,29 @@ fn anchor_pairs(left: &[String], right: &[String]) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut li = 0;
     let mut ri = 0;
-    let fill_gap =
-        |li: usize, ri: usize, l_end: usize, r_end: usize, out: &mut Vec<(usize, usize)>| {
-            let n = l_end.saturating_sub(li);
-            let m = r_end.saturating_sub(ri);
-            if n > 0 && m > 0 && n * m <= LCS_GAP_CELLS {
-                for (l, r) in lcs_pairs(&left[li..l_end], &right[ri..r_end], |a, b| a == b) {
-                    out.push((li + l, ri + r));
-                }
+    let fill_gap = |li: usize,
+                    ri: usize,
+                    l_end: usize,
+                    r_end: usize,
+                    out: &mut Vec<(usize, usize)>|
+     -> Result<(), String> {
+        let n = l_end.saturating_sub(li);
+        let m = r_end.saturating_sub(ri);
+        if n > 0 && m > 0 && n.saturating_mul(m) <= LCS_GAP_CELLS {
+            for (l, r) in lcs_pairs(&left[li..l_end], &right[ri..r_end], |a, b| a == b)? {
+                out.push((li + l, ri + r));
             }
-        };
+        }
+        Ok(())
+    };
     for (l, r) in unique {
-        fill_gap(li, ri, l, r, &mut out);
+        fill_gap(li, ri, l, r, &mut out)?;
         out.push((l, r));
         li = l + 1;
         ri = r + 1;
     }
-    fill_gap(li, ri, left.len(), right.len(), &mut out);
-    out
+    fill_gap(li, ri, left.len(), right.len(), &mut out)?;
+    Ok(out)
 }
 
 /// `longestIncreasing`: the longest run of candidate pairs whose right index
@@ -550,21 +559,21 @@ fn pair_region(
     left_range: std::ops::Range<usize>,
     right: &[Unit<'_>],
     right_range: std::ops::Range<usize>,
-) -> Vec<Aligned> {
+) -> Result<Vec<Aligned>, String> {
     let (l0, r0) = (left_range.start, right_range.start);
     let n = left_range.len();
     let m = right_range.len();
     if n == 0 {
-        return right_range.map(Aligned::Added).collect();
+        return Ok(right_range.map(Aligned::Added).collect());
     }
     if m == 0 {
-        return left_range.map(Aligned::Removed).collect();
+        return Ok(left_range.map(Aligned::Removed).collect());
     }
-    if n * m > 250_000 {
-        return left_range
+    if n.saturating_mul(m) > 250_000 {
+        return Ok(left_range
             .map(Aligned::Removed)
             .chain(right_range.map(Aligned::Added))
-            .collect();
+            .collect());
     }
     let mut dp = vec![vec![0.0f64; m + 1]; n + 1];
     // -1: removed, -2: added, -3: paired
@@ -577,7 +586,7 @@ fn pair_region(
                 best = dp[i][j - 1];
                 from = -2;
             }
-            let sim = similarity(&left[l0 + i - 1].text, &right[r0 + j - 1].text);
+            let sim = similarity(&left[l0 + i - 1].text, &right[r0 + j - 1].text)?;
             if sim >= PAIR_THRESHOLD && dp[i - 1][j - 1] + sim > best {
                 best = dp[i - 1][j - 1] + sim;
                 from = -3;
@@ -607,11 +616,11 @@ fn pair_region(
         }
     }
     region.reverse();
-    region
+    Ok(region)
 }
 
 /// `similarity`: the share of words two texts have in common, 0 to 1
-fn similarity(a: &str, b: &str) -> f64 {
+fn similarity(a: &str, b: &str) -> Result<f64, String> {
     let left: Vec<Vec<u16>> = tokenize(&units_of_str(a), CompareGranularity::Word)
         .into_iter()
         .map(|token| token.text)
@@ -621,13 +630,13 @@ fn similarity(a: &str, b: &str) -> f64 {
         .map(|token| token.text)
         .collect();
     if left.is_empty() && right.is_empty() {
-        return 1.0;
+        return Ok(1.0);
     }
     if left.is_empty() || right.is_empty() {
-        return 0.0;
+        return Ok(0.0);
     }
-    let common = lcs_pairs(&left, &right, |x, y| x == y).len();
-    (2 * common) as f64 / (left.len() + right.len()) as f64
+    let common = lcs_pairs(&left, &right, |x, y| x == y)?.len();
+    Ok((2 * common) as f64 / (left.len() + right.len()) as f64)
 }
 
 enum Op {
@@ -643,7 +652,7 @@ fn paragraph_chunks(
     right_runs: &[Run],
     granularity: CompareGranularity,
     rules: &Rules,
-) -> Vec<Chunk> {
+) -> Result<Vec<Chunk>, String> {
     let left_text: Vec<u16> = left_runs
         .iter()
         .flat_map(|run| run_text(run).encode_utf16())
@@ -656,7 +665,7 @@ fn paragraph_chunks(
     let right_tokens = tokenize(&right_text, granularity);
     let pairs = lcs_pairs(&left_tokens, &right_tokens, |a, b| {
         token_equal(&a.text, &b.text, rules)
-    });
+    })?;
 
     let mut ops = Vec::new();
     let mut li = 0;
@@ -751,7 +760,7 @@ fn paragraph_chunks(
         }
     }
     flush(&mut keep, &mut chunks);
-    merge_chunks(chunks)
+    Ok(merge_chunks(chunks))
 }
 
 /// `mergeChunks`: neighbouring deletions (or insertions) become one revision region
@@ -811,12 +820,34 @@ fn tokenize(text: &[u16], granularity: CompareGranularity) -> Vec<Token> {
     out
 }
 
+/// The error V8 gives for a typed array too large to allocate
+/// (`new Int32Array(n)` throws a RangeError): the TypeScript has no catch, so
+/// the comparison fails with it.
+const ARRAY_ALLOC_FAILED: &str = "RangeError: Array buffer allocation failed";
+
+/// The most `Int32Array` cells an LCS table may take: 2^30 (4 GiB), the whole
+/// address space of the wasm host; past it the allocation cannot succeed.
+const LCS_MAX_CELLS: usize = 1 << 30;
+
 /// `lcsPairs`: the longest common subsequence of two sequences, as index pairs
-fn lcs_pairs<T>(a: &[T], b: &[T], eq: impl Fn(&T, &T) -> bool) -> Vec<(usize, usize)> {
+fn lcs_pairs<T>(
+    a: &[T],
+    b: &[T],
+    eq: impl Fn(&T, &T) -> bool,
+) -> Result<Vec<(usize, usize)>, String> {
     let n = a.len();
     let m = b.len();
     let w = m + 1;
-    let mut lcs = vec![0i32; (n + 1) * w];
+    // `(n + 1) * w` cells: a product that wraps, or memory that is not there,
+    // is the allocation failure the TypeScript's `new Int32Array` throws
+    let cells = (n + 1)
+        .checked_mul(w)
+        .filter(|cells| *cells <= LCS_MAX_CELLS)
+        .ok_or_else(|| ARRAY_ALLOC_FAILED.to_owned())?;
+    let mut lcs: Vec<i32> = Vec::new();
+    lcs.try_reserve_exact(cells)
+        .map_err(|_| ARRAY_ALLOC_FAILED.to_owned())?;
+    lcs.resize(cells, 0);
     for i in (0..n).rev() {
         for j in (0..m).rev() {
             lcs[i * w + j] = if eq(&a[i], &b[j]) {
@@ -840,7 +871,7 @@ fn lcs_pairs<T>(a: &[T], b: &[T], eq: impl Fn(&T, &T) -> bool) -> Vec<(usize, us
             j += 1;
         }
     }
-    out
+    Ok(out)
 }
 
 /// `toLowerCase` over code units: a lone surrogate stays as it is.
@@ -1270,11 +1301,32 @@ pub fn compare_documents(
     now_ms: f64,
 ) -> Result<(Vec<u8>, CompareSummary), String> {
     let now = crate::save::save::helpers::to_iso_string(now_ms);
-    let plan = compare_blocks(original, revised, options, &now);
+    let plan = compare_blocks(original, revised, options, &now)?;
     let save_options = crate::save::save::SaveOptions {
         revision_id_floor: Some(plan.next_revision_id),
         ..Default::default()
     };
     let bytes = crate::save::save::save_docx(revised, &plan.blocks, &save_options, now_ms)?;
     Ok((bytes, plan.summary))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lcs_table_too_large_is_an_error_not_a_wrap() {
+        // two 65,535-token paragraphs: (n + 1) * (m + 1) is 2^32, which wrapped
+        // to 0 on wasm32. Zero-sized items keep the input itself empty of bytes.
+        let side = vec![(); 65_535];
+        let result = lcs_pairs(&side, &side, |_, _| true);
+        assert_eq!(result, Err(ARRAY_ALLOC_FAILED.to_owned()));
+    }
+
+    #[test]
+    fn lcs_small_input_still_pairs() {
+        let a = [1, 2, 3, 4];
+        let b = [2, 4];
+        assert_eq!(lcs_pairs(&a, &b, |x, y| x == y), Ok(vec![(1, 0), (3, 1)]));
+    }
 }

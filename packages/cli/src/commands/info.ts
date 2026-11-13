@@ -2,7 +2,8 @@ import { statSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseDocx } from '@seuoffice/docx-engine'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { parseDocx, withheldLabelOf } from '@seuoffice/docx-engine'
 import { protectedCellsOf } from '@seuoffice/odt-engine'
 import { openPptx } from '@seuoffice/pptx-engine'
 import { assertOptionValues, flagString } from '../args'
@@ -97,7 +98,15 @@ async function describeDocx(bytes: Uint8Array, locked = false): Promise<Descript
     .slice(0, 20)
     .map((b) => ({
       level: b.level ?? 1,
-      text: (b.runs ?? []).map((r) => r.text).join(''),
+      // the AI readers' view: a run or a picture hidden from AI reads as its placeholder
+      text: b.redact
+        ? placeholderSource(b.redact)
+        : (b.runs ?? [])
+            .map((r) => {
+              const label = withheldLabelOf(r.rawRPr)
+              return label === null ? r.text : placeholderSource(label)
+            })
+            .join(''),
     }))
   return {
     headline: `${blocks.length} blocks, ${counts.heading ?? 0} headings, ${counts.table ?? 0} tables`,

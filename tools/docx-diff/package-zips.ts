@@ -1,6 +1,7 @@
 // Containers and parts the corpus does not hold: every limit and malformed
 // package the loader has an answer for, built byte by byte, and OOXML parts
 // written the Strict way.
+import { COMMENT_PARTS, STORIES } from './withheld-inputs'
 import { crc32, deflateRawSync } from 'node:zlib'
 
 const encoder = new TextEncoder()
@@ -388,6 +389,16 @@ function richPackages(): Record<string, EntrySpec[]> {
       { name: 'word/media/c1.PNG', data: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0, 0xff, 0xfe]) },
       { name: 'word/media/c2.gif', data: 'GIF89a' },
     ],
+    // hidden from AI: the comments of the stories of hidden-stories.ts (every spelling of the mark,
+    // every tag mutation), and ones whose tags a pattern reads differently from the parser
+    ...Object.fromEntries(
+      [...STORIES.map((story) => story.comments), ...COMMENT_PARTS.slice(STORIES.length)].map(
+        (data, index): [string, EntrySpec[]] => [
+          `a package with comments hidden from AI (${index})`,
+          [...common, { name: 'word/comments.xml', data }],
+        ],
+      ),
+    ),
     'a package with the other answers of the settings and theme readers': [
       ...common,
       {

@@ -101,22 +101,24 @@ describe('the write guard on model output', () => {
     expect(withheld).toBe(SECRET.length)
   })
 
-  it('refuses a batch that overwrites the span itself', async () => {
-    // the one way a span can actually be lost: the words themselves are the
-    // find text. `find` matches real text, so this needs the model to have
-    // echoed the secret from somewhere — but it has to be refused
+  it('finds nothing to overwrite when the words themselves are the find text', async () => {
+    // the one way a span could be lost: the words themselves are the find text.
+    // Finding them would also tell the model that its guess is right, so they are
+    // answered exactly as a phrase that is not there, and nothing changes
     const editor = await marked()
+    const before = editor.state.doc.textContent
     const out = executeOps(editor, replaceOps(SECRET, 'the number'))
-    expect(out.ok).toBe(false)
-    expect(out.error).toMatch(/placeholder/i)
+    expect(out).toEqual(executeOps(await marked(), replaceOps('zzzz', 'the number')))
+    expect(editor.state.doc.textContent).toBe(before)
   })
 
-  it('refuses a batch that overwrites a span inside a table cell', async () => {
+  it('finds nothing to overwrite inside a table cell either', async () => {
     const editor = await marked(true)
     expect(editor.getText()).toContain(SECRET)
+    const before = editor.state.doc.textContent
     const out = executeOps(editor, replaceOps(SECRET, 'the number'))
-    expect(out.ok).toBe(false)
-    expect(out.error).toMatch(/placeholder/i)
+    expect(out).toEqual(executeOps(await marked(true), replaceOps('zzzz', 'the number')))
+    expect(editor.state.doc.textContent).toBe(before)
   })
 
   it('marks the range re-asserted in the same chain, not the live selection', async () => {
@@ -139,25 +141,26 @@ describe('the write guard on model output', () => {
     expect(spans).toEqual([SECRET])
   })
 
-  it('refuses a batch that swaps the words back for the marker they stand in for', async () => {
+  it('does not swap the words back for the marker they stand in for', async () => {
     // The model's view is byte-identical before and after, so comparing markers
-    // sees nothing wrong — and the reader's phone number is gone, replaced by
-    // literal braces that mean nothing to anyone. Only a range check sees it.
+    // would see nothing wrong — and the reader's phone number would be gone,
+    // replaced by literal braces that mean nothing to anyone. The words are not
+    // found at all, so nothing is swapped.
     const editor = await marked()
     const before = editor.state.doc.textContent
     const out = executeOps(editor, replaceOps(SECRET, '{{client phone}}'))
-    expect(out.ok, out.error).toBe(false)
+    expect(out).toEqual(executeOps(await marked(), replaceOps('zzzz', '{{client phone}}')))
     expect(editor.state.doc.textContent).toBe(before)
   })
 
-  it('refuses a batch that eats part of the span and leaves the rest marked', async () => {
-    // Half the secret is gone, the other half still wears the mark, so the
-    // model's view still reads `{{client phone}}` and the count matches. The
-    // document is silently destroyed and no marker comparison can tell.
+  it('does not eat part of the span and leave the rest marked', async () => {
+    // Half the secret would be gone, the other half still wearing the mark, so the
+    // model's view would still read `{{client phone}}` and the count would match.
+    // A part of the words is not found either.
     const editor = await marked()
     const before = editor.state.doc.textContent
     const out = executeOps(editor, replaceOps(SECRET.slice(0, -1), 'x'))
-    expect(out.ok, out.error).toBe(false)
+    expect(out).toEqual(executeOps(await marked(), replaceOps('zzzz', 'x')))
     expect(editor.state.doc.textContent).toBe(before)
   })
 
@@ -220,10 +223,9 @@ describe('the write guard on model output', () => {
 
   it('reports the same reason whatever the damage', async () => {
     // three different ways to wreck a marker, one refusal. a marker that was
-    // never there, a span overwritten, a marker broken in half
+    // never there, a marker broken in half
     const damages: Array<[string, string]> = [
       ['now', 'Call {{client phone}}'],
-      [SECRET, 'the number'],
       ['now', '{{cli}ent{{pho}ne}'],
     ]
     for (const [find, replace] of damages) {

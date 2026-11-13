@@ -71,6 +71,16 @@ describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s', (mutation) => {
     for (const run of holding) expect(run.redact, run.text).toBe(LABEL)
   })
 
+  it('a chart whose title and axis title runs are hidden is a hidden element, the plain one is not', async () => {
+    const opened = await open(mutation)
+    if (!opened || BLIND.has(mutation)) return
+    const charts = opened.deck.slides[0]!.elements.filter((el) => el.type === 'chart')
+    expect(charts.map((el) => [el.name, el.redact])).toEqual([
+      ['Chart', LABEL],
+      ['Plain chart', undefined],
+    ])
+  })
+
   it('an edit elsewhere is saved, with every hidden run, its words and its mark', async () => {
     const opened = await open(mutation)
     if (!opened || BLIND.has(mutation)) return

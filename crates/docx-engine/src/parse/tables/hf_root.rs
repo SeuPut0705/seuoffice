@@ -6,6 +6,7 @@
 use std::sync::LazyLock;
 
 use jscompat::{RegexLimit, js_regex};
+use ooxml_xml::mask_opaque;
 
 use crate::generate::split_xml_children;
 use crate::inline_opaque::{PartNamespaces, part_namespaces};
@@ -101,7 +102,7 @@ pub fn hf_kept_root(
     let Some(root_tag) = find_start_tag(original_xml, TagName::Exact(root), 0) else {
         return Ok(None);
     };
-    let Some(close_idx) = original_xml.rfind(&format!("</{root}>")) else {
+    let Some(close_idx) = mask_opaque(original_xml).rfind(&format!("</{root}>")) else {
         return Ok(None);
     };
     let (open, open_idx) = (root_tag.text, root_tag.start);

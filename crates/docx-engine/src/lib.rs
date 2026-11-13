@@ -42,6 +42,7 @@ pub mod theme;
 pub mod vml;
 pub mod warnings;
 pub mod watermark;
+pub mod withheld;
 pub mod xml_number;
 pub mod xml_tag;
 pub mod xml_text;

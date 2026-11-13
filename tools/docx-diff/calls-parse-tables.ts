@@ -1476,6 +1476,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractTable',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.extractTable!(text, await buildCtx(args), args.docOffset),
     fromParse: {
       fn: 'extractTable',
@@ -1520,6 +1521,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractCell',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.extractCell!(
         elementOf(text),
@@ -1614,6 +1616,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfStyledParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.hfStyledParaFormat!(elementOf(text), await buildCtx(args)),
     fromParse: { fn: 'hfStyledParaFormat', input: ctxNodeInput(() => ({})) },
@@ -1804,6 +1807,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfTableRowParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const paras = internals.hfTableRowParagraphs!(
         elementOf(text),
@@ -1852,6 +1856,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       const paras = internals.hfParagraphs!(
@@ -1895,6 +1900,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfContentFromXml',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       return internals.hfContentFromXml!(
@@ -1940,6 +1946,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.readHeaderFooterPart',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       return internals.readHeaderFooterPart!(
@@ -2013,6 +2020,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.parseAllHfParts',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) => {
       const doc = await docOf(args)
       return internals.parseAllHfParts!(
@@ -2088,7 +2096,11 @@ const BATCH2: CallSpec[] = [
     },
     built: HF_PARTS().map((text) => ({
       text,
-      args: { parts: hfParts(text), partPath: 'word/header1.xml', runImageIds: ['8'] },
+      args: {
+        parts: hfParts(text, '', [['word/media/logo.png', 'logo bytes']]),
+        partPath: 'word/header1.xml',
+        runImageIds: ['8'],
+      },
     })),
   },
   {
@@ -2132,7 +2144,13 @@ const BATCH2: CallSpec[] = [
         grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'), undefined, '<a:off x="5" y="5"/>'),
         grp('<pic:pic><pic:blipFill><a:blip r:embed="rId404"/></pic:blipFill></pic:pic>'),
         grp(''),
-      ].map((text) => ({ text, args: { parts: miniParts(), sourcePath: 'word/document.xml' } }))
+      ].map((text) => ({
+        text,
+        args: {
+          parts: miniParts([['word/media/image1.png', 'picture bytes']]),
+          sourcePath: 'word/document.xml',
+        },
+      }))
     })(),
   },
   {

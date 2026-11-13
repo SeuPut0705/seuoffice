@@ -253,7 +253,7 @@ fn run_groups_from_boxes<'a>(
 ) {
     for textbox in boxes.into_iter().flatten() {
         for para in textbox.paras.as_mut().into_iter().flatten() {
-            groups.push(Some(&mut para.runs));
+            groups.push(para.runs.as_mut());
         }
     }
 }

@@ -2886,6 +2886,9 @@ async function executeTool(
       const sourceId = String(call.input.sourceId ?? '')
       if (!slides[idx])
         return fail(t('aiFailChartEdit'), `slideIndex out of range (0-${slides.length - 1})`)
+      // the edit rewrites the chart part wholesale, the hidden words in it with it
+      const guard = redactGuardFor({ op: 'setChart', target: { slide: idx, el: sourceId } }, slides)
+      if (guard) return fail(t('aiFailChartEdit'), guard.reason)
       const op: import('../../shared/ipc').EditChartOp = { slideIndex: idx, sourceId }
       if (call.input.kind != null)
         op.kind = String(call.input.kind) as import('../../shared/ipc').EditChartOp['kind']

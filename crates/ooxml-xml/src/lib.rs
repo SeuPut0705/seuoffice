@@ -14,5 +14,5 @@ pub use ordered::{
     AttributeMode, ParseError, XElement, XNode, parse_ordered, parse_ordered_with_attributes,
     serialize, serialize_element,
 };
-pub use tag::{Tag, opaque_end, tag_at};
+pub use tag::{Tag, mask_opaque, opaque_end, tag_at};
 pub use utf16::Utf16Map;

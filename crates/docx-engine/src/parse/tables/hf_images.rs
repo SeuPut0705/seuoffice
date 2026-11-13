@@ -10,7 +10,7 @@ use ooxml_pkg::Package;
 use super::hf::{hf_cell_column_left_px_at, hf_movable_picture_frag, hf_tbl_ranges_bytes};
 use crate::model::{
     HfImage, HfImageAlign, HfImageCrop, HfImagePosH, HfImagePosHRel, HfImagePosV, HfImagePosVRel,
-    HfImageWashout, HfImageWrap, HfImageWrapDistPx,
+    HfImageWashout, HfImageWrap, HfImageWrapDistPx, SharedStr,
 };
 use crate::package::{RelInfo, Thrown, parse_rels, part_text, rels_path_of};
 use crate::parse::drawings::host::MediaEnv;
@@ -430,7 +430,7 @@ pub fn hf_images(
         }
         // mc:AlternateContent may hold several blips (mac Word: PDF Choice + PNG
         // Fallback); use the first one whose media resolves
-        let mut data_url: Option<String> = None;
+        let mut data_url: Option<SharedStr> = None;
         for b in js_regex!(r#"<a:blip[^>]*r:embed\s*=\s*["']([^"']+)["']"#, "g").find_iter(frag) {
             data_url = media_data_url(zip, &rels, b.get(1).unwrap_or(""), part_path, media)?
                 .filter(|url| !url.is_empty());
@@ -442,7 +442,8 @@ pub fn hf_images(
         if data_url.is_none() {
             data_url = hf_shape_drawing_svg(frag)
                 .map_err(|limit| limit.to_string())?
-                .filter(|url| !url.is_empty());
+                .filter(|url| !url.is_empty())
+                .map(SharedStr::from);
         }
         let Some(data_url) = data_url else {
             continue;
@@ -561,7 +562,7 @@ pub fn hf_images(
                 continue;
             }
             let mut image = HfImage::default();
-            image.data_url.set(shape.data_url.clone());
+            image.data_url.set(shape.data_url.as_str().into());
             image.width_px.set(shape.width_px);
             image.height_px.set(shape.height_px);
             image.floating.set(true);
@@ -656,7 +657,7 @@ pub fn hf_table_media(
     part_path: &str,
     part_xml: &str,
     media: &MediaEnv<'_>,
-) -> Result<Option<JsMap<String>>, Thrown> {
+) -> Result<Option<JsMap<SharedStr>>, Thrown> {
     if !part_xml.contains("<w:tbl") && !part_xml.contains("<wp:inline") {
         return Ok(None);
     }
@@ -664,7 +665,7 @@ pub fn hf_table_media(
         return Ok(None);
     }
     let rels = parse_rels(zip, &rels_path_of(part_path))?;
-    let mut out: JsMap<String> = JsMap::new();
+    let mut out: JsMap<SharedStr> = JsMap::new();
     // inline pictures sharing a text paragraph become run images too, so a part
     // without tables still needs its media
     let mut ranges = if part_xml.contains("<w:tbl") {
@@ -695,7 +696,7 @@ pub fn hf_table_media(
             if rel.target_mode.as_deref() == Some("External")
                 || js_regex!(r"^https?:\/\/", "i").test(&rel.target)
             {
-                out.set(r_id, rel.target.clone());
+                out.set(r_id, SharedStr::from(rel.target.as_str()));
                 continue;
             }
             if let Some(data_url) =

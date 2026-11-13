@@ -1,6 +1,7 @@
 //! XML builders ported from packages/docx-engine/src/generate.ts.
 
 use jscompat::{RegexLimit, js_regex, try_js_regex};
+use ooxml_xml::mask_opaque;
 
 pub mod drawing_build;
 pub mod drawing_patch;
@@ -33,11 +34,13 @@ pub fn split_xml_children(xml: &str) -> Result<Vec<(String, String)>, RegexLimit
     let mut depth = 0i64;
     let mut start = None;
     let mut name = String::new();
+    // tags are found where comments and CDATA cannot fake one; bytes come from xml
+    let masked = mask_opaque(xml);
     for found in try_js_regex!(
         r#"<(\/?)([A-Za-z0-9:._-]+)((?:"[^"]*"|'[^']*'|[^"'>])*)>"#,
         "g"
     )
-    .try_find_iter(xml)
+    .try_find_iter(&masked)
     {
         let found = found?;
         let closing = found.get(1) == Some("/");
@@ -54,7 +57,7 @@ pub fn split_xml_children(xml: &str) -> Result<Vec<(String, String)>, RegexLimit
             if depth == 0 {
                 out.push((
                     found.get(2).unwrap_or_default().to_owned(),
-                    found.get(0).unwrap_or_default().to_owned(),
+                    xml[found.start()..found.end()].to_owned(),
                 ));
             }
         } else {

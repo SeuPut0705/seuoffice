@@ -5,6 +5,7 @@
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 
+use crate::model::SharedStr;
 use crate::package::{ContentTypes, Thrown};
 
 /// The conversions the TypeScript engine gets from its environment. A host
@@ -57,8 +58,9 @@ pub struct MediaEnv<'a> {
     /// included.
     content_types: OnceCell<Result<ContentTypes, Thrown>>,
     /// `mediaDataUrlCache.get(zip)`: the data URL of each media part, by part
-    /// path.
-    data_urls: RefCell<HashMap<String, Option<String>>>,
+    /// path. A hit shares the string: the TypeScript cache is there so that a
+    /// picture referenced a thousand times is one string, not a thousand.
+    data_urls: RefCell<HashMap<String, Option<SharedStr>>>,
     /// `lazyHashesByZip.get(zip)`: a Set, in insertion order.
     lazy_hashes: RefCell<Vec<String>>,
 }
@@ -84,13 +86,14 @@ impl<'a> MediaEnv<'a> {
             .map_err(Clone::clone)
     }
 
-    /// `mediaDataUrlCache.get(zip)?.get(partPath)`
-    pub fn cached_data_url(&self, part_path: &str) -> Option<Option<String>> {
+    /// `mediaDataUrlCache.get(zip)?.get(partPath)`: the cached string itself, not
+    /// a copy.
+    pub fn cached_data_url(&self, part_path: &str) -> Option<Option<SharedStr>> {
         self.data_urls.borrow().get(part_path).cloned()
     }
 
     /// `cache.set(partPath, pending)`
-    pub fn cache_data_url(&self, part_path: &str, data_url: Option<String>) {
+    pub fn cache_data_url(&self, part_path: &str, data_url: Option<SharedStr>) {
         self.data_urls
             .borrow_mut()
             .insert(part_path.to_owned(), data_url);

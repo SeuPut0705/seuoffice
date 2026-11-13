@@ -24,7 +24,7 @@ use ooxml_pkg::Package;
 
 use super::lists::StyleCtx;
 use crate::inline_opaque::InlineRawSource;
-use crate::model;
+use crate::model::{self, SharedStr};
 use crate::package::RelInfo;
 use crate::parse::drawings::host::MediaEnv;
 use crate::resolve::ResolveCtx;
@@ -136,7 +136,7 @@ pub struct BuildContext<'a> {
     /// `noteNumbers`: "footnote:<id>" / "endnote:<id>" to display number
     pub note_numbers: JsMap<JsNum>,
     /// `mediaByRid`: a:blip rId to data/external URL for pictures inside w:tbl
-    pub media_by_rid: Option<RefCell<JsMap<String>>>,
+    pub media_by_rid: Option<RefCell<JsMap<SharedStr>>>,
     /// `externalTxbxByRid`: r:txbx rId to the content of the external textbox part
     pub external_txbx_by_rid: Option<JsMap<String>>,
     /// `referenceOnlyComments`
