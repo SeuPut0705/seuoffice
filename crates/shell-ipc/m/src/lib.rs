@@ -148,3 +148,26 @@ const _: RegisterBatch = register;
 pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
     probe::insert(hosts, case);
 }
+
+#[cfg(test)]
+mod tests {
+    use shell_contract::channels::{Batch, CHANNELS};
+    use shell_contract::ipc::ChannelKind;
+
+    use crate::testkit::Probe;
+
+    /// The shell's start-up check: after registering, every invoke, send
+    /// and sendSync channel of the batch has a handler
+    #[test]
+    fn every_channel_of_the_batch_has_a_handler() {
+        let probe = Probe::new(serde_json::json!({}), vec![]);
+        let missing: Vec<_> = CHANNELS
+            .iter()
+            .filter(|spec| spec.batch == Batch::M)
+            .filter(|spec| spec.kinds.iter().any(|k| *k != ChannelKind::Event))
+            .filter(|spec| !probe.registry.handlers.contains_key(spec.name))
+            .map(|spec| spec.name)
+            .collect();
+        assert!(missing.is_empty(), "no handler: {missing:?}");
+    }
+}
