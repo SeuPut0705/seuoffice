@@ -964,15 +964,15 @@
   {
     "name": "agent-sessions: a bad folder is not connected",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "return AgentStartResult::failed(AgentStartFailure::BadFolder);",
-    "replace": "return AgentStartResult::failed(AgentStartFailure::NotConnected);",
+    "find": "AgentStartResult::failed(AgentStartFailure::BadFolder)",
+    "replace": "AgentStartResult::failed(AgentStartFailure::NotConnected)",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: no connection is a bad folder",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "return AgentStartResult::failed(AgentStartFailure::NotConnected);",
-    "replace": "return AgentStartResult::failed(AgentStartFailure::BadFolder);",
+    "find": "AgentStartResult::failed(AgentStartFailure::NotConnected)",
+    "replace": "AgentStartResult::failed(AgentStartFailure::BadFolder)",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1006,8 +1006,8 @@
   {
     "name": "agent-sessions: Codex is started for Claude",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "let ran = if request.provider == \"claude-code\" {",
-    "replace": "let ran = if request.provider == \"codex\" {",
+    "find": "let call = if self.request.provider == \"claude-code\" {",
+    "replace": "let call = if self.request.provider == \"codex\" {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1034,78 +1034,78 @@
   {
     "name": "agent-sessions: the app tools are always told of",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "app_mcp_info.is_some(),",
+    "find": "self.app_mcp.is_some(),",
     "replace": "true,",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: no relays are an empty list",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "user_mcp_relays: if relay_list.is_empty() {",
+    "find": "user_mcp_relays: if self.relay_list.is_empty() {",
     "replace": "user_mcp_relays: if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: no servers keeping results inside are a list",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "mcp_keep_inside: if keep_inside.is_empty() {",
+    "find": "mcp_keep_inside: if self.keep_inside.is_empty() {",
     "replace": "mcp_keep_inside: if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: no cut notes are a list",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "instructions_truncated: if instructions.truncated.is_empty() {",
+    "find": "instructions_truncated: if self.truncated.is_empty() {",
     "replace": "instructions_truncated: if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a stop while the app tools start goes unnoticed",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "entry.borrow_mut().app_mcp = Some(app_mcp.server);\n            }\n            if self.stopped(host, &entry) {",
-    "replace": "entry.borrow_mut().app_mcp = Some(app_mcp.server);\n            }\n            if false {",
+    "find": "fn after_app_mcp(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {\n        if manager.stopped(host, &self.entry) {",
+    "replace": "fn after_app_mcp(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {\n        if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a stop while the relays start goes unnoticed",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "entry.borrow_mut().relays = Some(relays.handle);\n            }\n            if self.stopped(host, &entry) {",
-    "replace": "entry.borrow_mut().relays = Some(relays.handle);\n            }\n            if false {",
+    "find": "fn after_relays(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {\n        if manager.stopped(host, &self.entry) {",
+    "replace": "fn after_relays(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {\n        if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a stop while the instructions are made goes unnoticed",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "self.meanwhile(host, \"instructions\");\n            if self.stopped(host, &entry) {",
-    "replace": "self.meanwhile(host, \"instructions\");\n            if false {",
+    "find": "&process_platform,\n        );\n        if manager.stopped(host, &self.entry) {",
+    "replace": "&process_platform,\n        );\n        if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a stop while the runner works goes unnoticed",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "entry.borrow_mut().session = Some(ran?);\n            if self.stopped(host, &entry) {",
-    "replace": "entry.borrow_mut().session = Some(ran?);\n            if false {",
+    "find": "self.entry.borrow_mut().session = Some(program);\n        if manager.stopped(host, &self.entry) {",
+    "replace": "self.entry.borrow_mut().session = Some(program);\n        if false {",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: the program is started though turned off",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "if Self::off_in_app(host, &request.provider) {\n                self.cleanup(host, &entry);",
-    "replace": "if false {\n                self.cleanup(host, &entry);",
+    "find": "if AgentManager::off_in_app(host, &self.request.provider) {\n            manager.cleanup(host, &self.entry);",
+    "replace": "if false {\n            manager.cleanup(host, &self.entry);",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a program found after it was turned off keeps running",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "Self::stop_session(&entry);\n                self.cleanup(host, &entry);\n                return Ok(off_in_app_failure());",
-    "replace": "self.cleanup(host, &entry);\n                return Ok(off_in_app_failure());",
+    "find": "AgentManager::stop_session(&self.entry);\n            manager.cleanup(host, &self.entry);\n            return AgentStartStep::Done(off_in_app_failure());",
+    "replace": "manager.cleanup(host, &self.entry);\n            return AgentStartStep::Done(off_in_app_failure());",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
     "name": "agent-sessions: a program turned off while it started is let go",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "if Self::off_in_app(host, &request.provider) {\n                Self::stop_session(&entry);",
-    "replace": "if false {\n                Self::stop_session(&entry);",
+    "find": "if AgentManager::off_in_app(host, &self.request.provider) {\n            AgentManager::stop_session(&self.entry);",
+    "replace": "if false {\n            AgentManager::stop_session(&self.entry);",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1125,8 +1125,8 @@
   {
     "name": "agent-sessions: a failed start leaves its parts",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "self.cleanup(host, &entry);\n                agent_start_failed(&error)",
-    "replace": "agent_start_failed(&error)",
+    "find": "manager.cleanup(host, &self.entry);\n        AgentStartStep::Done(agent_start_failed(error))",
+    "replace": "let _ = (manager, host);\n        AgentStartStep::Done(agent_start_failed(error))",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1202,8 +1202,8 @@
   {
     "name": "agent-sessions: a message to a missing session has another text",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "return Err(\"No such agent session\".to_owned()),",
-    "replace": "return Err(\"No such session\".to_owned()),",
+    "find": "_ => return AgentSendStep::Done(Err(\"No such agent session\".to_owned())),",
+    "replace": "_ => return AgentSendStep::Done(Err(\"No such session\".to_owned())),",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1384,8 +1384,8 @@
   {
     "name": "agent-sessions: a program turned off since is left running",
     "file": "main-core/src/shell/agent/agent_sessions.rs",
-    "find": "Self::stop_session(&entry);\n            self.cleanup(host, &entry);\n            return Ok(());",
-    "replace": "self.cleanup(host, &entry);\n            return Ok(());",
+    "find": "Self::stop_session(&entry);\n            self.cleanup(host, &entry);\n            return AgentSendStep::Done(Ok(()));",
+    "replace": "self.cleanup(host, &entry);\n            return AgentSendStep::Done(Ok(()));",
     "fn": ["agent-sessions.createAgentManager"]
   },
   {
@@ -1464,5 +1464,40 @@
     "find": "pub const PROJECT_SKILLS_KEY: &str = \"agentProjectSkills\";",
     "replace": "pub const PROJECT_SKILLS_KEY: &str = \"agentProjectSkill\";",
     "fn": ["project-skills.PROJECT_SKILLS_KEY"]
+  },
+  {
+    "name": "agent-sessions: the program of a start goes to another session",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "self.entry.borrow_mut().session = Some(program);",
+    "replace": "manager.live.first().unwrap_or(&self.entry).borrow_mut().session = Some(program);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a start that waits is not live",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "self.live.push(entry.clone());",
+    "replace": "let _ = entry.clone();",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program that fails after the stop is called stopped",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Err(error) => return self.fail(manager, host, &StartError::from(error)),",
+    "replace": "Err(error) => {\n                if manager.stopped(host, &self.entry) {\n                    return stopped_step();\n                }\n                return self.fail(manager, host, &StartError::from(error));\n            }",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a message is not handed to the program",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "session.send(message);",
+    "replace": "let _ = message;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a message the program refuses is taken as sent",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "pub fn resume(self, answer: Result<(), String>) -> Result<(), String> {\n        answer\n    }",
+    "replace": "pub fn resume(self, answer: Result<(), String>) -> Result<(), String> {\n        let _ = answer;\n        Ok(())\n    }",
+    "fn": ["agent-sessions.createAgentManager"]
   }
 ]

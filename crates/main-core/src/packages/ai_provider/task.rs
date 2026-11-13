@@ -592,6 +592,9 @@ struct BodyState {
     signal: Option<Id>,
     /// the fetch whose stream this body (or a clone of it) reads
     source: Id,
+    /// the `Cmd::Read`s in flight (a reader takes several `read()` calls at
+    /// once), which a cancel of the body ends
+    reads: Vec<Id>,
 }
 
 /// The stream of one fetch, which `response.clone()` tees: it is cancelled
@@ -784,6 +787,7 @@ impl Rt {
                                 done: false,
                                 signal: signal.map(|s| s.id),
                                 source: id,
+                                reads: Vec::new(),
                             },
                         );
                         st.sources.insert(
@@ -997,7 +1001,31 @@ impl Rt {
             rt: self.clone(),
             id,
         });
-        match self.op(signal.as_ref(), |id| Cmd::Read { id, body }).await {
+        let op = self.op(signal.as_ref(), |id| Cmd::Read { id, body });
+        let id = op.id;
+        if let Some(b) = self.0.st.borrow_mut().bodies.get_mut(&body) {
+            b.reads.push(id);
+        }
+        let outcome = op.await;
+        // `reader.cancel()` took the read: it ends as `{ done: true }`, and
+        // the stream is not over for the body's other branches
+        let cancelled = self
+            .0
+            .st
+            .borrow_mut()
+            .bodies
+            .get_mut(&body)
+            .is_none_or(|b| match b.reads.iter().position(|r| *r == id) {
+                Some(at) => {
+                    b.reads.remove(at);
+                    false
+                }
+                None => true,
+            });
+        if cancelled {
+            return Ok(None);
+        }
+        match outcome {
             Ok(Answer::Chunk(bytes)) => Ok(Some(bytes)),
             Ok(_) => {
                 self.body_over(body);
@@ -1036,6 +1064,7 @@ impl Rt {
             return;
         }
         b.done = true;
+        let reads = std::mem::take(&mut b.reads);
         let source = b.source;
         if let Some(src) = st.sources.get_mut(&source) {
             src.live = src.live.saturating_sub(1);
@@ -1043,6 +1072,10 @@ impl Rt {
                 src.cancelled = true;
                 st.cmds.push(Cmd::Cancel { id: source });
             }
+        }
+        drop(st);
+        for read in reads {
+            self.settle(read, Ok(Answer::End));
         }
     }
 
@@ -1059,6 +1092,7 @@ impl Rt {
                 done,
                 signal,
                 source,
+                reads: Vec::new(),
             },
         );
         if !done && let Some(src) = st.sources.get_mut(&source) {
@@ -1874,5 +1908,171 @@ mod tests {
         drop((rt, parent, timeout, both, call));
         drop(runtime);
         assert!(weak.upgrade().is_none());
+    }
+
+    fn head() -> ResponseHead {
+        ResponseHead {
+            status: 200.0,
+            status_text: String::new(),
+            headers: Vec::new(),
+            url: String::new(),
+            redirected: false,
+            kind: "basic".into(),
+            has_body: true,
+        }
+    }
+
+    /// The id of the only `Cmd::Read` in `cmds`.
+    fn read_of(cmds: &[Cmd]) -> Id {
+        let reads: Vec<Id> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(reads.len(), 1, "{cmds:?}");
+        reads[0]
+    }
+
+    #[test]
+    fn cancelling_a_body_ends_the_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let held: Rc<RefCell<Option<Rc<Response>>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            );
+            *slot.borrow_mut() = Some(response.clone());
+            let first = response.read().await;
+            let second = response.read().await;
+            (first, second)
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        let read = read_of(&runtime.poll());
+        runtime.feed(Event::Done {
+            id: read,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        read_of(&runtime.poll());
+        // the stream stalls; `reader.cancel()` while the second read waits
+        held.borrow().as_ref().unwrap().cancel();
+        let cmds = runtime.poll();
+        assert_eq!(cmds, vec![Cmd::Cancel { id: fetch }]);
+        let (first, second) = call.take().expect("the second read ended");
+        assert_eq!(first.unwrap(), Some(b"one".to_vec()));
+        assert_eq!(second.unwrap(), None);
+    }
+
+    #[test]
+    fn cancelling_a_body_ends_every_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let fetched = runtime.start(async move {
+            Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            )
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        let response = fetched.take().expect("the fetch answered");
+        // three `read()` calls in flight at once, as a reader allows
+        let reads: Vec<_> = (0..3)
+            .map(|_| {
+                let response = response.clone();
+                runtime.start(async move { response.read().await })
+            })
+            .collect();
+        let ids: Vec<Id> = runtime
+            .poll()
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids.len(), 3);
+        // the first is answered; the two others still wait
+        runtime.feed(Event::Done {
+            id: ids[0],
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(reads[0].take().unwrap().unwrap(), Some(b"one".to_vec()));
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        for read in &reads[1..] {
+            assert_eq!(read.take().expect("the read ended").unwrap(), None);
+        }
+    }
+
+    #[test]
+    fn a_branch_cancelled_mid_read_leaves_its_clone_to_cancel_the_stream() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        type Pair = (Rc<Response>, Rc<Response>);
+        let held: Rc<RefCell<Option<Pair>>> = Rc::default();
+        let slot = held.clone();
+        let call = runtime.start(async move {
+            let response = rt
+                .fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap();
+            let copy = Rc::new(response.clone_response());
+            let response = Rc::new(response);
+            *slot.borrow_mut() = Some((response.clone(), copy));
+            response.read().await
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        read_of(&runtime.poll());
+        let (response, copy) = held.borrow().clone().unwrap();
+        response.cancel();
+        // the clone still reads the stream: it is not cancelled yet
+        assert!(runtime.poll().is_empty());
+        assert_eq!(call.take().expect("the read ended").unwrap(), None);
+        copy.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
     }
 }
