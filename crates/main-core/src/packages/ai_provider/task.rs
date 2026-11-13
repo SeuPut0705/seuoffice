@@ -1794,3 +1794,55 @@ impl Runtime {
         }
     }
 }
+
+/// The listeners, timers and handlers the runtime keeps capture [`Rt`]
+/// clones (a composite signal's listener holds its target, a watchdog's
+/// timer its signal), so the state refers to itself. Dropping the runtime
+/// drops all of it: the tasks first, then what they left registered, taken
+/// out of the state before it is dropped so that no destructor finds the
+/// state borrowed.
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        self.tasks.clear();
+        let state = std::mem::take(&mut *self.rt.0.st.borrow_mut());
+        drop(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn host() -> HostInfo {
+        HostInfo {
+            platform: "linux".into(),
+            pid: 1.0,
+            tmpdir: "/tmp".into(),
+            homedir: "/home".into(),
+            env: Vec::new(),
+            clock: Box::new(|| 0.0),
+            uuid: Box::new(String::new),
+            random: Box::new(|n| vec![0; n]),
+        }
+    }
+
+    #[test]
+    fn a_dropped_runtime_releases_its_state_with_timers_and_signals_left() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let weak = Rc::downgrade(&rt.0);
+        let parent = rt.controller();
+        let timeout = rt.timeout_signal(1000.0);
+        let both = rt.any_signal(&[&parent, &timeout]);
+        let held = both.clone();
+        let call = runtime.start(async move {
+            let target = held.clone();
+            held.on_abort(move |_| target.abort(None));
+            std::future::pending::<()>().await;
+        });
+        assert!(!runtime.poll().is_empty());
+        drop((rt, parent, timeout, both, call));
+        drop(runtime);
+        assert!(weak.upgrade().is_none());
+    }
+}
