@@ -5,18 +5,26 @@
 //! ([`ports`]). The shell inserts a [`Factory`] for every port in its hosts;
 //! a shell built without one refuses to start, naming it.
 
+pub mod agent;
+pub mod ai_naming;
 pub mod drive;
+pub mod free_ai;
+pub mod generate;
 pub mod integrations;
 pub mod knowledge_base;
+pub mod mcp;
 pub mod outbound;
 mod port;
 pub mod ports;
 #[cfg(feature = "probe")]
 mod probe;
+pub mod runtime;
 pub mod secrets;
 pub mod shell_ai_prefs;
+pub mod slides_ai;
 pub mod template_selection;
 mod unbuilt;
+pub mod user_skills;
 mod value;
 pub mod zotero;
 
@@ -133,6 +141,13 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     probe::integrations::insert(hosts, case, log.clone());
     probe::knowledge_base::insert(hosts, case, log.clone());
     probe::zotero::insert(hosts, case, log.clone());
+    probe::agent::insert(hosts, case, log.clone());
+    probe::ai_naming::insert(hosts, case, log.clone());
+    probe::free_ai::insert(hosts, case, log.clone());
+    probe::generate::insert(hosts, case, log.clone());
+    probe::mcp::insert(hosts, case, log.clone());
+    probe::slides_ai::insert(hosts, case, log.clone());
+    probe::user_skills::insert(hosts, case, log.clone());
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
         case, log,
     )));

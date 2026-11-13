@@ -23,12 +23,16 @@ aes-gcm = "0.10"
 cbc = { version = "0.1", features = ["alloc"] }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
 
+# the AI runtime's process.kill
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
 # the safeStorage key: the keychain item on macOS, DPAPI on Windows
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = "3"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Threading"] }
 
 [dev-dependencies]
 # the tests register the batch over its probe fakes
