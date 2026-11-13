@@ -36,6 +36,7 @@ const fake = (name: string): string => pathToFileURL(resolve(here, name)).href
 const WINDOW_URL = url('apps/shell/src/main/pdf-tools/pdf-tools-window.ts')
 const STRUCTURE_URL = url('apps/shell/src/main/pdf-structure-ipc.ts')
 const CONVERT_URL = url('apps/shell/src/main/pdf-convert-ui.ts')
+const INDEX_URL = url('apps/shell/src/main/index.ts')
 const FAKES = pathToFileURL(here).href
 
 /**
@@ -51,6 +52,15 @@ const REPLACED = new Map<string, { fake: string; parents?: string[] }>([
   ],
   [url('apps/pdf/src/main/wasm-path.ts'), { fake: fake('wasm-path.cts') }],
   [url('apps/shell/src/main/pdf-tools/tools.ts'), { fake: fake('tools.cts') }],
+  // the shell entry's active pdf tab and its converter (group d2/pdf-tools-office)
+  [
+    url('apps/shell/src/main/detached-windows.ts'),
+    { fake: fake('detached-windows.cts'), parents: [INDEX_URL] },
+  ],
+  [
+    url('apps/shell/src/main/pdf2docx-local.ts'),
+    { fake: fake('pdf2docx-local.cts'), parents: [INDEX_URL] },
+  ],
 ])
 
 registerHooks({
@@ -114,6 +124,11 @@ function fork() {
       else send({ type: 'result', value: ipc(field(a, 'value')) })
     },
   }
+}
+
+/** the case's `hosts.d2.pdf.tools` for the fakes the shell entry reaches (group d2/pdf-tools-office) */
+export function startToolsCase(cx: LoadContext): void {
+  startCase(field(field(field(cx.case.hosts, 'd2'), 'pdf'), 'tools'), cx.electron.log)
 }
 
 export async function loadPdfTools(cx: LoadContext): Promise<void> {

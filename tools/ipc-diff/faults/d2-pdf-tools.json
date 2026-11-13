@@ -89,5 +89,26 @@
     "find": "r\"\\.(md|epub|png|pdf)$\"",
     "replace": "r\"\\.(md|png|pdf)$\"",
     "groups": ["d2/pdf-tools-convert"]
+  },
+  {
+    "name": "an office export writes no file",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "move || atomic_write_file(&target, &bytes).map_err(|e| e.message),",
+    "replace": "move || { let _ = (&target, &bytes); Ok::<(), String>(()) },",
+    "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "an office export shows no progress",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "ctx.shell.set_progress_bar(self.host, 2.0);",
+    "replace": "",
+    "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "the Hangul copy is made without a tab manager",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "if !self.ctx.shell.has_tab_manager() {",
+    "replace": "if false {",
+    "groups": ["d2/pdf-tools-office"]
   }
 ]
