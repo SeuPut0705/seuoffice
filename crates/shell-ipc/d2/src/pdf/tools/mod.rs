@@ -24,6 +24,7 @@ use jscompat::{JsObject, JsonValue};
 use main_core::packages::electron_utils::dialog_memory::{
     Dialog, DialogMemory, FallbackDir, show_open_dialog_with_memory, show_save_dialog_with_memory,
 };
+use shell_contract::app_actions::{DocumentConversions, PdfExport};
 use shell_contract::hosts::{
     ContentsHost, Dialogs, DialogsHost, FileDialog, FileFilter, MainWindowHost, OsShellHost,
 };
@@ -346,10 +347,11 @@ impl PdfTools {
     }
 
     /// `exportPdfAs{Docx,Pptx,Xlsx}Local(preset)`: Save As › Word,
-    /// PowerPoint, Excel with the tab and target its dialog picked
+    /// PowerPoint, Excel with the tab and target its dialog picked; without
+    /// a preset, the active pdf tab and a save dialog
     pub fn export_office(
         &self,
-        format: OfficeFormat,
+        format: PdfExport,
         preset: Option<(PdfTab, String)>,
         then: Box<dyn FnOnce()>,
     ) {
@@ -359,6 +361,20 @@ impl PdfTools {
     /// `app.on('will-quit', () => runner.cancelAll())`
     pub fn cancel_all(&self) -> usize {
         self.ctx.runner.cancel_all()
+    }
+}
+
+/// The File menus' conversions (batch M calls them)
+impl DocumentConversions for PdfTools {
+    /// `exportPdfAs{Docx,Pptx,Xlsx}Local()`: the active pdf tab converts, as
+    /// in the TypeScript, whichever view the menu was used in
+    fn export_pdf_as(&self, _view: ViewId, format: PdfExport) {
+        self.export_office(format, None, Box::new(|| {}))
+    }
+
+    /// `importPdfAsHwp()`: the tab the menu was used in keeps its document
+    fn import_pdf_into_hwp(&self, _view: ViewId) {
+        self.convert.import_pdf_into_hwp()
     }
 }
 
@@ -389,13 +405,15 @@ pub(crate) fn entries(
     all.extend(structure.entries());
     all.extend(window.entries());
     all.extend(convert.entries());
-    provided.add::<PdfTools>(Rc::new(PdfTools {
+    let tools = Rc::new(PdfTools {
         ctx,
         structure,
         window,
         password,
         convert,
-    }));
+    });
+    provided.add::<dyn DocumentConversions>(tools.clone());
+    provided.add::<PdfTools>(tools);
     Ok(all)
 }
 
@@ -468,6 +486,33 @@ pub(crate) fn probe_trigger(
             IpcValue::Undefined
         }
         "cancel-all" => IpcValue::Number(tools.cancel_all() as f64),
+        // the File menu's Export as Word / PowerPoint / Excel: the answer
+        // waits for the flow, as the TypeScript's `await` does
+        "export-pdf-as" => {
+            let format = match s(0) {
+                Some("docx") => PdfExport::Docx,
+                Some("pptx") => PdfExport::Pptx,
+                Some("xlsx") => PdfExport::Xlsx,
+                // the menu offers no other
+                _ => {
+                    then(Ok(IpcValue::Undefined));
+                    return true;
+                }
+            };
+            tools.export_office(
+                format,
+                None,
+                Box::new(move || then(Ok(IpcValue::Undefined))),
+            );
+            return true;
+        }
+        "import-pdf-into-hwp" => {
+            let conversions = shell_contract::app_actions::document_conversions(provided);
+            conversions
+                .expect("the tools provide it")
+                .import_pdf_into_hwp(view);
+            IpcValue::Undefined
+        }
         _ => return false,
     };
     then(Ok(answer));

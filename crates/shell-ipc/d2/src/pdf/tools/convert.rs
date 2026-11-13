@@ -12,14 +12,15 @@ use jscompat::js_regex;
 use jscompat::node_path::host::{basename, join};
 use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::pdf::generated_output::exists_sync;
+use shell_contract::app_actions::PdfExport;
 use shell_contract::hosts::MessageBox;
 use shell_contract::ipc::Target;
 use shell_contract::runtime::PathName;
 use shell_contract::{IpcError, IpcValue, ViewId, WindowId};
 
-use super::hosts::{ConvertError, OfficeConversion, OfficeFormat, PdfTab, TabKind};
+use super::hosts::{ConvertError, OfficeConversion, PdfTab, TabKind, extension};
 use super::password::Password;
-use super::{Ctx, int_text, js_filter, js_len, js_str, options};
+use super::{Ctx, int_text, js_filter, js_len, js_str, js_strs, options};
 use crate::kit::{self, Entry, IntoIpc, as_str, field, obj};
 
 const MAX_PATH: usize = 4096;
@@ -54,21 +55,21 @@ struct Office {
     tabs: TabKind,
 }
 
-fn office(format: OfficeFormat) -> Office {
+fn office(format: PdfExport) -> Office {
     match format {
-        OfficeFormat::Docx => Office {
+        PdfExport::Docx => Office {
             busy: "pdfDocxBusyMsg",
             filter: "filterWord",
             failed: "pdfDocxFailedMsg",
             tabs: TabKind::Docs,
         },
-        OfficeFormat::Pptx => Office {
+        PdfExport::Pptx => Office {
             busy: "pdfPptxBusyMsg",
             filter: "filterPpt",
             failed: "pdfPptxFailedMsg",
             tabs: TabKind::Slides,
         },
-        OfficeFormat::Xlsx => Office {
+        PdfExport::Xlsx => Office {
             busy: "pdfXlsxBusyMsg",
             filter: "filterExcel",
             failed: "pdfXlsxFailedMsg",
@@ -80,7 +81,7 @@ fn office(format: OfficeFormat) -> Office {
 /// One export in flight; [`Export::end`] is its `finally`
 struct Export {
     c: Convert,
-    format: OfficeFormat,
+    format: PdfExport,
     tab: PdfTab,
     host: WindowId,
     file: String,
@@ -151,7 +152,7 @@ impl Convert {
     /// the flow ends, however it ends.
     pub fn export_office(
         &self,
-        format: OfficeFormat,
+        format: PdfExport,
         preset: Option<(PdfTab, String)>,
         then: Box<dyn FnOnce()>,
     ) {
@@ -187,7 +188,7 @@ impl Convert {
                 }
                 // Save As already picked the name: no second dialog
                 let picked = target.or_else(|| {
-                    let ext = format.extension();
+                    let ext = extension(format);
                     let default =
                         js_regex!(r"\.pdf$", "i").replace_all(&export.file, |_| format!(".{ext}"));
                     export.c.ctx.show_save(
@@ -264,6 +265,37 @@ impl Convert {
         }
     }
 
+    /// `importPdfAsHwp()`: Hangul > Import PDF. The shell asks for a PDF and
+    /// opens a copy of it as a new, untitled Hangul tab. The tab manager and
+    /// the shell window are set and cleared together, so the TypeScript's
+    /// `shellWindow ?? BrowserWindow.getFocusedWindow()` is the shell window
+    /// whenever there is a tab manager.
+    pub fn import_pdf_into_hwp(&self) {
+        let Some(win) = self.ctx.main_window.window() else {
+            return;
+        };
+        if !self.ctx.shell.has_tab_manager() {
+            return;
+        }
+        let picked = self.ctx.show_open(
+            Some(win),
+            options([
+                ("filters", Some(js_filter(&self.tm("filterPdf"), &["pdf"]))),
+                ("properties", Some(js_strs(&["openFile"]))),
+            ]),
+            None,
+        );
+        let Some(path) = picked
+            .and_then(|paths| paths.into_iter().next())
+            .filter(|p| !p.is_empty())
+        else {
+            return;
+        };
+        if let Err(message) = self.open_pdf_copy_as_hwp(&path) {
+            self.ctx.dialogs.error(&basename(&path, None), &message);
+        }
+    }
+
     pub fn entries(&self) -> Vec<Entry> {
         let mut out = Vec::new();
         let me = self.clone();
@@ -324,9 +356,9 @@ impl Convert {
                     return r.reply(Ok(IpcValue::Undefined));
                 }
                 let format = match args.str(0) {
-                    Some("docx") => OfficeFormat::Docx,
-                    Some("xlsx") => OfficeFormat::Xlsx,
-                    Some("pptx") => OfficeFormat::Pptx,
+                    Some("docx") => PdfExport::Docx,
+                    Some("xlsx") => PdfExport::Xlsx,
+                    Some("pptx") => PdfExport::Pptx,
                     Some("hwp") => {
                         return me.open_pdf_as_hwp(Box::new(move |done| {
                             r.reply(done.map(|()| IpcValue::Undefined))
@@ -474,7 +506,7 @@ impl Export {
             c.message(self.host, "info", c.tm(message), Some(detail))
         };
         match self.format {
-            OfficeFormat::Docx => {
+            PdfExport::Docx => {
                 let ocr = pages(&|s| s == "ocr");
                 let image = pages(&|s| s != "ok" && s != "ocr");
                 if done.scanned_document {
@@ -497,7 +529,7 @@ impl Export {
                     info("pdfDocxLocalOcrMsg", text("pdfDocxLocalOcrDetail", &ocr))
                 }
             }
-            OfficeFormat::Pptx => {
+            PdfExport::Pptx => {
                 let image = pages(&|s| s != "ok");
                 if done.scanned_document {
                     info("pdfDocxLocalScannedMsg", c.tm("pdfPptxLocalScannedDetail"))
@@ -508,7 +540,7 @@ impl Export {
                     )
                 }
             }
-            OfficeFormat::Xlsx => {
+            PdfExport::Xlsx => {
                 let notice = pages(&|s| s != "ok");
                 if done.scanned_document {
                     info("pdfDocxLocalScannedMsg", c.tm("pdfXlsxLocalScannedDetail"))
@@ -546,11 +578,12 @@ impl Export {
 #[cfg(test)]
 mod tests {
     use serde_json::json;
+    use shell_contract::app_actions::document_conversions;
     use shell_contract::hosts::MessageBox;
     use shell_contract::{Surface, ViewId, WindowId};
 
     use super::super::test_support::*;
-    use super::OfficeFormat;
+    use super::PdfExport;
     use crate::kit::IntoIpc;
     use crate::testing::HostCall;
 
@@ -698,18 +731,10 @@ mod tests {
         t.rt.script().save.push_back(Some(t.rt.dir.join("a.xlsx")));
         let ended = std::rc::Rc::new(std::cell::Cell::new(0));
         let e = ended.clone();
-        tools.export_office(
-            OfficeFormat::Xlsx,
-            None,
-            Box::new(move || e.set(e.get() + 1)),
-        );
+        tools.export_office(PdfExport::Xlsx, None, Box::new(move || e.set(e.get() + 1)));
         t.rt.drain();
         let e = ended.clone();
-        tools.export_office(
-            OfficeFormat::Pptx,
-            None,
-            Box::new(move || e.set(e.get() + 1)),
-        );
+        tools.export_office(PdfExport::Pptx, None, Box::new(move || e.set(e.get() + 1)));
         assert_eq!(ended.get(), 1);
         assert_eq!(messages(&t)[0].message, "pdfPptxBusyMsg");
         // cancelling the prompt ends the first quietly
@@ -719,7 +744,7 @@ mod tests {
         assert_eq!(messages(&t).len(), 1);
         // the next one fails with the explanation for its error
         t.rt.script().save.push_back(Some(t.rt.dir.join("b.xlsx")));
-        tools.export_office(OfficeFormat::Xlsx, None, Box::new(|| {}));
+        tools.export_office(PdfExport::Xlsx, None, Box::new(|| {}));
         t.rt.drain();
         let m = messages(&t);
         assert_eq!(m[1].message, "pdfXlsxFailedMsg");
@@ -767,5 +792,71 @@ mod tests {
             j(&t.rt.events()[0].args[0]),
             json!({ "format": "epub", "outPath": "/o.epub" })
         );
+    }
+
+    #[test]
+    fn the_menus_export_the_active_pdf_whichever_view_asks() {
+        let mut t = tools(json!({
+            "convert_to_office": [{ "bytes": { "$u8": [9] }, "pageResults": [[1, "ok"]] }]
+        }));
+        let menus = document_conversions(&t.rt.provided()).unwrap();
+        // no pdf tab is active: nothing is asked
+        menus.export_pdf_as(ViewId(42), PdfExport::Pptx);
+        assert!(t.rt.script().calls.is_empty());
+        let src = t.file("a.pdf", b"%PDF");
+        t.fake.set("active_pdf_tab", tab(&src));
+        let out = t.rt.dir.join("a.pptx");
+        t.rt.script().save.push_back(Some(out.clone()));
+        menus.export_pdf_as(ViewId(42), PdfExport::Pptx);
+        t.rt.drain();
+        assert!(matches!(
+            t.rt.script().calls[0],
+            HostCall::Save(Some(WindowId(2)), _)
+        ));
+        assert_eq!(
+            t.fake.called("convert_to_office")[0]["format"],
+            json!("pptx")
+        );
+        assert_eq!(std::fs::read(&out).unwrap(), vec![9]);
+    }
+
+    #[test]
+    fn import_pdf_asks_for_a_pdf_and_opens_a_copy_as_a_hangul_tab() {
+        let t = tools(json!({ "open_hwp_copy": [7, "no hangul"] }));
+        let menus = document_conversions(&t.rt.provided()).unwrap();
+        let opens = |t: &T| {
+            t.rt.script()
+                .calls
+                .iter()
+                .filter(|c| matches!(c, HostCall::Open(Some(WindowId(1)), _)))
+                .count()
+        };
+        // before the shell window exists nothing is asked
+        menus.import_pdf_into_hwp(ViewId(3));
+        assert!(t.rt.script().calls.is_empty());
+        t.rt.script().main_view = Some(ViewId(1));
+        let src = t.file("Scan.PDF", b"%PDF");
+        // a cancelled dialog opens nothing
+        t.rt.script().open.push_back(None);
+        menus.import_pdf_into_hwp(ViewId(3));
+        assert_eq!(opens(&t), 1);
+        assert!(t.fake.called("open_hwp_copy").is_empty());
+        t.rt.script().open.push_back(Some(vec![src.clone().into()]));
+        menus.import_pdf_into_hwp(ViewId(3));
+        let call = t.fake.called("open_hwp_copy")[0].clone();
+        assert_eq!(call[1], json!("Scan"));
+        assert_eq!(std::fs::read(call[0].as_str().unwrap()).unwrap(), b"%PDF");
+        // a failed open is shown with the file's name
+        t.rt.script().open.push_back(Some(vec![src.into()]));
+        menus.import_pdf_into_hwp(ViewId(3));
+        assert!(
+            t.rt.script()
+                .calls
+                .contains(&HostCall::ErrorBox("Scan.PDF".into(), "no hangul".into()))
+        );
+        // without the tab manager no dialog comes up
+        t.fake.set("tabManager", json!(false));
+        menus.import_pdf_into_hwp(ViewId(3));
+        assert_eq!(opens(&t), 3);
     }
 }

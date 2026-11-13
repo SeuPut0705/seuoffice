@@ -12,6 +12,8 @@ export interface ToolsState {
   /** `allowedByWc` of the pdf editor (pdf-main.cts) */
   grants: Map<number, Set<string>>
   uuids: number
+  /** the shell entry's `importPdf` for the Hangul editor (hwp-main.cts) */
+  importPdf?: () => void
 }
 
 const KEY = Symbol.for('ipc-diff.d2.pdf-tools')
