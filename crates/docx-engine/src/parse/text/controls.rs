@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 
-use jscompat::{RegexLimit, js_regex, trim};
+use jscompat::{js_regex, trim};
 use ooxml_xml::XNode;
 use serde::Serialize;
 
