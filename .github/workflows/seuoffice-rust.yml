@@ -125,6 +125,11 @@ jobs:
           npm --prefix tools/docx-diff run typecheck
           npm --prefix tools/docx-diff run test
 
+      # the unused import that failed ci.yml's Lint for tools/pptx-diff stops here too
+      - name: Gate harness lint
+        if: ${{ !cancelled() }}
+        run: npx eslint tools/docx-diff tools/pptx-diff tools/fileparse-diff tools/epub-diff
+
   crates:
     needs: quick
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
