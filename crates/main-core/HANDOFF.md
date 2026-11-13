@@ -7,15 +7,14 @@
 - `crates/main-core`는 B1–B5 묶음의 Electron 없는 모듈과 B6(Electron을 직접 쓰는 모듈)의 판단을 옮겼다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
 - main 07a251652를 합쳤다(1bf2c0bfd). 이 가지의 `apps/`, `packages/`는 그 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
-- 이 기계에서 마지막으로 본 결과(전체 비교, 그룹마다 따로 프로세스): 함수 1,095개, 34,692번, 다른 것 0, 적힌 것 10. clippy(`-D warnings`)는 macOS에서 깨끗하다.
-- 러너 실행 43348725507(헤드 87af9aa75, B1–B5와 d8·d9 결함)은 GitHub API 한도에 걸려 끝을 확인하지 못했다. B6 결함(`faults/b6-*.json`, 452개)은 아직 러너에서 돌리지 않았다.
+- 이 기계에서 마지막으로 본 결과(전체 비교, 그룹마다 따로 프로세스): 함수 1,100개, 34,785번, 다른 것 0, 적힌 것 10. clippy(`-D warnings`)는 macOS에서 깨끗하다.
+- 러너 실행 43348725507(헤드 87af9aa75, B1–B5와 d8·d9 결함)은 GitHub API 한도에 걸려 끝을 확인하지 못했다. B6 결함(`faults/b6-*.json`, 452개)과 `launch-recovery` 결함은 아직 러너에서 끝까지 확인하지 않았다.
 
 ## 다음 할 일
 
 1. 러너에서 비교와 결함 전부를 돌린다(아래 명령에 `b6-*.json`과 `d9.json`을 더함). 놓친 결함은 경계 입력을 더하거나 결함을 바꾼다.
-2. 지울 후보(결정 0030): `packages/electron_utils/{project_folder_bridge,split_pane_bridge}.rs`와 그 케이스. 메인의 확인 뒤에 지운다.
-3. B3의 `shell/launch-recovery`(633줄, Electron에 간접으로 닿음)를 옮기고 `recovery_shell.rs`의 `LaunchPlanner` trait를 그 포트로 바꾼다.
-4. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
+2. main(ec2d64f09 이후)을 합치고, 바뀐 TypeScript 가운데 이 가지가 옮긴 파일을 Rust로 따라 고친다.
+3. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
 
 ## 돌리는 법
 
