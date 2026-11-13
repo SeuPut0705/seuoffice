@@ -23,6 +23,7 @@
  * - ui-scale, crash-watch, renderer-watchdog, recovery-shell, updater:
  *   scenarios described at their runners below.
  */
+import { createHash } from 'node:crypto'
 import {
   chmodSync,
   existsSync,
@@ -30,6 +31,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs'
 import { createRequire, registerHooks, syncBuiltinESMExports } from 'node:module'
@@ -40,7 +42,7 @@ import fsPromises from 'node:fs/promises'
 import { setUiLang } from '@seuoffice/i18n'
 import { useElectron } from '../electron-fake.ts'
 import { fakeParent } from '../fakes.ts'
-import type { Case, FnSpec, Group, TsContext } from '../types.ts'
+import type { Case, FileSpec, FnSpec, Group, TsContext } from '../types.ts'
 
 // loaded after electron-fake.ts has registered its hooks: a static import
 // would resolve 'electron' before them
@@ -2410,10 +2412,10 @@ const pruneCases: Case[] = [
 // ---------------------------------------------------------------------------
 // recovery-shell
 // ---------------------------------------------------------------------------
-// The editors' main modules, the tab manager and launch-recovery are replaced
-// for recovery-shell.ts alone (no other module that imports them sees the
-// fakes): each export is a function of the case's table. The recovery store
-// and the session record are the real ones, over the case's folder.
+// The editors' main modules and the tab manager are replaced for
+// recovery-shell.ts alone (no other module that imports them sees the fakes):
+// each export is a function of the case's table. The recovery store, the session
+// record and launch-recovery.ts are the real ones, over the case's folder.
 
 const RECOVERY_BOX = Symbol.for('main-diff.recovery')
 const recoveryBox: { fns: Record<string, Fn> } = { fns: {} }
@@ -2443,7 +2445,6 @@ const RECOVERY_FAKES: Record<string, string[]> = {
     'setDiagramRecoveryTitleHook',
   ],
   'tab-manager': ['createPlainEditorView'],
-  'launch-recovery': ['planLaunch', 'resolveLaunchDecisions'],
 }
 const FAKE_URL = 'main-diff:recovery-'
 
@@ -2499,17 +2500,6 @@ interface PlannedJson {
   open: { type: 'file' } | { type: 'untitledCopy'; copy: IdentityJson; saveAsDefaultPath?: string }
 }
 
-interface OutcomeJson {
-  storeDecisions: { identity: IdentityJson; decision: string }[]
-  remove: string[]
-  replace: PlannedJson[]
-  append: PlannedJson[]
-  front?: string
-  split?: { a: string; b: string; orientation: string; ratio: number; focus: string }
-  launchPaths: string[]
-  splitMemoryOrHome: boolean
-}
-
 type RecStep =
   | { identity: { kind: string; contents: string } }
   | { tabCopy: { tab: { id: string; filePath?: string }; kind: string; contents: string | null } }
@@ -2544,9 +2534,6 @@ interface RecScenario {
   blocked?: boolean
   launchPaths?: string[]
   reopenedByInstaller?: boolean
-  plan?:
-    { restoreRun: boolean; plainLaunch: boolean; tabs: PlannedJson[]; items: unknown[] } | 'throws'
-  outcome?: OutcomeJson
   managerThrows?: string[]
   depsThrow?: string[]
   steps: RecStep[]
@@ -2744,23 +2731,6 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   }
   f.setHwpRecoveryTitle = (c: { name: string }, title: string) =>
     cx.log('setHwpRecoveryTitle', c.name, title)
-  f.planLaunch = (input: {
-    judgment: unknown
-    previous: { status: string }
-    launchPaths: string[]
-  }) => {
-    cx.log('planLaunch', {
-      judgment: input.judgment,
-      previous: input.previous.status,
-      launchPaths: input.launchPaths,
-    })
-    if (o.plan === 'throws') throw new Error('planLaunch failed')
-    return o.plan
-  }
-  f.resolveLaunchDecisions = (_plan: unknown, result: unknown) => {
-    cx.log('resolveLaunchDecisions', result ?? null)
-    return o.outcome
-  }
   const unregister = (o.contracts ?? []).map((kind) =>
     registerRecoveryEditor({
       kind,
@@ -2932,14 +2902,6 @@ const rec = (extra: Partial<RecScenario> & { steps: RecStep[] }): RecScenario =>
   contents: { c: rc(1), d: rc(2) },
   ...extra,
 })
-const OUTCOME_NONE: OutcomeJson = {
-  storeDecisions: [],
-  remove: [],
-  replace: [],
-  append: [],
-  launchPaths: [],
-  splitMemoryOrHome: false,
-}
 const SESSION = (tabs: unknown[], extra: Record<string, unknown> = {}): string =>
   JSON.stringify({
     version: 1,
@@ -3358,194 +3320,259 @@ const hwpCases: Case[] = [
   { args: [rec({ strip: [], steps: [{ pushHwp: true }] })], note: 'no tabs' },
 ]
 
-const SAVED = { version: 1 }
-const LAUNCH_PLAN = (extra: Partial<NonNullable<Exclude<RecScenario['plan'], 'throws'>>> = {}) => ({
-  restoreRun: true,
-  plainLaunch: false,
-  tabs: [file('k1', 'docs', 'A', '/a.docx'), copyTab('k2', 'docs', 'Untitled', uid('u1'))],
-  items: [],
-  ...extra,
+// The launch decisions are launch-recovery.ts's own (the group `b3-shell` compares
+// them one by one); here the whole launch runs over a real folder: the session
+// record, the copies the store lists, and three original files whose age against
+// the copies decides `fileChangedAfterCopy` and `originalMissing`.
+const L_NOW = 1_794_452_400_000
+const ORIG_DIR = join(tmpdir(), 'main-diff-b6-launch-orig')
+const orig = (name: string): string => `${ORIG_DIR}/${name}`
+mkdirSync(ORIG_DIR, { recursive: true })
+// a.docx is newer than every copy, b.docx older, gone.docx is not there
+writeFileSync(orig('a.docx'), 'a')
+utimesSync(orig('a.docx'), 4_102_444_800, 4_102_444_800)
+writeFileSync(orig('b.docx'), 'b')
+utimesSync(orig('b.docx'), 1_600_000_000, 1_600_000_000)
+process.on('exit', () => rmSync(ORIG_DIR, { recursive: true, force: true }))
+
+const lHash = (path: string): string => createHash('sha1').update(path).digest('hex').slice(0, 16)
+const lMeta = (o: Record<string, unknown>): string =>
+  JSON.stringify(
+    {
+      version: 1,
+      kind: 'docs',
+      filePath: null,
+      untitledId: null,
+      title: 't',
+      writtenAt: L_NOW,
+      runId: 'r',
+      state: 'undecided',
+      ...o,
+    },
+    null,
+    2,
+  )
+const fileCopy = (path: string, o: Record<string, unknown> = {}): Record<string, FileSpec> => ({
+  [`docs-autosave/${lHash(path)}.docx`]: { text: 'copy', mtimeMs: L_NOW - 1000 },
+  [`docs-autosave/${lHash(path)}.docx.meta.json`]: lMeta({ filePath: path, ...o }),
 })
+const untitledCopy = (id: string, o: Record<string, unknown> = {}): Record<string, FileSpec> => ({
+  [`docs-autosave/untitled/${id}.docx`]: { text: 'copy', mtimeMs: L_NOW - 1000 },
+  [`docs-autosave/untitled/${id}.docx.meta.json`]: lMeta({ untitledId: id, ...o }),
+})
+const tabFile = (path: string, title: string): Record<string, unknown> => ({
+  kind: 'docs',
+  title,
+  filePath: path,
+})
+const tabNew = (id: string, title: string): Record<string, unknown> => ({
+  kind: 'docs',
+  title,
+  untitled: { untitledId: id, ext: '.docx' },
+})
+const A_DOC = orig('a.docx')
+const B_DOC = orig('b.docx')
+const GONE_DOC = orig('gone.docx')
 
 const launchCases: Case[] = [
   {
-    args: [
-      rec({
-        plan: { restoreRun: false, plainLaunch: true, tabs: [], items: [] },
-        steps: [{ launch: true }],
-      }),
-    ],
+    args: [rec({ steps: [{ launch: true }] })],
     note: 'no previous record: a plain launch, Home or the remembered split',
   },
   {
-    args: [
-      rec({
-        launchPaths: ['/open/me.docx'],
-        plan: { restoreRun: false, plainLaunch: true, tabs: [], items: [] },
-        steps: [{ launch: true }],
-      }),
-    ],
+    args: [rec({ launchPaths: ['/open/me.docx'], steps: [{ launch: true }] })],
     note: 'a plain launch with files',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN({ items: [] }),
-        outcome: {
-          ...OUTCOME_NONE,
-          front: 'k1',
-          split: { a: 'k1', b: 'k2', orientation: 'row', ratio: 0.4, focus: 'a' },
-          launchPaths: [],
-          splitMemoryOrHome: false,
-        },
         steps: [{ launch: true }, { openTab: 't1' }, { openTab: 't2' }],
       }),
     ],
     files: {
-      'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]),
-      'docs-autosave/untitled/u1.docx': 'x',
+      'session-record.json': SESSION([tabFile(B_DOC, 'B'), tabFile(A_DOC, 'A')], {
+        active: 1,
+        split: { a: 0, b: 1, orientation: 'side', ratio: 0.4, focus: 'b' },
+      }),
     },
-    note: 'an abnormal exit with nothing to ask: tabs come back, the front one and the split are laid out',
+    note: 'an abnormal exit with nothing to ask: tabs come back, the split is laid out, the front tab takes the focus',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN({ items: [{ id: 'r1', title: 'A' }] }),
-        outcome: {
-          ...OUTCOME_NONE,
-          storeDecisions: [
-            { identity: fid('/a.docx'), decision: 'restore' },
-            { identity: uid('u1'), decision: 'discard' },
-            { identity: { kind: 'bogus', filePath: '/z' }, decision: 'later' },
-          ],
-          remove: ['k2', 'nope'],
-          replace: [copyTab('k1', 'docs', 'A (copy)', uid('ux'))],
-          append: [file('k9', 'pdf', 'New', '/n.pdf')],
-          front: 'k9',
-          launchPaths: [],
-          splitMemoryOrHome: true,
-        },
         blocked: true,
         steps: [
           { launch: true },
           { needsUserTab: 't1' },
-          { answer: { decisions: { r1: 'restore' } } },
-          { openTab: 't3' },
+          { needsUserTab: 't2' },
+          { openTab: 't1' },
+          { answer: { decisions: { r0: 'restore', r1: 'discard' } } },
+          { openTab: 't1' },
+          { openTab: 't2' },
         ],
       }),
     ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
-    note: 'a launch list: Home stays up, nothing loads; the answer records its decisions and rebuilds the strip',
-  },
-  {
-    args: [
-      rec({
-        plan: LAUNCH_PLAN({ items: [{ id: 'r1', title: 'A' }] }),
-        outcome: {
-          ...OUTCOME_NONE,
-          remove: ['k1'],
-          launchPaths: ['/x.docx'],
-          splitMemoryOrHome: false,
+    files: {
+      'session-record.json': SESSION(
+        [tabFile(A_DOC, 'A'), tabNew('u1', 'Draft'), tabNew('u2', 'No copy')],
+        {
+          active: 0,
         },
-        steps: [{ launch: true }, { answer: { dismissed: true } }],
-      }),
-    ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
-    note: 'a dismissed list; launch files take the front',
+      ),
+      ...untitledCopy('u1', { title: 'Draft copy', writtenAt: L_NOW + 1 }),
+      ...fileCopy(A_DOC, { title: 'A copy', writtenAt: L_NOW + 2 }),
+    },
+    note: 'a launch list: Home stays up, nothing loads; the answer restores the draft and discards the changed file',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN(),
-        outcome: { ...OUTCOME_NONE, append: [file('k5', 'docs', 'E', '/e.docx')], front: 'k5' },
+        launchPaths: ['/x.docx'],
+        steps: [{ launch: true }, { answer: { dismissed: true } }, { openTab: 't2' }],
+      }),
+    ],
+    files: {
+      'session-record.json': SESSION([tabNew('u1', 'Draft'), tabFile(B_DOC, 'B')], { active: 1 }),
+      ...untitledCopy('u1', { title: 'Draft copy' }),
+    },
+    note: 'a dismissed list: the draft tab goes, nothing is deleted; launch files take the front',
+  },
+  {
+    args: [
+      rec({
         managerThrows: ['addUnloadedTab'],
-        steps: [{ launch: true }],
+        steps: [{ launch: true }, { answer: { decisions: { r0: 'restore' } } }],
       }),
     ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
-    note: 'laying out fails: Home comes to the front and the launch settles',
+    files: {
+      'session-record.json': SESSION([]),
+      ...untitledCopy('u9', { title: 'Stray', state: 'restoreChosen' }),
+    },
+    note: 'laying out fails (the restored copy has no tab): Home comes to the front and the launch settles',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN(),
-        outcome: { ...OUTCOME_NONE, front: 'k1' },
         managerThrows: ['openHomeTab', 'activateTab'],
         depsThrow: ['settled'],
         steps: [{ launch: true }],
       }),
     ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
+    files: { 'session-record.json': SESSION([tabFile(B_DOC, 'B')], { active: 0 }) },
     note: 'Home cannot be shown either; settling throws and is only warned about',
   },
   {
-    args: [
-      rec({
-        plan: LAUNCH_PLAN(),
-        depsThrow: ['sessionChanged'],
-        outcome: OUTCOME_NONE,
-        steps: [{ launch: true }],
-      }),
-    ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
+    args: [rec({ depsThrow: ['sessionChanged'], steps: [{ launch: true }] })],
+    files: { 'session-record.json': SESSION([tabFile(B_DOC, 'B')], { active: 0 }) },
     note: 'the session record cannot be updated: warned, the launch goes on',
   },
   {
-    args: [rec({ plan: 'throws', launchPaths: ['/f.docx'], steps: [{ launch: true }] })],
+    args: [rec({ launchPaths: ['/f.docx'], steps: [{ launch: true }] })],
     files: { 'session-record.json': '{ corrupt' },
-    note: 'the plan throws: a plain launch with files',
+    note: 'an unreadable record with no copy left: a plain launch with files',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN(),
         reopenedByInstaller: true,
         managerThrows: ['hydrateSession'],
         steps: [{ launch: true }],
       }),
     ],
-    files: { 'session-record.json': SESSION([], { cleanExit: true }) },
+    files: { 'session-record.json': SESSION([tabFile(B_DOC, 'B')], { cleanExit: true }) },
     note: 'reopened by the installer, and the strip cannot be rebuilt: plain launch',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN(),
-        outcome: OUTCOME_NONE,
-        steps: [{ launch: true }],
+        blocked: true,
+        steps: [{ launch: true }, { answer: { dismissed: true } }],
       }),
     ],
     files: {
       'session-record.json': SESSION([], { cleanExit: true }),
-      'docs-autosave/untitled/z.docx': 'left over',
+      ...untitledCopy('z', { title: 'Left over' }),
     },
-    note: 'a clean exit with a copy left undecided',
+    note: 'a clean exit with a copy left undecided: it is asked about; a dismissed list keeps it',
   },
   {
-    args: [
-      rec({
-        plan: LAUNCH_PLAN({ plainLaunch: true }),
-        launchPaths: ['/a.docx', '/b.docx'],
-        steps: [{ launch: true }],
-      }),
-    ],
+    args: [rec({ launchPaths: ['/a.docx', '/b.docx'], steps: [{ launch: true }] })],
     files: {
       'session-record.json': SESSION([], { cleanExit: true, restoreRun: true, pastStartup: false }),
     },
-    note: 'the plan says plain launch with two files',
+    note: 'a clean exit with nothing left, two files to open',
+  },
+  {
+    args: [rec({ depsThrow: ['restoreSplitMemoryOrHome'], steps: [{ launch: true }] })],
+    note: 'the plain launch throws: out of the call',
   },
   {
     args: [
       rec({
-        plan: LAUNCH_PLAN({ restoreRun: false, plainLaunch: true }),
-        depsThrow: ['restoreSplitMemoryOrHome'],
-        steps: [{ launch: true }],
+        steps: [{ launch: true }, { answer: { decisions: { r0: 'restore' } } }, { openTab: 't1' }],
       }),
     ],
-    note: 'the plain launch throws: out of the call',
+    files: {
+      'session-record.json': SESSION([], { cleanExit: true }),
+      ...untitledCopy('l1', { title: 'Kept for later', state: 'later' }),
+    },
+    note: 'a clean exit: an untitled "later" copy is asked about again; restoring brings its tab to the front',
+  },
+  {
+    args: [
+      rec({
+        steps: [{ launch: true }, { answer: { decisions: { r0: 'restore' } } }, { openTab: 't1' }],
+      }),
+    ],
+    files: {
+      'session-record.json': SESSION([tabFile(A_DOC, 'A'), tabFile(B_DOC, 'B')], {
+        active: 1,
+        restoreRun: true,
+        pastStartup: false,
+      }),
+      ...fileCopy(A_DOC, { title: 'A copy' }),
+    },
+    note: 'a crash loop: the strip comes back but nothing is in front',
+  },
+  {
+    args: [
+      rec({
+        steps: [{ launch: true }, { answer: { decisions: { r0: 'restore' } } }, { openTab: 't3' }],
+      }),
+    ],
+    files: {
+      'session-record.json': SESSION([tabFile(B_DOC, 'B'), tabFile(GONE_DOC, 'Gone')], {
+        active: 1,
+      }),
+      ...fileCopy(GONE_DOC, { title: 'Gone copy' }),
+    },
+    note: 'a restored file whose original is gone opens as an untitled document in its slot',
+  },
+  {
+    args: [
+      rec({
+        steps: [{ launch: true }, { answer: { decisions: { r0: 'restore' } } }, { openTab: 't3' }],
+      }),
+    ],
+    files: {
+      'session-record.json': SESSION([tabFile(GONE_DOC, 'Gone'), tabFile(B_DOC, 'B')], {
+        active: 0,
+      }),
+      ...fileCopy(GONE_DOC, { title: 'Gone copy' }),
+    },
+    note: 'the same in the first slot: no reorder',
+  },
+  {
+    args: [rec({ steps: [{ launch: true }] })],
+    files: {
+      'session-record.json': SESSION([tabFile(B_DOC, 'B'), tabFile(A_DOC, 'A')], {
+        active: 0,
+        split: { a: 0, b: 1, orientation: 'stack', ratio: 0.6, focus: 'b' },
+      }),
+    },
+    note: "the front tab is the split's first side: it takes the focus",
   },
 ]
-void SAVED
 
 // ---------------------------------------------------------------------------
 // updater

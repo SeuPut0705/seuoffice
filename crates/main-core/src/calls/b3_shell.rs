@@ -8,7 +8,7 @@
 //! `control-server.serve` is the connection function of control-server.ts.
 
 use std::cell::{Cell, RefCell};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::rc::Rc;
 
 use super::{Answer, CallError, Context, arg, str_arg};
@@ -17,6 +17,10 @@ use crate::packages::cli::{CONTROL_FILE, CONTROL_MAX_REQUEST_BYTES, CONTROL_PROT
 use crate::packages::electron_utils::generate_handoff::{
     GenerateConvertKind, GenerateConvertTarget, GenerateHandoff, GenerateHandoffTarget,
     HandoffStore, Material,
+};
+use crate::packages::electron_utils::recovery_store::{
+    RecoveryCopyFilter, RecoveryCopyState, RecoveryFileIdentity, RecoveryIdentity,
+    RecoveryLaunchDecision, RecoveryUntitledIdentity,
 };
 use crate::packages::i18n::Lang;
 use crate::shell::atomic_write::{atomic_copy_file, atomic_write_file};
@@ -51,6 +55,14 @@ use crate::shell::feedback::{
     FEEDBACK_SURVEY_URL, FeedbackEnvironment, feedback_details, feedback_strings, feedback_text,
     platform_label,
 };
+use crate::shell::launch_recovery::{
+    EnsureLoaded, GateGet, GateSubmit, LAUNCH_NEEDS_USER_MESSAGE, LaunchCopy, LaunchCopySource,
+    LaunchJudgment, LaunchListGate, LaunchOutcome, LaunchPlan, LiveTabContentsDeps,
+    OS_SESSION_END_WRITE_TIMEOUT_MS, OsSessionEnd, OsSessionEndDeps, PlannedOpen, PlannedSplit,
+    PlannedTab, RecoveryChoice, RecoveryListItem, RecoveryListResult, WriteState,
+    live_session_source, live_tab_contents, normalize_launch_list_result, plan_launch,
+    recovery_identity_key, resolve_launch_decisions,
+};
 use crate::shell::pdf_convert_ui_handlers::{
     PdfConvertUiDeps, PdfConvertUiTabs, create_pdf_convert_ui_handlers,
 };
@@ -59,6 +71,10 @@ use crate::shell::pdf_note_tabs::{
 };
 use crate::shell::pdf_save_as_formats::{
     pdf_save_as_default_path, pdf_save_as_filters, pdf_save_as_format_of, pdf_save_as_picked_path,
+};
+use crate::shell::renderer_disposal::Failure;
+use crate::shell::session_record::{
+    SessionRecordReadResult, SessionUntitledCopy, parse_session_record,
 };
 use jscompat::{
     JsObject, JsonValue, json_value_from_serde, json_value_to_serde, number_to_string, sha1_hex,
@@ -165,6 +181,22 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "document-links.documentLinksAt" => links_at_call(args, cx),
         "document-links.documentLinkMenuModel" => menu_model_call(args, cx),
         "document-links-menu.documentLinkMenuItems" => menu_items_call(args, cx),
+        "launch-recovery.OS_SESSION_END_WRITE_TIMEOUT_MS" => {
+            Ok(Some(Value::from(OS_SESSION_END_WRITE_TIMEOUT_MS as u64)))
+        }
+        "launch-recovery.LAUNCH_NEEDS_USER_MESSAGE" => {
+            Ok(Some(Value::from(LAUNCH_NEEDS_USER_MESSAGE)))
+        }
+        "launch-recovery.recoveryIdentityKey" => Ok(Some(Value::from(recovery_identity_key(
+            &identity_in(arg(args, 0).unwrap_or(&Value::Null)),
+        )))),
+        "launch-recovery.planLaunch" => launch_plan_call(args, cx),
+        "launch-recovery.resolveLaunchDecisions" => launch_resolve_call(args),
+        "launch-recovery.normalizeLaunchListResult" => launch_normalize_call(args),
+        "launch-recovery.createLaunchListGate" => launch_gate_call(args, cx),
+        "launch-recovery.createOsSessionEnd" => os_end_call(args, cx),
+        "launch-recovery.liveSessionSource" => live_call(args, cx),
+        "launch-recovery.liveTabContents" => tab_contents_call(args, cx),
         _ => return None,
     })
 }
@@ -1725,4 +1757,827 @@ fn menu_items_call(args: &[Value], cx: &mut Context) -> Answer {
     MenuItem::run_clicks(&items, &mut Handlers(log.clone()));
     log.flush_into(cx);
     Ok(Some(serde_json::to_value(&items).expect("items print")))
+}
+
+// ---- launch-recovery ----
+
+fn text(x: &str) -> Value {
+    Value::from(x)
+}
+
+fn opt_text(x: Option<&str>) -> Value {
+    x.map_or(Value::Null, Value::from)
+}
+
+/// an identity as the spec writes it: `{ kind, filePath }` or `{ kind, untitledId, ext }`
+fn identity_in(v: &Value) -> RecoveryIdentity {
+    let kind = field_str(v, "kind").unwrap_or_default().to_owned();
+    // `'filePath' in identity`
+    if v.get("filePath").is_some() {
+        RecoveryIdentity::File(RecoveryFileIdentity {
+            kind,
+            file_path: field_str(v, "filePath").unwrap_or_default().to_owned(),
+        })
+    } else {
+        RecoveryIdentity::Untitled(RecoveryUntitledIdentity {
+            kind,
+            untitled_id: field_str(v, "untitledId").unwrap_or_default().to_owned(),
+            ext: field_str(v, "ext").unwrap_or_default().to_owned(),
+        })
+    }
+}
+
+fn identity_value(identity: &RecoveryIdentity) -> Value {
+    let mut o = Map::new();
+    match identity {
+        RecoveryIdentity::File(f) => {
+            o.insert("kind".to_owned(), text(&f.kind));
+            o.insert("filePath".to_owned(), text(&f.file_path));
+        }
+        RecoveryIdentity::Untitled(u) => {
+            o.insert("kind".to_owned(), text(&u.kind));
+            o.insert("untitledId".to_owned(), text(&u.untitled_id));
+            o.insert("ext".to_owned(), text(&u.ext));
+        }
+    }
+    Value::Object(o)
+}
+
+fn copy_in(v: &Value) -> LaunchCopy {
+    LaunchCopy {
+        identity: identity_in(v.get("identity").unwrap_or(&Value::Null)),
+        kind: field_str(v, "kind").unwrap_or_default().to_owned(),
+        file_path: field_str(v, "filePath").map(str::to_owned),
+        untitled_id: field_str(v, "untitledId").map(str::to_owned),
+        title: field_str(v, "title").unwrap_or_default().to_owned(),
+        written_at: field_f64(v, "writtenAt").unwrap_or(0.0),
+        state: field_str(v, "state")
+            .and_then(RecoveryCopyState::parse)
+            .unwrap_or(RecoveryCopyState::Undecided),
+        file_changed_after_copy: field_bool(v, "fileChangedAfterCopy"),
+        original_missing: field_bool(v, "originalMissing"),
+        original_path: field_str(v, "originalPath").map(str::to_owned),
+    }
+}
+
+fn copy_value(copy: &LaunchCopy) -> Value {
+    let mut o = Map::new();
+    o.insert("identity".to_owned(), identity_value(&copy.identity));
+    o.insert("kind".to_owned(), text(&copy.kind));
+    o.insert("filePath".to_owned(), opt_text(copy.file_path.as_deref()));
+    o.insert(
+        "untitledId".to_owned(),
+        opt_text(copy.untitled_id.as_deref()),
+    );
+    o.insert("title".to_owned(), text(&copy.title));
+    o.insert("writtenAt".to_owned(), num(copy.written_at));
+    o.insert("state".to_owned(), text(copy.state.as_str()));
+    o.insert(
+        "fileChangedAfterCopy".to_owned(),
+        Value::Bool(copy.file_changed_after_copy),
+    );
+    o.insert(
+        "originalMissing".to_owned(),
+        Value::Bool(copy.original_missing),
+    );
+    o.insert(
+        "originalPath".to_owned(),
+        opt_text(copy.original_path.as_deref()),
+    );
+    Value::Object(o)
+}
+
+/// a launch list row as `RecoveryListItem` writes it
+pub(super) fn list_item_value(item: &RecoveryListItem) -> Value {
+    let mut o = Map::new();
+    o.insert("id".to_owned(), text(&item.id));
+    o.insert("editorKind".to_owned(), text(&item.editor_kind));
+    o.insert("name".to_owned(), text(&item.name));
+    o.insert("folder".to_owned(), opt_text(item.folder.as_deref()));
+    o.insert("lastCopyTime".to_owned(), num(item.last_copy_time));
+    o.insert("untitled".to_owned(), Value::Bool(item.untitled));
+    o.insert(
+        "fileChangedAfterCopy".to_owned(),
+        Value::Bool(item.file_changed_after_copy),
+    );
+    o.insert(
+        "originalMissing".to_owned(),
+        Value::Bool(item.original_missing),
+    );
+    Value::Object(o)
+}
+
+fn list_item_in(v: &Value) -> RecoveryListItem {
+    RecoveryListItem {
+        id: field_str(v, "id").unwrap_or_default().to_owned(),
+        editor_kind: field_str(v, "editorKind").unwrap_or_default().to_owned(),
+        name: field_str(v, "name").unwrap_or_default().to_owned(),
+        folder: field_str(v, "folder").map(str::to_owned),
+        last_copy_time: field_f64(v, "lastCopyTime").unwrap_or(0.0),
+        untitled: field_bool(v, "untitled"),
+        file_changed_after_copy: field_bool(v, "fileChangedAfterCopy"),
+        original_missing: field_bool(v, "originalMissing"),
+    }
+}
+
+fn planned_tab_value(tab: &PlannedTab) -> Value {
+    let mut o = Map::new();
+    o.insert("key".to_owned(), text(&tab.key));
+    o.insert("kind".to_owned(), text(&tab.kind));
+    o.insert("title".to_owned(), text(&tab.title));
+    if let Some(path) = &tab.file_path {
+        o.insert("filePath".to_owned(), text(path));
+    }
+    let mut open = Map::new();
+    match &tab.open {
+        PlannedOpen::File => {
+            open.insert("type".to_owned(), text("file"));
+        }
+        PlannedOpen::UntitledCopy {
+            copy,
+            save_as_default_path,
+        } => {
+            open.insert("type".to_owned(), text("untitledCopy"));
+            open.insert("copy".to_owned(), identity_value(copy));
+            if let Some(path) = save_as_default_path {
+                open.insert("saveAsDefaultPath".to_owned(), text(path));
+            }
+        }
+    }
+    o.insert("open".to_owned(), Value::Object(open));
+    Value::Object(o)
+}
+
+fn planned_tab_in(v: &Value) -> PlannedTab {
+    let open = v.get("open").unwrap_or(&Value::Null);
+    PlannedTab {
+        key: field_str(v, "key").unwrap_or_default().to_owned(),
+        kind: field_str(v, "kind").unwrap_or_default().to_owned(),
+        title: field_str(v, "title").unwrap_or_default().to_owned(),
+        file_path: field_str(v, "filePath").map(str::to_owned),
+        open: if field_str(open, "type") == Some("untitledCopy") {
+            PlannedOpen::UntitledCopy {
+                copy: identity_in(open.get("copy").unwrap_or(&Value::Null)),
+                save_as_default_path: field_str(open, "saveAsDefaultPath").map(str::to_owned),
+            }
+        } else {
+            PlannedOpen::File
+        },
+    }
+}
+
+fn split_value(split: &PlannedSplit) -> Value {
+    let mut o = Map::new();
+    o.insert("a".to_owned(), text(&split.a));
+    o.insert("b".to_owned(), text(&split.b));
+    o.insert("orientation".to_owned(), text(&split.orientation));
+    o.insert("ratio".to_owned(), num(split.ratio));
+    o.insert("focus".to_owned(), text(&split.focus));
+    Value::Object(o)
+}
+
+fn split_in(v: &Value) -> PlannedSplit {
+    PlannedSplit {
+        a: field_str(v, "a").unwrap_or_default().to_owned(),
+        b: field_str(v, "b").unwrap_or_default().to_owned(),
+        orientation: field_str(v, "orientation").unwrap_or_default().to_owned(),
+        ratio: field_f64(v, "ratio").unwrap_or(f64::NAN),
+        focus: field_str(v, "focus").unwrap_or_default().to_owned(),
+    }
+}
+
+fn string_items(v: &Value, key: &str) -> Vec<String> {
+    field_list(v, key)
+        .iter()
+        .filter_map(|p| p.as_str().map(str::to_owned))
+        .collect()
+}
+
+fn plan_value(plan: &LaunchPlan) -> Value {
+    let mut o = Map::new();
+    o.insert("restoreRun".to_owned(), Value::Bool(plan.restore_run));
+    o.insert("crashLoop".to_owned(), Value::Bool(plan.crash_loop));
+    o.insert("plainLaunch".to_owned(), Value::Bool(plan.plain_launch));
+    o.insert(
+        "tabs".to_owned(),
+        Value::Array(plan.tabs.iter().map(planned_tab_value).collect()),
+    );
+    if let Some(front) = &plan.front {
+        o.insert("front".to_owned(), text(front));
+    }
+    if let Some(split) = &plan.split {
+        o.insert("split".to_owned(), split_value(split));
+    }
+    o.insert(
+        "items".to_owned(),
+        Value::Array(plan.items.iter().map(list_item_value).collect()),
+    );
+    o.insert(
+        "copies".to_owned(),
+        Value::Array(
+            plan.copies
+                .iter()
+                .map(|(id, copy)| Value::Array(vec![text(id), copy_value(copy)]))
+                .collect(),
+        ),
+    );
+    o.insert(
+        "launchPaths".to_owned(),
+        Value::Array(plan.launch_paths.iter().map(|p| text(p)).collect()),
+    );
+    Value::Object(o)
+}
+
+fn plan_in(v: &Value) -> LaunchPlan {
+    LaunchPlan {
+        restore_run: field_bool(v, "restoreRun"),
+        crash_loop: field_bool(v, "crashLoop"),
+        plain_launch: field_bool(v, "plainLaunch"),
+        tabs: field_list(v, "tabs").iter().map(planned_tab_in).collect(),
+        front: field_str(v, "front").map(str::to_owned),
+        split: field(v, "split").map(split_in),
+        items: field_list(v, "items").iter().map(list_item_in).collect(),
+        copies: field_list(v, "copies")
+            .iter()
+            .map(|pair| {
+                let pair = pair.as_array().map_or(&[][..], Vec::as_slice);
+                (
+                    pair.first()
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned(),
+                    copy_in(pair.get(1).unwrap_or(&Value::Null)),
+                )
+            })
+            .collect(),
+        launch_paths: string_items(v, "launchPaths"),
+    }
+}
+
+fn outcome_value(outcome: &LaunchOutcome) -> Value {
+    let mut o = Map::new();
+    o.insert(
+        "storeDecisions".to_owned(),
+        Value::Array(
+            outcome
+                .store_decisions
+                .iter()
+                .map(|(identity, decision)| {
+                    let mut d = Map::new();
+                    d.insert("identity".to_owned(), identity_value(identity));
+                    d.insert(
+                        "decision".to_owned(),
+                        text(match decision {
+                            RecoveryLaunchDecision::Restore => "restore",
+                            RecoveryLaunchDecision::Discard => "discard",
+                            RecoveryLaunchDecision::Later => "later",
+                        }),
+                    );
+                    Value::Object(d)
+                })
+                .collect(),
+        ),
+    );
+    o.insert(
+        "remove".to_owned(),
+        Value::Array(outcome.remove.iter().map(|k| text(k)).collect()),
+    );
+    o.insert(
+        "replace".to_owned(),
+        Value::Array(outcome.replace.iter().map(planned_tab_value).collect()),
+    );
+    o.insert(
+        "append".to_owned(),
+        Value::Array(outcome.append.iter().map(planned_tab_value).collect()),
+    );
+    if let Some(front) = &outcome.front {
+        o.insert("front".to_owned(), text(front));
+    }
+    if let Some(split) = &outcome.split {
+        o.insert("split".to_owned(), split_value(split));
+    }
+    o.insert(
+        "launchPaths".to_owned(),
+        Value::Array(outcome.launch_paths.iter().map(|p| text(p)).collect()),
+    );
+    o.insert(
+        "splitMemoryOrHome".to_owned(),
+        Value::Bool(outcome.split_memory_or_home),
+    );
+    Value::Object(o)
+}
+
+/// the launch list's answer as the spec writes it: `{ dismissed: true }` or `{ decisions }`
+fn list_result_in(v: &Value) -> RecoveryListResult {
+    if v.get("dismissed").is_some() {
+        return RecoveryListResult::Dismissed;
+    }
+    let mut decisions: JsObject<RecoveryChoice> = JsObject::new();
+    if let Some(Value::Object(map)) = v.get("decisions") {
+        for (id, choice) in map {
+            decisions.set(
+                id.clone(),
+                if choice.as_str() == Some("restore") {
+                    RecoveryChoice::Restore
+                } else {
+                    RecoveryChoice::Discard
+                },
+            );
+        }
+    }
+    RecoveryListResult::Decisions(decisions)
+}
+
+fn list_result_value(result: &RecoveryListResult) -> Value {
+    let mut o = Map::new();
+    match result {
+        RecoveryListResult::Dismissed => {
+            o.insert("dismissed".to_owned(), Value::Bool(true));
+        }
+        RecoveryListResult::Decisions(decisions) => {
+            let mut map = Map::new();
+            for (id, choice) in decisions.entries() {
+                map.insert(
+                    id.to_owned(),
+                    text(match choice {
+                        RecoveryChoice::Restore => "restore",
+                        RecoveryChoice::Discard => "discard",
+                    }),
+                );
+            }
+            o.insert("decisions".to_owned(), Value::Object(map));
+        }
+    }
+    Value::Object(o)
+}
+
+fn filter_value(filter: &RecoveryCopyFilter) -> Value {
+    let mut o = Map::new();
+    if let Some(states) = &filter.states {
+        o.insert(
+            "states".to_owned(),
+            Value::Array(states.iter().map(|s| text(s.as_str())).collect()),
+        );
+    }
+    if let Some(untitled) = filter.untitled {
+        o.insert("untitled".to_owned(), Value::Bool(untitled));
+    }
+    Value::Object(o)
+}
+
+/// `copies.listCopies` of the spec: each call answers the next list, or throws
+struct ListedCopies<'a> {
+    lists: &'a [Value],
+    at: Cell<usize>,
+    log: &'a Log,
+}
+
+impl LaunchCopySource for ListedCopies<'_> {
+    fn list_copies(&self, filter: &RecoveryCopyFilter) -> Result<Vec<LaunchCopy>, Failure> {
+        self.log
+            .push(vec![text("listCopies"), filter_value(filter)]);
+        let at = self.at.get();
+        self.at.set(at + 1);
+        match self.lists.get(at) {
+            Some(Value::String(s)) if s == "throws" => Err(Failure("listCopies failed".to_owned())),
+            Some(list) => Ok(list
+                .as_array()
+                .map_or(&[][..], Vec::as_slice)
+                .iter()
+                .map(copy_in)
+                .collect()),
+            None => Ok(Vec::new()),
+        }
+    }
+}
+
+fn launch_plan_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let judgment = spec.get("judgment").unwrap_or(&Value::Null);
+    let judgment = LaunchJudgment {
+        abnormal: field_bool(judgment, "abnormal"),
+        crash_loop: field_bool(judgment, "crashLoop"),
+    };
+    let previous = spec.get("previous").unwrap_or(&Value::Null);
+    let previous = match field_str(previous, "status") {
+        Some("ok") => SessionRecordReadResult::Ok(
+            parse_session_record(&json_value_from_serde(
+                previous.get("record").unwrap_or(&Value::Null),
+            ))
+            .ok_or_else(|| bad("a session record"))?,
+        ),
+        Some("corrupt") => SessionRecordReadResult::Corrupt,
+        _ => SessionRecordReadResult::Missing,
+    };
+    let log = Log::default();
+    let source = ListedCopies {
+        lists: field_list(spec, "lists"),
+        at: Cell::new(0),
+        log: &log,
+    };
+    let planned = plan_launch(
+        &judgment,
+        &previous,
+        &source,
+        &string_items(spec, "launchPaths"),
+    );
+    log.flush_into(cx);
+    planned
+        .map(|plan| Some(plan_value(&plan)))
+        .map_err(|Failure(message)| CallError::plain(message))
+}
+
+fn launch_resolve_call(args: &[Value]) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let plan = plan_in(spec.get("plan").unwrap_or(&Value::Null));
+    let result = field(spec, "result").map(list_result_in);
+    Ok(Some(outcome_value(&resolve_launch_decisions(
+        &plan,
+        result.as_ref(),
+    ))))
+}
+
+fn launch_normalize_call(args: &[Value]) -> Answer {
+    let raw = json_value_from_serde(arg(args, 0).unwrap_or(&Value::Null));
+    let ids = string_list(args, 1)?;
+    normalize_launch_list_result(&raw, &ids)
+        .map(|result| Some(list_result_value(&result)))
+        .map_err(|Failure(message)| CallError::plain(message))
+}
+
+/// a row the gate scenario publishes: `gateItem(id, name)`
+fn gate_row(index: usize) -> RecoveryListItem {
+    RecoveryListItem {
+        id: format!("r{index}"),
+        editor_kind: "docs".to_owned(),
+        name: format!("Row {index}"),
+        folder: None,
+        last_copy_time: 1000.0,
+        untitled: true,
+        file_changed_after_copy: false,
+        original_missing: false,
+    }
+}
+
+fn rows_value(rows: Option<Vec<RecoveryListItem>>) -> Value {
+    rows.map_or(Value::Null, |rows| {
+        Value::Array(rows.iter().map(list_item_value).collect())
+    })
+}
+
+fn rejected(message: &str) -> Value {
+    let mut o = Map::new();
+    o.insert("rejected".to_owned(), text(message));
+    Value::Object(o)
+}
+
+/// how the `apply` of the published rows behaves
+#[derive(Clone)]
+struct GateApply {
+    mode: String,
+    blocking: bool,
+    reenter: Option<Value>,
+}
+
+/// an `async` apply that has not settled: the call that started it and the calls that joined it
+struct PendingApply {
+    slot: usize,
+    joined: Vec<usize>,
+}
+
+struct GateRun {
+    gate: LaunchListGate,
+    slots: Vec<Value>,
+    waiting: Vec<usize>,
+    apply: Option<GateApply>,
+    pending: Option<PendingApply>,
+    log: Log,
+}
+
+impl GateRun {
+    /// the waiters a `settle` woke read the rows
+    fn wake(&mut self, woken: usize) {
+        let waiting = std::mem::take(&mut self.waiting);
+        debug_assert_eq!(waiting.len(), woken);
+        for slot in waiting {
+            self.slots[slot] = rows_value(self.gate.current());
+        }
+    }
+
+    fn submit(&mut self, raw: &JsonValue, slot: usize) {
+        match self.gate.submit(raw) {
+            GateSubmit::Resolved => self.slots[slot] = text("resolved"),
+            GateSubmit::Joined => {
+                if let Some(pending) = self.pending.as_mut() {
+                    pending.joined.push(slot);
+                }
+            }
+            GateSubmit::Rejected(message) => self.slots[slot] = rejected(&message),
+            GateSubmit::Apply(result) => self.run_apply(&result, slot),
+        }
+    }
+
+    fn run_apply(&mut self, result: &RecoveryListResult, slot: usize) {
+        let Some(apply) = self.apply.clone() else {
+            return;
+        };
+        self.log
+            .push(vec![text("apply"), list_result_value(result)]);
+        if apply.blocking {
+            self.log.push(vec![
+                text("blocking in apply"),
+                Value::Bool(self.gate.blocking()),
+            ]);
+        }
+        if let Some(raw) = &apply.reenter {
+            let again = self.slots.len();
+            self.slots.push(text("pending"));
+            self.submit(&json_value_from_serde(raw), again);
+        }
+        match apply.mode.as_str() {
+            "throws" => {
+                // the throw runs the `finally` before `applying` is assigned
+                let woken = self.gate.apply_finished(false);
+                self.gate.applying_started();
+                self.wake(woken);
+                self.slots[slot] = rejected("apply threw");
+            }
+            "rejects" => {
+                self.gate.applying_started();
+                let woken = self.gate.apply_finished(false);
+                self.wake(woken);
+                self.slots[slot] = rejected("apply rejected");
+            }
+            "async" => {
+                self.gate.applying_started();
+                self.pending = Some(PendingApply {
+                    slot,
+                    joined: Vec::new(),
+                });
+            }
+            _ => {
+                self.gate.applying_started();
+                let woken = self.gate.apply_finished(true);
+                self.wake(woken);
+                self.slots[slot] = text("resolved");
+            }
+        }
+    }
+
+    fn finish(&mut self, ok: bool) {
+        let Some(pending) = self.pending.take() else {
+            return;
+        };
+        let woken = self.gate.apply_finished(ok);
+        self.wake(woken);
+        let outcome = if ok {
+            text("resolved")
+        } else {
+            rejected("apply failed later")
+        };
+        self.slots[pending.slot] = outcome.clone();
+        for joined in pending.joined {
+            self.slots[joined] = outcome.clone();
+        }
+    }
+}
+
+fn launch_gate_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let mut run = GateRun {
+        gate: LaunchListGate::new(),
+        slots: Vec::new(),
+        waiting: Vec::new(),
+        apply: None,
+        pending: None,
+        log: Log::default(),
+    };
+    for step in field_list(spec, "steps") {
+        let slot = run.slots.len();
+        if step.get("get").is_some() {
+            run.slots.push(text("pending"));
+            match run.gate.get() {
+                GateGet::Waiting => run.waiting.push(slot),
+                GateGet::Ready(rows) => run.slots[slot] = rows_value(rows),
+            }
+        } else if let Some(count) = field_f64(step, "publish") {
+            let rows: Vec<RecoveryListItem> = (0..count as usize).map(gate_row).collect();
+            let was_open = run.gate.current().is_none();
+            let woken = run.gate.publish(rows);
+            // only the publish that took effect keeps its `apply`
+            if was_open && run.gate.current().is_some() {
+                run.apply = Some(GateApply {
+                    mode: field_str(step, "apply").unwrap_or("sync").to_owned(),
+                    blocking: field_bool(step, "blocking"),
+                    reenter: field(step, "reenter").cloned(),
+                });
+            }
+            run.wake(woken);
+        } else if step.get("publishNone").is_some() {
+            let woken = run.gate.publish_none();
+            run.wake(woken);
+        } else if let Some(raw) = step.get("submit") {
+            run.slots.push(text("pending"));
+            run.submit(&json_value_from_serde(raw), slot);
+        } else if let Some(how) = field_str(step, "finish") {
+            run.finish(how == "resolve");
+        } else {
+            let mut o = Map::new();
+            o.insert("blocking".to_owned(), Value::Bool(run.gate.blocking()));
+            run.slots.push(Value::Object(o));
+        }
+    }
+    run.log.flush_into(cx);
+    Ok(Some(Value::Array(run.slots)))
+}
+
+struct OsHost<'a> {
+    spec: &'a Value,
+    log: Log,
+    /// the editors whose write has not settled
+    pending: HashSet<usize>,
+    timer_armed: bool,
+}
+
+impl OsSessionEndDeps for OsHost<'_> {
+    fn mark_shutting_down(&mut self) -> Result<(), Failure> {
+        self.log.push(vec![text("markShuttingDown")]);
+        if field_str(self.spec, "latch") == Some("throws") {
+            return Err(Failure("latch failed".to_owned()));
+        }
+        Ok(())
+    }
+    fn mark_session_os_end(&mut self) -> Result<(), Failure> {
+        self.log.push(vec![text("markSessionOsEnd")]);
+        if field_str(self.spec, "closeRecord") == Some("throws") {
+            return Err(Failure("record failed".to_owned()));
+        }
+        Ok(())
+    }
+    fn editors(&mut self) -> Result<usize, Failure> {
+        self.log.push(vec![text("editors")]);
+        if field_str(self.spec, "editors") == Some("throws") {
+            return Err(Failure("editors failed".to_owned()));
+        }
+        Ok(field_list(self.spec, "editors").len())
+    }
+    fn write_copies_now(&mut self, index: usize) -> WriteState {
+        self.log
+            .push(vec![text("writeCopiesNow"), Value::from(index)]);
+        match field_list(self.spec, "editors")
+            .get(index)
+            .and_then(Value::as_str)
+        {
+            Some("throws") => WriteState::Settled(Err(Failure(format!("write {index} threw")))),
+            Some("rejects") => WriteState::Settled(Err(Failure(format!("write {index} rejected")))),
+            Some("pending") => {
+                self.pending.insert(index);
+                WriteState::Pending
+            }
+            _ => WriteState::Settled(Ok(())),
+        }
+    }
+    fn finish(&mut self) {
+        self.log.push(vec![text("finish")]);
+    }
+    fn timeout_ms(&self) -> Option<f64> {
+        field_f64(self.spec, "timeoutMs")
+    }
+    fn warn(&mut self, prefix: &str, detail: &str) {
+        self.log.push(vec![text(prefix), text(detail)]);
+    }
+    fn set_timeout(&mut self, ms: f64) {
+        self.log.push(vec![text("setTimeout"), num(ms)]);
+        self.timer_armed = true;
+    }
+    fn clear_timeout(&mut self) {
+        self.log.push(vec![text("clearTimeout")]);
+    }
+}
+
+fn os_end_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let mut host = OsHost {
+        spec,
+        log: Log::default(),
+        pending: HashSet::new(),
+        timer_armed: false,
+    };
+    let mut end = OsSessionEnd::new();
+    let mut calls = 0usize;
+    for step in field_list(spec, "steps") {
+        if step.get("call").is_some() {
+            calls += 1;
+            end.run(&mut host);
+        } else if let Some(settle) = step.get("settle") {
+            let editor = field_f64(settle, "editor").unwrap_or(-1.0) as usize;
+            if host.pending.remove(&editor) {
+                let result = if field_str(settle, "result") == Some("ok") {
+                    Ok(())
+                } else {
+                    Err(Failure(format!("write {editor} failed later")))
+                };
+                end.write_settled(&mut host, result);
+            }
+        } else if host.timer_armed {
+            host.timer_armed = false;
+            end.timer_fired(&mut host);
+        }
+    }
+    host.log.flush_into(cx);
+    let state = text(if end.is_finished() {
+        "resolved"
+    } else {
+        "pending"
+    });
+    Ok(Some(Value::Array(vec![state; calls])))
+}
+
+fn untitled_value(copy: &SessionUntitledCopy) -> Value {
+    let mut o = Map::new();
+    o.insert("untitledId".to_owned(), text(&copy.untitled_id));
+    o.insert("ext".to_owned(), text(&copy.ext));
+    Value::Object(o)
+}
+
+fn live_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let strip = field(spec, "strip").map(json_value_from_serde);
+    let detached: Vec<JsonValue> = field_list(spec, "detached")
+        .iter()
+        .map(json_value_from_serde)
+        .collect();
+    let answers = spec.get("untitled").unwrap_or(&Value::Null);
+    let log = Log::default();
+    let source = live_session_source(strip.as_ref(), &detached, &mut |tab| {
+        let shown = json_value_to_serde(tab);
+        let id = field_str(&shown, "id").map(str::to_owned);
+        log.push(vec![text("untitledOf"), shown]);
+        let answer = field(answers, id.as_deref()?)?;
+        Some(SessionUntitledCopy {
+            untitled_id: field_str(answer, "untitledId")?.to_owned(),
+            ext: field_str(answer, "ext")?.to_owned(),
+        })
+    });
+    log.flush_into(cx);
+    let mut shown = Map::new();
+    shown.insert(
+        "strip".to_owned(),
+        source
+            .strip
+            .as_ref()
+            .map_or(Value::Null, json_value_to_serde),
+    );
+    shown.insert(
+        "detached".to_owned(),
+        Value::Array(source.detached.iter().map(json_value_to_serde).collect()),
+    );
+    let copies: Vec<Value> = string_items(spec, "probes")
+        .iter()
+        .map(|id| {
+            source
+                .untitled_copy_for(id)
+                .map_or(Value::Null, untitled_value)
+        })
+        .collect();
+    let mut answer = Map::new();
+    answer.insert("source".to_owned(), Value::Object(shown));
+    answer.insert("copies".to_owned(), Value::Array(copies));
+    Ok(Some(Value::Object(answer)))
+}
+
+struct TabLookup<'a> {
+    spec: &'a Value,
+    log: &'a Log,
+}
+
+impl LiveTabContentsDeps<String> for TabLookup<'_> {
+    fn ensure_loaded(&mut self, tab_id: &str) -> Result<EnsureLoaded<String>, Failure> {
+        self.log.push(vec![text("ensureLoaded"), text(tab_id)]);
+        match field_str(self.spec, "ensure") {
+            Some("rejects") => Err(Failure("load failed".to_owned())),
+            Some("ready") => Ok(EnsureLoaded::Ready(format!("contents of {tab_id}"))),
+            Some("needs-user") => Ok(EnsureLoaded::NeedsUser),
+            _ => Ok(EnsureLoaded::Missing),
+        }
+    }
+    fn detached(&mut self, tab_id: &str) -> Option<String> {
+        self.log.push(vec![text("detached"), text(tab_id)]);
+        field_str(self.spec, "detached").map(str::to_owned)
+    }
+    fn title_of(&mut self, tab_id: &str) -> Option<String> {
+        self.log.push(vec![text("titleOf"), text(tab_id)]);
+        field_str(self.spec, "title").map(str::to_owned)
+    }
+}
+
+fn tab_contents_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| bad("scenario"))?;
+    let log = Log::default();
+    let mut deps = TabLookup { spec, log: &log };
+    let found = live_tab_contents(field_str(spec, "tabId").unwrap_or_default(), &mut deps);
+    log.flush_into(cx);
+    found
+        .map(|contents| contents.map(Value::from))
+        .map_err(|Failure(message)| CallError::plain(message))
 }

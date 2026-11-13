@@ -8,28 +8,29 @@
 //! keeps one [`RecoveryStore`] and hands it to every function that reads it),
 //! the editors' main modules ([`RecoveryEditors`]), the tab manager
 //! ([`LaunchManager`]), the launch list's gate and the rest of the launch's
-//! `deps` ([`LaunchDeps`]). `planLaunch` and `resolveLaunchDecisions` of
-//! launch-recovery.ts are not ported: they are the [`LaunchPlanner`], under
-//! the names of the TypeScript exports, with the plan types it reads and
-//! writes defined here. The module-level `plannedUntitled` map is a
-//! [`RecoveryShell`] the caller owns. The launch list's answer arrives later:
+//! `deps` ([`LaunchDeps`]). The plan types and `planLaunch` and
+//! `resolveLaunchDecisions` are those of [`crate::shell::launch_recovery`].
+//! The module-level `plannedUntitled` map is a [`RecoveryShell`] the caller
+//! owns. The launch list's answer arrives later:
 //! [`run_launch_recovery`] hands back a [`PendingLaunchList`] whose
 //! [`PendingLaunchList::answer`] is the callback the gate would run.
 
 use std::collections::HashMap;
 
-use serde_json::Value;
-
 use crate::node_fs::NodeError;
 use crate::packages::electron_utils::recovery_contract::RecoveryOpenUntitledRequest;
 use crate::packages::electron_utils::recovery_store::{
-    RecoveryFileIdentity, RecoveryIdentity, RecoveryLaunchDecision, RecoveryOpenPlan,
-    RecoveryStore, RecoveryUntitledIdentity, is_recovery_editor_kind, is_untitled_identity,
+    RecoveryFileIdentity, RecoveryIdentity, RecoveryOpenPlan, RecoveryStore,
+    RecoveryUntitledIdentity, is_recovery_editor_kind, is_untitled_identity,
+};
+use crate::shell::launch_recovery::{
+    LaunchJudgment, LaunchOutcome, LaunchPlan, PlannedOpen, PlannedTab, RecoveryListItem,
+    RecoveryListResult, plan_launch, resolve_launch_decisions,
 };
 use crate::shell::renderer_disposal::Failure;
 use crate::shell::session_record::{
-    PreviousExitJudgment, SessionRecordProcess, SessionRecordReadResult, SessionRecorderEnv,
-    SessionRecorderOptions, SessionUntitledCopy, judge_previous_exit,
+    SessionRecordProcess, SessionRecorderEnv, SessionRecorderOptions, SessionUntitledCopy,
+    judge_previous_exit,
 };
 
 /// the part of a `WebContents` this module reads
@@ -111,76 +112,6 @@ pub struct RecoveryShell {
     planned_untitled: HashMap<String, RecoveryUntitledIdentity>,
 }
 
-/// `PlannedOpen`
-#[derive(Debug, Clone, PartialEq)]
-pub enum PlannedOpen {
-    /// the tab's file as a plain open
-    File,
-    /// a copy opened as an untitled document
-    UntitledCopy {
-        copy: RecoveryIdentity,
-        save_as_default_path: Option<String>,
-    },
-}
-
-/// `PlannedTab`: one document tab the launch puts in the strip, unloaded
-#[derive(Debug, Clone, PartialEq)]
-pub struct PlannedTab {
-    pub key: String,
-    pub kind: String,
-    pub title: String,
-    pub file_path: Option<String>,
-    pub open: PlannedOpen,
-}
-
-/// `PlannedSplit`
-#[derive(Debug, Clone, PartialEq)]
-pub struct PlannedSplit {
-    pub a: String,
-    pub b: String,
-    pub orientation: String,
-    pub ratio: f64,
-    /// 'a' or 'b'
-    pub focus: String,
-}
-
-/// `LaunchPlan`: the fields recovery-shell.ts reads
-#[derive(Debug, Clone, PartialEq)]
-pub struct LaunchPlan {
-    pub restore_run: bool,
-    pub plain_launch: bool,
-    pub tabs: Vec<PlannedTab>,
-    /// the launch list's rows; empty = no list
-    pub items: Vec<Value>,
-}
-
-/// `LaunchOutcome`
-#[derive(Debug, Clone, PartialEq)]
-pub struct LaunchOutcome {
-    pub store_decisions: Vec<(RecoveryIdentity, RecoveryLaunchDecision)>,
-    pub remove: Vec<String>,
-    pub replace: Vec<PlannedTab>,
-    pub append: Vec<PlannedTab>,
-    pub front: Option<String>,
-    pub split: Option<PlannedSplit>,
-    pub launch_paths: Vec<String>,
-    pub split_memory_or_home: bool,
-}
-
-/// launch-recovery.ts, as far as the launch flow calls it
-pub trait LaunchPlanner {
-    /// `planLaunch({ judgment, previous, copies, launchPaths })`
-    fn plan_launch(
-        &self,
-        judgment: &PreviousExitJudgment,
-        previous: &SessionRecordReadResult,
-        copies: &RecoveryStore<'_>,
-        launch_paths: &[String],
-    ) -> Result<LaunchPlan, Failure>;
-    /// `resolveLaunchDecisions(plan, result)`; `result` is `None` for no list
-    fn resolve_launch_decisions(&self, plan: &LaunchPlan, result: Option<&Value>) -> LaunchOutcome;
-}
-
 /// `UnloadedTabSpec`'s `opener`
 #[derive(Debug, Clone, PartialEq)]
 pub enum RestoredTabOpener {
@@ -255,7 +186,7 @@ pub trait LaunchDeps {
     /// `deps.gate.publishNone()`
     fn gate_publish_none(&mut self);
     /// `deps.gate.publish(items, apply)`: the answer comes to [`PendingLaunchList::answer`]
-    fn gate_publish(&mut self, items: &[Value]);
+    fn gate_publish(&mut self, items: &[RecoveryListItem]);
     /// `deps.manager()`
     fn manager(&mut self) -> &mut Self::Manager;
     fn user_data_dir(&self) -> String;
@@ -593,11 +524,9 @@ pub struct PendingLaunchList {
 
 /// `runLaunchRecovery`: the whole launch (spec 4, 5.1, 5.2, 5.3, 6). `None`
 /// once the launch settled; `Some` while it waits for the launch list.
-#[allow(clippy::too_many_arguments)]
-pub fn run_launch_recovery<E, D, P>(
+pub fn run_launch_recovery<E, D>(
     shell: &mut RecoveryShell,
     editors: &E,
-    planner: &P,
     store: &RecoveryStore<'_>,
     session: &mut SessionRecordProcess,
     session_env: &mut dyn SessionRecorderEnv,
@@ -606,7 +535,6 @@ pub fn run_launch_recovery<E, D, P>(
 where
     E: RecoveryEditors,
     D: LaunchDeps + RestoredTabOpenerDeps,
-    P: LaunchPlanner,
 {
     let launch_paths = deps.launch_paths();
     // pruneStaleCopies answers a count and never throws
@@ -635,7 +563,12 @@ where
         if let Some(e) = unresolved_error {
             return Err(Failure(e.message));
         }
-        let plan = planner.plan_launch(&judgment, &recorder.previous, store, &launch_paths)?;
+        let plan = plan_launch(
+            &LaunchJudgment::from(&judgment),
+            &recorder.previous,
+            store,
+            &launch_paths,
+        )?;
         recorder.start_run(session_env, plan.restore_run);
         if !plan.plain_launch {
             let tabs = plan.tabs.clone();
@@ -683,7 +616,7 @@ where
 
     if plan.items.is_empty() {
         deps.gate_publish_none();
-        let outcome = planner.resolve_launch_decisions(&plan, None);
+        let outcome = resolve_launch_decisions(&plan, None);
         finish_launch(shell, editors, deps, &mut ids, &outcome);
         return Ok(None);
     }
@@ -696,20 +629,18 @@ where
 
 impl PendingLaunchList {
     /// the gate's `apply(result)` callback
-    pub fn answer<E, D, P>(
+    pub fn answer<E, D>(
         mut self,
         shell: &mut RecoveryShell,
         editors: &E,
-        planner: &P,
         store: &RecoveryStore<'_>,
         deps: &mut D,
-        result: &Value,
+        result: &RecoveryListResult,
     ) where
         E: RecoveryEditors,
         D: LaunchDeps + RestoredTabOpenerDeps,
-        P: LaunchPlanner,
     {
-        let outcome = planner.resolve_launch_decisions(&self.plan, Some(result));
+        let outcome = resolve_launch_decisions(&self.plan, Some(result));
         for (identity, decision) in &outcome.store_decisions {
             if let Err(error) = store.apply_launch_decision(identity, *decision) {
                 editors.warn(

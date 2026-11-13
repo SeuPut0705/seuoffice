@@ -800,5 +800,580 @@
     "find": "path[dot + 1..].to_lowercase()",
     "replace": "path[dot + 1..].to_owned()",
     "fn": ["pdf-save-as-formats.pdfSaveAsFormatOf"]
+  },
+  {
+    "name": "launch-recovery: OS shutdown timeout constant (control)",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "pub const OS_SESSION_END_WRITE_TIMEOUT_MS: f64 = 10_000.0;",
+    "replace": "pub const OS_SESSION_END_WRITE_TIMEOUT_MS: f64 = 10_001.0;",
+    "fn": ["launch-recovery.OS_SESSION_END_WRITE_TIMEOUT_MS", "launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: needs-user message",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "pub const LAUNCH_NEEDS_USER_MESSAGE: &str = \"the user must open this document in the app first\";",
+    "replace": "pub const LAUNCH_NEEDS_USER_MESSAGE: &str = \"the user must open this document first\";",
+    "fn": ["launch-recovery.LAUNCH_NEEDS_USER_MESSAGE", "launch-recovery.liveTabContents"]
+  },
+  {
+    "name": "launch-recovery: a file identity is keyed as an untitled one",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "format!(\"{}\\u{0}file\\u{0}{}\", file.kind, file.file_path)",
+    "replace": "format!(\"{}\\u{0}untitled\\u{0}{}\", file.kind, file.file_path)",
+    "fn": [
+      "launch-recovery.recoveryIdentityKey",
+      "launch-recovery.planLaunch",
+      "launch-recovery.resolveLaunchDecisions"
+    ]
+  },
+  {
+    "name": "launch-recovery: the key leaves out the kind",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "untitled.kind, untitled.untitled_id",
+    "replace": "\"\", untitled.untitled_id",
+    "fn": [
+      "launch-recovery.recoveryIdentityKey",
+      "launch-recovery.planLaunch",
+      "launch-recovery.resolveLaunchDecisions"
+    ]
+  },
+  {
+    "name": "launch-recovery: no first Save As from the original path",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".or_else(|| copy.original_path.clone())",
+    "replace": ".or_else(|| None)",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: an empty path is a Save As path",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".or_else(|| copy.original_path.clone())\n        .filter(|path| !path.is_empty())",
+    "replace": ".or_else(|| copy.original_path.clone())",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: row names are not trimmed",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let title = trim(&copy.title);",
+    "replace": "let title = copy.title.as_str();",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: an empty tab title is a row name",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "match fallback.filter(|fallback| !fallback.is_empty()) {",
+    "replace": "match fallback {",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a copy listed twice is two rows",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if !seen.insert(key) {",
+    "replace": "if !seen.insert(key) && false {",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the abnormal list is read after a clean exit",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "    if judgment.abnormal {\n        add_rows(",
+    "replace": "    if !judgment.abnormal {\n        add_rows(",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the \"later\" list takes file copies",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "untitled: Some(true),\n            ..RecoveryCopyFilter::default()",
+    "replace": "untitled: Some(false),\n            ..RecoveryCopyFilter::default()",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: restore-chosen copies are not asked about",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "RecoveryCopyState::RestoreChosen,\n                ]),",
+    "replace": "RecoveryCopyState::Later,\n                ]),",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the record is read after a clean exit",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if let (true, SessionRecordReadResult::Ok(record)) = (judgment.abnormal, previous) {",
+    "replace": "if let (true, SessionRecordReadResult::Ok(record)) = (true, previous) {",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a crash loop keeps its front tab",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "session_restore_layout(record, judgment.crash_loop)",
+    "replace": "session_restore_layout(record, false)",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: an untitled tab of a kind with no copies comes back",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if !is_recovery_editor_kind(&tab.kind) {\n                continue;",
+    "replace": "if false {\n                continue;",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: an untitled tab's title is not its row name",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "untitled_titles.insert(identity_key, tab.title.clone());",
+    "replace": "let _ = identity_key;",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the front tab is dropped",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".and_then(|active| key_by_index.get(&active).cloned());",
+    "replace": ".and_then(|_| None);",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: launch files do not take the front",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if launch_paths.is_empty() {\n            front = layout",
+    "replace": "if true {\n            front = layout",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the split takes its second side from the first",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let b = key_by_index.get(&s.b);",
+    "replace": "let b = key_by_index.get(&s.a);",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the split's focus is always a",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "focus: s.focus.to_owned(),\n                    });",
+    "replace": "focus: \"a\".to_owned(),\n                    });",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the split's orientation is always side",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "orientation: s.orientation.to_owned(),\n                        ratio: s.ratio,",
+    "replace": "orientation: \"side\".to_owned(),\n                        ratio: s.ratio,",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: the split's ratio is always even",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "ratio: s.ratio,\n                        focus",
+    "replace": "ratio: 0.5,\n                        focus",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: rows are numbered from one",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let id = format!(\"r{index}\");",
+    "replace": "let id = format!(\"r{}\", index + 1);",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a file row's folder is its path",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "Some(path) => Some(dirname(path)),",
+    "replace": "Some(path) => Some(path.to_owned()),",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: an untitled row's folder is its original path",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".map(dirname),",
+    "replace": ".map(|path| path.to_owned()),",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: every row is a file",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "untitled: copy.file_path.is_none(),",
+    "replace": "untitled: false,",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a plan with tabs only is plain",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "plain_launch: tabs.is_empty() && items.is_empty(),",
+    "replace": "plain_launch: tabs.is_empty() || items.is_empty(),",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a crash loop without an abnormal exit",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "crash_loop: judgment.abnormal && judgment.crash_loop,",
+    "replace": "crash_loop: judgment.crash_loop,",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: every launch restores",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "restore_run: judgment.abnormal,",
+    "replace": "restore_run: true,",
+    "fn": ["launch-recovery.planLaunch"]
+  },
+  {
+    "name": "launch-recovery: a dismissed list discards",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "None | Some(RecoveryListResult::Dismissed) => RecoveryLaunchDecision::Later,",
+    "replace": "None | Some(RecoveryListResult::Dismissed) => RecoveryLaunchDecision::Discard,",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a row without a choice restores",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".map_or(RecoveryLaunchDecision::Later, |choice| choice.decision()),",
+    "replace": ".map_or(RecoveryLaunchDecision::Restore, |choice| choice.decision()),",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: no list still decides every row",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if result.is_some() {\n        for item in &plan.items {",
+    "replace": "if true {\n        for item in &plan.items {",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: no list removes the untitled tabs",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if result.is_some()\n                && decision_by_key.get(&key)",
+    "replace": "if decision_by_key.get(&key)",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a copy tab is not marked in the strip",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "in_strip.insert(key.clone());\n            if result.is_some()",
+    "replace": "if result.is_some()",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a file tab is swapped whatever its original",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "            && copy.original_missing\n            && decision_by_key",
+    "replace": "            && decision_by_key",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a file tab is swapped whatever the decision",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "            && decision_by_key.get(&key) == Some(&RecoveryLaunchDecision::Restore)\n        {\n            replace.push",
+    "replace": "        {\n            replace.push",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: an unrestored copy is appended",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "|| decision_by_key.get(&key) != Some(&RecoveryLaunchDecision::Restore)",
+    "replace": "|| false",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a file copy is appended as untitled",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "Some(path) if !copy.original_missing => append.push(PlannedTab {",
+    "replace": "Some(path) if copy.original_missing => append.push(PlannedTab {",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: appended tabs are keyed from one",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let tab_key = format!(\"a{index}\");",
+    "replace": "let tab_key = format!(\"a{}\", index + 1);",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a lost file keeps the tab title",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "Some(path) => basename(path, None),\n        None => title.to_owned(),",
+    "replace": "Some(_) => title.to_owned(),\n        None => title.to_owned(),",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a removed tab stays in front",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".filter(|front| !front.is_empty() && !removed.contains(front.as_str()));",
+    "replace": ".filter(|front| !front.is_empty());",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: the split stays when one side is removed",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "removed.contains(s.a.as_str()) || removed.contains(s.b.as_str())",
+    "replace": "removed.contains(s.a.as_str()) && removed.contains(s.b.as_str())",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a crash loop brings an appended tab forward",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "&& launch_paths.is_empty() && !plan.crash_loop {",
+    "replace": "&& launch_paths.is_empty() {",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: launch files let an appended tab forward",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "split.is_none() && launch_paths.is_empty() && !plan.crash_loop {",
+    "replace": "split.is_none() && !plan.crash_loop {",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a split lets an appended tab forward",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if front.is_none() && split.is_none() && launch_paths",
+    "replace": "if front.is_none() && launch_paths",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: a restore run is today's launch",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "!plan.restore_run && front.is_none() && split.is_none() && launch_paths.is_empty();",
+    "replace": "front.is_none() && split.is_none() && launch_paths.is_empty();",
+    "fn": ["launch-recovery.resolveLaunchDecisions"]
+  },
+  {
+    "name": "launch-recovery: only true dismisses",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "value.get(\"dismissed\") == Some(&JsonValue::Bool(true))",
+    "replace": "value.get(\"dismissed\").is_some()",
+    "fn": ["launch-recovery.normalizeLaunchListResult"]
+  },
+  {
+    "name": "launch-recovery: discard is not a choice",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "JsonValue::String(text) if text == \"discard\" => RecoveryChoice::Discard,",
+    "replace": "JsonValue::String(text) if text == \"later\" => RecoveryChoice::Discard,",
+    "fn": ["launch-recovery.normalizeLaunchListResult"]
+  },
+  {
+    "name": "launch-recovery: rows the list never showed are kept",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if known.contains(id) {",
+    "replace": "if true {",
+    "fn": ["launch-recovery.normalizeLaunchListResult"]
+  },
+  {
+    "name": "launch-recovery: a bad choice has the result's message",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "\"invalid launch recovery choice\"",
+    "replace": "\"invalid launch recovery result\"",
+    "fn": ["launch-recovery.normalizeLaunchListResult"]
+  },
+  {
+    "name": "launch-recovery: a gate blocks while an answer is applied",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "&& !self.answering)",
+    "replace": ")",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: an answer during an apply starts another",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.answering {",
+    "replace": "if false {",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: an answer joins an apply that has not begun",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "return if self.applying {",
+    "replace": "return if !self.applying {",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: a failed apply closes the list",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if ok && self.in_flight == Some(self.state_id) {",
+    "replace": "if self.in_flight == Some(self.state_id) {",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: the rows can be published again",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.state != GateState::Unknown {\n            return 0;",
+    "replace": "if false {\n            return 0;",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: no rows is a list",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if items.is_empty() {\n            self.settle(GateState::Done)",
+    "replace": "if false {\n            self.settle(GateState::Done)",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: nothing-to-ask replaces the rows",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.state == GateState::Unknown {\n            self.settle(GateState::Done)",
+    "replace": "if true {\n            self.settle(GateState::Done)",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: get does not wait",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.state == GateState::Unknown {\n            self.waiters += 1;",
+    "replace": "if false {\n            self.waiters += 1;",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: an answer with no list waits for one",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "return GateSubmit::Resolved;\n        };\n        if self.answering",
+    "replace": "return GateSubmit::Joined;\n        };\n        if self.answering",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: a bad answer is taken",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "Err(Failure(message)) => return GateSubmit::Rejected(message),",
+    "replace": "Err(_) => return GateSubmit::Resolved,",
+    "fn": ["launch-recovery.createLaunchListGate"]
+  },
+  {
+    "name": "launch-recovery: the shutdown runs again",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.running {\n            return;",
+    "replace": "if false {\n            return;",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a failed latch is not reported",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "\"[recovery] could not latch the shutdown:\"",
+    "replace": "\"[recovery] could not latch:\"",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a failed record close is not reported",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "\"[recovery] could not close the session record:\"",
+    "replace": "\"[recovery] could not close the record:\"",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: no editors are written",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let editors = deps.editors().unwrap_or(0);",
+    "replace": "let editors = 0;",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: the timeout is five seconds",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "deps.timeout_ms().unwrap_or(OS_SESSION_END_WRITE_TIMEOUT_MS)",
+    "replace": "deps.timeout_ms().unwrap_or(5000.0)",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a pending write is not waited for",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "WriteState::Pending => self.pending += 1,",
+    "replace": "WriteState::Pending => {}",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a failed write is warned about at once",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "WriteState::Settled(Err(Failure(error))) => failed.push(error),",
+    "replace": "WriteState::Settled(Err(Failure(error))) => {\n                    deps.warn(\"[recovery] copy at shutdown failed:\", &error);\n                }",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a late failure is not warned about",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "        if let Err(Failure(error)) = result {\n            deps.warn(\"[recovery] copy at shutdown failed:\", &error);",
+    "replace": "        if let Err(Failure(_error)) = result {",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: the app ends twice",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "if self.finished {\n            return;",
+    "replace": "if false {\n            return;",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: the timer is not cleared",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "deps.clear_timeout();\n        deps.finish();",
+    "replace": "deps.finish();",
+    "fn": ["launch-recovery.createOsSessionEnd"]
+  },
+  {
+    "name": "launch-recovery: a working file stays in an untitled tab",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": ".filter(|(key, _)| *key != \"filePath\")",
+    "replace": ".filter(|(key, _)| *key != \"title\")",
+    "fn": ["launch-recovery.liveSessionSource"]
+  },
+  {
+    "name": "launch-recovery: the first copy of an id wins",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "untitled.insert(id.clone(), copy);",
+    "replace": "untitled.entry(id.clone()).or_insert(copy);",
+    "fn": ["launch-recovery.liveSessionSource"]
+  },
+  {
+    "name": "launch-recovery: the strip's tabs are not rewritten",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "JsonValue::Array(tabs.iter().map(&mut without_working_file).collect()),",
+    "replace": "JsonValue::Array(tabs.clone()),",
+    "fn": ["launch-recovery.liveSessionSource"]
+  },
+  {
+    "name": "launch-recovery: detached tabs are not rewritten",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let detached: Vec<JsonValue> = detached.iter().map(&mut without_working_file).collect();",
+    "replace": "let detached: Vec<JsonValue> = detached.to_vec();",
+    "fn": ["launch-recovery.liveSessionSource"]
+  },
+  {
+    "name": "launch-recovery: a ready tab has no contents",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "EnsureLoaded::Ready(contents) => Ok(Some(contents)),",
+    "replace": "EnsureLoaded::Ready(_) => Ok(None),",
+    "fn": ["launch-recovery.liveTabContents"]
+  },
+  {
+    "name": "launch-recovery: an empty title names the document",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "let title = deps.title_of(tab_id).filter(|title| !title.is_empty());",
+    "replace": "let title = deps.title_of(tab_id);",
+    "fn": ["launch-recovery.liveTabContents"]
+  },
+  {
+    "name": "launch-recovery: a missing tab is not looked up in detached windows",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "EnsureLoaded::Missing => Ok(deps.detached(tab_id)),",
+    "replace": "EnsureLoaded::Missing => Ok(None),",
+    "fn": ["launch-recovery.liveTabContents"]
+  },
+  {
+    "name": "launch-recovery: a nameless document's message",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "\"this document has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}\"",
+    "replace": "\"a document has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}\"",
+    "fn": ["launch-recovery.liveTabContents"]
+  },
+  {
+    "name": "launch-recovery: the store's copies lose their change mark",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "file_changed_after_copy: info.file_changed_after_copy,",
+    "replace": "file_changed_after_copy: false,",
+    "fn": ["recovery-shell.runLaunchRecovery"]
+  },
+  {
+    "name": "launch-recovery: the store's copies lose their missing mark",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "original_missing: info.original_missing,",
+    "replace": "original_missing: false,",
+    "fn": ["recovery-shell.runLaunchRecovery"]
+  },
+  {
+    "name": "launch-recovery: the store's copies lose their time",
+    "file": "main-core/src/shell/launch_recovery.rs",
+    "find": "written_at: info.written_at,",
+    "replace": "written_at: 0.0,",
+    "fn": ["recovery-shell.runLaunchRecovery"]
   }
 ]

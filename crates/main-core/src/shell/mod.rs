@@ -25,6 +25,7 @@ pub mod feedback;
 pub mod file_targets;
 pub mod folder_roots;
 pub mod launch_paths;
+pub mod launch_recovery;
 pub mod mac_update;
 pub mod open_documents;
 pub mod pdf_convert_ui_handlers;

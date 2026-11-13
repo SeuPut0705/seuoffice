@@ -25,8 +25,8 @@ use crate::packages::electron_utils::permission_guard::{
 };
 use crate::packages::electron_utils::recovery_contract::RecoveryOpenUntitledRequest;
 use crate::packages::electron_utils::recovery_store::{
-    RecoveryFileIdentity, RecoveryIdentity, RecoveryLaunchDecision, RecoveryStoreOptions,
-    RecoveryUntitledIdentity, SharedRecoveryState, create_recovery_store,
+    RecoveryFileIdentity, RecoveryIdentity, RecoveryStoreOptions, RecoveryUntitledIdentity,
+    SharedRecoveryState, create_recovery_store,
 };
 use crate::packages::i18n::{Lang, OLD_HOME_DIR_NAMES, existing_or_current};
 use crate::shell::cli_link::{
@@ -42,15 +42,17 @@ use crate::shell::crash_watch::{
     should_prompt_for_gone_renderer,
 };
 use crate::shell::error_dialog::{ErrorDialog, ErrorValue};
+use crate::shell::launch_recovery::{
+    PlannedOpen, PlannedTab, RecoveryChoice, RecoveryListItem, RecoveryListResult,
+};
 use crate::shell::mac_update::{SpawnOptions, SwapChild};
 use crate::shell::permission_guard::{ShellPermissionGuardOptions, install_shell_permission_guard};
 use crate::shell::pointer_size::{
     POINTER_SIZE_VAR, PointerSize, apply_pointer_size_to, parse_cursor_base_size, read_pointer_size,
 };
 use crate::shell::recovery_shell::{
-    LaunchDeps, LaunchManager, LaunchOutcome, LaunchPlan, LaunchPlanner, ListedTab, OpenContext,
-    PendingLaunchList, PlannedOpen, PlannedSplit, PlannedTab, RecoveryContents, RecoveryEditors,
-    RecoveryShell, RestoredTabOpener, RestoredTabOpenerDeps, UnloadedTabSpec,
+    LaunchDeps, LaunchManager, ListedTab, OpenContext, PendingLaunchList, RecoveryContents,
+    RecoveryEditors, RecoveryShell, RestoredTabOpener, RestoredTabOpenerDeps, UnloadedTabSpec,
     discard_editor_recovery, editor_recovery_identity, install_recovery_title_sources,
     push_hwp_recovery_titles, restored_tab_opener, run_launch_recovery,
 };
@@ -62,8 +64,7 @@ use crate::shell::renderer_watchdog::{
     WatchdogHost, WatchdogOptions, WatchdogStringKey,
 };
 use crate::shell::session_record::{
-    SessionRecord, SessionRecordProcess, SessionRecordReadResult, SessionRecorderEnv,
-    write_record_atomic,
+    SessionRecord, SessionRecordProcess, SessionRecorderEnv, write_record_atomic,
 };
 use crate::shell::ui_scale::{
     StyleTarget, UI_SCALE_KEY, UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEPS, UiScale,
@@ -1716,52 +1717,6 @@ fn planned_of(v: &Value) -> PlannedTab {
     }
 }
 
-fn plan_of(v: &Value) -> LaunchPlan {
-    LaunchPlan {
-        restore_run: field_bool(v, "restoreRun"),
-        plain_launch: field_bool(v, "plainLaunch"),
-        tabs: list(v.get("tabs")).iter().map(planned_of).collect(),
-        items: list(v.get("items")).to_vec(),
-    }
-}
-
-fn outcome_of(v: &Value) -> LaunchOutcome {
-    LaunchOutcome {
-        store_decisions: list(v.get("storeDecisions"))
-            .iter()
-            .map(|d| {
-                (
-                    identity_of(d.get("identity").unwrap_or(&Value::Null)),
-                    RecoveryLaunchDecision::parse(field_str(d, "decision").unwrap_or_default())
-                        .unwrap_or(RecoveryLaunchDecision::Later),
-                )
-            })
-            .collect(),
-        remove: list(v.get("remove"))
-            .iter()
-            .filter_map(|k| k.as_str().map(str::to_owned))
-            .collect(),
-        replace: list(v.get("replace")).iter().map(planned_of).collect(),
-        append: list(v.get("append")).iter().map(planned_of).collect(),
-        front: field_str(v, "front").map(str::to_owned),
-        split: v
-            .get("split")
-            .filter(|s| s.is_object())
-            .map(|s| PlannedSplit {
-                a: field_str(s, "a").unwrap_or_default().to_owned(),
-                b: field_str(s, "b").unwrap_or_default().to_owned(),
-                orientation: field_str(s, "orientation").unwrap_or_default().to_owned(),
-                ratio: field_f64(s, "ratio").unwrap_or(f64::NAN),
-                focus: field_str(s, "focus").unwrap_or_default().to_owned(),
-            }),
-        launch_paths: list(v.get("launchPaths"))
-            .iter()
-            .filter_map(|k| k.as_str().map(str::to_owned))
-            .collect(),
-        split_memory_or_home: field_bool(v, "splitMemoryOrHome"),
-    }
-}
-
 struct RecEditors {
     spec: Value,
     log: Log,
@@ -2123,10 +2078,13 @@ impl LaunchDeps for RecDeps {
     fn gate_publish_none(&mut self) {
         log_line(&self.log, vec![text("gate.publishNone")]);
     }
-    fn gate_publish(&mut self, items: &[Value]) {
+    fn gate_publish(&mut self, items: &[RecoveryListItem]) {
         log_line(
             &self.log,
-            vec![text("gate.publish"), Value::Array(items.to_vec())],
+            vec![
+                text("gate.publish"),
+                Value::Array(items.iter().map(super::b3_shell::list_item_value).collect()),
+            ],
         );
     }
     fn manager(&mut self) -> &mut RecManager {
@@ -2170,61 +2128,6 @@ impl LaunchDeps for RecDeps {
     }
 }
 
-struct RecPlanner {
-    spec: Value,
-    log: Log,
-}
-
-impl LaunchPlanner for RecPlanner {
-    fn plan_launch(
-        &self,
-        judgment: &crate::shell::session_record::PreviousExitJudgment,
-        previous: &SessionRecordReadResult,
-        _copies: &crate::packages::electron_utils::recovery_store::RecoveryStore<'_>,
-        launch_paths: &[String],
-    ) -> Result<LaunchPlan, Failure> {
-        let mut shown_judgment = Map::new();
-        shown_judgment.insert("abnormal".to_owned(), Value::Bool(judgment.abnormal));
-        shown_judgment.insert("reason".to_owned(), text(judgment.reason.as_str()));
-        shown_judgment.insert("crashLoop".to_owned(), Value::Bool(judgment.crash_loop));
-        let mut shown = Map::new();
-        shown.insert("judgment".to_owned(), Value::Object(shown_judgment));
-        shown.insert(
-            "previous".to_owned(),
-            text(match previous {
-                SessionRecordReadResult::Missing => "missing",
-                SessionRecordReadResult::Corrupt => "corrupt",
-                SessionRecordReadResult::Ok(_) => "ok",
-            }),
-        );
-        shown.insert(
-            "launchPaths".to_owned(),
-            Value::Array(launch_paths.iter().map(|p| text(p)).collect()),
-        );
-        log_line(&self.log, vec![text("planLaunch"), Value::Object(shown)]);
-        match self.spec.get("plan") {
-            Some(Value::String(s)) if s == "throws" => Err(Failure("planLaunch failed".to_owned())),
-            Some(plan) => Ok(plan_of(plan)),
-            None => Err(Failure("no plan".to_owned())),
-        }
-    }
-
-    fn resolve_launch_decisions(
-        &self,
-        _plan: &LaunchPlan,
-        result: Option<&Value>,
-    ) -> LaunchOutcome {
-        log_line(
-            &self.log,
-            vec![
-                text("resolveLaunchDecisions"),
-                result.cloned().unwrap_or(Value::Null),
-            ],
-        );
-        outcome_of(self.spec.get("outcome").unwrap_or(&Value::Null))
-    }
-}
-
 struct SessionEnv {
     now: f64,
     log: Log,
@@ -2261,6 +2164,25 @@ fn needs_user(answer: bool) -> Value {
     let mut o = Map::new();
     o.insert("needsUser".to_owned(), Value::Bool(answer));
     Value::Object(o)
+}
+
+/// the launch list's answer as the gate hands it to `apply`
+fn list_result_of(answer: &Value) -> RecoveryListResult {
+    if answer.get("dismissed").is_some() {
+        return RecoveryListResult::Dismissed;
+    }
+    let mut decisions: JsObject<RecoveryChoice> = JsObject::new();
+    for (id, choice) in entries(answer.get("decisions")) {
+        decisions.set(
+            id.clone(),
+            if choice.as_str() == Some("restore") {
+                RecoveryChoice::Restore
+            } else {
+                RecoveryChoice::Discard
+            },
+        );
+    }
+    RecoveryListResult::Decisions(decisions)
 }
 
 fn recovery_call(args: &[Value], cx: &mut Context) -> Answer {
@@ -2317,10 +2239,6 @@ fn recovery_call(args: &[Value], cx: &mut Context) -> Answer {
             .iter()
             .filter_map(|m| m.as_str().map(str::to_owned))
             .collect(),
-    };
-    let planner = RecPlanner {
-        spec: spec.clone(),
-        log: Rc::clone(&log),
     };
     let dir = field_str(&spec, "userData").unwrap_or_default().to_owned();
     let now = cx.now_ms;
@@ -2432,7 +2350,6 @@ fn recovery_call(args: &[Value], cx: &mut Context) -> Answer {
             match run_launch_recovery(
                 &mut shell,
                 &editors,
-                &planner,
                 &store,
                 &mut session,
                 &mut session_env,
@@ -2446,7 +2363,13 @@ fn recovery_call(args: &[Value], cx: &mut Context) -> Answer {
             }
         } else if let Some(answer) = step.get("answer") {
             if let Some(waiting) = pending.take() {
-                waiting.answer(&mut shell, &editors, &planner, &store, &mut deps, answer);
+                waiting.answer(
+                    &mut shell,
+                    &editors,
+                    &store,
+                    &mut deps,
+                    &list_result_of(answer),
+                );
             }
             results.push(Value::Null);
         } else if let Some(id) = field_str(step, "openTab") {

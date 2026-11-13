@@ -87,12 +87,26 @@ import {
   takeGenerateHandoff,
 } from '../../../packages/electron-utils/src/generate-handoff.ts'
 import '../electron-fake.ts'
-import type { Case, FileSpec, Group } from '../types.ts'
+import type { Case, FileSpec, Group, TsContext } from '../types.ts'
 
 // pdf-note-tabs.ts reaches `ipcMain` of 'electron' through the Markdown note
 // queue: the shared fake answers it (electron-fake.ts, imported above)
 const { insertIntoNoteTab, isNoteFile, openNoteTab } =
   await import('../../../apps/shell/src/main/pdf-note-tabs.ts')
+
+// launch-recovery.ts imports the electron-utils index, which reaches 'electron'
+const {
+  LAUNCH_NEEDS_USER_MESSAGE,
+  OS_SESSION_END_WRITE_TIMEOUT_MS,
+  createLaunchListGate,
+  createOsSessionEnd,
+  liveSessionSource,
+  liveTabContents,
+  normalizeLaunchListResult,
+  planLaunch,
+  recoveryIdentityKey,
+  resolveLaunchDecisions,
+} = await import('../../../apps/shell/src/main/launch-recovery.ts')
 
 const str = (a: unknown[], i: number): string => a[i] as string
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve))
@@ -3133,6 +3147,1161 @@ const linksGroup: Group = {
   },
 }
 
+// ---------------------------------------------------------------------------
+// launch-recovery
+// ---------------------------------------------------------------------------
+// The launch decisions without Electron. `planLaunch` reads a copy source and
+// `resolveLaunchDecisions` a plan that holds a `Map`: both come from JSON here,
+// and the plan is written back with its `Map` as a list of pairs. The launch
+// list's gate, the OS shutdown and the live tab lookup are driven by lists of
+// steps (see their runners); their answers that arrive later are collected
+// into a list with one slot per call, so the order in which two promises of
+// one step settle is not part of the answer.
+
+type Json = Record<string, unknown>
+const idF = (path: string, kind = 'docs'): Json => ({ kind, filePath: path })
+const idU = (id: string, kind = 'docs', ext = '.docx'): Json => ({ kind, untitledId: id, ext })
+
+/** a copy as `listCopies` describes it, as far as the launch reads it */
+const lcFile = (path: string, o: Json = {}): Json => ({
+  identity: idF(path),
+  kind: 'docs',
+  filePath: path,
+  untitledId: null,
+  title: basename(path),
+  writtenAt: 1000,
+  state: 'undecided',
+  fileChangedAfterCopy: false,
+  originalMissing: false,
+  originalPath: null,
+  ...o,
+})
+const lcNew = (id: string, o: Json = {}): Json => ({
+  identity: idU(id),
+  kind: 'docs',
+  filePath: null,
+  untitledId: id,
+  title: 'Untitled',
+  writtenAt: 2000,
+  state: 'undecided',
+  fileChangedAfterCopy: false,
+  originalMissing: false,
+  originalPath: null,
+  ...o,
+})
+
+const planTab = (kind: string, title: string, filePath?: string): Json => ({
+  kind,
+  title,
+  ...(filePath ? { filePath } : {}),
+})
+const planNew = (kind: string, title: string, id: string, ext = '.docx'): Json => ({
+  kind,
+  title,
+  untitled: { untitledId: id, ext },
+})
+const sessionOf = (tabs: Json[], o: Json = {}): Json => ({
+  status: 'ok',
+  record: {
+    version: 1,
+    cleanExit: false,
+    startedAt: 1000,
+    restoreRun: false,
+    pastStartup: true,
+    tabs,
+    ...o,
+  },
+})
+
+interface PlanScenario {
+  judgment: { abnormal: boolean; crashLoop: boolean }
+  previous: Json
+  /** what each call of `listCopies` answers, in order */
+  lists: (Json[] | 'throws')[]
+  launchPaths: string[]
+}
+
+function runPlan(o: PlanScenario, cx: TsContext): unknown {
+  let at = 0
+  const plan = planLaunch({
+    judgment: o.judgment,
+    previous: o.previous as never,
+    copies: {
+      listCopies: (filter?: unknown) => {
+        cx.log('listCopies', filter)
+        const list = o.lists[at++] ?? []
+        if (list === 'throws') throw new Error('listCopies failed')
+        return list as never
+      },
+    },
+    launchPaths: o.launchPaths,
+  })
+  return { ...plan, copies: [...plan.copies].map(([id, copy]) => [id, copy]) }
+}
+
+const planCase = (o: Partial<PlanScenario>, note: string): Case => ({
+  args: [
+    {
+      judgment: { abnormal: true, crashLoop: false },
+      previous: { status: 'missing' },
+      lists: [[], []],
+      launchPaths: [],
+      ...o,
+    },
+  ],
+  note,
+})
+
+const TABS_FULL = [
+  planTab('docs', 'Report', '/w/report.docx'),
+  planNew('docs', 'Draft', 'u1'),
+  planNew('sheets', 'Numbers', 's1', '.xlsx'),
+  planNew('docs', 'No copy', 'u2'),
+  planNew('epub', 'Book', 'e1', '.epub'),
+  planTab('epub', 'Read me', '/w/book.epub'),
+]
+
+const planCases: Case[] = [
+  planCase(
+    { judgment: { abnormal: false, crashLoop: false }, lists: [[]] },
+    'a clean exit with nothing left: a plain launch',
+  ),
+  planCase(
+    {
+      judgment: { abnormal: false, crashLoop: false },
+      previous: sessionOf(TABS_FULL),
+      lists: [[lcNew('l1', { state: 'later', title: '  Kept  ' })]],
+    },
+    'a clean exit: only the untitled "later" copies are asked about; the record is not read',
+  ),
+  planCase(
+    {
+      previous: sessionOf(TABS_FULL, {
+        active: 1,
+        split: { a: 0, b: 1, orientation: 'stack', ratio: 0.35, focus: 'b' },
+      }),
+      lists: [
+        [
+          lcFile('/w/report.docx', { fileChangedAfterCopy: true, writtenAt: 3000 }),
+          lcNew('u1', { title: 'Draft copy' }),
+          lcNew('s1', {
+            identity: idU('s1', 'sheets', '.xlsx'),
+            kind: 'sheets',
+            title: 'Numbers copy',
+          }),
+        ],
+        [lcNew('l9', { state: 'later', originalPath: '/o/data.csv' })],
+      ],
+    },
+    'after an abnormal exit: file tab, untitled tabs with and without a copy, a kind with no copies; front and split come back',
+  ),
+  planCase(
+    {
+      judgment: { abnormal: true, crashLoop: true },
+      previous: sessionOf(TABS_FULL, {
+        active: 0,
+        restoreRun: true,
+        pastStartup: false,
+        split: { a: 0, b: 1, orientation: 'stack', ratio: 0.3, focus: 'a' },
+      }),
+      lists: [[lcNew('u1')], []],
+    },
+    'a crash loop: the strip is kept, the front tab and the split are not',
+  ),
+  planCase(
+    {
+      previous: sessionOf(TABS_FULL, {
+        active: 0,
+        split: { a: 0, b: 1, orientation: 'side', ratio: 0.5, focus: 'a' },
+      }),
+      lists: [[lcNew('u1')], []],
+      launchPaths: ['/open/me.docx', '/open/too.docx'],
+    },
+    'launch files: no front tab, no split',
+  ),
+  planCase(
+    {
+      judgment: { abnormal: false, crashLoop: true },
+      previous: sessionOf(TABS_FULL, { active: 0 }),
+      lists: [[]],
+    },
+    'a crash loop is only a crash loop after an abnormal exit',
+  ),
+  planCase(
+    {
+      previous: sessionOf(TABS_FULL, {
+        active: 3,
+        split: { a: 1, b: 3, orientation: 'side', ratio: 0.5, focus: 'a' },
+      }),
+      lists: [[lcNew('u1')], []],
+    },
+    'the front tab and one split side are untitled documents without a copy: neither comes back',
+  ),
+  planCase(
+    { previous: { status: 'corrupt' }, lists: [[lcFile('/w/a.docx')], []] },
+    'an unreadable record: the copies are still asked about',
+  ),
+  planCase(
+    { previous: { status: 'missing' }, lists: [[], [lcNew('l1', { state: 'later' })]] },
+    'no record: the "later" copies are asked about',
+  ),
+  planCase(
+    {
+      previous: sessionOf([planTab('docs', 'Report', '/w/report.docx')]),
+      lists: [
+        [lcFile('/w/report.docx', { title: 'R' })],
+        [lcFile('/w/report.docx', { title: 'again' }), lcNew('l1', { state: 'later' })],
+      ],
+    },
+    'a copy listed twice is one row',
+  ),
+  planCase(
+    {
+      previous: sessionOf(
+        [
+          planNew('docs', '', 'a'),
+          planNew('docs', 'Tab title', 'b'),
+          planNew('docs', '', 'c'),
+          planNew('docs', 'x', 'd'),
+        ],
+        { active: 0 },
+      ),
+      lists: [
+        [
+          lcNew('a', { title: '   ' }),
+          lcNew('b', { title: '\t' }),
+          lcNew('c', { title: ' own ', originalPath: '/o/한글 폴더/표.csv' }),
+          lcNew('d', { title: '', originalPath: '' }),
+          lcFile('/w/하나.docx', { title: 'ignored', originalMissing: true, writtenAt: 5000 }),
+          lcFile('/w/b/c.docx', { originalPath: '/o/ignored.csv', fileChangedAfterCopy: true }),
+        ],
+        [],
+      ],
+    },
+    'row names and folders: a file name, a trimmed title, the tab title, the kind; the original path of an untitled copy',
+  ),
+  planCase(
+    {
+      previous: sessionOf([planNew('docs', 'Draft', 'u1')]),
+      lists: [[lcNew('u1', { originalPath: '/o/p.csv' })], []],
+    },
+    'an untitled copy that names the file it came from opens with that path as its first Save As',
+  ),
+  planCase(
+    {
+      previous: sessionOf([planNew('docs', 'Draft', 'u1'), planNew('docs', 'Other', 'u2')]),
+      lists: [
+        [
+          lcNew('u1', { originalPath: '' }),
+          lcNew('u2', { filePath: '', originalPath: '/o/q.csv' }),
+        ],
+        [],
+      ],
+    },
+    'an empty path is no Save As path',
+  ),
+  planCase({ lists: ['throws', []] }, 'the store cannot list the copies: the plan throws'),
+  planCase(
+    { previous: sessionOf([]), lists: [[], 'throws'] },
+    'the store cannot list the "later" copies: the plan throws',
+  ),
+  planCase(
+    {
+      previous: sessionOf([
+        planTab('pdf', 'Scan', '/w/scan.pdf'),
+        planTab('docs', '', '/w/x.docx'),
+      ]),
+      lists: [[], []],
+    },
+    'file tabs with no copy come back as they were; nothing to ask: not a plain launch',
+  ),
+  planCase(
+    { previous: sessionOf([]), lists: [[], []] },
+    'an empty strip and no copy: a plain launch',
+  ),
+]
+
+interface ResolveScenario {
+  plan: Json
+  result: Json | null
+}
+
+function runResolve(o: ResolveScenario): unknown {
+  const plan = { ...o.plan, copies: new Map(o.plan.copies as [string, unknown][]) }
+  return resolveLaunchDecisions(plan as never, o.result as never)
+}
+
+const openFile: Json = { type: 'file' }
+const openCopy = (copy: Json, saveAsDefaultPath?: string): Json => ({
+  type: 'untitledCopy',
+  copy,
+  ...(saveAsDefaultPath ? { saveAsDefaultPath } : {}),
+})
+const pTab = (
+  key: string,
+  kind: string,
+  title: string,
+  filePath: string | undefined,
+  open: Json,
+): Json => ({
+  key,
+  kind,
+  title,
+  ...(filePath ? { filePath } : {}),
+  open,
+})
+const itemOf = (id: string, name: string, o: Json = {}): Json => ({
+  id,
+  editorKind: 'docs',
+  name,
+  folder: null,
+  lastCopyTime: 1000,
+  untitled: false,
+  fileChangedAfterCopy: false,
+  originalMissing: false,
+  ...o,
+})
+const planOf = (o: Json = {}): Json => ({
+  restoreRun: true,
+  crashLoop: false,
+  plainLaunch: false,
+  tabs: [],
+  items: [],
+  copies: [],
+  launchPaths: [],
+  ...o,
+})
+const decide = (decisions: Record<string, string>): Json => ({ decisions })
+const resolveCase = (plan: Json, result: Json | null, note: string): Case => ({
+  args: [{ plan, result }],
+  note,
+})
+
+const U1 = lcNew('u1', { title: 'Draft copy' })
+const FA = lcFile('/w/a.docx')
+const FG = lcFile('/w/gone.docx', { originalMissing: true })
+const BASE_PLAN = planOf({
+  tabs: [
+    pTab('s0', 'docs', 'A', '/w/a.docx', openFile),
+    pTab('s1', 'docs', 'Draft', undefined, openCopy(idU('u1'))),
+    pTab('s2', 'docs', 'Gone', '/w/gone.docx', openFile),
+  ],
+  front: 's1',
+  split: { a: 's0', b: 's1', orientation: 'side', ratio: 0.5, focus: 'a' },
+  items: [
+    itemOf('r0', 'a.docx'),
+    itemOf('r1', 'Draft', { untitled: true }),
+    itemOf('r2', 'gone.docx', { originalMissing: true }),
+  ],
+  copies: [
+    ['r0', FA],
+    ['r1', U1],
+    ['r2', FG],
+  ],
+})
+
+const resolveCases: Case[] = [
+  resolveCase(
+    BASE_PLAN,
+    null,
+    "no list: nothing is decided, nothing removed; the plan's front and split stand",
+  ),
+  resolveCase(
+    BASE_PLAN,
+    { dismissed: true },
+    'a dismissed list: "later" for every row; the draft tab goes, and with it the split and the front',
+  ),
+  resolveCase(
+    BASE_PLAN,
+    decide({ r0: 'restore', r1: 'restore', r2: 'restore' }),
+    'everything restored: the file whose original is gone is swapped for an untitled tab',
+  ),
+  resolveCase(
+    BASE_PLAN,
+    decide({ r0: 'discard', r1: 'discard', r2: 'discard' }),
+    'everything discarded: the draft goes; no replacement',
+  ),
+  resolveCase(BASE_PLAN, decide({ r1: 'restore' }), 'rows without a choice are "later"'),
+  resolveCase(
+    planOf({
+      tabs: [
+        pTab('s0', 'docs', 'A', '/w/a.docx', openFile),
+        pTab('s1', 'docs', 'B', '/w/b.docx', openFile),
+      ],
+      split: { a: 's0', b: 's1', orientation: 'stack', ratio: 0.3, focus: 'b' },
+      items: [itemOf('r0', 'c.docx')],
+      copies: [['r0', lcFile('/w/c.docx')]],
+    }),
+    decide({ r0: 'restore' }),
+    'a split and no front tab: the appended tab does not take the front from it',
+  ),
+  resolveCase(
+    planOf({
+      tabs: [pTab('s0', 'docs', 'A', '/w/a.docx', openFile)],
+      items: [
+        itemOf('r0', 'Gone', { originalMissing: true }),
+        itemOf('r1', 'b.docx'),
+        itemOf('r2', 'Kept', { untitled: true }),
+      ],
+      copies: [
+        ['r0', lcFile('/w/gone.docx', { originalMissing: true, originalPath: '/old/gone.docx' })],
+        ['r1', lcFile('/w/b.docx')],
+        ['r2', lcNew('k1', { originalPath: '/o/k.csv' })],
+      ],
+    }),
+    decide({ r0: 'restore', r1: 'restore', r2: 'restore' }),
+    'restored copies with no tab are appended: a file whose original is gone and an untitled copy open untitled, a file opens as a file; the first comes forward',
+  ),
+  resolveCase(
+    planOf({
+      items: [itemOf('r0', 'b.docx'), itemOf('r1', 'c.docx')],
+      copies: [
+        ['r0', lcFile('/w/b.docx')],
+        ['r1', lcFile('/w/c.docx')],
+      ],
+      crashLoop: true,
+    }),
+    decide({ r0: 'restore', r1: 'restore' }),
+    'a crash loop: nothing comes forward',
+  ),
+  resolveCase(
+    planOf({
+      items: [itemOf('r0', 'b.docx')],
+      copies: [['r0', lcFile('/w/b.docx')]],
+      launchPaths: ['/open/x.docx'],
+    }),
+    decide({ r0: 'restore' }),
+    'launch files take the front: no appended tab comes forward',
+  ),
+  resolveCase(
+    planOf({
+      restoreRun: false,
+      items: [itemOf('r0', 'Later', { untitled: true })],
+      copies: [['r0', lcNew('l1')]],
+    }),
+    { dismissed: true },
+    "not a restore run, nothing in front: today's launch",
+  ),
+  resolveCase(planOf({ restoreRun: false }), null, "not a restore run and no list: today's launch"),
+  resolveCase(planOf({ restoreRun: true }), null, 'a restore run and no list: Home'),
+  resolveCase(
+    planOf({
+      tabs: [
+        pTab('s0', 'epub', 'Book', '/w/book.epub', openFile),
+        pTab('s1', 'docs', 'No path', undefined, openFile),
+        pTab('s2', 'docs', 'B', '/w/b.docx', openFile),
+      ],
+      items: [itemOf('r0', 'b.docx')],
+      copies: [['r0', lcFile('/w/b.docx', { originalMissing: true })]],
+      front: 's0',
+    }),
+    decide({ r0: 'restore' }),
+    'tabs of a kind that keeps no copy, or with no path, are left alone; a copy of an open file whose original is gone replaces it',
+  ),
+  resolveCase(
+    planOf({
+      tabs: [pTab('s0', 'docs', 'Draft', undefined, openCopy(idU('u1'), '/o/p.csv'))],
+      items: [
+        itemOf('r0', 'Draft', { untitled: true }),
+        itemOf('r9', 'No copy'),
+        itemOf('r0', 'Twice'),
+      ],
+      copies: [['r0', U1]],
+      front: 's0',
+      split: { a: 's0', b: 'sX', orientation: 'stack', ratio: 0.25, focus: 'b' },
+    }),
+    decide({ r0: 'restore', r9: 'restore', zz: 'restore' }),
+    'an item with no copy is skipped; a decision for a row that does not exist is ignored; the split keeps a side that is not a tab',
+  ),
+  resolveCase(
+    planOf({
+      tabs: [pTab('s0', 'docs', 'Draft', undefined, openCopy(idU('u1')))],
+      items: [itemOf('r0', 'Draft', { untitled: true })],
+      copies: [['r0', U1]],
+      front: 's0',
+    }),
+    decide({ r0: 'discard' }),
+    'the front tab is removed: nothing is in front',
+  ),
+  resolveCase(
+    planOf({
+      tabs: [
+        pTab('s0', 'docs', 'A', '/w/a.docx', openFile),
+        pTab('s1', 'docs', 'A again', '/w/a.docx', openFile),
+      ],
+      items: [itemOf('r0', 'a.docx')],
+      copies: [['r0', lcFile('/w/a.docx', { originalMissing: true })]],
+    }),
+    decide({ r0: 'restore' }),
+    'two tabs of one file: both are swapped',
+  ),
+  resolveCase(
+    planOf({
+      items: [itemOf('r0', '한글')],
+      copies: [['r0', lcFile('/w/한글 폴더/표.docx')]],
+    }),
+    decide({ r0: 'restore' }),
+    'a unicode path',
+  ),
+]
+
+const normalizeIds = ['r0', 'r1', 'r2']
+const normalizeCases: Case[] = [
+  { args: [null, normalizeIds] },
+  { args: [[], normalizeIds], note: 'an array is not a result' },
+  { args: ['restore', normalizeIds] },
+  { args: [7, normalizeIds] },
+  { args: [{ dismissed: true }, normalizeIds] },
+  { args: [{ dismissed: true, decisions: 'junk' }, normalizeIds], note: 'dismissed wins' },
+  { args: [{ dismissed: 'true', decisions: {} }, normalizeIds], note: 'only `true` dismisses' },
+  { args: [{ dismissed: false, decisions: { r0: 'restore' } }, normalizeIds] },
+  { args: [{}, normalizeIds], note: 'no decisions' },
+  { args: [{ decisions: null }, normalizeIds] },
+  { args: [{ decisions: [] }, normalizeIds] },
+  { args: [{ decisions: 'restore' }, normalizeIds] },
+  { args: [{ decisions: { r0: 'later' } }, normalizeIds], note: '"later" is not a choice' },
+  { args: [{ decisions: { r0: 'restore', r1: 3 } }, normalizeIds] },
+  {
+    args: [{ decisions: { r9: 'bogus' } }, normalizeIds],
+    note: 'a bad choice for an unknown row still fails',
+  },
+  { args: [{ decisions: { r0: 'restore', r1: 'discard', r2: 'restore' } }, normalizeIds] },
+  {
+    args: [{ decisions: { r5: 'restore', r1: 'discard' } }, normalizeIds],
+    note: 'unknown rows are dropped',
+  },
+  { args: [{ decisions: {} }, normalizeIds] },
+  { args: [{ decisions: { r0: 'restore' } }, []], note: 'no rows' },
+  {
+    args: [
+      { decisions: { b: 'restore', 10: 'discard', 2: 'restore', a: 'discard' } },
+      ['a', 'b', '10', '2'],
+    ],
+    note: 'index keys come first',
+  },
+]
+
+const identityKeyCases: Case[] = [
+  { args: [idF('/w/a.docx')] },
+  { args: [idU('u1')] },
+  { args: [idF('/w/한글 \u{1F600}.docx', 'sheets')], note: 'unicode' },
+  { args: [idF('', 'pdf')] },
+  { args: [idU('x', 'hwp', '.hwpx')] },
+  { args: [{ kind: 'docs', filePath: '/w/a.docx', untitledId: 'u1' }], note: 'a path wins' },
+]
+
+// ---- the launch list's gate ----
+
+type GateStep =
+  | { get: true }
+  | {
+      publish: number
+      apply: 'sync' | 'async' | 'throws' | 'rejects'
+      blocking?: true
+      reenter?: unknown
+    }
+  | { publishNone: true }
+  | { submit: unknown }
+  | { finish: 'resolve' | 'reject' }
+  | { blocking: true }
+
+const gateItem = (id: string, name: string): Json => itemOf(id, name, { untitled: true })
+
+async function runLaunchGate(o: { steps: GateStep[] }, cx: TsContext): Promise<unknown> {
+  const gate = createLaunchListGate()
+  const slots: unknown[] = []
+  const settle = (slot: number, promise: Promise<unknown>, show: (v: unknown) => unknown): void => {
+    promise.then(
+      (value) => (slots[slot] = show(value)),
+      (error: Error) => (slots[slot] = { rejected: error.message }),
+    )
+  }
+  let pending: { resolve: () => void; reject: (e: Error) => void } | null = null
+  const items = (n: number): Json[] =>
+    Array.from({ length: n }, (_, i) => gateItem(`r${i}`, `Row ${i}`))
+  for (const step of o.steps) {
+    const slot = slots.length
+    if ('get' in step) {
+      slots.push('pending')
+      settle(slot, gate.get(), (v) => v)
+    } else if ('publish' in step) {
+      const mine = step
+      gate.publish(items(step.publish) as never, (result) => {
+        cx.log('apply', result)
+        if (mine.blocking) cx.log('blocking in apply', gate.blocking())
+        if (mine.reenter !== undefined) {
+          const again = slots.length
+          slots.push('pending')
+          settle(again, gate.submit(mine.reenter), () => 'resolved')
+        }
+        if (mine.apply === 'throws') throw new Error('apply threw')
+        if (mine.apply === 'rejects') return Promise.reject(new Error('apply rejected'))
+        if (mine.apply === 'async') {
+          return new Promise<void>((resolve, reject) => {
+            pending = { resolve, reject: (e) => reject(e) }
+          })
+        }
+        return undefined
+      })
+    } else if ('publishNone' in step) {
+      gate.publishNone()
+    } else if ('submit' in step) {
+      slots.push('pending')
+      try {
+        settle(slot, gate.submit(step.submit), () => 'resolved')
+      } catch (error) {
+        slots[slot] = { threw: (error as Error).message }
+      }
+    } else if ('finish' in step) {
+      const held = pending as { resolve: () => void; reject: (e: Error) => void } | null
+      pending = null
+      if (held) {
+        if (step.finish === 'resolve') held.resolve()
+        else held.reject(new Error('apply failed later'))
+      }
+    } else {
+      slots.push({ blocking: gate.blocking() })
+    }
+    await flush()
+    await flush()
+  }
+  return slots
+}
+
+const GATE_RAW = { decisions: { r0: 'restore', r1: 'discard' } }
+const launchGateCases: Case[] = [
+  {
+    args: [
+      { steps: [{ blocking: true }, { publishNone: true }, { blocking: true }, { get: true }] },
+    ],
+    note: 'nothing to ask: not blocking, no rows',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { get: true },
+          { get: true },
+          { blocking: true },
+          { publish: 2, apply: 'sync' },
+          { blocking: true },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'waiting gets are woken by the rows; blocking until answered',
+  },
+  {
+    args: [
+      { steps: [{ get: true }, { publish: 0, apply: 'sync' }, { blocking: true }, { get: true }] },
+    ],
+    note: 'no rows: done',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'sync' },
+          { submit: GATE_RAW },
+          { blocking: true },
+          { get: true },
+          { submit: GATE_RAW },
+        ],
+      },
+    ],
+    note: 'an answer applies once, then the list is gone',
+  },
+  {
+    args: [{ steps: [{ publish: 2, apply: 'sync', blocking: true }, { submit: GATE_RAW }] }],
+    note: 'blocking is false while the answer is applied',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'async' },
+          { submit: GATE_RAW },
+          { blocking: true },
+          { submit: GATE_RAW },
+          { get: true },
+          { finish: 'resolve' },
+          { blocking: true },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'a second answer while one is applied joins it; the rows stay until it is done',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'async' },
+          { submit: GATE_RAW },
+          { finish: 'reject' },
+          { blocking: true },
+          { get: true },
+          { submit: GATE_RAW },
+          { finish: 'resolve' },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'a failed apply leaves the list up; it can be answered again',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'rejects' },
+          { submit: GATE_RAW },
+          { get: true },
+          { blocking: true },
+        ],
+      },
+    ],
+    note: 'an apply that rejects at once',
+  },
+  {
+    args: [{ steps: [{ publish: 2, apply: 'throws' }, { submit: GATE_RAW }, { get: true }] }],
+    note: 'an apply that throws',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'sync' },
+          { submit: { decisions: { r0: 'later' } } },
+          { submit: null },
+          { submit: { dismissed: true } },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'a bad answer is rejected and the list stays up',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 1, apply: 'sync' },
+          { publish: 3, apply: 'async' },
+          { publishNone: true },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'the rows are fixed by the first publish',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publishNone: true },
+          { publish: 2, apply: 'sync' },
+          { submit: GATE_RAW },
+          { get: true },
+        ],
+      },
+    ],
+    note: 'nothing to ask, then rows: ignored',
+  },
+  {
+    args: [
+      {
+        steps: [
+          { publish: 2, apply: 'async', reenter: GATE_RAW },
+          { submit: GATE_RAW },
+          { finish: 'resolve' },
+        ],
+      },
+    ],
+    note: 'an answer from inside the apply settles at once',
+  },
+  {
+    args: [
+      { steps: [{ publish: 2, apply: 'sync' }, { submit: { dismissed: true } }, { get: true }] },
+    ],
+    note: 'a dismissed list is applied too',
+  },
+  {
+    args: [{ steps: [{ finish: 'resolve' }, { submit: GATE_RAW }, { get: true }] }],
+    note: 'an answer before the rows are known',
+  },
+]
+
+// ---- the OS ending the session ----
+
+type EditorKind = 'ok' | 'throws' | 'rejects' | 'pending'
+type OsStep =
+  { call: true } | { settle: { editor: number; result: 'ok' | 'rejects' } } | { fire: true }
+
+interface OsScenario {
+  timeoutMs: number | null
+  latch: 'ok' | 'throws'
+  closeRecord: 'ok' | 'throws'
+  editors: EditorKind[] | 'throws'
+  steps: OsStep[]
+}
+
+async function runOsEnd(o: OsScenario, cx: TsContext): Promise<unknown> {
+  const held = new Map<number, { resolve: () => void; reject: (e: Error) => void }>()
+  let timerFn: (() => void) | undefined
+  const realSet = globalThis.setTimeout
+  const realClear = globalThis.clearTimeout
+  globalThis.setTimeout = ((fn: () => void, ms: number) => {
+    cx.log('setTimeout', ms)
+    timerFn = fn
+    return { unref() {} }
+  }) as never
+  globalThis.clearTimeout = (() => cx.log('clearTimeout')) as never
+  const end = createOsSessionEnd({
+    markShuttingDown: () => {
+      cx.log('markShuttingDown')
+      if (o.latch === 'throws') throw new Error('latch failed')
+    },
+    markSessionOsEnd: () => {
+      cx.log('markSessionOsEnd')
+      if (o.closeRecord === 'throws') throw new Error('record failed')
+    },
+    editors: () => {
+      cx.log('editors')
+      if (o.editors === 'throws') throw new Error('editors failed')
+      return o.editors.map((kind, index) => ({
+        writeCopiesNow: (): Promise<void> => {
+          cx.log('writeCopiesNow', index)
+          if (kind === 'throws') throw new Error(`write ${index} threw`)
+          if (kind === 'rejects') return Promise.reject(new Error(`write ${index} rejected`))
+          if (kind === 'pending') {
+            return new Promise<void>((resolve, reject) => held.set(index, { resolve, reject }))
+          }
+          return Promise.resolve()
+        },
+      }))
+    },
+    finish: () => cx.log('finish'),
+    ...(o.timeoutMs === null ? {} : { timeoutMs: o.timeoutMs }),
+  })
+  const calls: Promise<void>[] = []
+  const states: string[] = []
+  try {
+    await withWarnings(cx.log, async () => {
+      for (const step of o.steps) {
+        if ('call' in step) {
+          const slot = calls.length
+          states.push('pending')
+          calls.push(end())
+          calls[slot].then(() => (states[slot] = 'resolved'))
+        } else if ('settle' in step) {
+          const entry = held.get(step.settle.editor)
+          held.delete(step.settle.editor)
+          if (entry) {
+            if (step.settle.result === 'ok') entry.resolve()
+            else entry.reject(new Error(`write ${step.settle.editor} failed later`))
+          }
+        } else {
+          const fn = timerFn
+          timerFn = undefined
+          fn?.()
+        }
+        await flush()
+        await flush()
+      }
+    })
+  } finally {
+    globalThis.setTimeout = realSet
+    globalThis.clearTimeout = realClear
+  }
+  return states
+}
+
+const osCase = (o: Partial<OsScenario>, note: string): Case => ({
+  args: [
+    {
+      timeoutMs: null,
+      latch: 'ok',
+      closeRecord: 'ok',
+      editors: ['ok', 'ok'],
+      steps: [{ call: true }],
+      ...o,
+    },
+  ],
+  note,
+})
+
+const osCases: Case[] = [
+  osCase({}, 'two editors write at once; the app ends'),
+  osCase({ editors: [] }, 'no editors: the app ends'),
+  osCase({ editors: 'throws' }, 'the editors cannot be listed: none'),
+  osCase({ steps: [{ call: true }, { call: true }] }, 'it runs once'),
+  osCase({ latch: 'throws' }, 'the latch fails: warned, the rest goes on'),
+  osCase({ closeRecord: 'throws', latch: 'throws' }, 'the record fails too'),
+  osCase({ editors: ['throws', 'ok'] }, 'an editor throws: warned, the app still ends'),
+  osCase({ editors: ['rejects', 'rejects', 'ok'] }, 'editors reject: each is warned about'),
+  osCase(
+    {
+      editors: ['pending', 'ok'],
+      steps: [{ call: true }, { settle: { editor: 0, result: 'ok' } }],
+    },
+    'the app ends when the last write is done, not before',
+  ),
+  osCase(
+    {
+      editors: ['pending', 'pending'],
+      steps: [
+        { call: true },
+        { settle: { editor: 1, result: 'rejects' } },
+        { settle: { editor: 0, result: 'ok' } },
+      ],
+    },
+    'a write that fails later is warned about; the app ends after it',
+  ),
+  osCase(
+    {
+      editors: ['pending', 'ok'],
+      steps: [
+        { call: true },
+        { fire: true },
+        { settle: { editor: 0, result: 'rejects' } },
+        { fire: true },
+      ],
+    },
+    'the timeout ends the wait; a late failure is still warned about',
+  ),
+  osCase(
+    { editors: ['pending'], timeoutMs: 50, steps: [{ call: true }, { fire: true }] },
+    'a short timeout',
+  ),
+  osCase(
+    {
+      editors: ['pending'],
+      timeoutMs: 0,
+      steps: [{ call: true }, { fire: true }, { settle: { editor: 0, result: 'ok' } }],
+    },
+    'a zero timeout is a timeout',
+  ),
+  osCase(
+    {
+      editors: ['pending', 'pending'],
+      steps: [
+        { settle: { editor: 0, result: 'ok' } },
+        { call: true },
+        { settle: { editor: 0, result: 'ok' } },
+        { settle: { editor: 0, result: 'ok' } },
+        { settle: { editor: 1, result: 'ok' } },
+        { fire: true },
+      ],
+    },
+    'a settle before the call does nothing; a second settle of one write does nothing',
+  ),
+]
+
+// ---- the live strip as the session record keeps it ----
+
+interface LiveScenario {
+  strip: Json | null
+  detached: Json[]
+  /** the answer of `untitledOf`, by tab id */
+  untitled: Record<string, { untitledId: string; ext: string } | null>
+  probes: string[]
+}
+
+function runLive(o: LiveScenario, cx: TsContext): unknown {
+  const source = liveSessionSource({
+    strip: o.strip as never,
+    detached: o.detached as never,
+    untitledOf: (tab) => {
+      cx.log('untitledOf', tab)
+      return o.untitled[tab.id] ?? undefined
+    },
+  })
+  return {
+    source: { strip: source.strip, detached: source.detached },
+    copies: o.probes.map((id) => source.untitledCopyFor?.({ id, kind: 'docs' }) ?? null),
+  }
+}
+
+const sTab = (
+  id: string,
+  kind: string,
+  title: string,
+  filePath?: string,
+  extra: Json = {},
+): Json => ({
+  id,
+  kind,
+  title,
+  ...(filePath ? { filePath } : {}),
+  ...extra,
+})
+const liveCase = (o: Partial<LiveScenario>, note: string): Case => ({
+  args: [{ strip: null, detached: [], untitled: {}, probes: [], ...o }],
+  note,
+})
+
+const liveCases: Case[] = [
+  liveCase({}, 'no strip, nothing detached'),
+  liveCase({ strip: { tabs: [], activeId: null, split: null } }, 'an empty strip'),
+  liveCase(
+    {
+      strip: {
+        tabs: [
+          sTab('a', 'docs', 'A', '/w/a.docx'),
+          sTab('b', 'docs', 'B'),
+          sTab('c', 'sheets', 'C', '/tmp/new.xlsx'),
+        ],
+        activeId: 'b',
+        split: null,
+      },
+      untitled: { b: { untitledId: 'u1', ext: '.docx' }, c: { untitledId: 's1', ext: '.xlsx' } },
+      probes: ['a', 'b', 'c', 'zz'],
+    },
+    'an untitled tab is recorded by its copy; a working file is dropped from it; a saved tab is untouched',
+  ),
+  liveCase(
+    {
+      strip: {
+        activeId: 'a',
+        tabs: [sTab('a', 'pdf', 'Template', '/tmp/copy.pdf', { extra: 1 })],
+        split: { aTabId: 'a', bTabId: 'a' },
+      },
+      detached: [
+        sTab('d', 'docs', 'Detached', '/tmp/work.docx'),
+        sTab('e', 'docs', 'Saved', '/w/e.docx'),
+      ],
+      untitled: { a: { untitledId: 'p1', ext: '.pdf' }, d: { untitledId: 'd1', ext: '.docx' } },
+      probes: ['a', 'd', 'e'],
+    },
+    'key order of the strip is kept; detached tabs are handled the same way; extra keys stay',
+  ),
+  liveCase(
+    {
+      strip: {
+        tabs: [
+          sTab('a', 'docs', 'One', '/tmp/1.docx'),
+          sTab('a', 'docs', 'Same id', '/tmp/2.docx'),
+        ],
+        activeId: 'a',
+        split: null,
+      },
+      untitled: { a: { untitledId: 'u7', ext: '.docx' } },
+      probes: ['a'],
+    },
+    'two tabs with one id: the later copy is kept',
+  ),
+  liveCase(
+    {
+      detached: [sTab('d', 'hwp', '한글 문서', undefined)],
+      untitled: { d: { untitledId: 'h1', ext: '.hwpx' } },
+      probes: ['d'],
+    },
+    'only detached tabs; unicode',
+  ),
+  liveCase(
+    {
+      strip: { tabs: [sTab('a', 'docs', 'A')], activeId: 'a', split: null },
+      untitled: { a: null },
+      probes: ['a'],
+    },
+    'the editor says nothing: the tab is as it was',
+  ),
+]
+
+// ---- MCP and `@` lookups of a restored tab ----
+
+interface TabContentsScenario {
+  tabId: string
+  ensure: 'ready' | 'needs-user' | 'missing' | 'rejects'
+  detached: string | null
+  /** `null` = `undefined` */
+  title: string | null
+}
+
+async function runTabContents(o: TabContentsScenario, cx: TsContext): Promise<unknown> {
+  return liveTabContents<string>(o.tabId, {
+    ensureLoaded: async (tabId) => {
+      cx.log('ensureLoaded', tabId)
+      if (o.ensure === 'rejects') throw new Error('load failed')
+      if (o.ensure === 'ready') return { status: 'ready', webContents: `contents of ${tabId}` }
+      return { status: o.ensure }
+    },
+    detached: (tabId) => {
+      cx.log('detached', tabId)
+      return o.detached ?? undefined
+    },
+    titleOf: (tabId) => {
+      cx.log('titleOf', tabId)
+      return o.title ?? undefined
+    },
+  })
+}
+
+const tabContentsCases: Case[] = [
+  { args: [{ tabId: 't1', ensure: 'ready', detached: null, title: null }], note: 'a loaded tab' },
+  {
+    args: [{ tabId: 't2', ensure: 'needs-user', detached: null, title: 'Report' }],
+    note: 'it must ask the user: the message names the document',
+  },
+  { args: [{ tabId: 't3', ensure: 'needs-user', detached: 'x', title: null }], note: 'no title' },
+  {
+    args: [{ tabId: 't4', ensure: 'needs-user', detached: null, title: '' }],
+    note: 'an empty title is no title',
+  },
+  {
+    args: [{ tabId: 't5', ensure: 'missing', detached: 'detached contents', title: null }],
+    note: 'not in the strip: a detached window',
+  },
+  {
+    args: [{ tabId: 't6', ensure: 'missing', detached: null, title: null }],
+    note: 'no such document',
+  },
+  {
+    args: [{ tabId: 't7', ensure: 'rejects', detached: null, title: null }],
+    note: 'the load fails',
+  },
+  {
+    args: [{ tabId: '한글', ensure: 'needs-user', detached: null, title: '한글 \u{1F600}' }],
+    note: 'unicode',
+  },
+]
+
+const launchRecoveryGroup: Group = {
+  'launch-recovery.OS_SESSION_END_WRITE_TIMEOUT_MS': constant(OS_SESSION_END_WRITE_TIMEOUT_MS),
+  'launch-recovery.LAUNCH_NEEDS_USER_MESSAGE': constant(LAUNCH_NEEDS_USER_MESSAGE),
+  'launch-recovery.recoveryIdentityKey': {
+    ts: (a) => recoveryIdentityKey(a[0] as never),
+    cases: identityKeyCases,
+  },
+  'launch-recovery.planLaunch': {
+    ts: (a, cx) => runPlan(a[0] as PlanScenario, cx),
+    cases: planCases,
+  },
+  'launch-recovery.resolveLaunchDecisions': {
+    ts: (a) => runResolve(a[0] as ResolveScenario),
+    cases: resolveCases,
+  },
+  'launch-recovery.normalizeLaunchListResult': {
+    ts: (a) => normalizeLaunchListResult(a[0], a[1] as string[]),
+    cases: normalizeCases,
+  },
+  'launch-recovery.createLaunchListGate': {
+    ts: (a, cx) => runLaunchGate(a[0] as { steps: GateStep[] }, cx),
+    cases: launchGateCases,
+  },
+  'launch-recovery.createOsSessionEnd': {
+    ts: (a, cx) => runOsEnd(a[0] as OsScenario, cx),
+    cases: osCases,
+  },
+  'launch-recovery.liveSessionSource': {
+    ts: (a, cx) => runLive(a[0] as LiveScenario, cx),
+    cases: liveCases,
+  },
+  'launch-recovery.liveTabContents': {
+    ts: (a, cx) => runTabContents(a[0] as TabContentsScenario, cx),
+    cases: tabContentsCases,
+  },
+}
+
 export const group: Group = {
   ...commonGroup,
   ...controlGroup,
@@ -3143,4 +4312,5 @@ export const group: Group = {
   ...pdfGroup,
   ...noteTabsGroup,
   ...linksGroup,
+  ...launchRecoveryGroup,
 }
