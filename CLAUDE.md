@@ -41,6 +41,7 @@ seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편�
 무거운 검사는 GitHub 러너에서 돌리고, 이 기계에서는 몇 초에서 몇 분짜리 확인만 돌린다. 공개 저장소라 러너 시간은 무료다. 기기를 막은 것은 로컬에서 돈 무거운 일이었다(부하, 스왑, 디스크 가득).
 
 - 로컬에서 돌리는 것: 바꾼 파일의 typecheck·lint·format, 바꾼 동작을 덮는 단위 시험 파일 몇 개(`npx vitest run <파일>`), 재현 시험 한 개.
+- 푸시하기 전에는 언제나 `node tools/prepush.mjs`를 돌리고 녹색일 때만 푸시한다. 이 가지가 origin/main에서 바꾼 것만 보고 format, 영어 주석, lint, 바뀐 작업 공간의 typecheck와 바뀐 파일이 닿는 vitest, 바뀐 crate의 `cargo fmt --check`·clippy·단위 시험을 돌린다. 러너에서 떨어진 실패 대부분이 이 검사로 잡히는 것이었다. git 훅으로 걸지 않는다(작업 트리 여럿이 `.git` 하나를 공유한다).
 - 러너에서 돌리는 것: 작업 공간 전체 시험, `npm run test:parallel`, 웹 시험(Playwright), e2e, xlsx `native:test`, Rust 빌드·비교·결함 심기, 정형 검증(TLC), 여러 OS 빌드. 가지에 푸시한 뒤 `gh workflow run <워크플로> --ref <가지>`로 돌린다(`CI`, `seuoffice`, `seuoffice rust`, `seuoffice formal` 모두 `workflow_dispatch`가 있다). 가지에서 못 도는 워크플로를 만나면 그 워크플로를 고친다.
 - 기다리기: 실행 하나를 `gh run watch <id> --interval 300` 한 번으로 본다. 여러 세션이 같은 실행을 따로 폴링하지 않는다(API 시간당 5,000회를 나눠 쓴다).
 - 로컬에만 남는 것: 실제 기기 확인(Windows 창 끌기·크기, 페어링 기기, 설치·자동 업데이트), 사람이 화면을 보고 판단하는 시각 확인.
