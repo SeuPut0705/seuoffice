@@ -32,7 +32,7 @@ use std::io::{self, Read, Write};
 
 use flate2::read::GzDecoder;
 use jscompat::node_path::host;
-use jscompat::{Radix, parse_int, trim};
+use jscompat::{JsObject, Radix, parse_int, trim};
 use sha2::{Digest, Sha256};
 
 use super::runtime_pins::{ArchiveFormat, PinnedArchive};
@@ -322,9 +322,15 @@ fn file_mode(mode: Option<f64>) -> u32 {
 
 fn extract_zip(file: &str, root: &str, dest: &str) -> Step {
     let bytes = fs::read(namespaced(file)).map_err(|e| node_error(&e, "open", file))?;
-    let entries = ooxml_pkg::jszip::load(&bytes).map_err(Fail::Other)?;
-    // one entry at a time keeps only one inflated file in memory
-    for entry in entries {
+    // `zip.file(name, ...)` of `loadAsync` sets `this.files[name]`: a later
+    // entry of a name replaces the earlier one in its place (an own key of a
+    // plain object, so a name that is an array index sorts first), and the
+    // replaced entry is never inflated
+    let mut files: JsObject<ooxml_pkg::jszip::LoadedEntry> = JsObject::new();
+    for entry in ooxml_pkg::jszip::load(&bytes).map_err(Fail::Other)? {
+        files.set(entry.name.clone(), entry);
+    }
+    for (_, entry) in files.entries() {
         let Some(segments) = entry_segments(&entry.name, root)? else {
             continue;
         };
@@ -334,9 +340,9 @@ fn extract_zip(file: &str, root: &str, dest: &str) -> Step {
             continue;
         }
         mkdir_p(&host::dirname(&target))?;
-        let data = entry.content.map_err(Fail::Other)?;
+        let data = entry.content.as_ref().map_err(|e| Fail::Other(e.clone()))?;
         let mut handle = open_for_write(&target, file_mode(entry.unix_permissions.map(f64::from)))?;
-        write_chunk(&mut handle, &data)?;
+        write_chunk(&mut handle, data)?;
     }
     Ok(())
 }

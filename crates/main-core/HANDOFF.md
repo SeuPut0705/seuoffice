@@ -33,10 +33,10 @@ npx tsx main.ts --list                                                          
 node faults.mjs faults/b1.json,faults/b2.json      # FAULT_SHARD=i/n 으로 나눠 돌림
 
 # 러너(비교 + Windows + 결함 6조각)
-# 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 5,973개 전부는 한 실행에 들지 않으므로
-# 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store):
+# 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 6,109개 전부는 한 실행에 들지 않으므로
+# 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store, b5-kb):
 gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
-  -f main_faults=$(ls tools/main-diff/faults/{b1,b2,b3,b4,b5,d8,d9,b2-cli,b4-fonts,b4-pdf-store}.json tools/main-diff/faults/b6-*.json | paste -sd, -)
+  -f main_faults=$(ls tools/main-diff/faults/{b1,b2,b3,b4,b5,d8,d9,b2-cli,b4-fonts,b4-pdf-store,b5-kb}.json tools/main-diff/faults/b6-*.json | paste -sd, -)
 # 나머지는 실행마다 한 묶음: b3-projects.*, b3b4-rest-*, b5-agent-*, b5-mcp, b5-provider-*
 ```
 
