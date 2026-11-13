@@ -113,7 +113,7 @@ impl DiagramViews {
             dialogs: hosts.need::<DialogsHost>(Batch::D1)?,
             os_shell: hosts.need::<OsShellHost>(Batch::D1)?,
             locale: hosts.need::<LocaleHost>(Batch::D1)?,
-            shared: hosts.need::<Arc<Shared>>(Batch::D1)?,
+            shared: Shared::need(hosts)?,
             recovery_state: hosts.need::<RecoveryStateHost>(Batch::D1)?,
             state: RefCell::new(State::default()),
             text_cache: Arc::default(),

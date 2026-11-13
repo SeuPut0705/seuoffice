@@ -283,7 +283,7 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
     let clipboard = hosts.need::<ClipboardHost>(Batch::D1)?;
     let contents = hosts.need::<ContentsHost>(Batch::D1)?;
     let locale = hosts.need::<LocaleHost>(Batch::D1)?;
-    let shared = hosts.need::<Arc<Shared>>(Batch::D1)?;
+    let shared = Shared::need(hosts)?;
     let recovery_state = hosts.need::<RecoveryStateHost>(Batch::D1)?;
     let registry_index = APPS.with(|apps| apps.borrow().len());
     let app = App {

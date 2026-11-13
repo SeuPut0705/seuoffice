@@ -23,7 +23,6 @@ mod session;
 mod tests;
 
 use std::rc::Rc;
-use std::sync::Arc;
 
 use shell_contract::editors::DocumentEditors;
 use shell_contract::ipc::RegisterError;
@@ -68,7 +67,7 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
         os_shell: hosts.need::<OsShellHost>(Batch::D1)?,
         clipboard: hosts.need::<ClipboardHost>(Batch::D1)?,
         main_window: hosts.need::<MainWindowHost>(Batch::D1)?,
-        shared: hosts.need::<Arc<Shared>>(Batch::D1)?,
+        shared: Shared::need(hosts)?,
         recovery: hosts.need::<RecoveryStateHost>(Batch::D1)?,
         tm: i18n::Tm::new(locale),
     });

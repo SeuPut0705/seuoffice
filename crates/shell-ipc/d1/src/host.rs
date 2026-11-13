@@ -14,8 +14,9 @@ use main_core::packages::electron_utils::default_save_dir::{PathProvider, SaveDi
 use main_core::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
 use main_core::packages::i18n::Lang;
 use shell_contract::hosts::{Dialogs, FileDialog, FileFilter};
+use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::{AppPaths, PathName, Services};
-use shell_contract::{ViewId, WindowId};
+use shell_contract::{Batch, ViewId, WindowId};
 
 type GoneListener = Rc<dyn Fn(ViewId)>;
 
@@ -59,15 +60,25 @@ pub type LocaleHost = Arc<dyn Locale>;
 pub type RecoveryStateHost =
     Arc<Mutex<main_core::packages::electron_utils::recovery_store::SharedRecoveryState>>;
 
-/// What the TypeScript kept once per process and every app module of the
-/// batch reads: the folder the last confirmed file dialog picked (Electron's
-/// `dialog` is one object, so its memory is one) and the default save
-/// folder's retry state. A `Mutex` because [`shell_contract::Hosts`] holds
-/// `Send` values only; every use is on the core thread.
-#[derive(Debug, Default)]
+/// The two pieces of state the TypeScript kept once per process and every
+/// editor and the shell read: the folder the last confirmed file dialog
+/// picked (`lastUsedDirectoryByDialog`) and the default save folder's retry
+/// state. The shell inserts one of each into `Hosts` for every batch; the
+/// four apps take them through this. A `Mutex` because `Hosts` holds `Send`
+/// values only; every use is on the core thread.
+#[derive(Clone, Debug)]
 pub struct Shared {
-    pub dialog_memory: Mutex<DialogMemory>,
-    pub save_dir: Mutex<SaveDirState>,
+    pub dialog_memory: Arc<Mutex<DialogMemory>>,
+    pub save_dir: Arc<Mutex<SaveDirState>>,
+}
+
+impl Shared {
+    pub fn need(hosts: &shell_contract::Hosts) -> Result<Arc<Shared>, RegisterError> {
+        Ok(Arc::new(Shared {
+            dialog_memory: hosts.need::<Arc<Mutex<DialogMemory>>>(Batch::D1)?,
+            save_dir: hosts.need::<Arc<Mutex<SaveDirState>>>(Batch::D1)?,
+        }))
+    }
 }
 
 /// `app.getPath(name)` by Electron's names

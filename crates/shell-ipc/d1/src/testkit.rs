@@ -26,7 +26,10 @@ use shell_contract::{
     OsShellHost, Surface, ViewId, WindowId,
 };
 
-use crate::host::{Locale, LocaleHost, RecoveryStateHost, Shared};
+use main_core::packages::electron_utils::default_save_dir::SaveDirState;
+use main_core::packages::electron_utils::dialog_memory::DialogMemory;
+
+use crate::host::{Locale, LocaleHost, RecoveryStateHost};
 
 /// The shell's start rules (contract section 5), with the handlers kept
 #[derive(Default)]
@@ -387,7 +390,9 @@ impl Kit {
         }));
         hosts.insert::<MainWindowHost>(Arc::new(FakeMainWindow(None)));
         hosts.insert::<LocaleHost>(Arc::new(FixedLocale(Lang::En)));
-        hosts.insert::<Arc<Shared>>(Arc::default());
+        // the shell's one dialog memory and default-save-folder state
+        hosts.insert::<Arc<Mutex<DialogMemory>>>(Arc::default());
+        hosts.insert::<Arc<Mutex<SaveDirState>>>(Arc::default());
         hosts.insert::<RecoveryStateHost>(Arc::new(Mutex::new(
             main_core::packages::electron_utils::recovery_store::SharedRecoveryState::new(
                 "0123456789abcdef",

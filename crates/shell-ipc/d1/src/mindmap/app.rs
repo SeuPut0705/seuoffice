@@ -291,7 +291,7 @@ impl MindmapApp {
             os_shell: hosts.need(Batch::D1)?,
             contents: hosts.need(Batch::D1)?,
             locale: hosts.need(Batch::D1)?,
-            shared: hosts.need(Batch::D1)?,
+            shared: Shared::need(hosts)?,
             recovery_state: hosts.need(Batch::D1)?,
             engine: hosts.need(Batch::D1)?,
             parse: hosts.need(Batch::D1)?,

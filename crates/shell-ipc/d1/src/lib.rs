@@ -54,7 +54,6 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     hosts.insert::<host::LocaleHost>(Arc::new(testkit::FixedLocale(
         main_core::packages::i18n::Lang::En,
     )));
-    hosts.insert::<Arc<host::Shared>>(Arc::default());
     diagram::insert_fakes(hosts, case);
     mindmap::insert_fakes(hosts, case);
     sheets::insert_fakes(hosts, case);
