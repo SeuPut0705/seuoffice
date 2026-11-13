@@ -2616,4 +2616,38 @@ mod tests {
         assert_eq!(a.take().expect("A ended").unwrap(), None);
         assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
     }
+
+    #[test]
+    fn an_abort_after_the_host_ended_the_stream_in_the_same_batch_changes_nothing() {
+        let mut runtime = Runtime::new(host());
+        // the host's end or failure is in before the abort, though no task ran in between
+        let answers: [Result<Answer, JsError>; 2] =
+            [Ok(Answer::End), Err(JsError::type_error("terminated"))];
+        for answer in answers {
+            let (response, _, signal) = fetched_with_signal(&mut runtime);
+            let reader = response.clone();
+            let read = runtime.start(async move { reader.read().await });
+            let id = read_of(&runtime.poll());
+            let failed = answer.as_ref().err().map(|e| e.message.clone());
+            runtime.feed(match answer {
+                Ok(answer) => Event::Done { id, answer },
+                Err(error) => Event::Failed { id, error },
+            });
+            signal.abort(None);
+            // the stream ended on the host: nothing to cancel
+            assert!(runtime.poll().is_empty());
+            let first = read.take().expect("the read ended");
+            let later = read_now(&mut runtime, &response);
+            match failed {
+                None => {
+                    assert_eq!(first.unwrap(), None);
+                    assert_eq!(later.unwrap(), None);
+                }
+                Some(message) => {
+                    assert_eq!(first.unwrap_err().message, message);
+                    assert_eq!(later.unwrap_err().message, message);
+                }
+            }
+        }
+    }
 }
