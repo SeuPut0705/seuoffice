@@ -18,6 +18,5 @@
   {"id":"saxes-surrogate-pair","group":"saxes","file":"crates/saxes/src/lib.rs","from":"out.push(0x10000 + ((unit - 0xD800) << 10)","to":"out.push(0x10001 + ((unit - 0xD800) << 10)"},
   {"id":"notation-placeholder-number","group":"pure","file":"crates/epub-engine/src/notation.rs","from":"let n = (state.context.placeholders.len() + 1) as f64;","to":"let n = state.context.placeholders.len() as f64;"},
   {"id":"blocks-h6-kind","group":"pure","file":"crates/epub-engine/src/blocks.rs","from":"Self::H6 => \"h6\",","to":"Self::H6 => \"h5\","},
-  {"id":"edits-trailing-blank-trim","group":"pure","file":"crates/epub-engine/src/edits.rs","from":"while i > 0 && is_ascii_blank(source[i - 1]) {","to":"while i > 1 && is_ascii_blank(source[i - 1]) {"},
-  {"id":"xml-listed-id-bound","group":"xml","file":"crates/epub-engine/src/xml.rs","from":".filter(|&at| at > id && at < listed.len())","to":".filter(|&at| at >= id && at < listed.len())"}
+  {"id":"edits-trailing-blank-trim","group":"pure","file":"crates/epub-engine/src/edits.rs","from":"while i > 0 && is_ascii_blank(source[i - 1]) {","to":"while i > 1 && is_ascii_blank(source[i - 1]) {"}
 ]

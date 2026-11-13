@@ -243,6 +243,10 @@ const CHAPTERS: Array<[string, string]> = [
   ['opaque', page('<p>a<svg><text>s</text></svg>b</p><p><math><mi>x</mi></math></p><p>only <script>1</script></p><p><template>t</template></p><div><svg/></div>')],
   ['bom-and-decl', `\uFEFF<?xml version="1.0"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><body><p>bom</p></body></html>`],
   ['flat', '<html><body><p>no namespace</p><p>second</p></body></html>'],
+  ['headings', page('<h1>one</h1>\n<h4>four</h4>\n<h5>five</h5>\n<h6>six</h6>\n<p>after</p>')],
+  // a block that is the root, with only blanks before it: its indentation runs to the first character
+  ['bare root', '  <p>lead</p>'],
+  ['bare root tab', '\n\t<p xmlns="http://www.w3.org/1999/xhtml">lead <b>b</b></p>'],
 ]
 const deepDivs = (n: number): string => page(`${'<div>'.repeat(n)}text${'</div>'.repeat(n)}<p>after</p>`)
 const deepSpans = (n: number): string => page(`<p>${'<span>'.repeat(n)}t${'</span>'.repeat(n)}</p>`)

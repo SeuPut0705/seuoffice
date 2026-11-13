@@ -184,6 +184,11 @@ const DOCUMENTS: Array<[string, string]> = [
   ['truncated comment', '<a><!-- x'],
   ['truncated cdata', '<a><![CDATA[x'],
   ['truncated entity', '<a>&am'],
+  // entity names at the end of the astral name characters: U+EFFFF is one, U+F0000 is not
+  ['entity name of the last astral name character', '<a>&\u{EFFFF};</a>'],
+  ['entity name ending in the last astral name character', '<a>&x\u{EFFFF};</a>'],
+  ['entity name past the astral name characters', '<a>&\u{F0000};</a>'],
+  ['entity name of the first astral name character', '<a>&\u{10000};</a>'],
   ['truncated pi', '<a><?x y'],
   ['truncated doctype', '<!DOCTYPE'],
   ['truncated doctype body', '<!DOCTYPE html'],

@@ -17,7 +17,12 @@ const groups = only < 0 ? null : new Set(process.argv[only + 1]!.split(','))
 /** `--id a,b`: only those faults. */
 const idArg = process.argv.indexOf('--id')
 const ids = idArg < 0 ? null : new Set(process.argv[idArg + 1]!.split(','))
-const selected = faults.filter(fault => (groups === null || groups.has(fault.group)) && (ids === null || ids.has(fault.id)))
+/** `--shard i/n`: every n-th fault from the i-th, so n jobs share the list and none is left out. */
+const shardArg = process.argv.indexOf('--shard')
+const [shard, shards] = shardArg < 0 ? [0, 1] : process.argv[shardArg + 1]!.split('/').map(Number) as [number, number]
+if (!(Number.isInteger(shard) && Number.isInteger(shards) && shard >= 0 && shard < shards)) throw new Error('--shard takes i/n with 0 <= i < n')
+const selected = faults.filter((fault, index) => index % shards === shard
+  && (groups === null || groups.has(fault.group)) && (ids === null || ids.has(fault.id)))
 if (selected.length === 0) throw new Error('No fault selected')
 mkdirSync(resolve(gate, 'out'), { recursive: true })
 const out = mkdtempSync(resolve(gate, 'out/faults-'))
