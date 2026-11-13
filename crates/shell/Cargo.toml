@@ -63,6 +63,12 @@ trash = "5"
 
 # regress 0.12.0 with a bounded backtrack stack (see crates/vendor/regress/VENDORED.md):
 # the workspace patch does not reach a crate outside it
+[target.'cfg(target_os = "macos")'.dependencies]
+# the Dock menu (host/menu/dock.rs): applicationDockMenu: added to the NSApp delegate's class
+objc2 = "0.6.5"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSMenu", "NSMenuItem", "NSResponder"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSObject", "NSString"] }
+
 [target.'cfg(windows)'.dependencies]
 # the silent print loop (host/print/windows.rs): Windows.Data.Pdf pages into a GDI printer DC
 windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT"] }

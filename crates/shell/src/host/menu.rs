@@ -15,6 +15,7 @@
 mod app;
 mod cef_ops;
 mod context;
+mod dock;
 
 pub(crate) use cef_ops::{host_of, print_preview};
 
@@ -35,12 +36,13 @@ use shell_ipc_m::hosts::{
     FontQueries, FontQueriesRef, KeyInput, MHost, MHostRef, PrintSurface, PrintWindowSpec, Printer,
 };
 use shell_ipc_m::state::{MState, MStateRef};
+use shell_ipc_m::{MenuDict, menu_label};
 use shell_ipc_w::quick_look::QuickLookHost;
 use tauri::{AppHandle, Manager, Theme};
 use tauri_runtime_cef::WebviewCefExt;
 
 use super::shell_tabs::shell_tabs;
-use super::w::on_core;
+use super::w::{on_core, post_core};
 use super::window::Windows;
 use super::{HostContext, on_ui, print};
 use crate::paths::ShellPaths;
@@ -154,6 +156,67 @@ pub(crate) fn apply_menu(kind: TabKind) {
 /// from any thread; the menu is set on the UI thread.
 pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
     app::apply_menu_for(app, kind);
+    // the Dock needs the tabs, which exist once a menu is first applied
+    static DOCK: std::sync::Once = std::sync::Once::new();
+    DOCK.call_once(|| install_dock_menu(app));
+}
+
+/// The kinds the Dock offers to create, in home order (`installDockMenu`'s `only`)
+const DOCK_KINDS: [(&str, &str); 5] = [
+    ("docx", "menuNewDoc"),
+    ("xlsx", "menuNewSheet"),
+    ("pptx", "menuNewSlide"),
+    ("md", "menuNewMarkdown"),
+    ("pdf", "menuNewPdf"),
+];
+
+/// `installDockMenu()`: Home, then the new-document entries the person did not
+/// hide, in the app's language. At start and after a language change.
+pub(crate) fn install_dock_menu(app: &AppHandle) {
+    let app = app.clone();
+    post_core(move |provided, services| {
+        let Ok(lang) = shell_ipc_m::current_lang(services) else {
+            return;
+        };
+        let Some(tabs) = shell_tabs(provided) else {
+            return;
+        };
+        let visible = tabs.new_document_kinds();
+        let mut entries = vec![dock::DockEntry {
+            label: menu_label(MenuDict::Shell, lang, "menuHome"),
+            action: dock::DockAction::Home,
+        }];
+        entries.extend(
+            DOCK_KINDS
+                .iter()
+                .filter(|(kind, _)| visible.iter().any(|v| v == kind))
+                .map(|(kind, key)| dock::DockEntry {
+                    label: menu_label(MenuDict::Shell, lang, key),
+                    action: dock::DockAction::NewDocument(kind),
+                }),
+        );
+        dock::set_dock_menu(
+            &app,
+            entries,
+            Arc::new(|action| {
+                post_core(move |provided, _| {
+                    let Some(tabs) = shell_tabs(provided) else {
+                        return;
+                    };
+                    match action {
+                        dock::DockAction::Home => {
+                            tabs.reveal_shell_window();
+                            tabs.open_home_tab();
+                        }
+                        dock::DockAction::NewDocument(kind) => {
+                            tabs.reveal_shell_window();
+                            tabs.new_document(kind);
+                        }
+                    }
+                });
+            }),
+        );
+    });
 }
 
 /// The first language of the profile's accept languages: the locale Chromium
@@ -249,6 +312,7 @@ impl MHost for ShellM {
     fn rebuild_menus_for_language(&self) {
         // the language switcher lives on the home page, so the home menu is the active one
         apply_menu_for(&self.app, TabKind::Home);
+        install_dock_menu(&self.app);
     }
 
     fn sync_tray_menu(&self) {
