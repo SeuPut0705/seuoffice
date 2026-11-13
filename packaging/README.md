@@ -7,4 +7,4 @@
 servers; see `cli/README.md`.
 
 SeuOffice releases no Linux desktop package (AppImage, deb, rpm), so there are
-no Flatpak, Nix or Docker recipes here (decision 0030).
+no Flatpak, Nix or Docker recipes here (decision 0032).
