@@ -92,6 +92,12 @@ describe('docs read --fields: a field and hidden words', () => {
       listed: true,
     },
     {
+      name: 'a field whose instruction repeats the hidden result of a protected field',
+      body:
+        `<w:p>${field('IF 1 = 1 "x" "y"', hidden(SECRET))}</w:p>` +
+        `<w:p>${field(`MERGEFIELD ${SECRET}`, plain('Phone'))}</w:p>`,
+    },
+    {
       name: 'a paragraph field whose instruction itself is hidden',
       body: `<w:p>${field(`MERGEFIELD ${SECRET}`, plain('Phone'), true)}</w:p>`,
       listed: true,
