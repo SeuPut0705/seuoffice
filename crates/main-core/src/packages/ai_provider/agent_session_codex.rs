@@ -969,16 +969,13 @@ impl Core {
                     ok: status != Some("interrupted"),
                 });
             }
-            "error" => {
-                // a retried stream is still live; a warning arrives the same way, so only the
-                // turn's own outcome decides
-                if params.get("willRetry") != Some(&JsonValue::Bool(true)) {
-                    self.st.borrow_mut().reported_error =
-                        Some(match record_of(params.get("error")) {
-                            Some(error) => JsonValue::Object(error.clone()),
-                            None => JsonValue::Object(params.clone()),
-                        });
-                }
+            // a retried stream is still live; a warning arrives the same way, so only the
+            // turn's own outcome decides
+            "error" if params.get("willRetry") != Some(&JsonValue::Bool(true)) => {
+                self.st.borrow_mut().reported_error = Some(match record_of(params.get("error")) {
+                    Some(error) => JsonValue::Object(error.clone()),
+                    None => JsonValue::Object(params.clone()),
+                });
             }
             _ => {}
         }
