@@ -39,10 +39,18 @@ function adoptValue(old: unknown, next: Json): unknown {
 
 function adoptArray(old: unknown[], next: Json[]): void {
   const key = keyOf(next)
-  const byKey = new Map<unknown, unknown>()
-  if (key) for (const item of old) if (isBag(item)) byKey.set(item[key], item)
+  // each old object is taken once, in order: a deck may list one slide part twice,
+  // and two answers adopted into one object would make the two entries one
+  const byKey = new Map<unknown, unknown[]>()
+  if (key)
+    for (const item of old)
+      if (isBag(item)) {
+        const same = byKey.get(item[key])
+        if (same) same.push(item)
+        else byKey.set(item[key], [item])
+      }
   const items = next.map((item, i) => {
-    const before = key && isBag(item) ? byKey.get(item[key]) : old[i]
+    const before = key && isBag(item) ? byKey.get(item[key])?.shift() : old[i]
     return before === undefined ? item : adoptValue(before, item)
   })
   old.length = 0
@@ -84,7 +92,8 @@ export function adoptArchive(archive: PackageArchive, changes: ArchiveChanges): 
   const entries = archive.entries
   for (const [path, bytes] of changes.changed) {
     if (bytes === null) entries.delete(path)
-    else entries.set(path, bytes)
+    // a copy: the answer is a view into the whole reply frame, which a kept view would pin
+    else entries.set(path, bytes.slice())
   }
   const now = [...entries.keys()]
   if (now.length === changes.paths.length && now.every((path, i) => path === changes.paths[i]))
