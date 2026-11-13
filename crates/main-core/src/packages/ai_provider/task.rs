@@ -1973,6 +1973,62 @@ mod tests {
     }
 
     #[test]
+    fn cancelling_a_body_ends_every_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let rt = runtime.rt().clone();
+        let fetched = runtime.start(async move {
+            Rc::new(
+                rt.fetch(
+                    Fetcher::Node,
+                    "https://x.example/",
+                    Request::default(),
+                    None,
+                )
+                .await
+                .unwrap(),
+            )
+        });
+        let cmds = runtime.poll();
+        let Some(Cmd::Fetch { id: fetch, .. }) = cmds.first().cloned() else {
+            panic!("{cmds:?}");
+        };
+        runtime.feed(Event::Done {
+            id: fetch,
+            answer: Answer::Response(head()),
+        });
+        assert!(runtime.poll().is_empty());
+        let response = fetched.take().expect("the fetch answered");
+        // three `read()` calls in flight at once, as a reader allows
+        let reads: Vec<_> = (0..3)
+            .map(|_| {
+                let response = response.clone();
+                runtime.start(async move { response.read().await })
+            })
+            .collect();
+        let ids: Vec<Id> = runtime
+            .poll()
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids.len(), 3);
+        // the first is answered; the two others still wait
+        runtime.feed(Event::Done {
+            id: ids[0],
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(reads[0].take().unwrap().unwrap(), Some(b"one".to_vec()));
+        response.cancel();
+        assert_eq!(runtime.poll(), vec![Cmd::Cancel { id: fetch }]);
+        for read in &reads[1..] {
+            assert_eq!(read.take().expect("the read ended").unwrap(), None);
+        }
+    }
+
+    #[test]
     fn a_branch_cancelled_mid_read_leaves_its_clone_to_cancel_the_stream() {
         let mut runtime = Runtime::new(host());
         let rt = runtime.rt().clone();
