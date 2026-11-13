@@ -71,7 +71,8 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => realTimeou
 const settle = async (): Promise<void> => {
   const until = Date.now() + 10_000
   await tick()
-  while (process.getActiveResourcesInfo().includes('ProcessWrap') && Date.now() < until) await sleep(10)
+  while (process.getActiveResourcesInfo().includes('ProcessWrap') && Date.now() < until)
+    await sleep(10)
   await tick()
 }
 
@@ -241,7 +242,13 @@ const errorDialogCases: Case[] = [
     note: 'answered: the next call shows its box',
   },
   {
-    args: [[call('first', { error: 'one' }), call('second', { error: 'two' }), call('third', { value: 3 })]],
+    args: [
+      [
+        call('first', { error: 'one' }),
+        call('second', { error: 'two' }),
+        call('third', { value: 3 }),
+      ],
+    ],
     note: 'never answered while calls come: only the first shows',
   },
 ]
@@ -368,7 +375,12 @@ const guardCases: Case[] = [
           { permission: 'media', id: 3, url: 'http://localhost:5173/', mediaType: 'audio' },
           { permission: 'media', id: 4, url: 'http://localhost:5173/', mediaType: 'audio' },
           { permission: 'media', id: 3, url: 'http://localhost:5173/', mediaType: 'video' },
-          { permission: 'media', id: 3, url: 'file://$DIR/renderer/sub/index.html', mediaType: 'audio' },
+          {
+            permission: 'media',
+            id: 3,
+            url: 'file://$DIR/renderer/sub/index.html',
+            mediaType: 'audio',
+          },
           { permission: 'clipboard-read', url: 'file://$DIR/renderer/index.html' },
           { permission: 'geolocation', url: 'file://$DIR/renderer/index.html' },
         ],
@@ -443,13 +455,18 @@ const cliLinkScenarios: Case[] = [
   {
     args: [cliScenario({ version: '2.0.0' })],
     files: {
-      'settings.json': JSON.stringify({ cliLink: { version: '1.0.0', status: 'linked' }, other: 1 }),
+      'settings.json': JSON.stringify({
+        cliLink: { version: '1.0.0', status: 'linked' },
+        other: 1,
+      }),
     },
     note: 'a record of an older version is replaced, other settings stay',
   },
   {
     args: [cliScenario({ platform: 'win32' })],
-    files: { 'settings.json': JSON.stringify({ cliLink: { version: '1.2.3', status: 'present' } }) },
+    files: {
+      'settings.json': JSON.stringify({ cliLink: { version: '1.2.3', status: 'present' } }),
+    },
     note: 'Windows: the same version was checked: stop after the launcher file',
   },
   {
@@ -580,10 +597,16 @@ const out = (output: string): ReadSpec['run'] => ({ output })
 const readCases: Case[] = [
   { args: [{ platform: 'win32', run: out('    CursorBaseSize    REG_DWORD    0x40') }] },
   { args: [{ platform: 'win32', run: { throws: true } }], note: 'no such value' },
-  { args: [{ platform: 'darwin', run: out('    CursorBaseSize    REG_DWORD    0x40') }], note: 'only Windows reads it' },
+  {
+    args: [{ platform: 'darwin', run: out('    CursorBaseSize    REG_DWORD    0x40') }],
+    note: 'only Windows reads it',
+  },
   { args: [{ platform: 'linux', run: null }], note: 'the stock runner is never reached' },
   { args: [{ platform: 'win32', run: out('garbage') }], note: 'unreadable output' },
-  { args: [{ platform: 'win32', run: out('    CursorBaseSize    REG_DWORD    0x1000') }], note: 'implausible' },
+  {
+    args: [{ platform: 'win32', run: out('    CursorBaseSize    REG_DWORD    0x1000') }],
+    note: 'implausible',
+  },
   { args: [{ platform: 'win32', run: null }], note: 'the stock runner: no reg on this machine' },
 ]
 
@@ -637,7 +660,8 @@ async function runPointer(o: PointerScenario, cx: TsContext): Promise<void> {
     if (text === null) rmSync(outFile, { force: true })
     else writeFileSync(outFile, text)
   }
-  const runs = (): number => (existsSync(countFile) ? readFileSync(countFile, 'utf8').length / 2 : 0)
+  const runs = (): number =>
+    existsSync(countFile) ? readFileSync(countFile, 'utf8').length / 2 : 0
   const waitForRun = async (before: number): Promise<void> => {
     if (o.platform !== 'win32') return
     const until = Date.now() + 5000
@@ -707,7 +731,12 @@ const pointerScenarios: Case[] = [
         platform: 'win32',
         initialOut: REG40,
         contents: { a: {}, b: { destroyed: true }, c: { rejects: true } },
-        steps: [{ created: 'a' }, { load: 'a' }, { focus: true, out: REG40 }, { focus: true, out: REG30 }],
+        steps: [
+          { created: 'a' },
+          { load: 'a' },
+          { focus: true, out: REG40 },
+          { focus: true, out: REG30 },
+        ],
       },
     ],
     note: 'the size is written to every live view, only when it changed',
@@ -729,7 +758,12 @@ const pointerScenarios: Case[] = [
         platform: 'win32',
         initialOut: REG40,
         contents: { a: {} },
-        steps: [{ focus: true, out: null }, { focus: true, out: null }, { created: 'a' }, { load: 'a' }],
+        steps: [
+          { focus: true, out: null },
+          { focus: true, out: null },
+          { created: 'a' },
+          { load: 'a' },
+        ],
       },
     ],
     note: 'the size is gone: nothing is written, and the memory says so',
@@ -859,7 +893,10 @@ async function runDisposal(o: DisposalScenario, cx: TsContext): Promise<unknown[
   }
 }
 
-const dc = (id: number, extra: Partial<DisposalContents> = {}): DisposalContents => ({ id, ...extra })
+const dc = (id: number, extra: Partial<DisposalContents> = {}): DisposalContents => ({
+  id,
+  ...extra,
+})
 const release = (name: string): DisposalStep => ({ release: name })
 const FLUSH: DisposalStep = { flush: true }
 
@@ -901,18 +938,32 @@ const releaseCases: Case[] = [
   {
     args: [
       {
-        contents: { a: dc(1, { pid: 10 }), b: dc(2, { pid: 10, destroyed: true }), c: dc(3, { pid: 11 }) },
+        contents: {
+          a: dc(1, { pid: 10 }),
+          b: dc(2, { pid: 10, destroyed: true }),
+          c: dc(3, { pid: 11 }),
+        },
         steps: [release('a'), FLUSH],
       },
     ],
     note: 'peers that are destroyed or elsewhere do not count',
   },
   {
-    args: [{ contents: { a: dc(1, { pid: 10, throws: ['isDestroyed'] }) }, steps: [release('a'), release('a')] }],
+    args: [
+      {
+        contents: { a: dc(1, { pid: 10, throws: ['isDestroyed'] }) },
+        steps: [release('a'), release('a')],
+      },
+    ],
     note: 'a view torn down meanwhile: false, and it counts as closed',
   },
   {
-    args: [{ contents: { a: dc(1, { pid: 10, throws: ['getOSProcessId'] }) }, steps: [release('a'), FLUSH] }],
+    args: [
+      {
+        contents: { a: dc(1, { pid: 10, throws: ['getOSProcessId'] }) },
+        steps: [release('a'), FLUSH],
+      },
+    ],
     note: 'the process id cannot be read',
   },
   {
@@ -920,7 +971,12 @@ const releaseCases: Case[] = [
     note: 'the listener cannot be added',
   },
   {
-    args: [{ contents: { a: dc(1, { pid: 10, throws: ['forcefullyCrashRenderer'] }) }, steps: [release('a'), FLUSH] }],
+    args: [
+      {
+        contents: { a: dc(1, { pid: 10, throws: ['forcefullyCrashRenderer'] }) },
+        steps: [release('a'), FLUSH],
+      },
+    ],
     note: 'the crash call throws',
   },
   {
@@ -934,8 +990,16 @@ const releaseCases: Case[] = [
 ]
 
 const wasCases: Case[] = [
-  { args: [{ contents: { a: dc(1, { pid: 10 }) }, steps: [{ was: 'a' }, release('a'), { was: 'a' }] }] },
-  { args: [{ contents: { a: dc(1), b: dc(2) }, steps: [release('a'), { was: 'b' }, { was: 'zz' }] }] },
+  {
+    args: [
+      { contents: { a: dc(1, { pid: 10 }) }, steps: [{ was: 'a' }, release('a'), { was: 'a' }] },
+    ],
+  },
+  {
+    args: [
+      { contents: { a: dc(1), b: dc(2) }, steps: [release('a'), { was: 'b' }, { was: 'zz' }] },
+    ],
+  },
   {
     args: [{ contents: { a: dc(1, { destroyed: true }) }, steps: [release('a'), { was: 'a' }] }],
     note: 'a destroyed view is marked too',
@@ -944,7 +1008,9 @@ const wasCases: Case[] = [
 
 const canCases: Case[] = [
   {
-    args: [{ contents: { a: dc(1, { pid: 10 }) }, steps: [{ can: { target: 'a', peers: ['a'] } }] }],
+    args: [
+      { contents: { a: dc(1, { pid: 10 }) }, steps: [{ can: { target: 'a', peers: ['a'] } }] },
+    ],
     note: 'alone in its process',
   },
   {
@@ -966,14 +1032,26 @@ const canCases: Case[] = [
     note: 'the one sharing it is already closed',
   },
   {
-    args: [{ contents: { a: dc(1, { destroyed: true, pid: 10 }) }, steps: [{ can: { target: 'a', peers: [] } }] }],
+    args: [
+      {
+        contents: { a: dc(1, { destroyed: true, pid: 10 }) },
+        steps: [{ can: { target: 'a', peers: [] } }],
+      },
+    ],
     note: 'a destroyed target',
   },
-  { args: [{ contents: { a: dc(1) }, steps: [{ can: { target: 'a', peers: [] } }] }], note: 'no process id' },
+  {
+    args: [{ contents: { a: dc(1) }, steps: [{ can: { target: 'a', peers: [] } }] }],
+    note: 'no process id',
+  },
   {
     args: [
       {
-        contents: { a: dc(1, { pid: 10 }), b: dc(2, { pid: 11 }), c: dc(3, { pid: 10, destroyed: true }) },
+        contents: {
+          a: dc(1, { pid: 10 }),
+          b: dc(2, { pid: 11 }),
+          c: dc(3, { pid: 10, destroyed: true }),
+        },
         steps: [{ can: { target: 'a', peers: ['b', 'c', 'a'] } }],
       },
     ],
@@ -1093,25 +1171,45 @@ const stepCases = cases(
 
 const applyScaleCases: Case[] = [
   { args: [{ scale: 1.25, destroyed: false, rejects: false }] },
-  { args: [{ scale: 3, destroyed: false, rejects: true }], note: 'clamped; a renderer torn down mid-call' },
+  {
+    args: [{ scale: 3, destroyed: false, rejects: true }],
+    note: 'clamped; a renderer torn down mid-call',
+  },
   { args: [{ scale: 1.1, destroyed: true }], note: 'destroyed: nothing runs' },
   { args: [{ scale: 0.1, destroyed: false }], note: 'clamped up' },
 ]
 
 const applyAllCases: Case[] = [
-  { args: [{ scale: 1.5, contents: [{}, { destroyed: true }, { rejects: true }] }], note: 'the live ones get it' },
+  {
+    args: [{ scale: 1.5, contents: [{}, { destroyed: true }, { rejects: true }] }],
+    note: 'the live ones get it',
+  },
   { args: [{ scale: 1.1, contents: [] }], note: 'no webContents' },
   { args: [{ scale: 7, contents: [{ destroyed: true }] }], note: 'only a destroyed one' },
 ]
 
 const setScaleCases: Case[] = [
   {
-    args: [{ path: '$DIR/settings.json', scale: 1.25, contents: [{}, { destroyed: true }], listeners: 2 }],
+    args: [
+      {
+        path: '$DIR/settings.json',
+        scale: 1.25,
+        contents: [{}, { destroyed: true }],
+        listeners: 2,
+      },
+    ],
     files: SCALE_FILE(1),
     note: 'persisted, applied, announced',
   },
-  { args: [{ path: '$DIR/settings.json', scale: 9, listeners: 1 }], note: 'clamped before it is stored' },
-  { args: [{ path: '$DIR/settings.json', scale: 0, contents: [{}] }], files: SCALE_FILE(1.5), note: 'clamped up' },
+  {
+    args: [{ path: '$DIR/settings.json', scale: 9, listeners: 1 }],
+    note: 'clamped before it is stored',
+  },
+  {
+    args: [{ path: '$DIR/settings.json', scale: 0, contents: [{}] }],
+    files: SCALE_FILE(1.5),
+    note: 'clamped up',
+  },
   {
     args: [{ path: '$DIR/missing/settings.json', scale: 1.25, contents: [{}], listeners: 1 }],
     note: 'unwritable: nothing is applied, nobody is told',
@@ -1119,18 +1217,45 @@ const setScaleCases: Case[] = [
 ]
 
 const changeScaleCases: Case[] = [
-  { args: [{ path: '$DIR/settings.json', direction: 1, contents: [{}], listeners: 1 }], files: SCALE_FILE(1.1) },
-  { args: [{ path: '$DIR/settings.json', direction: -1, contents: [{}] }], files: SCALE_FILE(1.25) },
-  { args: [{ path: '$DIR/settings.json', direction: 0, contents: [{}], listeners: 1 }], files: SCALE_FILE(1.5), note: 'reset' },
+  {
+    args: [{ path: '$DIR/settings.json', direction: 1, contents: [{}], listeners: 1 }],
+    files: SCALE_FILE(1.1),
+  },
+  {
+    args: [{ path: '$DIR/settings.json', direction: -1, contents: [{}] }],
+    files: SCALE_FILE(1.25),
+  },
+  {
+    args: [{ path: '$DIR/settings.json', direction: 0, contents: [{}], listeners: 1 }],
+    files: SCALE_FILE(1.5),
+    note: 'reset',
+  },
   { args: [{ path: '$DIR/settings.json', direction: 1, contents: [] }], note: 'no file: from 1' },
-  { args: [{ path: '$DIR/settings.json', direction: 1, contents: [] }], files: SCALE_FILE(1.5), note: 'already at the top' },
-  { args: [{ path: '$DIR/settings.json', direction: -1, contents: [] }], files: SCALE_FILE(1), note: 'already at the bottom' },
-  { args: [{ path: '$DIR/missing/settings.json', direction: 1, listeners: 1 }], note: 'unwritable' },
+  {
+    args: [{ path: '$DIR/settings.json', direction: 1, contents: [] }],
+    files: SCALE_FILE(1.5),
+    note: 'already at the top',
+  },
+  {
+    args: [{ path: '$DIR/settings.json', direction: -1, contents: [] }],
+    files: SCALE_FILE(1),
+    note: 'already at the bottom',
+  },
+  {
+    args: [{ path: '$DIR/missing/settings.json', direction: 1, listeners: 1 }],
+    note: 'unwritable',
+  },
 ]
 
 const listenerCases: Case[] = [
-  { args: [{ path: '$DIR/settings.json', scale: 1.1, listeners: 3 }], note: 'three listeners, in order' },
-  { args: [{ path: '$DIR/settings.json', scale: 2, listeners: 1 }], note: 'one, with the clamped scale' },
+  {
+    args: [{ path: '$DIR/settings.json', scale: 1.1, listeners: 3 }],
+    note: 'three listeners, in order',
+  },
+  {
+    args: [{ path: '$DIR/settings.json', scale: 2, listeners: 1 }],
+    note: 'one, with the clamped scale',
+  },
   { args: [{ path: '$DIR/settings.json', scale: 1.1, listeners: 0 }], note: 'none' },
 ]
 
@@ -1229,11 +1354,31 @@ const lowMemoryCases = cases(
   [0, 0],
   [511.9, 100],
 )
-const heapShortCases = cases([850, 1000], [851, 1000], [10, 0], [0, 0], [4000, 4144], [3523, 4144], [3524, 4144])
+const heapShortCases = cases(
+  [850, 1000],
+  [851, 1000],
+  [10, 0],
+  [0, 0],
+  [4000, 4144],
+  [3523, 4144],
+  [3524, 4144],
+)
 
-const crashPathCases = cases([{ userData: '/home/u/data' }], [{ userData: 'C:\\Users\\u\\AppData' }], [{ userData: '' }])
+const crashPathCases = cases(
+  [{ userData: '/home/u/data' }],
+  [{ userData: 'C:\\Users\\u\\AppData' }],
+  [{ userData: '' }],
+)
 
-const promptCases = cases(['clean-exit'], ['killed'], ['crashed'], ['oom'], ['launch-failed'], ['abnormal-exit'], [''])
+const promptCases = cases(
+  ['clean-exit'],
+  ['killed'],
+  ['crashed'],
+  ['oom'],
+  ['launch-failed'],
+  ['abnormal-exit'],
+  [''],
+)
 
 type ErrSpec = { error: { name?: string; code?: unknown; message?: string } } | { value: unknown }
 
@@ -1296,7 +1441,8 @@ async function runLowMemory(o: LowScenario, cx: TsContext): Promise<void> {
             o.probe === 'given'
               ? () => {
                   cx.log('probe')
-                  if (state.probe === 'throws' || state.probe === undefined) throw new Error('probe failed')
+                  if (state.probe === 'throws' || state.probe === undefined)
+                    throw new Error('probe failed')
                   return state.probe
                 }
               : undefined,
@@ -1333,29 +1479,74 @@ const lowMemoryScenarios: Case[] = [
         userData: '$DIR',
         probe: 'given',
         memory: 'ok',
-        steps: [{ clock: 1e6, probe: SHORT_PC }, { clock: 1e6 + COOL - 1, probe: SHORT_PC }, { clock: 1e6 + COOL, probe: SHORT_HEAP }],
+        steps: [
+          { clock: 1e6, probe: SHORT_PC },
+          { clock: 1e6 + COOL - 1, probe: SHORT_PC },
+          { clock: 1e6 + COOL, probe: SHORT_HEAP },
+        ],
       },
     ],
     note: 'a line; the cooldown holds the second; then a heap line',
   },
   {
-    args: [{ userData: '$DIR', probe: 'given', memory: 'ok', steps: [{ clock: 5, probe: FINE }, { clock: 6, probe: SHORT_HEAP }] }],
+    args: [
+      {
+        userData: '$DIR',
+        probe: 'given',
+        memory: 'ok',
+        steps: [
+          { clock: 5, probe: FINE },
+          { clock: 6, probe: SHORT_HEAP },
+        ],
+      },
+    ],
     note: 'nothing short; then the heap',
   },
   {
-    args: [{ userData: '$DIR', probe: 'given', memory: 'throws', steps: [{ clock: 5, probe: SHORT_PC }, { clock: 6, probe: SHORT_PC }] }],
+    args: [
+      {
+        userData: '$DIR',
+        probe: 'given',
+        memory: 'throws',
+        steps: [
+          { clock: 5, probe: SHORT_PC },
+          { clock: 6, probe: SHORT_PC },
+        ],
+      },
+    ],
     note: 'the figures throw: best effort, the cooldown was already taken',
   },
   {
-    args: [{ userData: '$DIR', probe: 'given', memory: 'ok', steps: [{ clock: 5, probe: 'throws' }, { clock: 6, probe: SHORT_PC }] }],
+    args: [
+      {
+        userData: '$DIR',
+        probe: 'given',
+        memory: 'ok',
+        steps: [
+          { clock: 5, probe: 'throws' },
+          { clock: 6, probe: SHORT_PC },
+        ],
+      },
+    ],
     note: 'the probe throws once',
   },
   {
-    args: [{ userData: '$DIR', probe: 'given', memory: 'ok', sampleMs: 1000, cooldownMs: 10, steps: [{ clock: 100, probe: SHORT_PC }, { clock: 111, probe: SHORT_PC }, { stop: true }] }],
+    args: [
+      {
+        userData: '$DIR',
+        probe: 'given',
+        memory: 'ok',
+        sampleMs: 1000,
+        cooldownMs: 10,
+        steps: [{ clock: 100, probe: SHORT_PC }, { clock: 111, probe: SHORT_PC }, { stop: true }],
+      },
+    ],
     note: 'options of its own, then stopped',
   },
   {
-    args: [{ userData: '$DIR', probe: 'stock', memory: 'ok', steps: [{ clock: 1 }, { clock: 2e6 }] }],
+    args: [
+      { userData: '$DIR', probe: 'stock', memory: 'ok', steps: [{ clock: 1 }, { clock: 2e6 }] },
+    ],
     note: 'the stock probe over the machine: plenty free',
   },
   {
@@ -1455,7 +1646,9 @@ async function runCrashWatch(o: CrashScenario, cx: TsContext): Promise<void> {
         else cx.log('box', given[0])
         return new Promise((resolve, reject) =>
           pending.push((answer) =>
-            answer === 'reject' ? reject(new Error('dialog failed')) : resolve({ response: answer }),
+            answer === 'reject'
+              ? reject(new Error('dialog failed'))
+              : resolve({ response: answer }),
           ),
         )
       },
@@ -1558,7 +1751,9 @@ const scenario = (extra: Partial<CrashScenario>): CrashScenario => ({
   events: [],
   ...extra,
 })
-const render = (wc: string, reason: string, exitCode = 1): CrashEvent => ({ render: { wc, reason, exitCode } })
+const render = (wc: string, reason: string, exitCode = 1): CrashEvent => ({
+  render: { wc, reason, exitCode },
+})
 
 const crashScenarios: Case[] = [
   {
@@ -1608,7 +1803,12 @@ const crashScenarios: Case[] = [
     note: 'a renderer the shell ended on purpose',
   },
   {
-    args: [scenario({ wcs: { a: cw(1, { editor: 'throws' }) }, events: [render('a', 'oom'), { answer: 0 }] })],
+    args: [
+      scenario({
+        wcs: { a: cw(1, { editor: 'throws' }) },
+        events: [render('a', 'oom'), { answer: 0 }],
+      }),
+    ],
     note: 'the editor cannot be told: other; the answer 0 reopens',
   },
   {
@@ -1632,7 +1832,13 @@ const crashScenarios: Case[] = [
   {
     args: [
       scenario({
-        wcs: { a: cw(1, { doc: { kind: 'docs', title: 'Untitled 1' }, untitled: 'copy', editor: 'docs' }) },
+        wcs: {
+          a: cw(1, {
+            doc: { kind: 'docs', title: 'Untitled 1' },
+            untitled: 'copy',
+            editor: 'docs',
+          }),
+        },
         events: [render('a', 'crashed'), { answer: 0 }],
       }),
     ],
@@ -1688,7 +1894,11 @@ const crashScenarios: Case[] = [
   {
     args: [
       scenario({
-        wcs: { a: cw(1, { parent: 'live' }), b: cw(2, { parent: 'destroyed' }), c: cw(3, { parent: 'throws' }) },
+        wcs: {
+          a: cw(1, { parent: 'live' }),
+          b: cw(2, { parent: 'destroyed' }),
+          c: cw(3, { parent: 'throws' }),
+        },
         events: [
           render('a', 'crashed'),
           render('b', 'crashed'),
@@ -1704,7 +1914,12 @@ const crashScenarios: Case[] = [
   {
     args: [
       scenario({
-        events: [render('a', 'crashed'), render('a', 'crashed'), { answer: 'reject' }, render('a', 'crashed')],
+        events: [
+          render('a', 'crashed'),
+          render('a', 'crashed'),
+          { answer: 'reject' },
+          render('a', 'crashed'),
+        ],
       }),
     ],
     note: 'a second crash while the box is up is not asked again; a failed box frees the renderer',
@@ -1846,7 +2061,9 @@ async function runWatchdog(o: DogScenario, cx: TsContext): Promise<void> {
         else cx.log('box', given[0])
         return new Promise((resolve, reject) =>
           pending.push((answer) =>
-            answer === 'reject' ? reject(new Error('dialog failed')) : resolve({ response: answer }),
+            answer === 'reject'
+              ? reject(new Error('dialog failed'))
+              : resolve({ response: answer }),
           ),
         )
       },
@@ -1879,7 +2096,7 @@ async function runWatchdog(o: DogScenario, cx: TsContext): Promise<void> {
   }
   syncBuiltinESMExports()
   const settle = async (): Promise<void> => {
-    for (let quiet = 0; quiet < 3; ) {
+    for (let quiet = 0; quiet < 3;) {
       await tick(1)
       quiet = inflight.n === 0 ? quiet + 1 : 0
     }
@@ -1934,7 +2151,12 @@ const dogWc = (id: number, extra: Partial<DogWc> = {}): DogWc => ({
   url: `genoffice-app://docs/index.html?tab=${id}`,
   ...extra,
 })
-const hot = (pid: number, cpu?: number, memKB = 3 * 1024 * 1024): DogMetric => ({ pid, type: 'Tab', memKB, cpu })
+const hot = (pid: number, cpu?: number, memKB = 3 * 1024 * 1024): DogMetric => ({
+  pid,
+  type: 'Tab',
+  memKB,
+  cpu,
+})
 const dog = (extra: Partial<DogScenario>): DogScenario => ({
   userData: '$DIR',
   totalMem: 16 * 1024 * MBYTES,
@@ -2108,9 +2330,7 @@ const watchdogCases: Case[] = [
       dog({
         wcs: { a: dogWc(1, { destroyed: true }) },
         options: { hotSamplesBeforeReport: 1, profileMs: 0 },
-        steps: [
-          sampleAt(T0, [hot(101), { pid: 555, type: 'GPU', memKB: 9e9 }, hot(999)]),
-        ],
+        steps: [sampleAt(T0, [hot(101), { pid: 555, type: 'GPU', memKB: 9e9 }, hot(999)])],
       }),
     ],
     note: 'only Tab metrics of a live view count',
@@ -2211,9 +2431,17 @@ const RECOVERY_FAKES: Record<string, string[]> = {
   'slides-main': ['slidesRecoveryIdentity'],
   'markdown-main': ['markdownRecoveryIdentity', 'setMarkdownRecoveryTitleSource'],
   'html-main': ['htmlRecoveryIdentity', 'setHtmlRecoveryTitleSource'],
-  'mindmap-main': ['discardMindmapRecovery', 'mindmapRecoveryIdentity', 'setMindmapRecoveryTitleHook'],
+  'mindmap-main': [
+    'discardMindmapRecovery',
+    'mindmapRecoveryIdentity',
+    'setMindmapRecoveryTitleHook',
+  ],
   'hwp-main': ['hwpDiscardRecoveryCopy', 'hwpRecoveryIdentity', 'setHwpRecoveryTitle'],
-  'diagram-main': ['diagramRecoveryIdentity', 'discardDiagramRecovery', 'setDiagramRecoveryTitleHook'],
+  'diagram-main': [
+    'diagramRecoveryIdentity',
+    'discardDiagramRecovery',
+    'setDiagramRecoveryTitleHook',
+  ],
   'tab-manager': ['createPlainEditorView'],
   'launch-recovery': ['planLaunch', 'resolveLaunchDecisions'],
 }
@@ -2286,7 +2514,15 @@ type RecStep =
   | { identity: { kind: string; contents: string } }
   | { tabCopy: { tab: { id: string; filePath?: string }; kind: string; contents: string | null } }
   | { crashedCopy: { tab: { id?: string; kind: string; filePath?: string }; contents: string } }
-  | { opener: { planned: PlannedJson; kind: string; title: string; filePath?: string; call: 'open' | 'needsUser' } }
+  | {
+      opener: {
+        planned: PlannedJson
+        kind: string
+        title: string
+        filePath?: string
+        call: 'open' | 'needsUser'
+      }
+    }
   | { reopen: { kind: string; title: string; copy: IdentityJson } }
   | { discard: { kind: string; contents: string } }
   | { titles: true }
@@ -2308,7 +2544,8 @@ interface RecScenario {
   blocked?: boolean
   launchPaths?: string[]
   reopenedByInstaller?: boolean
-  plan?: { restoreRun: boolean; plainLaunch: boolean; tabs: PlannedJson[]; items: unknown[] } | 'throws'
+  plan?:
+    { restoreRun: boolean; plainLaunch: boolean; tabs: PlannedJson[]; items: unknown[] } | 'throws'
   outcome?: OutcomeJson
   managerThrows?: string[]
   depsThrow?: string[]
@@ -2326,9 +2563,14 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   let nextTab = 0
   let nextView = 0
   const specs: Record<string, { kind: string; title: string; filePath?: string; opener: any }> = {}
-  const strip: { id: string; kind: string; title: string; filePath?: string }[] = (o.strip ?? []).map(
-    (t) => ({ id: tid(t.id), kind: t.kind, title: t.title, ...(t.filePath ? { filePath: t.filePath } : {}) }),
-  )
+  const strip: { id: string; kind: string; title: string; filePath?: string }[] = (
+    o.strip ?? []
+  ).map((t) => ({
+    id: tid(t.id),
+    kind: t.kind,
+    title: t.title,
+    ...(t.filePath ? { filePath: t.filePath } : {}),
+  }))
   let split = false
   let gateApply: Fn | undefined
   const contents = Object.fromEntries(
@@ -2337,16 +2579,22 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
       { name, id: spec.id, isDestroyed: () => spec.destroyed ?? false },
     ]),
   )
-  const nameOfId = (id: number): string => Object.values(contents).find((c) => c.id === id)?.name ?? `#${id}`
+  const nameOfId = (id: number): string =>
+    Object.values(contents).find((c) => c.id === id)?.name ?? `#${id}`
   const throwIf = (list: string[] | undefined, method: string): void => {
     if (list?.includes(method)) throw new Error(`${method} failed`)
   }
-  const identityFor = (editor: string) => (arg: unknown): unknown => {
-    cx.log(`${editor}RecoveryIdentity`, typeof arg === 'number' ? nameOfId(arg) : (arg as { name: string }).name)
-    const answer = o.identities?.[editor]
-    if (answer === 'throws') throw new Error(`${editor} identity failed`)
-    return answer ?? null
-  }
+  const identityFor =
+    (editor: string) =>
+    (arg: unknown): unknown => {
+      cx.log(
+        `${editor}RecoveryIdentity`,
+        typeof arg === 'number' ? nameOfId(arg) : (arg as { name: string }).name,
+      )
+      const answer = o.identities?.[editor]
+      if (answer === 'throws') throw new Error(`${editor} identity failed`)
+      return answer ?? null
+    }
   const view = (): { webContents: { id: number } } => ({ webContents: { id: 900 + ++nextView } })
   const summary = (s: { kind: string; title: string; filePath?: string }) => ({
     kind: s.kind,
@@ -2354,22 +2602,32 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
     ...(s.filePath ? { filePath: s.filePath } : {}),
   })
   const manager = {
-    hydrateSession: (arg: { tabs: typeof specs[string][] }) => {
+    hydrateSession: (arg: { tabs: (typeof specs)[string][] }) => {
       throwIf(o.managerThrows, 'hydrateSession')
       cx.log('hydrateSession', arg.tabs.map(summary))
       return arg.tabs.map((spec) => {
         const id = tid(`t${++nextTab}`)
         specs[id] = spec
-        strip.push({ id, kind: spec.kind, title: spec.title, ...(spec.filePath ? { filePath: spec.filePath } : {}) })
+        strip.push({
+          id,
+          kind: spec.kind,
+          title: spec.title,
+          ...(spec.filePath ? { filePath: spec.filePath } : {}),
+        })
         return id
       })
     },
-    addUnloadedTab: (spec: typeof specs[string]) => {
+    addUnloadedTab: (spec: (typeof specs)[string]) => {
       throwIf(o.managerThrows, 'addUnloadedTab')
       cx.log('addUnloadedTab', summary(spec))
       const id = tid(`t${++nextTab}`)
       specs[id] = spec
-      strip.push({ id, kind: spec.kind, title: spec.title, ...(spec.filePath ? { filePath: spec.filePath } : {}) })
+      strip.push({
+        id,
+        kind: spec.kind,
+        title: spec.title,
+        ...(spec.filePath ? { filePath: spec.filePath } : {}),
+      })
       return id
     },
     activateTab: (id: string) => {
@@ -2440,7 +2698,17 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   }
   const openerDeps = { blocked: () => deps.gate.blocking(), afterSheetsOpen: deps.afterSheetsOpen }
   const f = recoveryBox.fns
-  for (const editor of ['docs', 'sheets', 'pdf', 'markdown', 'html', 'mindmap', 'hwp', 'slides', 'diagram']) {
+  for (const editor of [
+    'docs',
+    'sheets',
+    'pdf',
+    'markdown',
+    'html',
+    'mindmap',
+    'hwp',
+    'slides',
+    'diagram',
+  ]) {
     f[`${editor}RecoveryIdentity`] = identityFor(editor)
   }
   for (const [fn, label] of [
@@ -2474,9 +2742,18 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   ]) {
     f[fn] = (titleOf: unknown) => cx.log(fn, typeof titleOf)
   }
-  f.setHwpRecoveryTitle = (c: { name: string }, title: string) => cx.log('setHwpRecoveryTitle', c.name, title)
-  f.planLaunch = (input: { judgment: unknown; previous: { status: string }; launchPaths: string[] }) => {
-    cx.log('planLaunch', { judgment: input.judgment, previous: input.previous.status, launchPaths: input.launchPaths })
+  f.setHwpRecoveryTitle = (c: { name: string }, title: string) =>
+    cx.log('setHwpRecoveryTitle', c.name, title)
+  f.planLaunch = (input: {
+    judgment: unknown
+    previous: { status: string }
+    launchPaths: string[]
+  }) => {
+    cx.log('planLaunch', {
+      judgment: input.judgment,
+      previous: input.previous.status,
+      launchPaths: input.launchPaths,
+    })
     if (o.plan === 'throws') throw new Error('planLaunch failed')
     return o.plan
   }
@@ -2510,7 +2787,8 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   const realSetTimeout = globalThis.setTimeout
   // the recorder's timers never fire in a case
   globalThis.setTimeout = (() => ({ unref() {} })) as never
-  const contentsOf = (name: string | null): never => (name === null ? undefined : contents[name]) as never
+  const contentsOf = (name: string | null): never =>
+    (name === null ? undefined : contents[name]) as never
   const planned = (p: PlannedJson): never => p as never
   const results: unknown[] = []
   try {
@@ -2518,11 +2796,20 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
       for (const step of o.steps) {
         try {
           if ('identity' in step) {
-            results.push(recovery.editorRecoveryIdentity(step.identity.kind as never, contentsOf(step.identity.contents)) ?? null)
+            results.push(
+              recovery.editorRecoveryIdentity(
+                step.identity.kind as never,
+                contentsOf(step.identity.contents),
+              ) ?? null,
+            )
           } else if ('tabCopy' in step) {
             const { tab, kind, contents: name } = step.tabCopy
             results.push(
-              recovery.tabUntitledCopy({ ...tab, id: tid(tab.id) }, kind as never, contentsOf(name)) ?? null,
+              recovery.tabUntitledCopy(
+                { ...tab, id: tid(tab.id) },
+                kind as never,
+                contentsOf(name),
+              ) ?? null,
             )
           } else if ('crashedCopy' in step) {
             const { tab, contents: name } = step.crashedCopy
@@ -2538,7 +2825,10 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
             const context = { kind, title, ...(filePath ? { filePath } : {}) } as never
             if (which === 'open') {
               try {
-                results.push({ opened: (opener.open(context) as { view: { webContents: { id: number } } }).view.webContents.id })
+                results.push({
+                  opened: (opener.open(context) as { view: { webContents: { id: number } } }).view
+                    .webContents.id,
+                })
               } catch (error) {
                 results.push({ threw: (error as Error).message })
               }
@@ -2546,10 +2836,19 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
               results.push({ needsUser: await opener.needsUser?.(context) })
             }
           } else if ('reopen' in step) {
-            recovery.reopenUntitledCopy(manager as never, step.reopen.kind as never, step.reopen.title, step.reopen.copy as never, openerDeps)
+            recovery.reopenUntitledCopy(
+              manager as never,
+              step.reopen.kind as never,
+              step.reopen.title,
+              step.reopen.copy as never,
+              openerDeps,
+            )
             results.push(null)
           } else if ('discard' in step) {
-            recovery.discardEditorRecovery(step.discard.kind as never, contentsOf(step.discard.contents))
+            recovery.discardEditorRecovery(
+              step.discard.kind as never,
+              contentsOf(step.discard.contents),
+            )
             results.push(null)
           } else if ('titles' in step) {
             recovery.installRecoveryTitleSources((c: unknown) => String(c) as never)
@@ -2566,14 +2865,24 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
           } else if ('openTab' in step) {
             const spec = specs[tid(step.openTab)]
             try {
-              const loaded = spec.opener.open({ kind: spec.kind, title: spec.title, filePath: spec.filePath })
+              const loaded = spec.opener.open({
+                kind: spec.kind,
+                title: spec.title,
+                filePath: spec.filePath,
+              })
               results.push({ opened: loaded.view.webContents.id })
             } catch (error) {
               results.push({ threw: (error as Error).message })
             }
           } else {
             const spec = specs[tid(step.needsUserTab)]
-            results.push({ needsUser: await spec.opener.needsUser?.({ kind: spec.kind, title: spec.title, filePath: spec.filePath }) })
+            results.push({
+              needsUser: await spec.opener.needsUser?.({
+                kind: spec.kind,
+                title: spec.title,
+                filePath: spec.filePath,
+              }),
+            })
           }
         } catch (error) {
           results.push({ error: (error as Error).message })
@@ -2589,7 +2898,11 @@ async function runRecovery(o: RecScenario, cx: TsContext): Promise<unknown[]> {
   return results
 }
 
-const uid = (id: string, kind = 'docs', ext = '.docx'): IdentityJson => ({ kind, untitledId: id, ext })
+const uid = (id: string, kind = 'docs', ext = '.docx'): IdentityJson => ({
+  kind,
+  untitledId: id,
+  ext,
+})
 const fid = (path: string, kind = 'docs'): IdentityJson => ({ kind, filePath: path })
 const rc = (id: number, extra: Partial<RecContents> = {}): RecContents => ({ id, ...extra })
 const COPY = (id: string, kind = 'docs', ext = '.docx'): Record<string, string> => ({
@@ -2602,16 +2915,41 @@ const file = (key: string, kind: string, title: string, filePath?: string): Plan
   ...(filePath ? { filePath } : {}),
   open: { type: 'file' },
 })
-const copyTab = (key: string, kind: string, title: string, copy: IdentityJson, saveAs?: string): PlannedJson => ({
+const copyTab = (
+  key: string,
+  kind: string,
+  title: string,
+  copy: IdentityJson,
+  saveAs?: string,
+): PlannedJson => ({
   key,
   kind,
   title,
   open: { type: 'untitledCopy', copy, ...(saveAs ? { saveAsDefaultPath: saveAs } : {}) },
 })
-const rec = (extra: Partial<RecScenario> & { steps: RecStep[] }): RecScenario => ({ userData: '$DIR', contents: { c: rc(1), d: rc(2) }, ...extra })
-const OUTCOME_NONE: OutcomeJson = { storeDecisions: [], remove: [], replace: [], append: [], launchPaths: [], splitMemoryOrHome: false }
+const rec = (extra: Partial<RecScenario> & { steps: RecStep[] }): RecScenario => ({
+  userData: '$DIR',
+  contents: { c: rc(1), d: rc(2) },
+  ...extra,
+})
+const OUTCOME_NONE: OutcomeJson = {
+  storeDecisions: [],
+  remove: [],
+  replace: [],
+  append: [],
+  launchPaths: [],
+  splitMemoryOrHome: false,
+}
 const SESSION = (tabs: unknown[], extra: Record<string, unknown> = {}): string =>
-  JSON.stringify({ version: 1, cleanExit: false, startedAt: 1000, restoreRun: false, pastStartup: true, tabs, ...extra })
+  JSON.stringify({
+    version: 1,
+    cleanExit: false,
+    startedAt: 1000,
+    restoreRun: false,
+    pastStartup: true,
+    tabs,
+    ...extra,
+  })
 const idKinds = {
   docs: fid('/a.docx'),
   sheets: uid('s1', 'sheets', '.xlsx'),
@@ -2650,7 +2988,13 @@ const identityCases: Case[] = [
     note: 'a throwing editor, no answer, and kinds with no editor',
   },
   {
-    args: [rec({ contents: { c: rc(1, { destroyed: true }) }, identities: idKinds, steps: [{ identity: { kind: 'docs', contents: 'c' } }] })],
+    args: [
+      rec({
+        contents: { c: rc(1, { destroyed: true }) },
+        identities: idKinds,
+        steps: [{ identity: { kind: 'docs', contents: 'c' } }],
+      }),
+    ],
     note: 'a destroyed webContents is not asked',
   },
 ]
@@ -2676,7 +3020,13 @@ const tabCopyCases: Case[] = [
         steps: [
           { reopen: { kind: 'docs', title: 'Untitled', copy: uid('u9') } },
           { tabCopy: { tab: { id: 't1' }, kind: 'docs', contents: null } },
-          { tabCopy: { tab: { id: 't1', filePath: '/now/saved.docx' }, kind: 'docs', contents: null } },
+          {
+            tabCopy: {
+              tab: { id: 't1', filePath: '/now/saved.docx' },
+              kind: 'docs',
+              contents: null,
+            },
+          },
           { tabCopy: { tab: { id: 'other' }, kind: 'docs', contents: 'c' } },
         ],
       }),
@@ -2684,7 +3034,13 @@ const tabCopyCases: Case[] = [
     note: 'a restored tab not loaded yet answers with the copy it was restored from, until it has a file',
   },
   {
-    args: [rec({ contents: { c: rc(1, { destroyed: true }) }, identities: { docs: uid('u1') }, steps: [{ tabCopy: { tab: { id: 'a' }, kind: 'docs', contents: 'c' } }] })],
+    args: [
+      rec({
+        contents: { c: rc(1, { destroyed: true }) },
+        identities: { docs: uid('u1') },
+        steps: [{ tabCopy: { tab: { id: 'a' }, kind: 'docs', contents: 'c' } }],
+      }),
+    ],
     note: 'a destroyed webContents is not asked',
   },
 ]
@@ -2693,7 +3049,11 @@ const crashedCopyCases: Case[] = [
   {
     args: [
       rec({
-        identities: { docs: uid('u1'), pdf: uid('p1', 'pdf', '.pdf'), sheets: fid('/s.xlsx', 'sheets') },
+        identities: {
+          docs: uid('u1'),
+          pdf: uid('p1', 'pdf', '.pdf'),
+          sheets: fid('/s.xlsx', 'sheets'),
+        },
         steps: [
           { crashedCopy: { tab: { id: 'a', kind: 'docs' }, contents: 'c' } },
           { crashedCopy: { tab: { id: 'a', kind: 'pdf' }, contents: 'c' } },
@@ -2737,11 +3097,48 @@ const openerCases: Case[] = [
     args: [
       rec({
         steps: [
-          { opener: { planned: file('k', 'docs', 'A', '/a.docx'), kind: 'docs', title: 'A', filePath: '/a.docx', call: 'open' } },
-          { opener: { planned: file('k', 'sheets', 'S', '/s.xlsx'), kind: 'sheets', title: 'S', filePath: '/s.xlsx', call: 'open' } },
-          { opener: { planned: copyTab('k', 'docs', 'U', uid('u1')), kind: 'docs', title: 'U', call: 'open' } },
-          { opener: { planned: copyTab('k', 'pdf', 'P', uid('p1', 'pdf', '.pdf'), '/was/here.pdf'), kind: 'pdf', title: 'P', call: 'open' } },
-          { opener: { planned: copyTab('k', 'sheets', 'S2', uid('s1', 'sheets', '.xlsx')), kind: 'sheets', title: 'S2', call: 'open' } },
+          {
+            opener: {
+              planned: file('k', 'docs', 'A', '/a.docx'),
+              kind: 'docs',
+              title: 'A',
+              filePath: '/a.docx',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: file('k', 'sheets', 'S', '/s.xlsx'),
+              kind: 'sheets',
+              title: 'S',
+              filePath: '/s.xlsx',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'docs', 'U', uid('u1')),
+              kind: 'docs',
+              title: 'U',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'pdf', 'P', uid('p1', 'pdf', '.pdf'), '/was/here.pdf'),
+              kind: 'pdf',
+              title: 'P',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'sheets', 'S2', uid('s1', 'sheets', '.xlsx')),
+              kind: 'sheets',
+              title: 'S2',
+              call: 'open',
+            },
+          },
         ],
         contracts: ['docs', 'pdf', 'sheets'],
       }),
@@ -2754,10 +3151,40 @@ const openerCases: Case[] = [
         blocked: true,
         contracts: ['docs'],
         steps: [
-          { opener: { planned: file('k', 'docs', 'A', '/a.docx'), kind: 'docs', title: 'A', filePath: '/a.docx', call: 'open' } },
-          { opener: { planned: copyTab('k', 'docs', 'U', uid('u1')), kind: 'docs', title: 'U', call: 'open' } },
-          { opener: { planned: file('k', 'docs', 'A', '/a.docx'), kind: 'docs', title: 'A', filePath: '/a.docx', call: 'needsUser' } },
-          { opener: { planned: copyTab('k', 'docs', 'U', uid('u1')), kind: 'docs', title: 'U', call: 'needsUser' } },
+          {
+            opener: {
+              planned: file('k', 'docs', 'A', '/a.docx'),
+              kind: 'docs',
+              title: 'A',
+              filePath: '/a.docx',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'docs', 'U', uid('u1')),
+              kind: 'docs',
+              title: 'U',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: file('k', 'docs', 'A', '/a.docx'),
+              kind: 'docs',
+              title: 'A',
+              filePath: '/a.docx',
+              call: 'needsUser',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'docs', 'U', uid('u1')),
+              kind: 'docs',
+              title: 'U',
+              call: 'needsUser',
+            },
+          },
         ],
       }),
     ],
@@ -2769,9 +3196,30 @@ const openerCases: Case[] = [
         contracts: ['docs'],
         contractOpens: 'throws',
         steps: [
-          { opener: { planned: copyTab('k', 'docs', 'U', uid('u1')), kind: 'docs', title: 'U', call: 'open' } },
-          { opener: { planned: copyTab('k', 'slides', 'D', uid('d1', 'slides', '.pptx')), kind: 'slides', title: 'D', call: 'open' } },
-          { opener: { planned: copyTab('k', 'home', 'H', uid('h1', 'home', '.x')), kind: 'home', title: 'H', call: 'open' } },
+          {
+            opener: {
+              planned: copyTab('k', 'docs', 'U', uid('u1')),
+              kind: 'docs',
+              title: 'U',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'slides', 'D', uid('d1', 'slides', '.pptx')),
+              kind: 'slides',
+              title: 'D',
+              call: 'open',
+            },
+          },
+          {
+            opener: {
+              planned: copyTab('k', 'home', 'H', uid('h1', 'home', '.x')),
+              kind: 'home',
+              title: 'H',
+              call: 'open',
+            },
+          },
         ],
       }),
     ],
@@ -2782,7 +3230,16 @@ const openerCases: Case[] = [
       rec({
         contracts: ['docs'],
         contractOpens: 'rejects',
-        steps: [{ opener: { planned: copyTab('k', 'docs', 'U', uid('u1')), kind: 'docs', title: 'U', call: 'open' } }],
+        steps: [
+          {
+            opener: {
+              planned: copyTab('k', 'docs', 'U', uid('u1')),
+              kind: 'docs',
+              title: 'U',
+              call: 'open',
+            },
+          },
+        ],
       }),
     ],
     note: 'a rejecting contract is only warned about',
@@ -2791,9 +3248,32 @@ const openerCases: Case[] = [
     args: [
       rec({
         steps: [
-          { opener: { planned: file('k', 'docs', 'A'), kind: 'docs', title: 'A', call: 'needsUser' } },
-          { opener: { planned: file('k', 'home', 'H', '/h'), kind: 'home', title: 'H', filePath: '/h', call: 'needsUser' } },
-          { opener: { planned: file('k', 'docs', 'A', '/a.docx'), kind: 'docs', title: 'A', filePath: '/a.docx', call: 'needsUser' } },
+          {
+            opener: {
+              planned: file('k', 'docs', 'A'),
+              kind: 'docs',
+              title: 'A',
+              call: 'needsUser',
+            },
+          },
+          {
+            opener: {
+              planned: file('k', 'home', 'H', '/h'),
+              kind: 'home',
+              title: 'H',
+              filePath: '/h',
+              call: 'needsUser',
+            },
+          },
+          {
+            opener: {
+              planned: file('k', 'docs', 'A', '/a.docx'),
+              kind: 'docs',
+              title: 'A',
+              filePath: '/a.docx',
+              call: 'needsUser',
+            },
+          },
         ],
       }),
     ],
@@ -2803,11 +3283,24 @@ const openerCases: Case[] = [
 
 const reopenCases: Case[] = [
   {
-    args: [rec({ contracts: ['docs'], steps: [{ reopen: { kind: 'docs', title: 'Untitled 3', copy: uid('u3') } }, { openTab: 't1' }] })],
+    args: [
+      rec({
+        contracts: ['docs'],
+        steps: [
+          { reopen: { kind: 'docs', title: 'Untitled 3', copy: uid('u3') } },
+          { openTab: 't1' },
+        ],
+      }),
+    ],
     note: 'a new tab that opens the copy',
   },
   {
-    args: [rec({ managerThrows: ['addUnloadedTab'], steps: [{ reopen: { kind: 'docs', title: 'X', copy: uid('u3') } }] })],
+    args: [
+      rec({
+        managerThrows: ['addUnloadedTab'],
+        steps: [{ reopen: { kind: 'docs', title: 'X', copy: uid('u3') } }],
+      }),
+    ],
     note: 'the manager throws out of the call',
   },
 ]
@@ -2816,14 +3309,31 @@ const discardCases: Case[] = [
   {
     args: [
       rec({
-        steps: ['docs', 'sheets', 'pdf', 'mindmap', 'hwp', 'diagram', 'slides', 'markdown', 'html', 'home'].map(
-          (kind): RecStep => ({ discard: { kind, contents: 'c' } }),
-        ),
+        steps: [
+          'docs',
+          'sheets',
+          'pdf',
+          'mindmap',
+          'hwp',
+          'diagram',
+          'slides',
+          'markdown',
+          'html',
+          'home',
+        ].map((kind): RecStep => ({ discard: { kind, contents: 'c' } })),
       }),
     ],
     note: 'six editors discard their copy; the others have nothing to do',
   },
-  { args: [rec({ contents: { c: rc(1, { destroyed: true }) }, steps: [{ discard: { kind: 'docs', contents: 'c' } }] })], note: 'destroyed' },
+  {
+    args: [
+      rec({
+        contents: { c: rc(1, { destroyed: true }) },
+        steps: [{ discard: { kind: 'docs', contents: 'c' } }],
+      }),
+    ],
+    note: 'destroyed',
+  },
 ]
 
 const titleCases: Case[] = [{ args: [rec({ steps: [{ titles: true }] })] }]
@@ -2859,7 +3369,12 @@ const LAUNCH_PLAN = (extra: Partial<NonNullable<Exclude<RecScenario['plan'], 'th
 
 const launchCases: Case[] = [
   {
-    args: [rec({ plan: { restoreRun: false, plainLaunch: true, tabs: [], items: [] }, steps: [{ launch: true }] })],
+    args: [
+      rec({
+        plan: { restoreRun: false, plainLaunch: true, tabs: [], items: [] },
+        steps: [{ launch: true }],
+      }),
+    ],
     note: 'no previous record: a plain launch, Home or the remembered split',
   },
   {
@@ -2876,11 +3391,20 @@ const launchCases: Case[] = [
     args: [
       rec({
         plan: LAUNCH_PLAN({ items: [] }),
-        outcome: { ...OUTCOME_NONE, front: 'k1', split: { a: 'k1', b: 'k2', orientation: 'row', ratio: 0.4, focus: 'a' }, launchPaths: [], splitMemoryOrHome: false },
+        outcome: {
+          ...OUTCOME_NONE,
+          front: 'k1',
+          split: { a: 'k1', b: 'k2', orientation: 'row', ratio: 0.4, focus: 'a' },
+          launchPaths: [],
+          splitMemoryOrHome: false,
+        },
         steps: [{ launch: true }, { openTab: 't1' }, { openTab: 't2' }],
       }),
     ],
-    files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]), 'docs-autosave/untitled/u1.docx': 'x' },
+    files: {
+      'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]),
+      'docs-autosave/untitled/u1.docx': 'x',
+    },
     note: 'an abnormal exit with nothing to ask: tabs come back, the front one and the split are laid out',
   },
   {
@@ -2902,7 +3426,12 @@ const launchCases: Case[] = [
           splitMemoryOrHome: true,
         },
         blocked: true,
-        steps: [{ launch: true }, { needsUserTab: 't1' }, { answer: { decisions: { r1: 'restore' } } }, { openTab: 't3' }],
+        steps: [
+          { launch: true },
+          { needsUserTab: 't1' },
+          { answer: { decisions: { r1: 'restore' } } },
+          { openTab: 't3' },
+        ],
       }),
     ],
     files: { 'session-record.json': SESSION([{ kind: 'docs', title: 'A', filePath: '/a.docx' }]) },
@@ -2912,7 +3441,12 @@ const launchCases: Case[] = [
     args: [
       rec({
         plan: LAUNCH_PLAN({ items: [{ id: 'r1', title: 'A' }] }),
-        outcome: { ...OUTCOME_NONE, remove: ['k1'], launchPaths: ['/x.docx'], splitMemoryOrHome: false },
+        outcome: {
+          ...OUTCOME_NONE,
+          remove: ['k1'],
+          launchPaths: ['/x.docx'],
+          splitMemoryOrHome: false,
+        },
         steps: [{ launch: true }, { answer: { dismissed: true } }],
       }),
     ],
@@ -2981,7 +3515,10 @@ const launchCases: Case[] = [
         steps: [{ launch: true }],
       }),
     ],
-    files: { 'session-record.json': SESSION([], { cleanExit: true }), 'docs-autosave/untitled/z.docx': 'left over' },
+    files: {
+      'session-record.json': SESSION([], { cleanExit: true }),
+      'docs-autosave/untitled/z.docx': 'left over',
+    },
     note: 'a clean exit with a copy left undecided',
   },
   {
@@ -2992,7 +3529,9 @@ const launchCases: Case[] = [
         steps: [{ launch: true }],
       }),
     ],
-    files: { 'session-record.json': SESSION([], { cleanExit: true, restoreRun: true, pastStartup: false }) },
+    files: {
+      'session-record.json': SESSION([], { cleanExit: true, restoreRun: true, pastStartup: false }),
+    },
     note: 'the plan says plain launch with two files',
   },
   {
@@ -3037,8 +3576,10 @@ const UPDATER_URL = 'main-diff:updater-'
 registerHooks({
   resolve(specifier, context, next) {
     if (context.parentURL?.includes('/apps/shell/src/main/updater.ts')) {
-      if (specifier === 'electron-updater') return { url: `${UPDATER_URL}electron-updater`, shortCircuit: true }
-      if (specifier === './update-window') return { url: `${UPDATER_URL}update-window`, shortCircuit: true }
+      if (specifier === 'electron-updater')
+        return { url: `${UPDATER_URL}electron-updater`, shortCircuit: true }
+      if (specifier === './update-window')
+        return { url: `${UPDATER_URL}update-window`, shortCircuit: true }
     }
     return next(specifier, context)
   },
@@ -3055,7 +3596,12 @@ registerHooks({
             '})',
             'export class CancellationToken {}',
           ]
-        : [box, ...WINDOW_EXPORTS.map((n) => `export const ${n} = (...args) => box.window.${n}(...args)`)]
+        : [
+            box,
+            ...WINDOW_EXPORTS.map(
+              (n) => `export const ${n} = (...args) => box.window.${n}(...args)`,
+            ),
+          ]
     return { format: 'module', source: source.join('\n'), shortCircuit: true }
   },
 })
@@ -3074,7 +3620,11 @@ interface UpdaterEventSpec {
 
 interface CheckScript {
   events?: UpdaterEventSpec[]
-  result: 'none' | 'null' | { available: boolean; version?: string } | { throws: { message: string; code?: string } }
+  result:
+    | 'none'
+    | 'null'
+    | { available: boolean; version?: string }
+    | { throws: { message: string; code?: string } }
 }
 
 type UpdaterStep =
@@ -3132,11 +3682,16 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     httpExecutor: o.updater.httpDownload ? { download: original } : {},
   }
   const emit = async (spec: UpdaterEventSpec): Promise<void> => {
-    if (spec.type === 'update-available') raw('update-available', { version: spec.version, releaseNotes: spec.notes })
-    else if (spec.type === 'download-progress') raw('download-progress', { transferred: spec.transferred, percent: spec.percent })
+    if (spec.type === 'update-available')
+      raw('update-available', { version: spec.version, releaseNotes: spec.notes })
+    else if (spec.type === 'download-progress')
+      raw('download-progress', { transferred: spec.transferred, percent: spec.percent })
     else if (spec.type === 'error') raw('error', new Error(spec.message))
     else if (typeof fake.updateDownloaded === 'function') {
-      await (fake.updateDownloaded as Fn)(null, { downloadedFile: spec.file, version: spec.version })
+      await (fake.updateDownloaded as Fn)(null, {
+        downloadedFile: spec.file,
+        version: spec.version,
+      })
     } else raw('update-downloaded', { version: spec.version, downloadedFile: spec.file })
   }
   const stored: Record<string, unknown> = {}
@@ -3162,14 +3717,19 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     cx.log('autoUpdater.checkForUpdates')
     const script = checks[Math.min(checkAt++, checks.length - 1)]
     for (const event of script.events ?? []) await emit(event)
-    if (script.result === 'none') return { isUpdateAvailable: false, updateInfo: { version: '0.0.0' } }
+    if (script.result === 'none')
+      return { isUpdateAvailable: false, updateInfo: { version: '0.0.0' } }
     if (script.result === 'null') return null
     if ('throws' in script.result) {
-      throw Object.assign(new Error(script.result.throws.message), script.result.throws.code ? { code: script.result.throws.code } : {})
+      throw Object.assign(
+        new Error(script.result.throws.message),
+        script.result.throws.code ? { code: script.result.throws.code } : {},
+      )
     }
     return {
       isUpdateAvailable: script.result.available,
-      updateInfo: script.result.version === undefined ? undefined : { version: script.result.version },
+      updateInfo:
+        script.result.version === undefined ? undefined : { version: script.result.version },
     }
   }
   fake.downloadUpdate = async () => {
@@ -3204,7 +3764,12 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
   updaterBox.window = {
     setUpdateParentWindow: () => cx.log('setUpdateParentWindow'),
     currentUpdateUiState: () => null,
-    showUpdateWindow: (_win: unknown, state: unknown, given: Record<string, Fn>, options?: unknown) => {
+    showUpdateWindow: (
+      _win: unknown,
+      state: unknown,
+      given: Record<string, Fn>,
+      options?: unknown,
+    ) => {
       cx.log('showUpdateWindow', state, options ?? null)
       windowOpen = true
       actions = given
@@ -3277,17 +3842,30 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
     await withConsole(cx, () =>
       withClock(clock, () =>
         withProcess(
-          { platform: o.platform, env: o.env, extra: { argv: o.argv, execPath: o.execPath, uptime: () => o.uptime } },
+          {
+            platform: o.platform,
+            env: o.env,
+            extra: { argv: o.argv, execPath: o.execPath, uptime: () => o.uptime },
+          },
           async () => {
             for (const step of o.steps) {
               if ('init' in step) {
-                updater.initAutoUpdater(() => null, () => o.autoCheck, o.channel)
+                updater.initAutoUpdater(
+                  () => null,
+                  () => o.autoCheck,
+                  o.channel,
+                )
               } else if ('manual' in step) {
                 await updater.checkForUpdatesNow()
               } else if ('event' in step) {
                 await emit(step.event)
               } else if ('action' in step) {
-                const name = { download: 'onDownload', install: 'onInstall', later: 'onLater', openDownload: 'onOpenDownload' }[step.action]
+                const name = {
+                  download: 'onDownload',
+                  install: 'onInstall',
+                  later: 'onLater',
+                  openDownload: 'onOpenDownload',
+                }[step.action]
                 actions[name]?.()
               } else if ('timer' in step) {
                 const timer = timers[step.timer - 1]
@@ -3315,7 +3893,11 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
   }
 }
 
-const upd = (extra: Partial<Omit<UpdaterScenario, 'updater'>> & { updater?: Partial<UpdaterScenario['updater']> }): UpdaterScenario => ({
+const upd = (
+  extra: Partial<Omit<UpdaterScenario, 'updater'>> & {
+    updater?: Partial<UpdaterScenario['updater']>
+  },
+): UpdaterScenario => ({
   userData: '$DIR',
   lang: 'en',
   platform: 'win32',
@@ -3345,13 +3927,25 @@ const INIT: UpdaterStep = { init: true }
 const MANUAL: UpdaterStep = { manual: true }
 const act = (action: 'download' | 'install' | 'later' | 'openDownload'): UpdaterStep => ({ action })
 const timer = (n: number): UpdaterStep => ({ timer: n })
-const available = (version: string, notes?: unknown): UpdaterEventSpec => ({ type: 'update-available', version, notes })
+const available = (version: string, notes?: unknown): UpdaterEventSpec => ({
+  type: 'update-available',
+  version,
+  notes,
+})
 const found = (version: string, notes?: unknown): CheckScript => ({
   events: [available(version, notes)],
   result: { available: true, version },
 })
-const downloaded = (version: string, file = '$DIR/dl/update.exe'): UpdaterEventSpec => ({ type: 'update-downloaded', version, file })
-const progress = (transferred: number, percent: number): UpdaterEventSpec => ({ type: 'download-progress', transferred, percent })
+const downloaded = (version: string, file = '$DIR/dl/update.exe'): UpdaterEventSpec => ({
+  type: 'update-downloaded',
+  version,
+  file,
+})
+const progress = (transferred: number, percent: number): UpdaterEventSpec => ({
+  type: 'download-progress',
+  transferred,
+  percent,
+})
 const NOTES = [
   { version: '2.0.0', note: '<h2>Added</h2><ul><li>One <strong>big</strong> thing</li></ul>' },
   { version: '1.5.0', note: '<p>Older <code>fix</code></p>' },
@@ -3363,15 +3957,36 @@ const HOURLY = timer(2)
 
 const updaterScenarios: Case[] = [
   {
-    args: [upd({ packaged: false, dialogs: [1, 0, 1], lang: 'ko', steps: [INIT, MANUAL, MANUAL, MANUAL] })],
+    args: [
+      upd({
+        packaged: false,
+        dialogs: [1, 0, 1],
+        lang: 'ko',
+        steps: [INIT, MANUAL, MANUAL, MANUAL],
+      }),
+    ],
     note: 'an unpacked run: the manual check points at the download page (button, then not)',
   },
   {
-    args: [upd({ packaged: false, env: { SEUOFFICE_FAKE_UPDATE: '1.2.3' }, steps: [
-      INIT, FIRST_CHECK, act('download'),
-      ...Array.from({ length: 25 }, () => timer(2)),
-      act('install'), act('openDownload'), MANUAL, act('download'), act('later'), timer(3), act('later'),
-    ] })],
+    args: [
+      upd({
+        packaged: false,
+        env: { SEUOFFICE_FAKE_UPDATE: '1.2.3' },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          ...Array.from({ length: 25 }, () => timer(2)),
+          act('install'),
+          act('openDownload'),
+          MANUAL,
+          act('download'),
+          act('later'),
+          timer(3),
+          act('later'),
+        ],
+      }),
+    ],
     note: 'the dev preview: a simulated download that completes, then the manual check shows the window again',
   },
   {
@@ -3387,35 +4002,150 @@ const updaterScenarios: Case[] = [
     note: 'another platform',
   },
   {
-    args: [upd({ platform: 'linux', env: { APPIMAGE: '/x.AppImage' }, channel: 'stable', updater: { checks: [found('2.0.0', NOTES)], downloads: [{ events: [progress(5, 10), progress(10, 100), downloaded('2.0.0')] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('install'), { immediate: 1 }, { willQuit: true }] })],
+    args: [
+      upd({
+        platform: 'linux',
+        env: { APPIMAGE: '/x.AppImage' },
+        channel: 'stable',
+        updater: {
+          checks: [found('2.0.0', NOTES)],
+          downloads: [{ events: [progress(5, 10), progress(10, 100), downloaded('2.0.0')] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('install'),
+          { immediate: 1 },
+          { willQuit: true },
+        ],
+      }),
+    ],
     files: DL,
     note: 'an AppImage on the stable channel: a full update, the installer starts at will-quit',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0', NOTES)], downloads: [{ events: [progress(3, 30), progress(6, 60), downloaded('2.0.0')] }] }, steps: [INIT, FIRST_CHECK, { willQuit: true }, act('download'), { willQuit: true }, act('install'), { immediate: 1 }, { willQuit: true }, MANUAL] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0', NOTES)],
+          downloads: [{ events: [progress(3, 30), progress(6, 60), downloaded('2.0.0')] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          { willQuit: true },
+          act('download'),
+          { willQuit: true },
+          act('install'),
+          { immediate: 1 },
+          { willQuit: true },
+          MANUAL,
+        ],
+      }),
+    ],
     files: DL,
     note: 'Windows: update, download, restart and install; the installer starts only after the restart request',
   },
   {
-    args: [upd({ lang: 'ko', updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }], install: 'false' }, steps: [INIT, FIRST_CHECK, act('download'), act('install'), { immediate: 1 }, { willQuit: true }] })],
-    files: { ...DL, 'app': { dir: true, mode: 0o555 } },
+    args: [
+      upd({
+        lang: 'ko',
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }],
+          install: 'false',
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('install'),
+          { immediate: 1 },
+          { willQuit: true },
+        ],
+      }),
+    ],
+    files: { ...DL, app: { dir: true, mode: 0o555 } },
     note: 'a folder only an administrator can write: the window says so; the installer does not start',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }], install: 'none' }, steps: [INIT, FIRST_CHECK, act('download'), act('install'), { immediate: 1 }, { willQuit: true }] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }],
+          install: 'none',
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('install'),
+          { immediate: 1 },
+          { willQuit: true },
+        ],
+      }),
+    ],
     files: DL,
     note: 'an updater without an install function',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [progress(1, 5)], rejects: 'net down' }, { events: [], rejects: 'net down again' }, {}] }, steps: [INIT, FIRST_CHECK, act('download'), act('download'), act('download'), act('openDownload'), act('install')] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [
+            { events: [progress(1, 5)], rejects: 'net down' },
+            { events: [], rejects: 'net down again' },
+            {},
+          ],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('download'),
+          act('download'),
+          act('openDownload'),
+          act('install'),
+        ],
+      }),
+    ],
     note: 'two failed downloads: the dialog stops offering retry; a failure is logged once',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [{ type: 'error', message: 'boom' }, progress(1, 1)] }] }, steps: [INIT, FIRST_CHECK, act('download'), { event: progress(2, 2) }, { event: { type: 'error', message: 'late' } }] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0')],
+          downloads: [{ events: [{ type: 'error', message: 'boom' }, progress(1, 1)] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          { event: progress(2, 2) },
+          { event: { type: 'error', message: 'late' } },
+        ],
+      }),
+    ],
     note: 'error events are logged; progress counts only while a download runs',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('1.9.9')] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('later'), { event: downloaded('1.9.9') }, act('install')] })],
+    args: [
+      upd({
+        updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('1.9.9')] }] },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('later'),
+          { event: downloaded('1.9.9') },
+          act('install'),
+        ],
+      }),
+    ],
     note: 'a download of a version that is not the offered one is ignored; "install" before anything downloaded does nothing',
   },
   {
@@ -3423,28 +4153,77 @@ const updaterScenarios: Case[] = [
     note: 'download with no update known',
   },
   {
-    args: [upd({ argv: ['SeuOffice', '--updated'], version: '2.0.0', uptime: 3.25, steps: [INIT] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: true, startedAt: '2026-11-12T02:59:00.000Z' }) },
+    args: [
+      upd({ argv: ['SeuOffice', '--updated'], version: '2.0.0', uptime: 3.25, steps: [INIT] }),
+    ],
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: true,
+        startedAt: '2026-11-12T02:59:00.000Z',
+      }),
+    },
     note: 'the installer ran and the app is at the new version: recorded, the record goes; reopened by the installer',
   },
   {
     args: [upd({ version: '2.0.0', uptime: 0.04, steps: [INIT] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: false, startedAt: 'not a date' }) },
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: false,
+        startedAt: 'not a date',
+      }),
+    },
     note: 'a start time that is not a date',
   },
   {
     args: [upd({ version: '2.0.0', steps: [INIT] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: false, startedAt: '2026-11-12T02:00:00.123Z' }) },
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: false,
+        startedAt: '2026-11-12T02:00:00.123Z',
+      }),
+    },
     note: 'long after the install start',
   },
   {
     args: [upd({ updater: { checks: [found('2.0.0')] }, steps: [INIT, FIRST_CHECK] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: false, tries: 1 }) },
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: false,
+        tries: 1,
+      }),
+    },
     note: 'an installer start that left the app at the old version: the next offer says so (install-failed)',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('install'), { immediate: 1 }, { willQuit: true }] })],
-    files: { ...DL, 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: true }) },
+    args: [
+      upd({
+        updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }] },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('install'),
+          { immediate: 1 },
+          { willQuit: true },
+        ],
+      }),
+    ],
+    files: {
+      ...DL,
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: true,
+      }),
+    },
     note: 'a second failure goes to the download page (manual), and the retry counts tries',
   },
   {
@@ -3453,24 +4232,67 @@ const updaterScenarios: Case[] = [
     note: 'a record that is not a record is ignored',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0', NOTES), found('2.0.0'), found('2.0.0', NOTES), found('3.0.0')] }, steps: [INIT, FIRST_CHECK, HOURLY, act('later'), HOURLY, HOURLY, HOURLY] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0', NOTES), found('2.0.0'), found('2.0.0', NOTES), found('3.0.0')],
+        },
+        steps: [INIT, FIRST_CHECK, HOURLY, act('later'), HOURLY, HOURLY, HOURLY],
+      }),
+    ],
     note: 'a repeat of the shown version leaves the window; "later" mutes the version for the session; a newer one is offered',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0', NOTES), found('2.0.0')], downloads: [{ events: [progress(1, 10)] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('later'), HOURLY, { event: available('2.0.0', undefined) }] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0', NOTES), found('2.0.0')],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('later'),
+          HOURLY,
+          { event: available('2.0.0', undefined) },
+        ],
+      }),
+    ],
     note: 'a repeat for the same version, window closed: it is shown again at its phase, with the notes kept',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0'), found('3.0.0')], downloads: [{ events: [progress(1, 10)] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('later'), HOURLY, MANUAL, MANUAL] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), found('3.0.0')],
+          downloads: [{ events: [progress(1, 10)] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), act('later'), HOURLY, MANUAL, MANUAL],
+      }),
+    ],
     note: 'a newer release during a download stays out; the scheduled check is skipped; a manual one brings back the flow',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0'), found('3.0.0')], downloads: [{ events: [downloaded('2.0.0')] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('later'), MANUAL, HOURLY] })],
+    args: [
+      upd({
+        updater: {
+          checks: [found('2.0.0'), found('3.0.0')],
+          downloads: [{ events: [downloaded('2.0.0')] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), act('later'), MANUAL, HOURLY],
+      }),
+    ],
     files: DL,
     note: 'a newer release after a finished download; the window comes back inactive after "later"',
   },
   {
-    args: [upd({ updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }] }, steps: [INIT, FIRST_CHECK, act('download')] })],
+    args: [
+      upd({
+        updater: { checks: [found('2.0.0')], downloads: [{ events: [downloaded('2.0.0')] }] },
+        steps: [INIT, FIRST_CHECK, act('download')],
+      }),
+    ],
     files: DL,
     note: 'a download that finishes behind a closed window shows it inactive',
   },
@@ -3479,15 +4301,50 @@ const updaterScenarios: Case[] = [
     note: 'background checks turned off: a manual check still asks',
   },
   {
-    args: [upd({ updater: { checks: [{ result: { throws: { message: 'offline' } } }, { result: 'null' }, { result: { available: true } }] }, steps: [INIT, FIRST_CHECK, HOURLY, HOURLY] })],
+    args: [
+      upd({
+        updater: {
+          checks: [
+            { result: { throws: { message: 'offline' } } },
+            { result: 'null' },
+            { result: { available: true } },
+          ],
+        },
+        steps: [INIT, FIRST_CHECK, HOURLY, HOURLY],
+      }),
+    ],
     note: 'scheduled checks: a failure is logged, a skipped check is none, an available one without a version',
   },
   {
-    args: [upd({ lang: 'ko', dialogs: [0, 0, 0, 0, 0, 0], updater: { checks: [{ result: 'none' }, { result: { throws: { message: 'offline' } } }, { result: { throws: { message: 'nothing', code: 'HTTP_ERROR_404' } } }, { result: { throws: { message: 'odd', code: 'ERR_SOMETHING' } } }, { result: 'null' }, found('2.0.0')] }, steps: [INIT, MANUAL, MANUAL, MANUAL, MANUAL, MANUAL, MANUAL] })],
+    args: [
+      upd({
+        lang: 'ko',
+        dialogs: [0, 0, 0, 0, 0, 0],
+        updater: {
+          checks: [
+            { result: 'none' },
+            { result: { throws: { message: 'offline' } } },
+            { result: { throws: { message: 'nothing', code: 'HTTP_ERROR_404' } } },
+            { result: { throws: { message: 'odd', code: 'ERR_SOMETHING' } } },
+            { result: 'null' },
+            found('2.0.0'),
+          ],
+        },
+        steps: [INIT, MANUAL, MANUAL, MANUAL, MANUAL, MANUAL, MANUAL],
+      }),
+    ],
     note: 'manual checks: up to date, failure, no release (up to date), another code, skipped, found',
   },
   {
-    args: [upd({ dialogs: [0], updater: { checks: [{ result: { throws: { message: 'no feed', code: 'ERR_XML_MISSED_ELEMENT' } } }] }, steps: [INIT, MANUAL] })],
+    args: [
+      upd({
+        dialogs: [0],
+        updater: {
+          checks: [{ result: { throws: { message: 'no feed', code: 'ERR_XML_MISSED_ELEMENT' } } }],
+        },
+        steps: [INIT, MANUAL],
+      }),
+    ],
     note: 'a repository with no release counts as up to date',
   },
   {
@@ -3503,7 +4360,13 @@ const updaterScenarios: Case[] = [
     note: 'the helper names no cache folder',
   },
   {
-    args: [upd({ version: '1.0.0', updater: { cacheDir: '$DIR/cache' }, steps: [INIT, timer(3), timer(4), timer(5)] })],
+    args: [
+      upd({
+        version: '1.0.0',
+        updater: { cacheDir: '$DIR/cache' },
+        steps: [INIT, timer(3), timer(4), timer(5)],
+      }),
+    ],
     files: {
       'cache/pending/update-info.json': JSON.stringify({ fileName: 'SeuOffice-0.9.0.exe' }),
       'cache/pending/SeuOffice-0.9.0.exe': 'old',
@@ -3512,7 +4375,16 @@ const updaterScenarios: Case[] = [
     note: 'an old download goes at the start; a removal that fails is tried again later, a few times',
   },
   {
-    args: [upd({ updater: { cacheDir: '$DIR/cache', checks: [found('2.0.0')], downloads: [{ events: [progress(1, 1)] }] }, steps: [INIT, FIRST_CHECK, act('download'), timer(3)] })],
+    args: [
+      upd({
+        updater: {
+          cacheDir: '$DIR/cache',
+          checks: [found('2.0.0')],
+          downloads: [{ events: [progress(1, 1)] }],
+        },
+        steps: [INIT, FIRST_CHECK, act('download'), timer(3)],
+      }),
+    ],
     files: {
       'cache/pending/update-info.json': JSON.stringify({ fileName: 'SeuOffice-0.9.0.exe' }),
       'cache/pending/SeuOffice-0.9.0.exe': 'old',
@@ -3529,27 +4401,95 @@ const updaterScenarios: Case[] = [
     note: 'an executor without a download function: no resume wrapper',
   },
   {
-    args: [upd({ platform: 'darwin', execPath: '/usr/bin/node', steps: [INIT, FIRST_CHECK, act('download'), MANUAL] })],
+    args: [
+      upd({
+        platform: 'darwin',
+        execPath: '/usr/bin/node',
+        steps: [INIT, FIRST_CHECK, act('download'), MANUAL],
+      }),
+    ],
     note: 'macOS, not an app bundle: no self update; the notice and the manual phase',
   },
   {
-    args: [upd({ platform: 'darwin', execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice', updater: { checks: [found('2.0.0')], macMethods: false }, steps: [INIT, FIRST_CHECK, act('download'), act('openDownload')] })],
-    files: { 'Apps/.SeuOffice.app.update/left': 'x', 'Apps/.SeuOffice.app.previous/left': 'y', 'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '' },
+    args: [
+      upd({
+        platform: 'darwin',
+        execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice',
+        updater: { checks: [found('2.0.0')], macMethods: false },
+        steps: [INIT, FIRST_CHECK, act('download'), act('openDownload')],
+      }),
+    ],
+    files: {
+      'Apps/.SeuOffice.app.update/left': 'x',
+      'Apps/.SeuOffice.app.previous/left': 'y',
+      'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '',
+    },
     note: 'a Mac that cannot stage: leftovers are removed; "download" opens the page',
   },
   {
-    args: [upd({ platform: 'darwin', execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice', lang: 'ko', updater: { checks: [found('2.0.0', NOTES)], downloads: [{ events: [progress(1, 50), downloaded('2.0.0', '$DIR/dl/update.zip')] }, { events: [downloaded('2.0.0', '$DIR/dl/missing.zip')] }] }, steps: [INIT, FIRST_CHECK, act('download'), act('download'), { willQuit: true }, act('install')] })],
+    args: [
+      upd({
+        platform: 'darwin',
+        execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice',
+        lang: 'ko',
+        updater: {
+          checks: [found('2.0.0', NOTES)],
+          downloads: [
+            { events: [progress(1, 50), downloaded('2.0.0', '$DIR/dl/update.zip')] },
+            { events: [downloaded('2.0.0', '$DIR/dl/missing.zip')] },
+          ],
+        },
+        steps: [
+          INIT,
+          FIRST_CHECK,
+          act('download'),
+          act('download'),
+          { willQuit: true },
+          act('install'),
+        ],
+      }),
+    ],
     files: { 'dl/update.zip': 'not a zip', 'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '' },
     note: 'a Mac that stages: the zip cannot be unpacked, the download fails, twice means manual',
   },
   {
-    args: [upd({ platform: 'darwin', execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice', steps: [INIT] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: false, tries: 1 }), 'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '' },
+    args: [
+      upd({
+        platform: 'darwin',
+        execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice',
+        steps: [INIT],
+      }),
+    ],
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: false,
+        tries: 1,
+      }),
+      'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '',
+    },
     note: 'macOS after a swap that did not take',
   },
   {
-    args: [upd({ platform: 'darwin', execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice', version: '1.0.0', updater: { checks: [found('2.0.0')] }, steps: [INIT, FIRST_CHECK] })],
-    files: { 'update-install-attempt.json': JSON.stringify({ version: '2.0.0', fromVersion: '1.0.0', visible: false, tries: 1 }), 'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '' },
+    args: [
+      upd({
+        platform: 'darwin',
+        execPath: '$DIR/Apps/SeuOffice.app/Contents/MacOS/SeuOffice',
+        version: '1.0.0',
+        updater: { checks: [found('2.0.0')] },
+        steps: [INIT, FIRST_CHECK],
+      }),
+    ],
+    files: {
+      'update-install-attempt.json': JSON.stringify({
+        version: '2.0.0',
+        fromVersion: '1.0.0',
+        visible: false,
+        tries: 1,
+      }),
+      'Apps/SeuOffice.app/Contents/MacOS/SeuOffice': '',
+    },
     note: 'a Mac swap that did not take is not retried: manual',
   },
 ]

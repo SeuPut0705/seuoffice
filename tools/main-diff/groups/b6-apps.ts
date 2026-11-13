@@ -125,7 +125,8 @@ async function describe(res: Response, kind: 'text' | 'hex'): Promise<J> {
 // slides/element-clipboard
 // ---------------------------------------------------------------------------
 
-const clipboardModule = (): Promise<J> => import('../../../apps/slides/src/main/element-clipboard.ts')
+const clipboardModule = (): Promise<J> =>
+  import('../../../apps/slides/src/main/element-clipboard.ts')
 
 /** the clipboard and `nativeImage` of a case (see calls/b6_apps.rs `ClipFake`) */
 function useClipboard(spec: J, log: (...args: unknown[]) => void): void {
@@ -175,7 +176,10 @@ const markerCases: Case[] = [
   { args: ['tok', { buffer: hexOf('tok') }], note: 'the buffer matches: the HTML is not read' },
   { args: ['tok', { buffer: hexOf('other'), html: TOKEN_HTML('tok') }], note: 'the HTML matches' },
   { args: ['tok', { buffer: hexOf('other'), html: TOKEN_HTML('nope') }], note: 'neither' },
-  { args: ['tok', { bufferThrows: true, html: TOKEN_HTML('tok') }], note: 'the buffer read throws' },
+  {
+    args: ['tok', { bufferThrows: true, html: TOKEN_HTML('tok') }],
+    note: 'the buffer read throws',
+  },
   { args: ['tok', { bufferThrows: true, htmlThrows: true }], note: 'both throw' },
   { args: ['', { buffer: '' }], note: 'an empty token asks nothing' },
   { args: ['a'.repeat(257), { buffer: hexOf('a'.repeat(257)) }], note: 'a token past 256' },
@@ -244,11 +248,23 @@ const writeCases: Case[] = [
 
 const canWriteCases: Case[] = [
   { args: [{ token: 'tok', senderId: 3 }, 3, 'tok', { buffer: hexOf('tok') }], note: 'allowed' },
-  { args: [{ token: 'tok', senderId: 3 }, 4, 'tok', { buffer: hexOf('tok') }], note: 'another sender' },
-  { args: [{ token: 'tok', senderId: 3 }, 3, 'other', { buffer: hexOf('other') }], note: 'another token' },
+  {
+    args: [{ token: 'tok', senderId: 3 }, 4, 'tok', { buffer: hexOf('tok') }],
+    note: 'another sender',
+  },
+  {
+    args: [{ token: 'tok', senderId: 3 }, 3, 'other', { buffer: hexOf('other') }],
+    note: 'another token',
+  },
   { args: [null, 3, 'tok', { buffer: hexOf('tok') }], note: 'no copy yet' },
-  { args: [{ token: 'tok', senderId: 3 }, 3, 5, { buffer: hexOf('tok') }], note: 'a number as token' },
-  { args: [{ token: 'tok', senderId: 3 }, 3, 'tok', { buffer: hexOf('x') }], note: 'the clipboard moved on' },
+  {
+    args: [{ token: 'tok', senderId: 3 }, 3, 5, { buffer: hexOf('tok') }],
+    note: 'a number as token',
+  },
+  {
+    args: [{ token: 'tok', senderId: 3 }, 3, 'tok', { buffer: hexOf('x') }],
+    note: 'the clipboard moved on',
+  },
   {
     args: [{ token: 'tok', senderId: 3 }, 3, 'tok', { buffer: '', html: TOKEN_HTML('tok') }],
     note: 'the HTML marker',
@@ -375,11 +391,7 @@ const fontStore: Group = {
     },
     cases: [
       {
-        args: [
-          '$DIR/ud',
-          [['$DIR/in/Foo.ttf', ['Foo Sans', 'Foo']]],
-          ['$DIR/in/Foo.ttf'],
-        ],
+        args: ['$DIR/ud', [['$DIR/in/Foo.ttf', ['Foo Sans', 'Foo']]], ['$DIR/in/Foo.ttf']],
         files: { 'in/Foo.ttf': TTF },
         note: 'one font installed under its family name',
       },
@@ -421,7 +433,10 @@ const fontStore: Group = {
       {
         args: [
           '$DIR/ud',
-          [['$DIR/in/A.ttf', ['One']], ['$DIR/in/B.ttf', ['One', 'Two']]],
+          [
+            ['$DIR/in/A.ttf', ['One']],
+            ['$DIR/in/B.ttf', ['One', 'Two']],
+          ],
           ['$DIR/in/A.ttf', '$DIR/in/B.ttf'],
         ],
         files: { 'in/A.ttf': TTF, 'in/B.ttf': TTF },
@@ -435,7 +450,8 @@ const fontStore: Group = {
 // sheets/template-fonts
 // ---------------------------------------------------------------------------
 
-const templateFontsModule = (): Promise<J> => import('../../../apps/sheets/src/main/template-fonts.ts')
+const templateFontsModule = (): Promise<J> =>
+  import('../../../apps/sheets/src/main/template-fonts.ts')
 
 const FONT_URL = (file: string): string => `seuoffice-docx-media://template-fonts/${file}`
 
@@ -507,7 +523,8 @@ const sheetsFonts: Group = {
         mod.installStandaloneTemplateFontProtocol(),
       )
       const answers: J[] = []
-      for (const url of spec.requests ?? []) answers.push(await describe(await handler!({ url }), 'hex'))
+      for (const url of spec.requests ?? [])
+        answers.push(await describe(await handler!({ url }), 'hex'))
       return answers
     },
     cases: [
@@ -591,7 +608,10 @@ async function previewModule(): Promise<J> {
 }
 
 const PREVIEW_ENTRIES = {
-  '12': { text: '<html><head><title>a</title></head><body>12</body></html>', baseHref: 'file:///x/y/' },
+  '12': {
+    text: '<html><head><title>a</title></head><body>12</body></html>',
+    baseHref: 'file:///x/y/',
+  },
   '5': { text: 'plain text', baseHref: null },
   '1e+22': { text: '<p>huge</p>', baseHref: '' },
   '0': { text: '<base href="z"><p>own base</p>', baseHref: 'file:///q/' },
@@ -643,7 +663,8 @@ const previewProtocol: Group = {
         return spec.entries[String(id)] ?? null
       })
       const answers: J[] = []
-      for (const url of spec.urls) answers.push(await describe(handler!({ url }) as Response, 'text'))
+      for (const url of spec.urls)
+        answers.push(await describe(handler!({ url }) as Response, 'text'))
       return answers
     },
     cases: [
@@ -679,7 +700,8 @@ const previewProtocol: Group = {
 // markdown/print-document, markdown/print-pdf
 // ---------------------------------------------------------------------------
 
-const printDocumentModule = (): Promise<J> => import('../../../apps/markdown/src/main/print-document.ts')
+const printDocumentModule = (): Promise<J> =>
+  import('../../../apps/markdown/src/main/print-document.ts')
 const printPdfModule = (): Promise<J> => import('../../../apps/markdown/src/main/print-pdf.ts')
 
 interface WindowScript {
@@ -698,7 +720,12 @@ function useWindow(script: WindowScript, cx: TsContext, state: { workDir?: strin
   const win = {
     async loadFile(path: string) {
       state.workDir = dirname(path)
-      cx.log('loadFile', basename(dirname(path)).slice(0, -6), basename(path), readFileSync(path, 'utf8'))
+      cx.log(
+        'loadFile',
+        basename(dirname(path)).slice(0, -6),
+        basename(path),
+        readFileSync(path, 'utf8'),
+      )
       if (script.loadFile === 'throws') throw new Error('load failed')
     },
     show() {
@@ -780,7 +807,13 @@ const markdownPrint: Group = {
       ['<p>hi</p>', null, null, 'win32', OK_PRINT],
       ['<p>caf\u00e9 \u{1F600}</p>', { from: 2, to: 5 }, LETTER, 'linux', OK_PRINT],
       ['', { from: 1, to: 1 }, NARROW, 'linux', OK_PRINT],
-      ['<p>x</p>', null, null, 'linux', { print: { success: false, reason: 'Print job canceled' } }],
+      [
+        '<p>x</p>',
+        null,
+        null,
+        'linux',
+        { print: { success: false, reason: 'Print job canceled' } },
+      ],
       ['<p>x</p>', null, null, 'linux', { print: { success: false, reason: 'CANCELLED' } }],
       ['<p>x</p>', null, null, 'linux', { print: { success: false, reason: 'Driver failure' } }],
       ['<p>x</p>', null, null, 'linux', { print: { success: false, reason: '' } }],
@@ -803,7 +836,9 @@ const markdownPrint: Group = {
       useWindow(a[2] as WindowScript, cx, state)
       try {
         return await masked(async () =>
-          (await mod.printMarkdownPdf(a[0] as string, (a[1] ?? undefined) as unknown)).toString('hex'),
+          (await mod.printMarkdownPdf(a[0] as string, (a[1] ?? undefined) as unknown)).toString(
+            'hex',
+          ),
         )
       } finally {
         if (state.workDir) rmSync(state.workDir, { recursive: true, force: true })
@@ -931,7 +966,9 @@ async function runUpdater(spec: UpdaterSpec, cx: TsContext): Promise<undefined> 
             return fakeParent(spec.window)
           })
         } else if (step.error !== undefined) {
-          listeners.error?.(step.error.message !== undefined ? new Error(step.error.message) : step.error.value)
+          listeners.error?.(
+            step.error.message !== undefined ? new Error(step.error.message) : step.error.value,
+          )
         } else if (step.downloaded !== undefined) {
           listeners['update-downloaded']?.({ version: step.downloaded })
         } else if (step.fire === 'first') {
@@ -959,13 +996,27 @@ const updater: Group = {
     cases: [
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', window: 'live', response: 0, steps: [INIT, downloaded('1.2.0')] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            window: 'live',
+            response: 0,
+            steps: [INIT, downloaded('1.2.0')],
+          },
         ],
         note: 'install',
       },
       {
         args: [
-          { lang: 'ko', packaged: true, platform: 'win32', window: 'live', response: 1, steps: [INIT, downloaded('1.2.0')] },
+          {
+            lang: 'ko',
+            packaged: true,
+            platform: 'win32',
+            window: 'live',
+            response: 1,
+            steps: [INIT, downloaded('1.2.0')],
+          },
         ],
         note: 'later, in Korean',
       },
@@ -977,40 +1028,86 @@ const updater: Group = {
             platform: 'win32',
             window: 'live',
             response: [1, 0, 0],
-            steps: [INIT, downloaded('1.2.0'), downloaded('1.2.0'), downloaded('1.3.0'), downloaded('1.3.0')],
+            steps: [
+              INIT,
+              downloaded('1.2.0'),
+              downloaded('1.2.0'),
+              downloaded('1.3.0'),
+              downloaded('1.3.0'),
+            ],
           },
         ],
         note: 'a declined version is not asked again, the next one is',
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', window: 'destroyed', response: 0, steps: [INIT, downloaded('2.0.0')] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            window: 'destroyed',
+            response: 0,
+            steps: [INIT, downloaded('2.0.0')],
+          },
         ],
         note: 'the window is gone: a box without a parent',
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', response: 2, steps: [INIT, downloaded('2.0.0')] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            response: 2,
+            steps: [INIT, downloaded('2.0.0')],
+          },
         ],
         note: 'no window; a button that is neither',
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', window: 'live', steps: [INIT, downloaded('2.0.1')] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            window: 'live',
+            steps: [INIT, downloaded('2.0.1')],
+          },
         ],
         note: 'the box answers nothing',
       },
       {
-        args: [{ lang: 'en', packaged: false, platform: 'darwin', steps: [INIT, downloaded('1.0.0'), { fire: 'first' }] }],
+        args: [
+          {
+            lang: 'en',
+            packaged: false,
+            platform: 'darwin',
+            steps: [INIT, downloaded('1.0.0'), { fire: 'first' }],
+          },
+        ],
         note: 'an unpackaged run registers nothing',
       },
       {
-        args: [{ lang: 'en', packaged: true, platform: 'linux', steps: [INIT, downloaded('1.0.0'), { fire: 'first' }] }],
+        args: [
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'linux',
+            steps: [INIT, downloaded('1.0.0'), { fire: 'first' }],
+          },
+        ],
         note: 'linux is not served',
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', window: 'live', response: 0, steps: [INIT, INIT, downloaded('1.0.0')] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            window: 'live',
+            response: 0,
+            steps: [INIT, INIT, downloaded('1.0.0')],
+          },
         ],
         note: 'a second init does nothing',
       },
@@ -1045,17 +1142,39 @@ const updater: Group = {
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', check: 'rejects', steps: [INIT, { fire: 'first' }, { fire: 'interval' }] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            check: 'rejects',
+            steps: [INIT, { fire: 'first' }, { fire: 'interval' }],
+          },
         ],
         note: 'a check that fails',
       },
       {
         args: [
-          { lang: 'en', packaged: true, platform: 'darwin', check: 'rejectsValue', steps: [INIT, { fire: 'first' }] },
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            check: 'rejectsValue',
+            steps: [INIT, { fire: 'first' }],
+          },
         ],
         note: 'a check that fails with a string',
       },
-      { args: [{ lang: 'en', packaged: true, platform: 'darwin', steps: [{ fire: 'first' }, { error: { message: 'x' } }] }], note: 'events before init' },
+      {
+        args: [
+          {
+            lang: 'en',
+            packaged: true,
+            platform: 'darwin',
+            steps: [{ fire: 'first' }, { error: { message: 'x' } }],
+          },
+        ],
+        note: 'events before init',
+      },
     ],
   },
 }
@@ -1078,8 +1197,10 @@ interface DiagramSpec {
 async function runDiagramSession(spec: DiagramSpec, cx: TsContext): Promise<J[]> {
   const mod = await diagramModule()
   const printDocument = await import('../../../apps/diagram/src/main/print-document.ts')
-  const handlers: Record<string, (request: { method: string; url: string }) => Promise<Response>> = {}
-  let before: ((details: { url: string }, done: (r: { cancel: boolean }) => void) => void) | undefined
+  const handlers: Record<string, (request: { method: string; url: string }) => Promise<Response>> =
+    {}
+  let before:
+    ((details: { url: string }, done: (r: { cancel: boolean }) => void) => void) | undefined
   let permissionRequest: ((c: unknown, p: string, done: (g: boolean) => void) => void) | undefined
   let permissionCheck: ((c: unknown, p: string) => boolean) | undefined
   const ses = {
@@ -1129,7 +1250,10 @@ async function runDiagramSession(spec: DiagramSpec, cx: TsContext): Promise<J[]>
       )
     } else if (step.renderer && handlers['genoffice-app']) {
       result = await describe(
-        await handlers['genoffice-app']({ method: step.renderer.method, url: address(step.renderer) }),
+        await handlers['genoffice-app']({
+          method: step.renderer.method,
+          url: address(step.renderer),
+        }),
         'text',
       )
     } else if (step.before !== undefined && before) {
@@ -1269,7 +1393,10 @@ const diagramSession: Group = {
             ],
           },
         ],
-        files: { ...DIAGRAM_FILES, 'drawio/index.html': '\u{feff}<html><head></head>\u00e9</html>' },
+        files: {
+          ...DIAGRAM_FILES,
+          'drawio/index.html': '\u{feff}<html><head></head>\u00e9</html>',
+        },
         note: 'a byte order mark and a non-ASCII text',
       },
       {
@@ -1296,7 +1423,10 @@ const diagramSession: Group = {
       {
         args: [
           {
-            paths: { ...DIAGRAM_PATHS, devOrigins: ['http://localhost:5173', 'http://127.0.0.1:5174'] },
+            paths: {
+              ...DIAGRAM_PATHS,
+              devOrigins: ['http://localhost:5173', 'http://127.0.0.1:5174'],
+            },
             steps: [
               { install: true },
               drawio('GET', 'drawio-app://editor/index.html'),
@@ -1336,7 +1466,9 @@ const diagramSession: Group = {
             paths: DIAGRAM_PATHS,
             steps: [
               { install: true },
-              ...Array.from({ length: 105 }, (_, i): J => ({ before: `https://example.com/${i}?q=${i}` })),
+              ...Array.from({ length: 105 }, (_, i): J => ({
+                before: `https://example.com/${i}?q=${i}`,
+              })),
               { log: true },
             ],
           },
@@ -1499,7 +1631,11 @@ async function runLazyMedia(spec: LazySpec, cx: TsContext): Promise<J[]> {
           const opened = await mod.openLazyDocx(step.open.path, step.open.wc)
           result = opened ? { bytes: opened.bytes.toString('hex'), hash: opened.hash } : null
         } else if (step.adopt) {
-          await mod.adoptLazyMediaHashes(Buffer.from(step.adopt.bytes, 'hex'), step.adopt.path, step.adopt.wc)
+          await mod.adoptLazyMediaHashes(
+            Buffer.from(step.adopt.bytes, 'hex'),
+            step.adopt.path,
+            step.adopt.wc,
+          )
         } else if (step.move) {
           mod.moveLazyMediaSource(step.move[0], step.move[1])
         } else if (step.forget !== undefined) {
@@ -1649,7 +1785,10 @@ const lazyMedia: Group = {
       },
       {
         args: [
-          { lib: baseLib({ slim: { [DOC_HASH]: 'throws' } }), steps: [open(), read('word/media/image1.png')] },
+          {
+            lib: baseLib({ slim: { [DOC_HASH]: 'throws' } }),
+            steps: [open(), read('word/media/image1.png')],
+          },
         ],
         files: docFile('doc.docx'),
         note: 'slimming throws',
@@ -1724,7 +1863,9 @@ const lazyMedia: Group = {
       {
         args: [
           {
-            lib: baseLib({ hashes: { [PLACEHOLDER_DOC]: [DOC_HASH], aabb: [OTHER_HASH, DOC_HASH] } }),
+            lib: baseLib({
+              hashes: { [PLACEHOLDER_DOC]: [DOC_HASH], aabb: [OTHER_HASH, DOC_HASH] },
+            }),
             steps: [
               { adopt: { bytes: PLACEHOLDER_DOC, path: '$DIR/doc.docx', wc: 5 } },
               read('word/media/image1.png'),
@@ -1835,7 +1976,10 @@ const lazyMedia: Group = {
           {
             lib: baseLib(),
             fontsDir: '$DIR/fonts',
-            steps: [{ register: { handled: false } }, { request: lazyUrl('word/media/image1.png') }],
+            steps: [
+              { register: { handled: false } },
+              { request: lazyUrl('word/media/image1.png') },
+            ],
           },
         ],
         note: 'nothing opened: a lazy URL is 404',
@@ -1909,7 +2053,9 @@ function usePdf(spec: J, log: (...args: unknown[]) => void): J {
     _FPDF_LoadPage: (_doc: number, i: number) => {
       const index = i | 0
       log('loadPage', index)
-      return index >= 0 && index < pages.length && !list('loadFails').includes(index) ? 100 + index : 0
+      return index >= 0 && index < pages.length && !list('loadFails').includes(index)
+        ? 100 + index
+        : 0
     },
     _FPDF_ClosePage: (page: number) => log('closePage', page - 100),
     _FPDFPage_GenerateContent: (page: number) => {
@@ -2000,7 +2146,12 @@ const edit = (kind: string, pageIndex: number, extra: J = {}): J => ({
   image: 'AAAA',
   ...extra,
 })
-const IMG = (obj: number, bounds: number[], extra: J = {}): J => ({ obj, index: obj, bounds, ...extra })
+const IMG = (obj: number, bounds: number[], extra: J = {}): J => ({
+  obj,
+  index: obj,
+  bounds,
+  ...extra,
+})
 const WORLD: J = {
   pages: [
     {
@@ -2045,7 +2196,13 @@ const imageEdit: Group = {
   'image-edit.matchImage': {
     ts: async (a) => {
       const mod = await imageEditModule()
-      const objects = (a[0] as J[]).map((o) => ({ ...o, obj: 0, index: 0, chain: [], ordinals: [] }))
+      const objects = (a[0] as J[]).map((o) => ({
+        ...o,
+        obj: 0,
+        index: 0,
+        chain: [],
+        ordinals: [],
+      }))
       const found = mod.matchImage(objects, a[1])
       return found ? objects.indexOf(found) : null
     },
@@ -2053,9 +2210,18 @@ const imageEdit: Group = {
       [[{ bounds: [0, 0, 10, 10] }], [0, 0, 10, 10]],
       [[{ bounds: [0, 0, 10, 10] }], [1, 1, 11, 11]],
       [[{ bounds: [0, 0, 10, 10] }], [3, 0, 10, 10]],
-      [[{ bounds: [0, 0, 10, 10] }, { bounds: [0, 0, 11, 10] }], [0, 0, 10.5, 10]],
-      [[{ bounds: [0, 0, 11, 10] }, { bounds: [0, 0, 10, 10] }], [0, 0, 10.5, 10]],
-      [[{ bounds: [0, 0, 10, 10] }, { bounds: [0, 0, 10, 10] }], [0, 0, 10, 10]],
+      [
+        [{ bounds: [0, 0, 10, 10] }, { bounds: [0, 0, 11, 10] }],
+        [0, 0, 10.5, 10],
+      ],
+      [
+        [{ bounds: [0, 0, 11, 10] }, { bounds: [0, 0, 10, 10] }],
+        [0, 0, 10.5, 10],
+      ],
+      [
+        [{ bounds: [0, 0, 10, 10] }, { bounds: [0, 0, 10, 10] }],
+        [0, 0, 10, 10],
+      ],
       [[{ bounds: [0, 0, 10, 12] }], [0, 0, 10, 10]],
       [[{ bounds: [0, 0, 10, 11.5] }], [0, 0, 10, 10]],
       [[{ bounds: [0, 0, 10, 12.5] }], [0, 0, 10, 10]],
@@ -2080,7 +2246,10 @@ const imageEdit: Group = {
   'image-edit.applyImageGeometry': {
     ts: async (a, cx) => {
       const mod = await imageEditModule()
-      const m = { _FPDFPageObj_Transform: (obj: number, ...matrix: number[]) => cx.log('transform', obj, ...matrix) }
+      const m = {
+        _FPDFPageObj_Transform: (obj: number, ...matrix: number[]) =>
+          cx.log('transform', obj, ...matrix),
+      }
       mod.applyImageGeometry(m, 7, a[0], a[1], (a[2] ?? undefined) as number | undefined)
       return undefined
     },
@@ -2143,7 +2312,10 @@ const imageEdit: Group = {
         note: 'a rounding tie',
       },
       { args: [{ b64: 'AAAA', empty: true }], note: 'nothing decoded' },
-      { args: [{ b64: 'AAAA', width: 1, height: 1, bitmap: '10203040ff' }], note: 'a partial pixel' },
+      {
+        args: [{ b64: 'AAAA', width: 1, height: 1, bitmap: '10203040ff' }],
+        note: 'a partial pixel',
+      },
       { args: [{ b64: 'AAAA', width: 0, height: 0, bitmap: '' }], note: 'no pixels' },
     ],
   },
@@ -2151,7 +2323,11 @@ const imageEdit: Group = {
     ts: (a, cx) => runImageEdit(a, cx, 'applyImageEdits'),
     cases: [
       {
-        args: [world({ edits: [edit('deleteImage', 0), edit('deleteImage', 7), edit('deleteImage', -1)] })],
+        args: [
+          world({
+            edits: [edit('deleteImage', 0), edit('deleteImage', 7), edit('deleteImage', -1)],
+          }),
+        ],
         note: 'delete; pages that do not exist',
       },
       {
@@ -2159,7 +2335,11 @@ const imageEdit: Group = {
           world({
             edits: [
               edit('transformImage', 0),
-              edit('transformImage', 0, { oldRect: [300, 300, 340, 340], rect: [300, 300, 340, 340], quarterTurns: 1 }),
+              edit('transformImage', 0, {
+                oldRect: [300, 300, 340, 340],
+                rect: [300, 300, 340, 340],
+                quarterTurns: 1,
+              }),
               edit('transformImage', 0, { oldRect: [10, 10, 20, 20] }),
               edit('deleteImage', 1, { oldRect: [100.5, 99.5, 201, 200.25] }),
             ],
@@ -2180,15 +2360,24 @@ const imageEdit: Group = {
         note: 'moved to the top',
       },
       {
-        args: [world({ edits: [edit('transformImage', 0, { layer: 'belowText' })], noInsertAt: true })],
+        args: [
+          world({ edits: [edit('transformImage', 0, { layer: 'belowText' })], noInsertAt: true }),
+        ],
         note: 'no insert at an index',
       },
       {
-        args: [world({ edits: [edit('transformImage', 0, { layer: 'belowText' })], insertAtFails: true })],
+        args: [
+          world({
+            edits: [edit('transformImage', 0, { layer: 'belowText' })],
+            insertAtFails: true,
+          }),
+        ],
         note: 'the reinsert fails: the object stays on top',
       },
       {
-        args: [world({ edits: [edit('transformImage', 0, { layer: 'belowText' })], removeFails: [11] })],
+        args: [
+          world({ edits: [edit('transformImage', 0, { layer: 'belowText' })], removeFails: [11] }),
+        ],
         note: 'the remove fails',
       },
       {
@@ -2209,7 +2398,10 @@ const imageEdit: Group = {
           world({
             edits: [
               edit('transformImage', 1),
-              edit('transformImage', 1, { oldRect: [100.5, 99.5, 201, 200.25], rect: [100.5, 99.5, 201, 200.25] }),
+              edit('transformImage', 1, {
+                oldRect: [100.5, 99.5, 201, 200.25],
+                rect: [100.5, 99.5, 201, 200.25],
+              }),
             ],
             exclusive: [22],
           }),
@@ -2221,7 +2413,14 @@ const imageEdit: Group = {
         note: 'a fractional quarter turn throws inside the edit',
       },
       {
-        args: [world({ edits: [edit('insertImage', 0, { rotate: 90 }), edit('insertImage', 0, { layer: 'belowText', rotate: 0 })] })],
+        args: [
+          world({
+            edits: [
+              edit('insertImage', 0, { rotate: 90 }),
+              edit('insertImage', 0, { layer: 'belowText', rotate: 0 }),
+            ],
+          }),
+        ],
         note: 'inserted images',
       },
       {
@@ -2241,15 +2440,29 @@ const imageEdit: Group = {
         note: 'the bitmap does not take',
       },
       {
-        args: [world({ edits: [edit('insertImage', 0, { layer: 'belowText' })], insertAtFails: true })],
+        args: [
+          world({ edits: [edit('insertImage', 0, { layer: 'belowText' })], insertAtFails: true }),
+        ],
         note: 'the inserted image cannot go below the text',
       },
       {
-        args: [world({ edits: [edit('replaceImage', 0, { quarterTurns: 3 }), edit('replaceImage', 0, { layer: 'aboveText' })] })],
+        args: [
+          world({
+            edits: [
+              edit('replaceImage', 0, { quarterTurns: 3 }),
+              edit('replaceImage', 0, { layer: 'aboveText' }),
+            ],
+          }),
+        ],
         note: 'replaced pictures',
       },
       {
-        args: [world({ edits: [edit('replaceImage', 0)], image: { setBitmapFails: true, width: 2, height: 3 } })],
+        args: [
+          world({
+            edits: [edit('replaceImage', 0)],
+            image: { setBitmapFails: true, width: 2, height: 3 },
+          }),
+        ],
         note: 'a replacement that does not take',
       },
       {
@@ -2261,11 +2474,15 @@ const imageEdit: Group = {
         note: 'a page that cannot be loaded ends the run',
       },
       {
-        args: [world({ edits: [edit('deleteImage', 0), edit('deleteImage', 1)], generateFails: [0] })],
+        args: [
+          world({ edits: [edit('deleteImage', 0), edit('deleteImage', 1)], generateFails: [0] }),
+        ],
         note: 'a page that cannot be regenerated ends the run',
       },
       {
-        args: [world({ edits: [edit('deleteImage', 0, { oldRect: [1, 1, 2, 2] })], generateFails: [0] })],
+        args: [
+          world({ edits: [edit('deleteImage', 0, { oldRect: [1, 1, 2, 2] })], generateFails: [0] }),
+        ],
         note: 'nothing applied: the content is not regenerated',
       },
       {
@@ -2304,7 +2521,11 @@ const imageEdit: Group = {
             pages: [
               {
                 objects: [{ type: 1, index: 4 }],
-                images: [IMG(1, [0, 0, 3, 3], { index: 4 }), IMG(2, [0, 0, 2.99, 10], { index: 5 }), IMG(3, [0, 0, 10, 3], { index: 2 })],
+                images: [
+                  IMG(1, [0, 0, 3, 3], { index: 4 }),
+                  IMG(2, [0, 0, 2.99, 10], { index: 5 }),
+                  IMG(3, [0, 0, 10, 3], { index: 2 }),
+                ],
               },
             ],
           },
@@ -2332,7 +2553,15 @@ const imageEdit: Group = {
         note: 'found, missing, a page that is not there',
       },
       {
-        args: [world({ checks: [{ pageIndex: 0, rect: [1, 1, 2, 2] }, { pageIndex: 0, rect: [3, 3, 4, 4] }], loadFails: [0] })],
+        args: [
+          world({
+            checks: [
+              { pageIndex: 0, rect: [1, 1, 2, 2] },
+              { pageIndex: 0, rect: [3, 3, 4, 4] },
+            ],
+            loadFails: [0],
+          }),
+        ],
         note: 'a page that cannot be read fails each of its checks',
       },
       { args: [world({ checks: [] })], note: 'nothing to check' },
@@ -2362,7 +2591,12 @@ async function sessionStateModule(): Promise<J> {
   slidesStub ??= scratchFile('slides-stub.mjs', SLIDES_STUB)
   return loadPatched('apps/slides/src/main/session-state.ts', (src) => {
     let out = src
-    for (const spec of ['@seuoffice/pptx-engine', '@seuoffice/pptx-render', './fonts', './tiff-decode']) {
+    for (const spec of [
+      '@seuoffice/pptx-engine',
+      '@seuoffice/pptx-render',
+      './fonts',
+      './tiff-decode',
+    ]) {
       out = must(out, `from '${spec}'`, `from '${slidesStub}'`, 'session-state.ts')
     }
     out = must(
@@ -2378,7 +2612,10 @@ async function sessionStateModule(): Promise<J> {
 const bytesOf = (hex: string): Uint8Array => Uint8Array.from(Buffer.from(hex, 'hex'))
 const snapJson = (s: J): J => ({
   slides: s.slides,
-  entries: [...s.entries].map(([k, v]: [string, Uint8Array]) => [k, Buffer.from(v).toString('hex')]),
+  entries: [...s.entries].map(([k, v]: [string, Uint8Array]) => [
+    k,
+    Buffer.from(v).toString('hex'),
+  ]),
   size: s.size,
   metaDirty: s.metaDirty,
 })
@@ -2387,9 +2624,15 @@ const stateJson = (s: J): J => ({
   undo: s.undoStack.map(snapJson),
   redo: s.redoStack.map(snapJson),
   batch: s.historyBatch
-    ? { depth: s.historyBatch.depth, undoStart: s.historyBatch.undoStart, before: snapJson(s.historyBatch.before) }
+    ? {
+        depth: s.historyBatch.depth,
+        undoStart: s.historyBatch.undoStart,
+        before: snapJson(s.historyBatch.before),
+      }
     : null,
-  aiSnapshots: s.aiSnapshots ? [...s.aiSnapshots].map(([id, snap]: [number, J]) => [id, snapJson(snap)]) : null,
+  aiSnapshots: s.aiSnapshots
+    ? [...s.aiSnapshots].map(([id, snap]: [number, J]) => [id, snapJson(snap)])
+    : null,
   aiRun: s.aiRun !== undefined,
   metaDirty: !!s.metaDirty,
   metaRev: s.metaRev ?? null,
@@ -2461,17 +2704,26 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
       if (xml.includes('THROWTHEME')) throw new Error('bad theme')
       return {
         colors: Object.fromEntries(
-          xml.split(',').filter((p) => p.includes('=')).map((p) => p.split('=') as [string, string]),
+          xml
+            .split(',')
+            .filter((p) => p.includes('='))
+            .map((p) => p.split('=') as [string, string]),
         ),
       }
     },
-    parseClrMap: (master: string | undefined, layout: string | undefined, slide: string | undefined) => {
+    parseClrMap: (
+      master: string | undefined,
+      layout: string | undefined,
+      slide: string | undefined,
+    ) => {
       cx.log('parseClrMap', master ?? null, layout ?? null, slide ?? null)
       if ((layout ?? '').includes('THROWMAP')) throw new Error('bad map')
       return {}
     },
     resolveSchemeColor: (name: unknown, theme: J) =>
-      typeof name === 'string' && Object.hasOwn(theme.colors, name) ? theme.colors[name] : undefined,
+      typeof name === 'string' && Object.hasOwn(theme.colors, name)
+        ? theme.colors[name]
+        : undefined,
   }
   const windows = new Map<string, J>(
     Object.entries(spec.windows ?? {}).map(([name, w]) => [
@@ -2485,12 +2737,15 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
       },
     ]),
   )
-  const win = (name: string | null | undefined): J => (name == null ? null : (windows.get(name) ?? null))
+  const win = (name: string | null | undefined): J =>
+    name == null ? null : (windows.get(name) ?? null)
   const live = spec.live ?? []
   useElectron({
     webContents: {
       fromId: (id: number) =>
-        live.includes(id) ? { send: (channel: string, payload: unknown) => cx.log('send', id, channel, payload) } : undefined,
+        live.includes(id)
+          ? { send: (channel: string, payload: unknown) => cx.log('send', id, channel, payload) }
+          : undefined,
     },
     BrowserWindow: {
       fromWebContents: (wc: J) => win(spec.fromWc?.[String(wc.id)]),
@@ -2516,7 +2771,8 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
         case 'edit':
           if (step.slides) session.opened.deck.slides = structuredClone(step.slides)
           if (step.size) session.opened.deck.size = { ...step.size }
-          for (const [k, v] of Object.entries(step.set ?? {})) session.opened.archive.entries.set(k, bytesOf(v as string))
+          for (const [k, v] of Object.entries(step.set ?? {}))
+            session.opened.archive.entries.set(k, bytesOf(v as string))
           for (const k of step.delete ?? []) session.opened.archive.entries.delete(k)
           break
         case 'restore': {
@@ -2529,7 +2785,9 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
           result = ss.registerAiSnapshot(session, ss.takeSnapshot(session))
           break
         case 'registerBefore':
-          result = session.historyBatch ? ss.registerAiSnapshot(session, session.historyBatch.before) : null
+          result = session.historyBatch
+            ? ss.registerAiSnapshot(session, session.historyBatch.before)
+            : null
           break
         case 'restoreAi':
           result = ss.restoreAiSnapshot(session, step.id)
@@ -2602,7 +2860,9 @@ async function runSessionState(spec: SlidesSpec, cx: TsContext): Promise<J> {
           break
         case 'read': {
           const found = ss.readSlideMedia(step.url)
-          result = found ? { body: Buffer.from(found.body).toString('hex'), mime: found.mime } : null
+          result = found
+            ? { body: Buffer.from(found.body).toString('hex'), mime: found.mime }
+            : null
           break
         }
         case 'prune':
@@ -2624,11 +2884,18 @@ const S1 = 'ppt/slides/slide1.xml'
 const S2 = 'ppt/slides/slide2.xml'
 const S3 = 'ppt/slides/slide3.xml'
 const slide = (path: string, elements: J[] = [], extra: J = {}): J => ({ path, elements, ...extra })
-const slideNo = (): J => ({ type: 'text', text: { paragraphs: [{ runs: [{ field: 'slidenum' }] }] } })
+const slideNo = (): J => ({
+  type: 'text',
+  text: { paragraphs: [{ runs: [{ field: 'slidenum' }] }] },
+})
 const plainText = (): J => ({ type: 'text', text: { paragraphs: [{ runs: [{ text: 'hi' }] }] } })
 const SIZE = { cx: 9144000, cy: 6858000 }
 const DECK: SlidesSpec['deck'] = {
-  slides: [slide(S1, [plainText()]), slide(S2, [{ type: 'group', children: [plainText(), slideNo()] }]), slide(S3, [], { decorations: [slideNo()] })],
+  slides: [
+    slide(S1, [plainText()]),
+    slide(S2, [{ type: 'group', children: [plainText(), slideNo()] }]),
+    slide(S3, [], { decorations: [slideNo()] }),
+  ],
   size: SIZE,
 }
 const slides = (...paths: string[]): J[] => paths.map((p) => slide(p, [plainText()]))
@@ -2653,7 +2920,8 @@ const SVG_RULES =
   '.MsftOfcThm_Accent2_Fill { fill:3 } .MsftOfcThm_Accent3_Fill { fill:3 } .MsftOfcThm_Accent4_Fill { fill:3 } .MsftOfcThm_Accent5_Fill { fill:3 } .MsftOfcThm_Accent6_Fill { fill:3 }'
 const MEDIA_ENTRIES: Record<string, string> = {
   'ppt/media/image1.png': '89504e470d0a1a0a',
-  'ppt/media/image2.jpg': 'ffd8ffe1002245786966000049492a0008000000010012010300010000000600000000000000',
+  'ppt/media/image2.jpg':
+    'ffd8ffe1002245786966000049492a0008000000010012010300010000000600000000000000',
   'ppt/media/image3.tif': '49492a00ff',
   'ppt/media/image4.tif': '49492a0000',
   'ppt/media/image5.svg': SVG(SVG_RULES),
@@ -2667,7 +2935,11 @@ const MEDIA_ENTRIES: Record<string, string> = {
   [S2]: hexOf('<slide2/>'),
 }
 const CHAIN = {
-  [S1]: { themePath: 'ppt/theme/theme1.xml', layoutPath: 'ppt/slideLayouts/l1.xml', masterPath: 'ppt/slideMasters/m1.xml' },
+  [S1]: {
+    themePath: 'ppt/theme/theme1.xml',
+    layoutPath: 'ppt/slideLayouts/l1.xml',
+    masterPath: 'ppt/slideMasters/m1.xml',
+  },
   [S2]: { themePath: 'ppt/theme/theme1.xml' },
   [S3]: { layoutPath: 'ppt/slideLayouts/l1.xml' },
 }
@@ -3053,7 +3325,12 @@ const sessionState: Group = {
               resolve('ppt/media/image5.svg', S1),
               { op: 'read', url: 'seuoffice-slide-media://archive/uuid-1?mime=image%2Fsvg%2Bxml' },
             ],
-            { entries: { ...MEDIA_ENTRIES, 'ppt/theme/theme1.xml': hexOf('THROWTHEME,accent1=#FF0000') } },
+            {
+              entries: {
+                ...MEDIA_ENTRIES,
+                'ppt/theme/theme1.xml': hexOf('THROWTHEME,accent1=#FF0000'),
+              },
+            },
           ),
         ],
         note: 'a theme that does not parse leaves the SVG as it is',

@@ -19,635 +19,489 @@
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "math_round(TAB_STRIP_HEIGHT * scale)",
     "replace": "math_round(TAB_STRIP_HEIGHT)",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "a window as tall as the strip counts as settled",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "&& rect.height > 0.0",
     "replace": "&& rect.height >= 0.0",
-    "fn": [
-      "tab-manager.layout",
-      "detached-windows.create"
-    ]
+    "fn": ["tab-manager.layout", "detached-windows.create"]
   },
   {
     "name": "the fullscreen tab does not cover",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if let Some(id) = &self.html_full_screen_id {",
     "replace": "if let Some(id) = &self.html_full_screen_id.clone().filter(|_| false) {",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "a bleeding view does not cover",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "self.bleed_wc_ids.contains(&host.view_id(view))",
     "replace": "!self.bleed_wc_ids.contains(&host.view_id(view))",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "split layout only when pane a is active",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "(self.active_id == split.a_tab_id || self.active_id == split.b_tab_id)",
     "replace": "self.active_id == split.a_tab_id",
-    "fn": [
-      "tab-manager.split",
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.split", "tab-manager.layout"]
   },
   {
     "name": "a spare sheets view is scheduled during a split",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if target_kind == TabKind::Sheets && self.split.is_none() {",
     "replace": "if target_kind == TabKind::Sheets {",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "restore reconciles a minimized window",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if host.window_destroyed() || host.window_minimized() {",
     "replace": "if host.window_destroyed() {",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "the spare view is handed over without a nudge",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "host.nudge_queued_workbook(&view);",
     "replace": "let _ = &view;",
-    "fn": [
-      "tab-manager.layout"
-    ]
+    "fn": ["tab-manager.layout"]
   },
   {
     "name": "focus goes to the view of an unfocused window",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if host.window_destroyed() || !host.window_focused() {",
     "replace": "if host.window_destroyed() {",
-    "fn": [
-      "tab-manager.activate"
-    ]
+    "fn": ["tab-manager.activate"]
   },
   {
     "name": "reorder lets a tab take the Home slot",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "math_max(to_index.trunc(), 1.0)",
     "replace": "math_max(to_index.trunc(), 0.0)",
-    "fn": [
-      "tab-manager.activate"
-    ]
+    "fn": ["tab-manager.activate"]
   },
   {
     "name": "a strip of one cycles",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if self.tabs.len() < 2 {",
     "replace": "if self.tabs.len() < 1 {",
-    "fn": [
-      "tab-manager.activate"
-    ]
+    "fn": ["tab-manager.activate"]
   },
   {
     "name": "a present tab gets its own menu",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if target.present || target.opener.is_some() {",
     "replace": "if target.opener.is_some() {",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "the split never remembers the previous tab",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "self.previous_active_id.as_deref(),",
     "replace": "None,",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "the split ratio is not clamped on entry",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let ratio = clamp_split_ratio(next.ratio, &bounds, next.orientation);",
     "replace": "let ratio = next.ratio;",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "the divider re-lays out at the same ratio",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if bounded == split.ratio {",
     "replace": "if false {",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "begin split takes a ratio past the ends",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "math_min(1.0, math_max(0.0, ratio))",
     "replace": "ratio",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "a divider at zero does not close the first pane",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if ratio <= 0.0 {",
     "replace": "if ratio < 0.0 {",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "a strip document replaces pane a whatever the focus",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let side = split.focus;",
     "replace": "let side = Pane::A;",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "reorient restarts at the even ratio",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "ratio: split.ratio,",
     "replace": "ratio: SPLIT_EVEN_RATIO,",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "an unchanged prompt arrangement is rebuilt",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let same = self.split == split;",
     "replace": "let same = false;",
-    "fn": [
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.split"]
   },
   {
     "name": "the survivor takes over even under a cover",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if self.active_id == id && self.tabs.iter().any(|t| t.id == survivor) {",
     "replace": "if self.tabs.iter().any(|t| t.id == survivor) {",
-    "fn": [
-      "tab-manager.split",
-      "tab-manager.detach"
-    ]
+    "fn": ["tab-manager.split", "tab-manager.detach"]
   },
   {
     "name": "a restored index may be a fraction",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "index.fract() == 0.0 && index.is_finite()",
     "replace": "index.is_finite()",
-    "fn": [
-      "tab-manager.unloaded"
-    ]
+    "fn": ["tab-manager.unloaded"]
   },
   {
     "name": "the front tab does not pick the restored focus",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if active_id.as_ref() == Some(a_id) {",
     "replace": "if false {",
-    "fn": [
-      "tab-manager.unloaded"
-    ]
+    "fn": ["tab-manager.unloaded"]
   },
   {
     "name": "ensure waits only for a settled document",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "&& !settled",
     "replace": "&& settled",
-    "fn": [
-      "tab-manager.unloaded"
-    ]
+    "fn": ["tab-manager.unloaded"]
   },
   {
     "name": "a hwp memo is no reason to ask",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "host.family_is_dirty(kind, wc_id) || host.hwp_memo_modal_open(wc_id)",
     "replace": "host.family_is_dirty(kind, wc_id)",
-    "fn": [
-      "tab-manager.close"
-    ]
+    "fn": ["tab-manager.close"]
   },
   {
     "name": "a clean docs tab is asked about",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let dirty = host.docs_query_dirty(view);",
     "replace": "let dirty = true;",
-    "fn": [
-      "tab-manager.close"
-    ]
+    "fn": ["tab-manager.close"]
   },
   {
     "name": "closing the active tab falls back to Home",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "            let before = if idx >= 1 {\n                self.tabs.get(idx - 1)\n            } else {\n                None\n            };",
     "replace": "            let before = None;",
-    "fn": [
-      "tab-manager.close"
-    ]
+    "fn": ["tab-manager.close"]
   },
   {
     "name": "a promptless close ignores the memo editor",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "            if host.hwp_memo_modal_open(wc_id) {\n                return false;\n            }",
     "replace": "            if false {\n                return false;\n            }",
-    "fn": [
-      "tab-manager.close"
-    ]
+    "fn": ["tab-manager.close"]
   },
   {
     "name": "the memo rule needs no dirtiness to be asked",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "host.family_is_dirty(TabKind::Hwp, wc_id) || host.hwp_memo_modal_open(wc_id)",
     "replace": "host.family_is_dirty(TabKind::Hwp, wc_id) && host.hwp_memo_modal_open(wc_id)",
-    "fn": [
-      "tab-manager.close"
-    ]
+    "fn": ["tab-manager.close"]
   },
   {
     "name": "a present tab can be detached",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if tab.present || self.closing_ids.iter().any(|c| c == id) {",
     "replace": "if self.closing_ids.iter().any(|c| c == id) {",
-    "fn": [
-      "tab-manager.detach"
-    ]
+    "fn": ["tab-manager.detach"]
   },
   {
     "name": "attach lets a tab take the Home slot",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "math_min(math_max(index.trunc(), 1.0), len as f64) as usize",
     "replace": "math_min(math_max(index.trunc(), 0.0), len as f64) as usize",
-    "fn": [
-      "tab-manager.detach"
-    ]
+    "fn": ["tab-manager.detach"]
   },
   {
     "name": "a sheets tab with an empty path opens a workbook",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "opening_workbook: Some(truthy(open_path).is_some()),",
     "replace": "opening_workbook: Some(open_path.is_some()),",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "a tab title is the whole path",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "            Some(path) => basename(path, None),\n            None => self.untitled(host, kind, fallback),",
     "replace": "            Some(path) => path.to_owned(),\n            None => self.untitled(host, kind, fallback),",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "an imported drawing keeps its file",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let imported = identity.as_ref().is_some_and(|i| i.imported);",
     "replace": "let imported = false;",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "an imported pdf copy is a plain copy",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "Some(copy) if copy.imported_pdf =>",
     "replace": "Some(copy) if !copy.imported_pdf =>",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "a hwp copy keeps the temp file as its file",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "            if copy.is_some() {\n                None\n            } else {\n                open_path.map(str::to_owned)\n            },",
     "replace": "            open_path.map(str::to_owned),",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "the slides seed is named by the title",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "host.queue_slides_seed_for(&contents, &copy.bytes, &copy.file_name)",
     "replace": "host.queue_slides_seed_for(&contents, &copy.bytes, &copy.title)",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "a markdown seed keeps the byte order mark",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "text_decoder_decode(&copy.bytes).into_owned()",
     "replace": "String::from_utf8_lossy(&copy.bytes).into_owned()",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "a sheets copy opens as docs",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "_ => return Ok(None),",
     "replace": "_ => self.open_docs_tab(host, None, None)?,",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "a file-less sheets duplicate is not blank",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "TabKind::Sheets => self.open_sheets_tab(host, path, !has_path)?,",
     "replace": "TabKind::Sheets => self.open_sheets_tab(host, path, false)?,",
-    "fn": [
-      "tab-manager.open",
-      "tab-manager.split"
-    ]
+    "fn": ["tab-manager.open", "tab-manager.split"]
   },
   {
     "name": "generate sends slides to html",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "let id = if target == \"slides\" {",
     "replace": "let id = if target == \"html\" {",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "open documents list a present tab",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "            if tab.kind == TabKind::Home\n                || tab.present\n                || !(tab.view.is_some() || tab.opener.is_some())\n            {",
     "replace": "            if tab.kind == TabKind::Home || !(tab.view.is_some() || tab.opener.is_some()) {",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "the session keeps a present tab",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "t.kind != TabKind::Home && t.kind != TabKind::Help && !t.present",
     "replace": "t.kind != TabKind::Home && t.kind != TabKind::Help",
-    "fn": [
-      "tab-manager.open",
-      "tab-manager.lookup"
-    ]
+    "fn": ["tab-manager.open", "tab-manager.lookup"]
   },
   {
     "name": "a destroyed view is asked for its dirty state",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "        if host.view_destroyed(view) {\n            return false;\n        }\n        let wc_id = host.view_id(view);\n        match tab.kind {",
     "replace": "        let wc_id = host.view_id(view);\n        match tab.kind {",
-    "fn": [
-      "tab-manager.activate"
-    ]
+    "fn": ["tab-manager.activate"]
   },
   {
     "name": "help topics may be 64 long",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "r\"^[a-z0-9-]{1,64}$\"",
     "replace": "r\"^[a-z0-9-]{1,63}$\"",
-    "fn": [
-      "tab-manager.helpTopicParam"
-    ]
+    "fn": ["tab-manager.helpTopicParam"]
   },
   {
     "name": "the manual url asks for another mode",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "(\"mode\".to_owned(), \"help\".to_owned())",
     "replace": "(\"mode\".to_owned(), \"Help\".to_owned())",
-    "fn": [
-      "tab-manager.helpViewUrl"
-    ]
+    "fn": ["tab-manager.helpViewUrl"]
   },
   {
     "name": "the manual lets a window open",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "    \"deny\"\n}",
     "replace": "    \"allow\"\n}",
-    "fn": [
-      "tab-manager.open"
-    ]
+    "fn": ["tab-manager.open"]
   },
   {
     "name": "an unresolvable path has no canonical form",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "Err(_) => Some(path.to_owned()),",
     "replace": "Err(_) => None,",
-    "fn": [
-      "tab-manager.canonicalPath",
-      "tab-manager.lookup"
-    ]
+    "fn": ["tab-manager.canonicalPath", "tab-manager.lookup"]
   },
   {
     "name": "a rename answers affected views for nothing",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if !affected.is_empty() {",
     "replace": "if true {",
-    "fn": [
-      "tab-manager.lookup"
-    ]
+    "fn": ["tab-manager.lookup"]
   },
   {
     "name": "a title is set again when it is the same",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if truthy_opt(&tab.file_path) || tab.title == title {",
     "replace": "if truthy_opt(&tab.file_path) {",
-    "fn": [
-      "tab-manager.lookup"
-    ]
+    "fn": ["tab-manager.lookup"]
   },
   {
     "name": "every tab of the kind is the active html target",
     "file": "main-core/src/shell/tab_manager.rs",
     "find": "if kind == TabKind::Html && tab.present {",
     "replace": "if false {",
-    "fn": [
-      "tab-manager.lookup"
-    ]
+    "fn": ["tab-manager.lookup"]
   },
   {
     "name": "dock dwell is one millisecond longer",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "pub const DOCK_DWELL_MS: f64 = 180.0;",
     "replace": "pub const DOCK_DWELL_MS: f64 = 181.0;",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "dock band slack is wider",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "pub const DOCK_BAND_SLACK: f64 = 8.0;",
     "replace": "pub const DOCK_BAND_SLACK: f64 = 9.0;",
-    "fn": [
-      "detached-windows.registry"
-    ]
+    "fn": ["detached-windows.registry"]
   },
   {
     "name": "the band holds its right edge",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "x >= rect.x && x < rect.x + rect.width",
     "replace": "x >= rect.x && x <= rect.x + rect.width",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "the tear grab is one pixel wider",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "const TEAR_GRAB_DX: f64 = 120.0;",
     "replace": "const TEAR_GRAB_DX: f64 = 121.0;",
-    "fn": [
-      "detached-windows.create"
-    ]
+    "fn": ["detached-windows.create"]
   },
   {
     "name": "a pdf window opens at another height",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "TabKind::Pdf => (1200.0, 900.0),",
     "replace": "TabKind::Pdf => (1200.0, 901.0),",
-    "fn": [
-      "detached-windows.create"
-    ]
+    "fn": ["detached-windows.create"]
   },
   {
     "name": "the torn window is steered from its own corner",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "to_int(x - torn.grab_dx)",
     "replace": "to_int(x)",
-    "fn": [
-      "detached-windows.create"
-    ]
+    "fn": ["detached-windows.create"]
   },
   {
     "name": "detached ids are read as plain text",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "number_to_string(to_number(rest))",
     "replace": "rest.to_owned()",
-    "fn": [
-      "detached-windows.registry"
-    ]
+    "fn": ["detached-windows.registry"]
   },
   {
     "name": "the indicator shows the screen x",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "host.dock_preview(Some(cursor.0 - band.x));",
     "replace": "host.dock_preview(Some(cursor.0));",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "a window with no dock host tracks the hover",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if r.released || !self.dock_host {",
     "replace": "if r.released {",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "a cursor that left still docks after the dwell",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if now_band.is_some_and(|b| point_in_rect(now.0, now.1, &b)) {",
     "replace": "if true {",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "a taken torn-off window may be destroyed",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if r.released || host.win_destroyed(&window) {",
     "replace": "if r.released {",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "a window moved by its own tear-off docks",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "        if self.torn_is(rec) {\n            return;\n        }\n        self.track_dock_hover(host, rec);",
     "replace": "        self.track_dock_hover(host, rec);",
-    "fn": [
-      "detached-windows.dock"
-    ]
+    "fn": ["detached-windows.dock"]
   },
   {
     "name": "a denied pdf close tells nobody",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if kind == TabKind::Pdf {",
     "replace": "if kind == TabKind::Sheets {",
-    "fn": [
-      "detached-windows.close"
-    ]
+    "fn": ["detached-windows.close"]
   },
   {
     "name": "an open memo asks nothing of a clean document",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if !memo_open && !self.detached_is_dirty(host, rec) {",
     "replace": "if !self.detached_is_dirty(host, rec) {",
-    "fn": [
-      "detached-windows.close"
-    ]
+    "fn": ["detached-windows.close"]
   },
   {
     "name": "the agent closes a window over a memo editor",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if kind == TabKind::Hwp && !host.view_destroyed(&view) {",
     "replace": "if false {",
-    "fn": [
-      "detached-windows.close"
-    ]
+    "fn": ["detached-windows.close"]
   },
   {
     "name": "a docs window keeps its renderer",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "host.teardown_docs_renderer(&view);",
     "replace": "host.close_view(&view);",
-    "fn": [
-      "detached-windows.close"
-    ]
+    "fn": ["detached-windows.close"]
   },
   {
     "name": "a titled window takes a new title",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "if truthy(rec.file_path.as_deref()).is_some() || host.win_destroyed(&window) {",
     "replace": "if host.win_destroyed(&window) {",
-    "fn": [
-      "detached-windows.registry"
-    ]
+    "fn": ["detached-windows.registry"]
   },
   {
     "name": "the detached resolver answers for a destroyed view",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "host.set_active_docs_resolver(Some(&view), true);",
     "replace": "host.set_active_docs_resolver(Some(&view), false);",
-    "fn": [
-      "detached-windows.create"
-    ]
+    "fn": ["detached-windows.create"]
   },
   {
     "name": "a failed prompt keeps the update restart",
     "file": "main-core/src/shell/detached_windows.rs",
     "find": "host.console_error(\"[shell] detached window close prompt failed:\", &error);\n                host.reset_sheets_shutting_down();\n                host.cancel_update_restart();",
     "replace": "host.console_error(\"[shell] detached window close prompt failed:\", &error);\n                host.reset_sheets_shutting_down();",
-    "fn": [
-      "detached-windows.close"
-    ]
+    "fn": ["detached-windows.close"]
   }
 ]

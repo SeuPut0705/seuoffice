@@ -140,8 +140,7 @@ registerHooks({
 // static import would be resolved before them
 const tabManagerModule = await import('../../../apps/shell/src/main/tab-manager.ts')
 const detachedModule = await import('../../../apps/shell/src/main/detached-windows.ts')
-const { TabManager, canonicalPath, helpTopicParam, helpViewUrl, plainTabOpener } =
-  tabManagerModule
+const { TabManager, canonicalPath, helpTopicParam, helpViewUrl, plainTabOpener } = tabManagerModule
 const detached = detachedModule
 
 // ---------------------------------------------------------------------------
@@ -667,7 +666,9 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     }
 
     const winOf = (n: unknown): FakeWin => windows[Number(n) - 1]
-    const tabOut = (t: { kind: string; title: string; filePath?: string; view: FakeView } | null) =>
+    const tabOut = (
+      t: { kind: string; title: string; filePath?: string; view: FakeView } | null,
+    ) =>
       t
         ? {
             kind: t.kind,
@@ -911,7 +912,9 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         case 'dirtyMemo':
           return pairs(tm.dirtyOrMemoHwpTabs())
         case 'live':
-          return pairs((tm as unknown as Record<string, () => never>)[LIVE_METHOD[o.kind as string]]())
+          return pairs(
+            (tm as unknown as Record<string, () => never>)[LIVE_METHOD[o.kind as string]](),
+          )
         case 'find':
           return tabLike(tm.findTabByPath(o.path as string | undefined))
         case 'findKind':
@@ -932,7 +935,11 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
             >
           )[ACTIVE_METHOD[o.kind as string]]()
           return t
-            ? { id: t.id, wc: t.webContents.id, ...(t.filePath !== undefined ? { filePath: t.filePath } : {}) }
+            ? {
+                id: t.id,
+                wc: t.webContents.id,
+                ...(t.filePath !== undefined ? { filePath: t.filePath } : {}),
+              }
             : null
         }
         case 'viewFor':
@@ -1101,7 +1108,9 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         case 'hwp':
           return tm.openHwpTab(
             path,
-            o.copy ? { untitledCopy: o.copy as { title: string; importedPdf?: boolean } } : undefined,
+            o.copy
+              ? { untitledCopy: o.copy as { title: string; importedPdf?: boolean } }
+              : undefined,
           )
         case 'help':
           return tm.openHelpTab(o.topic as string | undefined)
@@ -1144,7 +1153,12 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     }
     results.push([
       'final',
-      { list: tm.list(), split: tm.splitState(), session: tm.sessionTabs(), paths: tm.openFilePaths() },
+      {
+        list: tm.list(),
+        split: tm.splitState(),
+        session: tm.sessionTabs(),
+        paths: tm.openFilePaths(),
+      },
     ])
     return results
   } finally {
@@ -1253,7 +1267,11 @@ const openCases: Case[] = [
   scenario(
     [
       open('diagram', { path: '/w/a.drawio' }),
-      { op: 'state', wc: 101, identity: { imported: true, title: 'From Visio', sourcePath: '/w/v.vsdx' } },
+      {
+        op: 'state',
+        wc: 101,
+        identity: { imported: true, title: 'From Visio', sourcePath: '/w/v.vsdx' },
+      },
       open('diagram', { path: '/w/v.vsdx' }),
       open('diagram'),
       { op: 'findDiagram', path: '/w/v.vsdx' },
@@ -1279,7 +1297,11 @@ const openCases: Case[] = [
     { untitled: KO, devUrl: 'http://localhost:5173/' },
     'one manual: asking again focuses it, at the topic when given; its links open outside',
   ),
-  scenario([open('help'), open('help', { topic: 'x' }), L], { devUrl: 'not a url' }, 'an invalid dev URL'),
+  scenario(
+    [open('help'), open('help', { topic: 'x' }), L],
+    { devUrl: 'not a url' },
+    'an invalid dev URL',
+  ),
   scenario(
     [
       { op: 'fail', create: 'createPdfView' },
@@ -1316,15 +1338,33 @@ const openCases: Case[] = [
     [
       {
         op: 'template',
-        copy: { editor: 'docs', path: '/t/a.docx', hex: '504b0304', fileName: 'a.docx', title: 'Report' },
+        copy: {
+          editor: 'docs',
+          path: '/t/a.docx',
+          hex: '504b0304',
+          fileName: 'a.docx',
+          title: 'Report',
+        },
       },
       {
         op: 'template',
-        copy: { editor: 'markdown', path: '/t/a.md', hex: 'efbbbf23205469', fileName: 'a.md', title: 'Notes' },
+        copy: {
+          editor: 'markdown',
+          path: '/t/a.md',
+          hex: 'efbbbf23205469',
+          fileName: 'a.md',
+          title: 'Notes',
+        },
       },
       {
         op: 'template',
-        copy: { editor: 'html', path: '/t/a.html', hex: '3c68313e', fileName: 'a.html', title: 'Page' },
+        copy: {
+          editor: 'html',
+          path: '/t/a.html',
+          hex: '3c68313e',
+          fileName: 'a.html',
+          title: 'Page',
+        },
       },
       {
         op: 'template',
@@ -1332,7 +1372,13 @@ const openCases: Case[] = [
       },
       {
         op: 'template',
-        copy: { editor: 'slides', path: '/t/a.pptx', hex: '504b', fileName: 'a.pptx', title: 'Deck' },
+        copy: {
+          editor: 'slides',
+          path: '/t/a.pptx',
+          hex: '504b',
+          fileName: 'a.pptx',
+          title: 'Deck',
+        },
       },
       {
         op: 'template',
@@ -1340,7 +1386,13 @@ const openCases: Case[] = [
       },
       {
         op: 'template',
-        copy: { editor: 'pdf', path: '/t/a.pdf', hex: '25504446', fileName: 'a.pdf', title: 'Form' },
+        copy: {
+          editor: 'pdf',
+          path: '/t/a.pdf',
+          hex: '25504446',
+          fileName: 'a.pdf',
+          title: 'Form',
+        },
       },
       {
         op: 'template',
@@ -1445,7 +1497,14 @@ const layoutCases: Case[] = [
     'the strip grows with the interface scale',
   ),
   scenario(
-    [open('docs'), open('markdown'), { op: 'window', height: 30 }, { op: 'layout' }, { op: 'window', height: 40 }, { op: 'layout' }],
+    [
+      open('docs'),
+      open('markdown'),
+      { op: 'window', height: 30 },
+      { op: 'layout' },
+      { op: 'window', height: 40 },
+      { op: 'layout' },
+    ],
     {},
     'a window as tall as the strip leaves no room',
   ),
@@ -1625,7 +1684,11 @@ const activateCases: Case[] = [
     {},
     'Ctrl+Tab wraps through Home',
   ),
-  scenario([{ op: 'cycle', dir: 1 }, { op: 'cycle', dir: -1 }, L], {}, 'a strip of one does not cycle'),
+  scenario(
+    [{ op: 'cycle', dir: 1 }, { op: 'cycle', dir: -1 }, L],
+    {},
+    'a strip of one does not cycle',
+  ),
   scenario(
     [
       open('docs'),
@@ -2024,7 +2087,10 @@ const unloadedCases: Case[] = [
   scenario(
     [
       { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: plain } },
-      { op: 'addUnloaded', spec: { kind: 'sheets', title: 'Budget', filePath: '/w/b.xlsx', opener: plain } },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'sheets', title: 'Budget', filePath: '/w/b.xlsx', opener: plain },
+      },
       { op: 'addUnloaded', spec: { kind: 'markdown', opener: plain } },
       { op: 'unloaded', id: 't1' },
       { op: 'unloaded', id: 'home' },
@@ -2165,7 +2231,11 @@ const unloadedCases: Case[] = [
     [
       {
         op: 'hydrate',
-        session: { tabs: [{ kind: 'docs', filePath: '/w/a.docx', opener: plain }], active: -1, split: { a: 5, b: 0, orientation: 'side', ratio: 0.5, focus: 'a' } },
+        session: {
+          tabs: [{ kind: 'docs', filePath: '/w/a.docx', opener: plain }],
+          active: -1,
+          split: { a: 5, b: 0, orientation: 'side', ratio: 0.5, focus: 'a' },
+        },
       },
       { op: 'hydrate', session: { tabs: [] } },
       L,
@@ -2212,10 +2282,30 @@ const unloadedCases: Case[] = [
   ),
   scenario(
     [
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', ready: 'resolved' } } },
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/b.docx', opener: { kind: 'custom', ready: 'rejected' } } },
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/c.docx', opener: { kind: 'custom', ready: 'pending' } } },
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/d.docx', opener: { kind: 'custom' } } },
+      {
+        op: 'addUnloaded',
+        spec: {
+          kind: 'docs',
+          filePath: '/w/a.docx',
+          opener: { kind: 'custom', ready: 'resolved' },
+        },
+      },
+      {
+        op: 'addUnloaded',
+        spec: {
+          kind: 'docs',
+          filePath: '/w/b.docx',
+          opener: { kind: 'custom', ready: 'rejected' },
+        },
+      },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/c.docx', opener: { kind: 'custom', ready: 'pending' } },
+      },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/d.docx', opener: { kind: 'custom' } },
+      },
       { op: 'ensure', id: 't1' },
       { op: 'ensure', id: 't1' },
       { op: 'ensure', id: 't2' },
@@ -2228,11 +2318,14 @@ const unloadedCases: Case[] = [
       { op: 'ensure', id: 't4' },
     ],
     {},
-    'ensure waits for the opener\'s ready, or the page load when it gave none; a settled one is not awaited again',
+    "ensure waits for the opener's ready, or the page load when it gave none; a settled one is not awaited again",
   ),
   scenario(
     [
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom' } } },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom' } },
+      },
       { op: 'ensure', id: 't1' },
       { op: 'viewEvent', wc: 100, event: 'destroyed' },
       { op: 'ensure', id: 't1' },
@@ -2242,8 +2335,18 @@ const unloadedCases: Case[] = [
   ),
   scenario(
     [
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', needsUser: true } } },
-      { op: 'addUnloaded', spec: { kind: 'sheets', filePath: '/w/b.xlsx', opener: { kind: 'custom', needsUser: false, ready: 'pending' } } },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', needsUser: true } },
+      },
+      {
+        op: 'addUnloaded',
+        spec: {
+          kind: 'sheets',
+          filePath: '/w/b.xlsx',
+          opener: { kind: 'custom', needsUser: false, ready: 'pending' },
+        },
+      },
       { op: 'ensure', id: 't1' },
       { op: 'unloaded', id: 't1' },
       act('t1'),
@@ -2257,7 +2360,10 @@ const unloadedCases: Case[] = [
   ),
   scenario(
     [
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', fails: true } } },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', fails: true } },
+      },
       { op: 'ensure', id: 't1' },
     ],
     {},
@@ -2283,7 +2389,10 @@ const unloadedCases: Case[] = [
   ),
   scenario(
     [
-      { op: 'addUnloaded', spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', fails: true } } },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', fails: true } },
+      },
       { op: 'find', path: '/w/a.docx' },
       { op: 'detach', id: 't1' },
       { op: 'closeNoPrompt', id: 't1' },
@@ -2834,10 +2943,23 @@ const registryCases: Case[] = [
     [
       { op: 'dockBandFor', shell: null },
       { op: 'dockBandFor', shell: { bounds: { x: 100, y: 50, width: 1200, height: 800 } } },
-      { op: 'dockBandFor', shell: { bounds: { x: 100, y: 50, width: 1200, height: 800 } }, scale: 1.5 },
-      { op: 'dockBandFor', shell: { destroyed: true, bounds: { x: 0, y: 0, width: 10, height: 10 } } },
-      { op: 'dockBandFor', shell: { visible: false, bounds: { x: 0, y: 0, width: 10, height: 10 } } },
-      { op: 'dockBandFor', shell: { minimized: true, bounds: { x: 0, y: 0, width: 10, height: 10 } } },
+      {
+        op: 'dockBandFor',
+        shell: { bounds: { x: 100, y: 50, width: 1200, height: 800 } },
+        scale: 1.5,
+      },
+      {
+        op: 'dockBandFor',
+        shell: { destroyed: true, bounds: { x: 0, y: 0, width: 10, height: 10 } },
+      },
+      {
+        op: 'dockBandFor',
+        shell: { visible: false, bounds: { x: 0, y: 0, width: 10, height: 10 } },
+      },
+      {
+        op: 'dockBandFor',
+        shell: { minimized: true, bounds: { x: 0, y: 0, width: 10, height: 10 } },
+      },
     ],
     {},
     'the dock band covers the strip as it is rendered, with slack; none for a hidden shell',
@@ -3100,7 +3222,7 @@ const dockCases: Case[] = [
       L,
     ],
     {},
-    'while a tear-off follows the pointer the window\'s own moves are ignored; the held pointer over the strip takes the tab back',
+    "while a tear-off follows the pointer the window's own moves are ignored; the held pointer over the strip takes the tab back",
   ),
   scenario(
     [
@@ -3201,7 +3323,7 @@ const detachedCloseCases: Case[] = [
       { op: 'closeDetached', id: 'detached:100' },
     ],
     {},
-    'an open memo editor asks even a clean document, and blocks the agent\'s promptless close',
+    "an open memo editor asks even a clean document, and blocks the agent's promptless close",
   ),
   scenario(
     [
@@ -3263,7 +3385,7 @@ const detachedCloseCases: Case[] = [
       L,
     ],
     {},
-    'a docked window\'s close handler lets the close through (its view left)',
+    "a docked window's close handler lets the close through (its view left)",
   ),
 ]
 

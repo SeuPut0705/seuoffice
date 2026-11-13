@@ -18,7 +18,11 @@
     "file": "main-core/src/packages/electron_utils/save_conflict.rs",
     "find": "probe.is_some_and(|probe| probe(path).unwrap_or(false))",
     "replace": "probe.is_some_and(|probe| probe(path).unwrap_or(true))",
-    "fn": ["save-conflict.isPathOpenElsewhere", "save-conflict.confirmOverwriteIfConflicted", "save-conflict.shouldDeferAutoSave"]
+    "fn": [
+      "save-conflict.isPathOpenElsewhere",
+      "save-conflict.confirmOverwriteIfConflicted",
+      "save-conflict.shouldDeferAutoSave"
+    ]
   },
   {
     "name": "save conflict box cancels on overwrite",
