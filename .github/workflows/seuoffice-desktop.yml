@@ -298,7 +298,7 @@ jobs:
             has_line "$dir/$feed" "path: $installer" || { echo "$feed path is not $installer"; exit 1; }
             local update="$dir/win-unpacked/resources/app-update.yml"
             test -f "$update" || { echo "missing: $update"; exit 1; }
-            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+            for line in "channel: $channel" "repo: seuoffice" "owner: seuput-inc"; do
               has_line "$update" "$line" || { echo "$update lacks '$line'"; exit 1; }
             done
           }
@@ -549,7 +549,7 @@ jobs:
             [ "$built" = "$version" ] || { echo "$feed says $built, package.json $version"; exit 1; }
             grep -qF "url: $zip" "$dir/$feed" || { echo "$feed does not name $zip"; exit 1; }
             local update="$app/Contents/Resources/app-update.yml"
-            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+            for line in "channel: $channel" "repo: seuoffice" "owner: seuput-inc"; do
               grep -Fxq -- "$line" "$update" || { echo "$update lacks '$line'"; exit 1; }
             done
 
