@@ -52,7 +52,7 @@
   },
   "author": "SeuOffice",
   "build": {
-    "appId": "com.genoffice.slides",
+    "appId": "com.seuput.seuoffice.slides",
     "productName": "SeuOffice Slides",
     "electronVersion": "43.3.0",
     "directories": {
