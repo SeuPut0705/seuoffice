@@ -369,6 +369,12 @@ jobs:
             else
               npx tauri build --config bundle/macos.conf.json --config "{\"version\":\"$v\"}" --bundles app --verbose
               app=$(find target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
+              # every renderer host's page where a packaged shell reads it
+              # (Electron's layout: modules/<app>/renderer, help is the shell's)
+              for host in docs sheets slides pdf markdown html mindmap hwp epub diagram shell; do
+                test -f "$app/Contents/Resources/modules/$host/renderer/index.html" ||
+                  { echo "no modules/$host/renderer/index.html in the app"; exit 1; }
+              done
               # the app must report the version it was built as, not Cargo's:
               # an updating installer compares its start mark with its own
               # version and rolls back on a mismatch (bundle/hooks.nsh)
