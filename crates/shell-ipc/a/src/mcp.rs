@@ -827,12 +827,7 @@ mod tests {
             ui.clone(),
             Arc::new(Storage),
         );
-        Setup {
-            rig,
-            port,
-            net,
-            ui,
-        }
+        Setup { rig, port, net, ui }
     }
 
     fn cx(view: u32) -> CallContext {
