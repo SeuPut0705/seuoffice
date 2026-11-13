@@ -15,6 +15,7 @@
  * Every file of `apps/slides/src/main` is loaded afresh for each case, so its
  * module state starts over. Timers do not keep the process alive.
  */
+import type { Group } from '../types.ts'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createRequire, registerHooks } from 'node:module'
 import { resolve } from 'node:path'
@@ -132,7 +133,7 @@ const STUBS: Record<string, string> = {
     exports.getPrivateFontData = () => null
     exports.setUserFontDir = () => {}
     exports.setTemplateFontDir = () => {}
-    exports.fontFileFamilies = () => []`,
+    exports.fontFileFamilies = (path) => ${SELF}.fontFileFamilies(path)`,
   'shaped-metrics.ts': `
     exports.shapedMetricsReady = () => Promise.resolve()
     exports.refineComplexWidths = async () => false
@@ -142,10 +143,6 @@ const STUBS: Record<string, string> = {
   'pdf-export.ts': `
     exports.exportSlidesPdf = ${SELF}.exportSlidesPdf
     exports.buildPdfLinkOverlays = () => ''`,
-  'font-store.ts': `
-    exports.initFontStore = () => {}
-    exports.installLocalFontFiles = (paths) => ${SELF}.installLocalFontFiles(paths)
-    exports.fontStoreDir = () => ''`,
   'template-selection-ipc.ts': `
     exports.registerTemplateSelectionIpc = () => {}
     exports.followTemplateSelection = () => {}
@@ -203,9 +200,10 @@ box.parseFileToText = async (path: string) => {
     return { ok: false, error: (err as Error).message }
   }
 }
-box.installLocalFontFiles = (paths: string[]) => {
-  box.log(['font-store.installLocalFontFiles', paths.length])
-  return paths.map((p) => p.split('/').at(-1) ?? p).map((n) => n.split('.')[0] ?? n)
+box.fontFileFamilies = (path: string) => {
+  box.log(['fonts.fontFileFamilies', path])
+  const name = path.split('/').at(-1) ?? path
+  return [name.split('.')[0] ?? name]
 }
 
 function wrapperSource(name: string, real: string): string {
@@ -303,8 +301,6 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
   for (const v of cx.case.views ?? [{ view: 1 }]) {
     Object.assign(e.contents(v.view), {
       setWindowOpenHandler() {},
-      on() {},
-      once() {},
       getURL: () => '',
       loadURL: async () => {},
       reload() {},
@@ -316,7 +312,9 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
   const bw = e.BrowserWindow as Record<string, unknown>
   // no window has the focus: dialogs have no parent (the Rust fake's `dialog_parent`)
   bw.getFocusedWindow = () => null
-  const desktop = makeDesktop(e, box.d1.externalDisplay === true)
+  const desktop = makeDesktop(e, box.d1.externalDisplay === true, () =>
+    Number(box.standaloneView ?? 1),
+  )
   // the fake desktop is a Mac's: the slides main asks `process.platform` about the window snap
   Object.defineProperty(process, 'platform', { value: 'darwin' })
   const noop = () => {}
@@ -326,7 +324,6 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
       defaultSession: { protocol: { handle: noop }, setDisplayMediaRequestHandler: noop },
       fromPartition: () => ({ webRequest: { onBeforeRequest: noop } }),
     },
-    desktopCapturer: { getSources: async () => [] },
     // every picture is 640x480 and an empty one has no size; asking one for its size is one log line
     nativeImage: {
       ...(e.nativeImage as object),
@@ -343,14 +340,6 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
         markers.set(format, Buffer.from(bytes))
       },
     },
-    systemPreferences: {
-      getMediaAccessStatus: () => 'not-determined',
-      askForMediaAccess: async () => {
-        e.log.push(['systemPreferences.askForMediaAccess'])
-        return box.d1.microphone !== false
-      },
-    },
-    Menu: {},
     ...desktop,
   })
   useElectron(e)
@@ -385,7 +374,52 @@ export async function loadSlides(cx: LoadContext): Promise<SlidesMainModule> {
     e.log.push(['showChrome.setBleed', wc.id, on])
   })
   main.registerSlidesIpc()
+  box.main = main
   return main
 }
 
 export type SlidesMainModule = typeof SlidesMain
+
+/**
+ * The TypeScript side of the triggers (crates/shell-ipc/d1/src/slides/mod.rs
+ * `probe_trigger`): what the shell runs on the loaded entry. The File menu's
+ * items are found by their English label and clicked, with the view the menu's
+ * commands go to made the active one, as the shell's tab switch does.
+ */
+const MENU_ITEMS: Record<string, string> = {
+  'save-as': 'Save As…',
+  'export-pdf': 'Export as PDF…',
+  'export-images': 'Export as PNG…',
+  'export-images-jpg': 'Export as JPG…',
+}
+interface MenuItem {
+  label?: string
+  submenu?: MenuItem[]
+  click?: (item: MenuItem, window: unknown, event: unknown) => unknown
+}
+export const slidesTriggers: NonNullable<Group['triggers']> = {
+  'd1/slides:requestSlidesClose': (cx, view, args) =>
+    (box.main as SlidesMainModule).requestSlidesClose(
+      cx.contents(view) as never,
+      args[0] === true
+        ? (cx.electron.BrowserWindow as { fromId(id: number): never }).fromId(view)
+        : undefined,
+    ),
+  'd1/slides:slidesMenu': (cx, view, args) => {
+    const main = box.main as SlidesMainModule
+    main.setActiveSlidesWebContents(cx.contents(view) as never)
+    const menu = main.buildSlidesMenu() as unknown as { template: MenuItem[] }
+    const file = menu.template.find((item) => item.label === 'File')
+    const item = (file?.submenu as MenuItem[] | undefined)?.find(
+      (entry) => entry.label === MENU_ITEMS[String(args[0])],
+    )
+    if (!item?.click) throw new Error(`no menu item for ${String(args[0])}`)
+    item.click(item, undefined, undefined)
+  },
+  // `createSlidesWindow(path)`: the window's page loads and the deck opens in it
+  'd1/slides:openFileInWindow': async (cx, view, args) => {
+    box.standaloneView = view
+    ;(box.main as SlidesMainModule).createSlidesWindow(String(args[0]))
+    await cx.contents(view).emit('did-finish-load')
+  },
+}

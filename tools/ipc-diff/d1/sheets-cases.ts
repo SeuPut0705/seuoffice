@@ -123,3 +123,20 @@ export const cellEdit = (row: number, value: unknown = 1) => ({
   writeValue: true,
   value,
 })
+
+/** a trigger (`d1/workbook:<what>`, sheets-host.ts `sheetsTriggers`), run on the tab `view` */
+export const trigger = (
+  name: string,
+  args: unknown[] = [],
+  options: { view?: number; defer?: true } = {},
+): Call => ({
+  channel: name,
+  kind: 'trigger',
+  name,
+  ...(options.view ? { view: options.view } : {}),
+  args,
+  ...(options.defer ? { defer: true } : {}),
+})
+
+/** the answer of the deferred call at `index` of the case */
+export const settled = (index: number): Call => ({ channel: '', args: [], await: index })

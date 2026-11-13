@@ -212,8 +212,9 @@ pub trait SlidesEngine: Send + Sync {
     /// the page of `renderTemplateCover(id, lang)`: `None` for an id the
     /// catalog does not list or a cover that could not be built
     fn template_cover(&self, id: &str, lang: &str, fit_width_px: f64) -> Option<IpcValue>;
-    /// `installLocalFontFiles(paths)`: the families installed
-    fn install_local_fonts(&self, paths: &[String]) -> Vec<String>;
+    /// `fontFileFamilies(path)` of `fonts.ts`: the family names in a font
+    /// file's name table (the store's install itself is main-core's)
+    fn font_file_families(&self, path: &str) -> Vec<String>;
     /// `parseFileToText(path)` of `@seuoffice/file-parse`: the text, or the
     /// message a failed parse gives
     fn parse_file_text(&self, path: &str) -> Result<String, String>;

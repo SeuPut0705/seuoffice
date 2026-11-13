@@ -31,7 +31,7 @@ import { setUiLang } from '@seuoffice/i18n'
 import { useElectron } from '../../main-diff/electron-fake.ts'
 import type * as SheetsMain from '../../../apps/sheets/src/main/sheets-main.ts'
 import type { FakeContents } from '../fakes.ts'
-import type { LoadContext } from '../types.ts'
+import type { LoadContext, TriggerContext } from '../types.ts'
 
 const RealDate = Date
 const req = createRequire(import.meta.url)
@@ -54,6 +54,8 @@ interface Box {
   /** the snapshot the last archive read named: the gateway readers do not get it */
   lastSnapshot: string
   exitListeners: (() => void)[]
+  /** the timers of the close wait and the shutdown flush, held until a trigger says they elapsed */
+  timers: { ms: number; run: () => void; live: boolean }[]
   [name: string]: unknown
 }
 const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
@@ -63,6 +65,7 @@ const box: Box = ((globalThis as Record<symbol, unknown>)[KEY] ??= {
   uuids: 0,
   lastSnapshot: '',
   exitListeners: [],
+  timers: [],
 }) as Box
 
 const asObject = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json) : {})
@@ -448,6 +451,32 @@ registerHooks({
   },
 })
 
+/**
+ * The two waits the shell's close and shutdown paths put a timer on (the
+ * renderer's save, 120 s; a tab's flush, 8 s) do not run on the clock: the
+ * timer is held until `d1/workbook:timeout-elapsed` says it ran (the Rust
+ * fakes hold `SheetsShell::after` the same way). Other timers run as ever.
+ */
+const HELD_MS = [8_000, 120_000]
+function holdTimers(): void {
+  const g = globalThis as unknown as Record<string, unknown>
+  const real = (box.realSetTimeout ??= g.setTimeout) as typeof setTimeout
+  const realClear = (box.realClearTimeout ??= g.clearTimeout) as typeof clearTimeout
+  g.setTimeout = ((fn: () => void, ms?: number, ...rest: unknown[]) => {
+    if (typeof ms === 'number' && HELD_MS.includes(ms)) {
+      const held = { ms, run: fn, live: true }
+      box.timers.push(held)
+      return Object.assign(held, { unref: () => held, ref: () => held, hasRef: () => false })
+    }
+    return (real as (...a: unknown[]) => unknown)(fn, ms, ...rest)
+  }) as unknown
+  g.clearTimeout = ((handle: unknown) => {
+    const held = box.timers.find((t) => t === handle)
+    if (held) held.live = false
+    else realClear(handle as never)
+  }) as unknown
+}
+
 interface Startup {
   queued?: { view: number; path: string }[]
   newBlank?: boolean
@@ -465,6 +494,8 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
   box.uuids = 0
   box.lastSnapshot = ''
   box.exitListeners = []
+  box.timers = []
+  holdTimers()
   // a case may fix the clock (`new Date()` and `Date.now()` answer it)
   const clock = box.d1.clock
   globalThis.Date =
@@ -496,8 +527,6 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
   for (const v of views) {
     Object.assign(e.contents(v.view), {
       setWindowOpenHandler() {},
-      on() {},
-      once() {},
       getURL: () => '',
       loadURL: async () => {},
       reload() {},
@@ -589,6 +618,7 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
   const load = createRequire(`${root}/${MAIN}/sheets-main.ts`)
   for (const key of Object.keys(load.cache)) if (key.includes(MAIN_PATH)) delete load.cache[key]
   const main = load(`${root}/${MAIN}/sheets-main.ts`) as typeof SheetsMain
+  box.main = main
 
   const writer = box.d1.writeNewDocument
   const create = box.d1.createDocument
@@ -656,4 +686,47 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
     }
     limit.setDelimitedImportLimit(box.d1.importLimit)
   }
+}
+
+// ---- triggers: what the shell does to the tabs outside any channel ----
+
+type Trigger = (cx: TriggerContext, view: number, args: unknown[]) => Promise<unknown> | unknown
+const main = (): typeof SheetsMain => box.main as typeof SheetsMain
+
+/**
+ * By name, `d1/workbook:<what>`; each runs the exported function of
+ * sheets-main.ts the Rust `probe_trigger` (sheets/mod.rs) stands in for.
+ */
+export const sheetsTriggers: Record<string, Trigger> = {
+  /** `requestSheetsClose(contents, parent)`: `args[0]` is the parent window id */
+  'd1/workbook:request-sheets-close': (cx, view, args) => {
+    const bw = cx.electron.BrowserWindow as unknown as { fromId(id: number): unknown }
+    const parent = typeof args[0] === 'number' ? bw.fromId(args[0]) : null
+    return main().requestSheetsClose(cx.contents(view) as never, parent as never)
+  },
+  /** `writeSheetsCopiesNow()` */
+  'd1/workbook:write-sheets-copies-now': async () => {
+    await main().writeSheetsCopiesNow()
+  },
+  /** the sidecar process exits: every listener `client.onProcessExit` took runs */
+  'd1/workbook:sidecar-exit': () => {
+    for (const listener of box.exitListeners) listener()
+  },
+  /** `webContents.on('render-process-gone')` of the view */
+  'd1/workbook:render-process-gone': async (cx, view) => {
+    await cx.contents(view).emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })
+  },
+  /** `markSheetsShuttingDown()` */
+  'd1/workbook:mark-sheets-shutting-down': () => main().markSheetsShuttingDown(),
+  /** `resetSheetsShuttingDown()` */
+  'd1/workbook:reset-sheets-shutting-down': () => main().resetSheetsShuttingDown(),
+  /** `discardSheetsRecovery(contents)` */
+  'd1/workbook:discard-sheets-recovery': (cx, view) =>
+    main().discardSheetsRecovery(cx.contents(view) as never),
+  /** the held timers of this length run, in the order they were set (`args[0]` is the length in ms) */
+  'd1/workbook:timeout-elapsed': (_cx, _view, args) => {
+    const due = box.timers.filter((t) => t.ms === args[0])
+    box.timers = box.timers.filter((t) => t.ms !== args[0])
+    for (const timer of due) if (timer.live) timer.run()
+  },
 }

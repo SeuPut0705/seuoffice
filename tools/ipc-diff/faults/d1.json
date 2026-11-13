@@ -294,6 +294,48 @@
     "groups": ["d1/sheets-save"]
   },
   {
+    "name": "sheets: Don't Save no longer drops the tab's copies",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "        if response == 1 {\n            self.discard_tab_copies(view);\n            return then(Ok(true));\n        }",
+    "replace": "        if response == 1 {\n            return then(Ok(true));\n        }",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a vetoed quit leaves the app flag up, so a later close asks nothing",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "        self.env.set_app_shutting_down(false);\n",
+    "replace": "        // fault: the flag stays up\n",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a flush asks the tabs whose renderer died and skips the others",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": ".is_some_and(|r| r.crashed)",
+    "replace": ".is_some_and(|r| !r.crashed)",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: the sidecar dying is not told to the second tab",
+    "file": "shell-ipc/d1/src/sheets/mod.rs",
+    "find": "                    if core.env.alive(view) {\n                        core.send(view, \"workbook:sidecar-crashed\"",
+    "replace": "                    if core.env.alive(view) && view.0 < 2 {\n                        core.send(view, \"workbook:sidecar-crashed\"",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a flush names its nonce with a suffix",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "vec![string(nonce)]",
+    "replace": "vec![string(format!(\"{nonce}x\"))]",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a close wait that ran out resumes with true",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "                        (waiter.resume)(false);\n                    }\n                })",
+    "replace": "                        (waiter.resume)(true);\n                    }\n                })",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
     "name": "a mailto link is refused as a script link is",
     "file": "shell-ipc/d1/src/slides/reads.rs",
     "find": "\"mailto:\".into()]),",
@@ -390,5 +432,26 @@
     "find": "configured_author_name(&user_data, username.as_deref())",
     "replace": "configured_author_name(\"\", username.as_deref())",
     "groups": ["d1/slides-reads"]
+  },
+  {
+    "name": "the Export as PNG menu item sends another command",
+    "file": "shell-ipc/d1/src/slides/mod.rs",
+    "find": "\"png\" => \"export-images\".to_owned(),",
+    "replace": "\"png\" => \"export-image\".to_owned(),",
+    "groups": ["d1/slides-events"]
+  },
+  {
+    "name": "a close that asked the renderer to save sends no request",
+    "file": "shell-ipc/d1/src/slides/lifecycle.rs",
+    "find": "self.emit(view, \"slides:close-save-request\", Vec::new());",
+    "replace": "let _ = view;",
+    "groups": ["d1/slides-events"]
+  },
+  {
+    "name": "slides:opened goes out before the history notice",
+    "file": "shell-ipc/d1/src/slides/mod.rs",
+    "find": "            app.pump();\n            let index = app.registry_index;",
+    "replace": "            let index = app.registry_index;\n            app.emit(view, \"slides:opened\", vec![result.clone()]);",
+    "groups": ["d1/slides-events"]
   }
 ]

@@ -77,11 +77,11 @@ const cases: Case[] = [
     call('slides:microphone-access'),
     send('slides:microphone-release'),
   ]),
-  slidesCase('the microphone is refused by the system', { slides: { microphone: false } }, [
-    OPEN_A,
-    call('slides:microphone-access'),
-    call('slides:microphone-access'),
-  ]),
+  slidesCase(
+    'the microphone is refused by the system',
+    { slides: { microphone: false }, shared: { media: { microphone: 'denied' } } },
+    [OPEN_A, call('slides:microphone-access'), call('slides:microphone-access')],
+  ),
   slidesCase(
     'attachments are checked, picked and read',
     { opens: [['$DIR/note.txt', '$DIR/pic.png'], null] },
@@ -154,8 +154,16 @@ const cases: Case[] = [
   ]),
   slidesCase(
     'local fonts are installed or declined',
-    { opens: [['$DIR/A.ttf', '$DIR/b.otf'], null, []] },
+    {
+      opens: [
+        ['$DIR/A.otf', '$DIR/b-bold.ttf', '$DIR/junk.ttf', '$DIR/missing.ttf'],
+        null,
+        [],
+        ['$DIR/junk.ttf'],
+      ],
+    },
     [
+      call('slides:font-install-local'),
       call('slides:font-install-local'),
       call('slides:font-install-local'),
       call('slides:font-install-local'),
@@ -163,6 +171,8 @@ const cases: Case[] = [
       call('slides:private-font-data', ['id-1']),
       call('slides:private-font-data', [UNDEFINED]),
     ],
+    // the first four bytes decide what is a font: OTTO and true are, plain text is not
+    { files: { 'A.otf': 'OTTO-one', 'b-bold.ttf': 'true-two', 'junk.ttf': 'not a font' } },
   ),
 ]
 

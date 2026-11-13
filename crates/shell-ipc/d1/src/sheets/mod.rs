@@ -560,12 +560,77 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
 /// `d1/` prefix; false when it is not one of them
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
-    _name: &str,
-    _view: shell_contract::ViewId,
-    _args: &serde_json::Value,
-    _services: &Services,
-    _provided: &std::rc::Rc<shell_contract::provided::Provided>,
-    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+    name: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
+    services: &Services,
+    provided: &std::rc::Rc<shell_contract::provided::Provided>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
 ) -> bool {
-    false
+    use shell_contract::editors::editor_for;
+    use shell_contract::{IpcValue, WindowId};
+
+    // each arm runs what the TypeScript trigger of the same name runs
+    // (`sheetsTriggers` of tools/ipc-diff/d1/sheets-host.ts)
+    let parent = args
+        .get(0)
+        .and_then(serde_json::Value::as_u64)
+        .map(|id| WindowId(id as u32));
+    match name {
+        // `requestSheetsClose(contents, parent)`
+        "workbook:request-sheets-close" => match editor_for(provided, view) {
+            Some(editor) => {
+                editor.request_close(view, parent, Box::new(move |r| then(r.map(IpcValue::Bool))));
+            }
+            None => then(Err(crate::value::thrown("no sheets editor for the view"))),
+        },
+        // `writeSheetsCopiesNow()`
+        "workbook:write-sheets-copies-now" => match views() {
+            Some(tabs) => tabs.write_copies_now(Box::new(move || then(Ok(IpcValue::Undefined)))),
+            None => then(Err(crate::value::thrown(
+                "the sheets module is not registered",
+            ))),
+        },
+        // the sidecar process exits
+        "workbook:sidecar-exit" => {
+            if let Some(engine) = services.hosts.get::<std::sync::Arc<fakes::FakeEngine>>() {
+                engine.exit();
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        // `webContents.on('render-process-gone')`
+        "workbook:render-process-gone" => {
+            if let Some(tabs) = views() {
+                tabs.render_process_gone(view);
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        "workbook:mark-sheets-shutting-down" => {
+            if let Some(tabs) = views() {
+                tabs.mark_shutting_down();
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        "workbook:reset-sheets-shutting-down" => {
+            if let Some(tabs) = views() {
+                tabs.reset_shutting_down();
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        "workbook:discard-sheets-recovery" => {
+            if let Some(tabs) = views() {
+                tabs.discard_recovery(view);
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        // a held timer of this length (the close wait, the shutdown flush) ran
+        "workbook:timeout-elapsed" => {
+            if let Some(shell) = services.hosts.get::<std::sync::Arc<fakes::FakeShell>>() {
+                shell.fire(args.get(0).and_then(serde_json::Value::as_u64).unwrap_or(0));
+            }
+            then(Ok(IpcValue::Undefined));
+        }
+        _ => return false,
+    }
+    true
 }

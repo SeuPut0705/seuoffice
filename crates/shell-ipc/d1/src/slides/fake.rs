@@ -648,13 +648,10 @@ impl SlidesEngine for FakeEngine {
         Some(Self::render(&deck, 0))
     }
 
-    fn install_local_fonts(&self, paths: &[String]) -> Vec<String> {
-        self.record(json!(["font-store.installLocalFontFiles", paths.len()]));
-        paths
-            .iter()
-            .filter_map(|p| p.rsplit('/').next())
-            .map(|n| n.split('.').next().unwrap_or(n).to_owned())
-            .collect()
+    fn font_file_families(&self, path: &str) -> Vec<String> {
+        self.record(json!(["fonts.fontFileFamilies", path]));
+        let name = path.rsplit('/').next().unwrap_or(path);
+        vec![name.split('.').next().unwrap_or(name).to_owned()]
     }
 
     fn parse_file_text(&self, path: &str) -> Result<String, String> {
@@ -1093,7 +1090,14 @@ impl SlidesShell for FakeShell {
         }
     }
     fn ask_microphone(&self, done: Box<dyn FnOnce(bool) + Send>) {
-        self.record(json!(["systemPreferences.askForMediaAccess"]));
+        // the status is asked first; only a status that is not `granted` is asked about
+        self.record(json!([
+            "systemPreferences.getMediaAccessStatus",
+            "microphone"
+        ]));
+        if !self.microphone {
+            self.record(json!(["systemPreferences.askForMediaAccess", "microphone"]));
+        }
         done(self.microphone)
     }
     fn displays(&self) -> Vec<Display> {

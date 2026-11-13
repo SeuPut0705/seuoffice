@@ -31,7 +31,7 @@ interface Display {
 
 const AUDIENCE = 100
 
-export function makeDesktop(e: Electron, external: boolean) {
+export function makeDesktop(e: Electron, external: boolean, standaloneView: () => number) {
   const rect = (x: number): Rect => ({ x, y: 0, width: 1920, height: 1080 })
   const displays: Display[] = [{ id: 1, bounds: rect(0), workArea: rect(0) }]
   if (external) displays.push({ id: 2, bounds: rect(1920), workArea: rect(1920) })
@@ -94,6 +94,17 @@ export function makeDesktop(e: Electron, external: boolean) {
     id = AUDIENCE
     webContents = e.contents(AUDIENCE)
     constructor(options: Rect) {
+      if (
+        (options as { width?: number }).width === 1280 &&
+        (options as { height?: number }).height === 840
+      ) {
+        // `createSlidesWindow`: a window of the editor itself, on the view the case names
+        const view = standaloneView()
+        this.id = view
+        this.webContents = e.contents(view)
+        dress(this as unknown as Record<string, unknown>, view)
+        return
+      }
       e.log.push(['BrowserWindow.audience', displayAt(options).id])
       dress(this as unknown as Record<string, unknown>, AUDIENCE)
     }

@@ -482,16 +482,88 @@ pub fn insert_fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
     fake::insert(hosts, case);
 }
 
+/// The shell's `createSlidesWindow(openPath)` and `open-file` after the page
+/// loaded: opens `path` in `view` at the editor's default width and tells the
+/// renderer with `slides:opened`. A deck that cannot be opened is ignored, as
+/// the TypeScript's `catch` does. Called by the shell on the core thread.
+pub fn open_file_in_window(view: shell_contract::ViewId, path: &str) {
+    let app = APPS.with(|apps| apps.borrow().last().cloned());
+    if let Some(app) = app {
+        if let Ok(result) = app.open_and_build(view, path, 1280.0, None) {
+            // the history notice is queued for the end of the task: it goes out while
+            // the TypeScript awaits the recent list, before the open's answer is sent
+            app.pump();
+            let index = app.registry_index;
+            post_to(&app.services.clone(), index, move |app| {
+                app.emit(view, "slides:opened", vec![result]);
+                app.pump();
+            });
+        }
+        app.pump();
+    }
+}
+
 /// This app's triggers for [`crate::probe_trigger`]: `name` without its
-/// `d1/` prefix; false when it is not one of them
+/// `d1/` prefix; false when it is not one of them. Named after the TypeScript
+/// the shell runs:
+///
+/// - `slides:requestSlidesClose` `[withParent]`: `requestSlidesClose(contents, parent)`
+/// - `slides:slidesMenu` `[command]`: the click of the File or Edit menu item that
+///   sends `slides:menu` `command` (`save-as`, `export-pdf`, `export-images`,
+///   `export-images-jpg`)
+/// - `slides:openFileInWindow` `[path]`: the open of `createSlidesWindow(path)`
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
-    _name: &str,
-    _view: shell_contract::ViewId,
-    _args: &serde_json::Value,
+    name: &str,
+    view: shell_contract::ViewId,
+    args: &serde_json::Value,
     _services: &Services,
     _provided: &std::rc::Rc<shell_contract::provided::Provided>,
-    _then: shell_contract::editors::Then<shell_contract::IpcValue>,
+    then: shell_contract::editors::Then<shell_contract::IpcValue>,
 ) -> bool {
-    false
+    use shell_contract::editors::{DocumentEditors, SaveMode};
+    let Some(what) = name.strip_prefix("slides:") else {
+        return false;
+    };
+    let Some(app) = APPS.with(|apps| apps.borrow().last().cloned()) else {
+        return false;
+    };
+    let text = args
+        .get(0)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("")
+        .to_owned();
+    let editors = SlidesEditors { app: app.clone() };
+    match what {
+        "requestSlidesClose" => {
+            let parent = args
+                .get(0)
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+                .then(|| app.shell.host_window_for(view))
+                .flatten();
+            editors.request_close(
+                view,
+                parent,
+                Box::new(move |close| then(close.map(shell_contract::IpcValue::Bool))),
+            );
+        }
+        "slidesMenu" => {
+            match text.as_str() {
+                "save-as" => editors.request_save(view, SaveMode::SaveAs, Box::new(|_| {})),
+                "export-pdf" => editors.export_request(view, "pdf"),
+                "export-images" => editors.export_request(view, "png"),
+                "export-images-jpg" => editors.export_request(view, "jpg"),
+                _ => return false,
+            }
+            app.pump();
+            then(Ok(shell_contract::IpcValue::Undefined));
+        }
+        "openFileInWindow" => {
+            open_file_in_window(view, &text);
+            then(Ok(shell_contract::IpcValue::Undefined));
+        }
+        _ => return false,
+    }
+    true
 }

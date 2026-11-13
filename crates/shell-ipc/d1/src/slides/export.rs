@@ -228,7 +228,18 @@ pub fn font_install_local(app: &App, _cx: &CallContext, _args: Args) -> Reply {
     if paths.is_empty() {
         return Ok(obj([("families", IpcValue::Array(Vec::new()))]));
     }
-    let families = app.engine.install_local_fonts(&paths);
+    let user_data = crate::host::path_string(
+        app.services
+            .paths
+            .path(shell_contract::runtime::PathName::UserData),
+    );
+    let engine = app.engine.clone();
+    let families = main_core::slides::font_store::install_local_font_files(
+        &mut || user_data.clone(),
+        &|path| engine.font_file_families(path),
+        &paths,
+    )
+    .map_err(|e| thrown(e.message))?;
     if !families.is_empty() {
         app.after_fonts_changed();
     }

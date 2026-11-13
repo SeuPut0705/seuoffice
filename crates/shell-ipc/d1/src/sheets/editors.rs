@@ -179,7 +179,7 @@ impl Core {
         let remaining = std::rc::Rc::new(std::cell::Cell::new(views.len()));
         let done = std::rc::Rc::new(std::cell::RefCell::new(Some(done)));
         for view in views {
-            let nonce = jscompat::random_uuid();
+            let nonce = self.env.uuid();
             let settle = {
                 let (remaining, done) = (remaining.clone(), done.clone());
                 move || {
