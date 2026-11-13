@@ -990,6 +990,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "shell-contract"
+version = "0.1.0"
+
+[[package]]
+name = "shell-ipc-a"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
+name = "shell-ipc-d1"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
+name = "shell-ipc-d2"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
+name = "shell-ipc-m"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
+name = "shell-ipc-u"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
+name = "shell-ipc-w"
+version = "0.1.0"
+dependencies = [
+ "shell-contract",
+]
+
+[[package]]
 name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

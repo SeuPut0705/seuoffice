@@ -11,6 +11,9 @@ members = [
   "spike-one-run-save",
   "main-core",
   "main-node",
+  "shell-contract",
+  # one crate per stage 3 area batch: shell-ipc/u, a, m, w, d1, d2
+  "shell-ipc/*",
 ]
 # vendor: third-party source carried with patches, outside fmt, clippy and the
 # workspace tests; spike-main-bridge: an experiment with its own lock

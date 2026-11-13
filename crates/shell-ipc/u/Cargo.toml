@@ -1,0 +1,10 @@
+[package]
+name = "shell-ipc-u"
+description = "Stage 3 batch U: Updates, install, crash and recovery. Handlers of its channels in shell-contract's CHANNELS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+shell-contract = { path = "../../shell-contract" }

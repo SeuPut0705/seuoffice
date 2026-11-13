@@ -1,0 +1,11 @@
+[package]
+name = "shell-contract"
+description = "The contract between the stage 3 shell (Tauri 3, CEF) and its area batches: IPC, threads, surfaces"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies: the Tauri adapter implements these traits; the contract
+# itself must not pin Tauri 3 alpha (decision 0029).
+[dependencies]

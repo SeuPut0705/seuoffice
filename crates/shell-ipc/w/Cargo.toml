@@ -1,0 +1,10 @@
+[package]
+name = "shell-ipc-w"
+description = "Stage 3 batch W: Windows, tabs and the re-created preloads. Handlers of its channels in shell-contract's CHANNELS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+shell-contract = { path = "../../shell-contract" }

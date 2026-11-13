@@ -1,0 +1,10 @@
+[package]
+name = "shell-ipc-m"
+description = "Stage 3 batch M: Menus, printing and app-wide settings. Handlers of its channels in shell-contract's CHANNELS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+shell-contract = { path = "../../shell-contract" }

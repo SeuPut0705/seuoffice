@@ -1,0 +1,10 @@
+[package]
+name = "shell-ipc-d1"
+description = "Stage 3 batch D1: Documents 1: slides, sheets, mind maps, diagrams. Handlers of its channels in shell-contract's CHANNELS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+shell-contract = { path = "../../shell-contract" }
