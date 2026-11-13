@@ -278,5 +278,131 @@
     "find": "Some(value) => to_primitive(Some(value)).map_or_else(|e| e.0, |p| p.to_js_string()),",
     "replace": "Some(JsonValue::String(s)) => s.clone(),\n        Some(_) => String::new(),",
     "groups": ["a/integrations"]
+  },
+  {
+    "name": "search limit cap 21",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "const SEARCH_LIMIT_MAX: f64 = 20.0;",
+    "replace": "const SEARCH_LIMIT_MAX: f64 = 21.0;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "free-ai refusal says cancelled",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "return reply.reply(Ok(refused(\"free-ai\")));",
+    "replace": "return reply.reply(Ok(refused(\"cancelled\")));",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "list search text cut at 199",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "slice_utf16(typed, 0, 200)",
+    "replace": "slice_utf16(typed, 0, 199)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "page token of 2000 accepted",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": ".filter(|token| token.encode_utf16().count() < 2000)",
+    "replace": ".filter(|token| token.encode_utf16().count() <= 2000)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "state change reaches shell views only",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": ".emit(Target::All, STATE_CHANGED, vec![self.ui_state()])",
+    "replace": ".emit(Target::Surface(shell_contract::Surface::Shell), STATE_CHANGED, vec![self.ui_state()])",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "any string turns a switch on",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "matches!(args.first(), Some(IpcValue::Bool(true)))",
+    "replace": "matches!(args.first(), Some(IpcValue::Bool(true) | IpcValue::String(_)))",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "search limit may reach zero",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "limit.floor().clamp(1.0, SEARCH_LIMIT_MAX)",
+    "replace": "limit.floor().clamp(0.0, SEARCH_LIMIT_MAX)",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "cancelled picker failure is told as failed",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "                            | PickFailure::Cancelled",
+    "replace": "",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "copy button is not the default",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "default_id: answers.iter().position(|a| *a == SyncAnswer::Copy),",
+    "replace": "default_id: answers.iter().position(|a| *a == SyncAnswer::Local),",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "sync dialogs have no parent window",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "let answered = self.dialogs.message(self.main_window.window(), &options);",
+    "replace": "let answered = self.dialogs.message(None, &options);",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "google host prefix without slash",
+    "file": "shell-ipc/a/src/drive.rs",
+    "find": "target.starts_with(\"https://accounts.google.com/\")",
+    "replace": "target.starts_with(\"https://accounts.google.com\")",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "21 attachments",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "pub const MAX_ATTACH_FILES: usize = 20;",
+    "replace": "pub const MAX_ATTACH_FILES: usize = 21;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "attachment copies pruned after one day",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "const KEEP_MS: f64 = 7.0 * 24.0",
+    "replace": "const KEEP_MS: f64 = 1.0 * 24.0",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "attachment ids not deduplicated",
+    "file": "shell-ipc/a/src/drive/attach.rs",
+    "find": "if !ids.contains(&id) {",
+    "replace": "if true {",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "AI text cache holds five",
+    "file": "shell-ipc/a/src/drive/ai.rs",
+    "find": "const TEXT_CACHE_MAX: usize = 4;",
+    "replace": "const TEXT_CACHE_MAX: usize = 5;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "AI text cache lasts twenty minutes",
+    "file": "shell-ipc/a/src/drive/ai.rs",
+    "find": "const TEXT_CACHE_MS: u64 = 10 * 60 * 1000;",
+    "replace": "const TEXT_CACHE_MS: u64 = 20 * 60 * 1000;",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "vault file version 2",
+    "file": "shell-ipc/a/src/drive/vault.rs",
+    "find": "file.set(\"version\", JsonValue::Number(1.0));",
+    "replace": "file.set(\"version\", JsonValue::Number(2.0));",
+    "groups": ["a/drive"]
+  },
+  {
+    "name": "vault ignores the file version",
+    "file": "shell-ipc/a/src/drive/vault.rs",
+    "find": "if *version != 1.0 || !self.cipher.available() {",
+    "replace": "if !self.cipher.available() {",
+    "groups": ["a/drive"]
   }
 ]

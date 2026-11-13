@@ -58,7 +58,7 @@ use self::files::{
 };
 use self::host::DriveShellHost;
 use self::strings::{copy_file_name, drive_text};
-use self::util::{on_core, slice_utf16};
+use self::util::{Clock, on_core, slice_utf16};
 
 /// `DRIVE_AI_ACCESS_KEY`: the person lets the AI search and read Drive
 pub const DRIVE_AI_ACCESS_KEY: &str = "driveAiAccess";
@@ -365,6 +365,8 @@ struct Inner {
     picking: AtomicBool,
     was_connected: AtomicBool,
     attach_pruned: AtomicBool,
+    /// `Date.now()`, as the sync and the attachments see it
+    now: Clock,
 }
 
 impl Inner {
@@ -566,7 +568,7 @@ impl DrivePort {
         );
         let inner = Arc::new(Inner {
             services: services.clone(),
-            ai: DriveAi::with_clock(client.clone(), shell.clone(), config.now),
+            ai: DriveAi::with_clock(client.clone(), shell.clone(), config.now.clone()),
             client,
             shell,
             os_shell,
@@ -575,6 +577,7 @@ impl DrivePort {
             picking: AtomicBool::new(false),
             was_connected: AtomicBool::new(false),
             attach_pruned: AtomicBool::new(false),
+            now: config.now,
         });
         let weak: Weak<Inner> = Arc::downgrade(&inner);
         inner.client.on_change(Arc::new(move || {
@@ -741,7 +744,7 @@ impl Drive for DrivePort {
                 .join("seuoffice-drive-attach");
             let worker = me.clone();
             me.services.workers.spawn(Box::new(move || {
-                let now = util::now_ms();
+                let now = (worker.now)();
                 let got =
                     download_picks(&*worker.client, &picked, &dir, now, &worker.attach_pruned);
                 let answer = match got {
@@ -922,7 +925,13 @@ impl DriveService for DrivePort {
 /// The host the shell inserts for this port. Building it starts loading the
 /// kept token and adds the [`DriveService`] to what the batches provide.
 pub fn factory() -> crate::Factory<dyn Drive> {
-    crate::Factory::new(|services, provided| {
+    factory_with(FilesConfig::default())
+}
+
+/// [`factory`] with the sync's clock and timings given (the probe pins the
+/// clock so a run can be compared with the TypeScript's)
+pub fn factory_with(config: FilesConfig) -> crate::Factory<dyn Drive> {
+    crate::Factory::new(move |services, provided| {
         let hosts = &services.hosts;
         let batch = shell_contract::Batch::A;
         let shell = hosts.need::<DriveShellHost>(batch)?;
@@ -938,7 +947,7 @@ pub fn factory() -> crate::Factory<dyn Drive> {
             shell,
             hosts.need::<OsShellHost>(batch)?,
             ui,
-            FilesConfig::default(),
+            config.clone(),
         ));
         port.start();
         provided.add::<dyn DriveService>(port.clone());

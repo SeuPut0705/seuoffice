@@ -11,6 +11,8 @@
 use std::fs;
 use std::io;
 use std::path::Path;
+#[cfg(feature = "probe")]
+use std::sync::atomic::AtomicI64;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::UNIX_EPOCH;
 
@@ -27,6 +29,26 @@ pub struct AttachDownload {
     pub paths: Vec<String>,
     pub skipped: usize,
     pub failed: usize,
+}
+
+/// Probe only: negative names each download folder at random (the TypeScript's
+/// `randomBytes(6)`); from 0 up, the folders are named `000000000001`,
+/// `000000000002`, ... in the order they are made, so a run can be compared
+/// with the TypeScript's (tools/ipc-diff stands `randomBytes` in the same way)
+#[cfg(feature = "probe")]
+pub static COUNTED_FOLDERS: AtomicI64 = AtomicI64::new(-1);
+
+/// `randomBytes(6).toString('hex')`
+fn folder_name() -> io::Result<String> {
+    #[cfg(feature = "probe")]
+    if COUNTED_FOLDERS.load(Ordering::SeqCst) >= 0 {
+        // downloads of one call run one after another, so counting needs no more
+        let before = COUNTED_FOLDERS.fetch_add(1, Ordering::SeqCst);
+        return Ok(format!("{:012x}", before + 1));
+    }
+    let mut random = [0u8; 6];
+    getrandom::fill(&mut random).map_err(io::Error::other)?;
+    Ok(random.iter().map(|b| format!("{b:02x}")).collect())
 }
 
 /// `pruneOld(dir, now)`: `pruned` is the module variable of the TypeScript,
@@ -111,14 +133,7 @@ pub fn download_picks(
             continue;
         };
         let written = (|| -> io::Result<String> {
-            let mut random = [0u8; 6];
-            getrandom::fill(&mut random).map_err(io::Error::other)?;
-            let folder = dir.join(
-                random
-                    .iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<String>(),
-            );
+            let folder = dir.join(folder_name()?);
             fs::create_dir(&folder)?;
             let path = folder.join(client.local_file_name(&file.name, &extension));
             fs::write(&path, &bytes)?;
