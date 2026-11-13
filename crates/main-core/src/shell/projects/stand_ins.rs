@@ -2,7 +2,7 @@
 //! calls, ported here until those modules land. Each item names the file that
 //! replaces it; at merge this file goes and its users import from there.
 
-use jscompat::node_path::host::join;
+use jscompat::node_path::host::{extname, join};
 use jscompat::node_path::win32;
 use jscompat::{JsObject, try_js_regex};
 
@@ -150,4 +150,60 @@ pub fn windows_system_tool(env: &JsObject<String>, segments: &[&str]) -> String 
     parts.push(&dir);
     parts.extend_from_slice(segments);
     win32::join(&parts)
+}
+
+// --- `process.platform` of Node
+
+/// `process.platform`
+pub fn process_platform() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "darwin",
+        "windows" => "win32",
+        other => other,
+    }
+}
+
+// --- `packages/file-parse/src/attachable.ts` and
+// `apps/shell/src/main/knowledge-base.ts`, replaced by the ports of those files
+
+/// `ATTACHABLE_IMAGE_EXTS`: pictures, sent to the model as pictures
+const ATTACHABLE_IMAGE_EXTS: [&str; 5] = ["png", "jpg", "jpeg", "gif", "webp"];
+
+/// `SIZE_FREE_EXTS`: formats read at any size
+const SIZE_FREE_EXTS: [&str; 9] = [
+    "docx", "pptx", "xlsx", "xlsm", "hwpx", "odt", "epub", "xmind", "pdf",
+];
+
+/// `ATTACHABLE_MAX_BYTES`: the largest file read whole as an attachment
+/// (formats in `SIZE_FREE_EXTS` excepted)
+const ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;
+
+/// `ATTACHABLE_IMAGE_MAX_BYTES`: the largest picture sent with a message
+const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;
+
+/// `KB_READ_MAX_BYTES`: byte cap per corpus file
+pub const KB_READ_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;
+
+/// `attachableMaxBytes(ext)`: a picture's cap, no cap (`Infinity`) for the
+/// formats read at any size, else `ATTACHABLE_MAX_BYTES`
+pub fn attachable_max_bytes(ext: &str) -> f64 {
+    let clean = ext.strip_prefix('.').unwrap_or(ext).to_lowercase();
+    if ATTACHABLE_IMAGE_EXTS.contains(&clean.as_str()) {
+        return ATTACHABLE_IMAGE_MAX_BYTES;
+    }
+    if SIZE_FREE_EXTS.contains(&clean.as_str()) {
+        return f64::INFINITY;
+    }
+    ATTACHABLE_MAX_BYTES
+}
+
+/// `kbReadMaxBytes(filePath)`: the largest file with this path read for the AI
+/// (`attachableMaxBytes`, pictures aside)
+pub fn kb_read_max_bytes(file_path: &str) -> f64 {
+    let cap = attachable_max_bytes(&extname(file_path));
+    if cap.is_finite() {
+        cap.max(KB_READ_MAX_BYTES)
+    } else {
+        cap
+    }
 }

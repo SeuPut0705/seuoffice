@@ -4,6 +4,7 @@
 //! (`groups/b3-projects-<part>.ts`).
 
 mod cloud;
+mod files;
 mod foundation;
 mod guard;
 
@@ -13,7 +14,7 @@ use super::{Answer, Context};
 
 type Part = fn(&str, &[Value], &mut Context) -> Option<Answer>;
 
-const PARTS: &[Part] = &[foundation::call, cloud::call, guard::call];
+const PARTS: &[Part] = &[foundation::call, cloud::call, guard::call, files::call];
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     PARTS.iter().find_map(|part| part(name, args, cx))
