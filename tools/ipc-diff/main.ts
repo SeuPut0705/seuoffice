@@ -345,12 +345,18 @@ async function runGroup(name: string): Promise<void> {
   process.exitCode = differences.length > 0 || stale.length > 0 ? 1 : 0
 }
 
-/** Coverage of a required batch over every group's report */
+/**
+ * Coverage of a required batch. Its channels count over its own groups; its
+ * events over every group, as another batch's handler may send one (M's
+ * `slides:open-font-settings` sends W's `home:open-settings`).
+ */
 function coverage(batch: string, reports: GroupReport[]): string[] {
   const merged = new Map<string, ChannelReport>()
   const emitted = new Set<string>()
   const single = new Map<string, string>()
   for (const r of reports) {
+    for (const e of r.events) emitted.add(e)
+    if (r.batch !== batch) continue
     for (const [ch, c] of Object.entries(r.channels)) {
       const m = merged.get(ch) ?? { calls: 0, answers: [], withArgs: false }
       m.calls += c.calls
@@ -358,7 +364,6 @@ function coverage(batch: string, reports: GroupReport[]): string[] {
       for (const a of c.answers) if (!m.answers.includes(a)) m.answers.push(a)
       merged.set(ch, m)
     }
-    for (const e of r.events) emitted.add(e)
     for (const [ch, why] of Object.entries(r.single)) single.set(ch, why)
   }
   const problems: string[] = []
@@ -406,10 +411,7 @@ function runEveryGroup(): void {
   if (process.argv.includes('--list')) return
   writeFileSync(join(out, 'report.json'), JSON.stringify(reports, null, 2))
   for (const batch of args('--require')) {
-    const problems = coverage(
-      batch,
-      Object.values(reports).filter((r) => r.batch === batch),
-    )
+    const problems = coverage(batch, Object.values(reports))
     for (const p of problems) console.log(`COVERAGE ${batch} ${p}`)
     console.log(`coverage of ${batch}: ${problems.length} problems`)
     if (problems.length > 0) failed = true
