@@ -30,12 +30,16 @@ throwaway branch that holds the faults file:
 
     gh workflow run "seuoffice rust" --ref rust-faults/<name> -f faults=<faults.json>
 
-The result is written to tools/docx-diff/out/faults.txt, which the job keeps.
-Exits 1 when a fault does not apply or does not build: such a fault says nothing.
+The result is written to tools/docx-diff/out/faults.txt, which the job keeps,
+and the seconds each fault took to tools/docx-diff/out/faults.json, which
+`node tools/fault-shards.mjs refresh tools/docx-diff/fault-costs.json ...`
+reads. Exits 1 when a fault does not apply or does not build: such a fault
+says nothing.
 
-FAULT_SHARD=i/n runs only the faults whose index is i modulo n, so that n
-runners can share one file (the workflow's `fault_shards` input). Every
-shard still checks that each fault of the file applies.
+FAULT_SHARD=i/n runs one of n runners' share of the file: the faults
+tools/fault-shards.mjs gives shard i by the seconds in fault-costs.json (the
+workflow's `fault_shards` input sets n). Every shard still checks that each
+fault of the file applies.
 """
 import json
 import os
@@ -43,9 +47,12 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "tools/docx-diff/out/faults.txt"
+TIMES = ROOT / "tools/docx-diff/out/faults.json"
+COSTS = ROOT / "tools/docx-diff/fault-costs.json"
 # the lines of a group's report that say how the two sides compare
 TELLING = re.compile(r"^\(f\+?\) |^key order|^ +\S+\.\S+ +checks ")
 # a function's line: its name, its differences and those in key order only
@@ -100,11 +107,16 @@ def main() -> int:
         if found != 1:
             print(f"{fault['name']}: the text occurs {found} times in {fault['file']}")
             return 1
-    shard, shards = (int(part) for part in os.environ.get("FAULT_SHARD", "0/1").split("/"))
-    if not 0 <= shard < shards:
-        print(f"FAULT_SHARD {shard}/{shards} names no shard")
+    shard = os.environ.get("FAULT_SHARD", "0/1")
+    planned = subprocess.run(
+        ["node", str(ROOT / "tools/fault-shards.mjs"), "pick", str(COSTS), shard],
+        input="".join(fault["name"] + "\n" for fault in faults),
+        capture_output=True, text=True)
+    if planned.returncode != 0:
+        print(f"FAULT_SHARD {shard}: {planned.stderr.strip()}")
         return 1
-    faults = faults[shard::shards]
+    mine = set(planned.stdout.splitlines())
+    faults = [fault for fault in faults if fault["name"] in mine]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     broken = 0
     counts = {"caught": 0, "MISSED": 0, "SET ASIDE": 0}
@@ -124,17 +136,21 @@ def main() -> int:
         if RAN.get(group, "(f) ") not in text:
             print(f"the group {group} does not run without a fault\n{text[-3000:]}")
             return 1
+    times = []
     with OUT.open("w") as out:
         for fault in faults:
             path = ROOT / fault["file"]
             original = path.read_text()
             group = fault.get("group", spec.get("group"))
+            started = time.monotonic()
             try:
                 path.write_text(original.replace(fault["old"], fault["new"]))
                 failed = build()
                 text, told = (failed, []) if failed else compare(group)
             finally:
                 path.write_text(original)
+            times.append({"id": fault["name"], "seconds": time.monotonic() - started})
+            TIMES.write_text(json.dumps(times, indent=2) + "\n")
             seen = [line for line in told if line not in baseline[group]]
             before = differing(baseline[group])
             more = [

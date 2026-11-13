@@ -4,6 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseShard, planShards, readCosts } from '../fault-shards.mjs'
 
 if (Number(process.versions.node.split('.')[0]) !== 22)
   throw new Error('fault probes require Node 22')
@@ -2277,14 +2278,21 @@ if (process.argv.includes('--inventory')) {
 }
 const onlyAt = process.argv.indexOf('--only')
 const only = onlyAt === -1 ? null : new Set(process.argv[onlyAt + 1].split(','))
-// `--shard INDEX/COUNT`: every COUNTth fault from INDEX, for runners side by side.
+// `--shard INDEX/COUNT`: one of COUNT runners side by side, each with the
+// faults tools/fault-shards.mjs gives it by the seconds in fault-costs.json
 const shardAt = process.argv.indexOf('--shard')
-const [shard, shards] = shardAt === -1 ? [0, 1] : process.argv[shardAt + 1].split('/').map(Number)
-if (!(Number.isInteger(shard) && Number.isInteger(shards) && shard >= 0 && shard < shards))
-  throw new Error('--shard takes INDEX/COUNT')
+const { index: shard, count: shards } =
+  shardAt === -1 ? { index: 0, count: 1 } : parseShard(process.argv[shardAt + 1])
 const named = faults.filter(([id]) => only === null || only.has(id))
 if (only !== null && named.length !== only.size) throw new Error('--only names an unknown fault')
-const selected = named.filter((_, index) => index % shards === shard)
+const planned = new Set(
+  planShards(
+    named.map(([id]) => id),
+    readCosts(resolve(here, 'fault-costs.json')),
+    shards,
+  ).shards[shard],
+)
+const selected = named.filter(([id]) => planned.has(id))
 // A scratch copy: an interrupted probe leaves no fault in the working tree.
 const workspace = mkdtempSync(join(tmpdir(), 'pptx-faults-'))
 cpSync(resolve(root, 'crates'), resolve(workspace, 'crates'), {
@@ -2370,6 +2378,7 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
   if (count !== occurrences)
     throw new Error(`${id}: source anchor occurs ${count}, expected ${occurrences}`)
   let result
+  const started = Date.now()
   try {
     // a function: `$` in the fault text is not a replacement pattern
     writeFileSync(
@@ -2390,6 +2399,8 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
     // no tally: the comparison ended before its report (the fault made the module abort)
     const aborted = tally === undefined
     result = { id, fn, file, before, after, differences, aborted, caught: differences > 0 }
+    // its build and its comparison: the cost tools/fault-shards.mjs plans by
+    result.seconds = (Date.now() - started) / 1000
   } finally {
     writeFileSync(path, original)
   }
