@@ -25,7 +25,7 @@ use shell_contract::{
     OsShellHost, Surface, ViewId, WindowId,
 };
 
-use crate::host::{Locale, LocaleHost, Shared};
+use crate::host::{Locale, LocaleHost, RecoveryStateHost, Shared};
 
 /// The shell's start rules (contract section 5), with the handlers kept
 #[derive(Default)]
@@ -381,6 +381,11 @@ impl Kit {
         hosts.insert::<MainWindowHost>(Arc::new(FakeMainWindow(None)));
         hosts.insert::<LocaleHost>(Arc::new(FixedLocale(Lang::En)));
         hosts.insert::<Arc<Shared>>(Arc::default());
+        hosts.insert::<RecoveryStateHost>(Arc::new(Mutex::new(
+            main_core::packages::electron_utils::recovery_store::SharedRecoveryState::new(
+                "0123456789abcdef",
+            ),
+        )));
         more(&mut hosts);
         let services = Services {
             ui: Arc::new(Inline { current: false }),

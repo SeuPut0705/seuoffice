@@ -51,6 +51,14 @@ pub trait Locale: Send + Sync {
 
 pub type LocaleHost = Arc<dyn Locale>;
 
+/// The one process-wide state of `main-core`'s recovery store (shutdown
+/// latch, delete epochs, run id, the Don't-Save block), shared with the
+/// batches that also write or read recovery copies (U, W, D2). `Hosts` is
+/// keyed by type, so every batch that takes this exact type gets the
+/// instance the shell inserted once.
+pub type RecoveryStateHost =
+    Arc<Mutex<main_core::packages::electron_utils::recovery_store::SharedRecoveryState>>;
+
 /// What the TypeScript kept once per process and every app module of the
 /// batch reads: the folder the last confirmed file dialog picked (Electron's
 /// `dialog` is one object, so its memory is one) and the default save
