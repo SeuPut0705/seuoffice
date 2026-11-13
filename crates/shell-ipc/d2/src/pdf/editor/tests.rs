@@ -12,8 +12,8 @@ use shell_contract::{BytesKind, IpcValue, Surface, ViewId};
 
 use super::PdfEditors;
 use super::fakes::{FakeShell, engine, shell};
+use super::hosts::{PdfEngineHost, PdfShellHost};
 use super::open::{NoClobber, move_pdf_file_no_clobber, sanitize_auto_rename_base};
-use super::{PdfEngineHost, PdfShellHost};
 use crate::kit::{IntoIpc, field, obj};
 use crate::testing::{HostCall, Rt};
 
@@ -27,7 +27,7 @@ struct T {
     shell: Arc<FakeShell>,
 }
 
-fn rt_with(case: Value) -> (Rt, Arc<FakeShell>) {
+pub(super) fn rt_with(case: Value) -> (Rt, Arc<FakeShell>) {
     let fake_shell = shell(&case);
     let s = fake_shell.clone();
     let mut rt = Rt::new(move |h| {

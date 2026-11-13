@@ -9,6 +9,10 @@
 //! and the shell hooks are absent (`createDocument`, `openPdfTools`, notes)
 //! or succeed (`redactionSaved`, `renamed`). Bytes in answers are strings,
 //! taken as their UTF-8 bytes.
+//!
+//! In ipc-probe each call also writes one line to the case's host log, named
+//! after the TypeScript function the method stands for; the group
+//! `tools/ipc-diff/groups/d2/pdf-editor.ts` logs the same lines.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -17,20 +21,30 @@ use main_core::pdf::font_locate::Platform;
 use main_core::pdf::note_link::{FoundNoteLink, NoteLink, NoteLinks};
 use main_core::pdf::ocr::OcrEnv;
 use main_core::pdf::system_certificates::CertSummary;
-use serde_json::Value;
+use serde_json::{Value, json};
 use shell_contract::runtime::CancelToken;
 use shell_contract::{IpcValue, ViewId};
 
 use super::hosts::*;
 use crate::kit::from_json;
 
+/// The case's host log (ipc-probe inserts it; absent in unit tests)
+type Log = Arc<Mutex<Vec<Value>>>;
+
 #[derive(Default)]
 struct Answers {
     case: Value,
     used: Mutex<HashMap<String, usize>>,
+    log: Option<Log>,
 }
 
 impl Answers {
+    fn line(&self, line: Value) {
+        if let Some(log) = &self.log {
+            log.lock().unwrap().push(line)
+        }
+    }
+
     fn take(&self, name: &str) -> Option<Value> {
         match self.case.get(name)? {
             Value::Array(items) if !items.is_empty() && name_takes_turns(name) => {
@@ -80,6 +94,10 @@ fn num(v: Option<&Value>, default: f64) -> f64 {
 /// `PdfEngine` answering from the case
 pub struct FakeEngine(Answers);
 
+fn js(v: &IpcValue) -> Value {
+    crate::kit::to_json(v).unwrap_or(Value::Null)
+}
+
 impl FakeEngine {
     fn ipc(&self, name: &str, default: IpcValue) -> Result<IpcValue, String> {
         Ok(self.0.get(name)?.as_ref().map_or(default, from_json))
@@ -103,10 +121,17 @@ impl FakeEngine {
             image_edits: list("skippedImageEdits"),
         })
     }
+    fn line(&self, line: Value) {
+        self.0.line(line)
+    }
 }
 
 fn write(target: &str, bytes: &[u8]) -> Result<(), String> {
     std::fs::write(target, bytes).map_err(|e| e.to_string())
+}
+
+fn read(path: &str) -> Result<Vec<u8>, String> {
+    std::fs::read(path).map_err(|e| e.to_string())
 }
 
 impl PdfEngine for FakeEngine {
@@ -116,8 +141,9 @@ impl PdfEngine for FakeEngine {
         target: &str,
         _r: &IpcValue,
     ) -> Result<SaveSkips, String> {
+        self.line(json!(["savePdfToPath", source, target]));
         let skips = self.skips("savePdfToPath")?;
-        write(target, &std::fs::read(source).map_err(|e| e.to_string())?)?;
+        write(target, &read(source)?)?;
         Ok(skips)
     }
     fn save_pdf_bytes_to_path(
@@ -126,54 +152,71 @@ impl PdfEngine for FakeEngine {
         target: &str,
         _r: &IpcValue,
     ) -> Result<SaveSkips, String> {
+        self.line(json!(["savePdfBytesToPath", target]));
         let skips = self.skips("savePdfBytesToPath")?;
         write(target, source)?;
         Ok(skips)
     }
     fn copy_pdf_to_path(&self, source: &str, target: &str) -> Result<(), String> {
+        self.line(json!(["copyPdfToPath", source, target]));
         self.0.get("copyPdfToPath")?;
-        std::fs::copy(source, target)
-            .map(|_| ())
-            .map_err(|e| e.to_string())
+        write(target, &read(source)?)
     }
     fn pdf_bytes_with_edits(&self, source: &str, _r: &IpcValue) -> Result<Vec<u8>, String> {
-        let input = std::fs::read(source).map_err(|e| e.to_string())?;
+        self.line(json!(["pdfBytesWithEdits", source]));
+        let input = read(source)?;
         self.bytes_or("pdfBytesWithEdits", &input)
     }
     fn pdf_bytes_with_edits_of(&self, file: &[u8], _r: &IpcValue) -> Result<Vec<u8>, String> {
+        self.line(json!(["pdfBytesWithEditsOf"]));
         self.bytes_or("pdfBytesWithEditsOf", file)
     }
     fn pdf_bytes_with_edits_from(&self, source: &[u8], _r: &IpcValue) -> Result<Vec<u8>, String> {
+        self.line(json!(["pdfBytesWithEditsFrom"]));
         self.bytes_or("pdfBytesWithEditsFrom", source)
     }
     fn read_static_form_fills(&self, _b: &[u8]) -> Result<IpcValue, String> {
+        self.line(json!(["readStaticFormFills"]));
         self.ipc("readStaticFormFills", IpcValue::Array(Vec::new()))
     }
-    fn extract_pages(&self, b: &[u8], _p: &IpcValue) -> Result<Vec<u8>, String> {
+    fn extract_pages(&self, b: &[u8], pages: &IpcValue) -> Result<Vec<u8>, String> {
+        self.line(json!(["extractPagesBytes", js(pages)]));
         self.bytes_or("extractPages", b)
     }
     fn insert_pdf(
         &self,
         target: &[u8],
         other: &[u8],
-        _after: f64,
+        after: f64,
     ) -> Result<(Vec<u8>, f64), String> {
+        self.line(json!(["insertPdfBytes", after]));
         let count = num(self.0.get("insertPdf")?.as_ref(), 1.0);
         Ok(([target, other].concat(), count))
     }
-    fn insert_blank_page(&self, b: &[u8], _after: f64) -> Result<Vec<u8>, String> {
+    fn insert_blank_page(&self, b: &[u8], after: f64) -> Result<Vec<u8>, String> {
+        self.line(json!(["insertBlankPageBytes", after]));
         self.bytes_or("insertBlankPage", b)
     }
-    fn split_pdf(&self, b: &[u8], _chunk: f64) -> Result<Vec<Vec<u8>>, String> {
+    fn split_pdf(&self, b: &[u8], chunk: f64) -> Result<Vec<Vec<u8>>, String> {
+        self.line(json!(["splitPdfBytes", chunk]));
         Ok(match self.0.get("splitPdf")? {
             Some(Value::Array(parts)) => parts.iter().map(bytes).collect(),
             _ => vec![b.to_vec()],
         })
     }
-    fn merge_pages(&self, b: &[u8], _n: f64, _h: bool, _s: bool) -> Result<Vec<u8>, String> {
+    fn merge_pages(
+        &self,
+        b: &[u8],
+        per_sheet: f64,
+        horizontal: bool,
+        separator: bool,
+    ) -> Result<Vec<u8>, String> {
+        let direction = if horizontal { "horizontal" } else { "vertical" };
+        self.line(json!(["mergePagesBytes", per_sheet, direction, separator]));
         self.bytes_or("mergePages", b)
     }
     fn merge_pdf(&self, base: &[u8], others: &[Vec<u8>]) -> Result<(Vec<u8>, f64), String> {
+        self.line(json!(["mergePdfBytes", others.len()]));
         self.0.get("mergePdf")?;
         Ok((
             [base.to_vec(), others.concat()].concat(),
@@ -186,6 +229,7 @@ impl PdfEngine for FakeEngine {
         other: &[u8],
         pages: &IpcValue,
     ) -> Result<(Vec<u8>, IpcValue, IpcValue), String> {
+        self.line(json!(["replacePagesBytes", js(pages)]));
         self.0.get("replacePages")?;
         Ok((
             [target, other].concat(),
@@ -193,13 +237,16 @@ impl PdfEngine for FakeEngine {
             IpcValue::Number(1.0),
         ))
     }
-    fn set_page_size(&self, b: &[u8], _w: f64, _h: f64) -> Result<Vec<u8>, String> {
+    fn set_page_size(&self, b: &[u8], width: f64, height: f64) -> Result<Vec<u8>, String> {
+        self.line(json!(["setPageSizeBytes", width, height]));
         self.bytes_or("setPageSize", b)
     }
-    fn split_pages(&self, b: &[u8], _n: f64) -> Result<Vec<u8>, String> {
+    fn split_pages(&self, b: &[u8], per_page: f64) -> Result<Vec<u8>, String> {
+        self.line(json!(["splitPagesBytes", per_page]));
         self.bytes_or("splitPages", b)
     }
-    fn crop_pages(&self, b: &[u8], _p: &IpcValue, _r: &IpcValue) -> Result<Vec<u8>, String> {
+    fn crop_pages(&self, b: &[u8], pages: &IpcValue, rect: &IpcValue) -> Result<Vec<u8>, String> {
+        self.line(json!(["cropPagesBytes", js(pages), js(rect)]));
         self.bytes_or("cropPages", b)
     }
     fn copied_pages_of(
@@ -208,6 +255,7 @@ impl PdfEngine for FakeEngine {
         _r: &IpcValue,
         positions: &IpcValue,
     ) -> Result<Option<(Vec<u8>, f64)>, String> {
+        self.line(json!(["copiedPagesOf", js(positions)]));
         match self.0.get("copiedPagesOf")? {
             Some(Value::Null) => Ok(None),
             Some(v) => Ok(Some((bytes(&v), 1.0))),
@@ -221,6 +269,7 @@ impl PdfEngine for FakeEngine {
         }
     }
     fn shrink(&self, source: &[u8]) -> Result<Shrunk, String> {
+        self.line(json!(["shrinkDocument"]));
         let v = self.0.get("shrink")?.unwrap_or(Value::Null);
         Ok(Shrunk {
             bytes: v.get("bytes").map_or_else(|| source.to_vec(), bytes),
@@ -229,6 +278,7 @@ impl PdfEngine for FakeEngine {
         })
     }
     fn decrypt_document(&self, b: &[u8], password: &str) -> Result<Decrypted, DecryptError> {
+        self.line(json!(["decryptDocument", password]));
         match self.0.get("decryptDocument") {
             Err(e) if e == "wrong-password" => Err(DecryptError::WrongPassword),
             Err(e) if e == "certificate-encryption" => Err(DecryptError::CertificateEncryption),
@@ -242,40 +292,47 @@ impl PdfEngine for FakeEngine {
         }
     }
     fn read_annot_subjects(&self, _b: &[u8]) -> Result<IpcValue, String> {
+        self.line(json!(["readAnnotSubjects"]));
         self.ipc("readAnnotSubjects", IpcValue::Array(Vec::new()))
     }
     fn list_page_images(&self, _b: &[u8]) -> Result<IpcValue, String> {
+        self.line(json!(["listPageImages"]));
         self.ipc("listPageImages", IpcValue::Array(Vec::new()))
     }
     fn render_image_png(
         &self,
         _b: &[u8],
-        _i: f64,
-        _r: &IpcValue,
-        _s: f64,
+        page_index: f64,
+        rect: &IpcValue,
+        scale: f64,
     ) -> Result<IpcValue, String> {
+        self.line(json!(["renderImagePng", page_index, js(rect), scale]));
         self.ipc("renderImagePng", IpcValue::Null)
     }
-    fn render_page_preview_png(&self, _b: &[u8], _r: &IpcValue) -> Result<IpcValue, String> {
+    fn render_page_preview_png(&self, _b: &[u8], request: &IpcValue) -> Result<IpcValue, String> {
+        self.line(json!(["renderPagePreviewPng", js(request)]));
         self.ipc("renderPagePreviewPng", IpcValue::Null)
     }
-    fn validate_text_edits(&self, _b: &[u8], _e: &IpcValue) -> Result<IpcValue, String> {
+    fn validate_text_edits(&self, _b: &[u8], edits: &IpcValue) -> Result<IpcValue, String> {
+        self.line(json!(["validateTextEdits", js(edits)]));
         self.ipc("validateTextEdits", IpcValue::Array(Vec::new()))
     }
     fn can_draw_text(
         &self,
-        _t: &str,
-        _f: Option<&str>,
-        _b: bool,
-        _i: bool,
+        text: &str,
+        font: Option<&str>,
+        bold: bool,
+        italic: bool,
     ) -> Result<bool, String> {
+        self.line(json!(["canDrawText", text, font, bold, italic]));
         Ok(self
             .0
             .get("canDrawText")?
             .and_then(|v| v.as_bool())
             .unwrap_or(true))
     }
-    fn read_pdf_text(&self, b: &[u8], _p: Option<&str>) -> Result<PdfText, String> {
+    fn read_pdf_text(&self, b: &[u8], password: Option<&str>) -> Result<PdfText, String> {
+        self.line(json!(["readPdfText", password]));
         let v = self.0.get("readPdfText")?;
         let pages: Vec<String> = match v.as_ref().and_then(|v| v.get("pages")) {
             Some(Value::Array(p)) => p
@@ -290,12 +347,17 @@ impl PdfEngine for FakeEngine {
         })
     }
     fn read_pdf_signatures(&self, _b: &[u8]) -> Result<IpcValue, String> {
+        self.line(json!(["readPdfSignatures"]));
         self.ipc("readPdfSignatures", IpcValue::Array(Vec::new()))
     }
     fn describe_certificate(&self, _input: &[u8]) -> Option<CertSummary> {
         None
     }
-    fn open_certificate(&self, _m: &CertMaterial) -> Result<Vec<IpcValue>, String> {
+    fn open_certificate(&self, material: &CertMaterial) -> Result<Vec<IpcValue>, String> {
+        match material {
+            CertMaterial::P12 { password, .. } => self.line(json!(["openCertificate", password])),
+            CertMaterial::InPlace(_) => self.line(json!(["openExternalCertificate"])),
+        }
         match self.0.get("openCertificate")? {
             Some(Value::Array(info)) => Ok(info.iter().map(from_json).collect()),
             _ => Ok(vec![crate::kit::obj([(
@@ -308,8 +370,9 @@ impl PdfEngine for FakeEngine {
         &self,
         b: &[u8],
         _m: &CertMaterial,
-        _o: &SignOptions,
+        o: &SignOptions,
     ) -> Result<Vec<u8>, SignFailure> {
+        self.line(json!(["signPdf", o.reason, o.certify_level]));
         match self.0.take("signPdf") {
             Some(v) if v.get("code").is_some() => Err(SignFailure::Code(
                 v["code"].as_str().unwrap_or_default().into(),
@@ -323,15 +386,17 @@ impl PdfEngine for FakeEngine {
     fn generate_image(
         &self,
         _s: &str,
-        _p: &str,
-        _a: Option<&str>,
-        _o: Option<&str>,
+        prompt: &str,
+        aspect: Option<&str>,
+        open: Option<&str>,
         _d: &str,
         _c: &CancelToken,
     ) -> Result<IpcValue, String> {
+        self.line(json!(["generateImageTool", prompt, aspect, open]));
         self.ipc("generateImage", IpcValue::Null)
     }
     fn read_note_links(&self, _u: &str) -> Result<NoteLinks, String> {
+        self.line(json!(["ResultStore.readNoteLinks"]));
         self.0.get("readNoteLinks")?;
         Ok(NoteLinks {
             links: jscompat::JsMap::new(),
@@ -340,22 +405,34 @@ impl PdfEngine for FakeEngine {
     fn find_note_link(
         &self,
         _u: &str,
-        _p: &str,
-        _h: &str,
+        pdf_path: &str,
+        hash: &str,
     ) -> Result<Option<FoundNoteLink>, String> {
+        self.line(json!(["ResultStore.findNoteLink", pdf_path, hash]));
         self.0.get("findNoteLink")?;
         Ok(None)
     }
-    fn set_note_link(&self, _u: &str, _p: &str, _l: &NoteLink) -> Result<(), String> {
+    fn set_note_link(&self, _u: &str, pdf_path: &str, link: &NoteLink) -> Result<(), String> {
+        self.line(json!([
+            "ResultStore.setNoteLink",
+            pdf_path,
+            link.note_path,
+            link.doc_hash
+        ]));
         self.0.get("setNoteLink").map(|_| ())
     }
-    fn update_note_link_doc_hash(&self, _u: &str, _p: &str, _h: &str) -> Result<bool, String> {
+    fn update_note_link_doc_hash(
+        &self,
+        _u: &str,
+        pdf_path: &str,
+        hash: &str,
+    ) -> Result<bool, String> {
+        self.line(json!(["ResultStore.updateNoteLinkDocHash", pdf_path, hash]));
         self.0.get("updateNoteLinkDocHash").map(|_| true)
     }
     fn document_hash_of_file(&self, path: &str) -> Result<String, String> {
-        std::fs::read(path)
-            .map(|b| main_core::markdown::fs_util::sha256_hex(&b))
-            .map_err(|e| e.to_string())
+        self.line(json!(["documentHashOfFile", path]));
+        read(path).map(|b| main_core::markdown::fs_util::sha256_hex(&b))
     }
 }
 
@@ -368,17 +445,22 @@ pub struct FakeShell {
     answers: Answers,
     pub calls: Mutex<Vec<String>>,
     pub watchers: Mutex<Vec<(u64, String, WatchListener)>>,
+    uuids: Mutex<u64>,
 }
 
 impl FakeShell {
-    fn log(&self, call: String) {
-        self.calls.lock().unwrap().push(call)
+    fn log(&self, call: String, line: Value) {
+        self.calls.lock().unwrap().push(call);
+        self.answers.line(line);
     }
     fn flag(&self, name: &str) -> bool {
         self.answers
             .take(name)
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
+    }
+    fn configured(&self, name: &str) -> bool {
+        self.answers.case.get(name).is_some()
     }
 }
 
@@ -394,14 +476,24 @@ impl PdfShell for FakeShell {
             .take("username")
             .and_then(|v| v.as_str().map(str::to_owned))
     }
+    /// the host's, as the TypeScript's `process.platform`
     fn platform(&self) -> Platform {
-        Platform::Other
+        if cfg!(target_os = "macos") {
+            Platform::Darwin
+        } else if cfg!(windows) {
+            Platform::Win32
+        } else {
+            Platform::Other
+        }
     }
     fn is_path_open_elsewhere(&self, _path: &str) -> bool {
         self.flag("isPathOpenElsewhere")
     }
     fn open_generated_path(&self, path: &str) -> Result<bool, String> {
-        self.log(format!("openGeneratedPath {path}"));
+        self.log(
+            format!("openGeneratedPath {path}"),
+            json!(["openGeneratedPath", path]),
+        );
         Ok(self.flag("openGeneratedPath"))
     }
     fn create_document(
@@ -409,25 +501,40 @@ impl PdfShell for FakeShell {
         request: &IpcValue,
         owner: ViewId,
     ) -> Option<Result<IpcValue, String>> {
-        self.log(format!("createDocument {} {request:?}", owner.0));
+        if !self.configured("createDocument") {
+            return None;
+        }
+        self.log(
+            format!("createDocument {} {request:?}", owner.0),
+            json!(["createDocument", js(request), owner.0]),
+        );
         self.answers
             .get("createDocument")
             .map(|v| v.map(|v| from_json(&v)))
             .transpose()
     }
     fn open_pdf_tools(&self, path: &str, tool: &str) -> Option<bool> {
-        self.log(format!("openPdfTools {path} {tool}"));
+        if !self.configured("openPdfTools") {
+            return None;
+        }
+        self.log(
+            format!("openPdfTools {path} {tool}"),
+            json!(["openPdfTools", path, tool]),
+        );
         self.answers.take("openPdfTools").and_then(|v| v.as_bool())
     }
     fn has_note_hooks(&self) -> bool {
         self.flag("noteHooks")
     }
     fn open_note(&self, path: &str) -> Result<bool, String> {
-        self.log(format!("openNote {path}"));
+        self.log(format!("openNote {path}"), json!(["openNote", path]));
         Ok(true)
     }
-    fn insert_into_note(&self, path: &str, _text: &str) -> Result<bool, String> {
-        self.log(format!("insertIntoNote {path}"));
+    fn insert_into_note(&self, path: &str, text: &str) -> Result<bool, String> {
+        self.log(
+            format!("insertIntoNote {path}"),
+            json!(["insertIntoNote", path, text]),
+        );
         Ok(true)
     }
     fn new_document_dir(&self, _view: ViewId) -> Option<String> {
@@ -436,15 +543,24 @@ impl PdfShell for FakeShell {
             .and_then(|v| v.as_str().map(str::to_owned))
     }
     fn redaction_saved(&self, view: ViewId, path: &str) -> Result<(), String> {
-        self.log(format!("redactionSaved {} {path}", view.0));
+        self.log(
+            format!("redactionSaved {} {path}", view.0),
+            json!(["pdfRedactionSavedHook", view.0, path]),
+        );
         Ok(())
     }
     fn renamed(&self, view: ViewId, old_path: &str, new_path: &str) -> Result<(), String> {
-        self.log(format!("renamed {} {old_path} {new_path}", view.0));
+        self.log(
+            format!("renamed {} {old_path} {new_path}", view.0),
+            json!(["pdfRenamedHook", view.0, old_path, new_path]),
+        );
         Ok(())
     }
     fn reload(&self, view: ViewId) {
-        self.log(format!("reload {}", view.0));
+        self.log(
+            format!("reload {}", view.0),
+            json!(["webContents.reload", view.0]),
+        );
     }
     fn watch_dir(&self, dir: &str, on_event: WatchListener) -> Option<u64> {
         let mut w = self.watchers.lock().unwrap();
@@ -453,11 +569,20 @@ impl PdfShell for FakeShell {
         Some(id)
     }
     fn close_watch(&self, handle: u64) {
-        self.log(format!("closeWatch {handle}"));
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("closeWatch {handle}"));
         self.watchers
             .lock()
             .unwrap()
             .retain(|(id, _, _)| *id != handle);
+    }
+    /// numbered from 1 in each case, as the group's `randomUUID`
+    fn random_uuid(&self) -> String {
+        let mut n = self.uuids.lock().unwrap();
+        *n += 1;
+        format!("00000000-0000-4000-8000-{:012}", *n)
     }
     fn ocr_env(&self) -> OcrEnv {
         OcrEnv {
@@ -468,25 +593,32 @@ impl PdfShell for FakeShell {
     }
 }
 
-pub fn engine(case: &Value) -> Arc<FakeEngine> {
-    Arc::new(FakeEngine(Answers {
-        case: case.get("engine").cloned().unwrap_or(Value::Null),
+fn answers(case: &Value, key: &str, log: Option<Log>) -> Answers {
+    Answers {
+        case: case.get(key).cloned().unwrap_or(Value::Null),
         used: Mutex::default(),
-    }))
+        log,
+    }
+}
+
+pub fn engine(case: &Value) -> Arc<FakeEngine> {
+    Arc::new(FakeEngine(answers(case, "engine", None)))
 }
 
 pub fn shell(case: &Value) -> Arc<FakeShell> {
     Arc::new(FakeShell {
-        answers: Answers {
-            case: case.get("shell").cloned().unwrap_or(Value::Null),
-            used: Mutex::default(),
-        },
+        answers: answers(case, "shell", None),
         ..Default::default()
     })
 }
 
-/// The engine answers from `case.engine`, the shell from `case.shell`
+/// The engine answers from `case.engine`, the shell from `case.shell`; both
+/// log to the case's host log when there is one
 pub(super) fn insert(hosts: &mut shell_contract::Hosts, case: &Value) {
-    hosts.insert::<PdfEngineHost>(engine(case));
-    hosts.insert::<PdfShellHost>(shell(case));
+    let log = hosts.get::<Log>().cloned();
+    hosts.insert::<PdfEngineHost>(Arc::new(FakeEngine(answers(case, "engine", log.clone()))));
+    hosts.insert::<PdfShellHost>(Arc::new(FakeShell {
+        answers: answers(case, "shell", log),
+        ..Default::default()
+    }));
 }
