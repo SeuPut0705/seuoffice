@@ -1375,9 +1375,10 @@ impl SeedDeckHost for SeedFake {
         map.insert("redoStack".into(), Value::Array(Vec::new()));
         if fields.ask_path_on_first_save {
             map.insert("askPathOnFirstSave".into(), Value::Bool(true));
-            if let Some(name) = &fields.first_save_name {
-                map.insert("firstSaveName".into(), text(name));
-            }
+        }
+        // the TypeScript sets both keys together; the port decides when the name is kept
+        if let Some(name) = &fields.first_save_name {
+            map.insert("firstSaveName".into(), text(name));
         }
         if let Some(identity) = &fields.recovery_id {
             map.insert("recoveryId".into(), identity_value(identity));
