@@ -9,6 +9,7 @@ mod port;
 pub mod ports;
 #[cfg(feature = "probe")]
 mod probe;
+pub mod secrets;
 
 use shell_contract::Batch;
 use shell_contract::ipc::{RegisterBatch, RegisterError, Registry};

@@ -8,13 +8,28 @@ publish.workspace = true
 
 [features]
 # the fakes of this batch's hosts for crates/ipc-probe (tools/ipc-diff)
-probe = ["dep:serde_json"]
+probe = []
 
 [dependencies]
 shell-contract = { path = "../../shell-contract" }
-serde_json = { workspace = true, optional = true }
+main-core.workspace = true
+jscompat.workspace = true
+getrandom.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+# Chromium OSCrypt v10 values, as Electron's safeStorage writes them
+aes = "0.8"
+aes-gcm = "0.10"
+cbc = { version = "0.1", features = ["alloc"] }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+
+# the safeStorage key: the keychain item on macOS, DPAPI on Windows
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
 
 [dev-dependencies]
 # the tests register the batch over its probe fakes
 shell-ipc-a = { path = ".", features = ["probe"] }
-serde_json.workspace = true
