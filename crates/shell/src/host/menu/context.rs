@@ -16,9 +16,7 @@ use main_core::packages::electron_utils::context_menu::{
     ContextMenuParams, EditAction, EditFlags, MenuCommand, MenuEntry, context_menu_labels,
     context_menu_template,
 };
-use main_core::packages::electron_utils::dialog_memory::{
-    Dialog, DialogMemory, show_save_dialog_with_memory,
-};
+use main_core::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
 use main_core::packages::electron_utils::save_image::{
     DecodedImage, SaveImageOptions, SaveImageResult, fetch_image_for_save, save_fetched_image,
@@ -32,7 +30,7 @@ use shell_ipc_m::hosts::MHostRef;
 use shell_ipc_m::intercept_context_menu;
 use shell_ipc_m::state::MStateRef;
 use shell_ipc_w::SharedDialogMemory;
-use shell_ipc_w::shared_dialog::{save_confirmed, with_shared_memory};
+use shell_ipc_w::shared_dialog::with_shared_memory;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, LogicalPosition, Manager};
 use tauri_runtime_cef::WebviewCefExt;
@@ -373,7 +371,6 @@ impl Response for Fetched {
     }
 }
 
-/// `dialog.showSaveDialog` as `showSaveDialogWithMemory` calls it
 /// `saveImageFromUrl`'s dialog and write, on a worker. The shared memory is
 /// copied under a short lock for the dialog's suggestion and is never held
 /// while the user picks. A confirmed pick is written back the moment the
@@ -387,15 +384,12 @@ fn save_image_as(
     image: DecodedImage,
     title: &str,
 ) -> SaveImageResult {
-    let mut dialog = SaveDialog {
-        host: dialogs,
-        shared: memory,
-    };
-    // the copy only: the dialog itself writes a confirmed pick back
-    with_shared_memory(memory, |copy| {
-        let result = save_fetched_image(
+    let mut dialog = SaveDialog { host: dialogs };
+    // the helper records a confirmed pick as the dialog returns it
+    with_shared_memory(memory, &mut dialog, |copy, dialog| {
+        save_fetched_image(
             copy,
-            &mut dialog,
+            dialog,
             parent.as_ref(),
             url,
             image,
@@ -403,35 +397,17 @@ fn save_image_as(
                 title,
                 fallback_dir: None,
             },
-        );
-        (result, false)
+        )
     })
 }
 
-/// The save dialog of Save Image As
-struct SaveDialog<'a> {
+/// The save dialog of Save Image As: `dialog.showSaveDialog` as
+/// `showSaveDialogWithMemory` calls it
+struct SaveDialog {
     host: DialogsHost,
-    /// where a confirmed pick is remembered as soon as it is made
-    shared: &'a Mutex<DialogMemory>,
 }
 
-/// A dialog that answers what the real one answered, for main-core's own
-/// rule of what a pick remembers
-struct Answered(JsonValue);
-
-impl Dialog for Answered {
-    type Window = WindowId;
-
-    fn show_open_dialog(&mut self, _: Option<&WindowId>, _: &JsObject<JsonValue>) -> JsonValue {
-        self.0.clone()
-    }
-
-    fn show_save_dialog(&mut self, _: Option<&WindowId>, _: &JsObject<JsonValue>) -> JsonValue {
-        self.0.clone()
-    }
-}
-
-impl Dialog for SaveDialog<'_> {
+impl Dialog for SaveDialog {
     type Window = WindowId;
 
     fn show_open_dialog(
@@ -495,15 +471,7 @@ impl Dialog for SaveDialog<'_> {
                     .unwrap_or_default(),
             ),
         );
-        let answer = JsonValue::Object(answer);
-        if save_confirmed(&answer) {
-            with_shared_memory(self.shared, |memory| {
-                let remembered = Answered(answer.clone());
-                show_save_dialog_with_memory(memory, &mut { remembered }, parent, options, None);
-                ((), true)
-            });
-        }
-        answer
+        JsonValue::Object(answer)
     }
 }
 
@@ -514,6 +482,8 @@ mod tests {
     use std::time::Duration;
 
     use shell_contract::hosts::{Dialogs, MessageBox, MessageBoxAnswer};
+
+    use main_core::packages::electron_utils::dialog_memory::show_save_dialog_with_memory;
 
     use super::*;
 
