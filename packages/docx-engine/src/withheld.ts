@@ -283,17 +283,19 @@ function tagAttributes(tag: string) {
 
 /**
  * A written story part (the document, a header or footer, the comments, the
- * notes) whose runs carry the editor's mark, with its root declaring what a
- * consumer needs to keep that mark: the mark's namespace, that namespace as
- * ignorable (a consumer that does not know it skips the element instead of
- * rejecting the run), and the mark element as preserved (a consumer that
- * re-saves keeps it instead of dropping every ignorable element). The root is
- * read through its quoted values whatever its name or quotes, an existing
- * markup-compatibility prefix and lists are extended, and a root that binds
- * the mark's prefix to another namespace is left as it is.
+ * notes) whose runs carry the mark, with its root declaring what a consumer
+ * needs to keep that mark: the mark's namespace, that namespace as ignorable
+ * (a consumer that does not know it skips the element instead of rejecting the
+ * run), and the mark element as preserved (a consumer that re-saves keeps it
+ * instead of dropping every ignorable element). Both lists name the mark by
+ * the namespace it is really in: the editor's own `go:` mark leans on the root
+ * for its namespace, and a mark that declares its own (another writer, an older
+ * release) gets a root prefix bound to that namespace. The root is read through
+ * its quoted values whatever its name or quotes, and an existing
+ * markup-compatibility prefix and lists are extended.
  */
 export function withRedactRoot(partXml: string): string {
-  if (!partXml.includes(`<${REDACT_EL}`)) return partXml
+  if (!MARK_RE.test(partXml)) return partXml
   const root = findStartTag(maskOpaque(partXml))
   if (!root || root.selfClosing) return partXml
   let tag = partXml.slice(root.start, root.end)
@@ -301,12 +303,19 @@ export function withRedactRoot(partXml: string): string {
   const add = (attr: string) => {
     tag = `<${name} ${attr}${tag.slice(name.length + 1)}`
   }
-  const bound = tagAttributes(tag).get(`xmlns:${REDACT_PREFIX}`)?.value
-  if (bound !== undefined && !REDACT_NAMESPACES.includes(bound)) return partXml
-  if (bound === undefined) add(`xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
-  let mc = [...tagAttributes(tag)]
-    .find(([attr, a]) => attr.startsWith('xmlns:') && a.value === MC_NS)?.[0]
-    .slice(6)
+  const prefixOf = (uri: string) =>
+    [...tagAttributes(tag)]
+      .find(([attr, a]) => attr.startsWith('xmlns:') && a.value === uri)?.[0]
+      .slice('xmlns:'.length)
+  const ownPrefix = tagAttributes(tag).get(`xmlns:${REDACT_PREFIX}`)?.value
+  // the namespaces the part's marks are in
+  const used = REDACT_NAMESPACES.filter((ns) => partXml.includes(ns))
+  if (ownPrefix === undefined && partXml.includes(`<${REDACT_EL}`)) {
+    add(`xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
+    if (!used.includes(REDACT_NS_WRITTEN)) used.unshift(REDACT_NS_WRITTEN)
+  }
+  if (used.length === 0) return partXml
+  let mc = prefixOf(MC_NS)
   if (mc === undefined) {
     mc = tagAttributes(tag).has('xmlns:mc') ? 'mce' : 'mc'
     add(`xmlns:${mc}="${MC_NS}"`)
@@ -319,7 +328,16 @@ export function withRedactRoot(partXml: string): string {
     if (tokens.includes(token)) return
     tag = `${tag.slice(0, attr.start)}${[...tokens, token].join(' ')}${tag.slice(attr.end)}`
   }
-  ensure('Ignorable', REDACT_PREFIX)
-  ensure('PreserveElements', REDACT_EL)
+  for (const uri of used) {
+    let prefix = prefixOf(uri)
+    if (prefix === undefined) {
+      let n = 1
+      while (tagAttributes(tag).has(`xmlns:${REDACT_PREFIX}${n}`)) n++
+      prefix = `${REDACT_PREFIX}${n}`
+      add(`xmlns:${prefix}="${uri}"`)
+    }
+    ensure('Ignorable', prefix)
+    ensure('PreserveElements', `${prefix}:redact`)
+  }
   return partXml.slice(0, root.start) + tag + partXml.slice(root.end)
 }
