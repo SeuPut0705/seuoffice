@@ -330,7 +330,9 @@ fn headless(
     flush(&log, cx);
     result.map(Some).map_err(|error| CallError {
         code: error.code,
-        message: error.message,
+        // the scratch folder's random suffix shows in a Node error's message
+        message: js_regex!(r"[^\s']*seuoffice-mcp-[A-Za-z0-9]{6}", "g")
+            .replace_all(&error.message, |_| "<tmp>".to_owned()),
     })
 }
 
