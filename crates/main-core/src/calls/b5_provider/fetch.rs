@@ -21,7 +21,7 @@ use crate::packages::ai_provider::protocols_shared::{
     usage_count,
 };
 use crate::packages::ai_provider::task::{
-    Fetcher, JsError, Request, RequestBody, Response, Rt, Signal,
+    Fetcher, JsError, LocalBoxFuture, Request, RequestBody, Response, Rt, Signal,
 };
 
 const URL_A: &str = "https://api.example.com/v1/chat";
@@ -198,6 +198,24 @@ where
     })
 }
 
+/// `readOne(n)`: a fetch of the n-th answer, read to its end, logged when done
+async fn read_one(rt: Rt, n: u64, sink: Sink, signal: Signal) -> Result<String, JsError> {
+    let r = rt
+        .fetch(
+            Fetcher::Node,
+            &format!("{URL_A}/{n}"),
+            Request::default(),
+            Some(&signal),
+        )
+        .await?;
+    let text = r.text().await?;
+    note(&sink, json!(["done", n, text]));
+    if text.starts_with("fail") {
+        return Err(JsError::error(format!("failed {n}")));
+    }
+    Ok(text)
+}
+
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     Some(match name {
         // ---- protocols/shared.ts, the pure part ----
@@ -330,6 +348,29 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             };
             answer(keyed_download(&rt, &fx, &o.url, &init, &options).await?).await
         }),
+
+        // ---- the runtime's combinators ----
+        "task.race" | "task.all" => {
+            let world = arg(args, 0).cloned();
+            let n = arg(args, 1).and_then(Value::as_u64).unwrap_or(0);
+            let all = name == "task.all";
+            let outcome = drive(world.as_ref(), cx, move |rt, signal, sink| async move {
+                let futures: Vec<LocalBoxFuture<Result<String, JsError>>> = (0..n)
+                    .map(|k| {
+                        Box::pin(read_one(rt.clone(), k, sink.clone(), signal.clone()))
+                            as LocalBoxFuture<Result<String, JsError>>
+                    })
+                    .collect();
+                if all {
+                    rt.try_join_all(futures)
+                        .await
+                        .map(|v| Value::Array(v.into_iter().map(Value::String).collect()))
+                } else {
+                    rt.race(futures).await.1.map(Value::String)
+                }
+            })?;
+            outcome.map(Some).map_err(thrown)
+        }
         _ => return None,
     })
 }

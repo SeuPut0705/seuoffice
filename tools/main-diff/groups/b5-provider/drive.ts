@@ -1161,7 +1161,7 @@ const connectionCases = {
     c(LOADED([TOKEN(), ok([], [], 401)]), steps(load, settle, state)),
     c(LOADED([TOKEN(), { hang: true }]), steps(load, settle, state)),
     c(
-      LOADED([REVOKED], { calls: ['rt', undefined] }),
+      LOADED([REVOKED], { calls: ['rt', { undefined: true }] }),
       steps(listen('a'), load, settle, state, st('api.file', { id: 'x' }), state),
     ),
     c(
@@ -1269,16 +1269,16 @@ const connectionCases = {
     c(connectWorld(), steps(listen('a'), st('connect'), state)),
   ],
   connect: [
-    ...[1, 'yes', {}, [], 0, ''].map((kept) =>
+    ...[1, 'yes', {}, [], 0, '', null].map((kept) =>
       c(connectWorld({ calls: [true, kept] }), steps(st('connect'), state)),
     ),
     c(connectWorld(), steps(listen('a'), st('connect'), state)),
-    c(connectWorld({ calls: [true, false, undefined] }), steps(st('connect'), state)),
+    c(connectWorld({ calls: [true, false, { undefined: true }] }), steps(st('connect'), state)),
     c(
-      connectWorld({ calls: [true, { reject: 'locked' }, undefined] }),
+      connectWorld({ calls: [true, { reject: 'locked' }, { undefined: true }] }),
       steps(st('connect'), state),
     ),
-    c(connectWorld({ calls: [true, undefined] }), steps(st('connect'), state)),
+    c(connectWorld({ calls: [true, { undefined: true }] }), steps(st('connect'), state)),
     c(
       connectWorld({ calls: [true, true] }, [SIGNED_IN, ok([], [], 403)]),
       steps(st('connect'), state),
@@ -1320,7 +1320,7 @@ const connectionCases = {
     ),
     c(
       LOADED([REVOKED, SIGNED_IN, ABOUT], {
-        calls: ['rt', undefined, true, true],
+        calls: ['rt', { undefined: true }, true, true],
         requests: [back(2)],
       }),
       steps(load, settle, state, st('connect'), state),
@@ -1419,7 +1419,7 @@ const connectionCases = {
     c(w([]), withSteps({ client: null }, st('disconnect'), state)),
     c(LOADED([REVOKED]), steps(load, settle, st('disconnect'), state)),
     c(
-      LOADED([TOKEN(), ABOUT, TOKEN(), json({})], { calls: ['rt', undefined] }),
+      LOADED([TOKEN(), ABOUT, TOKEN(), json({})], { calls: ['rt', { undefined: true }] }),
       steps(
         load,
         settle,
@@ -1464,7 +1464,7 @@ const connectionCases = {
       steps(load, settle, expire, st('api.account'), st('api.account'), state),
     ),
     c(
-      LOADED([TOKEN(), ABOUT, REVOKED], { calls: ['rt', undefined] }),
+      LOADED([TOKEN(), ABOUT, REVOKED], { calls: ['rt', { undefined: true }] }),
       steps(listen('a'), load, settle, expire, st('api.account'), st('api.account'), state),
     ),
     c(

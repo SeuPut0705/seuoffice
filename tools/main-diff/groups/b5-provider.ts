@@ -7,7 +7,21 @@ import type { Group } from '../types.ts'
  * scripted world of b5-provider/world.ts. No function may be named by two
  * parts.
  */
-const parts = [() => import('./b5-provider/fetch.ts')]
+const parts = [
+  () => import('./b5-provider/fetch.ts'),
+  () => import('./b5-provider/openai.ts'),
+  () => import('./b5-provider/anthropic.ts'),
+  () => import('./b5-provider/keys.ts'),
+  () => import('./b5-provider/media.ts'),
+  () => import('./b5-provider/chatgpt.ts'),
+  () => import('./b5-provider/subscription.ts'),
+  () => import('./b5-provider/launch.ts'),
+  () => import('./b5-provider/codex.ts'),
+  () => import('./b5-provider/claude.ts'),
+  () => import('./b5-provider/agent.ts'),
+  () => import('./b5-provider/drive.ts'),
+  () => import('./b5-provider/route.ts'),
+]
 
 const merged: Group = {}
 for (const load of parts) {

@@ -25,7 +25,9 @@
  *   'never' (default 'end') }`. A spawn past the end is a child that did not
  *   start (`spawn ENOENT`).
  * - `calls`: the answers of the functions the caller passed in (`openBrowser`
- *   and the like), in order: a value, or `{ reject: message }`.
+ *   and the like), in order: a value, or `{ reject: message }`, or `{ undefined: true }`
+ *   for an answer of `undefined` (an `undefined` entry of the JSON is `null`; no entry past
+ *   the end is `undefined` too).
  * - `requests`: loopback HTTP requests a caller's browser would make: `{
  *   afterCall: k, method='GET', url, headers: [[name, value]] }` is handed
  *   to the newest open server (`http.createServer`) after the k-th call has
@@ -362,11 +364,18 @@ export class WorldRun {
       const k = this.callCount++
       for (const spec of this.world.requests ?? [])
         if (spec.afterCall === k) this.emitLater(() => this.deliver(spec, args))
-      const answer = this.world.calls?.[k]
-      const r = answer as { reject?: string } | null
+      // the script reaches Rust as JSON: an `undefined` entry is `null` there,
+      // so it is `null` here too; `{ undefined: true }` (or no entry) is `undefined`
+      const given = this.world.calls?.[k]
+      const r = given as { reject?: string; undefined?: true } | null | undefined
       if (r && typeof r === 'object' && typeof r.reject === 'string')
         return Promise.reject(new Error(r.reject))
-      return Promise.resolve(answer)
+      if (
+        k >= (this.world.calls?.length ?? 0) ||
+        (r && typeof r === 'object' && r.undefined === true)
+      )
+        return Promise.resolve(undefined)
+      return Promise.resolve(given === undefined ? null : given)
     }
   }
 
@@ -605,8 +614,7 @@ export class WorldRun {
               get: (target, key) =>
                 typeof key === 'string'
                   ? target[
-                      Object.keys(target).find((k) => k.toLowerCase() === key.toLowerCase()) ??
-                        key
+                      Object.keys(target).find((k) => k.toLowerCase() === key.toLowerCase()) ?? key
                     ]
                   : undefined,
             })

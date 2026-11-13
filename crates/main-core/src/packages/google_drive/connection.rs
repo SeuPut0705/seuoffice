@@ -125,17 +125,16 @@ async fn vault_load(rt: &Rt) -> Option<String> {
 }
 
 /// `vault.save(token).catch(() => false)`: what the vault answered; `None`
-/// is `undefined`.
+/// is `undefined`, `Some(Null)` is `null`.
 async fn vault_save(rt: &Rt, token: &str) -> Option<JsonValue> {
     match rt
-        .call(
+        .call_exact(
             "vault.save",
             JsonValue::Array(vec![JsonValue::String(token.to_owned())]),
         )
         .await
     {
-        Ok(JsonValue::Null) => None,
-        Ok(kept) => Some(kept),
+        Ok(kept) => kept,
         Err(_) => Some(JsonValue::Bool(false)),
     }
 }

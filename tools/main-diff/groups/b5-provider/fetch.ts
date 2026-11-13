@@ -473,4 +473,45 @@ const fetches: Group = {
   },
 }
 
-export const group: Group = { ...pure, ...readers, ...fetches }
+// ---------------------------------------------------------------------------
+// the runtime's combinators: what Promise.race and Promise.all leave running
+// ---------------------------------------------------------------------------
+
+/** a fetch of the n-th answer, read to its end, logged when done */
+async function readOne(n: number, cx: TsContext, signal: AbortSignal): Promise<string> {
+  const r = await fetch(`${URL_A}/${n}`, { signal })
+  const text = await r.text()
+  cx.log('done', n, text)
+  if (text.startsWith('fail')) throw new Error(`failed ${n}`)
+  return text
+}
+
+const runtime: Group = {
+  'task.race': {
+    ts: ([world, n], cx) =>
+      inWorld(world as World, cx, async (_run, signal) => {
+        const all = Array.from({ length: n as number }, (_, k) => readOne(k, cx, signal))
+        return Promise.race(all)
+      }),
+    cases: [
+      c(w([ok(['a']), ok(['b1', 'b2', 'b3'])]), 2),
+      c(w([ok(['a1', 'a2', 'a3']), ok(['b'])]), 2),
+      c(w([ok(['fail'])]), 1),
+    ],
+  },
+  'task.all': {
+    ts: ([world, n], cx) =>
+      inWorld(world as World, cx, async (_run, signal) => {
+        const all = Array.from({ length: n as number }, (_, k) => readOne(k, cx, signal))
+        return Promise.all(all)
+      }),
+    cases: [
+      c(w([ok(['a']), ok(['b1', 'b2'])]), 2),
+      c(w([ok(['fail', 'x']), ok(['b']), ok(['c1', 'c2', 'c3'])]), 3),
+      c(w([ok(['a1', 'a2']), ok(['fail'])]), 2),
+      c(w([]), 0),
+    ],
+  },
+}
+
+export const group: Group = { ...pure, ...readers, ...fetches, ...runtime }

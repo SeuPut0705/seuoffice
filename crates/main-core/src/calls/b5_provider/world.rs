@@ -575,6 +575,10 @@ impl WorldRun<'_> {
                     None => Event::Done {
                         id,
                         answer: match answer {
+                            // `{ undefined: true }` is `undefined`, as world.ts reads it
+                            Some(v) if v.get("undefined") == Some(&Value::Bool(true)) => {
+                                Answer::Unit
+                            }
                             Some(v) => Answer::Value(json_value_from_serde(&v)),
                             None => Answer::Unit,
                         },
@@ -902,7 +906,9 @@ fn run_fs(op: &FsOp) -> Result<FsAnswer, NodeError> {
             {
                 let c_path = std::ffi::CString::new(path.as_str()).map_err(|_| NodeError {
                     code: Some("ERR_INVALID_ARG_VALUE"),
-                    message: format!("The argument 'path' must be a string without null bytes: {path}"),
+                    message: format!(
+                        "The argument 'path' must be a string without null bytes: {path}"
+                    ),
                 })?;
                 // SAFETY: `c_path` is a valid NUL-terminated string that outlives the call
                 let result = unsafe { libc::access(c_path.as_ptr(), *mode as libc::c_int) };
