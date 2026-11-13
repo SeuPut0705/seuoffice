@@ -130,19 +130,45 @@ fn messages_rel(chat_id: &str) -> String {
     format!("{}/{}", chats_dir(), messages_name(chat_id))
 }
 
-/// What the TypeScript throws (an `Error` with this message)
+/// What the TypeScript throws: an `Error` with this message, and the `code`
+/// of a Node file error the store passes on (the guide's `installId` that
+/// cannot write the settings file), `None` for the store's own errors
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChatStoreError(pub String);
+pub struct ChatStoreError {
+    pub message: String,
+    pub code: Option<&'static str>,
+}
 
 impl ChatStoreError {
     fn new(message: impl Into<String>) -> Self {
-        ChatStoreError(message.into())
+        ChatStoreError {
+            message: message.into(),
+            code: None,
+        }
+    }
+}
+
+impl From<NodeError> for ChatStoreError {
+    fn from(error: NodeError) -> Self {
+        ChatStoreError {
+            message: error.message,
+            code: error.code,
+        }
+    }
+}
+
+impl From<ChatStoreError> for NodeError {
+    fn from(error: ChatStoreError) -> Self {
+        NodeError {
+            code: error.code,
+            message: error.message,
+        }
     }
 }
 
 impl std::fmt::Display for ChatStoreError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "Error: {}", self.0)
+        write!(formatter, "Error: {}", self.message)
     }
 }
 
