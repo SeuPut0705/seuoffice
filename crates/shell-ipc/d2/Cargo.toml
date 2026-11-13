@@ -8,8 +8,10 @@ publish.workspace = true
 
 [features]
 # the fakes of this batch's hosts for crates/ipc-probe (tools/ipc-diff)
-probe = ["dep:serde_json"]
+probe = []
 
 [dependencies]
 shell-contract = { path = "../../shell-contract" }
-serde_json = { workspace = true, optional = true }
+main-core.workspace = true
+jscompat.workspace = true
+serde_json.workspace = true
