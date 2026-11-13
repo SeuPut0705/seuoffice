@@ -1,1 +1,64 @@
-[]
+[
+  {
+    "id": "d1-diagram-unlistened-sends",
+    "group": "d1/diagram",
+    "case": 41,
+    "typescript": {
+      "record": {
+        "calls": [
+          {
+            "answer": {
+              "thrown": "Error: No handler registered for 'diagram:read-result'"
+            },
+            "events": []
+          },
+          {
+            "answer": {
+              "thrown": "Error: No handler registered for 'diagram:read-result'"
+            },
+            "events": []
+          },
+          {
+            "answer": {
+              "thrown": "Error: No handler registered for 'diagram:apply-result'"
+            },
+            "events": []
+          },
+          {
+            "answer": {
+              "thrown": "Error: No handler registered for 'diagram:bytes-result'"
+            },
+            "events": []
+          }
+        ],
+        "log": []
+      },
+      "files": {}
+    },
+    "rust": {
+      "record": {
+        "calls": [
+          {
+            "answer": {},
+            "events": []
+          },
+          {
+            "answer": {},
+            "events": []
+          },
+          {
+            "answer": {},
+            "events": []
+          },
+          {
+            "answer": {},
+            "events": []
+          }
+        ],
+        "log": []
+      },
+      "files": {}
+    },
+    "reason": "The TypeScript registers read-result and apply-result only when the in-app MCP server first asks a question (mcp-queries listen()), and nothing ever listens to bytes-result. The harness records the TypeScript side's missing listener as a thrown 'No handler registered'; Electron drops such a send, so the renderer sees nothing. The Rust side must register a handler for every send channel of the table (shell start rule) and ignores a reply nobody waits for."
+  }
+]

@@ -54,6 +54,10 @@ pub trait DiagramShell: Send + Sync {
     /// `isHeadlessMode()` of `electron-utils`
     fn is_headless(&self) -> bool;
 
+    /// `randomBytes(16).toString('hex')` of `node:crypto`: a save target's
+    /// token, 32 lower-case hex digits
+    fn save_token(&self) -> String;
+
     /// `renderPdf(pages, title)` of `export-main.ts`: the hidden window of
     /// the diagram's session showing the print document, `printToPDF`. Called
     /// on a worker thread.

@@ -200,6 +200,28 @@ impl DiagramViews {
         f(&store)
     }
 
+    /// The views and the headless job a probe case starts with
+    #[cfg(any(test, feature = "probe"))]
+    fn apply_probe(&self, probe: &fakes::ProbeOpen) {
+        for entry in &probe.open {
+            self.open_view(entry.view, entry.path.as_deref());
+            if let Some(decision) = entry.decision {
+                self.set_view_open_decision(entry.view, decision);
+            }
+            if let Some(seed) = &entry.seed {
+                self.queue_seed(entry.view, seed);
+            }
+        }
+        if let Some((view, path)) = &probe.headless {
+            self.open_hidden_view(*view, path);
+            let job = crate::value::obj([
+                ("kind", crate::value::string("export")),
+                ("format", crate::value::string("png")),
+            ]);
+            self.run_headless_job(*view, job, Box::new(|_| {}));
+        }
+    }
+
     /// `e.sender` gone: what `grantAndTrack`'s `destroyed` listener did
     fn view_gone(&self, view: ViewId) {
         let removed = self.with_state(|state| state.views.remove(&view));
@@ -224,6 +246,10 @@ impl DiagramViews {
 pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>, RegisterError> {
     let views = DiagramViews::new(services)?;
     provided.add::<dyn DocumentEditors>(Rc::new(editors::DiagramEditors(views.clone())));
+    #[cfg(any(test, feature = "probe"))]
+    if let Some(probe) = services.hosts.get::<fakes::ProbeOpen>() {
+        views.apply_probe(probe);
+    }
     let gone = views.clone();
     crate::host::on_view_gone(services, move |view| gone.view_gone(view));
 

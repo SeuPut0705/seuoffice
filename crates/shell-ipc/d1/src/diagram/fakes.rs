@@ -7,16 +7,21 @@
 //! | key | answers | log line |
 //! | --- | --- | --- |
 //! | `openDiagram` | `{"<file name>": {ok, xml, format, root, anyPageCompressed} or {ok: false, reason, message}}` | `["drawio.openDiagram", name, byteLength]` |
-//! | `pictureExt` | `{"<path>": "drawio.png"}` | `["fileParse.diagramPictureExtOf", path]` |
-//! | `parseFileToText` | `{"<path>": {ok, kind, text, damaged, error}}` | `["fileParse.parseFileToText", path]` |
+//! | `pictureExt` | `{"<file name>": "drawio.png"}` | `["fileParse.diagramPictureExtOf", path]` |
+//! | `parseFileToText` | `{"<file name>": {ok, kind, text, damaged, error}}` | `["fileParse.parseFileToText", path]` |
 //! | `recoveryTitle` | a string | `["diagram.recoveryTitle", view]` |
 //! | `openFailed` | a bool | `["diagram.openFailed", view, message]` |
 //! | `openElsewhere` | the paths open in another pane | `["electronUtils.isPathOpenElsewhere", path]` |
-//! | `unsaved` | `{"<path>": "<refusal message>"}` | `["electronUtils.assertFileSaved", path]` |
+//! | `unsaved` | `{"<file name>": "<refusal message>"}` | `["electronUtils.assertFileSaved", path]` |
 //! | `headless` | a bool | none |
 //! | `newDocumentDir` | a string or null | `["diagram.newDocumentDir", view]` |
 //! | `writeNewDocument` | `{path}` or `{error}`; absent: the hook is unset | `["diagram.writeNewDocument", view, fileName, byteLength]` |
-//! | `pdf` | hex of the PDF | `["diagram.renderPdf", pageCount, title]` |
+//! | `pdf` | hex of the PDF | `["diagram.renderPdf", printHtml]` |
+//!
+//! | `open` | `[{view, path?, decision?}]`: the views the shell made (`createDiagramView(path)`), `decision` is `restore` or `original` | none |
+//! | `headlessJob` | `{view, path}`: a headless export of `path` runs in that hidden window | none |
+//!
+//! Save tokens are `00000000000000000000000000000001`, `...02`, and so on.
 //!
 //! Without a case a file opens when its text has an `mxfile` or
 //! `mxGraphModel` root, nothing is open elsewhere or unsaved, and the PDF is
@@ -25,6 +30,7 @@
 //! `["diagram.help", view]`, `["diagram.fileSaved", view, path]` and
 //! `["diagram.provisionalTitle", view, title]`.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use main_core::diagram::print_document::PrintPage;
@@ -34,18 +40,75 @@ use shell_contract::{Hosts, ViewId};
 use super::engine::{DiagramEngine, DiagramEngineHost, DiagramFile, OpenFailure, ParsedText};
 use super::formats::{Detected, DiagramFormat, detect_format};
 use super::shell::{DiagramShell, DiagramShellHost};
+use super::state::Decision;
 
 /// The case's log, as the probe inserts it
 type CaseLog = Arc<Mutex<Vec<Value>>>;
 
+/// One view the shell made before the case's first call
+pub(super) struct OpenView {
+    pub view: ViewId,
+    pub path: Option<String>,
+    pub decision: Option<Decision>,
+    /// `queueDiagramSeedFor`: the draw.io XML queued for the view
+    pub seed: Option<String>,
+}
+
+/// The views the case says the shell made before its first call, and the
+/// headless job it started: [`super::routes`] applies them at registration
+pub(super) struct ProbeOpen {
+    pub open: Vec<OpenView>,
+    pub headless: Option<(ViewId, String)>,
+}
+
 pub(super) fn insert(hosts: &mut Hosts, case: &Value) {
+    let case_diagram = case.get("diagram").unwrap_or(&Value::Null);
+    let view_of = |entry: &Value| {
+        entry
+            .get("view")
+            .and_then(Value::as_u64)
+            .map(|v| ViewId(v as u32))
+    };
+    // `open` absent: a new, untitled diagram in view 1
+    let open = match case_diagram.get("open").and_then(Value::as_array) {
+        Some(entries) => entries
+            .iter()
+            .filter_map(|entry| {
+                let decision = match entry.get("decision").and_then(Value::as_str) {
+                    Some("restore") => Some(Decision::Restore),
+                    Some("original") => Some(Decision::Original),
+                    _ => None,
+                };
+                let text = |key: &str| entry.get(key).and_then(Value::as_str).map(str::to_owned);
+                Some(OpenView {
+                    view: view_of(entry)?,
+                    path: text("path"),
+                    decision,
+                    seed: text("seed"),
+                })
+            })
+            .collect(),
+        None => vec![OpenView {
+            view: ViewId(1),
+            path: None,
+            decision: None,
+            seed: None,
+        }],
+    };
+    let headless = case_diagram.get("headlessJob").and_then(|entry| {
+        let path = entry.get("path")?.as_str()?.to_owned();
+        Some((view_of(entry)?, path))
+    });
+    hosts.insert(ProbeOpen { open, headless });
     let fake = Fake {
         case: case.get("diagram").cloned().unwrap_or(Value::Null),
         log: hosts.get::<CaseLog>().cloned(),
+        tokens: AtomicU64::new(0),
     };
     hosts.insert::<DiagramEngineHost>(Arc::new(Fake {
         case: fake.case.clone(),
         log: fake.log.clone(),
+        tokens: AtomicU64::new(0),
     }));
     hosts.insert::<DiagramShellHost>(Arc::new(fake));
 }
@@ -53,6 +116,8 @@ pub(super) fn insert(hosts: &mut Hosts, case: &Value) {
 struct Fake {
     case: Value,
     log: Option<CaseLog>,
+    /// the save tokens handed out so far: they count up, 1, 2, ...
+    tokens: AtomicU64,
 }
 
 impl Fake {
@@ -69,6 +134,11 @@ impl Fake {
     fn text(&self, key: &str, field: &str) -> Option<&str> {
         self.answer(key).get(field).and_then(Value::as_str)
     }
+}
+
+/// the file name a case keys a scripted answer by (`$DIR` is not replaced in keys)
+fn name_of(path: &str) -> String {
+    jscompat::node_path::host::basename(path, None)
 }
 
 fn format_named(name: &str) -> DiagramFormat {
@@ -130,12 +200,12 @@ impl DiagramEngine for Fake {
 
     fn diagram_picture_ext_of(&self, path: &str) -> Option<DiagramFormat> {
         self.log(json!(["fileParse.diagramPictureExtOf", path]));
-        self.text("pictureExt", path).map(format_named)
+        self.text("pictureExt", &name_of(path)).map(format_named)
     }
 
     fn parse_file_to_text(&self, path: &str) -> ParsedText {
         self.log(json!(["fileParse.parseFileToText", path]));
-        if let Some(scripted) = self.answer("parseFileToText").get(path) {
+        if let Some(scripted) = self.answer("parseFileToText").get(name_of(path)) {
             let flag = |key: &str| scripted.get(key).and_then(Value::as_bool).unwrap_or(false);
             let text = |key: &str| scripted.get(key).and_then(Value::as_str).map(str::to_owned);
             return ParsedText {
@@ -227,7 +297,7 @@ impl DiagramShell for Fake {
 
     fn assert_file_saved(&self, path: &str) -> Result<(), String> {
         self.log(json!(["electronUtils.assertFileSaved", path]));
-        match self.text("unsaved", path) {
+        match self.text("unsaved", &name_of(path)) {
             Some(message) => Err(message.to_owned()),
             None => Ok(()),
         }
@@ -237,13 +307,20 @@ impl DiagramShell for Fake {
         self.answer("headless").as_bool().unwrap_or(false)
     }
 
+    fn save_token(&self) -> String {
+        format!("{:032x}", self.tokens.fetch_add(1, Ordering::Relaxed) + 1)
+    }
+
     fn render_pdf(&self, pages: &[PrintPage], title: &str) -> Result<Vec<u8>, String> {
-        self.log(json!(["diagram.renderPdf", pages.len(), title]));
+        self.log(json!([
+            "diagram.renderPdf",
+            main_core::diagram::print_document::build_print_html(pages, title)
+        ]));
         Ok(match self.answer("pdf").as_str() {
             Some(hex) => (0..hex.len() / 2)
                 .filter_map(|i| u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).ok())
                 .collect(),
-            None => format!("%PDF {} {title}", pages.len()).into_bytes(),
+            None => b"%PDF-fake".to_vec(),
         })
     }
 }

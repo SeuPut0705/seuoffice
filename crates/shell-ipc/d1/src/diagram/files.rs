@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 
 use jscompat::node_path::host::{basename, dirname, join};
-use jscompat::{JsObject, JsonValue, js_regex, random_uuid, slice_utf16, trim};
+use jscompat::{JsObject, JsonValue, js_regex, slice_utf16, trim};
 use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::packages::electron_utils::default_save_dir::configured_default_save_dir;
 use main_core::packages::electron_utils::dialog_memory::show_save_dialog_with_memory;
@@ -132,7 +132,7 @@ impl DiagramViews {
 
     /// `handOutTarget(wcId, path, format)`
     fn hand_out_target(&self, view: ViewId, path: &str, format: DiagramFormat) -> IpcValue {
-        let token: String = random_uuid().chars().filter(|c| *c != '-').collect();
+        let token = self.0.shell.save_token();
         self.with_state(|state| {
             state.view(view).targets.insert(
                 token.clone(),
