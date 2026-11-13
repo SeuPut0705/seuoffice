@@ -411,6 +411,11 @@ const PINNED: Record<string, string> = {
   'app:split-role-changed': 'W',
   'slides:fonts-changed': 'D1',
 }
+/**
+ * Events a preload listens for that nothing in the main process ever sends:
+ * no batch owns them, and the Rust shell does not send them either
+ */
+const NEVER_SENT = new Set(['diagram:bytes-request'])
 const APP_BATCH: Record<string, string> = {
   shell: 'W',
   slides: 'D1',
@@ -423,10 +428,11 @@ const APP_BATCH: Record<string, string> = {
 for (const c of channels.values()) {
   const owners = c.handlers.length > 0 ? c.handlers : c.senders
   c.owner = owners[0]
-  c.batch =
-    PINNED[c.name] ??
-    BATCHES.find((b) => b.rule.test(c.name))?.id ??
-    (c.owner ? (APP_BATCH[c.owner.split('/')[0]] ?? 'D2') : undefined)
+  c.batch = NEVER_SENT.has(c.name)
+    ? undefined
+    : (PINNED[c.name] ??
+      BATCHES.find((b) => b.rule.test(c.name))?.id ??
+      (c.owner ? (APP_BATCH[c.owner.split('/')[0]] ?? 'D2') : undefined))
 }
 
 /**

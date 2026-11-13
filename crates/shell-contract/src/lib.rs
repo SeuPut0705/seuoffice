@@ -8,6 +8,7 @@
 //! design and the batch table are in `docs/seuoffice/` (the stage 3 shell
 //! contract).
 
+pub mod app_actions;
 pub mod channels;
 pub mod editors;
 pub mod error;
