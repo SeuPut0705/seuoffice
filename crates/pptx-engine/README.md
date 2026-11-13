@@ -161,7 +161,28 @@ The same benchmark on a GitHub runner (workflow `seuoffice bench pptx`, run
 | wasm, `groupChildDurableId` in TypeScript     | 66.2    | 22.5      | 88.7     | -34.6%        | 1.0%        |
 | wasm, `isBackgroundLikeElement` in TypeScript | 66.0    | 22.6      | 88.6     | -34.7%        | 1.0%        |
 
-The verdict holds: the largest cost, `elementDurableId`, is 4.7%, under 5%.
+At 8fc9462a2 the verdict held: the largest cost, `elementDurableId`, was 4.7%,
+under 5%.
+
+Run 43471015686 at 2fc9611be (the org's runner pool, the codec's `ref` shapes
+in; same benchmark):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 115.3   | 5.7       | 121.1    | 0.0%          |             |
+| wasm                                          | 66.1    | 23.1      | 89.3     | -26.3%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 65.5    | 18.6      | 84.1     | -30.6%        | 4.3%        |
+| wasm, `elementDurableId` in TypeScript        | 65.8    | 15.0      | 80.8     | -33.3%        | 7.0%        |
+| wasm, `groupChildDurableId` in TypeScript     | 66.3    | 19.9      | 86.3     | -28.7%        | 2.5%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 66.6    | 21.1      | 87.7     | -27.6%        | 1.3%        |
+
+`elementDurableId` crosses the 5% line here: 8.5 ms of a 121.1 ms TypeScript
+total, against 6.4 ms of 135.7 ms before. The wasm total barely moved (90.0 to
+89.3 ms); the TypeScript total fell 14.6 ms on these runners, most of the
+change in the percentage. The codec change cannot explain it: the export
+answers a string, so its reply is never revived through a shape. Whether it
+stays TypeScript is main's call (2026-11-14): one more 100-round run, or the
+rule as measured.
 
 ## Unit order
 
