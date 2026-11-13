@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseDocx } from '@seuoffice/docx-engine'
+import JSZip from 'jszip'
+import { parseDocx, REDACT_NS_WRITTEN } from '@seuoffice/docx-engine'
 import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@seuoffice/odt-engine'
 import { generateDocx } from '../../../packages/html2docx/src/generate'
 import { HTML_CHANNELS } from '../src/shared/ipc'
@@ -68,6 +69,17 @@ async function docxText(bytes: Uint8Array): Promise<string> {
 
 const words = (text: string) => new Set(text.split(/\s+/).filter(Boolean))
 
+/** `docx` with a run hidden from AI (`go:redact`) at the start of its first paragraph */
+async function withMarkedRun(docx: Uint8Array): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(docx)
+  const xml = await zip.file('word/document.xml')!.async('string')
+  const run =
+    `<w:r><w:rPr><go:redact xmlns:go="${REDACT_NS_WRITTEN}" w:label="client"/></w:rPr>` +
+    '<w:t>SECRET-4711</w:t></w:r>'
+  zip.file('word/document.xml', xml.replace(/<w:p\b[^>]*>/, (open) => open + run))
+  return zip.generateAsync({ type: 'uint8array' })
+}
+
 describe('HTML ODT export', () => {
   it('writes the Word export as an ODT (stored mimetype first) at the chosen path', async () => {
     const docx = await wordExportOf(['Quarterly ', 'report'])
@@ -99,6 +111,17 @@ describe('HTML ODT export', () => {
     s.prepare.mockResolvedValueOnce(false)
     expect(await exportOdt(s)).toEqual({ ok: true, canceled: true })
     expect(s.write).not.toHaveBeenCalled()
+  })
+
+  it('a docx holding content hidden from AI is refused and nothing is written', async () => {
+    const docx = await withMarkedRun(wordExportOf(['Quarterly report']))
+    const path = tempPath('marked.odt')
+    const s = steps(docx, path)
+    const outcome = await exportOdt(s)
+    expect(outcome).toEqual({ ok: false, error: expect.stringContaining('hidden from AI') })
+    expect(s.confirm).not.toHaveBeenCalled()
+    expect(s.write).not.toHaveBeenCalled()
+    expect(existsSync(path)).toBe(false)
   })
 
   it('carries exactly the text of the Word export, no more (AI redaction)', async () => {

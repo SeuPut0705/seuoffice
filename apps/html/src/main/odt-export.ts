@@ -44,6 +44,10 @@ export async function exportOdt(
     const path = await steps.pickPath()
     if (!path) return { ok: true, canceled: true }
     const { odtBytes, report } = await convert(await steps.docx())
+    // an ODT shows a hidden-from-AI run as plain words: nothing is written
+    if (report.some((item) => item.feature === 'hidden_from_ai')) {
+      return { ok: false, error: tOdt(getUiLang(), 'markedRefused') }
+    }
     if (report.length > 0 && !(await steps.confirm(report))) return { ok: true, canceled: true }
     if (steps.prepare && !(await steps.prepare(path))) return { ok: true, canceled: true }
     await steps.write(path, odtBytes)
@@ -130,6 +134,8 @@ const tOdt = createI18n({
     odtLeftOut: 'What is left out',
     odtSave: 'Save',
     odtCancel: 'Cancel',
+    markedRefused:
+      'this page has content hidden from AI, and this export cannot keep that; clear the marks first',
     featToc: 'Table of contents',
     featChart: 'Charts',
     featEquation: 'Equations',
@@ -159,6 +165,8 @@ const tOdt = createI18n({
     odtLeftOut: '빠지는 것',
     odtSave: '저장',
     odtCancel: '취소',
+    markedRefused:
+      '이 페이지에는 AI에게 숨긴 내용이 있어 이 형식으로 내보낼 수 없습니다. 표시를 먼저 지우세요',
     featToc: '목차',
     featChart: '차트',
     featEquation: '수식',

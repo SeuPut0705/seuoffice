@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Editor, type JSONContent } from '@tiptap/core'
-import { parseDocx } from '@seuoffice/docx-engine'
+import JSZip from 'jszip'
+import { parseDocx, REDACT_NS_WRITTEN } from '@seuoffice/docx-engine'
 import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@seuoffice/odt-engine'
 import type { Lang } from '@seuoffice/i18n'
 import { buildExtensions } from '../src/renderer/editor/extensions'
@@ -90,6 +91,17 @@ async function docxText(bytes: Uint8Array): Promise<string> {
 
 const words = (text: string) => new Set(text.split(/\s+/).filter(Boolean))
 
+/** `docx` with a run hidden from AI (`go:redact`) at the start of its first paragraph */
+async function withMarkedRun(docx: Uint8Array): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(docx)
+  const xml = await zip.file('word/document.xml')!.async('string')
+  const run =
+    `<w:r><w:rPr><go:redact xmlns:go="${REDACT_NS_WRITTEN}" w:label="client"/></w:rPr>` +
+    '<w:t>SECRET-4711</w:t></w:r>'
+  zip.file('word/document.xml', xml.replace(/<w:p\b[^>]*>/, (open) => open + run))
+  return zip.generateAsync({ type: 'uint8array' })
+}
+
 describe('markdown ODT export', () => {
   it('writes an ODT (zip, stored mimetype first) at the chosen path', async () => {
     const docx = await docxOf(createEditor('# Title\n\nSome **bold** text.').getJSON())
@@ -173,6 +185,17 @@ describe('markdown ODT export and AI redaction', () => {
       ],
     }
   }
+
+  it('a docx holding content hidden from AI is refused and nothing is written', async () => {
+    const docx = await withMarkedRun(docxOf(redactedDoc()))
+    const path = tempPath('marked.odt')
+    const { s } = steps(docx, path)
+    const outcome = await exportOdt(s)
+    expect(outcome).toEqual({ ok: false, error: expect.stringContaining('hidden from AI') })
+    expect(s.confirm).not.toHaveBeenCalled()
+    expect(s.write).not.toHaveBeenCalled()
+    expect(existsSync(path)).toBe(false)
+  })
 
   it('the ODT carries exactly the text the docx export carries, no more', async () => {
     const docx = await docxOf(redactedDoc())
