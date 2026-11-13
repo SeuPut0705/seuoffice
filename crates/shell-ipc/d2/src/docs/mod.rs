@@ -15,7 +15,7 @@
 
 mod adapters;
 mod close;
-mod editors;
+pub(crate) mod editors;
 mod export;
 pub(crate) mod hosts;
 mod misc;

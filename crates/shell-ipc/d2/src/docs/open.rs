@@ -903,7 +903,6 @@ impl Docs {
     /// `exportDocsHeadless(input, outPath, format, timeoutMs)` up to its
     /// window: the shell made the hidden view `view`; its renderer takes the
     /// document and the target from the queues, and `then` gets the report
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn begin_headless_export(
         self: &Rc<Self>,
         view: ViewId,
