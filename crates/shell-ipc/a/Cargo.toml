@@ -13,3 +13,8 @@ probe = ["dep:serde_json"]
 [dependencies]
 shell-contract = { path = "../../shell-contract" }
 serde_json = { workspace = true, optional = true }
+
+[dev-dependencies]
+# the tests register the batch over its probe fakes
+shell-ipc-a = { path = ".", features = ["probe"] }
+serde_json.workspace = true

@@ -999,6 +999,7 @@ version = "0.1.0"
 dependencies = [
  "serde_json",
  "shell-contract",
+ "shell-ipc-a",
 ]
 
 [[package]]
