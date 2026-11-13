@@ -57,7 +57,7 @@ use shell_ipc_m::state::{MState, MStateRef};
 use shell_ipc_m::{MenuDict, menu_label};
 use shell_ipc_w::SharedSaveDirState;
 use shell_ipc_w::quick_look::QuickLookHost;
-use tauri::{AppHandle, Manager, Theme};
+use tauri::{AppHandle, Theme};
 use tauri_runtime_cef::WebviewCefExt;
 
 use super::shell_tabs::shell_tabs;
@@ -395,10 +395,9 @@ impl MHost for ShellM {
             .into_owned()
     }
 
+    /// `process.resourcesPath`: on Windows one level below the exe folder
     fn resources_path(&self) -> String {
-        self.app
-            .path()
-            .resource_dir()
+        crate::paths::resources_path(&self.app)
             .map(|dir| dir.to_string_lossy().into_owned())
             .unwrap_or_default()
     }
