@@ -24,7 +24,10 @@ use crate::update_window::{self, UpdateWindowSpec, UpdateWindows, UpdateWindowsH
 /// The start-up check of the contract: known channel, once, own batch, the
 /// kind renderers use
 #[derive(Default)]
-struct Table(HashMap<&'static str, Rc<dyn Handler>>);
+struct Table(
+    HashMap<&'static str, Rc<dyn Handler>>,
+    Rc<shell_contract::Provided>,
+);
 
 impl Registry for Table {
     fn register(
@@ -55,7 +58,7 @@ impl Registry for Table {
     }
 
     fn provided(&self) -> Rc<shell_contract::Provided> {
-        Rc::default()
+        self.1.clone()
     }
 }
 
@@ -133,8 +136,20 @@ impl UpdateWindows for Windows {
     }
 }
 
+#[derive(Default)]
+struct Updater(Mutex<u32>);
+impl crate::UpdaterControl for Updater {
+    fn available(&self) -> bool {
+        true
+    }
+    fn check_now(&self) {
+        *self.0.lock().unwrap() += 1;
+    }
+}
+
 struct Fixture {
     table: Table,
+    updater: Arc<Updater>,
     events: Arc<Events>,
     windows: Arc<Windows>,
 }
@@ -157,12 +172,16 @@ fn fixture() -> Fixture {
     let mut hosts = Hosts::default();
     let main: MainWindowHost = Arc::new(Shell);
     let update: UpdateWindowsHost = windows.clone();
+    let updater = Arc::new(Updater::default());
+    let control: crate::UpdaterControlHost = updater.clone();
     hosts.insert(main);
     hosts.insert(update);
+    hosts.insert(control);
     let mut table = Table::default();
     crate::register(&mut table, &services(hosts, events.clone())).unwrap();
     Fixture {
         table,
+        updater,
         events,
         windows,
     }
@@ -533,4 +552,13 @@ fn nothing_to_ask_answers_null() {
         f.call(launch_list::SUBMIT, vec![IpcValue::Undefined]),
         Ok(IpcValue::Undefined)
     );
+}
+
+#[test]
+fn the_menus_reach_the_update_check() {
+    let f = fixture();
+    let check = shell_contract::app_actions::update_check(&f.table.1).expect("provided");
+    assert!(check.available());
+    check.check_now();
+    assert_eq!(*f.updater.0.lock().unwrap(), 1);
 }

@@ -1,6 +1,7 @@
 //! Fakes of U's hosts for `crates/ipc-probe`, and the state a case starts
 //! from (`tools/ipc-diff/groups/u`). The case's `hosts.u`:
 //!
+//! - `updaterAvailable`: whether an updater runs (default true);
 //! - `windowId`: the id the fake gives a new update window (default 900);
 //! - `update`: a list of `{ state, inactive }`, each shown as the updater
 //!   shows it (`showUpdateWindow`) before the first call; `state` is an
@@ -29,6 +30,7 @@ use main_core::shell::updater::{
 use serde_json::{Map, Value, json};
 use shell_contract::{Hosts, IpcError, WindowId};
 
+use crate::update_check::{UpdaterControl, UpdaterControlHost};
 use crate::update_window::{UpdateWindowSpec, UpdateWindows, UpdateWindowsHost};
 use crate::{launch_list, update_window};
 
@@ -69,6 +71,21 @@ impl UpdateWindows for FakeWindows {
     }
 }
 
+/// `hosts.u.updaterAvailable` (default true); a check logs `["updater.checkNow"]`
+struct FakeUpdater {
+    available: bool,
+    log: ProbeLog,
+}
+
+impl UpdaterControl for FakeUpdater {
+    fn available(&self) -> bool {
+        self.available
+    }
+    fn check_now(&self) {
+        self.log.lock().unwrap().push(json!(["updater.checkNow"]));
+    }
+}
+
 /// The case's `hosts.u`, kept for [`seed`]
 #[derive(Clone)]
 struct Seed(Arc<Value>);
@@ -76,6 +93,11 @@ struct Seed(Arc<Value>);
 pub fn hosts(hosts: &mut Hosts, case: &Value) {
     let log = hosts.get::<ProbeLog>().cloned().unwrap_or_default();
     let id = case["windowId"].as_u64().unwrap_or(900) as u32;
+    let control: UpdaterControlHost = Arc::new(FakeUpdater {
+        available: case["updaterAvailable"].as_bool().unwrap_or(true),
+        log: log.clone(),
+    });
+    hosts.insert(control);
     let windows: UpdateWindowsHost = Arc::new(FakeWindows { id, log });
     hosts.insert(windows);
     hosts.insert(Seed(Arc::new(case.clone())));

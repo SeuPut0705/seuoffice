@@ -15,9 +15,11 @@ use shell_contract::{Batch, IpcValue, MainWindowHost};
 pub mod launch_list;
 #[cfg(feature = "probe")]
 mod probe;
+pub mod update_check;
 pub mod update_window;
 mod value;
 
+pub use update_check::{UpdaterControl, UpdaterControlHost};
 pub use update_window::{UpdateWindowSpec, UpdateWindows, UpdateWindowsHost};
 
 struct FnHandler<F>(F);
@@ -35,6 +37,8 @@ fn handler(f: impl Fn(&CallContext, Vec<IpcValue>, Responder) + 'static) -> Rc<d
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
     let main_window: MainWindowHost = services.hosts.need(Batch::U)?;
     let windows: UpdateWindowsHost = services.hosts.need(Batch::U)?;
+    let control: UpdaterControlHost = services.hosts.need(Batch::U)?;
+    update_check::provide(&registry.provided(), control);
     let window =
         update_window::UpdateWindow::new(services.events.clone(), windows, main_window.clone());
     update_window::register(registry, window)?;
