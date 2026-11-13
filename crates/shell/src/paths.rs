@@ -37,6 +37,13 @@ impl ShellPaths {
     }
 }
 
+impl ShellPaths {
+    /// `APP_SETTINGS_PATH()`
+    pub fn settings_file(&self) -> PathBuf {
+        self.user_data.join("app-settings.json")
+    }
+}
+
 /// `app.getPath('appData')`: `~/Library/Application Support`, `%APPDATA%`, `$XDG_CONFIG_HOME`
 fn app_data() -> PathBuf {
     dirs::config_dir().unwrap_or_else(|| home().join(".config"))

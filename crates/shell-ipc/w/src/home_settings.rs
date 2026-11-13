@@ -438,6 +438,18 @@ fn normalize_home_kinds(raw: Option<&JsonValue>) -> HomeKinds {
     HomeKinds { order, hidden }
 }
 
+/// `visibleHomeKinds(readHomeKinds())` without `pdfTools`: the new-document
+/// kinds the shell's menus list, in home's order, read from the settings file
+pub fn visible_home_kinds(settings_path: &str) -> Vec<String> {
+    let kinds = normalize_home_kinds(read_app_settings(settings_path).get("homeKinds"));
+    kinds
+        .order
+        .iter()
+        .filter(|k| **k != "pdfTools" && !kinds.hidden.contains(k))
+        .map(|k| (*k).to_owned())
+        .collect()
+}
+
 impl HomeKinds {
     /// `storedHomeKinds`: only what differs from the first state
     fn stored(&self) -> JsonValue {
