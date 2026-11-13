@@ -1321,5 +1321,19 @@
     "find": "                        now: self.clock.clone().map(|RuntimeClock(clock)| {",
     "replace": "                        now: None::<RuntimeClock>.map(|RuntimeClock(clock)| {",
     "groups": ["a/template-selection"]
+  },
+  {
+    "name": "a skill card or install proposal is sent without its payload",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            vec![from_json(&json_value_from_serde(payload))],",
+    "replace": "            vec![IpcValue::Null],",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a skill card or install proposal is sent on the session event channel",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            Target::View(self.owner),\n            channel,\n",
+    "replace": "            Target::View(self.owner),\n            \"agent-window:event\",\n",
+    "groups": ["a/agent-window"]
   }
 ]

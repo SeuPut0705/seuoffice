@@ -178,7 +178,8 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
 /// Runs the named trigger of this batch for an event no channel call
 /// reaches (tools/ipc-diff `trigger` cases); `false` for a name it does not
 /// know: the skills dropped on a window (`a/skills-drop`) and the MCP
-/// server's document commands (`a/mcp-*`).
+/// server's document commands (`a/mcp-*`), the agent window's skill tools
+/// (`a/agent-*`).
 #[cfg(feature = "probe")]
 pub fn probe_trigger(
     name: &str,
@@ -190,6 +191,9 @@ pub fn probe_trigger(
 ) -> bool {
     if name.starts_with("a/mcp-") {
         return probe::mcp::trigger(name, view, args, services, provided, then);
+    }
+    if name.starts_with("a/agent-") {
+        return probe::agent::trigger(name, view, args, services, provided, then);
     }
     user_skills::probe_trigger(name, args, provided, then)
 }
