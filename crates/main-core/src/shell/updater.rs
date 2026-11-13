@@ -467,11 +467,14 @@ pub trait UpdaterEnv {
 
 type Clock = Box<dyn FnMut() -> f64>;
 
+/// the step log of the update, writing each line through the env
+type Steps = UpdateSteps<Box<dyn FnMut(&str)>, Clock>;
+
 /// `log`, `updateLog` and `step`
 struct Logger {
     env: Rc<dyn UpdaterEnv>,
     update_log: RefCell<Option<UpdateLog<Clock>>>,
-    steps: RefCell<Option<UpdateSteps<Box<dyn FnMut(&str)>, Clock>>>,
+    steps: RefCell<Option<Steps>>,
     step_lines: Rc<RefCell<Vec<String>>>,
 }
 

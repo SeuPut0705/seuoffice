@@ -55,9 +55,9 @@ use crate::slides::element_clipboard::{
 };
 use crate::slides::font_store::{font_store_dir, init_font_store, install_local_font_files};
 use crate::slides::session_state::{
-    Deck, DeckBroadcast, FontMetrics, MediaRegistry, OpRecord, OpSource, PartPath, Scheduled,
-    Session, SessionIds, SlideArchive, SlideChain, SlideRef, SlideUpdate, ThemeEngine, WcSessions,
-    dialog_parent, host_window_for, plan_slide_update,
+    Deck, DeckBroadcast, EngineThrew, FontMetrics, MediaRegistry, OpRecord, OpSource, PartPath,
+    Scheduled, Session, SessionIds, SlideArchive, SlideChain, SlideRef, SlideUpdate, ThemeEngine,
+    WcSessions, dialog_parent, host_window_for, plan_slide_update,
 };
 
 type Log = Rc<RefCell<Vec<Vec<Value>>>>;
@@ -201,7 +201,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             finish(cx, &log);
             Ok(Some(Value::Bool(answer)))
         })(),
-        "element-clipboard.canWriteElementClipboardImage" => (|| {
+        "element-clipboard.canWriteElementClipboardImage" => {
             let current =
                 arg(args, 0)
                     .filter(|v| v.is_object())
@@ -221,7 +221,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             );
             finish(cx, &log);
             Ok(Some(Value::Bool(answer)))
-        })(),
+        }
         "element-clipboard.writeElementClipboardImage" => (|| {
             let token = str_arg(args, 0)?;
             let png = arg(args, 1).map(json_value_from_serde);
@@ -403,7 +403,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
 
         // ---- pdf/image-edit ----
         "image-edit.matchImage" => match_image_call(args),
-        "image-edit.imageMatrix" => (|| {
+        "image-edit.imageMatrix" => {
             let rect = rect_of(arg(args, 0));
             let rotate = arg(args, 1).and_then(Value::as_f64).unwrap_or(f64::NAN);
             Ok(Some(Value::Array(
@@ -412,8 +412,8 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     .map(|x| number(*x))
                     .collect(),
             )))
-        })(),
-        "image-edit.applyImageGeometry" => (|| {
+        }
+        "image-edit.applyImageGeometry" => {
             let bounds = rect_of(arg(args, 0));
             let rect = rect_of(arg(args, 1));
             let turns = arg(args, 2).and_then(Value::as_f64);
@@ -432,8 +432,8 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             };
             finish(cx, &log);
             answer
-        })(),
-        "image-edit.decodeImage" => (|| {
+        }
+        "image-edit.decodeImage" => {
             let spec = arg(args, 0).unwrap_or(&NULL);
             let log = new_log();
             logl!(log; "createFromBuffer", text(spec, "b64"));
@@ -462,7 +462,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     }))
                 })
                 .map_err(CallError::plain)
-        })(),
+        }
         "image-edit.applyImageEdits"
         | "image-edit.listPageImages"
         | "image-edit.verifyImageEdits" => image_edits_call(name, args, cx),
@@ -923,7 +923,7 @@ struct SessionFake<'a> {
 }
 
 impl SessionHost for SessionFake<'_> {
-    fn from_partition(&mut self, partition: &str) {
+    fn session_from_partition(&mut self, partition: &str) {
         logl!(self.log; "fromPartition", partition);
     }
 
@@ -1883,9 +1883,9 @@ struct ThemeFake<'a> {
 impl ThemeEngine for ThemeFake<'_> {
     type Theme = Vec<(String, String)>;
 
-    fn parse_theme(&mut self, xml: &str) -> Result<Self::Theme, ()> {
+    fn parse_theme(&mut self, xml: &str) -> Result<Self::Theme, EngineThrew> {
         if xml.contains("THROWTHEME") {
-            return Err(());
+            return Err(EngineThrew);
         }
         Ok(xml
             .split(',')
@@ -1900,10 +1900,10 @@ impl ThemeEngine for ThemeFake<'_> {
         master_xml: Option<&str>,
         layout_xml: Option<&str>,
         slide_xml: Option<&str>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), EngineThrew> {
         logl!(self.log; "parseClrMap", master_xml, layout_xml, slide_xml);
         if layout_xml.is_some_and(|layout| layout.contains("THROWMAP")) {
-            return Err(());
+            return Err(EngineThrew);
         }
         Ok(())
     }

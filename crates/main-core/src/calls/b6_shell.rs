@@ -115,7 +115,7 @@ fn list(value: Option<&Value>) -> &[Value] {
 }
 
 /// `Object.keys` of the spec's `contents` table, in the order written
-fn entries<'a>(value: Option<&'a Value>) -> Vec<(&'a String, &'a Value)> {
+fn entries(value: Option<&Value>) -> Vec<(&String, &Value)> {
     value
         .and_then(Value::as_object)
         .map(|o| o.iter().collect())
@@ -160,9 +160,8 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
 
         // ---- pointer-size ----
         "pointer-size.POINTER_SIZE_VAR" => Ok(Some(text(POINTER_SIZE_VAR))),
-        "pointer-size.parseCursorBaseSize" => str_arg(args, 0).map(|output| {
-            Some(parse_cursor_base_size(output).map_or(Value::Null, |px| Value::from(px)))
-        }),
+        "pointer-size.parseCursorBaseSize" => str_arg(args, 0)
+            .map(|output| Some(parse_cursor_base_size(output).map_or(Value::Null, Value::from))),
         "pointer-size.readPointerSize" => read_pointer_call(args, cx),
         "pointer-size.applyPointerSizeTo" => {
             let spec = arg(args, 0).cloned().unwrap_or(Value::Null);
@@ -216,13 +215,13 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         // ---- crash-watch ----
         "crash-watch.shouldPromptForGoneRenderer" => str_arg(args, 0)
             .map(|reason| Some(Value::Bool(should_prompt_for_gone_renderer(reason)))),
-        "crash-watch.crashLogPath" => (|| -> Answer {
+        "crash-watch.crashLogPath" => {
             let user_data = arg(args, 0)
                 .and_then(|o| field_str(o, "userData"))
                 .unwrap_or_default();
             cx.logs.push(vec![text("getPath"), text("userData")]);
             Ok(Some(Value::from(crash_log_path(user_data))))
-        })(),
+        }
         "crash-watch.mainProcessFigures" | "crash-watch.memoryFigures" => {
             memory_figures_call(name == "crash-watch.mainProcessFigures", args, cx)
         }
@@ -712,13 +711,12 @@ fn pointer_scenario_call(args: &[Value], cx: &mut Context) -> Answer {
                 log_line(&log, vec![text(name), text("on"), text("did-finish-load")]);
                 registered.push(name.to_owned());
             }
-        } else if let Some(name) = field_str(step, "load") {
-            if let Some((_, c)) = contents
+        } else if let Some(name) = field_str(step, "load")
+            && let Some((_, c)) = contents
                 .iter()
                 .find(|(n, _)| n == name && registered.iter().any(|r| r == n))
-            {
-                size.did_finish_load(c.as_ref());
-            }
+        {
+            size.did_finish_load(c.as_ref());
         }
     }
     cx.logs.extend(take_logs(&log));
@@ -1622,15 +1620,15 @@ fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
                 }
             }
         }
-        if let Some(answer) = step.get("answer") {
-            if !pending.is_empty() {
-                let (report, prompt) = pending.remove(0);
-                let response = match answer.as_f64() {
-                    Some(response) => Ok(response),
-                    None => Err(Failure("dialog failed".to_owned())),
-                };
-                dog.answered(&host, &report, prompt, response);
-            }
+        if let Some(answer) = step.get("answer")
+            && !pending.is_empty()
+        {
+            let (report, prompt) = pending.remove(0);
+            let response = match answer.as_f64() {
+                Some(response) => Ok(response),
+                None => Err(Failure("dialog failed".to_owned())),
+            };
+            dog.answered(&host, &report, prompt, response);
         }
     }
     cx.logs.extend(take_logs(&log));
@@ -2460,15 +2458,15 @@ fn recovery_call(args: &[Value], cx: &mut Context) -> Answer {
                 };
                 results.push(opened(tab.opener.open(&editors, &deps, &context)));
             }
-        } else if let Some(id) = field_str(step, "needsUserTab") {
-            if let Some(tab) = deps.manager.specs.get(id).cloned() {
-                let context = OpenContext {
-                    kind: tab.kind.clone(),
-                    title: tab.title.clone(),
-                    file_path: tab.file_path.clone(),
-                };
-                results.push(needs_user(tab.opener.needs_user(&store, &deps, &context)));
-            }
+        } else if let Some(id) = field_str(step, "needsUserTab")
+            && let Some(tab) = deps.manager.specs.get(id).cloned()
+        {
+            let context = OpenContext {
+                kind: tab.kind.clone(),
+                title: tab.title.clone(),
+                file_path: tab.file_path.clone(),
+            };
+            results.push(needs_user(tab.opener.needs_user(&store, &deps, &context)));
         }
         // what `setImmediate` left runs before the next step
         let deferred: Vec<Vec<Value>> = editors.deferred.borrow_mut().drain(..).collect();

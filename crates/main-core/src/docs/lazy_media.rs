@@ -374,22 +374,23 @@ impl LazyMedia {
             return Ok(None);
         };
         let info = StatInfo::of(&meta);
-        if let Some(table) = &source.table {
-            if table.size == info.size && table.mtime_ms == info.mtime_ms {
-                return Ok(Some(Rc::clone(&table.entries)));
-            }
+        if let Some(table) = &source.table
+            && table.size == info.size
+            && table.mtime_ms == info.mtime_ms
+        {
+            return Ok(Some(Rc::clone(&table.entries)));
         }
         let zip = lib.open_zip_file(&path)?;
         let entries = Rc::clone(&zip.entries);
         // an encrypted save may have switched the source to memory meanwhile
-        if let Some(source) = self.sources.get_mut(hash) {
-            if source.bytes.is_none() {
-                source.table = Some(Table {
-                    size: info.size,
-                    mtime_ms: info.mtime_ms,
-                    entries: Rc::clone(&entries),
-                });
-            }
+        if let Some(source) = self.sources.get_mut(hash)
+            && source.bytes.is_none()
+        {
+            source.table = Some(Table {
+                size: info.size,
+                mtime_ms: info.mtime_ms,
+                entries: Rc::clone(&entries),
+            });
         }
         lib.close_zip_file(zip);
         Ok(Some(entries))

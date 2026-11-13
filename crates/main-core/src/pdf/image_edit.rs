@@ -314,10 +314,10 @@ fn resolve_image<H: ImagePdf>(
     };
     let mut target = images[at];
     if target.in_form {
-        if let Some(guard) = guard {
-            if !exclusive(host, guard, &target) {
-                return Err(SHARED_TEMPLATE_IMAGE_REASON.to_owned());
-            }
+        if let Some(guard) = guard
+            && !exclusive(host, guard, &target)
+        {
+            return Err(SHARED_TEMPLATE_IMAGE_REASON.to_owned());
         }
         host.lift_out_of_forms(page, &target);
         target.in_form = false;

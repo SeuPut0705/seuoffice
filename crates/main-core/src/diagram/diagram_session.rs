@@ -67,7 +67,7 @@ pub enum DiagramReply {
 /// The calls on the session `diagramSession` makes.
 pub trait SessionHost {
     /// `session.fromPartition(partition)`
-    fn from_partition(&mut self, partition: &str);
+    fn session_from_partition(&mut self, partition: &str);
     /// `ses.protocol.handle(scheme, ...)`
     fn handle_protocol(&mut self, scheme: &str);
     /// `ses.webRequest.onBeforeRequest(...)`
@@ -101,7 +101,7 @@ impl DiagramSession {
         if self.installed.is_some() {
             return false;
         }
-        host.from_partition(DIAGRAM_PARTITION);
+        host.session_from_partition(DIAGRAM_PARTITION);
         host.handle_protocol(DRAWIO_SCHEME);
         host.handle_protocol(RENDERER_SCHEME);
         host.on_before_request();

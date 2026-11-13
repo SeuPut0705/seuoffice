@@ -415,10 +415,10 @@ impl<D: Deck<S>, S: Clone, O: Clone, R> Session<D, S, O, R> {
     /// so its partial state replaces the last queued update (any unrelated
     /// edit in the same task still forces a full resync).
     pub fn note_slide_update(&mut self, update: SlideUpdate<R>) {
-        if let Some(pending) = self.deck_broadcast_updates.as_mut() {
-            if let Some(last) = pending.last_mut() {
-                *last = Some(update);
-            }
+        if let Some(pending) = self.deck_broadcast_updates.as_mut()
+            && let Some(last) = pending.last_mut()
+        {
+            *last = Some(update);
         }
     }
 
@@ -585,10 +585,10 @@ pub fn host_window_for<'a, W: ParentWindow>(
     shell_window: Option<&'a W>,
 ) -> Option<&'a W> {
     let own = from_web_contents().or_else(|| host_window_hook.and_then(|hook| hook()));
-    if let Some(own) = own {
-        if !own.is_destroyed() {
-            return Some(own);
-        }
+    if let Some(own) = own
+        && !own.is_destroyed()
+    {
+        return Some(own);
     }
     match shell_window {
         Some(shell) if !shell.is_destroyed() => Some(shell),
@@ -658,7 +658,7 @@ pub fn retint_svg_rules(
     js_regex!(r"\.MsftOfcThm_(\w+?)_(Fill|Stroke)\w*\s*\{[^}]*\}", "g").replace_all(svg, |found| {
         let rule = found.as_str();
         let slot = found.get(1).unwrap_or("").to_lowercase();
-        let color = svg_theme_slot(&slot).and_then(|scheme| resolve_scheme_color(scheme));
+        let color = svg_theme_slot(&slot).and_then(&mut *resolve_scheme_color);
         let Some(color) = color.filter(|c| !c.is_empty()) else {
             return rule.to_owned();
         };
@@ -691,11 +691,15 @@ pub trait SlideArchive {
     fn first_slide_path(&self) -> Option<String>;
 }
 
+/// A call of the pptx engine threw.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EngineThrew;
+
 /// `parseTheme`, `parseClrMap` and `resolveSchemeColor` of the pptx engine.
 /// A `parse_*` that throws is an `Err`.
 pub trait ThemeEngine {
     type Theme;
-    fn parse_theme(&mut self, xml: &str) -> Result<Self::Theme, ()>;
+    fn parse_theme(&mut self, xml: &str) -> Result<Self::Theme, EngineThrew>;
     /// `theme.clrMap = parseClrMap(master, layout, slide)`
     fn set_clr_map(
         &mut self,
@@ -703,7 +707,7 @@ pub trait ThemeEngine {
         master_xml: Option<&str>,
         layout_xml: Option<&str>,
         slide_xml: Option<&str>,
-    ) -> Result<(), ()>;
+    ) -> Result<(), EngineThrew>;
     fn resolve_scheme_color(&mut self, scheme: &str, theme: &Self::Theme) -> Option<String>;
 }
 

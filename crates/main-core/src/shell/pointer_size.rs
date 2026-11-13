@@ -11,6 +11,7 @@ use std::rc::Rc;
 use jscompat::{Radix, parse_int, to_number};
 
 use crate::shell::default_app::parse_reg_value;
+use crate::shell::mac_update::RunProgram;
 use crate::shell::ui_scale::StyleTarget;
 
 pub const POINTER_SIZE_VAR: &str = "--os-pointer-size";
@@ -35,10 +36,7 @@ pub fn parse_cursor_base_size(output: &str) -> Option<u32> {
 
 /// `readPointerSize(run, platform)`: `run` is the `reg` runner, an `Err` is
 /// its rejection (no such value on this machine)
-pub fn read_pointer_size(
-    run: &mut dyn FnMut(&str, &[String]) -> Result<String, String>,
-    platform: &str,
-) -> Option<u32> {
+pub fn read_pointer_size(run: RunProgram<'_>, platform: &str) -> Option<u32> {
     if platform != "win32" {
         return None;
     }
