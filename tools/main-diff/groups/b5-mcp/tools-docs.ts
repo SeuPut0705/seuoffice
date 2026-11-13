@@ -249,6 +249,20 @@ const sessionCases: Case[] = [
     note: 'two drivers of a family: the last wins',
   },
   {
+    args: [
+      {
+        drivers: [
+          { family: 'docx', open: 3, save: { value: { path: '/first' } } },
+          { family: 'docx', open: 4, save: { value: { path: '/second' } } },
+        ],
+        tool: 'save_session',
+        args: { path: '/x/a.docx' },
+        session: { family: 'docx', wcId: 9 },
+      },
+    ],
+    note: 'two drivers of a family: the last one saves',
+  },
+  {
     args: [{ drivers: [], tool: 'create_session', args: { family: 'docx' } }],
     note: 'no drivers, no tool',
   },
