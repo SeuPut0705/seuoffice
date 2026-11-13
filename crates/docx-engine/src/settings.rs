@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use jscompat::{
     JsNum, JsRegex, Radix, RegexLimit, TryJsRegex, base64, js_regex, math_round, parse_int, truthy,
+    units_pattern,
 };
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
@@ -132,8 +133,11 @@ fn comment_image_of(package: &Package, comment: &XNode) -> Result<Option<Comment
         return Ok(None);
     };
     // the id goes into the pattern unescaped, as in the original
-    let rel_pattern = TryJsRegex::new(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#), "")
-        .map_err(|error| error.to_string())?;
+    let rel_pattern = TryJsRegex::new(
+        &units_pattern(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#)),
+        "",
+    )
+    .map_err(|error| error.to_string())?;
     let Some(rel) = rel_pattern
         .try_exec(rels_xml)
         .map_err(|limit| limit.to_string())?
