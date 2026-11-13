@@ -448,6 +448,15 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   with their checksums. A unit adds its own there.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
+- The hidden-from-AI batch (`withheld.rs`, group `withheld` of (f)) reads
+  entries from the parser's tree and finds tags in the XML with comments,
+  CDATA and processing instructions blanked (`ooxml_xml::mask_opaque`, same
+  length in bytes, so offsets index the original). `comment_entries` restarts
+  its search past a comment only where a match began inside the comment just
+  read and ended beyond it: one allowed restart of `jscompat/tests/sites.rs`.
+  `withheldNode` and `parseEntry` answer an `XNode` through the binding
+  (`node_value` of the generated table: attributes as an object); the gate
+  compares them with attributes as entries, as for `rPrNodeOf`.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
   subtags taken from one ICU (`tools/docx-diff/blank-locale-table.mjs` says
   which and regenerates it). The TypeScript asks the host's `Intl.Locale`, so
