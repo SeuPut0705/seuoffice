@@ -121,7 +121,9 @@ fn logged_actions(log: ProbeLog) -> update_window::Actions {
 /// - `u/show-update-window` `{state, inactive}`: `showUpdateWindow`;
 /// - `u/push-update-state` `{phase, percent?, visibleInstall?}`: `pushUpdateState`;
 /// - `u/close-update-window`: `closeUpdateWindow` (install, quit);
-/// - `u/update-window-closed`: the window's `closed` event (the user closed it).
+/// - `u/update-window-closed`: the window's `closed` event (the user closed it);
+/// - `u/publish-launch-list` `null | {items, apply}`: the launch flow
+///   publishes, as `hosts.u.launchList` does before the first call.
 pub fn trigger(name: &str, args: &Value, services: &Services, then: Then<IpcValue>) -> bool {
     let log = services
         .hosts
@@ -141,6 +143,7 @@ pub fn trigger(name: &str, args: &Value, services: &Services, then: Then<IpcValu
             visible_install: args["visibleInstall"].as_bool(),
         }),
         "u/close-update-window" => window.close(),
+        "u/publish-launch-list" => publish(args, log),
         "u/update-window-closed" => window.closed(WindowId(window_id(services))),
         _ => return false,
     }
@@ -157,6 +160,37 @@ fn window_id(services: &Services) -> u32 {
         .unwrap_or(900) as u32
 }
 
+/// What the launch flow publishes: `null`, nothing to ask; else the rows,
+/// and whether its apply resolves (`"ok"`) or rejects (`"reject"`)
+fn publish(list: &Value, log: ProbeLog) {
+    let launch = launch_list::current().expect("registered");
+    if list.is_null() {
+        launch.publish_none();
+        return;
+    }
+    let items = list["items"]
+        .as_array()
+        .map(|items| items.iter().map(item).collect())
+        .unwrap_or_default();
+    let ok = list["apply"] != "reject";
+    launch.publish(
+        items,
+        Rc::new(move |result, done| {
+            log.lock()
+                .unwrap()
+                .push(json!(["launchList.apply", result_value(&result)]));
+            done.settle(if ok {
+                Ok(())
+            } else {
+                Err(IpcError {
+                    name: Some("Error".into()),
+                    message: "apply failed".into(),
+                })
+            })
+        }),
+    );
+}
+
 pub fn seed(hosts: &Hosts) {
     let Some(Seed(case)) = hosts.get::<Seed>() else {
         return;
@@ -171,32 +205,8 @@ pub fn seed(hosts: &Hosts) {
             inactive,
         );
     }
-    match case.get("launchList") {
-        None => {}
-        Some(Value::Null) => launch_list::current().expect("registered").publish_none(),
-        Some(list) => {
-            let items = list["items"]
-                .as_array()
-                .map(|items| items.iter().map(item).collect())
-                .unwrap_or_default();
-            let ok = list["apply"] != "reject";
-            launch_list::current().expect("registered").publish(
-                items,
-                Rc::new(move |result, done| {
-                    log.lock()
-                        .unwrap()
-                        .push(json!(["launchList.apply", result_value(&result)]));
-                    done.settle(if ok {
-                        Ok(())
-                    } else {
-                        Err(IpcError {
-                            name: Some("Error".into()),
-                            message: "apply failed".into(),
-                        })
-                    })
-                }),
-            );
-        }
+    if let Some(list) = case.get("launchList") {
+        publish(list, log);
     }
 }
 
