@@ -14,7 +14,7 @@ import { undoDoubledEscapes } from '@seuoffice/agent-core/doubled-escapes'
 import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'
-import { redactTextBetween } from './redact-view'
+import { redactTextBetween, withheldBlockLabel, type RedactableNode } from './redact-view'
 import { insertPictureAtSelection } from '../editor/insert-picture'
 import { asModelEdit } from '../editor/redaction'
 import {
@@ -1823,6 +1823,12 @@ function executeSyncTool(
         return fail(t('aiSumEditChart'), 'blockIndex invalid or out of range')
       }
       const node = editor.state.doc.child(idx)
+      // a block the person hid from AI: its data is not the model's to read or rewrite
+      if (withheldBlockLabel(node.toJSON() as RedactableNode) !== undefined)
+        return fail(
+          t('aiSumEditChart'),
+          `block ${idx} holds content the person hid from AI and cannot be edited here; tell the person what to change and let them edit it`,
+        )
       // native docx charts are passthrough blocks + chartDisplay; AI/UI-created ones are blockType 'chart'
       const display =
         node.type.name === 'docProtected' ? (node.attrs.chartDisplay as ChartDisplay | null) : null
