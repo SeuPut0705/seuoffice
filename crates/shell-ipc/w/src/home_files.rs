@@ -27,6 +27,8 @@ use main_core::packages::electron_utils::default_save_dir::{
     PathProvider, Thrown as SaveDirThrown, configured_default_save_dir, default_save_dir_fallback,
 };
 use main_core::packages::electron_utils::dialog_memory::{Dialog, show_open_dialog_with_memory};
+
+use crate::shared_dialog::{open_confirmed, with_shared_memory};
 use main_core::packages::electron_utils::message_box::ParentWindow;
 use main_core::packages::i18n::{Lang, install_lang, normalize_lang};
 use main_core::shell::app_routing::rename_stays_in_app;
@@ -980,15 +982,19 @@ impl Home {
         parent: Option<WindowId>,
         options: &JsObject<JsonValue>,
     ) -> (bool, Vec<String>) {
-        let result = show_open_dialog_with_memory(
-            &mut self.dialog_memory.lock().unwrap(),
-            &mut OpenDialog {
-                dialogs: &self.dialogs,
-            },
-            parent.as_ref(),
-            options,
-            None,
-        );
+        let result = with_shared_memory(&self.dialog_memory, |memory| {
+            let result = show_open_dialog_with_memory(
+                memory,
+                &mut OpenDialog {
+                    dialogs: &self.dialogs,
+                },
+                parent.as_ref(),
+                options,
+                None,
+            );
+            let confirmed = open_confirmed(&result);
+            (result, confirmed)
+        });
         let canceled = matches!(
             result.get("canceled").as_deref(),
             Some(JsonValue::Bool(true))
