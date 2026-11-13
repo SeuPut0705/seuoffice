@@ -27,14 +27,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::time::{Duration, Instant};
 
-use jscompat::{JsObject, JsonValue, json_parse, json_quote, json_stringify, number_to_string};
+use jscompat::{JsObject, JsonValue, json_parse, json_stringify, number_to_string};
 use main_core::docs::zotero_wire::{
     ZOTERO_INTEGRATION_HOST, ZOTERO_INTEGRATION_PORT, ZoteroFrameDecoder, ZoteroWireRequest,
     encode_zotero_frame,
 };
 use shell_contract::ipc::{CallContext, EventSink, Responder, Target};
 use shell_contract::runtime::{CancelToken, Thread, Workers};
-use shell_contract::{IpcValue, ViewId};
+use shell_contract::{BytesKind, IpcValue, ViewId};
 
 use crate::ports::Zotero;
 use crate::value::{from_json, to_json};
@@ -93,7 +93,8 @@ pub trait ZoteroConnector: Send + Sync {
 /// What `ZoteroWireClient.run` holds for one command
 struct Run {
     id: u64,
-    command: String,
+    /// the first frame, which names the command: `JSON.stringify({ command, templateVersion: 1 })`
+    hello: String,
     socket: Option<Arc<dyn ZoteroSocket>>,
     decoder: ZoteroFrameDecoder,
     failure: Option<String>,
@@ -129,8 +130,13 @@ struct Inner {
     host: String,
     port: u16,
     timeout: Duration,
+    /// `randomUUID()` of the question ids
+    ids: RequestIds,
     state: Mutex<State>,
 }
+
+/// Makes the id a question goes to the renderer under
+pub type RequestIds = Box<dyn Fn() -> String + Send + Sync>;
 
 /// `{ ok: true }`
 fn command_ok() -> IpcValue {
@@ -213,12 +219,28 @@ fn truthy(value: Option<&IpcValue>) -> bool {
     }
 }
 
-/// `new Error(error).message` of a truthy `error`
+/// `new Error(error).message` of a truthy `error`: what `ToString` makes of
+/// it, which joins an array's elements with commas (`null` and `undefined`
+/// as nothing) and calls any other object `[object Object]`
 fn error_text(value: &IpcValue) -> String {
     match value {
         IpcValue::String(s) => s.clone(),
         IpcValue::Number(n) => number_to_string(*n),
         IpcValue::Bool(b) => b.to_string(),
+        IpcValue::Array(items) => items
+            .iter()
+            .map(|item| match item {
+                IpcValue::Null | IpcValue::Undefined => String::new(),
+                item => error_text(item),
+            })
+            .collect::<Vec<_>>()
+            .join(","),
+        IpcValue::Bytes(BytesKind::Uint8Array, bytes) => bytes
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(","),
+        IpcValue::Bytes(BytesKind::ArrayBuffer, _) => "[object ArrayBuffer]".to_owned(),
         _ => "[object Object]".to_owned(),
     }
 }
@@ -247,15 +269,50 @@ fn request_id() -> String {
     )
 }
 
+/// Under the probe a port's ids are `00000000-0000-4000-8000-000000000001`,
+/// `...02`, ...: a comparison can name a question the TypeScript asked under
+/// the same count
+#[cfg(feature = "probe")]
+pub struct NumberedRequestIds;
+
+/// Under the probe, the connector the port talks through is made by this
+/// from the shell's workers (tools/ipc-diff: the probe's one waits for the
+/// case's Zotero to settle, and keeps its connection off the pool the probe
+/// waits on)
+#[cfg(feature = "probe")]
+pub struct ProbeConnector(
+    pub Arc<dyn Fn(Arc<dyn Workers>) -> Arc<dyn ZoteroConnector> + Send + Sync>,
+);
+
+#[cfg(feature = "probe")]
+fn numbered_request_ids() -> RequestIds {
+    let next = std::sync::atomic::AtomicU64::new(1);
+    Box::new(move || {
+        let n = next.fetch_add(1, Ordering::Relaxed);
+        format!("00000000-0000-4000-8000-{n:012}")
+    })
+}
+
 /// An id no waiting question has
-fn fresh_request_id(pending: &HashMap<String, Waiter>) -> String {
-    let mut id = request_id();
+fn fresh_request_id(ids: &RequestIds, pending: &HashMap<String, Waiter>) -> String {
+    let mut id = ids();
     let mut salt = 0u64;
     while pending.contains_key(&id) {
         salt += 1;
-        id = format!("{}-{salt}", request_id());
+        id = format!("{}-{salt}", ids());
     }
     id
+}
+
+/// `/^(addEditCitation|...)$/.test(command)`: the pattern takes what the
+/// renderer sent as a string, and an array stringifies as its elements joined
+/// by commas, so `['refresh']` passes it. The command is the text it matched.
+fn command_text(value: &IpcValue) -> Option<&str> {
+    match value {
+        IpcValue::String(text) => Some(text),
+        IpcValue::Array(items) if items.len() == 1 => command_text(&items[0]),
+        _ => None,
+    }
 }
 
 /// What one decoded frame leads to, run once the state is released
@@ -275,9 +332,15 @@ enum Step {
 impl Inner {
     /// `ipcMain.handle('zotero:command')`
     fn command(self: &Arc<Self>, cx: &CallContext, args: &[IpcValue], reply: Responder) {
-        let command = match args.first() {
-            Some(IpcValue::String(command)) if COMMANDS.contains(&command.as_str()) => {
-                command.clone()
+        let hello = match args.first() {
+            Some(value) if command_text(value).is_some_and(|text| COMMANDS.contains(&text)) => {
+                let mut object = JsObject::new();
+                object.set(
+                    "command",
+                    to_json(value).expect("a string or arrays of one"),
+                );
+                object.set("templateVersion", JsonValue::Number(1.0));
+                json_stringify(&JsonValue::Object(object))
             }
             _ => {
                 return reply.reply(Ok(command_failed(
@@ -299,7 +362,7 @@ impl Inner {
                 view,
                 Run {
                     id,
-                    command,
+                    hello,
                     socket: None,
                     decoder: ZoteroFrameDecoder::new(),
                     failure: None,
@@ -344,10 +407,7 @@ impl Inner {
             SocketEvent::Connected(socket) => {
                 let run = state.runs.get_mut(&view).expect("run is live");
                 run.socket = Some(socket.clone());
-                let hello = format!(
-                    "{{\"command\":{},\"templateVersion\":1}}",
-                    json_quote(&run.command)
-                );
+                let hello = run.hello.clone();
                 drop(guard);
                 socket.write(&encode_zotero_frame(0.0, &hello));
             }
@@ -413,7 +473,7 @@ impl Inner {
                     payload: format!("ERR:{message}"),
                 }),
                 Ok(request) => {
-                    let request_id = fresh_request_id(&state.pending);
+                    let request_id = fresh_request_id(&self.ids, &state.pending);
                     state.pending.insert(
                         request_id.clone(),
                         Waiter {
@@ -553,6 +613,15 @@ impl ZoteroPort {
         core: Arc<dyn Thread>,
         connector: Arc<dyn ZoteroConnector>,
     ) -> Self {
+        Self::with_ids(events, core, connector, Box::new(request_id))
+    }
+
+    pub fn with_ids(
+        events: Arc<dyn EventSink>,
+        core: Arc<dyn Thread>,
+        connector: Arc<dyn ZoteroConnector>,
+        ids: RequestIds,
+    ) -> Self {
         ZoteroPort {
             inner: Arc::new(Inner {
                 events,
@@ -561,6 +630,7 @@ impl ZoteroPort {
                 host: ZOTERO_INTEGRATION_HOST.to_owned(),
                 port: ZOTERO_INTEGRATION_PORT as u16,
                 timeout: REQUEST_TIMEOUT,
+                ids,
                 state: Mutex::new(State::default()),
             }),
         }
@@ -767,10 +837,27 @@ impl ZoteroConnector for TcpConnector {
 /// The host the shell inserts for this port
 pub fn factory() -> crate::Factory<dyn Zotero> {
     crate::Factory::new(|services, _| {
-        let port = ZoteroPort::new(
+        #[cfg(feature = "probe")]
+        let ids: RequestIds = if services.hosts.get::<NumberedRequestIds>().is_some() {
+            numbered_request_ids()
+        } else {
+            Box::new(request_id)
+        };
+        #[cfg(not(feature = "probe"))]
+        let ids: RequestIds = Box::new(request_id);
+        #[cfg(feature = "probe")]
+        let connector: Arc<dyn ZoteroConnector> = match services.hosts.get::<ProbeConnector>() {
+            Some(make) => (make.0)(services.workers.clone()),
+            None => Arc::new(TcpConnector::new(services.workers.clone())),
+        };
+        #[cfg(not(feature = "probe"))]
+        let connector: Arc<dyn ZoteroConnector> =
+            Arc::new(TcpConnector::new(services.workers.clone()));
+        let port = ZoteroPort::with_ids(
             services.events.clone(),
             services.core.clone(),
-            Arc::new(TcpConnector::new(services.workers.clone())),
+            connector,
+            ids,
         );
         let inner = port.inner.clone();
         services
@@ -1006,6 +1093,43 @@ mod tests {
     }
 
     #[test]
+    fn an_array_that_stringifies_to_a_command_runs_it_as_sent() {
+        let rig = rig();
+        let (reply, slot) = responder();
+        rig.port.zotero_command(
+            &cx(1, &CancelToken::default()),
+            vec![IpcValue::Array(vec![IpcValue::Array(vec![text(
+                "refresh",
+            )])])],
+            reply,
+        );
+        assert!(slot.lock().unwrap().is_none());
+        let (_sink, socket) = connection(&rig);
+        assert_eq!(
+            socket.frames(),
+            vec![(
+                0,
+                r#"{"command":[["refresh"]],"templateVersion":1}"#.to_owned()
+            )]
+        );
+        // two elements join as "refresh,refresh": no command
+        let (reply, refused) = responder();
+        rig.port.zotero_command(
+            &cx(2, &CancelToken::default()),
+            vec![IpcValue::Array(vec![text("refresh"), text("refresh")])],
+            reply,
+        );
+        assert_eq!(
+            answered(&refused),
+            obj(&[
+                ("ok", IpcValue::Bool(false)),
+                ("errorCode", text("unsupported-command")),
+                ("error", text("Unsupported Zotero command")),
+            ])
+        );
+    }
+
+    #[test]
     fn a_command_runs_until_zotero_closes_the_connection() {
         let rig = rig();
         let slot = start(&rig, 1, "refresh");
@@ -1237,6 +1361,46 @@ mod tests {
             (2, "ERR:Zotero document operation failed".to_owned())
         );
         assert_eq!(frames[3], (3, "false".to_owned()));
+    }
+
+    #[test]
+    fn an_error_that_is_not_text_is_worded_as_new_error_words_it() {
+        let rig = rig();
+        let _slot = start(&rig, 1, "refresh");
+        let (sink, socket) = connection(&rig);
+        feed(
+            &rig,
+            &sink,
+            &[(1, r#"["a",[]]"#), (2, r#"["b",[]]"#), (3, r#"["c",[]]"#)],
+        );
+        let asks = asked(&rig, 1);
+        let failed = |at: usize, error: IpcValue| {
+            respond(
+                &rig,
+                1,
+                obj(&[
+                    ("requestId", text(&asks[at].0)),
+                    ("ok", IpcValue::Bool(false)),
+                    ("error", error),
+                ]),
+            )
+        };
+        // an array joins its elements with commas, null as nothing
+        failed(
+            0,
+            IpcValue::Array(vec![
+                text("a"),
+                IpcValue::Number(1.0),
+                IpcValue::Null,
+                IpcValue::Array(vec![text("b")]),
+            ]),
+        );
+        failed(1, obj(&[("message", text("m"))]));
+        failed(2, IpcValue::Number(5.0));
+        let frames = socket.frames();
+        assert_eq!(frames[1], (1, "ERR:a,1,,b".to_owned()));
+        assert_eq!(frames[2], (2, "ERR:[object Object]".to_owned()));
+        assert_eq!(frames[3], (3, "ERR:5".to_owned()));
     }
 
     #[test]

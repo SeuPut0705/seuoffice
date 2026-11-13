@@ -670,5 +670,152 @@
     "find": "lock(&self.scopes).close(cx.sender.view, args.first());",
     "replace": "let _ = args.first();",
     "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "Zotero is looked for on the next port",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "port: ZOTERO_INTEGRATION_PORT as u16,",
+    "replace": "port: ZOTERO_INTEGRATION_PORT as u16 + 1,",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the opening frame names template version 2",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"templateVersion\", JsonValue::Number(1.0));",
+    "replace": "object.set(\"templateVersion\", JsonValue::Number(2.0));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a frame with transaction id 1 is ignored instead of 0",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if frame.transaction_id == 0 {",
+    "replace": "if frame.transaction_id == 1 {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an array of two elements passes the command pattern",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Array(items) if items.len() == 1 => command_text(&items[0]),",
+    "replace": "IpcValue::Array(items) if items.len() == 2 => command_text(&items[0]),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a request that does not have the shape is worded differently",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Err(\"Invalid Zotero integration request\".to_owned())",
+    "replace": "Err(\"Invalid Zotero request\".to_owned())",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a request that does not parse is answered without ERR:",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "payload: format!(\"ERR:{message}\"),",
+    "replace": "payload: format!(\"{message}\"),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed answer is not marked ERR:",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Err(message) => format!(\"ERR:{message}\"),",
+    "replace": "Err(message) => format!(\"ERR {message}\"),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed answer without an error is worded differently",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "None => \"Zotero document operation failed\".to_owned(),",
+    "replace": "None => \"Zotero operation failed\".to_owned(),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question event has another name",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "const REQUEST_EVENT: &str = \"zotero:request\";",
+    "replace": "const REQUEST_EVENT: &str = \"zotero:ask\";",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question's arguments are not sent",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"args\", JsonValue::Array(request.args));",
+    "replace": "object.set(\"args\", JsonValue::Array(Vec::new()));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question id is not under requestId",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "object.set(\"requestId\", JsonValue::String(request_id));",
+    "replace": "object.set(\"id\", JsonValue::String(request_id));",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "the question ids have a digit fewer",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "format!(\"00000000-0000-4000-8000-{n:012}\")",
+    "replace": "format!(\"00000000-0000-4000-8000-{n:011}\")",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an answer from another view is taken",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": ".is_none_or(|waiter| waiter.view != cx.sender.view)",
+    "replace": ".is_none_or(|_| false)",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an answer with ok 0 is a success",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Some(IpcValue::Number(n)) => *n != 0.0 && !n.is_nan(),",
+    "replace": "Some(IpcValue::Number(_)) => true,",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an error that is an array is worded as an object",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Array(items) => items\n            .iter()\n            .map(|item| match item {",
+    "replace": "IpcValue::Array(items) if items.is_empty() => items\n            .iter()\n            .map(|item| match item {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "null inside an error array is worded null",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "IpcValue::Null | IpcValue::Undefined => String::new(),",
+    "replace": "IpcValue::Null | IpcValue::Undefined => \"null\".to_owned(),",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "an oversized payload is not a failure of the run",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "socket.destroy(Some(&message));",
+    "replace": "socket.destroy(None);",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "Document_complete does not end the connection",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if command == \"Document_complete\" {",
+    "replace": "if command == \"Document_completed\" {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a refused connection is not told from another failure",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "format!(\"connect ECONNREFUSED {host}:{port}\")",
+    "replace": "format!(\"connect ECONNRESET {host}:{port}\")",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a second command of a running view is let through",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "if state.runs.contains_key(&view) {",
+    "replace": "if false && state.runs.contains_key(&view) {",
+    "groups": ["a/zotero"]
+  },
+  {
+    "name": "a failed run is told as a success",
+    "file": "shell-ipc/a/src/zotero.rs",
+    "find": "Some(message) => run_failed(&message),\n                        None => command_ok(),",
+    "replace": "Some(_) => command_ok(),\n                        None => command_ok(),",
+    "groups": ["a/zotero"]
   }
 ]
