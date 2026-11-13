@@ -255,6 +255,9 @@ pub struct RendererWatchdog {
     states: HashMap<i64, Rc<RefCell<RendererState>>>,
 }
 
+/// What [`RendererWatchdog::start_report`] answers: the run and its first step.
+pub type ReportStart<C> = (ReportRun<C>, ReportStep<C>);
+
 impl RendererWatchdog {
     /// `{ ...DEFAULTS, memoryLimitMB: memoryLimitFor(totalmem()), ...options }`
     pub fn new(options: WatchdogOptions, total_bytes: f64) -> Self {
@@ -368,7 +371,7 @@ impl RendererWatchdog {
         &self,
         host: &H,
         report: Report<H::Contents>,
-    ) -> Result<(ReportRun<H::Contents>, ReportStep<H::Contents>), Failure> {
+    ) -> Result<ReportStart<H::Contents>, Failure> {
         let info = host.describe(&report.wc)?;
         let stamp = host.now_ms();
         let dir = host.user_data_dir();
