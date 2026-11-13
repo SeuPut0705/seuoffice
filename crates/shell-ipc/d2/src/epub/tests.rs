@@ -65,15 +65,27 @@ fn opened(rt: &mut Rt, id: u32) -> (Sender, String) {
     (sender, path)
 }
 
+fn edits(rt: &mut Rt, sender: Sender, edits: Vec<IpcValue>) -> IpcValue {
+    let request = obj([("spineIndex", n(0.0)), ("edits", edits.into_ipc())]);
+    rt.invoke_now("epub:apply-edits", sender, vec![request])
+        .unwrap()
+}
+
+/// replaces the text of the chapter's first block
 fn edit(rt: &mut Rt, sender: Sender, text: &str) -> IpcValue {
     let edit = obj([
         ("op", s("replace")),
-        ("blockId", s("b0")),
+        ("blockId", s("b1")),
         ("text", s(text)),
     ]);
-    let request = obj([("spineIndex", n(0.0)), ("edits", vec![edit].into_ipc())]);
-    rt.invoke_now("epub:apply-edits", sender, vec![request])
-        .unwrap()
+    edits(rt, sender, vec![edit])
+}
+
+fn ids(answer: &IpcValue) -> Vec<IpcValue> {
+    match field(answer, "blocks") {
+        IpcValue::Array(blocks) => blocks.iter().map(|b| field(b, "id").clone()).collect(),
+        other => panic!("{other:?}"),
+    }
 }
 
 type Slot<T> = Rc<RefCell<Option<Result<T, IpcError>>>>;
@@ -187,10 +199,14 @@ fn an_edit_makes_the_book_dirty_and_a_save_writes_only_then() {
     );
 
     let edited = edit(&mut rt, sender, "hello");
-    assert_eq!(field(&edited, "source"), &s("hello"));
+    assert_eq!(field(&edited, "source"), &s("<p>hello</p>"));
     assert_eq!(field(&edited, "version"), &n(1.0));
     assert_eq!(field(&edited, "dirty"), &true.into_ipc());
-    let inverse = obj([("start", n(0.0)), ("end", n(5.0)), ("text", s(CHAPTER))]);
+    let inverse = obj([
+        ("start", n(3.0)),
+        ("end", n(8.0)),
+        ("text", s("OEBPS/c1.xhtml")),
+    ]);
     assert_eq!(field(&edited, "inverse"), &vec![inverse].into_ipc());
     let eds = editors(&rt);
     assert!(eds.is_dirty(sender.view));
@@ -247,7 +263,11 @@ fn range_replacements_need_the_current_version() {
     let (sender, _) = opened(&mut rt, 1);
     edit(&mut rt, sender, "hello");
     let replace = |version: IpcValue| {
-        let r = obj([("start", n(0.0)), ("end", n(5.0)), ("text", s(CHAPTER))]);
+        let r = obj([
+            ("start", n(3.0)),
+            ("end", n(8.0)),
+            ("text", s("OEBPS/c1.xhtml")),
+        ]);
         obj([
             ("spineIndex", n(0.0)),
             ("version", version),
@@ -275,6 +295,54 @@ fn range_replacements_need_the_current_version() {
     assert_eq!(field(&back, "source"), &s(CHAPTER));
     assert_eq!(field(&back, "version"), &n(2.0));
     assert_eq!(field(&back, "dirty"), &false.into_ipc());
+}
+
+/// `OpenChapter.nextId` goes back to the engine with the map: after the
+/// highest block is deleted, a new block must not take its id again
+#[test]
+fn fresh_block_ids_continue_after_the_last_block_is_deleted() {
+    let (mut rt, _) =
+        rt(json!({ "engine": { "readText": { "OEBPS/c1.xhtml": "<p>a</p><p>b</p>" } } }));
+    let (sender, _) = opened(&mut rt, 1);
+    let chapter = rt
+        .invoke_now("epub:read-chapter", sender, vec![n(0.0)])
+        .unwrap();
+    assert_eq!(ids(&chapter), vec![s("b1"), s("b2")]);
+    let deleted = edits(
+        &mut rt,
+        sender,
+        vec![obj([("op", s("delete")), ("blockId", s("b2"))])],
+    );
+    assert_eq!(ids(&deleted), vec![s("b1")]);
+    let inserted = edits(
+        &mut rt,
+        sender,
+        vec![obj([
+            ("op", s("insert_after")),
+            ("blockId", s("b1")),
+            ("text", s("c")),
+        ])],
+    );
+    assert_eq!(field(&inserted, "created"), &vec![s("b3")].into_ipc());
+    assert_eq!(ids(&inserted), vec![s("b1"), s("b3")]);
+
+    // a range replacement that splits the last block numbers on from there too
+    let split = obj([
+        ("start", n(12.0)),
+        ("end", n(12.0)),
+        ("text", s("</p><p>d")),
+    ]);
+    let request = obj([
+        ("spineIndex", n(0.0)),
+        ("version", field(&inserted, "version").clone()),
+        ("replacements", vec![split].into_ipc()),
+    ]);
+    let remapped = rt
+        .invoke_now("epub:replace-ranges", sender, vec![request])
+        .unwrap();
+    assert_eq!(field(&remapped, "source"), &s("<p>a</p><p>c</p><p>d</p>"));
+    assert_eq!(field(&remapped, "created"), &vec![s("b4")].into_ipc());
+    assert_eq!(ids(&remapped), vec![s("b1"), s("b3"), s("b4")]);
 }
 
 #[test]
@@ -373,7 +441,7 @@ fn reading_the_text_waits_for_the_flush() {
     let (sender, _) = opened(&mut rt, 1);
     let view = sender.view;
     let editor = editor_for(&rt.provided(), view).unwrap();
-    edit(&mut rt, sender, "<p>hello</p>");
+    edit(&mut rt, sender, "hello");
 
     let flush = |rt: &mut Rt, result: IpcValue| {
         let mut events = events(rt);

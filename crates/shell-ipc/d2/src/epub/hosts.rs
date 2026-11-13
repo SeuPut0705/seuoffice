@@ -52,13 +52,20 @@ pub struct Block {
 }
 
 /// The engine's `ChapterMap`: a chapter's text and its blocks; a broken one
-/// has no blocks and says why
+/// has no blocks and says why. What it leaves out (`doc`, each block's
+/// `element`, `attributes`, `selfClosing`) is what parsing `source` gives at
+/// the blocks' ranges, so the host parses again; `next_id` cannot be had so
+/// and travels here.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChapterMap {
     pub source: String,
     pub broken: bool,
     pub error: Option<String>,
     pub blocks: Vec<Block>,
+    /// `OpenChapter.nextId`: the number the next fresh block id (`b<n>`)
+    /// takes. The session hands it back with the map on every call; it
+    /// cannot be recovered from the blocks once the highest one is deleted.
+    pub next_id: u64,
 }
 
 /// An opened book: `bookSummary(book)` (`EpubBookSummary`) and
@@ -306,7 +313,7 @@ mod fake {
         BlockEdits, Bytes, ChapterMap, DecodedText, EpubEngine, EpubShell, OpenedBook, Replacement,
         SavedBytes, Translated, TranslatedRequest,
     };
-    use crate::epub::session::{apply_replacements, diff_replacement, len16};
+    use crate::epub::session::{apply_replacements, diff_replacement, len16, slice16};
 
     /// `case[name]`: an array is a queue of answers, one per call (wrap a
     /// list answer in an array: `[["en"]]`), past its end the default;
@@ -349,11 +356,14 @@ mod fake {
     ///   SHA-256 of the bytes
     /// - `readText`: an object by entry path, each a string or `{ text, valid }`
     ///   (`null`: no such entry); by default `<p>{path}</p>`
-    /// - chapters: a chapter containing `<broken` is broken; any other has
-    ///   one block `b0` over its whole text. `replace` edits of a known block
-    ///   apply, every other edit is refused (`applyBlockEdits`:
-    ///   `{ throw }` or `{ refusal, index }` overrides). Replacements apply
-    ///   and compose as text does.
+    /// - chapters: a chapter containing `<broken` is broken; any other is a
+    ///   run of `<p>…</p>` blocks, `b1`, `b2`, … as `openChapter` numbers
+    ///   them. `replace`, `insert_after` and `delete` edits apply (a new
+    ///   block takes `b<nextId>`), any other is refused (`applyBlockEdits`:
+    ///   `{ throw }` or `{ refusal, index }` overrides). `remapChapter`
+    ///   keeps the id of a block whose start a replacement did not touch and
+    ///   numbers the rest from `nextId`. Replacements apply and compose as
+    ///   text does.
     /// - `save`: `"unchanged"`, `{ refused: { reason, detail } }`,
     ///   `{ throw }`; by default unchanged without edits, else the bytes with
     ///   every edit's text appended
@@ -392,29 +402,85 @@ mod fake {
         })
     }
 
-    fn chapter(text: &str) -> ChapterMap {
-        if text.contains("<broken") {
-            return ChapterMap {
-                source: text.to_owned(),
-                broken: true,
-                error: Some("not well-formed".into()),
-                blocks: Vec::new(),
+    /// the `<p>…</p>` runs of a chapter: outer and inner ranges in UTF-16 units
+    fn paragraphs(text: &str) -> Vec<((usize, usize), (usize, usize))> {
+        let at16 = |i: usize| len16(&text[..i]);
+        let mut out = Vec::new();
+        let mut at = 0;
+        while let Some(open) = text[at..].find("<p>") {
+            let start = at + open;
+            let Some(close) = text[start..].find("</p>") else {
+                break;
             };
+            let end = start + close;
+            out.push(((at16(start), at16(end + 4)), (at16(start + 3), at16(end))));
+            at = end + 4;
         }
-        let len = len16(text);
+        out
+    }
+
+    fn broken(text: &str, next_id: u64) -> ChapterMap {
+        ChapterMap {
+            source: text.to_owned(),
+            broken: true,
+            error: Some("not well-formed".into()),
+            blocks: Vec::new(),
+            next_id,
+        }
+    }
+
+    /// the map of `text` whose blocks take the ids `id` gives, in order
+    fn numbered(text: &str, mut id: impl FnMut(usize) -> String, next_id: u64) -> ChapterMap {
+        let blocks = paragraphs(text)
+            .into_iter()
+            .map(|(outer, inner)| super::Block {
+                id: id(outer.0),
+                kind: "paragraph".into(),
+                tag: "p".into(),
+                flowing: true,
+                outer,
+                inner,
+            })
+            .collect();
         ChapterMap {
             source: text.to_owned(),
             broken: false,
             error: None,
-            blocks: vec![super::Block {
-                id: "b0".into(),
-                kind: "paragraph".into(),
-                tag: "p".into(),
-                flowing: true,
-                outer: (0, len),
-                inner: (0, len),
-            }],
+            blocks,
+            next_id,
         }
+    }
+
+    /// `openChapter(text)`
+    fn chapter(text: &str) -> ChapterMap {
+        if text.contains("<broken") {
+            return broken(text, 1);
+        }
+        let count = paragraphs(text).len() as u64;
+        let mut n = 0;
+        numbered(
+            text,
+            |_| {
+                n += 1;
+                format!("b{n}")
+            },
+            count + 1,
+        )
+    }
+
+    /// where `offset` lands after `replacements`; `None` inside a replaced range
+    fn map_offset(offset: usize, replacements: &[Replacement]) -> Option<usize> {
+        let mut delta: i64 = 0;
+        for r in replacements {
+            if offset < r.start {
+                break;
+            }
+            if offset < r.end {
+                return None;
+            }
+            delta += len16(&r.text) as i64 - (r.end - r.start) as i64;
+        }
+        Some((offset as i64 + delta) as usize)
     }
 
     fn thrown(v: &Value) -> Option<String> {
@@ -480,34 +546,48 @@ mod fake {
                     index: answer.get("index").and_then(Value::as_f64).unwrap_or(0.0),
                 });
             }
-            let mut current = map.clone();
-            let mut replacements = Vec::new();
+            let units: Vec<u16> = map.source.encode_utf16().collect();
+            let mut items: Vec<(String, String)> = map
+                .blocks
+                .iter()
+                .map(|b| (b.id.clone(), slice16(&units, b.inner.0, b.inner.1)))
+                .collect();
+            let mut next_id = map.next_id;
+            let mut created = Vec::new();
             for (i, edit) in edits.iter().enumerate() {
-                let block = current
-                    .blocks
-                    .iter()
-                    .find(|b| Some(b.id.as_str()) == edit.get("blockId").and_then(Value::as_str));
-                let (Some("replace"), Some(block)) =
-                    (edit.get("op").and_then(Value::as_str), block)
-                else {
-                    return Ok(BlockEdits::Refused {
-                        refusal: json!({ "code": "unsupported", "message": "the fake applies replace only" }),
-                        index: i as f64,
-                    });
+                let at = items.iter().position(|(id, _)| {
+                    Some(id.as_str()) == edit.get("blockId").and_then(Value::as_str)
+                });
+                let refused = || BlockEdits::Refused {
+                    refusal: json!({ "code": "unsupported", "message": "the fake cannot apply this edit" }),
+                    index: i as f64,
                 };
-                let r = Replacement {
-                    start: block.inner.0,
-                    end: block.inner.1,
-                    text: text_of(edit, "text"),
-                };
-                let text = apply_replacements(&current.source, std::slice::from_ref(&r));
-                current = chapter(&text);
-                replacements.push(r);
+                let Some(at) = at else { return Ok(refused()) };
+                match edit.get("op").and_then(Value::as_str) {
+                    Some("replace") => items[at].1 = text_of(edit, "text"),
+                    Some("insert_after") => {
+                        let id = format!("b{next_id}");
+                        next_id += 1;
+                        created.push(id.clone());
+                        items.insert(at + 1, (id, text_of(edit, "text")));
+                    }
+                    Some("delete") => {
+                        items.remove(at);
+                    }
+                    _ => return Ok(refused()),
+                }
             }
+            let text: String = items.iter().map(|(_, t)| format!("<p>{t}</p>")).collect();
+            let mut ids = items.into_iter().map(|(id, _)| id);
+            let replacements = if text == map.source {
+                Vec::new()
+            } else {
+                vec![diff_replacement(&map.source, &text)]
+            };
             Ok(BlockEdits::Applied {
-                map: current,
+                map: numbered(&text, |_| ids.next().unwrap_or_default(), next_id),
                 replacements,
-                created: Vec::new(),
+                created,
             })
         }
 
@@ -543,8 +623,28 @@ mod fake {
             apply_replacements(source, replacements)
         }
 
-        fn remap_chapter(&self, _map: &ChapterMap, text: &str, _r: &[Replacement]) -> ChapterMap {
-            chapter(text)
+        fn remap_chapter(&self, map: &ChapterMap, text: &str, r: &[Replacement]) -> ChapterMap {
+            if text.contains("<broken") {
+                return broken(text, map.next_id);
+            }
+            let mut carried: HashMap<usize, String> = map
+                .blocks
+                .iter()
+                .filter_map(|b| map_offset(b.outer.0, r).map(|at| (at, b.id.clone())))
+                .collect();
+            let mut next_id = map.next_id;
+            let mut remapped = numbered(
+                text,
+                |start| {
+                    carried.remove(&start).unwrap_or_else(|| {
+                        next_id += 1;
+                        format!("b{}", next_id - 1)
+                    })
+                },
+                0,
+            );
+            remapped.next_id = next_id;
+            remapped
         }
 
         fn extract_chapter_text(&self, source: &str) -> String {
