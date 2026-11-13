@@ -924,7 +924,16 @@ fn scenario(spec: &Value) -> Answer {
             }
             "resume" => {
                 let n = step["call"].as_f64().unwrap_or(0.0) as usize;
-                let (session, ticket) = world.tool_calls[n - 1].clone();
+                // a call that was never issued is an answer of its own
+                let Some((session, ticket)) = n
+                    .checked_sub(1)
+                    .and_then(|at| world.tool_calls.get(at))
+                    .cloned()
+                else {
+                    out.insert("error".to_owned(), text("no such host call"));
+                    results.push(Value::Object(out));
+                    continue;
+                };
                 let answer: Settled = if let Some(message) = step.get("error") {
                     Err(message.as_str().unwrap_or("").to_owned())
                 } else {
@@ -935,7 +944,14 @@ fn scenario(spec: &Value) -> Answer {
             }
             "settle" => {
                 let n = step["call"].as_f64().unwrap_or(0.0) as usize;
-                let (session, ticket) = world.calls.borrow()[n - 1].clone();
+                let known = n
+                    .checked_sub(1)
+                    .and_then(|at| world.calls.borrow().get(at).cloned());
+                let Some((session, ticket)) = known else {
+                    out.insert("error".to_owned(), text("no such call"));
+                    results.push(Value::Object(out));
+                    continue;
+                };
                 let result = if step.get("error").is_some() {
                     Err(HandlerError {
                         code: step.get("code").and_then(Value::as_f64),
