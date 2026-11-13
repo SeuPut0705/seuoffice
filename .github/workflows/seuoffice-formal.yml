@@ -45,11 +45,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Fetch tla2tools 1.8.0
+      - name: Fetch tla2tools 1.8.0 (pre-release asset rebuilt 2026-11-06; a rebuild fails the checksum)
         if: steps.gate.outputs.run == 'true'
         run: |
           curl -fsSL -o "$RUNNER_TEMP/tla2tools.jar" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
-          echo "fc6878c603f0fdc18b9fe3e5bf51860cb90ab5b1154e3c371660c036d6bdd63e  $RUNNER_TEMP/tla2tools.jar" | sha256sum -c -
+          echo "e1f11b75c4b5bc4478ba0ac5cb6ae28e40a01b0016bc33e0aa97da22dfdbcd7f  $RUNNER_TEMP/tla2tools.jar" | sha256sum -c -
       - name: Run the ${{ matrix.tier }} matrix
         if: steps.gate.outputs.run == 'true'
         run: |
