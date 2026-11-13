@@ -1,0 +1,481 @@
+[
+  {
+    "name": "loopback timeout outcome is cancelled",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "self.settle(host, LoopbackOutcome::Failed(LoopbackFailure::Timeout));",
+    "replace": "self.settle(host, LoopbackOutcome::Failed(LoopbackFailure::Cancelled));",
+    "fn": [
+      "oauth-loopback.scenario",
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "loopback answers a stray request with 403",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "status: 404,",
+    "replace": "status: 403,",
+    "fn": [
+      "oauth-loopback.scenario"
+    ]
+  },
+  {
+    "name": "loopback matches any path that starts with callback",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "&& url.path() == \"/callback\"",
+    "replace": "&& url.path().starts_with(\"/callback\")",
+    "fn": [
+      "oauth-loopback.scenario"
+    ]
+  },
+  {
+    "name": "loopback answers after the outcome settled",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "&& self.outcome.is_none()",
+    "replace": "&& true",
+    "fn": [
+      "oauth-loopback.scenario"
+    ]
+  },
+  {
+    "name": "loopback takes an empty code",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": ".filter(|code| !code.is_empty())",
+    "replace": ".filter(|_| true)",
+    "fn": [
+      "oauth-loopback.scenario",
+      "oauth.signIn"
+    ]
+  },
+  {
+    "name": "loopback page keeps the connection alive",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "(\"Connection\".to_owned(), \"close\".to_owned()),",
+    "replace": "(\"Connection\".to_owned(), \"keep-alive\".to_owned()),",
+    "fn": [
+      "oauth-loopback.scenario"
+    ]
+  },
+  {
+    "name": "loopback close does not drop connections",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "        host.close_all_connections(self.port);\n",
+    "replace": "",
+    "fn": [
+      "oauth-loopback.scenario",
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "loopback does not clear its timer",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "        host.clear_timeout(self.timer);\n",
+    "replace": "",
+    "fn": [
+      "oauth-loopback.scenario",
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "loopback state compare ignores a longer state",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "if x.len() != y.len() {\n        return false;\n    }",
+    "replace": "",
+    "fn": [
+      "oauth-loopback.scenario"
+    ]
+  },
+  {
+    "name": "loopback aborted at start is not noticed",
+    "file": "main-core/src/shell/mcp_client/oauth_loopback.rs",
+    "find": "        if aborted {\n            receiver.on_abort(host);\n        }",
+    "replace": "",
+    "fn": [
+      "oauth-loopback.scenario",
+      "oauth.signIn"
+    ]
+  },
+  {
+    "name": "expiry margin is 30 s",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "const EXPIRY_MARGIN_MS: f64 = 60.0 * 1000.0;",
+    "replace": "const EXPIRY_MARGIN_MS: f64 = 30.0 * 1000.0;",
+    "fn": [
+      "oauth.accessTokenExpired",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "expiry compares strictly",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": ".is_some_and(|at| now >= at - EXPIRY_MARGIN_MS)",
+    "replace": ".is_some_and(|at| now > at - EXPIRY_MARGIN_MS)",
+    "fn": [
+      "oauth.accessTokenExpired"
+    ]
+  },
+  {
+    "name": "auth request limit is 30 s",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "pub const AUTH_REQUEST_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "pub const AUTH_REQUEST_TIMEOUT_MS: f64 = 30_000.0;",
+    "fn": [
+      "oauth.authFetch",
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "auth fetch follows redirects",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "next.redirect = Some(Redirect::Manual);",
+    "replace": "next.redirect = Some(Redirect::Follow);",
+    "fn": [
+      "oauth.authFetch",
+      "oauth.signIn"
+    ]
+  },
+  {
+    "name": "stored sign-in of another version is read",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "Some(JsonValue::Number(v)) if *v == 1.0",
+    "replace": "Some(JsonValue::Number(v)) if *v >= 1.0",
+    "fn": [
+      "oauth.parseStoredOAuth"
+    ]
+  },
+  {
+    "name": "store access writes empty tokens into a missing block",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "if server.oauth.is_none() && tokens.is_empty() {",
+    "replace": "if false {",
+    "fn": [
+      "oauth.storeOAuthAccess"
+    ]
+  },
+  {
+    "name": "sign-in accepts a server without S256",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "            \"S256\",\n",
+    "replace": "            \"plain\",\n",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "sign-in accepts a resource of another origin",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "Ok(false) => return finished(fail(McpSignInFailure::NotSupported)),",
+    "replace": "Ok(false) => {}",
+    "fn": [
+      "oauth.signIn"
+    ]
+  },
+  {
+    "name": "sign-in state is 18 bytes",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "base64url(&host.random_bytes(24))",
+    "replace": "base64url(&host.random_bytes(18))",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "sign-in a listen failure is cancelled",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "Err(_) => return finished(fail(McpSignInFailure::Network)),",
+    "replace": "Err(_) => return finished(fail(McpSignInFailure::Cancelled)),",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "sign-in without registration is network",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "            if !has_registration {\n                return Err(fail(McpSignInFailure::ClientRequired));",
+    "replace": "            if !has_registration {\n                return Err(fail(McpSignInFailure::Network));",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "sign-in opens the browser after an abort",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "        if aborted {\n            return Err(fail(McpSignInFailure::Cancelled));\n        }\n        if !(ctx.open_external)",
+    "replace": "        if !(ctx.open_external)",
+    "fn": [
+      "oauth.signIn"
+    ]
+  },
+  {
+    "name": "sign-in token endpoint refusal is network",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "                    McpSignInFailure::Denied\n                } else {",
+    "replace": "                    McpSignInFailure::Network\n                } else {",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "sign-in does not name an insecure authorization endpoint",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "return finished(fail(McpSignInFailure::InsecureAddress));",
+    "replace": "return finished(fail(McpSignInFailure::NotSupported));",
+    "fn": [
+      "oauth.signIn",
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "refresh keeps invalid_client as network",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "const REFUSALS: [&str; 3] = [\"invalid_grant\", \"invalid_client\", \"unauthorized_client\"];",
+    "replace": "const REFUSALS: [&str; 3] = [\"invalid_grant\", \"invalid_grant\", \"unauthorized_client\"];",
+    "fn": [
+      "oauth.refreshStoredOAuth"
+    ]
+  },
+  {
+    "name": "revoke hint follows presence not truth",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": "let hint = if refresh.is_some_and(|r| r.truthy()) {",
+    "replace": "let hint = if refresh.is_some() {",
+    "fn": [
+      "oauth.revokeStoredOAuth"
+    ]
+  },
+  {
+    "name": "revoke takes a null refresh token",
+    "file": "main-core/src/shell/mcp_client/oauth.rs",
+    "find": ".filter(|t| !matches!(t, JsonValue::Null));",
+    "replace": ".filter(|_| true);",
+    "fn": [
+      "oauth.revokeStoredOAuth"
+    ]
+  },
+  {
+    "name": "remote end of session limit is 4 s",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "pub const TERMINATE_TIMEOUT_MS: f64 = 5_000.0;",
+    "replace": "pub const TERMINATE_TIMEOUT_MS: f64 = 4_000.0;",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote sends a configured Accept header",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "    \"accept\",\n",
+    "replace": "    \"accept-x\",\n",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote counts 5xx only as an answer",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "if response.status >= 400 && response.status != 401 {",
+    "replace": "if response.status >= 500 && response.status != 401 {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote does not treat 301 as a redirect",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "const REDIRECT_STATUSES: [u16; 5] = [301, 302, 303, 307, 308];",
+    "replace": "const REDIRECT_STATUSES: [u16; 5] = [300, 302, 303, 307, 308];",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote follows a redirect to any origin",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": ".is_some_and(|t| t.origin().ascii_serialization() == st.origin);",
+    "replace": ".is_some();",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote ignores an opaque redirect",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "    if response.opaque_redirect {",
+    "replace": "    if false {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote bearer scheme in lower case",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "format!(\"Bearer {bearer}\")",
+    "replace": "format!(\"bearer {bearer}\")",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote 401 after a refresh is not login-required",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "    st.sign_in_needed = true;\n    Err(st.record(RemoteMcpErrorReason::LoginRequired))",
+    "replace": "    Err(st.record(RemoteMcpErrorReason::Unreachable))",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote refused refresh does not ask for sign-in",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "RefreshOutcome::Refused => {\n            st.sign_in_needed = true;",
+    "replace": "RefreshOutcome::Refused => {\n            st.sign_in_needed = false;",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote unresolved name is insecure",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "let reason = if is_unresolved(check) {",
+    "replace": "let reason = if !is_unresolved(check) {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote a pre-aborted waiter still waits",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "        if self.signal_aborted(signal) {\n            let error",
+    "replace": "        if false {\n            let error",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote header value limit is 16 bits",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "unit <= 0xFF)",
+    "replace": "unit <= 0xFFFF)",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote newline allowed in a header value",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "!trimmed.contains(['\\0', '\\r', '\\n'])",
+    "replace": "!trimmed.contains(['\\0', '\\r'])",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote falls back only on 4xx",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "*code == -1.0 || (*code >= 400.0 && *code < 500.0)",
+    "replace": "(*code >= 400.0 && *code < 500.0)",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote keeps a connection that finished after close",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "if mine != self.shared.generation {",
+    "replace": "if false {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote close does not bump the generation",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "        self.shared.generation += 1;\n",
+    "replace": "",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote follows a cursor it saw before",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "if !self.lists[index].seen.contains(&cursor) {",
+    "replace": "if true {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote does not race the end of the session",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "let timer = host.set_timeout(TERMINATE_TIMEOUT_MS);",
+    "replace": "let timer = 0u64;",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote a newer sign-in does not cancel the older",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "if let Some(previous) = self.sign_in_current {",
+    "replace": "if let Some(previous) = None::<u64> {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote Authorization header name is case sensitive",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": ".any(|(name, _)| name.to_lowercase() == \"authorization\")",
+    "replace": ".any(|(name, _)| name == \"authorization\")",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote an aborted call is a timeout",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "        if aborted {\n            return RemoteMcpErrorReason::Aborted;\n        }",
+    "replace": "",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote request timeout is a server error",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "if mcp.code == error_code::REQUEST_TIMEOUT {",
+    "replace": "if mcp.code == error_code::CONNECTION_CLOSED {",
+    "fn": [
+      "remote.scenario"
+    ]
+  },
+  {
+    "name": "remote aborted is shown on the card",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "RemoteMcpErrorReason::Aborted => None,",
+    "replace": "RemoteMcpErrorReason::Aborted => Some(StatusFailure::Fail(McpFailReason::Unreachable)),",
+    "fn": [
+      "remote.statusFailureOf"
+    ]
+  },
+  {
+    "name": "remote http-error reason text",
+    "file": "main-core/src/shell/mcp_client/remote.rs",
+    "find": "RemoteMcpErrorReason::HttpError => \"http-error\",\n            RemoteMcpErrorReason::Timeout",
+    "replace": "RemoteMcpErrorReason::HttpError => \"http_error\",\n            RemoteMcpErrorReason::Timeout",
+    "fn": [
+      "remote.scenario",
+      "remote.RemoteMcpError",
+      "remote.statusFailureOf"
+    ]
+  }
+]
