@@ -15,9 +15,9 @@
   },
   {
     "name": "docs:save writes a path this view never opened",
-    "file": "shell-ipc/d2/src/docs/save.rs",
-    "find": ".filter(|p| d.can_doc_write(view, p))",
-    "replace": ".filter(|_| true)",
+    "file": "shell-ipc/d2/src/docs/mod.rs",
+    "find": "self.doc_writable\n            .with(view, |s| s.is_some_and(|s| s.contains(path)))",
+    "replace": "self.doc_writable\n            .with(view, |_| true)",
     "groups": ["d2/docs-save"]
   },
   {
