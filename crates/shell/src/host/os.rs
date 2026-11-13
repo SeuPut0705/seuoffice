@@ -255,7 +255,7 @@ fn open_paths(paths: Vec<String>, reveal: bool) {
 }
 
 /// The event loop's events U answers
-pub fn on_run_event(_app: &AppHandle, event: &RunEvent) {
+pub fn on_run_event(app: &AppHandle, event: &RunEvent) {
     match event {
         RunEvent::Ready => {
             let first = {
@@ -263,7 +263,7 @@ pub fn on_run_event(_app: &AppHandle, event: &RunEvent) {
                 launch.ready = true;
                 std::mem::take(&mut launch.pending)
             };
-            write_start_mark();
+            write_start_mark(app);
             // the first launch's documents, after whatever the launch restores
             if !first.is_empty() {
                 open_paths(first, false);
@@ -283,11 +283,14 @@ pub fn on_run_event(_app: &AppHandle, event: &RunEvent) {
     }
 }
 
-fn write_start_mark() {
+/// The packaged version (`tauri build --config {"version": ...}`), which an
+/// updating installer compares with its own: Cargo's version stays what
+/// Cargo.toml says whatever the build stamps
+fn write_start_mark(app: &AppHandle) {
     let user_data = ShellPaths::new().path(shell_contract::runtime::PathName::UserData);
     if let Err(error) = fs::write(
         user_data.join(START_MARK),
-        format!("{}\n", env!("CARGO_PKG_VERSION")),
+        format!("{}\n", app.package_info().version),
     ) {
         eprintln!("shell: cannot write {START_MARK}: {error}");
     }

@@ -631,7 +631,7 @@ fn detach(_: &mut std::process::Command) {}
 
 fn client() -> Result<reqwest::blocking::Client, UpdateError> {
     reqwest::blocking::Client::builder()
-        .user_agent(concat!("SeuOffice/", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("SeuOffice/{}", super::app_version()))
         .connect_timeout(Duration::from_secs(30))
         .build()
         .map_err(net)

@@ -24,7 +24,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use main_core::packages::electron_utils::message_box::MessageBoxOptions;
@@ -54,8 +54,19 @@ use crate::views::ViewTable;
 /// When this process started (`process.uptime()`), read first at install
 static STARTED_AT: LazyLock<Instant> = LazyLock::new(Instant::now);
 
+/// The packaged version (`app.getVersion()`): the build's Tauri config, which
+/// `tauri build --config {"version": ...}` sets, not Cargo's
+static APP_VERSION: OnceLock<String> = OnceLock::new();
+
+pub(crate) fn app_version() -> &'static str {
+    APP_VERSION
+        .get()
+        .map_or(env!("CARGO_PKG_VERSION"), String::as_str)
+}
+
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     LazyLock::force(&STARTED_AT);
+    let _ = APP_VERSION.set(cx.app.package_info().version.to_string());
     hosts.insert(QuitHost(cx.app.clone()));
     let windows: UpdateWindowsHost = Arc::new(CardWindows {
         app: cx.app.clone(),
@@ -374,7 +385,7 @@ impl UpdaterHost for ShellUpdater {
     }
 
     fn version(&self) -> String {
-        env!("CARGO_PKG_VERSION").to_owned()
+        app_version().to_owned()
     }
 
     fn user_data_dir(&self) -> String {
