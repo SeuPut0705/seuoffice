@@ -440,12 +440,10 @@ pub(crate) fn print_silently(webview: &tauri::Webview, options: &Value) -> Resul
 
 /// [`print_silently`] with the options as a handler passed them to
 /// `Contents::print`
-#[allow(dead_code)] // called by the shared Contents host (host/contents.rs)
 pub(crate) fn print_silently_ipc(webview: &tauri::Webview, options: &IpcValue) -> Result<(), String> {
     print_silently(webview, &json_of(options))
 }
 
-#[allow(dead_code)]
 fn json_of(value: &IpcValue) -> Value {
     match value {
         IpcValue::Bool(b) => json!(b),
