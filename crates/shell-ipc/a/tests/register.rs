@@ -228,3 +228,39 @@ fn a_shell_without_a_port_does_not_start() {
         other => panic!("{other:?}"),
     }
 }
+
+#[test]
+fn a_shell_with_some_ports_built_starts_and_the_others_say_not_built() {
+    let mut hosts = Hosts::default();
+    hosts.insert(shell_ipc_a::template_selection::factory());
+    shell_ipc_a::insert_unbuilt_ports(&mut hosts);
+    let mut registry = Checked::default();
+    shell_ipc_a::register(&mut registry, &services(hosts)).expect("batch A registers");
+    let cx = CallContext {
+        sender: Sender {
+            view: ViewId(3),
+            window: WindowId(1),
+            surface: Surface::Slides,
+        },
+        request: None,
+        cancel: CancelToken::default(),
+    };
+    let ask = |channel: &str| {
+        let got = Arc::new(Mutex::new(None));
+        let slot = got.clone();
+        registry.handlers[channel].1.call(
+            &cx,
+            Vec::new(),
+            Responder::new(move |r| *slot.lock().unwrap() = Some(r)),
+        );
+        got.lock().unwrap().take().expect("answered")
+    };
+    // built: no slides document is provided for the view, so no selection
+    assert_eq!(ask("slides:ai-template-selection-get"), Ok(IpcValue::Null));
+    let refused = ask("skills:list").unwrap_err();
+    assert_eq!(
+        refused.remote_message("skills:list"),
+        "Error invoking remote method 'skills:list': Error: not built yet: \
+         apps/shell/src/main/user-skills/user-skills-ipc.ts"
+    );
+}

@@ -132,6 +132,10 @@ macro_rules! ports {
         impl $name for $crate::probe::Fake {
             $( $crate::port::ports!(@fake $kind $channel $(=> $method)?); )*
         }
+
+        impl $name for $crate::unbuilt::Unbuilt {
+            $( $crate::port::ports!(@unbuilt $kind $channel $(=> $method)?); )*
+        }
     )*};
 
     (@method event $channel:literal) => {};
@@ -154,6 +158,18 @@ macro_rules! ports {
             reply: shell_contract::ipc::Responder,
         ) {
             self.answer($channel, reply)
+        }
+    };
+
+    (@unbuilt event $channel:literal) => {};
+    (@unbuilt $kind:ident $channel:literal => $method:ident) => {
+        fn $method(
+            &self,
+            _cx: &shell_contract::ipc::CallContext,
+            _args: Vec<shell_contract::IpcValue>,
+            reply: shell_contract::ipc::Responder,
+        ) {
+            self.answer(reply)
         }
     };
 

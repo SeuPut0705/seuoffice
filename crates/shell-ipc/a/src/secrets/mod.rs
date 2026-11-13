@@ -112,3 +112,61 @@ fn new_keychain_password() -> Option<String> {
     getrandom::fill(&mut bytes).ok()?;
     Some(jscompat::base64(&bytes))
 }
+
+/// `process.platform` of this build
+pub const PLATFORM: &str = if cfg!(target_os = "macos") {
+    "darwin"
+} else if cfg!(windows) {
+    "win32"
+} else {
+    "linux"
+};
+
+/// `safeStorageCodec(safeStorage, process.platform, () =>
+/// sealingKeyOnDisk(<userData>/Local State))` of the shell entry: the codec
+/// the AI settings and the home search's keys are sealed with, owned so the
+/// shell can hand it out as a host
+pub struct ShellSecretCodec {
+    storage: std::sync::Arc<OsSafeStorage>,
+    local_state: String,
+}
+
+impl ShellSecretCodec {
+    pub fn new(storage: std::sync::Arc<OsSafeStorage>) -> Self {
+        let local_state = storage.place.local_state().to_string_lossy().into_owned();
+        ShellSecretCodec {
+            storage,
+            local_state,
+        }
+    }
+}
+
+impl main_core::packages::ai_provider::settings_secrets::AiSecretCodec for ShellSecretCodec {
+    fn seal(&self, plain: &str) -> Result<Option<String>, CodecThrow> {
+        self.codec(|codec| codec.seal(plain))
+    }
+
+    fn open(&self, sealed: &str) -> Result<Option<String>, CodecThrow> {
+        self.codec(|codec| codec.open(sealed))
+    }
+}
+
+impl ShellSecretCodec {
+    fn codec<R>(
+        &self,
+        run: impl FnOnce(&dyn main_core::packages::ai_provider::settings_secrets::AiSecretCodec) -> R,
+    ) -> R {
+        let key_on_disk = || main_core::shell::ai_secrets::sealing_key_on_disk(&self.local_state);
+        run(&main_core::shell::ai_secrets::SafeStorageCodec {
+            storage: self.storage.as_ref(),
+            platform: PLATFORM,
+            key_on_disk: &key_on_disk,
+        })
+    }
+}
+
+/// The hosts the shell inserts (`host/secrets.rs`): `safeStorage` itself
+/// (the Drive token and the MCP secrets seal with it) and the AI settings'
+/// codec over it
+pub type SafeStorageHost = std::sync::Arc<OsSafeStorage>;
+pub type SecretCodecHost = std::sync::Arc<ShellSecretCodec>;

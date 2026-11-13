@@ -16,6 +16,7 @@ mod probe;
 pub mod secrets;
 pub mod shell_ai_prefs;
 pub mod template_selection;
+mod unbuilt;
 mod value;
 pub mod zotero;
 
@@ -68,6 +69,23 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
 }
 
 const _: RegisterBatch = register;
+
+/// Inserts, for every port the shell has no factory for, one whose channels
+/// reject with "not built yet": call it after the real factories, so the
+/// batch registers whole and the built ports answer
+pub fn insert_unbuilt_ports(hosts: &mut shell_contract::Hosts) {
+    macro_rules! insert_each {
+        ($($port:ident),*) => {$(
+            if hosts.get::<Factory<dyn ports::$port>>().is_none() {
+                let source = <dyn ports::$port as Port>::SOURCE;
+                hosts.insert(Factory::<dyn ports::$port>::new(move |_, _| {
+                    Ok(std::rc::Rc::new(unbuilt::Unbuilt(source)))
+                }));
+            }
+        )*};
+    }
+    all_ports!(insert_each);
+}
 
 /// Every port: the module it stands for and its channels
 pub fn port_table() -> Vec<(&'static str, &'static [PortChannel])> {
