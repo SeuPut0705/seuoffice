@@ -29,8 +29,11 @@ compares against that copy. One implementation per function.
   the async init once (`apps/slides/src/{main,web}/engine-init.ts` of B4). The
   wasm build step and the CSP are B4's.
 - Hot tiny exports: one render benchmark at the batch end; a function whose wasm
-  route makes it more than 5% slower stays TypeScript only, its Rust copy is
-  deleted, and the ledger gets a row with the numbers.
+  route makes it more than 5% slower stays TypeScript only, and the ledger gets
+  a row with the numbers. Its Rust copy is deleted unless the engine itself
+  calls it: then it is implemented once per side of the boundary and the gate
+  keeps comparing the two (B4's ledger, crates/docx-engine/B4-PLAN.md, the
+  char-class predicates).
 
 ## What pptx adds: arguments the engine changes
 
@@ -208,6 +211,11 @@ gh workflow run CI --ref feat/rust-pptx-c2             # and seuoffice, "seuoffi
 - Runner render benchmark: crates/pptx-engine/README.md. `elementDurableId`
   measured 7.0% and 5.9% on the org runners (2026-11-14), so it and the three
   `xml-utils` readers it uses stay TypeScript; the other three exports cross.
+  Their Rust copies stay, because the engine calls them: `element_durable_id`
+  from `matches_element_ref` (how every Rust edit finds an element by id) and
+  `group_child_durable_id`; `attribute_of`, `element_range` and `decode_xml`
+  from the parsers and writers (56, 16 and 12 call sites). The gate still
+  compares each with the reference.
   Gate 0 differences, 317/317 faults caught (seuoffice rust 43470998643).
 - The codec shaped a union by its first member: a chart in a group lost the
   holes of its point arrays to null. Unions now merge, model types are `ref`s
