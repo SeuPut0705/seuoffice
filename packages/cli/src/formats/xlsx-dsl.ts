@@ -1,5 +1,6 @@
 import {
   columnIndex,
+  formatAddress,
   parseAddress,
   parseRange,
   rangeAddresses,
@@ -51,7 +52,8 @@ import type { PathContext } from '../fs'
 import { classifyOpError } from '../op-errors'
 import { CliError, EXIT, type ErrorHints, type ErrorReason } from '../result'
 import { didYouMean, sheetNotFoundHints } from '../suggest'
-import { computedValues } from './xlsx'
+import { computedValues, withheldCellsIn } from './xlsx'
+import { withheldAreasOf, withheldRefusal } from './xlsx-redact-guard'
 
 const OP_REJECTED: ErrorHints = {
   reason: 'op_rejected',
@@ -276,6 +278,7 @@ export async function runWorkbookDsl(
   // one plan per op, applied before the next is planned: sort_range / find_replace
   // expand against the workbook as the previous ops left it, not the file's snapshot,
   // and a sheet added or renamed by an earlier op is addressable by the ops after it
+  const areas = await withheldAreasOf(source, snapshot.sheets, meta.definedNames)
   const ops: NormalizedOp[] = []
   const plans: ChangePlan[] = []
   const formatChanges: { position: number; change: ChangePlan['formatChanges'][number] }[] = []
@@ -286,6 +289,23 @@ export async function runWorkbookDsl(
     // sheet is a name too, so it follows a sheet recreated under it
     const fallbackId = fallback ? (live.get(fallback) ?? idByName.get(fallback)) : undefined
     const normalized = normalizeOp(raw, index, new Map([...idByName, ...live]), fallbackId)
+    // an op that would read, overwrite or move a cell hidden from AI never runs
+    const refused = areas
+      ? withheldRefusal(
+          normalized,
+          areas,
+          (id) => imported.sheetNamesById[id],
+          (name) => live.get(name) ?? idByName.get(name),
+        )
+      : null
+    if (refused !== null) {
+      throw new CliError(
+        EXIT.usage,
+        `ops[${index}] (${normalized.op}) rejected: ${refused}`,
+        pinned(index, normalized.op, refused),
+        { reason: 'op_rejected', suggestion: 'leave the cell hidden from AI out of the batch' },
+      )
+    }
     // convert_to_values expands into several ops that all pin the caller's index
     const expanded =
       normalized.op === 'convert_to_values'
@@ -1161,4 +1181,41 @@ function describeError(err: unknown): string {
     return issues.map((i) => `${i.path.join('.') || 'batch'}: ${i.message}`).join('; ')
   }
   return err instanceof Error ? err.message : String(err)
+}
+
+/**
+ * `sheet apply --cells` writes cells without the DSL; each one that would write
+ * into a cell hidden from AI, or compute from one, refuses the whole call.
+ */
+export async function refuseWithheldCellEdits(
+  source: Buffer,
+  edits: readonly CellEdit[],
+): Promise<void> {
+  // the common case reads nothing more of the workbook
+  if ((await withheldCellsIn(source)) === null) return
+  const { snapshot } = await readBasicWorkbook(source)
+  const meta = await readWorkbookMeta(source)
+  const sheets = snapshot.sheets.map((sheet) => ({ ...sheet, id: sheet.name }))
+  const areas = await withheldAreasOf(source, sheets, meta.definedNames)
+  if (areas === null) return
+  for (const [index, edit] of edits.entries()) {
+    if (!edit.writeValue) continue
+    const address = formatAddress(edit.row, edit.column)
+    const op =
+      edit.cell.formula === undefined
+        ? { op: 'set_cell', sheetId: edit.sheetName, address, value: edit.cell.value }
+        : { op: 'set_formula', sheetId: edit.sheetName, address, formula: edit.cell.formula }
+    const refused = withheldRefusal(
+      op,
+      areas,
+      (id) => id,
+      (name) => name,
+    )
+    if (refused !== null) {
+      throw new CliError(EXIT.usage, `cells[${index}] rejected: ${refused}`, undefined, {
+        reason: 'op_rejected',
+        suggestion: 'leave the cell hidden from AI out of the call',
+      })
+    }
+  }
 }

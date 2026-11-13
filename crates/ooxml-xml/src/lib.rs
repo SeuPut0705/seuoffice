@@ -11,5 +11,5 @@ mod utf16;
 
 pub use object::{EntityDecoder, ObjectOptions, parse_object, parse_object_with};
 pub use ordered::{ParseError, XElement, XNode, parse_ordered, serialize, serialize_element};
-pub use tag::{Tag, opaque_end, tag_at};
+pub use tag::{Tag, mask_opaque, opaque_end, tag_at};
 pub use utf16::{Utf16Index, Utf16Map};

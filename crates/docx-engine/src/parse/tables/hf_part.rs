@@ -12,7 +12,7 @@ use super::hf_fields::{
 };
 use super::hf_images::{hf_images, hf_table_media};
 use super::hf_paras::hf_paragraphs;
-use crate::model::{HfImage, HfParagraph, HfPartInfo, PictureWatermarkInfo};
+use crate::model::{HfImage, HfParagraph, HfPartInfo, PictureWatermarkInfo, SharedStr};
 use crate::package::{RelInfo, Thrown, part_text, resolve_relationship_target_path};
 use crate::parse::drawings::host::MediaEnv;
 use crate::parse::text::bridge;
@@ -53,7 +53,7 @@ pub fn hf_content_from_xml(
     kind: HfKind,
     zip: &Package,
     resolver: &Rc<ResolveCtx>,
-    table_media: Option<&JsMap<String>>,
+    table_media: Option<&JsMap<SharedStr>>,
     compatibility_mode: f64,
     media: &MediaEnv<'_>,
 ) -> Result<HfContent, Thrown> {
@@ -86,10 +86,7 @@ pub fn hf_content_from_xml(
                 continue;
             }
             out.push_str(&cleaned[pos..field.start]);
-            out.push_str(
-                &render_field(&cleaned, field, &tree, &mut page)
-                    .map_err(|limit| limit.to_string())?,
-            );
+            out.push_str(&render_field(&cleaned, field, &tree, &mut page, 0)?);
             pos = field.end as usize;
         }
         out.push_str(&cleaned[pos..]);

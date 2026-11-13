@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { parseDocx } from './reference/parse'
 import type { ParsedDocFull } from './reference/patch'
 import { failGate, gateHasFailed, repoRoot, reportComparisons } from './harness'
+import { buildModelBody, MODEL_BODIES } from './model-bodies'
 import { corpusDocuments, requireModelNode } from './model-inputs'
 import { modelAfterCorpus, modelOnDocument, reportModel } from './model-run'
 import { parseOnDocument, reportParse } from './model-parse'
@@ -25,6 +26,11 @@ for (const path of corpusDocuments()) {
   modelOnDocument(path, doc)
   parseOnDocument(path, new Uint8Array(bytes), doc)
   await saveOnDocument(path, new Uint8Array(bytes), doc as ParsedDocFull)
+}
+// the documents built to reach what the corpus does not cross the whole Rust parser as well
+for (const { name, ...options } of MODEL_BODIES) {
+  const bytes = await buildModelBody(options)
+  parseOnDocument(`model body ${name}`, bytes, await parseDocx(bytes))
 }
 console.log(`Model corpus: ${corpusDocuments().length} documents, ${encrypted.length} encrypted skipped, ${refused.length} parser refusals`)
 for (const refusal of refused) console.log(`  ${refusal.where}: ${refusal.error}`)

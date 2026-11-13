@@ -545,7 +545,7 @@ pub fn raw_elements(xml: &str, skip_non_elements: bool) -> Result<RawTree, Regex
 fn element_children(node: &XNode) -> Vec<&XNode> {
     node.children()
         .iter()
-        .filter(|child| child.name().is_some())
+        .filter(|child| matches!(child, XNode::Element(_)))
         .collect()
 }
 

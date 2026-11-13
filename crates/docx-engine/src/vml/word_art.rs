@@ -16,7 +16,7 @@ fn num_truthy(n: Option<f64>) -> Option<f64> {
 /// `{ runs: [run], align: 'center' }`
 fn centered_para(run: Run) -> TextboxParaDisplay {
     let mut para = TextboxParaDisplay {
-        runs: vec![run],
+        runs: jscompat::Slot::of(vec![run]),
         ..TextboxParaDisplay::default()
     };
     para.para_format.align.set(ParaAlign::Center);

@@ -41,7 +41,9 @@ pub fn resolver_of<'a>(ctx: &'a BuildContext<'_>) -> &'a ResolveCtx {
     &ctx.resolver
 }
 
-/// `cellResolverOf`: the document resolver scoped to a table's cells.
+/// `cellResolverOf`: the document resolver scoped to a table's cells. The
+/// style and numbering definitions stay shared with the document's: only the
+/// table conditions are the cell's own.
 pub fn cell_resolver_of(
     ctx: &BuildContext<'_>,
     table_style_id: Option<&str>,

@@ -1,4 +1,5 @@
 import { placeholderSource } from './redact'
+import { ownLinesOf } from './redact-view'
 import type { RenderNode, RenderSlide } from '@seuoffice/pptx-render'
 
 /**
@@ -51,6 +52,7 @@ const CONTENT_OPS = new Set([
   'insertEquation',
   'pasteElements',
   'setShapeCustomGeometry',
+  'setChart',
 ])
 
 /** Ops that drop a whole page, and so any span on it. */
@@ -62,7 +64,7 @@ const PAGE_DELETE_OPS = new Set(['deleteSlide'])
  * or ungrouping it would take its withheld descendants with it.
  */
 function labelOf(node: RenderNode): string | null {
-  if (node.type === 'picture') return node.redact ?? null
+  if (node.type === 'picture' || node.type === 'chart') return node.redact ?? null
   if (node.type === 'group') {
     for (const child of node.children) {
       const hit = labelOf(child)
@@ -70,20 +72,36 @@ function labelOf(node: RenderNode): string | null {
     }
     return null
   }
-  if (node.type !== 'shape' && node.type !== 'text') return null
-  for (const line of node.text?.lines ?? []) {
+  for (const line of ownLinesOf(node)) {
     for (const run of line.runs) if (run.redact) return run.redact
   }
   return null
 }
 
-/** The node an op addresses, or null. */
+/** The `s_<n>` id a slide is addressed by, from its part path (the deck engine's own rule). */
+function durableSlideId(slide: RenderSlide): string | null {
+  const n = /slide(\d+)\.xml$/.exec(slide.partPath ?? '')
+  return n ? `s_${n[1]}` : null
+}
+
+/**
+ * The slide an op addresses, the way the executor reads it: `target.slide`, a
+ * 0-based index or the durable `s_<n>`. A bare `slideIndex` is read too.
+ */
+function slideOf(op: Record<string, unknown>, slides: RenderSlide[]): RenderSlide | undefined {
+  const ref = (op.target as { slide?: unknown } | undefined)?.slide ?? op.slideIndex
+  if (typeof ref === 'number') return slides[ref]
+  if (typeof ref === 'string') return slides.find((s) => durableSlideId(s) === ref)
+  return undefined
+}
+
+/** The node an op addresses, or null: by the id the model reads in the outline (durable) or the source id. */
 function targetOf(op: Record<string, unknown>, slide: RenderSlide | undefined): RenderNode | null {
   const id = op.elementId ?? (op.target as { el?: unknown } | undefined)?.el
   if (typeof id !== 'string' || !slide) return null
   const walk = (nodes: RenderNode[]): RenderNode | null => {
     for (const n of nodes) {
-      if (n.id === id || n.sourceId === id) return n
+      if (n.id === id || n.sourceId === id || n.durableId === id) return n
       if (n.type === 'group') {
         const hit = walk(n.children)
         if (hit) return hit
@@ -112,11 +130,6 @@ function withheldOnSlide(slide: RenderSlide | undefined): string | null {
   return walk(slide.nodes)
 }
 
-function pageOf(slideIndex: unknown, slides: RenderSlide[]): RenderSlide | undefined {
-  if (typeof slideIndex === 'number') return slides[slideIndex]
-  return undefined
-}
-
 /**
  * Check one op. Returns null when it may proceed, or a failure to hand back.
  *
@@ -138,7 +151,7 @@ export function redactGuardFor(
     // anything with a capital letter — which silently under-refuses.
     const caseSensitive = op.matchCase === true
     const needle = caseSensitive ? find : find.toLowerCase()
-    // matching is per run, so a hit inside a withheld run is exactly the damage
+    // a hit inside a withheld run is exactly the damage
     const walk = (nodes: RenderNode[]): string | null => {
       for (const n of nodes) {
         if (n.type === 'group') {
@@ -147,13 +160,19 @@ export function redactGuardFor(
           continue
         }
         if (n.type === 'picture' && n.redact) return n.redact
-        if (n.type !== 'shape' && n.type !== 'text') continue
-        for (const line of n.text?.lines ?? []) {
+        // a withheld run is laid out as one token per word and per wrapped piece, so a needle that
+        // spans pieces of one run has to be looked for in the node's withheld text as a whole
+        let withheld = ''
+        let label: string | undefined
+        for (const line of ownLinesOf(n)) {
           for (const run of line.runs) {
             if (!run.redact) continue
-            const hay = caseSensitive ? run.text : run.text.toLowerCase()
-            if (hay.includes(needle)) return run.redact
+            withheld += run.text
+            label ??= run.redact
           }
+        }
+        if (label && (caseSensitive ? withheld : withheld.toLowerCase()).includes(needle)) {
+          return label
         }
       }
       return null
@@ -174,7 +193,7 @@ export function redactGuardFor(
   }
 
   if (PAGE_DELETE_OPS.has(name)) {
-    const label = withheldOnSlide(pageOf(op.slideIndex, slides))
+    const label = withheldOnSlide(slideOf(op, slides))
     if (label) {
       return {
         label,
@@ -185,7 +204,7 @@ export function redactGuardFor(
   }
 
   if (CONTENT_OPS.has(name)) {
-    const label = labelOf(targetOf(op, pageOf(op.slideIndex, slides)) ?? ({} as RenderNode))
+    const label = labelOf(targetOf(op, slideOf(op, slides)) ?? ({} as RenderNode))
     if (label) {
       return {
         label,

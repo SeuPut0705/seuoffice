@@ -16,6 +16,12 @@ import {
   type DocxToOdtResult,
   type ReportFeature,
 } from '@seuoffice/odt-engine'
+import {
+  markedOdtBox,
+  markedOdtChoice,
+  type MarkedOdtBox,
+  type MarkedOdtChoice,
+} from '@seuoffice/electron-utils/marked-odt'
 import type { MessageBoxOptions } from 'electron'
 
 export type OdtExportOutcome =
@@ -97,6 +103,30 @@ export async function confirmOdtReport(
   return response === 0
 }
 
+/** The choice box for a document with content hidden from AI (one box, the two ways out). */
+export async function askMarkedOdt(
+  show: (options: MarkedOdtBox) => Promise<{ response: number }>,
+  lang: Lang = getUiLang(),
+): Promise<MarkedOdtChoice> {
+  const t = (key: OdtKey) => tOdt(lang, key)
+  const { response } = await show(
+    markedOdtBox({
+      title: t('markedTitle'),
+      message: t('markedMessage'),
+      detail: t('markedDetail'),
+      saveDocx: t('markedDocx'),
+      clearMarks: t('markedClear'),
+      cancel: t('odtCancel'),
+    }),
+  )
+  return markedOdtChoice(response)
+}
+
+/** Why a headless export of a marked document writes nothing. */
+export function markedOdtRefusal(lang: Lang = getUiLang()): string {
+  return tOdt(lang, 'markedRefused')
+}
+
 /** Name of the save-dialog filter for `.odt` */
 export function odtFilterName(lang: Lang = getUiLang()): string {
   return tOdt(lang, 'filterOdt')
@@ -134,6 +164,12 @@ const tOdt = createI18n({
     odtLeftOut: 'What is left out',
     odtSave: 'Save',
     odtCancel: 'Cancel',
+    markedTitle: 'Content hidden from AI',
+    markedMessage: 'This document has content hidden from AI, and an ODT file cannot keep that.',
+    markedDetail:
+      'Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, which keeps the hiding, or clear the marks for the ODT copy. This document keeps its marks either way.',
+    markedDocx: 'Export as Word (.docx)',
+    markedClear: 'Clear marks and export as ODT',
     markedRefused:
       'this document has content hidden from AI, and an ODT file cannot keep that; export it as Word, or clear the marks first',
     featToc: 'Table of contents',
@@ -165,6 +201,12 @@ const tOdt = createI18n({
     odtLeftOut: '빠지는 것',
     odtSave: '저장',
     odtCancel: '취소',
+    markedTitle: 'AI에게 숨긴 내용',
+    markedMessage: '이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.',
+    markedDetail:
+      'ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 숨김이 유지되는 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.',
+    markedDocx: 'Word(.docx)로 내보내기',
+    markedClear: '표시 지우고 ODT로 내보내기',
     markedRefused:
       '이 문서에는 AI에게 숨긴 내용이 있어 ODT 파일에 담을 수 없습니다. Word로 내보내거나 표시를 먼저 지우세요',
     featToc: '목차',

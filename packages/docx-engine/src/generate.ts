@@ -138,54 +138,6 @@ export function patchFieldParagraphXml(xml: string, patch: FieldTextPatch): stri
 export function patchMathTokens(xml: string, tokens: readonly string[]): string {
   return invoke('patchMathTokens', [xml, tokens]) as never
 }
-// ---- table cell text patching ----
-
-/** top-level segments of `tag` between [from, to), depth-aware for nesting */
-export function xmlSegments(
-  xml: string,
-  tag: string,
-  from: number,
-  to: number,
-): Array<{ start: number; end: number }> {
-  const openPrefix = '<' + tag
-  const closeTag = '</' + tag + '>'
-  const segs: Array<{ start: number; end: number }> = []
-  let depth = 0
-  let segStart = -1
-  let i = from
-  while (i < to) {
-    const o = xml.indexOf(openPrefix, i)
-    const c = xml.indexOf(closeTag, i)
-    const hasOpen = o !== -1 && o < to
-    const hasClose = c !== -1 && c < to
-    // a trailing self-closing element (Word's empty <w:p/>) has no close tag after it
-    if (!hasOpen && !hasClose) break
-    if (hasOpen && (!hasClose || o < c)) {
-      const after = xml.charAt(o + openPrefix.length)
-      if (after !== '>' && after !== ' ' && after !== '/') {
-        i = o + openPrefix.length // prefix of a longer tag (w:tr vs w:trPr)
-        continue
-      }
-      const gt = xml.indexOf('>', o)
-      if (gt !== -1 && xml.charAt(gt - 1) === '/') {
-        if (depth === 0) segs.push({ start: o, end: gt + 1 }) // self-closing
-        i = gt + 1
-        continue
-      }
-      if (depth === 0) segStart = o
-      depth++
-      i = o + openPrefix.length
-    } else if (depth === 0) {
-      break
-    } else {
-      depth--
-      if (depth === 0) segs.push({ start: segStart, end: c + closeTag.length })
-      if (depth < 0) break
-      i = c + closeTag.length
-    }
-  }
-  return segs
-}
 /** one cell paragraph: control-char text (legacy first-run-rPr rebuild), rich runs, or null = keep the original paragraph bytes */
 export type CellParaPatch =
   | string

@@ -74,8 +74,12 @@ interface WithheldSpan {
 function modelPieces(runs: Run[]): Array<Run | WithheldSpan> {
   const pieces: Array<Run | WithheldSpan> = []
   let label: string | null = null
-  for (const run of runs) {
-    if (run.del) continue
+  for (const source of runs) {
+    if (source.del) continue
+    // a picture is no part of the text flow: hfPictureRuns gives it back on its own side of the
+    // text, so a span holding it as well would write the hidden picture twice
+    if (source.image && source.text === '') continue
+    const { image: _image, ...run } = source
     const mine = withheldLabelOf(run.rawRPr)
     const last = pieces[pieces.length - 1]
     if (mine !== null && mine === label && last && 'marker' in last) last.runs.push(run)

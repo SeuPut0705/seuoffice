@@ -1,36 +1,70 @@
 //! Run-level content controls and Zotero fields across paragraphs.
 
-use jscompat::{RegexLimit, js_regex, trim};
+use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+
+use jscompat::{js_regex, trim};
+use ooxml_xml::XNode;
 use serde::Serialize;
 
 use crate::model::{InlineContentControl, RunZoteroFieldPart};
 use crate::props::zotero_inline_field;
 use crate::scan::BodyElement;
-use crate::sdt::{sdt_meta, sdt_ranges};
-use crate::xml_text::{decode_entities, plain_text};
+use crate::withheld::{parse_entry, runs_text, withheld_text};
+use crate::xml_text::{decode_entities, decode_numeric_char_refs};
 
 /// `inlineContentControlsOf`: the run-level content controls of a
-/// paragraph, read only; a w:sdt holding a paragraph or a table is a block
-/// container and not one of them.
-pub fn inline_content_controls_of(xml: &str) -> Result<Vec<InlineContentControl>, RegexLimit> {
+/// paragraph, read only, as the parser finds them (outermost first; markup
+/// inside CDATA is text, not a control); a w:sdt holding a paragraph or a table
+/// is a block container and not one of them.
+pub fn inline_content_controls_of(xml: &str) -> Vec<InlineContentControl> {
+    let Some(paragraph) = parse_entry(xml) else {
+        return Vec::new();
+    };
     let mut out = Vec::new();
-    for range in sdt_ranges(xml)? {
-        // `xml.slice`: empty where the range is reversed
-        let content = xml.get(range.open_end..range.close_start).unwrap_or("");
-        if js_regex!(r"<w:p[\s/>]|<w:tbl[\s>]").test(content) {
-            continue;
+    visit_controls(&paragraph, &mut out);
+    out
+}
+
+fn visit_controls(node: &XNode, out: &mut Vec<InlineContentControl>) {
+    let val_of = |sdt_pr: Option<&XNode>, name: &str| -> String {
+        sdt_pr
+            .and_then(|sdt_pr| sdt_pr.find_child(name))
+            .and_then(|child| child.attr("w:val"))
+            .unwrap_or("")
+            .to_owned()
+    };
+    for child in node.children() {
+        if child.name() == Some("w:sdt")
+            && let Some(content) = child.find_child("w:sdtContent")
+            // a w:sdt holding a paragraph or a table is a block container, not a
+            // run-level control; the body/split paths already report those
+            && !holds_block(content)
+        {
+            let sdt_pr = child.find_child("w:sdtPr");
+            out.push(InlineContentControl {
+                tag: val_of(sdt_pr, "w:tag"),
+                title: val_of(sdt_pr, "w:alias"),
+                lock: val_of(sdt_pr, "w:lock"),
+                id: val_of(sdt_pr, "w:id"),
+                text: control_text(content),
+                model_text: withheld_text(content, &control_text),
+            });
         }
-        let meta = sdt_meta(xml.get(range.open_start..range.close_end).unwrap_or(""));
-        out.push(InlineContentControl {
-            tag: meta.tag,
-            title: meta.alias,
-            lock: meta.lock,
-            id: meta.id,
-            text: plain_text(content),
-            model_text: None,
-        });
+        visit_controls(child, out);
     }
-    Ok(out)
+}
+
+/// `controlText`: an inline control's text, character references decoded as the body's are.
+fn control_text(content: &XNode) -> String {
+    decode_numeric_char_refs(&runs_text(content)).into_owned()
+}
+
+/// `holdsBlock`: whether a subtree holds a paragraph or a table.
+fn holds_block(node: &XNode) -> bool {
+    node.children()
+        .iter()
+        .any(|child| matches!(child.name(), Some("w:p" | "w:tbl")) || holds_block(child))
 }
 
 /// `ZoteroFieldParagraph`: a paragraph's place in a Zotero field that spans
@@ -49,14 +83,49 @@ struct OpenField {
     paragraph_starts: Vec<usize>,
 }
 
+/// The `Map<number, ZoteroFieldParagraph>` of `crossParagraphZoteroFields`:
+/// the entries in the order a `Map` keeps them (as a slice), and a lookup by
+/// the start of a paragraph.
+#[derive(Debug, Default)]
+pub struct ZoteroFields {
+    entries: Vec<(usize, ZoteroFieldParagraph)>,
+    /// the place in `entries` of each start
+    at: HashMap<usize, usize>,
+}
+
+impl ZoteroFields {
+    /// `map.get(start)`
+    pub fn get(&self, start: usize) -> Option<&ZoteroFieldParagraph> {
+        self.at.get(&start).map(|&index| &self.entries[index].1)
+    }
+
+    /// `map.set(start, field)`: a key set again keeps its place.
+    fn set(&mut self, start: usize, field: ZoteroFieldParagraph) {
+        match self.at.get(&start) {
+            Some(&index) => self.entries[index].1 = field,
+            None => {
+                self.at.insert(start, self.entries.len());
+                self.entries.push((start, field));
+            }
+        }
+    }
+}
+
+impl Deref for ZoteroFields {
+    type Target = [(usize, ZoteroFieldParagraph)];
+
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
+}
+
 /// `crossParagraphZoteroFields`: the complex Zotero fields whose cached
-/// result crosses top-level paragraphs, by the start of each paragraph, in
-/// the order a `Map` keeps them.
+/// result crosses top-level paragraphs, by the start of each paragraph.
 pub fn cross_paragraph_zotero_fields(
     body_elements: &[BodyElement<'_>],
     document_xml: &str,
-) -> Vec<(usize, ZoteroFieldParagraph)> {
-    let mut result: Vec<(usize, ZoteroFieldParagraph)> = Vec::new();
+) -> ZoteroFields {
+    let mut result = ZoteroFields::default();
     let mut next_id = 1;
     let mut active: Option<OpenField> = None;
     let token_re = js_regex!(
@@ -99,12 +168,13 @@ pub fn cross_paragraph_zotero_fields(
                     open.depth -= 1;
                     if open.depth == 0 {
                         // `[...new Set(starts)]`
-                        let mut paragraphs: Vec<usize> = Vec::new();
-                        for start in &open.paragraph_starts {
-                            if !paragraphs.contains(start) {
-                                paragraphs.push(*start);
-                            }
-                        }
+                        let mut seen: HashSet<usize> = HashSet::new();
+                        let paragraphs: Vec<usize> = open
+                            .paragraph_starts
+                            .iter()
+                            .copied()
+                            .filter(|start| seen.insert(*start))
+                            .collect();
                         let instruction = trim(&open.instruction).to_owned();
                         if paragraphs.len() > 1 && zotero_inline_field().test(&instruction) {
                             let id = next_id;
@@ -123,11 +193,7 @@ pub fn cross_paragraph_zotero_fields(
                                     instruction: instruction.clone(),
                                     part,
                                 };
-                                // `result.set(start, ...)`: a key set again keeps its place
-                                match result.iter_mut().find(|(key, _)| *key == start) {
-                                    Some((_, value)) => *value = field,
-                                    None => result.push((start, field)),
-                                }
+                                result.set(start, field);
                             }
                         }
                         active = None;
@@ -141,16 +207,12 @@ pub fn cross_paragraph_zotero_fields(
 }
 
 /// `attachInlineContentControls`: attach the inline controls of a paragraph block, when it has any.
-pub fn attach_inline_content_controls(
-    block: &mut crate::model::Block,
-    xml: &str,
-) -> Result<(), RegexLimit> {
+pub fn attach_inline_content_controls(block: &mut crate::model::Block, xml: &str) {
     if block.inline_content_controls.is_some() || !js_regex!(r"^<w:p[\s/>]").test(xml) {
-        return Ok(());
+        return;
     }
-    let inline = inline_content_controls_of(xml)?;
+    let inline = inline_content_controls_of(xml);
     if !inline.is_empty() {
         block.inline_content_controls.set(inline);
     }
-    Ok(())
 }

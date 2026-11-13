@@ -652,6 +652,22 @@ const RPRS: string[] = [
   '<w:rPr z="1" a="2" 10="3" 2="4"><w:b/></w:rPr>',
 ]
 
+/** Controls whose tags a comment, CDATA or a processing instruction fakes or hides. */
+const MASKED_SDTS: string[] = [
+  '<w:p><w:sdt><w:sdtContent><w:r><w:t>a</w:t></w:r></w:sdtContent></w:sdt></w:p>',
+  '<w:p><!-- <w:sdt><w:sdtContent></w:sdtContent></w:sdt> --><w:sdt><w:sdtContent><w:r><w:t>real</w:t></w:r></w:sdtContent></w:sdt></w:p>',
+  '<w:p><w:sdt><w:sdtContent><w:r><w:t><![CDATA[</w:sdtContent></w:sdt>]]></w:t></w:r></w:sdtContent></w:sdt></w:p>',
+  '<w:p><w:sdt><w:sdtPr><w:tag w:val="a"/></w:sdtPr><w:sdtContent><?pi </w:sdtContent> ?><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt></w:p>',
+  '<w:p><w:sdt><w:sdtContent><!-- </w:sdt> --><w:sdt><w:sdtContent><w:r/></w:sdtContent></w:sdt></w:sdtContent></w:sdt></w:p>',
+  '<w:p><w:sdt a="<!-- x -->"><w:sdtContent/></w:sdt><!--></w:sdt>--><w:sdt><w:sdtContent></w:sdtContent></w:sdt></w:p>',
+  '<w:p><!-- never closed <w:sdt><w:sdtContent></w:sdtContent></w:sdt></w:p>',
+  '<w:p><![CDATA[ never closed <w:sdt><w:sdtContent></w:sdtContent></w:sdt></w:p>',
+  '<w:p><?pi never closed <w:sdt><w:sdtContent></w:sdtContent></w:sdt></w:p>',
+  '<w:p><!--a--><!--b--><w:sdt><w:sdtContent></w:sdtContent></w:sdt><![CDATA[c]]><?d e?></w:p>',
+  '<w:p>\u{1F600}<!-- \u{1F600} --><w:sdt><w:sdtContent><w:r><w:t>\u{e9}</w:t></w:r></w:sdtContent></w:sdt>\u{1F600}<![CDATA[\u{1F601}]]></w:p>',
+  '<w:p><w:sdt><w:sdtContent><w:r><w:t>a</w:t></w:r><w:sdt><w:sdtContent><!--</w:sdtContent>--></w:sdtContent></w:sdt></w:sdtContent></w:sdt></w:p>',
+]
+
 // ---------------------------------------------------------------- the specs
 
 /** A node with its attributes as entries: their order is part of the node (serializeXNode). */
@@ -801,7 +817,7 @@ export const FIELDS: CallSpec[] = [
     fn: 'fields.sdtRanges',
     call: (text) => sdtRanges(text),
     fromDocument: (parts) => texts([...collect(parts).bodies, ...collect(parts).sdts]),
-    built: texts([...SDTS, ...BODIES]),
+    built: texts([...SDTS, ...BODIES, ...MASKED_SDTS]),
   },
   {
     fn: 'fields.parseSdtBlock',

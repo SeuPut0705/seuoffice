@@ -1,6 +1,6 @@
 // Group `section`: the readers of section.ts, watermark.ts and notes.ts, and
 // the parse-vml.ts helpers the watermark readers stand on.
-import { nextNoteId, parseNotesXml, rootAttributes } from './reference/notes'
+import { nextNoteId, noteModelText, parseNotesXml, rootAttributes } from './reference/notes'
 import {
   anchorRelH,
   anchorRelV,
@@ -45,6 +45,7 @@ import {
 } from './reference/watermark'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
+import { NOTE_PARTS } from './withheld-inputs'
 
 type NoteKind = 'footnote' | 'endnote'
 type NotePrTag = 'w:footnotePr' | 'w:endnotePr'
@@ -704,7 +705,32 @@ const NOTES_TEXTS: Array<[NoteKind, string]> = [
   ['footnote', NOTES_PART('footnote', '<w:footnote w:id="-3"><w:p/></w:footnote>')],
 ]
 
-const NOTE_INPUTS: Input[] = NOTES_TEXTS.map(([kind, text]) => ({ text, args: { kind } }))
+const NOTE_INPUTS: Input[] = [
+  ...NOTES_TEXTS.map(([kind, text]) => ({ text, args: { kind } })),
+  // hidden from AI: every spelling of the mark, every tag mutation, entries no run accounts for
+  ...NOTE_PARTS.flatMap((text) =>
+    (['footnote', 'endnote'] as const).map((kind) => ({
+      text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
+      args: { kind },
+    })),
+  ),
+]
+
+const DELETED = { author: 'Ann', date: '2026-01-01T00:00:00Z' }
+/** Display runs of notes, some hidden from AI under a label. */
+const RICH_PARAS: Array<Array<Array<Record<string, unknown>>>> = [
+  [],
+  [[]],
+  [[{ text: 'plain' }]],
+  [[{ text: 'a' }, { text: '1', redact: 'phone' }, { text: '2', redact: 'phone' }, { text: 'b' }, { text: 'x', redact: 'name' }, { text: 'y', redact: 'phone' }]],
+  [[{ text: 'a', redact: 'p' }], [{ text: 'b' }], [{ text: 'c', redact: 'q' }, { text: 'd', redact: 'q' }]],
+  [[{ text: 'gone', redact: 'p', del: DELETED }, { text: 'kept' }]],
+  [[{ text: 'a', redact: 'p', del: DELETED }, { text: 'b', redact: 'p' }, { text: 'c', del: DELETED }]],
+  [[{ text: 'a', redact: '' }, { text: 'b', redact: '{braces} <x> "q"' }, { text: 'c', redact: 'a'.repeat(50) }]],
+  [[{ text: 'a', redact: 'p', ins: { author: 'Bob' } }], [{ text: '', redact: 'p' }]],
+  [[{ text: 'a', redact: 'p' }, { text: 'b', del: DELETED, redact: 'q' }, { text: 'c', redact: 'p' }]],
+  [[{ text: '\u{1F600}', redact: '\u{1F600}'.repeat(25) }, { text: 'e', redact: 'e\u0301' }]],
+]
 
 const notePartsOf = (parts: ReadonlyMap<string, string>): Input[] =>
   (['footnote', 'endnote'] as const).flatMap((kind) => {
@@ -1072,6 +1098,13 @@ export const SECTION: CallSpec[] = [
     call: (text, args) => parseNotesXml(text, args.kind as NoteKind),
     fromDocument: notePartsOf,
     built: NOTE_INPUTS,
+  },
+  {
+    fn: 'section.noteModelText',
+    call: (_text, args) => noteModelText(args.richParas as Parameters<typeof noteModelText>[0]),
+    built: RICH_PARAS.map((richParas) => ({ args: { richParas } })),
+    mutation: 'none',
+    argMutation: true,
   },
   {
     fn: 'section.nextNoteId',

@@ -287,6 +287,19 @@ export async function convertLegacyWorkbook(
  * names every dropped feature; the caller reports the non-zero ones.
  */
 export async function convertToOds(path: string, targetPath: string): Promise<OdsConversionResult> {
+  // the writer copies every cell, cached value, note and chart cache of the file, so a
+  // workbook that withholds cells from AI cannot be handed over as an ODS
+  if (await withheldCellsOf(path)) {
+    throw new CliError(
+      EXIT.conversion,
+      'this workbook has cells hidden from AI, and a .ods file cannot withhold them',
+      undefined,
+      {
+        reason: 'conversion_failed',
+        suggestion: 'convert to csv, which writes the hidden cells as their placeholders',
+      },
+    )
+  }
   return withSidecar((client) => client.convertToOds({ path, targetPath }))
 }
 
@@ -360,6 +373,8 @@ export interface ReadOptions {
   maxRows?: number
   where?: ReadWhere
   stats?: boolean
+  /** filled with the address of every cell given as a placeholder (hidden from AI, or computed from such a cell) */
+  withheldRefs?: Set<string>
 }
 
 export interface MatchedCell {
@@ -467,17 +482,15 @@ function parseRangeChecked(range: string): Bounds {
   }
 }
 
+type Withheld = (sheet: string, ref: string, hasFormula: boolean) => string | null
+
 /**
  * Which cells of a workbook the sheet editor withholds from a model (see
  * file-parse's xlsx reader, which this shares), or null when it withholds
  * none. A file that cannot carry the record withholds nothing; one whose
  * record cannot be read is not read.
  */
-async function withheldCellsOf(
-  path: string,
-): Promise<((sheet: string, ref: string, hasFormula: boolean) => string | null) | null> {
-  if (!/\.xls[xm]$/i.test(path)) return null
-  const bytes = new Uint8Array(await readFile(path))
+export async function withheldCellsIn(bytes: Uint8Array): Promise<Withheld | null> {
   // not a package at all: it carries no record, and the engine rejects it as it always did
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) return null
   try {
@@ -486,6 +499,11 @@ async function withheldCellsOf(
     if (!(err instanceof RedactionMarkError)) throw err
     throw new CliError(EXIT.conversion, err.message, undefined, { reason: 'conversion_failed' })
   }
+}
+
+async function withheldCellsOf(path: string): Promise<Withheld | null> {
+  if (!/\.xls[xm]$/i.test(path)) return null
+  return withheldCellsIn(new Uint8Array(await readFile(path)))
 }
 
 export async function readSheet(path: string, opts: ReadOptions): Promise<SheetRead> {
@@ -540,8 +558,10 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
     // is built from these cells
     if (withheld) {
       for (const c of result.cells) {
-        const marker = withheld(meta.name, `${columnLabel(c.column)}${c.row + 1}`, !!c.formula)
+        const ref = `${columnLabel(c.column)}${c.row + 1}`
+        const marker = withheld(meta.name, ref, !!c.formula)
         if (marker === null) continue
+        opts.withheldRefs?.add(ref)
         c.value = marker
         delete c.formula
       }
@@ -933,6 +953,7 @@ export interface SheetCsv {
  * a wide, sparse used range never needs a dense grid of the whole sheet.
  */
 export async function sheetToCsv(path: string, opts: { sheet?: string }): Promise<SheetCsv> {
+  const withheld = await withheldCellsOf(path)
   return withOpenWorkbook(path, async (client, wb) => {
     const meta = pickSheet(wb, opts.sheet) as SheetMeta
     const styles = wb.styles ?? []
@@ -964,6 +985,13 @@ export async function sheetToCsv(path: string, opts: { sheet?: string }): Promis
         const rowStyles = new Map((r.rows ?? []).map((row) => [row.row, row.styleIndex]))
         const pending: { row: number; column: number }[] = []
         for (const c of r.cells) {
+          // a cell hidden from AI, and one computed from it, is its placeholder: no
+          // value, and no formula left pending for a recalculation to fill in
+          const marker = withheld?.(meta.name, `${columnLabel(c.column)}${c.row + 1}`, !!c.formula)
+          if (marker != null) {
+            grid[c.row - band.startRow]![c.column] = marker
+            continue
+          }
           if (c.formula) formulas++
           if (c.value === undefined || c.value === null) {
             if (c.formula) pending.push({ row: c.row, column: c.column })
@@ -1661,6 +1689,19 @@ export async function breakExternalLinks(
   // --break 1,1 is one link, not two
   const indices = [...new Set(rawIndices)]
   const source = await readFile(path)
+  // a broken link turns its formulas into their cached values; one that computes from
+  // a cell hidden from AI would then hold that cell's figures in a cell nothing withholds
+  if (await withheldCellsIn(new Uint8Array(source))) {
+    throw new CliError(
+      EXIT.conversion,
+      'this workbook has cells hidden from AI, and breaking a link turns formulas into their values',
+      undefined,
+      {
+        reason: 'conversion_failed',
+        suggestion: 'break the links in the SeuOffice app, where the hidden cells stay marked',
+      },
+    )
+  }
   const mutation = await planExternalLinkBreak(await createBufferEntrySource(source), indices)
   const result = await assembleWithJsZip(source, mutation)
   await atomicWriteFile(outputPath, result.buffer)

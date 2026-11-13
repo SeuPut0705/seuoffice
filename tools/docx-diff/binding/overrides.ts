@@ -126,6 +126,10 @@ export const OVERRIDES: Record<string, Override> = {
     reject:
       'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)',
   },
+  findStartTag: {
+    reject:
+      'takes a RegExp (a host object) and answers UTF-16 offsets; the Rust port matches by name and answers UTF-8 offsets for the engine',
+  },
   xmlSegments: {
     reject:
       'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ',
@@ -188,6 +192,31 @@ export const OVERRIDES: Record<string, Override> = {
                 put(docx_engine::notes::parse_notes_xml_with(&xml, kind, &mut read)?)
             }
         }`,
+  },
+  // ---- a node the engine answers: `node_value` writes it as the TypeScript holds it ({ name: [children], ':@': { attr: value } })
+  parseEntry: {
+    rust: `let xml = rstr(args, 0)?;
+        Ok(docx_engine::withheld::parse_entry(xml).as_ref().map(node_value))`,
+  },
+  withheldNode: {
+    rust: `let node = xnode(args, 0)?;
+        Ok(Some(docx_engine::withheld::withheld_node(&node).as_ref().map_or(Value::Null, node_value)))`,
+  },
+  // the reader of the text is the caller's function, called back with the node it is to read
+  withheldText: {
+    args: ['xnodeArg(node)', 'textOf'],
+    callbacks: true,
+    rust: `let node = xnode(args, 0)?;
+        ${CALL_BACK}
+        let text_of = |view: &ooxml_xml::XNode| -> String {
+            match ask("textOf", json!([node_value(view)])) {
+                Value::String(text) => text,
+                other => other.to_string(),
+            }
+        };
+        let read = docx_engine::withheld::withheld_text(&node, &text_of);
+        ${FAILED}
+        put(read)`,
   },
   resolveRunProps: { args: ['xnodeArg(rPr)', 'para.styleId', '!!para.bidi', 'ctx', 'mark'] },
   // ---- an optional TypeScript parameter the Rust port takes as a plain value, or an options object it takes field by field

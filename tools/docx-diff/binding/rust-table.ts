@@ -446,6 +446,31 @@ fn xnode(args: Args<'_>, index: usize) -> Result<ooxml_xml::XNode, String> {
     oxnode(args, index)?.ok_or_else(|| format!("TypeError: argument {index} is missing"))
 }
 
+/// An XNode as the TypeScript holds it: \`{ name: [children], ':@': { attr: value } }\`, a text node as \`{ '#text': text }\`.
+fn node_value(node: &ooxml_xml::XNode) -> Value {
+    let mut object = serde_json::Map::new();
+    match node {
+        ooxml_xml::XNode::Text(text) => {
+            object.insert("#text".to_owned(), Value::String(text.clone()));
+        }
+        ooxml_xml::XNode::Element(element) => {
+            object.insert(
+                element.name.clone(),
+                Value::Array(element.children.iter().map(node_value).collect()),
+            );
+            if !element.attrs.is_empty() {
+                let attrs = element
+                    .attrs
+                    .iter()
+                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                    .collect();
+                object.insert(":@".to_owned(), Value::Object(attrs));
+            }
+        }
+    }
+    Value::Object(object)
+}
+
 fn oxnode(args: Args<'_>, index: usize) -> Result<Option<ooxml_xml::XNode>, String> {
     let Some(xml) = opt::<String>(args, index)? else {
         return Ok(None);

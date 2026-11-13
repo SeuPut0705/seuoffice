@@ -49,6 +49,7 @@ import {
 } from './style-ops'
 import {
   applyRevisionSelection,
+  withheldNote as revisionWithheldNote,
   describePending,
   listRevisionEntries,
   validateSelector,
@@ -909,7 +910,7 @@ function rangeError(editor: Editor): string {
 function imageBlockSource(
   editor: Editor,
   index: unknown,
-): { src: string; label: string | undefined } | null {
+): { src: string; label: string | undefined; hidden: boolean } | null {
   if (!Number.isInteger(index)) return null
   const i = Number(index)
   const doc = editor.state.doc
@@ -918,7 +919,12 @@ function imageBlockSource(
   if (node.type.name !== 'docProtected' || node.attrs.blockType !== 'image') return null
   const src = typeof node.attrs.imageDataUrl === 'string' ? node.attrs.imageDataUrl : ''
   if (!src) return null
-  return { src, label: typeof node.attrs.label === 'string' ? node.attrs.label : undefined }
+  return {
+    src,
+    label: typeof node.attrs.label === 'string' ? node.attrs.label : undefined,
+    // a picture in a run hidden from AI: the bytes never go to a model
+    hidden: typeof node.attrs.redact === 'string',
+  }
 }
 
 function validRange(
@@ -1016,6 +1022,12 @@ async function executeAsyncTool(
         : []
       if (call.input.blockIndex !== undefined) {
         const image = imageBlockSource(editor, call.input.blockIndex)
+        if (image?.hidden) {
+          return fail(
+            t('aiSumAnalyzeMedia'),
+            `block ${String(call.input.blockIndex)} holds a picture the person hid from AI and cannot be analysed here; tell the person what to look at and let them describe it`,
+          )
+        }
         if (!image) {
           return fail(
             t('aiSumAnalyzeMedia'),
@@ -1921,8 +1933,10 @@ function executeSyncTool(
         r.locked.length > 0
           ? ` ${r.locked.length} tracked change(s) (${r.locked.map((e) => e.id).join(', ')}) were left as they are: they would change the text of a content control locked against editing. Do not retry them.`
           : ''
+      const withheldNote =
+        r.withheld.length > 0 ? ` ${revisionWithheldNote(r.withheld)}. Do not retry them.` : ''
       return {
-        output: `${verb} ${applied.length} tracked change(s) (${applied.map((e) => e.id).join(', ')}).${lockedNote} ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
+        output: `${verb} ${applied.length} tracked change(s) (${applied.map((e) => e.id).join(', ')}).${lockedNote}${withheldNote} ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
         mutated: applied.length > 0,
         summary,
       }

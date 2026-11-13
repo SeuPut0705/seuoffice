@@ -190,6 +190,17 @@ mod tests {
     }
 
     #[test]
+    fn mixed_and_repeated_halves() {
+        assert_eq!(decode_xml_entities("&#xD83D;&#56832;"), "\u{1F600}");
+        assert_eq!(decode_xml_entities("a&#xd83d;&#xde00;b"), "a\u{1F600}b");
+        // a lone high half, then a whole pair
+        assert_eq!(
+            decode_xml_entities("&#xD83D;&#xD83D;&#xDE00;"),
+            "\u{FFFD}\u{1F600}"
+        );
+    }
+
+    #[test]
     fn the_hexadecimal_pass_runs_before_the_decimal_one() {
         // &#x26; is "&": the decimal pass then reads the reference it made
         assert_eq!(decode_xml_entities("&#x26;#65;"), "A");

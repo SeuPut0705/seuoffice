@@ -173,15 +173,7 @@ export function editedCommentModelText(markedXml: string, text: string): string 
   // an edit the runs cannot carry is saved with every word hidden under the
   // first label (buildCommentsXml), and reads that way now
   const node = patched === null ? undefined : parseEntry(patched)
-  const modelText = node
-    ? commentModelText(node)
-    : overWithheldModelText(text, firstMarkLabel(markedXml))
-  return modelText === text ? undefined : modelText
-}
-
-/** the model's text of a comment, kept only where it differs from what the comment says */
-function modelTextOf(modelText: string | undefined, text: string): { modelText?: string } {
-  return modelText !== undefined && modelText !== text ? { modelText } : {}
+  return node ? commentModelText(node) : overWithheldModelText(text, firstMarkLabel(markedXml))
 }
 
 /** word/comments.xml (+ reply/resolved relations from commentsExtended) -> display list, file order */
@@ -202,13 +194,14 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
     const paraId = paras.length > 0 ? attrsOf(paras[paras.length - 1])['w14:paraId'] : undefined
     const image = await commentImageOf(zip, node)
     const text = paras.map(runsText).join('\n')
+    const modelText = commentModelText(node)
     out.push({
       id: attrs['w:id'],
       author: attrs['w:author'] ?? '',
       initials: attrs['w:initials'],
       date: attrs['w:date'],
       text,
-      ...modelTextOf(commentModelText(node), text),
+      ...(modelText !== undefined ? { modelText } : {}),
       ...(hasMarkElement(node) && slices.has(attrs['w:id'])
         ? { markedXml: slices.get(attrs['w:id'])! }
         : {}),

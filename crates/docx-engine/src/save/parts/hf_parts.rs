@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use jscompat::{RegexLimit, js_regex, math_round, number_to_string, try_js_regex};
+use jscompat::{RegexLimit, js_regex, math_round, number_to_string};
 
 use super::thrown;
 use crate::generate::props::merge_p_pr_format;
@@ -378,6 +378,26 @@ pub fn header_footer_part_xml(
     original_xml: Option<&str>,
     page_count: f64,
 ) -> Result<String, String> {
+    header_footer_part_xml_within(
+        MAX_SDT_DEPTH,
+        kind,
+        hf,
+        watermark_xml,
+        original_xml,
+        page_count,
+    )
+}
+
+/// `header_footer_part_xml` with the nesting depth of block controls it
+/// follows given (a test passes a small one: the walk is quadratic in depth).
+fn header_footer_part_xml_within(
+    max_sdt_depth: usize,
+    kind: &str,
+    hf: &HeaderFooter,
+    watermark_xml: Option<&str>,
+    original_xml: Option<&str>,
+    page_count: f64,
+) -> Result<String, String> {
     let root = if kind == "header" {
         HfRootName::Hdr
     } else {
@@ -536,6 +556,7 @@ pub fn header_footer_part_xml(
                     &mut tbl_index,
                     xml,
                     &controls,
+                    max_sdt_depth,
                 )?);
             } else {
                 parts.push(xml.clone());
@@ -590,11 +611,15 @@ fn open_of(xml: &str) -> &str {
 
 /// The end tag an element ends with, or "".
 fn close_of(xml: &str) -> &str {
-    try_js_regex!(r"<\/[^>]*>$")
-        .try_exec(xml)
-        .ok()
-        .flatten()
-        .map_or("", |found| found.as_str())
+    // `/<\/[^>]*>$/`, without a scan of the whole part: the match is the last
+    // tag when the part ends with `>`, from the leftmost `</` after the `>`
+    // before it (`[^>]*` cannot cross a `>`). One pass over the part per
+    // nesting level was quadratic in the depth of block controls.
+    let Some(body) = xml.strip_suffix('>') else {
+        return "";
+    };
+    let from = body.rfind('>').map_or(0, |at| at + 1);
+    body[from..].find("</").map_or("", |at| &xml[from + at..])
 }
 
 fn inner_xml(xml: &str) -> &str {
@@ -605,29 +630,176 @@ fn rewrap(xml: &str, children: &[String]) -> String {
     format!("{}{}{}", open_of(xml), children.concat(), close_of(xml))
 }
 
-/// `patchSdt`: a block control's tables patched, through nested controls.
+/// Nested block controls `patch_sdt` follows. The TypeScript recurses and hits
+/// its own stack limit (a RangeError, with no catch around it) at some depth
+/// of thousands; past this bound the engine returns the same error.
+const MAX_SDT_DEPTH: usize = 1000;
+
+type Children = std::vec::IntoIter<(String, String)>;
+
+/// One level of `patch_sdt`'s walk: a control (`Sdt`) or its `w:sdtContent`.
+enum SdtFrame {
+    Sdt {
+        xml: String,
+        done: Vec<String>,
+        rest: Children,
+    },
+    Content {
+        xml: String,
+        inner: Vec<String>,
+        rest: Children,
+    },
+}
+
+fn sdt_frame(xml: String) -> Result<SdtFrame, String> {
+    let rest = split_xml_children(inner_xml(&xml))
+        .map_err(thrown)?
+        .into_iter();
+    Ok(SdtFrame::Sdt {
+        xml,
+        done: Vec::new(),
+        rest,
+    })
+}
+
+/// `patchSdt`: a block control's tables patched, through nested controls. An
+/// explicit stack, not a recursion: a document drives the nesting depth.
 fn patch_sdt(
     writer: &mut HfRuns<'_>,
     paras: &[HfParagraph],
     tbl_index: &mut usize,
     sdt_xml: &str,
     controls: &ContentControlPart,
+    max_depth: usize,
 ) -> Result<String, String> {
-    let mut children: Vec<String> = Vec::new();
-    for (name, xml) in split_xml_children(inner_xml(sdt_xml)).map_err(thrown)? {
-        if name != "w:sdtContent" {
-            children.push(xml);
-            continue;
+    let mut stack: Vec<SdtFrame> = vec![sdt_frame(sdt_xml.to_owned())?];
+    loop {
+        let Some(top) = stack.last_mut() else {
+            unreachable!("the walk returns when the outermost control is finished");
+        };
+        match top {
+            SdtFrame::Sdt { xml, done, rest } => match rest.next() {
+                Some((name, child)) if name == "w:sdtContent" => {
+                    let inner = split_xml_children(inner_xml(&child))
+                        .map_err(thrown)?
+                        .into_iter();
+                    stack.push(SdtFrame::Content {
+                        xml: child,
+                        inner: Vec::new(),
+                        rest: inner,
+                    });
+                }
+                Some((_, child)) => done.push(child),
+                None => {
+                    let result = rewrap(xml, done);
+                    stack.pop();
+                    match stack.last_mut() {
+                        Some(SdtFrame::Content { inner, .. }) => inner.push(result),
+                        _ => return Ok(result),
+                    }
+                }
+            },
+            SdtFrame::Content { xml, inner, rest } => match rest.next() {
+                Some((name, child)) => match name.as_str() {
+                    "w:tbl" => inner.push(patch_table(writer, paras, tbl_index, &child, controls)?),
+                    "w:sdt" => {
+                        if stack.len() >= max_depth * 2 {
+                            return Err("RangeError: Maximum call stack size exceeded".to_owned());
+                        }
+                        stack.push(sdt_frame(child)?);
+                    }
+                    _ => inner.push(child),
+                },
+                None => {
+                    let result = rewrap(xml, inner);
+                    stack.pop();
+                    if let Some(SdtFrame::Sdt { done, .. }) = stack.last_mut() {
+                        done.push(result);
+                    }
+                }
+            },
         }
-        let mut inner: Vec<String> = Vec::new();
-        for (child_name, child_xml) in split_xml_children(inner_xml(&xml)).map_err(thrown)? {
-            inner.push(match child_name.as_str() {
-                "w:tbl" => patch_table(writer, paras, tbl_index, &child_xml, controls)?,
-                "w:sdt" => patch_sdt(writer, paras, tbl_index, &child_xml, controls)?,
-                _ => child_xml,
-            });
-        }
-        children.push(rewrap(&xml, &inner));
     }
-    Ok(rewrap(sdt_xml, &children))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn nested_header(depth: usize) -> String {
+        let mut xml = String::from(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:hdr \
+             xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
+        );
+        for _ in 0..depth {
+            xml.push_str("<w:sdt><w:sdtPr/><w:sdtContent>");
+        }
+        xml.push_str("<w:p><w:r><w:t>x</w:t></w:r></w:p>");
+        for _ in 0..depth {
+            xml.push_str("</w:sdtContent></w:sdt>");
+        }
+        xml.push_str("</w:hdr>");
+        xml
+    }
+
+    fn run(max_depth: usize, depth: usize) -> Result<String, String> {
+        header_footer_part_xml_within(
+            max_depth,
+            "header",
+            &HeaderFooter::default(),
+            None,
+            Some(&nested_header(depth)),
+            1.0,
+        )
+    }
+
+    #[test]
+    fn controls_nested_to_the_bound_are_walked_in_a_loop() {
+        // the walk costs a pass over what is left of the part per level, so the
+        // bound a test uses is small; the real one only changes the number
+        let out = run(40, 40).expect("depth within the bound");
+        assert_eq!(out.matches("<w:sdt>").count(), 40);
+    }
+
+    #[test]
+    fn controls_nested_past_the_bound_are_the_engine_error() {
+        let error = run(40, 41).expect_err("past the bound");
+        assert!(
+            error.contains("Maximum call stack size exceeded"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn the_end_tag_is_what_the_regex_finds_over_every_short_string() {
+        // every string of up to 6 characters from the alphabet that matters
+        let pattern = jscompat::try_js_regex!(r"<\/[^>]*>$");
+        let alphabet = ['<', '/', '>', 'a', '\n'];
+        let mut count = 0;
+        for length in 0..=6usize {
+            for n in 0..alphabet.len().pow(length as u32) {
+                let text: String = (0..length)
+                    .map(|k| alphabet[n / alphabet.len().pow(k as u32) % alphabet.len()])
+                    .collect();
+                let expected = pattern
+                    .try_exec(&text)
+                    .unwrap()
+                    .map_or("", |found| found.as_str());
+                assert_eq!(close_of(&text), expected, "{text:?}");
+                count += 1;
+            }
+        }
+        assert!(count > 19_000);
+    }
+
+    #[test]
+    fn the_end_tag_of_a_part_is_its_last_tag() {
+        assert_eq!(close_of("<a><b>t</b></a>"), "</a>");
+        assert_eq!(close_of("<a>t</a\n>"), "</a\n>");
+        assert_eq!(close_of("<a>x < y</a>"), "</a>");
+        assert_eq!(close_of("</>"), "</>");
+        assert_eq!(close_of("<a>t<b/>"), "");
+        assert_eq!(close_of("<a>t</a> "), "");
+        assert_eq!(close_of(""), "");
+    }
 }

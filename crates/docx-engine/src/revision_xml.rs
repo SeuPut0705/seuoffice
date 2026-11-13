@@ -448,6 +448,82 @@ fn slice(xml: &str, start: Pos, end: Pos) -> &str {
     xml.get(start.byte..end.byte).unwrap_or("")
 }
 
+/// `MARK_ELEMENT`: the element that hides a run from AI, under any prefix
+fn is_mark_element(name: &str) -> bool {
+    js_regex!(r"(?:^|:)redact$").test(name)
+}
+
+/// `hiddenMarkIn`: the mark that hides a run from AI, in the run's current
+/// properties, with the border the editor draws beside it, as indices. It is
+/// not formatting, so a record of the old formatting never holds it, and
+/// putting the old properties back must not take it away.
+fn hidden_mark_in(els: &[El<'_>], xml: &str, holder: usize) -> (Vec<usize>, Vec<usize>) {
+    let editor_border = js_regex!(
+        r#"^<w:bdr\s+w:val\s*=\s*["']single["']\s+w:sz\s*=\s*["']6["']\s+w:color\s*=\s*["']6B4FC0["']\s*\/>$"#
+    );
+    let kids: Vec<(usize, &El<'_>)> = children(els, holder).collect();
+    let marks: Vec<usize> = kids
+        .iter()
+        .filter(|(_, c)| is_mark_element(c.name))
+        .map(|&(i, _)| i)
+        .collect();
+    let border = kids
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, c))| is_mark_element(c.name))
+        .filter_map(|(at, _)| at.checked_sub(1).map(|before| kids[before]))
+        .filter(|(_, before)| {
+            before.name == "w:bdr" && editor_border.test(slice(xml, before.start, before.end))
+        })
+        .map(|(i, _)| i)
+        .collect();
+    (marks, border)
+}
+
+/// `removesHiddenWords`: whether acting on the change would remove content that
+/// holds the mark hiding it from AI
+fn removes_hidden_words(els: &[El<'_>], el: &El<'_>, mode: &str) -> bool {
+    if el.name != "w:ins" && el.name != "w:del" {
+        return false;
+    }
+    let drops = if el.name == "w:ins" {
+        mode == "reject"
+    } else {
+        mode == "accept"
+    };
+    if !drops {
+        return false;
+    }
+    let slot = marker_slot(els, el);
+    if matches!(slot, Some(MarkerSlot::ParaMark | MarkerSlot::Other)) {
+        return false;
+    }
+    let target = if slot == Some(MarkerSlot::Row) {
+        match ancestor(els, el, "w:tr") {
+            Some(index) => &els[index],
+            None => return false,
+        }
+    } else {
+        el
+    };
+    els.iter().any(|c| {
+        is_mark_element(c.name)
+            && c.start.unit >= target.start.unit
+            && c.end.unit <= target.end.unit
+    })
+}
+
+/// `if (value)` of a JSON value
+fn json_truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(flag) => *flag,
+        Value::Number(number) => number.as_f64().is_some_and(|x| x != 0.0 && !x.is_nan()),
+        Value::String(text) => !text.is_empty(),
+        Value::Array(_) | Value::Object(_) => true,
+    }
+}
+
 /// `revertPropChange`: restore the pre-change properties recorded in a
 /// *Change element
 fn revert_prop_change<'a>(
@@ -515,6 +591,31 @@ fn revert_prop_change<'a>(
             text: Cow::Owned(refs),
         });
         return;
+    }
+    if holder_name == "w:rPr" {
+        let (marks, border) = hidden_mark_in(els, xml, holder_index);
+        if !marks.is_empty() {
+            let keep: HashSet<usize> = marks.iter().chain(&border).copied().collect();
+            // the old properties may hold the border already: it is not drawn twice
+            let old_has_border = js_regex!(r"<w:bdr\b").test(old_inner);
+            let tracked = js_regex!(r"^w:(?:ins|del|moveFrom|moveTo)$");
+            edits.extend(
+                children(els, holder_index)
+                    .filter(|&(i, c)| {
+                        !keep.contains(&i) && !(c.self_closing && tracked.test(c.name))
+                    })
+                    .map(|(_, c)| remove(c)),
+            );
+            edits.push(Edit {
+                start: holder.inner_end.unit,
+                end: holder.inner_end.unit,
+                text: Cow::Borrowed(old_inner),
+            });
+            if old_has_border {
+                edits.extend(border.iter().map(|&i| remove(&els[i])));
+            }
+            return;
+        }
     }
     // the holder's own tracked markers (paragraph-mark / row ins, del, move) are
     // separate revisions: edit around them so their own removal in the same pass
@@ -638,6 +739,13 @@ fn plan_edits<'a>(
         }
         let Some(ty) = type_of(el) else { continue };
         if !matches(el, filter, ty)? {
+            continue;
+        }
+        // `filter?.keepHidden`: changes that would remove words hidden from AI stay pending
+        let keep_hidden = filter
+            .and_then(|filter| filter.get("keepHidden"))
+            .is_some_and(json_truthy);
+        if keep_hidden && removes_hidden_words(els, el, mode) {
             continue;
         }
         applied += 1;

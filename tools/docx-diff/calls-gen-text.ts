@@ -6,11 +6,11 @@ import {
   patchMathTokens,
   patchTableCellTexts,
   patchTextboxParas,
-  xmlSegments,
   type CellTextsPatch,
   type FieldTextPatch,
   type TextboxParasPatchSet,
 } from './reference/generate'
+import { xmlSegments } from './reference/xml-tag'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

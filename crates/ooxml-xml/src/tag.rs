@@ -1,5 +1,7 @@
 //! The tag scanner under `scanBody` (packages/docx-engine/src/scan.ts).
 
+use std::borrow::Cow;
+
 use jscompat::trim_start;
 
 /// One tag found by the scanner. `start..end` is a byte range of the text.
@@ -106,6 +108,46 @@ pub fn opaque_end(xml: &str, start: usize) -> Option<usize> {
     Some(xml.len())
 }
 
+/// `maskOpaque` of xml-utils.ts: the XML with every comment, CDATA section and
+/// processing instruction blanked to spaces, the same length in bytes, so a
+/// scan of the blanked text gives offsets into the original. A construct
+/// with no terminator is no match and is left as it is.
+pub fn mask_opaque(xml: &str) -> Cow<'_, str> {
+    let mut masked: Option<String> = None;
+    let (mut copied, mut at) = (0, 0);
+    while let Some(found) = xml[at..].find('<') {
+        let start = at + found;
+        let rest = &xml[start..];
+        let (open, close) = if rest.starts_with("<!--") {
+            ("<!--", "-->")
+        } else if rest.starts_with("<![CDATA[") {
+            ("<![CDATA[", "]]>")
+        } else if rest.starts_with("<?") {
+            ("<?", "?>")
+        } else {
+            at = start + 1;
+            continue;
+        };
+        let Some(inside) = rest[open.len()..].find(close) else {
+            at = start + 1;
+            continue;
+        };
+        let end = start + open.len() + inside + close.len();
+        let out = masked.get_or_insert_with(|| String::with_capacity(xml.len()));
+        out.push_str(&xml[copied..start]);
+        out.extend(std::iter::repeat_n(' ', end - start));
+        copied = end;
+        at = end;
+    }
+    match masked {
+        Some(mut out) => {
+            out.push_str(&xml[copied..]);
+            Cow::Owned(out)
+        }
+        None => Cow::Borrowed(xml),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,6 +225,21 @@ mod tests {
         ] {
             assert_eq!(opaque_end(xml, 0), Some(xml.len()), "{xml}");
         }
+    }
+
+    #[test]
+    fn masking_blanks_what_a_scan_must_not_see_and_keeps_every_offset() {
+        let xml = "<a><!-- </a> --><![CDATA[</a>]]><?pi </a>?>\u{e9}</a>";
+        let masked = mask_opaque(xml);
+        assert_eq!(masked.len(), xml.len());
+        assert_eq!(masked.find("</a>"), xml.rfind("</a>"));
+        assert_eq!(mask_opaque("<w:p/>"), "<w:p/>");
+        // an opener without its terminator is no match: the later construct is
+        assert_eq!(
+            mask_opaque("<!-- x <?y?>"),
+            format!("<!-- x{}", " ".repeat(6))
+        );
+        assert_eq!(mask_opaque("<!-->x-->"), "         ");
     }
 
     #[test]

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { charIndentsOf, paraBorderSidesOf } from './reference/parse-props'
 import { DEFAULT_THEME_COLORS } from './reference/theme'
@@ -20,7 +21,7 @@ export type Outcome = { value?: unknown } | { error: string }
 
 interface Case {
   fn: string
-  text: number
+  xml: string
   args: object
   typescript: Outcome
 }
@@ -37,14 +38,20 @@ export const byFunction = new Map<
     differences: number
     keyOrderOnly: number
     threw: number
+    /** digests of the distinct results */
     outcomes: Set<string>
   }
 >()
 
-const textIds = new Map<string, number>()
-const texts: string[] = []
+/**
+ * A case or a result as a digest: what the run keeps of every case it has
+ * seen. Kept whole, the texts, arguments and results of the (f) groups outgrew
+ * the JavaScript heap of a runner.
+ */
+const digest = (text: string): string => createHash('sha256').update(text).digest('base64')
+
 const pending: Array<{ comparison: Comparison; where: string; key: string; fn: string }> = []
-/** Each distinct case reaches Rust once. `difference` is `null` for an equal case. */
+/** Each distinct case reaches Rust once, by the digest of the case. `difference` is `null` for an equal case. */
 const settled = new Map<
   string,
   {
@@ -83,13 +90,17 @@ const BATCH_CHARS = 2_000_000
 /** `--chars N`: how much of a call and of each answer a difference shows; the whole input reproduces it. */
 export const SHOWN_CHARS = option('--chars', 300)
 
+/** The argument text queued cases may hold before they are sent: a case of a parse function carries whole parts. */
+const QUEUED_CHARS = 200_000_000
+let queuedChars = 0
+
 /** Sends the queued cases to Rust, the calls on one text together, and records the waiting checks. */
 export function flush(): void {
-  const byText = new Map<number, Array<[key: string, queuedCase: Case]>>()
+  const byText = new Map<string, Array<[key: string, queuedCase: Case]>>()
   for (const entry of queued) {
-    const list = byText.get(entry[1].text) ?? []
+    const list = byText.get(entry[1].xml) ?? []
     list.push(entry)
-    byText.set(entry[1].text, list)
+    byText.set(entry[1].xml, list)
   }
   let batch: Array<Array<[string, Case]>> = []
   let chars = 0
@@ -98,30 +109,30 @@ export function flush(): void {
     const { header } = engine.call<{ results: Outcome[][] }>({
       cmd: 'props',
       inputs: batch.map((cases) => ({
-        xml: texts[cases[0]![1].text]!,
+        xml: cases[0]![1].xml,
         calls: cases.map(([, { fn, args }]) => ({ fn, args })),
       })),
     })
     if (failed(header)) throw new Error(`props failed: ${header.error.message}`)
     batch.forEach((cases, input) => {
-      cases.forEach(([key, { fn, text, args, typescript }], index) => {
+      cases.forEach(([key, { fn, xml, args, typescript }], index) => {
         const rust = header.results[input]![index]!
         const same = 'error' in typescript ? 'error' in rust : isDeepStrictEqual(typescript, rust)
-        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
+        const call = `${fn}(${JSON.stringify(xml).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
         const order =
           same && !('error' in typescript) ? keyOrderDifference(fn, typescript, rust) : null
         const listed =
           (!same || order !== null) &&
           listedDifference({
             fn,
-            text: texts[text]!,
+            text: xml,
             args,
             typescript,
             rust,
           }) !== null
         settled.set(key, {
           typescriptThrew: 'error' in typescript,
-          outcome: 'error' in typescript ? 'error' : JSON.stringify(typescript),
+          outcome: 'error' in typescript ? 'error' : digest(JSON.stringify(typescript)),
           keyOrderOnly: !listed && order !== null,
           listed,
           difference: listed
@@ -141,11 +152,12 @@ export function flush(): void {
   }
   for (const cases of byText.values()) {
     batch.push(cases)
-    chars += texts[cases[0]![1].text]!.length + cases.length * 60
+    chars += cases[0]![1].xml.length + cases.length * 60
     if (chars >= BATCH_CHARS) send()
   }
   send()
   queued.clear()
+  queuedChars = 0
   for (const waiting of pending.splice(0)) {
     record(waiting.comparison, waiting.fn, waiting.key, waiting.where)
   }
@@ -197,22 +209,18 @@ export function checkOutcome(
   args: object,
   typescript: () => Outcome,
 ): void {
-  let text = textIds.get(xml)
-  if (text === undefined) {
-    text = texts.push(xml) - 1
-    textIds.set(xml, text)
-  }
   // what the arguments are once they have crossed the wire
-  const wireArgs = JSON.parse(JSON.stringify(args)) as object
-  const key = `${fn}\0${text}\0${JSON.stringify(wireArgs)}`
+  const wireText = JSON.stringify(args)
+  const key = digest(`${fn}\0${xml}\0${wireText}`)
   let found = queued.get(key)
   if (!found && !settled.has(key)) {
-    found = { fn, text, args: wireArgs, typescript: typescript() }
+    found = { fn, xml, args: JSON.parse(wireText) as object, typescript: typescript() }
     queued.set(key, found)
+    queuedChars += wireText.length
   }
   if (found) pending.push({ comparison, where, key, fn })
   else record(comparison, fn, key, where)
-  if (queued.size >= 20_000) flush()
+  if (queued.size >= 20_000 || queuedChars >= QUEUED_CHARS) flush()
 }
 
 export const READER_ELEMENTS = new Set(
