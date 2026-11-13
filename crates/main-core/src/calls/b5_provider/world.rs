@@ -435,6 +435,9 @@ impl WorldRun {
                     self.cancel(i);
                 }
             }
+            // a body the program let go of: JavaScript's garbage collector frees it
+            // unseen, so the world logs nothing and keeps the scripted stream
+            Cmd::Release { .. } => {}
             Cmd::SetTimer { id, ms } => {
                 self.timer_count += 1;
                 let n = self.timer_count;
