@@ -1558,8 +1558,8 @@
   {
     "name": "constructor-entity",
     "file": "main-core/src/html/asset_lifecycle.rs",
-    "find": "\"constructor\" => \"function Object() { [native code] }\".to_owned(),",
-    "replace": "\"constructor\" => entity.to_owned(),",
+    "find": "Some(inherited) => inherited.to_owned(),",
+    "replace": "Some(_) => entity.to_owned(),",
     "fn": [
       "html/asset-lifecycle.extractHtmlImageSources",
       "html/asset-lifecycle.extractDocumentImageSources"

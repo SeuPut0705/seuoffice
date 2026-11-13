@@ -320,8 +320,8 @@
   {
     "name": "cancel id",
     "file": "main-core/src/packages/electron_utils/recovery_prompt.rs",
-    "find": "cancel_id: RESTORE,",
-    "replace": "cancel_id: DISCARD,",
+    "find": "cancel_id: Some(RESTORE),",
+    "replace": "cancel_id: Some(DISCARD),",
     "fn": ["recovery-prompt.promptRecoveryForFile", "recovery-prompt.resolveRecoveryOnOpen"]
   },
   {
@@ -538,8 +538,8 @@
   {
     "name": "constructor label",
     "file": "main-core/src/packages/electron_utils/generated_images.rs",
-    "find": "\"constructor\" => \"function Object() { [native code] }\",",
-    "replace": "\"constructor\" => \"png\",",
+    "find": "key => inherited_string(key).unwrap_or(\"png\"),",
+    "replace": "key => if key == \"constructor\" { \"png\" } else { inherited_string(key).unwrap_or(\"png\") },",
     "fn": ["generated-images.storeGeneratedImage"]
   },
   {
