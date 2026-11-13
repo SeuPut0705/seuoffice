@@ -22,7 +22,9 @@ function generate(block: GeneratedBlock, arg: CtxArg) {
   let revisions = 0
   const ctx: GenerateContext = {
     headingStyleIds: new Map(arg.headingStyleIds),
-    ...(arg.listParagraphStyleId !== undefined ? { listParagraphStyleId: arg.listParagraphStyleId } : {}),
+    ...(arg.listParagraphStyleId !== undefined
+      ? { listParagraphStyleId: arg.listParagraphStyleId }
+      : {}),
     allocateHyperlinkRel: (href) => {
       hyperlinks.push(href)
       return `rIdH${hyperlinks.length}`
@@ -49,8 +51,24 @@ function generate(block: GeneratedBlock, arg: CtxArg) {
 }
 
 const CTXS: CtxArg[] = [
-  { headingStyleIds: [[1, 'Heading1'], [2, 'Heading2'], [9, 'H9 & "x"']], listParagraphStyleId: 'ListParagraph', bookmarkIds: true, revisionIds: true },
-  { headingStyleIds: [[2.5, 'Half'], [3, '']], bookmarkIds: true, revisionIds: false },
+  {
+    headingStyleIds: [
+      [1, 'Heading1'],
+      [2, 'Heading2'],
+      [9, 'H9 & "x"'],
+    ],
+    listParagraphStyleId: 'ListParagraph',
+    bookmarkIds: true,
+    revisionIds: true,
+  },
+  {
+    headingStyleIds: [
+      [2.5, 'Half'],
+      [3, ''],
+    ],
+    bookmarkIds: true,
+    revisionIds: false,
+  },
 ]
 
 // ---------------------------------------------------------------- the corpus
@@ -83,7 +101,10 @@ const PER_DOC = 40
 /** Paragraph, heading and list blocks of a parsed document, as saved and with the pPr rebuilt. */
 export function paragraphModelInputs(doc: ParsedDoc): Input[] {
   return doc.blocks
-    .filter((block) => block.type === 'paragraph' || block.type === 'heading' || block.type === 'listItem')
+    .filter(
+      (block) =>
+        block.type === 'paragraph' || block.type === 'heading' || block.type === 'listItem',
+    )
     .slice(0, PER_DOC)
     .flatMap((block, i) => {
       const generated = generatedFrom(block)
@@ -106,7 +127,12 @@ const MARK = JSON.stringify({ author: 'A & B', date: '2024-02-03T04:05:06Z' })
 const BLOCKS: GeneratedBlock[] = [
   { type: 'paragraph', runs: [] },
   { type: 'paragraph', runs: [t('plain'), t(' bold', { bold: true })], styleId: 'Body' },
-  { type: 'paragraph', runs: [t('raw')], rawPPr: '<w:pPr><w:jc w:val="center"/></w:pPr>', format: { align: 'right' } },
+  {
+    type: 'paragraph',
+    runs: [t('raw')],
+    rawPPr: '<w:pPr><w:jc w:val="center"/></w:pPr>',
+    format: { align: 'right' },
+  },
   { type: 'paragraph', runs: [t('empty raw')], rawPPr: '' },
   { type: 'heading', level: 2, runs: [t('H2')] },
   { type: 'heading', level: 0, runs: [t('clamped up')] },
@@ -114,14 +140,26 @@ const BLOCKS: GeneratedBlock[] = [
   { type: 'heading', level: 2.5, runs: [t('fraction')] },
   { type: 'heading', level: 4, outlineOnly: true, styleId: 'Body', runs: [t('outline')] },
   { type: 'heading', level: 1, styleId: '', runs: [t('empty style')] },
-  { type: 'heading', runs: [t('no level')], format: { align: 'center', bidi: true, spaceBefore: 120, keepNext: true } },
+  {
+    type: 'heading',
+    runs: [t('no level')],
+    format: { align: 'center', bidi: true, spaceBefore: 120, keepNext: true },
+  },
   { type: 'listItem', list: { kind: 'bullet', numId: '3', ilvl: -1 }, runs: [t('below')] },
   { type: 'listItem', list: { kind: 'ordered', numId: '7&8', ilvl: 12.5 }, runs: [t('above')] },
-  { type: 'listItem', list: { kind: 'ordered', numId: '2', ilvl: 1.5 }, styleId: 'Own', runs: [t('own style')] },
+  {
+    type: 'listItem',
+    list: { kind: 'ordered', numId: '2', ilvl: 1.5 },
+    styleId: 'Own',
+    runs: [t('own style')],
+  },
   { type: 'listItem', runs: [t('no list')] },
   {
     type: 'paragraph',
-    runs: [t('link', { link: { href: 'https://example.com/?a=1&b=2' } }), t('again', { link: { href: 'https://example.com/?a=1&b=2' } })],
+    runs: [
+      t('link', { link: { href: 'https://example.com/?a=1&b=2' } }),
+      t('again', { link: { href: 'https://example.com/?a=1&b=2' } }),
+    ],
     bookmarks: ['Intro', 'A&B'],
     hiddenBookmarks: ['_Toc1'],
     commentStarts: ['1'],
@@ -137,9 +175,19 @@ const BLOCKS: GeneratedBlock[] = [
     paraMarkDel: MARK,
     paraMarkIns: MARK,
   },
-  { type: 'paragraph', runs: [t('mark only')], paraMarkIns: '{"author":"X"}', format: { emptyRunSizeHalfPoints: 28 } },
+  {
+    type: 'paragraph',
+    runs: [t('mark only')],
+    paraMarkIns: '{"author":"X"}',
+    format: { emptyRunSizeHalfPoints: 28 },
+  },
   { type: 'paragraph', runs: [t('bad mark')], paraMarkDel: 'not json', paraMarkIns: null },
-  { type: 'paragraph', runs: [t('ppr change')], pPrChange: JSON.stringify({ author: 'C', date: '2024-05-05T00:00:00Z', id: '4' }), format: { indentLeft: 720 } },
+  {
+    type: 'paragraph',
+    runs: [t('ppr change')],
+    pPrChange: JSON.stringify({ author: 'C', date: '2024-05-05T00:00:00Z', id: '4' }),
+    format: { indentLeft: 720 },
+  },
   { type: 'paragraph', runs: [t('ppr change null')], pPrChange: null, paraMarkDel: null },
   { type: 'paragraph', runs: [t('ppr change bad')], pPrChange: '{' },
   {
@@ -154,7 +202,13 @@ const BLOCKS: GeneratedBlock[] = [
   {
     type: 'paragraph',
     runs: [t('tabs')],
-    format: { tabStops: [{ pos: 720, val: 'right', leader: 'dot' }], lineSpacing: 1.5, pageBreakBefore: true, widowControl: false, textDirection: 'tbRl' },
+    format: {
+      tabStops: [{ pos: 720, val: 'right', leader: 'dot' }],
+      lineSpacing: 1.5,
+      pageBreakBefore: true,
+      widowControl: false,
+      textDirection: 'tbRl',
+    },
   },
 ]
 

@@ -1,16 +1,11 @@
 // Group `chart` of comparison (f): chart.ts and chartex.ts of
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_chart.rs to `pptxChart.<module>.<TypeScript name>`.
-import { parseChartXml } from '../../packages/pptx-engine/src/chart'
-import { parseChartExXml } from '../../packages/pptx-engine/src/chartex'
-import {
-  parseClrMap,
-  parseTheme,
-  type Theme,
-  themeWithOverride,
-} from '../../packages/pptx-engine/src/theme'
-import type { Fill } from '../../packages/pptx-engine/src/types'
-import { relsPathFor, resolveTarget } from '../../packages/pptx-engine/src/zip'
+import { parseChartXml } from './reference/chart'
+import { parseChartExXml } from './reference/chartex'
+import { parseClrMap, parseTheme, type Theme, themeWithOverride } from './reference/theme'
+import type { Fill } from './reference/types'
+import { relsPathFor, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 
@@ -1014,7 +1009,73 @@ const HAND: Array<[string, string]> = [
     'line series spPr text does not throw',
     chartOf(plotArea(line(ser({ sp: '<c:spPr>t</c:spPr>' })))),
   ],
+  ...redactHand(),
 ]
+
+// ── Hidden-from-AI marks in chart text ────────────────────────────────
+
+function redactHand(): Array<[string, string]> {
+  const uri = '{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'
+  const ns = 'xmlns:go="https://genspark.ai/genoffice/redaction/2026"'
+  const ext = (mark: string, extUri = uri): string =>
+    `<a:extLst><a:ext uri="${extUri}">${mark}</a:ext></a:extLst>`
+  const marked = (label: string): string =>
+    `<a:rPr lang="en-US">${ext(`<go:redact ${ns} label="${label}"/>`)}</a:rPr>`
+  const titled = (rPr: string): string =>
+    `<c:title>${rich([run('Secret', rPr)])}${v('overlay', 0)}</c:title>`
+  const plain = plotArea(bar(sers(1)))
+  return [
+    ['title run hidden', chartOf(plain, { title: titled(marked('board')) })],
+    [
+      'value axis title run hidden',
+      chartOf(
+        plotArea(
+          bar(sers(1)),
+          catAx() +
+            valAx().replace(
+              '<c:crossAx',
+              `<c:title>${rich([run('Units', marked('axis'))])}</c:title><c:crossAx`,
+            ),
+        ),
+      ),
+    ],
+    [
+      'title and data label hidden: the title comes first',
+      chartOf(
+        plotArea(
+          bar(ser({ extra: dLbls(`<c:txPr>${rich([run('x', marked('label'))])}</c:txPr>`) })),
+        ),
+        { title: titled(marked('title')) },
+      ),
+    ],
+    [
+      'mark without a label',
+      chartOf(plain, { title: titled(`<a:rPr>${ext('<go:redact/>')}</a:rPr>`) }),
+    ],
+    [
+      'mark under another prefix',
+      chartOf(plain, { title: titled(`<a:rPr>${ext('<x:redact label="other"/>')}</a:rPr>`) }),
+    ],
+    [
+      'extension of another uri',
+      chartOf(plain, { title: titled(`<a:rPr>${ext('<go:redact label="no"/>', '{0}')}</a:rPr>`) }),
+    ],
+    [
+      'marked default run properties',
+      chartOf(plain, {
+        title: `<c:title>${txPr(`<a:defRPr sz="1200">${ext(`<go:redact ${ns} label="defaults"/>`)}</a:defRPr>`)}</c:title>`,
+      }),
+    ],
+    [
+      'mark 30 elements deep',
+      chartOf(plain, { post: '<c:x>'.repeat(30) + marked('deep') + '</c:x>'.repeat(30) }),
+    ],
+    [
+      'mark past the walk depth',
+      chartOf(plain, { post: '<c:x>'.repeat(70) + marked('too deep') + '</c:x>'.repeat(70) }),
+    ],
+  ]
+}
 
 // ── CT_Boolean sites ──────────────────────────────────────────────────
 

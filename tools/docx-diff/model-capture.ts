@@ -20,6 +20,12 @@ try {
 } finally {
   closeSync(fd)
 }
-const summary = { node: process.version, tracked: corpusDocuments().length, counts, refused, hashes }
+const summary = {
+  node: process.version,
+  tracked: corpusDocuments().length,
+  counts,
+  refused,
+  hashes,
+}
 writeFileSync(output + '.summary.json', JSON.stringify(summary, null, 2) + '\n')
 console.log(JSON.stringify({ ...summary, hashes: `${hashes.length} hashes saved` }, null, 2))

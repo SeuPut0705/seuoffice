@@ -74,7 +74,8 @@ const EXCUSED: Excused[] = [
     file: 'parse.ts',
     within: 'paragraphStrayBox',
     keys: ['frameBox'],
-    reason: 'frameBoxOf returns nothing for a w:framePr with w:dropCap, so frameBox and dropCap never meet',
+    reason:
+      'frameBoxOf returns nothing for a w:framePr with w:dropCap, so frameBox and dropCap never meet',
   },
   ...[
     'ParaBorderSides',
@@ -82,14 +83,13 @@ const EXCUSED: Excused[] = [
     'ParaFormat.borderPad',
     'TextboxDisplay.wrapDistPx',
     'HfImage.wrapDistPx',
-  ].map(
-    (type): Excused => ({
-      type,
-      file: 'generate.ts',
-      within: 'buildAnchoredTextboxParagraphXml',
-      reason: 'the default text box insets `{ l, t, r, b }`: no model value, its field set only matches these',
-    }),
-  ),
+  ].map((type): Excused => ({
+    type,
+    file: 'generate.ts',
+    within: 'buildAnchoredTextboxParagraphXml',
+    reason:
+      'the default text box insets `{ l, t, r, b }`: no model value, its field set only matches these',
+  })),
   {
     type: 'NumberingLevel',
     file: 'blank.ts',
@@ -102,7 +102,8 @@ const EXCUSED: Excused[] = [
     type: 'GeneratedBlock',
     file: 'compare.ts',
     within: 'generatedFrom',
-    reason: 'a save-side input the comparison feature builds; no parse result holds a GeneratedBlock',
+    reason:
+      'a save-side input the comparison feature builds; no parse result holds a GeneratedBlock',
   },
   {
     type: 'SectionSettings',
@@ -114,35 +115,38 @@ const EXCUSED: Excused[] = [
     type: 'SectionSettings.pageBorderProps.sides',
     file: 'section.ts',
     within: 'pageBorderPropsOf',
-    reason: 'the sides of w:pgBorders in the order of the document; no parse result holds SectionSettings',
+    reason:
+      'the sides of w:pgBorders in the order of the document; no parse result holds SectionSettings',
   },
-  ...['SectionInfo.headerRefs', 'SectionInfo.footerRefs'].map(
-    (type): Excused => ({
-      type,
-      file: 'section.ts',
-      within: 'hfRefs',
-      reason: 'the references in the order of the sectPr; no parse result holds SectionInfo (readSections reads them)',
-    }),
-  ),
+  ...['SectionInfo.headerRefs', 'SectionInfo.footerRefs'].map((type): Excused => ({
+    type,
+    file: 'section.ts',
+    within: 'hfRefs',
+    reason:
+      'the references in the order of the sectPr; no parse result holds SectionInfo (readSections reads them)',
+  })),
   {
     type: 'ParsedDocFull',
     file: 'parse.ts',
     within: 'parseDocx',
     keys: ['embeddedFonts'],
-    reason: 'open: a document needs an obfuscated embedded font part to show embeddedFonts; none is built',
+    reason:
+      'open: a document needs an obfuscated embedded font part to show embeddedFonts; none is built',
   },
   {
     type: 'DiagramShape',
     file: 'parse.ts',
     within: 'extractLockedCanvas',
     keys: ['imageDataUrl'],
-    reason: 'imageDataUrl (an a:pic) and fillHex (an a:sp) are set in the two branches of one if/else',
+    reason:
+      'imageDataUrl (an a:pic) and fillHex (an a:sp) are set in the two branches of one if/else',
   },
   {
     type: 'DiagramShape',
     file: 'parse.ts',
     within: 'extractDiagramDrawing',
-    reason: 'open: a document needs a SmartArt drawing part (diagrams/drawing1.xml, dsp:sp) to show it; none is built',
+    reason:
+      'open: a document needs a SmartArt drawing part (diagrams/drawing1.xml, dsp:sp) to show it; none is built',
   },
 ]
 
@@ -151,12 +155,16 @@ const src = join(root, 'tools/docx-diff/reference')
 const files = readdirSync(src, { recursive: true, encoding: 'utf8' })
   .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
   .map((name) => join(src, name))
-const config = ts.getParsedCommandLineOfConfigFile(join(root, 'packages/docx-engine/tsconfig.json'), {}, {
-  ...ts.sys,
-  onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-    throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+const config = ts.getParsedCommandLineOfConfigFile(
+  join(root, 'packages/docx-engine/tsconfig.json'),
+  {},
+  {
+    ...ts.sys,
+    onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+      throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+    },
   },
-})!
+)!
 const program = ts.createProgram(files, config.options)
 const checker = program.getTypeChecker()
 
@@ -165,7 +173,10 @@ const orders = loadOrders()
 const bySet = new Map<string, string[]>()
 for (const definition of schema.types.values()) {
   if (definition.kind !== 'object') continue
-  const set = definition.fields.map((field) => field.name).sort().join(',')
+  const set = definition.fields
+    .map((field) => field.name)
+    .sort()
+    .join(',')
   bySet.set(set, [...(bySet.get(set) ?? []), definition.name])
 }
 const fieldsOf = (name: string): string[] => {
@@ -185,7 +196,8 @@ function declaredName(type: ts.Type): string | undefined {
   for (let node: ts.Node = declaration; node.parent; node = node.parent) {
     const parent = node.parent
     if (ts.isArrayTypeNode(parent)) path = `[]${path}`
-    else if (ts.isTypeReferenceNode(parent) && parent.typeName.getText() === 'Array') path = `[]${path}`
+    else if (ts.isTypeReferenceNode(parent) && parent.typeName.getText() === 'Array')
+      path = `[]${path}`
     else if (ts.isUnionTypeNode(parent)) {
       const rest = parent.types.filter(
         (member) =>
@@ -196,7 +208,11 @@ function declaredName(type: ts.Type): string | undefined {
     } else if (ts.isPropertySignature(parent)) path = `.${parent.name.getText()}${path}`
     else if (ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent)) {
       return `${parent.name.text}${path}`
-    } else if (!ts.isTypeLiteralNode(parent) && !ts.isIntersectionTypeNode(parent) && !ts.isParenthesizedTypeNode(parent)) {
+    } else if (
+      !ts.isTypeLiteralNode(parent) &&
+      !ts.isIntersectionTypeNode(parent) &&
+      !ts.isParenthesizedTypeNode(parent)
+    ) {
       return undefined
     }
   }
@@ -220,7 +236,11 @@ function modelTypes(type: ts.Type | undefined): string[] {
       out.add(declared)
       return
     }
-    const names = checker.getPropertiesOfType(member).map((property) => property.name).sort().join(',')
+    const names = checker
+      .getPropertiesOfType(member)
+      .map((property) => property.name)
+      .sort()
+      .join(',')
     for (const name of bySet.get(names) ?? []) out.add(name)
   }
   visit(type)
@@ -249,7 +269,12 @@ function prune(ways: Ways): Ways {
   }
   const unique = [...new Map(texts.map((text, at) => [text.join('\n'), at])).values()]
   return unique
-    .filter((a) => !unique.some((b) => b !== a && texts[b]!.length > texts[a]!.length && within(texts[a]!, texts[b]!)))
+    .filter(
+      (a) =>
+        !unique.some(
+          (b) => b !== a && texts[b]!.length > texts[a]!.length && within(texts[a]!, texts[b]!),
+        ),
+    )
     .map((at) => ways[at]!)
 }
 
@@ -258,7 +283,9 @@ function then(first: Ways, second: Ways, at: ts.Node): Ways {
   const ways = prune(first.flatMap((a) => second.map((b) => [...a, ...b])))
   if (ways.length > MAX_WAYS) {
     const where = at.getSourceFile().getLineAndCharacterOfPosition(at.getStart()).line + 1
-    throw new Error(`${relative(src, at.getSourceFile().fileName)}:${where} can go ${ways.length} ways; read it by hand`)
+    throw new Error(
+      `${relative(src, at.getSourceFile().fileName)}:${where} can go ${ways.length} ways; read it by hand`,
+    )
   }
   return ways
 }
@@ -268,8 +295,12 @@ const NO_KEYS: Ways = [[]]
 /** The nearest enclosing function with a name: a declaration, a method, or a function a variable holds. */
 function functionName(node: ts.Node): string {
   for (let at: ts.Node | undefined = node.parent; at; at = at.parent) {
-    if ((ts.isFunctionDeclaration(at) || ts.isMethodDeclaration(at)) && at.name) return at.name.getText()
-    if ((ts.isArrowFunction(at) || ts.isFunctionExpression(at)) && ts.isVariableDeclaration(at.parent)) {
+    if ((ts.isFunctionDeclaration(at) || ts.isMethodDeclaration(at)) && at.name)
+      return at.name.getText()
+    if (
+      (ts.isArrowFunction(at) || ts.isFunctionExpression(at)) &&
+      ts.isVariableDeclaration(at.parent)
+    ) {
       return at.parent.name.getText()
     }
   }
@@ -287,7 +318,8 @@ interface Producer {
 
 function unwrap(expression: ts.Expression): ts.Expression {
   let e = expression
-  while (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isNonNullExpression(e)) e = e.expression
+  while (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isNonNullExpression(e))
+    e = e.expression
   return e
 }
 
@@ -302,12 +334,14 @@ function calledFunction(call: ts.CallExpression): ts.SignatureDeclaration | unde
   let symbol = checker.getSymbolAtLocation(call.expression)
   if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol)
   const declaration = symbol?.valueDeclaration
-  if (!declaration || !resolve(declaration.getSourceFile().fileName).startsWith(src)) return undefined
+  if (!declaration || !resolve(declaration.getSourceFile().fileName).startsWith(src))
+    return undefined
   if (ts.isFunctionDeclaration(declaration) && declaration.body) return declaration
   if (
     ts.isVariableDeclaration(declaration) &&
     declaration.initializer &&
-    (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))
+    (ts.isArrowFunction(declaration.initializer) ||
+      ts.isFunctionExpression(declaration.initializer))
   ) {
     return declaration.initializer
   }
@@ -336,7 +370,8 @@ function typeKeys(e: ts.Expression): string[] {
 
 function spreadWays(expression: ts.Expression): Ways {
   const e = unwrap(expression)
-  if (ts.isConditionalExpression(e)) return prune([...spreadWays(e.whenTrue), ...spreadWays(e.whenFalse)])
+  if (ts.isConditionalExpression(e))
+    return prune([...spreadWays(e.whenTrue), ...spreadWays(e.whenFalse)])
   // `a && {...}` spreads the literal or nothing; `a ?? b` and `a || b` spread a or b
   if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
     return spreadWays(e.right)
@@ -355,7 +390,9 @@ function spreadWays(expression: ts.Expression): Ways {
       if (ts.isObjectLiteralExpression(initializer)) {
         return then(literalWays(initializer), tailWays(initializer, e.getStart()), e)
       }
-      const constant = ts.isVariableDeclarationList(declaration.parent) && declaration.parent.flags & ts.NodeFlags.Const
+      const constant =
+        ts.isVariableDeclarationList(declaration.parent) &&
+        declaration.parent.flags & ts.NodeFlags.Const
       if (constant && ts.isCallExpression(initializer)) return spreadWays(initializer)
     }
   }
@@ -377,8 +414,12 @@ function spreadWays(expression: ts.Expression): Ways {
 function literalWays(literal: ts.ObjectLiteralExpression): Ways {
   let ways = NO_KEYS
   for (const property of literal.properties) {
-    if (ts.isSpreadAssignment(property)) ways = then(ways, spreadWays(property.expression), property)
-    else if (property.name && (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))) {
+    if (ts.isSpreadAssignment(property))
+      ways = then(ways, spreadWays(property.expression), property)
+    else if (
+      property.name &&
+      (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+    ) {
       const key = property.name.text
       ways = ways.map((way) => [...way, { key }])
     }
@@ -422,7 +463,11 @@ function loopKeys(index: ts.Expression): string[][] | undefined {
   if (!ts.isIdentifier(index)) return undefined
   let declaration: ts.Node | undefined = checker.getSymbolAtLocation(index)?.valueDeclaration
   let position: number | undefined
-  if (declaration && ts.isBindingElement(declaration) && ts.isArrayBindingPattern(declaration.parent)) {
+  if (
+    declaration &&
+    ts.isBindingElement(declaration) &&
+    ts.isArrayBindingPattern(declaration.parent)
+  ) {
     position = declaration.parent.elements.indexOf(declaration)
     declaration = declaration.parent.parent
   }
@@ -430,7 +475,11 @@ function loopKeys(index: ts.Expression): string[][] | undefined {
   const loop = declaration.parent.parent
   if (!ts.isForOfStatement(loop)) return undefined
   const iterated = unwrap(loop.expression)
-  if (ts.isCallExpression(iterated) && iterated.expression.getText() === 'Object.entries' && iterated.arguments[0]) {
+  if (
+    ts.isCallExpression(iterated) &&
+    iterated.expression.getText() === 'Object.entries' &&
+    iterated.arguments[0]
+  ) {
     return entryKeys(iterated.arguments[0], position)
   }
   const items = arrayElements(iterated)
@@ -439,7 +488,9 @@ function loopKeys(index: ts.Expression): string[][] | undefined {
   for (const item of items) {
     let value: ts.Expression | undefined = unwrap(item)
     if (position !== undefined) {
-      const element: ts.Expression | undefined = ts.isArrayLiteralExpression(value) ? value.elements[position] : undefined
+      const element: ts.Expression | undefined = ts.isArrayLiteralExpression(value)
+        ? value.elements[position]
+        : undefined
       value = element && unwrap(element)
     }
     if (!value || !ts.isStringLiteralLike(value)) return undefined
@@ -453,12 +504,16 @@ function loopKeys(index: ts.Expression): string[][] | undefined {
  * (position 0) or string values (position 1) in order, one list per way the
  * conditionals it spreads can go.
  */
-function entryKeys(expression: ts.Expression, position: number | undefined): string[][] | undefined {
+function entryKeys(
+  expression: ts.Expression,
+  position: number | undefined,
+): string[][] | undefined {
   if (position !== 0 && position !== 1) return undefined
   let e = unwrap(expression)
   if (ts.isIdentifier(e)) {
     const declaration = checker.getSymbolAtLocation(e)?.valueDeclaration
-    if (!declaration || !ts.isVariableDeclaration(declaration) || !declaration.initializer) return undefined
+    if (!declaration || !ts.isVariableDeclaration(declaration) || !declaration.initializer)
+      return undefined
     e = unwrap(declaration.initializer)
   }
   if (ts.isConditionalExpression(e)) {
@@ -473,7 +528,10 @@ function entryKeys(expression: ts.Expression, position: number | undefined): str
       const inner = entryKeys(property.expression, position)
       if (!inner) return undefined
       ways = ways.flatMap((way) => inner.map((keys) => [...way, ...keys]))
-    } else if (ts.isPropertyAssignment(property) && (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))) {
+    } else if (
+      ts.isPropertyAssignment(property) &&
+      (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+    ) {
       const value = unwrap(property.initializer)
       let key: string
       if (position === 0) key = property.name.text
@@ -492,10 +550,18 @@ function annotationName(node: ts.TypeNode): string | undefined {
   if (ts.isTypeReferenceNode(node)) {
     const name = node.typeName.getText()
     if (!node.typeArguments) return orders[name] === undefined ? undefined : name
-    return name === 'NonNullable' && node.typeArguments.length === 1 ? annotationName(node.typeArguments[0]!) : undefined
+    return name === 'NonNullable' && node.typeArguments.length === 1
+      ? annotationName(node.typeArguments[0]!)
+      : undefined
   }
-  if (ts.isIndexedAccessTypeNode(node) && ts.isLiteralTypeNode(node.indexType) && ts.isStringLiteral(node.indexType.literal)) {
-    const owner = ts.isTypeReferenceNode(node.objectType) ? node.objectType.typeName.getText() : annotationName(node.objectType)
+  if (
+    ts.isIndexedAccessTypeNode(node) &&
+    ts.isLiteralTypeNode(node.indexType) &&
+    ts.isStringLiteral(node.indexType.literal)
+  ) {
+    const owner = ts.isTypeReferenceNode(node.objectType)
+      ? node.objectType.typeName.getText()
+      : annotationName(node.objectType)
     const name = owner && `${owner}.${node.indexType.literal.text}`
     return name && orders[name] !== undefined ? name : undefined
   }
@@ -509,7 +575,11 @@ function annotationName(node: ts.TypeNode): string | undefined {
 function annotatedType(literal: ts.ObjectLiteralExpression): string[] | undefined {
   let at: ts.Node = literal.parent
   while (ts.isParenthesizedExpression(at)) at = at.parent
-  const annotation = ts.isVariableDeclaration(at) ? at.type : ts.isAsExpression(at) ? at.type : undefined
+  const annotation = ts.isVariableDeclaration(at)
+    ? at.type
+    : ts.isAsExpression(at)
+      ? at.type
+      : undefined
   const name = annotation && annotationName(annotation)
   return name === undefined ? undefined : [name]
 }
@@ -526,7 +596,8 @@ function enclosingFunction(node: ts.Node): ts.Node {
  */
 function tailWays(literal: ts.ObjectLiteralExpression, before = Infinity): Ways {
   let declaration: ts.Node = literal.parent
-  while (ts.isParenthesizedExpression(declaration) || ts.isAsExpression(declaration)) declaration = declaration.parent
+  while (ts.isParenthesizedExpression(declaration) || ts.isAsExpression(declaration))
+    declaration = declaration.parent
   if (!ts.isVariableDeclaration(declaration) || !ts.isIdentifier(declaration.name)) return NO_KEYS
   const symbol = checker.getSymbolAtLocation(declaration.name)
   if (!symbol) return NO_KEYS
@@ -567,7 +638,8 @@ function tailWays(literal: ts.ObjectLiteralExpression, before = Infinity): Ways 
       node.arguments[0] &&
       isVariable(node.arguments[0])
     ) {
-      for (const source of node.arguments.slice(1)) steps.push([source.getStart(), source, spreadWays(source)])
+      for (const source of node.arguments.slice(1))
+        steps.push([source.getStart(), source, spreadWays(source)])
     }
     ts.forEachChild(node, visit)
   }
@@ -623,7 +695,8 @@ function contradictions(steps: readonly Step[], type: string, order: readonly st
   }
   groups.forEach((group, at) => {
     for (const later of groups.slice(at + 1)) {
-      for (const a of group) for (const b of later) if (rank.get(a)! > rank.get(b)!) pairs.push(`${a} before ${b}`)
+      for (const a of group)
+        for (const b of later) if (rank.get(a)! > rank.get(b)!) pairs.push(`${a} before ${b}`)
     }
   })
   return pairs
@@ -642,21 +715,31 @@ for (const producer of producers) {
         site.type === type &&
         site.file === producer.file &&
         site.within === producer.within &&
-        pairs.every((pair) => site.keys === undefined || pair.split(' before ').some((key) => site.keys!.includes(key))),
+        pairs.every(
+          (pair) =>
+            site.keys === undefined ||
+            pair.split(' before ').some((key) => site.keys!.includes(key)),
+        ),
     )
     if (known) {
       excused.add(known)
       continue
     }
     findings++
-    console.log(`${type} ${producer.file}:${producer.line} (${producer.within}): ${pairs.slice(0, 6).join('; ')}`)
+    console.log(
+      `${type} ${producer.file}:${producer.line} (${producer.within}): ${pairs.slice(0, 6).join('; ')}`,
+    )
   }
 }
 for (const site of EXCUSED) {
   if (!excused.has(site)) {
     findings++
-    console.log(`EXCUSED names ${site.type} in ${site.file} (${site.within}), which no longer contradicts its order`)
+    console.log(
+      `EXCUSED names ${site.type} in ${site.file} (${site.within}), which no longer contradicts its order`,
+    )
   }
 }
-console.log(`${producers.length} producers of model types read, ${findings} findings, ${excused.size} sites excused`)
+console.log(
+  `${producers.length} producers of model types read, ${findings} findings, ${excused.size} sites excused`,
+)
 if (findings > 0) process.exitCode = 1

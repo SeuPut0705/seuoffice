@@ -53,7 +53,11 @@ const GRAPHIC = (xfrm = '', extra = ''): string =>
   '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>' +
   `<pic:nvPicPr><pic:cNvPr id="1" name="p"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId5"/></pic:blipFill>${PIC_SPPR(xfrm)}</pic:pic>${extra}</a:graphicData></a:graphic>`
 
-const INLINE = (xfrm = '', effect = '<wp:effectExtent l="0" t="0" r="0" b="0"/>', docPr = true): string =>
+const INLINE = (
+  xfrm = '',
+  effect = '<wp:effectExtent l="0" t="0" r="0" b="0"/>',
+  docPr = true,
+): string =>
   `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="952500" cy="476250"/>${effect}` +
   `${docPr ? '<wp:docPr id="1" name="Picture 1"/>' : ''}${GRAPHIC(xfrm)}</wp:inline></w:drawing>`
 
@@ -71,7 +75,13 @@ const THROUGH =
 
 const ANCHOR = (
   wrap: string,
-  { pos = POS, attrs = 'behindDoc="0" relativeHeight="251659264"', xfrm = '', docPr = true, extra = '' } = {},
+  {
+    pos = POS,
+    attrs = 'behindDoc="0" relativeHeight="251659264"',
+    xfrm = '',
+    docPr = true,
+    extra = '',
+  } = {},
 ): string =>
   `<w:drawing><wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" ${attrs} locked="0" layoutInCell="1" allowOverlap="1">` +
   `${pos}<wp:extent cx="952500" cy="476250"/><wp:effectExtent l="0" t="0" r="0" b="0"/>${wrap}` +
@@ -87,7 +97,11 @@ const SHAPE = (
   id: string,
   spPr: string,
   body: string,
-  { wrap = '<wp:wrapSquare wrapText="bothSides"/>', attrs = 'behindDoc="0" relativeHeight="251660288"', inline = false } = {},
+  {
+    wrap = '<wp:wrapSquare wrapText="bothSides"/>',
+    attrs = 'behindDoc="0" relativeHeight="251660288"',
+    inline = false,
+  } = {},
 ): string => {
   const graphic =
     '<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp>' +
@@ -102,10 +116,28 @@ const FALLBACK = (style: string, text = 'box'): string =>
 const ALT = (choice: string, fallback: string): string =>
   `<mc:AlternateContent><mc:Choice Requires="wps">${choice}</mc:Choice>${fallback}</mc:AlternateContent>`
 
-const BOX_A = SHAPE('7', SPPR(`${XFRM_EXT}<a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`), TXBX('Hello'))
-const BOX_B = SHAPE('8', SPPR(`<a:xfrm rot="5400000"><a:off x="0" y="0"/><a:ext cx="100" cy="200"></a:ext></a:xfrm><a:noFill/>`), TXBX('Two &amp; more'))
+const BOX_A = SHAPE(
+  '7',
+  SPPR(
+    `${XFRM_EXT}<a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`,
+  ),
+  TXBX('Hello'),
+)
+const BOX_B = SHAPE(
+  '8',
+  SPPR(
+    `<a:xfrm rot="5400000"><a:off x="0" y="0"/><a:ext cx="100" cy="200"></a:ext></a:xfrm><a:noFill/>`,
+  ),
+  TXBX('Two &amp; more'),
+)
 const BOX_EMPTY = SHAPE('9', SPPR(`${XFRM_EXT}<a:noFill/>`), TXBX(''))
-const LINE = SHAPE('10', SPPR(`${XFRM_EXT}<a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom><a:ln><a:noFill/></a:ln>`), '')
+const LINE = SHAPE(
+  '10',
+  SPPR(
+    `${XFRM_EXT}<a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom><a:ln><a:noFill/></a:ln>`,
+  ),
+  '',
+)
 const LINE_NOWRAP = SHAPE('11', SPPR('<a:prstGeom prst="line"/>'), '', { wrap: '<wp:wrapNone/>' })
 const BOX_NOXFRM = SHAPE('12', SPPR('<a:prstGeom prst="rect"/>'), TXBX('noxfrm'))
 const BOX_INLINE = SHAPE('13', SPPR(XFRM_EXT), TXBX('inline'), { inline: true })
@@ -121,8 +153,14 @@ const SHAPE_PARAS = [
   para(BOX_EMPTY + LINE + BOX_A),
   para(LINE_NOWRAP + BOX_NOXFRM + BOX_INLINE),
   para(BOX_PIC + BOX_B),
-  para(ALT(BOX_A, FALLBACK('position:absolute;width:150pt;height:75pt')) + ALT(BOX_B, FALLBACK('width:200px;height: 100.5px', 'b'))),
-  para(ALT(BOX_EMPTY, FALLBACK('width:1pt;height:1pt', '')) + ALT(LINE, FALLBACK('width:3pt;height:4pt'))),
+  para(
+    ALT(BOX_A, FALLBACK('position:absolute;width:150pt;height:75pt')) +
+      ALT(BOX_B, FALLBACK('width:200px;height: 100.5px', 'b')),
+  ),
+  para(
+    ALT(BOX_EMPTY, FALLBACK('width:1pt;height:1pt', '')) +
+      ALT(LINE, FALLBACK('width:3pt;height:4pt')),
+  ),
   `<w:p><w:r>${BOX_A}</w:r><w:r><w:t>text <w:tab/></w:t></w:r></w:p>`,
 ]
 
@@ -157,8 +195,18 @@ const PIC_PARAS = [
   `<w:p w:rsidR="1">${'<w:pPr><w:spacing w:after="0"/></w:pPr>'}<w:r>${INLINE(' rot="2700000"')}</w:r></w:p>`,
   para(ANCHOR(TIGHT)),
   para(ANCHOR(THROUGH, { attrs: 'relativeHeight="5"', docPr: false })),
-  para(ANCHOR('<wp:wrapNone/>', { pos: POS_ALIGN, attrs: 'behindDoc="1" relativeHeight="251658245"', xfrm: ' rot="10800000"' })),
-  para(ANCHOR('<wp:wrapSquare wrapText="largest"><wp:effectExtent l="1" t="1" r="1" b="1"/></wp:wrapSquare>')),
+  para(
+    ANCHOR('<wp:wrapNone/>', {
+      pos: POS_ALIGN,
+      attrs: 'behindDoc="1" relativeHeight="251658245"',
+      xfrm: ' rot="10800000"',
+    }),
+  ),
+  para(
+    ANCHOR(
+      '<wp:wrapSquare wrapText="largest"><wp:effectExtent l="1" t="1" r="1" b="1"/></wp:wrapSquare>',
+    ),
+  ),
   para(ANCHOR('<wp:wrapTopAndBottom/>', { attrs: 'relativeHeight="251658240"' })),
   para(ANCHOR('', { extra: '<pic:pic/>' })),
   para(ANCHOR('<wp:wrapNone/>', { extra: '<wpg:grpSp/>' })),
@@ -171,7 +219,10 @@ const DRAWINGS = [
   ANCHOR(TIGHT),
   ANCHOR(THROUGH, { attrs: 'relativeHeight="5"' }),
   ANCHOR('<wp:wrapNone/>', { attrs: 'relativeHeight="251658245"', docPr: false }),
-  ANCHOR('<wp:wrapSquare wrapText="bothSides"/>', { attrs: 'relativeHeight="9"' }).replace(' behindDoc="0"', ''),
+  ANCHOR('<wp:wrapSquare wrapText="bothSides"/>', { attrs: 'relativeHeight="9"' }).replace(
+    ' behindDoc="0"',
+    '',
+  ),
   ANCHOR('', { extra: '<pic:pic/>' }),
   ANCHOR('<wp:wrapNone/>', { extra: '<wpg:grpSp/>' }),
   BOX_A,
@@ -346,10 +397,19 @@ export const GEN_DRAWING: CallSpec[] = [
     call: (text, args) =>
       patchImageParagraphXml(
         text,
-        numbersOf(args.patch as Record<string, unknown>, ['widthPx', 'heightPx', 'posOffsetX', 'posOffsetY', 'rotDeg']) as ImagePatch,
+        numbersOf(args.patch as Record<string, unknown>, [
+          'widthPx',
+          'heightPx',
+          'posOffsetX',
+          'posOffsetY',
+          'rotDeg',
+        ]) as ImagePatch,
       ),
     fromDocument: fromParas(IMAGE_PATCHES.slice(0, 8).map((patch) => ({ patch }))),
-    built: cross(PIC_PARAS, IMAGE_PATCHES.map((patch) => ({ patch }))),
+    built: cross(
+      PIC_PARAS,
+      IMAGE_PATCHES.map((patch) => ({ patch })),
+    ),
   },
   {
     fn: 'genDrawing.applyImageZOrder',
@@ -366,7 +426,9 @@ export const GEN_DRAWING: CallSpec[] = [
       return applyImageWrap(
         text,
         args.wrap as ImageWrap | null,
-        pos === undefined ? undefined : ({ ...pos, x: n(pos.x), y: n(pos.y) } as { x: number; y: number }),
+        pos === undefined
+          ? undefined
+          : ({ ...pos, x: n(pos.x), y: n(pos.y) } as { x: number; y: number }),
         args.marginAlign as { h: 'left'; v: 'top' } | undefined,
         on(args.zOrder) ?? undefined,
       )
@@ -385,19 +447,38 @@ export const GEN_DRAWING: CallSpec[] = [
     fn: 'genDrawing.applyShapeWrapAt',
     argMutation: true,
     call: (text, args) =>
-      applyShapeWrapAt(text, location(args), args.wrap as ImageWrap | null, on(args.zOrder) ?? undefined),
-    fromDocument: fromParas([{ location: { boxIndex: 0 }, wrap: null }, { location: { boxIndex: 0 }, wrap: 'behind' }]),
+      applyShapeWrapAt(
+        text,
+        location(args),
+        args.wrap as ImageWrap | null,
+        on(args.zOrder) ?? undefined,
+      ),
+    fromDocument: fromParas([
+      { location: { boxIndex: 0 }, wrap: null },
+      { location: { boxIndex: 0 }, wrap: 'behind' },
+    ]),
     built: cross(
       SHAPE_PARAS,
-      withLocation([{ wrap: null }, { wrap: 'front' }, { wrap: 'topBottom', zOrder: 1 }, { wrap: 'tight-left' }, { wrap: 'behind' }]),
+      withLocation([
+        { wrap: null },
+        { wrap: 'front' },
+        { wrap: 'topBottom', zOrder: 1 },
+        { wrap: 'tight-left' },
+        { wrap: 'behind' },
+      ]),
     ),
   },
   {
     fn: 'genDrawing.swapAnchorWrap',
     argMutation: true,
-    call: (text, args) => swapAnchorWrap(text, args.wrap as ImageWrap, on(args.zOrder) ?? undefined),
+    call: (text, args) =>
+      swapAnchorWrap(text, args.wrap as ImageWrap, on(args.zOrder) ?? undefined),
     fromDocument: fromDrawings([{ wrap: 'behind' }, { wrap: 'square-left', zOrder: 2 }]),
-    built: cross(DRAWINGS, [...WRAPS.map((wrap) => ({ wrap })), { wrap: 'front', zOrder: 7 }, { wrap: 'topBottom', zOrder: 0 }]),
+    built: cross(DRAWINGS, [
+      ...WRAPS.map((wrap) => ({ wrap })),
+      { wrap: 'front', zOrder: 7 },
+      { wrap: 'topBottom', zOrder: 0 },
+    ]),
   },
   {
     fn: 'genDrawing.patchTextboxHeights',
@@ -408,7 +489,11 @@ export const GEN_DRAWING: CallSpec[] = [
       ...cross(SHAPE_PARAS, HEIGHTS),
       ...cross(MARKUP_SHAPE_PARAS, HEIGHTS),
       // valid TypeScript output: -Infinity clamps to 1 EMU, NaN is skipped
-      ...cross(NO_FALLBACK_PARAS, [{ heightsPx: ['-Infinity'] }, { heightsPx: [10, '-Infinity'] }, { heightsPx: ['NaN', 30] }]),
+      ...cross(NO_FALLBACK_PARAS, [
+        { heightsPx: ['-Infinity'] },
+        { heightsPx: [10, '-Infinity'] },
+        { heightsPx: ['NaN', 30] },
+      ]),
     ],
   },
   {
@@ -426,12 +511,24 @@ export const GEN_DRAWING: CallSpec[] = [
       ...cross(SHAPE_PARAS, SIZES),
       ...cross(MARKUP_SHAPE_PARAS, SIZES),
       // valid TypeScript output: -Infinity clamps to 1 EMU
-      ...cross(NO_FALLBACK_PARAS, [{ sizes: [{ wPx: '-Infinity' }, { hPx: '-Infinity', wPx: 12 }] }]),
+      ...cross(NO_FALLBACK_PARAS, [
+        { sizes: [{ wPx: '-Infinity' }, { hPx: '-Infinity', wPx: 12 }] },
+      ]),
       // a non-finite width, then a finite height: the TypeScript's own cx="NaN"
       // stops the height reaching the shape's a:ext; the other order does not
       ...cross(SHAPE_PARAS, [
-        { sizes: [{ wPx: 'NaN', hPx: 40 }, { wPx: 'Infinity', hPx: 12.5 }] },
-        { sizes: [{ wPx: 20, hPx: 'NaN' }, { wPx: 'Infinity', hPx: '-Infinity' }] },
+        {
+          sizes: [
+            { wPx: 'NaN', hPx: 40 },
+            { wPx: 'Infinity', hPx: 12.5 },
+          ],
+        },
+        {
+          sizes: [
+            { wPx: 20, hPx: 'NaN' },
+            { wPx: 'Infinity', hPx: '-Infinity' },
+          ],
+        },
       ]),
     ],
   },
@@ -449,7 +546,9 @@ export const GEN_DRAWING: CallSpec[] = [
     built: cross(SHAPE_PARAS, [
       ...STYLES,
       // valid TypeScript output: -Infinity clamps to w="1"
-      { styles: [{ borderWidthPx: '-Infinity' }, { borderWidthPx: '-Infinity', fillHex: 'ABCDEF' }] },
+      {
+        styles: [{ borderWidthPx: '-Infinity' }, { borderWidthPx: '-Infinity', fillHex: 'ABCDEF' }],
+      },
     ]),
   },
   {
@@ -457,12 +556,15 @@ export const GEN_DRAWING: CallSpec[] = [
     argMutation: true,
     call: (text, args) => patchDrawingExtent(text, n(args.wPx), n(args.hPx)),
     fromDocument: fromParas(EXTENTS.slice(0, 1)),
-    built: cross([...PIC_PARAS, ...SHAPE_PARAS], [
-      ...EXTENTS,
-      // valid TypeScript output: -Infinity clamps to 1 EMU
-      { wPx: '-Infinity', hPx: '-Infinity' },
-      { wPx: '-Infinity', hPx: 20 },
-    ]),
+    built: cross(
+      [...PIC_PARAS, ...SHAPE_PARAS],
+      [
+        ...EXTENTS,
+        // valid TypeScript output: -Infinity clamps to 1 EMU
+        { wPx: '-Infinity', hPx: '-Infinity' },
+        { wPx: '-Infinity', hPx: 20 },
+      ],
+    ),
   },
   {
     fn: 'genDrawing.resizeInlinePictureXml',
@@ -490,27 +592,87 @@ const NF_BOX_PARA =
 const NF_FALLBACK_PARA = para(ALT(BOX_A, FALLBACK('width:150pt;height:75pt')))
 
 /** One input per argument where the TypeScript writes NaN or Infinity into the XML and the Rust ignores the value. */
-export const NON_FINITE_DRAWING: Array<{ fn: string; text: string; args: Record<string, unknown> }> = [
-  { fn: 'genDrawing.applyImageWrap', text: NF_INLINE, args: { wrap: 'front', posOffset: { x: 'NaN', y: 0 } } },
-  { fn: 'genDrawing.applyImageWrap', text: NF_INLINE, args: { wrap: 'front', posOffset: { x: 0, y: 'Infinity' } } },
-  { fn: 'genDrawing.applyImageWrap', text: NF_INLINE, args: { wrap: 'square-left', zOrder: 'NaN' } },
+export const NON_FINITE_DRAWING: Array<{
+  fn: string
+  text: string
+  args: Record<string, unknown>
+}> = [
+  {
+    fn: 'genDrawing.applyImageWrap',
+    text: NF_INLINE,
+    args: { wrap: 'front', posOffset: { x: 'NaN', y: 0 } },
+  },
+  {
+    fn: 'genDrawing.applyImageWrap',
+    text: NF_INLINE,
+    args: { wrap: 'front', posOffset: { x: 0, y: 'Infinity' } },
+  },
+  {
+    fn: 'genDrawing.applyImageWrap',
+    text: NF_INLINE,
+    args: { wrap: 'square-left', zOrder: 'NaN' },
+  },
   { fn: 'genDrawing.applyImageZOrder', text: NF_ANCHOR, args: { zOrder: 'NaN' } },
-  { fn: 'genDrawing.applyShapeZOrderAt', text: NF_BOX_PARA, args: { location: { boxIndex: 0 }, zOrder: 'NaN' } },
+  {
+    fn: 'genDrawing.applyShapeZOrderAt',
+    text: NF_BOX_PARA,
+    args: { location: { boxIndex: 0 }, zOrder: 'NaN' },
+  },
   { fn: 'genDrawing.swapAnchorWrap', text: NF_ANCHOR, args: { wrap: 'behind', zOrder: 'NaN' } },
   { fn: 'genDrawing.patchTextboxHeights', text: NF_BOX_PARA, args: { heightsPx: ['Infinity'] } },
   { fn: 'genDrawing.patchTextboxSizes', text: NF_BOX_PARA, args: { sizes: [{ wPx: 'NaN' }] } },
   { fn: 'genDrawing.patchTextboxSizes', text: NF_BOX_PARA, args: { sizes: [{ hPx: 'Infinity' }] } },
-  { fn: 'genDrawing.patchTextboxHeights', text: NF_FALLBACK_PARA, args: { heightsPx: ['-Infinity'] } },
-  { fn: 'genDrawing.patchTextboxSizes', text: NF_FALLBACK_PARA, args: { sizes: [{ wPx: '-Infinity' }] } },
-  { fn: 'genDrawing.patchTextboxSizes', text: NF_FALLBACK_PARA, args: { sizes: [{ hPx: '-Infinity' }] } },
+  {
+    fn: 'genDrawing.patchTextboxHeights',
+    text: NF_FALLBACK_PARA,
+    args: { heightsPx: ['-Infinity'] },
+  },
+  {
+    fn: 'genDrawing.patchTextboxSizes',
+    text: NF_FALLBACK_PARA,
+    args: { sizes: [{ wPx: '-Infinity' }] },
+  },
+  {
+    fn: 'genDrawing.patchTextboxSizes',
+    text: NF_FALLBACK_PARA,
+    args: { sizes: [{ hPx: '-Infinity' }] },
+  },
   { fn: 'genDrawing.patchShapeStyles', text: NF_BOX_PARA, args: { styles: [{ rotDeg: 'NaN' }] } },
-  { fn: 'genDrawing.patchShapeStyles', text: NF_BOX_PARA, args: { styles: [{ borderWidthPx: 'Infinity' }] } },
-  { fn: 'genDrawing.patchDrawingExtent', text: `<w:p><w:r>${NF_INLINE}</w:r></w:p>`, args: { wPx: 'NaN', hPx: 50 } },
-  { fn: 'genDrawing.patchDrawingExtent', text: `<w:p><w:r>${NF_INLINE}</w:r></w:p>`, args: { wPx: 100, hPx: 'Infinity' } },
-  { fn: 'genDrawing.resizeInlinePictureXml', text: NF_INLINE, args: { widthPx: 'Infinity', heightPx: 50 } },
-  { fn: 'genDrawing.resizeInlinePictureXml', text: NF_INLINE, args: { widthPx: 100, heightPx: 'Infinity' } },
-  { fn: 'genDrawing.resizeAnchoredPictureXml', text: NF_ANCHOR, args: { widthPx: 'Infinity', heightPx: 50 } },
-  { fn: 'genDrawing.resizeAnchoredPictureXml', text: NF_ANCHOR, args: { widthPx: 100, heightPx: 'Infinity' } },
+  {
+    fn: 'genDrawing.patchShapeStyles',
+    text: NF_BOX_PARA,
+    args: { styles: [{ borderWidthPx: 'Infinity' }] },
+  },
+  {
+    fn: 'genDrawing.patchDrawingExtent',
+    text: `<w:p><w:r>${NF_INLINE}</w:r></w:p>`,
+    args: { wPx: 'NaN', hPx: 50 },
+  },
+  {
+    fn: 'genDrawing.patchDrawingExtent',
+    text: `<w:p><w:r>${NF_INLINE}</w:r></w:p>`,
+    args: { wPx: 100, hPx: 'Infinity' },
+  },
+  {
+    fn: 'genDrawing.resizeInlinePictureXml',
+    text: NF_INLINE,
+    args: { widthPx: 'Infinity', heightPx: 50 },
+  },
+  {
+    fn: 'genDrawing.resizeInlinePictureXml',
+    text: NF_INLINE,
+    args: { widthPx: 100, heightPx: 'Infinity' },
+  },
+  {
+    fn: 'genDrawing.resizeAnchoredPictureXml',
+    text: NF_ANCHOR,
+    args: { widthPx: 'Infinity', heightPx: 50 },
+  },
+  {
+    fn: 'genDrawing.resizeAnchoredPictureXml',
+    text: NF_ANCHOR,
+    args: { widthPx: 100, heightPx: 'Infinity' },
+  },
 ]
 
 // The non-finite inputs are built inputs of the comparison; the mutations

@@ -42,15 +42,21 @@ function writeCopy(): void {
   const source = ts.createSourceFile(SOURCE, text, ts.ScriptTarget.Latest, true)
   const edits: Array<{ at: number; insert: string }> = []
   const exported = (statement: ts.Statement): boolean =>
-    !!ts.getModifiers(statement as ts.HasModifiers)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+    !!ts
+      .getModifiers(statement as ts.HasModifiers)
+      ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
   const back = relative(resolve(toolDir, 'out'), resolve(SOURCE, '..')).replaceAll('\\', '/')
   for (const statement of source.statements) {
-    if ((ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) && statement.moduleSpecifier) {
+    if (
+      (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) &&
+      statement.moduleSpecifier
+    ) {
       const specifier = statement.moduleSpecifier as ts.StringLiteral
       if (specifier.text.startsWith('.')) {
         edits.push({ at: specifier.getStart(source) + 1, insert: `${back}/` })
         // drop the leading './' of the specifier itself
-        if (specifier.text.startsWith('./')) edits.push({ at: -(specifier.getStart(source) + 1), insert: '' })
+        if (specifier.text.startsWith('./'))
+          edits.push({ at: -(specifier.getStart(source) + 1), insert: '' })
       }
     } else if (ts.isFunctionDeclaration(statement) && statement.name && statement.body) {
       if (!exported(statement)) edits.push({ at: statement.getStart(source), insert: 'export ' })
@@ -65,12 +71,21 @@ function writeCopy(): void {
   // a negative position removes the two characters './' there
   let out = text
   for (const edit of edits.sort((a, b) => Math.abs(b.at) - Math.abs(a.at) || a.at - b.at)) {
-    out = edit.at < 0 ? out.slice(0, -edit.at) + out.slice(-edit.at + 2) : out.slice(0, edit.at) + edit.insert + out.slice(edit.at)
+    out =
+      edit.at < 0
+        ? out.slice(0, -edit.at) + out.slice(-edit.at + 2)
+        : out.slice(0, edit.at) + edit.insert + out.slice(edit.at)
   }
-  const hook = relative(resolve(toolDir, 'out'), resolve(toolDir, 'parse-internals')).replaceAll('\\', '/')
+  const hook = relative(resolve(toolDir, 'out'), resolve(toolDir, 'parse-internals')).replaceAll(
+    '\\',
+    '/',
+  )
   out = `import { captureHook } from '${hook}'\n${out}`
   mkdirSync(resolve(toolDir, 'out'), { recursive: true })
-  writeFileSync(COPY, `// Written by tools/docx-diff/parse-internals.ts from ${relative(repoRoot, SOURCE).replaceAll('\\', '/')}: do not edit.\n${out}`)
+  writeFileSync(
+    COPY,
+    `// Written by tools/docx-diff/parse-internals.ts from ${relative(repoRoot, SOURCE).replaceAll('\\', '/')}: do not edit.\n${out}`,
+  )
 }
 
 /** A function of the copy: its parameters are what the spec passes. */

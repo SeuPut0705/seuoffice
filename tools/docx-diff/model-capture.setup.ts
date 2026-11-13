@@ -23,14 +23,23 @@ vi.mock('./reference/parse', async (importOriginal) => {
       try {
         result = await actual.parseDocx(bytes, options)
       } catch (error) {
-        appendFileSync(file, JSON.stringify({ status: 'rejected', test, input, error: String(error) }) + '\n')
+        appendFileSync(
+          file,
+          JSON.stringify({ status: 'rejected', test, input, error: String(error) }) + '\n',
+        )
         throw error
       }
       const json = modelJson(result)
-      appendFileSync(file, JSON.stringify({
-        status: 'ok', test, input, sha256: modelDigest(json),
-        model: { where: test, population: 'tests', type: 'ParsedDocFull', json },
-      }) + '\n')
+      appendFileSync(
+        file,
+        JSON.stringify({
+          status: 'ok',
+          test,
+          input,
+          sha256: modelDigest(json),
+          model: { where: test, population: 'tests', type: 'ParsedDocFull', json },
+        }) + '\n',
+      )
       return result
     },
   }

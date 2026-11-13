@@ -1,7 +1,7 @@
 // Group `ident` of comparison (f): identity.ts, redaction-xml.ts and model3d.ts
 // of packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_ident.rs to `pptxIdent.<module>.<TypeScript name>`.
-import type { GlbBounds } from '../../packages/pptx-engine/src/glb-bounds'
+import type { GlbBounds } from './reference/glb-bounds'
 import {
   elementCNvPrId,
   elementDurableId,
@@ -10,7 +10,7 @@ import {
   matchesElementRef,
   slideDurableId,
   withFreshCreationIds,
-} from '../../packages/pptx-engine/src/identity'
+} from './reference/identity'
 import {
   AM3D_NS,
   GLB_CONTENT_TYPE,
@@ -26,8 +26,9 @@ import {
   readModel3dRotation,
   setModel3dRotationXml,
   syncModel3dFrame,
-} from '../../packages/pptx-engine/src/model3d'
+} from './reference/model3d'
 import {
+  diagramDataRedactLabel,
   hasRedactExtIn,
   readRedactLabel,
   REDACT_EL,
@@ -38,10 +39,10 @@ import {
   setRedactExt,
   stripRedactExt,
   syncRedactExt,
-} from '../../packages/pptx-engine/src/redaction-xml'
-import { scanSlide } from '../../packages/pptx-engine/src/scan'
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
-import type { EmuRect, Slide, SlideElement } from '../../packages/pptx-engine/src/types'
+} from './reference/redaction-xml'
+import { scanSlide } from './reference/scan'
+import { xmlParser } from './reference/xml-parser'
+import type { EmuRect, Slide, SlideElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { withUuid } from './calls-leaves'
 
@@ -139,7 +140,7 @@ const MODEL3D_CONSTANTS: Record<string, unknown> = {
 const OTHER_NAMES = ['nothing', 'constructor', 'toString']
 
 /**
- * The parser of packages/pptx-engine/src/parse.ts, which parses the `<a:rPr>`
+ * The parser of tools/pptx-diff/reference/parse.ts, which parses the `<a:rPr>`
  * and `<p:spPr>` nodes readRedactLabel is given. The Rust dispatch holds the
  * same list.
  */
@@ -297,6 +298,8 @@ const CREATION_FORMS: string[] = [
   `<p:cNvPr id="36" name="B"><p:cNvPr id="37"/></p:cNvPr>`,
   `<p:cNvPr id="38" name="B"><a:hlinkClick r:id=""><a:extLst/></a:hlinkClick></p:cNvPr>`,
   `<p:cNvPr id="39" name="B"><a:hlinkClick r:id=""><a:extLst></a:extLst></a:hlinkClick></p:cNvPr>`,
+  `<p:cNvPr id="" name="B"/>`,
+  `<p:cNvPr id='' name="B"></p:cNvPr>`,
 ]
 
 /** An element without a slice of its own, as a group child is, named by nvId. */
@@ -421,9 +424,21 @@ const GROUP_CHILD_INPUTS: Input[] = [
     args: { nvId: '21' },
   },
   // an nvId is text, never a pattern
-  ...['2.', '2[12]', '+21', '21|x', '2\\d', '(', '[', ']', '{', '2{2}', '\\', '&#50;1', '2&amp;1'].map(
-    (nvId): Input => ({ text: GROUP, args: { nvId } }),
-  ),
+  ...[
+    '2.',
+    '2[12]',
+    '+21',
+    '21|x',
+    '2\\d',
+    '(',
+    '[',
+    ']',
+    '{',
+    '2{2}',
+    '\\',
+    '&#50;1',
+    '2&amp;1',
+  ].map((nvId): Input => ({ text: GROUP, args: { nvId } })),
   ...CREATION_FORMS.flatMap((creation) => [
     {
       text: group(cNvPr('id="20" name="Group"'), creation),
@@ -592,6 +607,18 @@ const LABEL_INPUTS: Input[] = [
     '<go:redact>plain</go:redact>',
     '<redact label="x"/>',
     '<toString label="x"/><go:redact label="y"/>',
+    '<seu:redact label="other prefix"/>',
+    '<a.b-c_d:redact label="prefix of every name character"/>',
+    '<redact xmlns="urn:x" label="default namespace"/>',
+    '<:redact label="empty prefix"/>',
+    '<go:redacted label="longer name"/>',
+    '<go:Redact label="case"/>',
+    '<x:y:redact label="two colons"/>',
+    '<go:redact label="written"/><seu:redact label="later"/>',
+    '<seu:redact label="first"/><go:redact label="written later"/>',
+    '<seu:redact/>',
+    '<other label="x"/>',
+    '',
   ].map((redact) => ({
     text: `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}" xmlns:go="${REDACT_NS_WRITTEN}">${redact}</a:ext></a:extLst></a:rPr>`,
     args: { name: 'a:rPr' },
@@ -628,7 +655,9 @@ const SET_INPUTS: Input[] = [
     text: '<a:rPr lang="en-US"><a:latin typeface="x"/></a:rPr><a:t>w</a:t><a:rPr/>',
     args: { label: 'Name' },
   },
-  ...DOLLAR_PROPS().flatMap((text) => DOLLAR_LABELS.map((label): Input => ({ text, args: { label } }))),
+  ...DOLLAR_PROPS().flatMap((text) =>
+    DOLLAR_LABELS.map((label): Input => ({ text, args: { label } })),
+  ),
   ...REDACT_FORMS.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
 ]
 
@@ -920,7 +949,38 @@ export const IDENT: CallSpec[] = [
     call: (text) => hasRedactExtIn(text),
     fromDocument: (parts) =>
       [...shapesOf(parts), ...elementsOf(parts, RPR)].map((text) => ({ text })),
-    built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({ text })),
+    built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({
+      text,
+    })),
+  },
+  {
+    fn: 'pptxIdent.redaction-xml.diagramDataRedactLabel',
+    call: (text) => diagramDataRedactLabel(text),
+    fromDocument: (parts) =>
+      [...parts]
+        .filter(([path]) => /^ppt\/diagrams\/data\d*\.xml$/.test(path))
+        .map(([, text]) => ({ text })),
+    built: [
+      '',
+      '<dgm:dataModel/>',
+      ...PROPS,
+      ...REDACT_FORMS,
+      `<dgm:pt><a:rPr><a:extLst>${redactExtXml('client phone')}</a:extLst></a:rPr></dgm:pt>`,
+      `<x:redact label='single'/>`,
+      '<redact label=""/>',
+      '<redact/>',
+      '<go:redacted label="no"/>',
+      '<go:redact\tlabel = "spaced"></go:redact>',
+      '<go:redact x="a" label="second"/><go:redact label="third"/>',
+      `<a:ext uri="${REDACT_EXT_URI}"/>`,
+      // the mark spelt with character references, valid and not
+      '&#60;go:redact label="ref"/>',
+      '&#x3C;go&#x3a;redact label="hex"/>',
+      `&#x7B;9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}`,
+      '&#xD800;redact label="surrogate"/>',
+      '&#1114112;redact&#99999999999999999999;/>',
+      '&#0;<redact label="nul"/>',
+    ].map((text) => ({ text })),
   },
   {
     fn: 'pptxIdent.redaction-xml.syncRedactExt',
@@ -959,9 +1019,7 @@ export const IDENT: CallSpec[] = [
       ...REDACT_FORMS,
       ...SYNC_TEXTS.map(([text]) => text),
       `<a:t> </a:t><a:b></a:c>`,
-    ].map(
-      (text) => ({ text }),
-    ),
+    ].map((text) => ({ text })),
   },
   {
     fn: 'pptxIdent.redaction-xml.setRedactExt',

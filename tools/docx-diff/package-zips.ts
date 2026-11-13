@@ -406,12 +406,13 @@ function richPackages(withHidden = false): Record<string, EntrySpec[]> {
         }
       : {}),
     ...Object.fromEntries(
-      (withHidden ? [...STORIES.map((story) => story.comments), ...COMMENT_PARTS.slice(STORIES.length)] : []).map(
-        (data, index): [string, EntrySpec[]] => [
-          `a package with comments hidden from AI (${index})`,
-          [...common, { name: 'word/comments.xml', data }],
-        ],
-      ),
+      (withHidden
+        ? [...STORIES.map((story) => story.comments), ...COMMENT_PARTS.slice(STORIES.length)]
+        : []
+      ).map((data, index): [string, EntrySpec[]] => [
+        `a package with comments hidden from AI (${index})`,
+        [...common, { name: 'word/comments.xml', data }],
+      ]),
     ),
     'a package with the other answers of the settings and theme readers': [
       ...common,

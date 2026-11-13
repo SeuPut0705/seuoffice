@@ -1,3 +1,4 @@
+import './engine-init'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'

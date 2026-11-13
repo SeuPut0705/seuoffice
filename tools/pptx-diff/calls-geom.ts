@@ -8,11 +8,8 @@ import {
   parseCustGeom,
   validCustGeomPath,
   type CustGeomPath,
-} from '../../packages/pptx-engine/src/custgeom'
-import {
-  isPresetShapeType,
-  PRESET_SHAPE_TYPES,
-} from '../../packages/pptx-engine/src/preset-shape-types'
+} from './reference/custgeom'
+import { isPresetShapeType, PRESET_SHAPE_TYPES } from './reference/preset-shape-types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Gd = { name: string; fmla: string }

@@ -287,7 +287,7 @@ describe('the parser and the attribute reader give one value for one spelling', 
     expect(declaredIds(opened, path)).toEqual([value])
   })
 
-  it('an entity a DTD declares is left as written: a package part has no DTD', async () => {
+  it('a part with a DTD is refused: a package part has no DTD', async () => {
     const opened = await openPptx(await createBlankPptx())
     const path = opened.deck.slides[0]!.path
     const rels = read(opened, relsPathFor(path))
@@ -301,7 +301,10 @@ describe('the parser and the attribute reader give one value for one spelling', 
         )
         .replace(/\bId="[^"]*"/, () => 'Id="r&e;1"'),
     )
-    expect([...opened.archive.readRels(path).keys()]).toEqual(['r&e;1'])
+    // the Rust engine refuses DOCTYPE outright (crates/pptx-engine/README.md, unit 1: final policy)
+    expect(() => opened.archive.readRels(path)).toThrow(
+      'document type declarations are not supported',
+    )
   })
 })
 

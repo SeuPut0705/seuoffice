@@ -18,7 +18,9 @@ function variantsOf(model: TableModel): TableModel[] {
       ...model,
       ...(model.tblPrChange !== undefined ? { tblPrChange: fix(model.tblPrChange) } : {}),
       ...(model.tblGridChange !== undefined ? { tblGridChange: fix(model.tblGridChange) } : {}),
-      ...(model.rowPrChanges ? { rowPrChanges: model.rowPrChanges.map((c) => fix(c) ?? null) } : {}),
+      ...(model.rowPrChanges
+        ? { rowPrChanges: model.rowPrChanges.map((c) => fix(c) ?? null) }
+        : {}),
       rows: model.rows.map((row) =>
         row.map((cell) => ({
           ...cell,
@@ -46,7 +48,12 @@ function variantsOf(model: TableModel): TableModel[] {
       rowHeightsTwips: model.rows.map((_, i) => (i % 3 === 0 ? 400.5 : i % 3 === 1 ? null : 0)),
       rowHeightRules: model.rows.map((_, i) => (i % 2 ? 'exact' : 'atLeast')),
       rows: model.rows.map((row) =>
-        row.map((cell, c) => ({ ...cell, tcPrEdited: true, noWrap: c % 2 === 0, vAlign: 'bottom' as const })),
+        row.map((cell, c) => ({
+          ...cell,
+          tcPrEdited: true,
+          noWrap: c % 2 === 0,
+          vAlign: 'bottom' as const,
+        })),
       ),
     },
   ]
@@ -71,7 +78,12 @@ export function tableModelInputs(doc: {
 
 const cell = (paras: string[], extra: Partial<TableCell> = {}): TableCell => ({ paras, ...extra })
 const border = (style: string, extra: Partial<CellBorder> = {}): CellBorder => ({ style, ...extra })
-const change = (extra: Record<string, unknown> = {}) => ({ author: 'A', date: '2024-01-01T00:00:00Z', id: '7', ...extra })
+const change = (extra: Record<string, unknown> = {}) => ({
+  author: 'A',
+  date: '2024-01-01T00:00:00Z',
+  id: '7',
+  ...extra,
+})
 
 const RAW_TC_PR =
   '<w:tcPr><w:cnfStyle w:val="1"/><w:tcW w:w="1" w:type="dxa"/><w:tcBorders><w:top w:val="single"/></w:tcBorders>' +
@@ -79,18 +91,37 @@ const RAW_TC_PR =
   '<w:tcPrChange w:id="3" w:author="B"><w:tcPr><w:shd w:fill="FF0000"/></w:tcPr></w:tcPrChange></w:tcPr>'
 
 const NESTED: TableModel = {
-  rows: [[cell(['inner a']), cell(['inner b'], { colSpan: 2 })], [cell([], { gridGap: true }), cell(['x'])]],
+  rows: [
+    [cell(['inner a']), cell(['inner b'], { colSpan: 2 })],
+    [cell([], { gridGap: true }), cell(['x'])],
+  ],
 }
 
 const MODELS: TableModel[] = [
-  { rows: [[cell(['a']), cell(['b'])], [cell(['c']), cell(['d'])]] },
+  {
+    rows: [
+      [cell(['a']), cell(['b'])],
+      [cell(['c']), cell(['d'])],
+    ],
+  },
   { rows: [[cell([])]] },
   { rows: [] },
   {
     rows: [
       [
-        cell(['head'], { bold: true, color: 'FF0000', align: 'center', fill: 'EEEEEE', vAlign: 'center' }),
-        cell(['tab\there', 'line2'], { colSpan: 3.7, vMerge: 'restart', textDirection: 'btLr', tcPrEdited: true }),
+        cell(['head'], {
+          bold: true,
+          color: 'FF0000',
+          align: 'center',
+          fill: 'EEEEEE',
+          vAlign: 'center',
+        }),
+        cell(['tab\there', 'line2'], {
+          colSpan: 3.7,
+          vMerge: 'restart',
+          textDirection: 'btLr',
+          tcPrEdited: true,
+        }),
       ],
       [
         cell([], { gridGap: true, colSpan: 2 }),
@@ -103,13 +134,20 @@ const MODELS: TableModel[] = [
     rowHeightRules: ['exact', 'atLeast'],
     repeatHeaderRows: [true, false],
     rowCantSplit: [true, null],
-    rawTrPrs: ['<w:trPr><w:cnfStyle w:val="1"/><w:gridBefore w:val="9"/><w:trHeight w:val="1"/></w:trPr>', '<w:trPr></w:trPr>'],
+    rawTrPrs: [
+      '<w:trPr><w:cnfStyle w:val="1"/><w:gridBefore w:val="9"/><w:trHeight w:val="1"/></w:trPr>',
+      '<w:trPr></w:trPr>',
+    ],
   },
   {
     rows: [
       [
         cell(['b'], {
-          borders: { top: border('single', { szEighths: 12, color: 'A<B' }), left: border('nil'), tl2br: border('dashed') },
+          borders: {
+            top: border('single', { szEighths: 12, color: 'A<B' }),
+            left: border('nil'),
+            tl2br: border('dashed'),
+          },
           tcPrEdited: true,
           cellMarTwips: { top: -5, left: 100.6 },
           noWrap: true,
@@ -124,11 +162,23 @@ const MODELS: TableModel[] = [
     borders: { top: border('none'), insideH: border('single', { szEighths: 4.5 }) },
     cellMarTwips: { top: 0 },
     colWidthsTwips: [1000.4, 0.2, Number.MAX_SAFE_INTEGER, 50],
-    tableLook: { firstRow: false, lastRow: true, firstColumn: false, lastColumn: true, bandedRows: false, bandedColumns: true },
+    tableLook: {
+      firstRow: false,
+      lastRow: true,
+      firstColumn: false,
+      lastColumn: true,
+      bandedRows: false,
+      bandedColumns: true,
+    },
     tblStyleId: 'Grid & "1"',
     align: 'left',
     indentTwips: 120.5,
-    floatPos: { xTwips: 5000, yTwips: -20.5, distanceTwips: { left: 100, bottom: -4 }, horzAnchor: 'margin' },
+    floatPos: {
+      xTwips: 5000,
+      yTwips: -20.5,
+      distanceTwips: { left: 100, bottom: -4 },
+      horzAnchor: 'margin',
+    },
   },
   {
     rows: [
@@ -137,7 +187,12 @@ const MODELS: TableModel[] = [
           nestedTables: [NESTED, { rows: [[cell(['deep'], { nestedTables: [NESTED] })]] }],
           nestedTableAnchors: [0, 7],
           richParas: [
-            { runs: [{ text: 'rich', italic: true }], align: 'right', bidi: true, list: { kind: 'bullet', numId: '4', ilvl: 1 } },
+            {
+              runs: [{ text: 'rich', italic: true }],
+              align: 'right',
+              bidi: true,
+              list: { kind: 'bullet', numId: '4', ilvl: 1 },
+            },
             { runs: [], spaceBefore: 120, indentLeft: 360 },
           ],
         }),
@@ -147,10 +202,14 @@ const MODELS: TableModel[] = [
     floatSide: 'left',
     tblGridChange: change({ oldXml: '<w:gridCol w:w="5"/>' }),
     tblPrChange: change({ resolved: 'accept' }),
-    rawTblPrExs: ['<w:tblPrEx><w:tblW w:w="1"/><w:tblPrExChange w:id="1" w:author="a"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>'],
+    rawTblPrExs: [
+      '<w:tblPrEx><w:tblW w:w="1"/><w:tblPrExChange w:id="1" w:author="a"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>',
+    ],
     rowTblPrExChanges: [change({ resolved: 'reject' })],
     rowPrChanges: [null],
-    rawTrPrs: ['<w:trPr><w:ins w:id="1" w:author="a"/><w:trPrChange w:id="2" w:author="a"><w:trPr><w:cantSplit/></w:trPr></w:trPrChange></w:trPr>'],
+    rawTrPrs: [
+      '<w:trPr><w:ins w:id="1" w:author="a"/><w:trPrChange w:id="2" w:author="a"><w:trPr><w:cantSplit/></w:trPr></w:trPrChange></w:trPr>',
+    ],
     caption: '',
     description: 'desc',
   },
@@ -162,7 +221,10 @@ const MODELS: TableModel[] = [
     rowHeightsTwips: [0],
   },
   {
-    rows: [[cell([], { gridGap: true }), cell(['z'])], [cell([], { gridGap: true }), cell(['w'])]],
+    rows: [
+      [cell([], { gridGap: true }), cell(['z'])],
+      [cell([], { gridGap: true }), cell(['w'])],
+    ],
     rawTrPrs: ['<w:trPr><w:tblHeader/>', 'junk</w:trPr>'],
     autoFit: 'fixed',
   },
@@ -186,17 +248,30 @@ const VERDICTS = [change({ resolved: 'reject' }), change({ resolved: 'accept' })
 const EMPTY_OLD_INPUTS: Input[] = [
   ...VERDICTS.map((verdict) => ({
     text: EMPTY_OLD_TBL,
-    args: { model: { rows: [[cell(['a'])]], tblPrChange: verdict, tblGridChange: change({ resolved: 'reject', oldXml: '' }) } },
+    args: {
+      model: {
+        rows: [[cell(['a'])]],
+        tblPrChange: verdict,
+        tblGridChange: change({ resolved: 'reject', oldXml: '' }),
+      },
+    },
   })),
-  { text: EMPTY_OLD_TBL_PAIRED, args: { model: { rows: [[cell(['a'])]], tblPrChange: VERDICTS[0] } } },
+  {
+    text: EMPTY_OLD_TBL_PAIRED,
+    args: { model: { rows: [[cell(['a'])]], tblPrChange: VERDICTS[0] } },
+  },
   ...VERDICTS.map((verdict) => ({
     text: '',
     args: {
       model: {
         rows: [[cell(['r'])]],
-        rawTrPrs: ['<w:trPr><w:cantSplit/><w:trPrChange w:id="3" w:author="a"><w:trPr/></w:trPrChange></w:trPr>'],
+        rawTrPrs: [
+          '<w:trPr><w:cantSplit/><w:trPrChange w:id="3" w:author="a"><w:trPr/></w:trPrChange></w:trPr>',
+        ],
         rowPrChanges: [verdict],
-        rawTblPrExs: ['<w:tblPrEx><w:tblW w:w="1"/><w:tblPrExChange w:id="5" w:author="a"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>'],
+        rawTblPrExs: [
+          '<w:tblPrEx><w:tblW w:w="1"/><w:tblPrExChange w:id="5" w:author="a"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>',
+        ],
         rowTblPrExChanges: [verdict],
       },
     },
@@ -208,7 +283,8 @@ const EMPTY_OLD_INPUTS: Input[] = [
         rows: [
           [
             cell(['c'], {
-              rawTcPr: '<w:tcPr><w:shd w:val="clear" w:fill="FF0000"/><w:tcPrChange w:id="4" w:author="a"><w:tcPr/></w:tcPrChange></w:tcPr>',
+              rawTcPr:
+                '<w:tcPr><w:shd w:val="clear" w:fill="FF0000"/><w:tcPrChange w:id="4" w:author="a"><w:tcPr/></w:tcPrChange></w:tcPr>',
               tcPrChange: verdict,
             }),
           ],
@@ -228,14 +304,17 @@ export const GEN_TABLE: CallSpec[] = [
     fromModel: tableModelInputs,
     built: [
       ...MODELS.flatMap((model) => ORIGINALS.map((text) => ({ text, args: { model } }))),
-      ...MODELS.flatMap((model) => variantsOf(model).map((model) => ({ text: ORIGINALS[3]!, args: { model } }))),
+      ...MODELS.flatMap((model) =>
+        variantsOf(model).map((model) => ({ text: ORIGINALS[3]!, args: { model } })),
+      ),
       ...EMPTY_OLD_INPUTS,
     ],
   },
   {
     fn: 'genTable.generateTableXml',
     argMutation: true,
-    call: (_text, args) => generateTableXml(args.rows as number, args.cols as number, args.opts as never),
+    call: (_text, args) =>
+      generateTableXml(args.rows as number, args.cols as number, args.opts as never),
     built: [
       [1, 1],
       [3, 4],

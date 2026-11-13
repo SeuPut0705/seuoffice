@@ -16,40 +16,29 @@ import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { crc32, deflateSync } from 'node:zlib'
-import { buildTimingXml, type SlideAnimation } from '../../packages/pptx-engine/src/animation'
-import { BLANK_SLIDE_XML, createBlankPptx } from '../../packages/pptx-engine/src/blank'
-import {
-  buildChartSpaceXml,
-  type NewChartOptions,
-} from '../../packages/pptx-engine/src/chart-insert'
+import { buildTimingXml, type SlideAnimation } from './reference/animation'
+import { BLANK_SLIDE_XML, createBlankPptx } from './reference/blank'
+import { buildChartSpaceXml, type NewChartOptions } from './reference/chart-insert'
 import {
   CHART_WORKBOOK_REL_TYPE,
   XLSX_CONTENT_TYPE,
   chartWorkbookXlsx,
-} from '../../packages/pptx-engine/src/chart-workbook'
-import { custGeomXml } from '../../packages/pptx-engine/src/custgeom'
-import { generateParagraphXml, generateXfrmXml } from '../../packages/pptx-engine/src/generate'
-import { glbBounds } from '../../packages/pptx-engine/src/glb-bounds'
+} from './reference/chart-workbook'
+import { custGeomXml } from './reference/custgeom'
+import { generateParagraphXml, generateXfrmXml } from './reference/generate'
+import { glbBounds } from './reference/glb-bounds'
 import {
   buildGrpSpXml,
   buildSpXml,
   buildTableXml,
   nextCNvPrId,
   type NewElementOptions,
-} from '../../packages/pptx-engine/src/insert'
-import {
-  GLB_CONTENT_TYPE,
-  MODEL3D_REL_TYPE,
-  model3dXml,
-} from '../../packages/pptx-engine/src/model3d'
-import { setRedactExt } from '../../packages/pptx-engine/src/redaction-xml'
-import { TABLE_STYLE_PRESETS, ensureTableStyleXml } from '../../packages/pptx-engine/src/table-edit'
-import type { EmuRect, Paragraph, Slide } from '../../packages/pptx-engine/src/types'
-import {
-  creationIdXml,
-  escapeXmlAttr,
-  maxRelationshipIdNumber,
-} from '../../packages/pptx-engine/src/xml-utils'
+} from './reference/insert'
+import { GLB_CONTENT_TYPE, MODEL3D_REL_TYPE, model3dXml } from './reference/model3d'
+import { setRedactExt } from './reference/redaction-xml'
+import { TABLE_STYLE_PRESETS, ensureTableStyleXml } from './reference/table-edit'
+import type { EmuRect, Paragraph, Slide } from './reference/types'
+import { creationIdXml, escapeXmlAttr, maxRelationshipIdNumber } from './reference/xml-utils'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const OUT = join(here, '../../packages/pptx-engine/tests/fixtures/06_corpus_gaps.pptx')

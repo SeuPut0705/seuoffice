@@ -544,9 +544,12 @@ const wordArt = (style: string, attrs: string, textpath: string, children = ''):
   `<v:shape id="WordArt" type="#_x0000_t136" style="${style}"${attrs}>${children}<v:textpath${textpath}/></v:shape>`
 
 const WA_STYLE = 'position:absolute;margin-left:10pt;margin-top:20.5pt;width:300pt;height:60pt'
-const WA_TEXTPATH = ' style="font-family:&quot;Arial Black&quot;;font-size:40pt" string="CONFIDENTIAL"'
-const wordArtTextpath = (string: string, style = 'font-family:&quot;Arial&quot;;font-size:40pt'): string =>
-  ` style="${style}" string="${string}"`
+const WA_TEXTPATH =
+  ' style="font-family:&quot;Arial Black&quot;;font-size:40pt" string="CONFIDENTIAL"'
+const wordArtTextpath = (
+  string: string,
+  style = 'font-family:&quot;Arial&quot;;font-size:40pt',
+): string => ` style="${style}" string="${string}"`
 
 /** WordArt shapes for every branch of vmlWordArtBox. */
 const WORD_ARTS: string[] = [
@@ -673,7 +676,10 @@ const WORD_ARTS: string[] = [
   wordArt(
     WA_STYLE,
     ' fillcolor="#c0c0c0" stroked="f"',
-    wordArtTextpath('\u00c9TAT', 'font-family:&quot;\u00c9l\u00e9gant&quot;;font-weight:bold;font-style:italic'),
+    wordArtTextpath(
+      '\u00c9TAT',
+      'font-family:&quot;\u00c9l\u00e9gant&quot;;font-weight:bold;font-style:italic',
+    ),
   ),
   '<v:shape style="width:10pt"><v:textpath string="A"></v:shape>',
   '',

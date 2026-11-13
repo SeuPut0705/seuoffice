@@ -23,7 +23,13 @@ import { parseDocx } from './reference/index'
 import { resolveMainDocumentPath } from './reference/parse-package'
 import { loadDocxZip } from './reference/zip-load'
 import { bench } from './bench'
-import { callsAfterCorpus, callsOnDocument, callsOnModel, callsOnParse, reportCalls } from './calls-run'
+import {
+  callsAfterCorpus,
+  callsOnDocument,
+  callsOnModel,
+  callsOnParse,
+  reportCalls,
+} from './calls-run'
 import { compareBlankBytes } from './compare-blank'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'

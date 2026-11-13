@@ -11,11 +11,7 @@
 // result itself: every GUID and every ISO timestamp of the answer is replaced by a placeholder
 // (`scrub`), and the Rust side does the same to its answer.
 import JSZip from 'jszip'
-import {
-  addSlideComment,
-  deleteSlideComment,
-  getSlideComments,
-} from '../../packages/pptx-engine/src/comments'
+import { addSlideComment, deleteSlideComment, getSlideComments } from './reference/comments'
 import {
   addContentTypeOverride,
   appendRelationship,
@@ -23,13 +19,13 @@ import {
   notesPathForSlide,
   setSlideNotes,
   unescapeXml,
-} from '../../packages/pptx-engine/src/notes'
+} from './reference/notes'
 import {
   cleanupDeletedElementResources,
   cleanupSupersededSlideResources,
   removePartWithOwnedResources,
   removeRelationshipAndCollectOwnedTarget,
-} from '../../packages/pptx-engine/src/resource-cleanup'
+} from './reference/resource-cleanup'
 import {
   addSection,
   getSections,
@@ -39,7 +35,7 @@ import {
   removeSection,
   renameSection,
   setSections,
-} from '../../packages/pptx-engine/src/sections'
+} from './reference/sections'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckNamed, deckOp } from './deck-ops'
 
@@ -91,7 +87,8 @@ const rel = (id: string, type: string, target: string, extra = ''): string =>
   `<Relationship Id="${id}" Type="${REL}/${type}" Target="${target}"${extra}/>`
 
 const CT = BASE.get('[Content_Types].xml')!
-const withCt = (...extra: string[]): string => CT.replace('</Types>', () => `${extra.join('')}</Types>`)
+const withCt = (...extra: string[]): string =>
+  CT.replace('</Types>', () => `${extra.join('')}</Types>`)
 const override = (part: string, type: string): string =>
   `<Override PartName="/${part}" ContentType="application/vnd.openxmlformats-officedocument.${type}"/>`
 const SLIDE_CT = 'presentationml.slide+xml'
@@ -133,12 +130,7 @@ const slidesEdits = (n: number, presRelsExtra: string[] = []): Edits => {
 }
 
 /** An input of the deck `deck`; `part` is the part `text` is written into. */
-const inp = (
-  deck: string,
-  args: Record<string, unknown>,
-  part?: string,
-  text?: string,
-): Input =>
+const inp = (deck: string, args: Record<string, unknown>, part?: string, text?: string): Input =>
   part === undefined
     ? { args: { deck, ...args } }
     : { text: text ?? '', args: { deck, ...args, textPart: part } }
@@ -155,12 +147,15 @@ const IMG_SP =
   '<p:sp><p:nvSpPr><p:cNvPr id="2" name="I"/><p:cNvSpPr/><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp>'
 const bodySp = (txBody: string, ph = 'type="body" idx="1"'): string =>
   `<p:sp><p:nvSpPr><p:cNvPr id="3" name="N"/><p:cNvSpPr/><p:nvPr><p:ph ${ph}/></p:nvPr></p:nvSpPr><p:spPr/>${txBody}</p:sp>`
-const tx = (...paras: string[]): string => `<p:txBody><a:bodyPr/><a:lstStyle/>${paras.join('')}</p:txBody>`
+const tx = (...paras: string[]): string =>
+  `<p:txBody><a:bodyPr/><a:lstStyle/>${paras.join('')}</p:txBody>`
 const para = (...runs: string[]): string => `<a:p>${runs.join('')}</a:p>`
 const run1 = (t: string): string => `<a:r><a:rPr lang="en-US"/><a:t>${t}</a:t></a:r>`
 
 const NOTES_TEXTS: string[] = [
-  notesXml(IMG_SP + bodySp(tx(para(run1('Hello')), para(run1('World &amp; &lt;x&gt; &#65;&#x42;'))))),
+  notesXml(
+    IMG_SP + bodySp(tx(para(run1('Hello')), para(run1('World &amp; &lt;x&gt; &#65;&#x42;')))),
+  ),
   notesXml(IMG_SP + bodySp(tx(para(run1('a')), para(), para(run1('b')), para(), para()))),
   notesXml(bodySp(tx(para(run1('x'))), `type='body' idx='1'`)),
   notesXml(IMG_SP),
@@ -177,9 +172,7 @@ const NOTES_TEXTS: string[] = [
   notesXml(bodySp(tx(para('<a:r><a:t a="x/">q</a:t></a:r>')))),
   notesXml(bodySp(tx(para('<a:r><a:t b="y/"/>skipped</a:t></a:r>')))),
   notesXml(
-    IMG_SP +
-      bodySp(tx(para(run1('first'))), 'type="title"') +
-      bodySp(tx(para(run1('second')))),
+    IMG_SP + bodySp(tx(para(run1('first'))), 'type="title"') + bodySp(tx(para(run1('second')))),
   ),
   notesXml(bodySp(tx(para(run1('\u{1F600} non-BMP \u00e9 \ud55c\uae00'))))),
   // a `<p:sp>` with attributes is not the block the reader looks for
@@ -245,7 +238,15 @@ const NOTES_RELS_TEXTS: string[] = [
   rels(),
 ]
 
-const NOTE_TEXTS_SET = ['Hello', 'a\r\nb\rc\n\nd', '', '\n\n', '<&>"\'', '\u0001\u000b x \u000c', '\u{1F600} \u00e9']
+const NOTE_TEXTS_SET = [
+  'Hello',
+  'a\r\nb\rc\n\nd',
+  '',
+  '\n\n',
+  '<&>"\'',
+  '\u0001\u000b x \u000c',
+  '\u{1F600} \u00e9',
+]
 
 // presentations that decide where the new notesMaster is registered
 const PRES_NOTES: string[] = [
@@ -283,12 +284,18 @@ const sectionExt = (...sections: string[]): string =>
   `<p:ext uri="${EXT_URI}"><p14:sectionLst xmlns:p14="${P14}">${sections.join('')}</p14:sectionLst></p:ext>`
 const extLst = (...exts: string[]): string => `<p:extLst>${exts.join('')}</p:extLst>`
 const OTHER_EXT = '<p:ext uri="{OTHER}"><x/></p:ext>'
-const TWO = sectionExt(section('A', '{S1}', ['256', '257']), section('B &amp; C', '{S2}', ['258', '259']))
+const TWO = sectionExt(
+  section('A', '{S1}', ['256', '257']),
+  section('B &amp; C', '{S2}', ['258', '259']),
+)
 
 const SECTION_TEXTS: Record<string, string> = {
   none: presXml(4),
   two: presXml(4, extLst(TWO)),
-  lead: presXml(4, extLst(sectionExt(section('A', '{S1}', ['257']), section('B', '{S2}', ['259'])))),
+  lead: presXml(
+    4,
+    extLst(sectionExt(section('A', '{S1}', ['257']), section('B', '{S2}', ['259']))),
+  ),
   three: presXml(
     4,
     extLst(
@@ -341,7 +348,10 @@ const SECTION_TEXTS: Record<string, string> = {
     4,
     extLst(`<p:ext uri="${EXT_URI}"><p14:sectionLst xmlns:p14="${P14}"/></p:ext>`),
   ),
-  swapped: presXml(4, extLst(sectionExt(section('A', '{S1}', ['258']), section('B', '{S2}', ['256'])))),
+  swapped: presXml(
+    4,
+    extLst(sectionExt(section('A', '{S1}', ['258']), section('B', '{S2}', ['256']))),
+  ),
   entity: presXml(
     4,
     extLst(
@@ -541,7 +551,9 @@ const CD_BY_AUTHORS = await Promise.all(
 const CD_SHARED = await commentsDeck(AUTH_A, true, {
   ...slidesEdits(2),
   [SLIDE1_RELS]: slideRels(rel('rId2', 'comments', '../comments/comment1.xml')),
-  'ppt/slides/_rels/slide2.xml.rels': slideRels(rel('rId2', 'comments', '../comments/comment1.xml')),
+  'ppt/slides/_rels/slide2.xml.rels': slideRels(
+    rel('rId2', 'comments', '../comments/comment1.xml'),
+  ),
   '[Content_Types].xml': withCt(
     override('ppt/slides/slide2.xml', SLIDE_CT),
     override(COMMENT1, COMMENTS_CT),
@@ -692,9 +704,13 @@ export const PACKAGEPARTS: CallSpec[] = [
     fn: 'pptxPackageparts.notes.unescapeXml',
     call: (text) => unescapeXml(text),
     mutation: 'none',
-    built: ['&#38;lt;', '&#38;amp;', '&#x26;gt;&#34;', 'a&#38;quot;b&#38;apos;', '&#38;#38;lt;'].map(
-      (text) => ({ text }),
-    ),
+    built: [
+      '&#38;lt;',
+      '&#38;amp;',
+      '&#x26;gt;&#34;',
+      'a&#38;quot;b&#38;apos;',
+      '&#38;#38;lt;',
+    ].map((text) => ({ text })),
   },
   {
     fn: 'pptxPackageparts.notes.notesPathForSlide',
@@ -788,7 +804,7 @@ export const PACKAGEPARTS: CallSpec[] = [
       ].flatMap((text) =>
         [
           ['ppt/x.xml', 'application/x'],
-          ['ppt/y.xml', 'a$&b$1$$c$`d$\'e'],
+          ['ppt/y.xml', "a$&b$1$$c$`d$'e"],
           ['ppt/$&.xml', 'application/z'],
           ['', ''],
         ].map(([part, type]) => inp(BLANK_DECK, { part, type }, '[Content_Types].xml', text)),
@@ -821,11 +837,9 @@ export const PACKAGEPARTS: CallSpec[] = [
       ].flatMap((text) =>
         [
           ['ppt/slides/slide1.xml', 'T', 'a.xml'],
-          ['ppt/slides/slide1.xml', 'T$&', 'x$&y$`z$\'w$$q$1'],
+          ['ppt/slides/slide1.xml', 'T$&', "x$&y$`z$'w$$q$1"],
           ['ppt/slides/slide1.xml', 'T', 'a&b<c>"d$&.xml'],
-        ].map(([part, type, target]) =>
-          inp(BLANK_DECK, { part, type, target }, SLIDE1_RELS, text),
-        ),
+        ].map(([part, type, target]) => inp(BLANK_DECK, { part, type, target }, SLIDE1_RELS, text)),
       ),
       // no rels part yet: created with the declaration
       inp(BLANK_DECK, { part: 'ppt/slides/slide7.xml', type: 'T', target: 'x' }),
@@ -852,9 +866,17 @@ export const PACKAGEPARTS: CallSpec[] = [
         return null
       }),
     built: [
-      ...['none', 'two', 'one', 'emptyExt', 'emptyExtLst', 'other', 'after', 'selfList', 'mismatch'].flatMap(
-        (name) => [SECS_A, [], SECS_ESC].map((sections) => sec(name, { sections })),
-      ),
+      ...[
+        'none',
+        'two',
+        'one',
+        'emptyExt',
+        'emptyExtLst',
+        'other',
+        'after',
+        'selfList',
+        'mismatch',
+      ].flatMap((name) => [SECS_A, [], SECS_ESC].map((sections) => sec(name, { sections }))),
       // no extLst, and no sldIdLst for the ids to come from
       inp(
         FOUR_DECK,
@@ -895,7 +917,9 @@ export const PACKAGEPARTS: CallSpec[] = [
       run(text, args, (opened) => renameSection(opened, args.id as string, args.name as string)),
     built: [
       ...['two', 'three', 'lead', 'entity'].flatMap((name) =>
-        ['{S1}', '{S2}', '{S3}', '{NONE}', ''].map((id) => sec(name, { id, name: 'Renamed &amp; x' })),
+        ['{S1}', '{S2}', '{S3}', '{NONE}', ''].map((id) =>
+          sec(name, { id, name: 'Renamed &amp; x' }),
+        ),
       ),
       sec('two', { id: '{S1}', name: '\u{1F600} <&> "q" \u0001' }),
       sec('none', { id: '{S1}', name: 'x' }),
@@ -1026,7 +1050,12 @@ export const PACKAGEPARTS: CallSpec[] = [
       ),
       // the part is also related from slide 2: it stays when slide 1 lets go of it
       ...[0, 1].map((slide) =>
-        inp(CD_SHARED, { slide, ref: { authorId: 0, idx: 1 } }, COMMENT1, cmLst(cm(0, 1, 'shared'))),
+        inp(
+          CD_SHARED,
+          { slide, ref: { authorId: 0, idx: 1 } },
+          COMMENT1,
+          cmLst(cm(0, 1, 'shared')),
+        ),
       ),
       inp(CD_A_NO_REL, { slide: 0, ref: { authorId: 0, idx: 1 } }),
       inp(CD_A, { slide: 0, ref: { authorId: 0, idx: 1 } }),
@@ -1084,7 +1113,11 @@ export const PACKAGEPARTS: CallSpec[] = [
     fn: 'pptxPackageparts.resource-cleanup.removeRelationshipAndCollectOwnedTarget',
     call: (text, args) =>
       run(text, args, (opened) =>
-        removeRelationshipAndCollectOwnedTarget(opened.archive, args.source as string, args.id as string),
+        removeRelationshipAndCollectOwnedTarget(
+          opened.archive,
+          args.source as string,
+          args.id as string,
+        ),
       ),
     built: resNames.flatMap((name) => {
       const { deck, slide1Rels } = RES.get(name)!
@@ -1110,7 +1143,9 @@ export const PACKAGEPARTS: CallSpec[] = [
   {
     fn: 'pptxPackageparts.resource-cleanup.removePartWithOwnedResources',
     call: (text, args) =>
-      run(text, args, (opened) => removePartWithOwnedResources(opened.archive, args.part as string)),
+      run(text, args, (opened) =>
+        removePartWithOwnedResources(opened.archive, args.part as string),
+      ),
     built: resNames.flatMap((name) => {
       const { deck } = RES.get(name)!
       return [

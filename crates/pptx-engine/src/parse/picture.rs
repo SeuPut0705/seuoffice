@@ -24,7 +24,7 @@ use crate::chart::{ResolveFill, UserLine, parse_chart_xml};
 use crate::chartex::parse_chart_ex_xml;
 use crate::custgeom::parse_cust_geom;
 use crate::placeholder::{resolve_placeholder_preset_geom, resolve_placeholder_transform};
-use crate::redaction_xml::read_redact_label;
+use crate::redaction_xml::{diagram_data_redact_label, read_redact_label};
 use crate::theme::{Theme, theme_with_override};
 use crate::types::{
     ByteAnchor, ChartElement, ElementType, Insets, MediaKind, Paragraph, PassthroughElement,
@@ -534,6 +534,16 @@ pub(super) fn graphic_frame_passthrough(
         if let Some(model) = model {
             let c_nv_pr = get(get(node, "p:nvGraphicFramePr"), "p:cNvPr");
             let descr = truthy(attr(c_nv_pr, "@_descr"));
+            // the overlay shapes' own words count too: they are drawn on the chart
+            let redact = model.redact.as_ref().cloned().or_else(|| {
+                user_shapes
+                    .iter()
+                    .filter_map(|shape| shape.text.as_ref())
+                    .flat_map(|text| text.paragraphs.iter().flatten())
+                    .flat_map(|p| p.runs.iter().flatten())
+                    .find_map(|r| r.redact.as_ref().filter(|label| !label.is_empty()))
+                    .cloned()
+            });
             return Ok(SlideElement::Chart(Box::new(ChartElement {
                 id: Slot::of(ctx.uid("chart")),
                 r#type: Slot::of(ElementType::Chart),
@@ -541,6 +551,7 @@ pub(super) fn graphic_frame_passthrough(
                 transform: Slot::of(frame_xfrm),
                 name: assigned(attr(c_nv_pr, "@_name").map(str::to_owned)),
                 descr: Slot::maybe(descr.map(str::to_owned)),
+                redact: Slot::maybe(redact.filter(|label| !label.is_empty())),
                 chart: Slot::of(model),
                 user_shapes: Slot::maybe((!user_shapes.is_empty()).then_some(user_shapes)),
                 ..ChartElement::default()
@@ -638,6 +649,10 @@ pub(super) fn graphic_frame_passthrough(
                 }
             }
         }
+        let hidden = diagram_data_redact_label(lookup(ctx.diagram_datas, dm).map(String::as_str))?;
+        if let (Some(label), Some(shapes)) = (hidden, el.preview_shapes.as_mut()) {
+            withhold_shape_text(shapes, &label);
+        }
     }
     // OLE read-only preview: p:pic embedded in graphicData (often inside mc:AlternateContent/mc:Fallback),
     // or, in legacy converted decks, a VML shape keyed by the oleObj spid (v:imagedata, usually WMF/EMF)
@@ -670,6 +685,29 @@ pub(super) fn graphic_frame_passthrough(
         }
     }
     Ok(SlideElement::Passthrough(Box::new(el)))
+}
+
+/// Every run and picture of the shapes drawn for a diagram, withheld under `label`.
+fn withhold_shape_text(shapes: &mut [SlideElement], label: &str) {
+    for shape in shapes {
+        match shape {
+            SlideElement::Group(group) => {
+                if let Some(children) = group.children.as_mut() {
+                    withhold_shape_text(children, label);
+                }
+            }
+            SlideElement::Picture(picture) => picture.redact.set(label.to_owned()),
+            SlideElement::Text(text) => {
+                let paragraphs = text.text.as_mut().and_then(|body| body.paragraphs.as_mut());
+                for paragraph in paragraphs.into_iter().flatten() {
+                    for run in paragraph.runs.as_mut().into_iter().flatten() {
+                        run.redact.set(label.to_owned());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// `sh.text?.paragraphs?.some((par) => par.runs?.some((r) => r.text?.trim()))`

@@ -1377,7 +1377,8 @@ const bibliographySpecs: CallSpec[] = [
     // a constant has one result: it is compared by name, with a name that is none
     fn: 'save.constants',
     call: (_text, args) => {
-      if (args.name !== 'buildSourcesItemPropsXml') throw new Error(`no constant ${String(args.name)}`)
+      if (args.name !== 'buildSourcesItemPropsXml')
+        throw new Error(`no constant ${String(args.name)}`)
       return buildSourcesItemPropsXml()
     },
     built: ['buildSourcesItemPropsXml', 'nothing'].map((name) => ({ args: { name } })),

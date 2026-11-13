@@ -62,7 +62,10 @@ async function readStories(pictures: boolean): Promise<Story[]> {
         )
     for (const mutation of TAG_MUTATION_NAMES)
       out.push(
-        await storyOf(`mutated: ${mutation}`, await mutatedStoriesDocx(dir, mutation, { pictures })),
+        await storyOf(
+          `mutated: ${mutation}`,
+          await mutatedStoriesDocx(dir, mutation, { pictures }),
+        ),
       )
     return out
   } finally {
@@ -83,7 +86,8 @@ const NS = 'https://genspark.ai/genoffice/redaction/2026'
 /** A run hidden from AI under `mark`, a rPr child. */
 export const hiddenRun = (text: string, mark: string): string =>
   `<w:r><w:rPr>${mark}</w:rPr><w:t>${text}</w:t></w:r>`
-export const plainRun = (text: string): string => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+export const plainRun = (text: string): string =>
+  `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
 
 /** Marks as another writer may spell them, each reading as `label`. */
 export const marks = (label = 'phone'): string[] => [
@@ -224,7 +228,10 @@ export const HF_PARTS: Array<{ root: 'w:hdr' | 'w:ftr'; xml: string }> = [
       xml: `<${root} xmlns:w="x"><w:p><w:r><w:t><![CDATA[</${root}>]]></w:t></w:r></w:p><w:tbl/><!-- </${root}> --><w:p/></${root}>`,
     },
     { root, xml: `<${root} xmlns:w="x"><w:p/><!-- <w:tbl/> --></${root}>` },
-    { root, xml: `<${root} xmlns:w="x"><w:p><w:r><w:t>a</w:t></w:r><!-- </w:p> --></w:p></${root}>` },
+    {
+      root,
+      xml: `<${root} xmlns:w="x"><w:p><w:r><w:t>a</w:t></w:r><!-- </w:p> --></w:p></${root}>`,
+    },
     { root, xml: `<${root}><w:sdt><w:sdtContent><w:p/></w:sdtContent></w:sdt></${root}>` },
     { root, xml: `<${root} a=">"><w:p/><w:tbl/></${root}>` },
     { root, xml: `<w:p/>` },

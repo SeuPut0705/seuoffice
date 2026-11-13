@@ -17,8 +17,8 @@
 // `<prefix>_<(k - next) in base 36>`, `next` the counter after the probe: the
 // ids a counter from 0 gives, which is how the Rust is called.
 import { readFileSync } from 'node:fs'
-import { listMasterParts, parseMasterPart } from '../../packages/pptx-engine/src/master-edit'
-import { MODEL3D_REL_TYPE } from '../../packages/pptx-engine/src/model3d'
+import { listMasterParts, parseMasterPart } from './reference/master-edit'
+import { MODEL3D_REL_TYPE } from './reference/model3d'
 import {
   type DecorationOptions,
   layoutDiagramFallback,
@@ -27,15 +27,15 @@ import {
   parseDecorations,
   parseSlide,
   sliceGroupChildXmls,
-} from '../../packages/pptx-engine/src/parse'
+} from './reference/parse'
 import {
   parseDefaultTextStyle,
   parseMasterTextStyles,
   parsePlaceholderMap,
-} from '../../packages/pptx-engine/src/placeholder'
-import { parseClrMap, parseTheme } from '../../packages/pptx-engine/src/theme'
-import type { Slide, SlideElement } from '../../packages/pptx-engine/src/types'
-import { PackageArchive, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/placeholder'
+import { parseClrMap, parseTheme } from './reference/theme'
+import type { Slide, SlideElement } from './reference/types'
+import { PackageArchive, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { SLIDES as DIAGRAM_SLIDES } from './parse-inputs/diagram'
 import { SLIDES as FILL_SLIDES } from './parse-inputs/fill'
@@ -107,9 +107,7 @@ function fromWire(wire: unknown): ParseContext {
   for (const [key, value] of Object.entries((wire ?? {}) as Wire)) {
     if (value === null || value === undefined) continue
     if (MAP_OF_MAPS_KEYS.has(key)) {
-      ctx[key] = new Map(
-        (value as Array<[string, Parts]>).map(([k, inner]) => [k, new Map(inner)]),
-      )
+      ctx[key] = new Map((value as Array<[string, Parts]>).map(([k, inner]) => [k, new Map(inner)]))
     } else if (MAP_KEYS.has(key)) {
       ctx[key] = new Map(value as Array<[string, unknown]>)
     } else if (key === 'chartStyleRels') {
@@ -575,11 +573,41 @@ const SLIDE_NUMBER = field('slidenum', '\u2039#\u203A')
 
 /** Footer, date and number placeholders, the decoration shapes, both in a master and a layout. */
 const masterTree = (prefix: string): string =>
-  shape(2, 'Title Placeholder 1', '<p:ph type="title"/>', xfrm(457200, 274638, 8229600, 1143000), runs(run(`${prefix} title`))) +
-  shape(3, 'Text Placeholder 2', '<p:ph type="body" idx="1"/>', xfrm(457200, 1600200, 8229600, 4525963), runs(run(`${prefix} text`))) +
-  shape(4, 'Date Placeholder 3', '<p:ph type="dt" sz="half" idx="2"/>', xfrm(457200, 6356350, 2133600, 365125), runs(field('datetime1', '11/12/2026'))) +
-  shape(5, 'Footer Placeholder 4', '<p:ph type="ftr" sz="quarter" idx="3"/>', xfrm(3124200, 6356350, 2895600, 365125), runs(run(`${prefix} footer`))) +
-  shape(6, 'Slide Number Placeholder 5', '<p:ph type="sldNum" sz="quarter" idx="4"/>', xfrm(6553200, 6356350, 2133600, 365125), runs(SLIDE_NUMBER)) +
+  shape(
+    2,
+    'Title Placeholder 1',
+    '<p:ph type="title"/>',
+    xfrm(457200, 274638, 8229600, 1143000),
+    runs(run(`${prefix} title`)),
+  ) +
+  shape(
+    3,
+    'Text Placeholder 2',
+    '<p:ph type="body" idx="1"/>',
+    xfrm(457200, 1600200, 8229600, 4525963),
+    runs(run(`${prefix} text`)),
+  ) +
+  shape(
+    4,
+    'Date Placeholder 3',
+    '<p:ph type="dt" sz="half" idx="2"/>',
+    xfrm(457200, 6356350, 2133600, 365125),
+    runs(field('datetime1', '11/12/2026')),
+  ) +
+  shape(
+    5,
+    'Footer Placeholder 4',
+    '<p:ph type="ftr" sz="quarter" idx="3"/>',
+    xfrm(3124200, 6356350, 2895600, 365125),
+    runs(run(`${prefix} footer`)),
+  ) +
+  shape(
+    6,
+    'Slide Number Placeholder 5',
+    '<p:ph type="sldNum" sz="quarter" idx="4"/>',
+    xfrm(6553200, 6356350, 2133600, 365125),
+    runs(SLIDE_NUMBER),
+  ) +
   picture(7, 'rId3') +
   shape(8, `${prefix} band`, '', xfrm(0, 0, 12192000, 200000), runs(run('Page ') + SLIDE_NUMBER)) +
   CONNECTOR
@@ -602,9 +630,21 @@ const MASTER_XML = shapeTreePart(
 const LAYOUT_TREE =
   shape(2, 'Title 1', '<p:ph type="title"/>', '') +
   shape(3, 'Content Placeholder 2', '<p:ph idx="1"/>', '') +
-  shape(4, 'Date Placeholder 3', '<p:ph type="dt" sz="half" idx="10"/>', '', runs(field('datetime1', '11/12/2026'))) +
+  shape(
+    4,
+    'Date Placeholder 3',
+    '<p:ph type="dt" sz="half" idx="10"/>',
+    '',
+    runs(field('datetime1', '11/12/2026')),
+  ) +
   shape(5, 'Footer Placeholder 4', '<p:ph type="ftr" sz="quarter" idx="11"/>', '') +
-  shape(6, 'Slide Number Placeholder 5', '<p:ph type="sldNum" sz="quarter" idx="12"/>', '', runs(SLIDE_NUMBER)) +
+  shape(
+    6,
+    'Slide Number Placeholder 5',
+    '<p:ph type="sldNum" sz="quarter" idx="12"/>',
+    '',
+    runs(SLIDE_NUMBER),
+  ) +
   shape(9, 'Layout band', '', xfrm(0, 6600000, 12192000, 258000), runs(run('Layout band')))
 
 const layoutPart = (attrs = ''): string =>
@@ -735,7 +775,10 @@ const SLIDE_FORMS: string[] = [
   slidePart(ONE_SHAPE, solidBg('0000FF')),
   slidePart(ONE_SHAPE, '<p:bg><p:bgPr><a:effectLst/></p:bgPr></p:bg>'),
   slidePart(ONE_SHAPE, '<p:bg/>'),
-  slidePart(ONE_SHAPE, '<p:bg ><p:bgPr><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></p:bgPr></p:bg>'),
+  slidePart(
+    ONE_SHAPE,
+    '<p:bg ><p:bgPr><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></p:bgPr></p:bg>',
+  ),
   slidePart(ONE_SHAPE, '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg2"/></p:bgRef></p:bg>'),
   slidePart(ONE_SHAPE, '<p:bg><p:bgRef idx="7"><a:srgbClr val="123456"/></p:bgRef></p:bg>'),
   slidePart(
@@ -789,7 +832,27 @@ const BACKGROUNDS: string[] = [
   '<p:bg><p:bgPr></p:bgPr></p:bg>',
   '<p:bg><p:bgPr><a:grpFill/></p:bgPr></p:bg>',
   '<p:bg bwMode="white"><p:bgPr><a:solidFill><a:srgbClr val=\'00FF00\'/></a:solidFill></p:bgPr><p:bgRef idx="1"><a:srgbClr val="0000FF"/></p:bgRef></p:bg>',
-  ...['1001', '1002', '1003', '1004', '1', '2', '3', '4', '0', '-1', '', 'abc', '1001.9', ' 1002', '+2', '1e3', '0x3EA', '99999999999999999999', 'constructor'].map((idx) => bgRef(idx)),
+  ...[
+    '1001',
+    '1002',
+    '1003',
+    '1004',
+    '1',
+    '2',
+    '3',
+    '4',
+    '0',
+    '-1',
+    '',
+    'abc',
+    '1001.9',
+    ' 1002',
+    '+2',
+    '1e3',
+    '0x3EA',
+    '99999999999999999999',
+    'constructor',
+  ].map((idx) => bgRef(idx)),
   bgRef('1001', '<a:schemeClr val="phClr"/>'),
   bgRef('1001', '<a:srgbClr val="ABCDEF"><a:alpha val="50000"/></a:srgbClr>'),
   bgRef('1001', '<a:prstClr val="red"/>'),
@@ -859,7 +922,11 @@ const GROUPS: string[] = [
   group(3, '<!-- <p:sp>commented</p:sp> -->', ONE_SHAPE, '<![CDATA[<p:sp>]]>', '<?pi <p:sp> ?>'),
   group(3, '<p:sp name="a>b"><p:spPr/></p:sp>', "<p:pic descr='<x>'/>"),
   group(3, '< p:sp ><p:spPr/></p:sp>', '<p:sp\n\t><p:spPr/></p:sp>'),
-  group(3, '<p:extLst><p:ext uri="x"><p:sp/></p:ext></p:extLst>', '<mc:AlternateContent><mc:Choice><p:sp/></mc:Choice></mc:AlternateContent>'),
+  group(
+    3,
+    '<p:extLst><p:ext uri="x"><p:sp/></p:ext></p:extLst>',
+    '<mc:AlternateContent><mc:Choice><p:sp/></mc:Choice></mc:AlternateContent>',
+  ),
   group(3, '<p:sp>', ONE_SHAPE),
   group(3, '</p:sp></p:sp>', ONE_SHAPE),
   group(3),
@@ -881,7 +948,8 @@ const point = (id: string, text: string, attrs = ''): string =>
   `<a:p><a:r><a:rPr lang="en-US" sz="1400"/><a:t>${text}</a:t></a:r></a:p></dgm:t></dgm:pt>`
 const link = (id: string, src: string, dest: string, ord: string, attrs = ''): string =>
   `<dgm:cxn modelId="${id}" srcId="${src}" destId="${dest}" srcOrd="${ord}" destOrd="0"${attrs}/>`
-const DOC = '<dgm:pt modelId="0" type="doc"><dgm:prSet/><dgm:spPr/><dgm:t><a:bodyPr/><a:p/></dgm:t></dgm:pt>'
+const DOC =
+  '<dgm:pt modelId="0" type="doc"><dgm:prSet/><dgm:spPr/><dgm:t><a:bodyPr/><a:p/></dgm:t></dgm:pt>'
 
 const FLAT = dataModel(
   DOC + point('1', 'Plan') + point('2', 'Build') + point('3', '\uD55C\uAE00 \u{1F600}'),
@@ -975,7 +1043,14 @@ const ENTRY_DIAGRAMS: Input[] = ENTRIES.flatMap((entry) => {
     ? /\buniqueId="([^"]+)"/.exec(layoutXml)?.[1]?.split('/').pop()
     : undefined
   return datas.map(([, dataXml]) =>
-    diagramInput(dataXml, { ...BASE_B.wire, ...ctx }, [6096000, 4064000], uniqueId, colorsXml, layoutXml),
+    diagramInput(
+      dataXml,
+      { ...BASE_B.wire, ...ctx },
+      [6096000, 4064000],
+      uniqueId,
+      colorsXml,
+      layoutXml,
+    ),
   )
 })
 
@@ -1000,14 +1075,36 @@ const DECORATION_TREE =
   shape(11, 'Empty ph', '<p:ph/>', xfrm(0, 0, 10, 10), runs(run('empty ph'))) +
   shape(12, 'Odd ph', '<p:ph type="constructor"/>', xfrm(0, 0, 10, 10), runs(SLIDE_NUMBER)) +
   shape(13, 'Proto ph', '<p:ph type="__proto__"/>', xfrm(0, 0, 10, 10), runs(run('proto'))) +
-  shape(14, 'Quoted number', "<p:ph type='sldNum'/>", xfrm(0, 0, 10, 10), runs(SLIDE_NUMBER + SLIDE_NUMBER)) +
-  shape(15, 'Comment ph', '<!-- <p:ph/> -->', xfrm(0, 0, 10, 10), runs(run('looks like a placeholder'))) +
+  shape(
+    14,
+    'Quoted number',
+    "<p:ph type='sldNum'/>",
+    xfrm(0, 0, 10, 10),
+    runs(SLIDE_NUMBER + SLIDE_NUMBER),
+  ) +
+  shape(
+    15,
+    'Comment ph',
+    '<!-- <p:ph/> -->',
+    xfrm(0, 0, 10, 10),
+    runs(run('looks like a placeholder')),
+  ) +
   picture(16, 'rId3', '<p:ph type="pic" idx="13"/>') +
-  group(17, shape(18, 'Grouped number', '', xfrm(0, 0, 10, 10), runs(run('No. ') + SLIDE_NUMBER)), CONNECTOR) +
+  group(
+    17,
+    shape(18, 'Grouped number', '', xfrm(0, 0, 10, 10), runs(run('No. ') + SLIDE_NUMBER)),
+    CONNECTOR,
+  ) +
   group(19, shape(20, 'Grouped footer', '<p:ph type="ftr"/>', xfrm(0, 0, 10, 10), runs(run('f')))) +
   '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="21" name="Unknown"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>' +
   `<p:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></p:xfrm><a:graphic><a:graphicData uri="urn:unknown"/></a:graphic></p:graphicFrame>` +
-  shape(22, 'Other field', '', xfrm(0, 0, 10, 10), runs(field('slidenumx', '9') + field('SLIDENUM', '8')))
+  shape(
+    22,
+    'Other field',
+    '',
+    xfrm(0, 0, 10, 10),
+    runs(field('slidenumx', '9') + field('SLIDENUM', '8')),
+  )
 
 const DECORATION_PARTS: string[] = [
   shapeTreePart('sldMaster', DECORATION_TREE),
@@ -1032,7 +1129,11 @@ const DECORATION_OPTIONS: Array<Wire | undefined> = [
 
 const decorationContexts = (base: Base): Wire[] => [
   base.wire,
-  { theme: base.wire.theme, mediaRels: base.wire.masterMediaRels, defaultTextStyle: base.wire.defaultTextStyle },
+  {
+    theme: base.wire.theme,
+    mediaRels: base.wire.masterMediaRels,
+    defaultTextStyle: base.wire.defaultTextStyle,
+  },
 ]
 
 const DECORATIONS_BUILT: Input[] = [BASE_A, BASE_B].flatMap((base) =>
@@ -1091,19 +1192,29 @@ const MASTER_LISTS: Input[] = [
   { args: { parts: [] } },
   splitOff(
     [
-      ...replacing(BUILT_DECK, MASTER_RELS, rels(
-        rel('rId9', 'slideLayout', '../slideLayouts/slideLayout11.xml'),
-        rel('rId2', 'theme', '../theme/theme1.xml'),
-        rel('rId8', 'slideLayout', '../slideLayouts/slideLayout2.xml'),
-        rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
-        rel('rId7', 'slideLayout', '/ppt/slideLayouts/layoutA.xml'),
-        rel('rId6', 'slideLayout', '../slideLayouts/layout'),
-        rel('rId5', 'slideLayoutX', '../slideLayouts/slideLayout3.xml'),
-        rel('rId4', 'slideLayout', '../slideLayouts/slideLayout99999999999999999999999.xml'),
-        rel('rId3', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
-      )),
-      ['ppt/slideLayouts/slideLayout2.xml', shapeTreePart('sldLayout', '', ' name="Second &amp; \uD55C \u{1F600}"')],
-      ['ppt/slideLayouts/slideLayout11.xml', shapeTreePart('sldLayout', '', " name='Single quoted'")],
+      ...replacing(
+        BUILT_DECK,
+        MASTER_RELS,
+        rels(
+          rel('rId9', 'slideLayout', '../slideLayouts/slideLayout11.xml'),
+          rel('rId2', 'theme', '../theme/theme1.xml'),
+          rel('rId8', 'slideLayout', '../slideLayouts/slideLayout2.xml'),
+          rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
+          rel('rId7', 'slideLayout', '/ppt/slideLayouts/layoutA.xml'),
+          rel('rId6', 'slideLayout', '../slideLayouts/layout'),
+          rel('rId5', 'slideLayoutX', '../slideLayouts/slideLayout3.xml'),
+          rel('rId4', 'slideLayout', '../slideLayouts/slideLayout99999999999999999999999.xml'),
+          rel('rId3', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
+        ),
+      ),
+      [
+        'ppt/slideLayouts/slideLayout2.xml',
+        shapeTreePart('sldLayout', '', ' name="Second &amp; \uD55C \u{1F600}"'),
+      ],
+      [
+        'ppt/slideLayouts/slideLayout11.xml',
+        shapeTreePart('sldLayout', '', " name='Single quoted'"),
+      ],
       ['ppt/slideLayouts/layoutA.xml', '<p:sldLayout><p:cSldX name="Not cSld"/></p:sldLayout>'],
     ],
     MASTER_PATH,
@@ -1114,7 +1225,10 @@ const MASTER_LISTS: Input[] = [
       parts: [
         ...without(BUILT_DECK, MASTER_PATH),
         ['ppt/slideMasters/slideMaster10.xml', shapeTreePart('sldMaster', '', ' name="Tenth"')],
-        ['ppt/slideMasters/slideMaster2.xml', '<p:sldMaster><p:cSld\nname="__proto__"/></p:sldMaster>'],
+        [
+          'ppt/slideMasters/slideMaster2.xml',
+          '<p:sldMaster><p:cSld\nname="__proto__"/></p:sldMaster>',
+        ],
         ['ppt/slideMasters/slideMasterX.xml', MASTER_XML],
         ['ppt/slideMasters/slideMaster3.xml.bak', MASTER_XML],
         ['ppt/slideMasters/sub/slideMaster4.xml', MASTER_XML],
@@ -1142,33 +1256,58 @@ const MASTER_PARTS: Input[] = [
   masterPartInput(BUILT_DECK, MASTER_PATH),
   masterPartInput(BUILT_DECK, LAYOUT_PATH),
   masterPartInput(replacing(BUILT_DECK, LAYOUT_PATH, layoutPart(' showMasterSp="0"')), LAYOUT_PATH),
-  masterPartInput(replacing(BUILT_DECK, LAYOUT_PATH, layoutPart(" showMasterSp='false'")), LAYOUT_PATH),
+  masterPartInput(
+    replacing(BUILT_DECK, LAYOUT_PATH, layoutPart(" showMasterSp='false'")),
+    LAYOUT_PATH,
+  ),
   masterPartInput(replacing(BUILT_DECK, LAYOUT_PATH, layoutPart(' showMasterSp="1"')), LAYOUT_PATH),
   masterPartInput(
-    replacing(BUILT_DECK, MASTER_PATH, shapeTreePart('sldMaster', masterTree('Plain').replace(/<p:pic>[\s\S]*<\/p:cxnSp>$/, ''))),
+    replacing(
+      BUILT_DECK,
+      MASTER_PATH,
+      shapeTreePart('sldMaster', masterTree('Plain').replace(/<p:pic>[\s\S]*<\/p:cxnSp>$/, '')),
+    ),
     LAYOUT_PATH,
   ),
   masterPartInput(without(BUILT_DECK, LAYOUT_RELS), LAYOUT_PATH),
-  masterPartInput(replacing(BUILT_DECK, MASTER_RELS, rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'))), MASTER_PATH),
-  masterPartInput(replacing(BUILT_DECK, MASTER_RELS, rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'))), LAYOUT_PATH),
+  masterPartInput(
+    replacing(
+      BUILT_DECK,
+      MASTER_RELS,
+      rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')),
+    ),
+    MASTER_PATH,
+  ),
+  masterPartInput(
+    replacing(
+      BUILT_DECK,
+      MASTER_RELS,
+      rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')),
+    ),
+    LAYOUT_PATH,
+  ),
   masterPartInput(replacing(BUILT_DECK, THEME_PATH, ''), LAYOUT_PATH),
   masterPartInput(replacing(BUILT_DECK, THEME_PATH, '<a:theme><a:themeElements><'), MASTER_PATH),
   masterPartInput(without(BUILT_DECK, MASTER_PATH), LAYOUT_PATH),
   masterPartInput(replacing(BUILT_DECK, MASTER_PATH, ''), LAYOUT_PATH),
   masterPartInput(without(BUILT_DECK, 'ppt/tableStyles.xml'), MASTER_PATH),
   masterPartInput(replacing(BUILT_DECK, 'ppt/tableStyles.xml', ''), LAYOUT_PATH),
-  masterPartInput(replacing(BUILT_DECK, LAYOUT_PATH, '<p:sldLayout><p:cSld/></p:sldLayout>'), LAYOUT_PATH),
+  masterPartInput(
+    replacing(BUILT_DECK, LAYOUT_PATH, '<p:sldLayout><p:cSld/></p:sldLayout>'),
+    LAYOUT_PATH,
+  ),
   masterPartInput(replacing(BUILT_DECK, LAYOUT_PATH, ''), LAYOUT_PATH),
   masterPartInput(BUILT_DECK, LAYOUT_PATH, 'ppt/slideLayouts/missing.xml'),
   masterPartInput(BUILT_DECK, MASTER_PATH, 'ppt/other/slideMasters/master.xml'),
   {
     text: MASTER_XML,
-    args: { parts: without(BUILT_DECK, MASTER_PATH), textPart: 'x/slideMasters/a.xml', path: 'x/slideMasters/a.xml' },
+    args: {
+      parts: without(BUILT_DECK, MASTER_PATH),
+      textPart: 'x/slideMasters/a.xml',
+      path: 'x/slideMasters/a.xml',
+    },
   },
-  masterPartInput(
-    replacing(BUILT_DECK, LAYOUT_RELS, '<Relationships><'),
-    LAYOUT_PATH,
-  ),
+  masterPartInput(replacing(BUILT_DECK, LAYOUT_RELS, '<Relationships><'), LAYOUT_PATH),
 ]
 
 /** Every master and layout of a deck, and a slide read as one. */
@@ -1215,7 +1354,9 @@ export const PARSE: CallSpec[] = [
     call: (text) => sliceGroupChildXmls(text),
     fromDocument: (parts) =>
       [...parts]
-        .filter(([name]) => SLIDE_PART.test(name) || LAYOUT_PART.test(name) || MASTER_PART.test(name))
+        .filter(
+          ([name]) => SLIDE_PART.test(name) || LAYOUT_PART.test(name) || MASTER_PART.test(name),
+        )
         .flatMap(([, xml]) => groupsOf(xml).map((text): Input => ({ text }))),
     built: [
       ...GROUPS.map((text): Input => ({ text })),

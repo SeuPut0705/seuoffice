@@ -41,7 +41,10 @@ if (existsSync(REFERENCE) && !force) {
   console.log(`reference/ exists: not frozen again (--force to replace it)`)
 } else {
   const commit = git(['rev-parse', base]).toString().trim()
-  const names = git(['ls-tree', '-r', '--name-only', commit, '--', SRC]).toString().split('\n').filter(Boolean)
+  const names = git(['ls-tree', '-r', '--name-only', commit, '--', SRC])
+    .toString()
+    .split('\n')
+    .filter(Boolean)
   for (const name of names) {
     const target = join(REFERENCE, name.slice(SRC.length + 1))
     mkdirSync(dirname(target), { recursive: true })

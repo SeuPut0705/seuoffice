@@ -74,7 +74,9 @@ const PARAGRAPHS: string[] = [
   `<w:p>${BUILT_RUNS.join('')}</w:p>`,
   ...BUILT_RUNS,
   run('<wp:extent cy="9525" cx="19050"/><wp:docPr id="1" name="aidocs-ink 1"/>'),
-  run('<wp:extent dcx="5" cx="9525" xcy="7" cy="28575"></wp:extent><wp:docPr id="1" name="aidocs-ink"/>'),
+  run(
+    '<wp:extent dcx="5" cx="9525" xcy="7" cy="28575"></wp:extent><wp:docPr id="1" name="aidocs-ink"/>',
+  ),
   run(
     '<wp:positionH relativeFrom="column"><wp:posOffset>-0</wp:posOffset></wp:positionH>' +
       '<wp:positionV relativeFrom="paragraph"><wp:posOffset>-19050</wp:posOffset></wp:positionV>' +

@@ -236,7 +236,7 @@ that commit.
   is a `js_object!`, every field a `Slot` (HfParagraph, composed over
   ParaFormat, is a struct of slots ordered across both), and reading it sets
   the slots in the order of the input. `model-gen.ts --observe-orders
-  FILE.ndjson` derives the table from captured parse results. **Only parse
+FILE.ndjson` derives the table from captured parse results. **Only parse
   results vote**: values built from the schema set their keys in whatever
   order the builder chose, and 32 types were once marked `"input"` by them
   alone. 82 orders are fixed by evidence, 62 are the declaration order of a
@@ -260,10 +260,9 @@ that commit.
 - **Evidence per field.** `model-field-floors.json` holds, for each of the
   1,680 fields, how many values the parse results held and how many the
   schema-built values did, apart: in the capture `model-gen.ts
-  --observe-orders` read last, 983 fields are seen in parse results and 697
+--observe-orders` read last, 983 fields are seen in parse results and 697
   only in built values. The 24 fields of main that this branch's parser does
-  not write (`Run.wrap` and the 5 of `InlineWrap` among them) are among the
-  697. A built value proves that the Rust reads and
+  not write (`Run.wrap` and the 5 of `InlineWrap` among them) are among the 697. A built value proves that the Rust reads and
   writes what the schema says, not that the parser ever produces it.
   `model-full.ts --write-field-floors` rewrites the file from the gate's own
   run.
@@ -361,7 +360,7 @@ into an input at the moment of the call, so the corpus inputs are exactly
 what `parseDocx` passes, through the copy, over each document. On the first
 40 corpus documents the copy returned the same model as the module.
 `parse-graph.ts` prints the functions of parse.ts in leaf-first waves (154
-functions, 16 waves) and marks those a `/// \`name\`` comment in `crates/`
+functions, 16 waves) and marks those a `/// \`name\``comment in`crates/`
 has ported.
 
 ### What makes a comparison worth its line
@@ -727,17 +726,17 @@ writes both from one string, and a consumer shows it (a swapped
 The builders, nine groups of (f), 43 functions (every export of
 `generate.ts` that is a function):
 
-| group | functions | first comparison |
-|---|---|---|
-| `genRpr` | `mergeRPrModel` | 17,144 checks, 0 differences |
-| `genProps` | 11 (pPr merges, paragraph mark, pPrChange, `splitXmlChildren`) | 48,959, 0 |
-| `genDrawing` | 12 picture and shape patches | 7,791, 297 |
-| `genDrawingBuild` | 6 builders and `LINE_KINDS` | 600, 0 |
-| `genText` | 5 (`xmlSegments`, field, formula, cell and text box patches) | 5,383, 0 |
-| `genTable` | `generateTableModelXml`, `generateTableXml` | 1,318, 0 |
-| `genFields` | TOC, caption, index | 1,447, 0 |
-| `genRuns` | `inlineRunsXml` | 4,955, 0 |
-| `genParagraph` | `generateParagraphXml` | 5,959, 0 |
+| group             | functions                                                      | first comparison             |
+| ----------------- | -------------------------------------------------------------- | ---------------------------- |
+| `genRpr`          | `mergeRPrModel`                                                | 17,144 checks, 0 differences |
+| `genProps`        | 11 (pPr merges, paragraph mark, pPrChange, `splitXmlChildren`) | 48,959, 0                    |
+| `genDrawing`      | 12 picture and shape patches                                   | 7,791, 297                   |
+| `genDrawingBuild` | 6 builders and `LINE_KINDS`                                    | 600, 0                       |
+| `genText`         | 5 (`xmlSegments`, field, formula, cell and text box patches)   | 5,383, 0                     |
+| `genTable`        | `generateTableModelXml`, `generateTableXml`                    | 1,318, 0                     |
+| `genFields`       | TOC, caption, index                                            | 1,447, 0                     |
+| `genRuns`         | `inlineRunsXml`                                                | 4,955, 0                     |
+| `genParagraph`    | `generateParagraphXml`                                         | 5,959, 0                     |
 
 Those first runs were local, on Node 22, before anything was fixed, and are
 in `crates/fixtures/generate-first/`; the porting agents compared nothing

@@ -43,14 +43,20 @@ for (const statement of source.statements) {
 // top-level functions and arrow functions held in a const
 const bodies = new Map<string, { node: ts.Node; exported: boolean; async: boolean }>()
 for (const statement of source.statements) {
-  const exported = !!ts.getModifiers(statement as ts.HasModifiers)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+  const exported = !!ts
+    .getModifiers(statement as ts.HasModifiers)
+    ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
   if (ts.isFunctionDeclaration(statement) && statement.name) {
     const async = !!statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
     bodies.set(statement.name.text, { node: statement, exported, async })
   } else if (ts.isVariableStatement(statement)) {
     for (const declaration of statement.declarationList.declarations) {
       const init = declaration.initializer
-      if (ts.isIdentifier(declaration.name) && init && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        init &&
+        (ts.isArrowFunction(init) || ts.isFunctionExpression(init))
+      ) {
         const async = !!init.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
         bodies.set(declaration.name.text, { node: statement, exported, async })
       }
@@ -67,7 +73,11 @@ const walk = (dir: string): void => {
     } else if (entry.name.endsWith('.rs')) {
       const text = readFileSync(at, 'utf8')
       for (const found of text.matchAll(/^\s*\/\/\/ `([A-Za-z_$][\w$]*)`/gm)) {
-        if (!ported.has(found[1]!)) ported.set(found[1]!, `${relative(repoRoot, at).replaceAll('\\', '/')}:${text.slice(0, found.index).split('\n').length}`)
+        if (!ported.has(found[1]!))
+          ported.set(
+            found[1]!,
+            `${relative(repoRoot, at).replaceAll('\\', '/')}:${text.slice(0, found.index).split('\n').length}`,
+          )
       }
     }
   }
@@ -81,7 +91,8 @@ for (const [name, { node, exported, async }] of bodies) {
   const visit = (child: ts.Node): void => {
     if (ts.isIdentifier(child) && child !== (node as ts.FunctionDeclaration).name) {
       const parent = child.parent
-      const isPropertyName = parent && ts.isPropertyAccessExpression(parent) && parent.name === child
+      const isPropertyName =
+        parent && ts.isPropertyAccessExpression(parent) && parent.name === child
       if (!isPropertyName) {
         if (bodies.has(child.text) && child.text !== name) calls.add(child.text)
         const from = imported.get(child.text)
@@ -163,8 +174,17 @@ waves.forEach((members, wave) => {
   total += lines
   console.log(`wave ${wave}: ${members.length} functions, ${lines} lines, ${done} ported`)
   for (const fn of members) {
-    const flags = [fn.exported ? 'export' : '', fn.async ? 'async' : '', fn.cycle >= 0 ? `cycle${fn.cycle}` : '', fn.ported ? `ported ${fn.ported}` : ''].filter(Boolean).join(' ')
-    console.log(`  ${fn.name} ${fn.start}-${fn.end} (${fn.end - fn.start + 1})${flags ? ' ' + flags : ''}${fn.calls.length ? ' -> ' + fn.calls.join(', ') : ''}`)
+    const flags = [
+      fn.exported ? 'export' : '',
+      fn.async ? 'async' : '',
+      fn.cycle >= 0 ? `cycle${fn.cycle}` : '',
+      fn.ported ? `ported ${fn.ported}` : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    console.log(
+      `  ${fn.name} ${fn.start}-${fn.end} (${fn.end - fn.start + 1})${flags ? ' ' + flags : ''}${fn.calls.length ? ' -> ' + fn.calls.join(', ') : ''}`,
+    )
   }
 })
 console.log(`${fns.length} functions, ${total} lines in functions`)

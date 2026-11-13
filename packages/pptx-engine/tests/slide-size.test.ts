@@ -14,9 +14,11 @@ describe('setSlideSize', () => {
     expect(setSlideSize(opened, 9144000, 6858000)).toBe(true)
     expect(opened.deck.size).toEqual({ cx: 9144000, cy: 6858000 })
 
+    // each slide is rewritten and reparsed (materializeSlide): the scaled element is a
+    // fresh one, and the slide carries the unsaved edit that its dirtyTransform was
     const el = slide.elements[0]!
     expect(el.transform.offset).toMatchObject({ x: 0, y: 0, cx: 9144000, cy: 6858000 })
-    expect(el.dirtyTransform).toBe(true)
+    expect(slide.structureDirty).toBe(true)
 
     const reopened = await openPptx(await savePptx(opened))
     expect(reopened.deck.size.cx).toBe(9144000)

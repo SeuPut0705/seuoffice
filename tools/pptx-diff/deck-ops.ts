@@ -26,10 +26,10 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import JSZip from 'jszip'
-import { type OpenedPptx, openPptx } from '../../packages/pptx-engine/src/index'
-import { parseSlide } from '../../packages/pptx-engine/src/parse'
-import type { Slide } from '../../packages/pptx-engine/src/types'
-import { PackageArchive } from '../../packages/pptx-engine/src/zip'
+import { type OpenedPptx, openPptx } from './reference/index'
+import { parseSlide } from './reference/parse'
+import type { Slide } from './reference/types'
+import { PackageArchive } from './reference/zip'
 import { repoRoot } from '../docx-diff/harness'
 import { builtDecks } from './built'
 
@@ -107,7 +107,11 @@ function rebase(node: unknown, next: number, ids: Map<string, string>): void {
   }
   if (node === null || typeof node !== 'object') return
   const object = node as Record<string, unknown>
-  if ('anchor' in object && typeof object.id === 'string' && !/^(?:spnew|picnew)_[0-9a-z]+_[0-9a-z]+$/.test(object.id)) {
+  if (
+    'anchor' in object &&
+    typeof object.id === 'string' &&
+    !/^(?:spnew|picnew)_[0-9a-z]+_[0-9a-z]+$/.test(object.id)
+  ) {
     const m = /^(.*)_([0-9a-z]+)$/.exec(object.id)
     if (m) {
       const id = `${m[1]}_${(parseInt(m[2]!, 36) - next).toString(36)}`
@@ -153,7 +157,11 @@ const DECK_UUID = '0b8f1c2e-4d5a-4e6f-8a7b-9c0d1e2f3a4b'
 async function withUuid<T>(uuid: string, run: () => Promise<T> | T): Promise<T> {
   const host = globalThis.crypto
   const own = Object.getOwnPropertyDescriptor(host, 'randomUUID')
-  Object.defineProperty(host, 'randomUUID', { value: () => uuid, configurable: true, writable: true })
+  Object.defineProperty(host, 'randomUUID', {
+    value: () => uuid,
+    configurable: true,
+    writable: true,
+  })
   try {
     return await run()
   } finally {

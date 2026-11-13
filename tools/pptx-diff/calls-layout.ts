@@ -1,25 +1,17 @@
 // Group `layout` of comparison (f): align.ts, dgm-hier.ts, smartart-layout.ts
 // and format-brush.ts of packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_layout.rs to `pptxLayout.<module>.<TypeScript name>`.
-import { type AlignRect, alignRects, distributeRects } from '../../packages/pptx-engine/src/align'
+import { type AlignRect, alignRects, distributeRects } from './reference/align'
 import {
   type HierConstraints,
   type HierTreeNode,
   layoutHierTree,
   parseHierConstraints,
-} from '../../packages/pptx-engine/src/dgm-hier'
-import {
-  applyFormat,
-  type CopiedFormat,
-  extractFormat,
-} from '../../packages/pptx-engine/src/format-brush'
-import { parseSlide } from '../../packages/pptx-engine/src/parse'
-import {
-  layoutShapes,
-  SMARTART_PALETTE,
-  type SmartArtLayout,
-} from '../../packages/pptx-engine/src/smartart-layout'
-import type { SlideElement, TextElement } from '../../packages/pptx-engine/src/types'
+} from './reference/dgm-hier'
+import { applyFormat, type CopiedFormat, extractFormat } from './reference/format-brush'
+import { parseSlide } from './reference/parse'
+import { layoutShapes, SMARTART_PALETTE, type SmartArtLayout } from './reference/smartart-layout'
+import type { SlideElement, TextElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 

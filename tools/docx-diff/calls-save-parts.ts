@@ -320,7 +320,9 @@ const HFS: Array<Record<string, unknown>> = [
       {
         runs: [
           run('One', {
-            wrap: [{ seq: 1, open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' }],
+            wrap: [
+              { seq: 1, open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' },
+            ],
           }),
           run('Two'),
         ],
@@ -1538,7 +1540,10 @@ export const SAVE_PARTS: CallSpec[] = [
         hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['99'] } }] },
         originalXml: REVISED_PART,
       },
-      { hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] }, originalXml: null },
+      {
+        hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] },
+        originalXml: null,
+      },
     ].map((args): Input => ({ args })),
     mutation: 'none',
   },
@@ -1623,7 +1628,13 @@ export const SAVE_PARTS: CallSpec[] = [
         const entries = commentEntries(originalXml).slice(0, 2)
         return entries.flatMap(({ id, xml }) =>
           editsOf(call('commentPlainText')(xml) as string).map((text) => ({
-            args: { comments: [{ id, author: 'Kim', text }, { id: '99', author: 'Kim', text: 'new' }], originalXml },
+            args: {
+              comments: [
+                { id, author: 'Kim', text },
+                { id: '99', author: 'Kim', text: 'new' },
+              ],
+              originalXml,
+            },
           })),
         )
       }),
