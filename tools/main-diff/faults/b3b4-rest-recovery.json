@@ -621,10 +621,10 @@
     "fn": ["docs-recovery.createDocsRecovery"]
   },
   {
-    "name": "docs-recovery: an adopted copy is later",
+    "name": "docs-recovery: a missing original is adopted from the wrong editor folder",
     "file": "main-core/src/docs/docs_recovery.rs",
-    "find": "state: Some(RecoveryCopyState::Undecided),",
-    "replace": "state: Some(RecoveryCopyState::Later),",
+    "find": "                    \"docs\",\n                    &source,",
+    "replace": "                    \"html\",\n                    &source,",
     "fn": ["docs-recovery.createDocsRecovery"]
   },
   {

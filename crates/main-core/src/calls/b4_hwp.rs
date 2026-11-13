@@ -24,6 +24,7 @@ use std::collections::HashSet;
 use jscompat::{JsMap, JsObject, json_value_from_serde, number_to_string};
 use serde_json::{Map, Number, Value};
 
+use super::fakes::{FakeRenderer, drive_pdf};
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::hwp::atomic_write::atomic_write_file;
 use crate::hwp::dialog_strings::tm;
@@ -32,8 +33,8 @@ use crate::hwp::hwp5_file::{open_hwp, paths_of};
 use crate::hwp::ipc::HwpFormat;
 use crate::hwp::ipc::PrintPage;
 use crate::hwp::print_document::{
-    PrintJob, PrintWindow, bad_job, image_file, own_ids, print_job_to_pdf, print_job_to_printer,
-    printable_html, side_mm,
+    PrintJob, PrintWindow, bad_job, begin_print_job_to_pdf, begin_print_job_to_printer, image_file,
+    own_ids, printable_html, side_mm,
 };
 use crate::hwp::save_as_formats::{
     SaveAsLabelKey, save_as_default_path, save_as_filters, save_as_target,
@@ -49,7 +50,9 @@ use crate::hwp::tab_widths::{MAX_NEW_TABS, hwpx_memo_count_of, new_tabs_of, writ
 use crate::hwp::zlib::inflate_raw_sync;
 use crate::node_fs::NodeError;
 use crate::packages::compound_file::has_ole2_signature;
-use crate::packages::electron_utils::print_window::{JsError, PrintReport};
+use crate::packages::electron_utils::print_window::{
+    ExecOutcome, JsError, PrintReport, RendererAnswer, RendererCall, WindowStep,
+};
 use crate::packages::i18n::{Lang, normalize_lang};
 
 type Logs = RefCell<Vec<Vec<Value>>>;
@@ -755,7 +758,20 @@ fn listing(dir: &str) -> Value {
     )
 }
 
-impl PrintWindow for FakeWindow<'_> {
+impl FakeRenderer for FakeWindow<'_> {
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => RendererAnswer::Loaded(self.load_file(path)),
+            RendererCall::PrintToPdf { options } => RendererAnswer::Pdf(self.print_to_pdf(options)),
+            RendererCall::Print { options } => RendererAnswer::Printed(self.print(options)),
+            RendererCall::ExecuteJavaScript { .. } => RendererAnswer::Executed(
+                ExecOutcome::Throws("the Hangul print window runs no script".to_owned()),
+            ),
+        }
+    }
+}
+
+impl FakeWindow<'_> {
     fn load_file(&mut self, path: &str) -> Result<(), JsError> {
         let dir = std::path::Path::new(path)
             .parent()
@@ -806,7 +822,9 @@ impl PrintWindow for FakeWindow<'_> {
             failure_reason,
         })
     }
+}
 
+impl PrintWindow for FakeWindow<'_> {
     fn destroy(&mut self) -> Result<(), JsError> {
         self.log(vec![Value::from("destroy")]);
         if self.script.get("destroyThrows") == Some(&Value::Bool(true)) {
@@ -863,9 +881,19 @@ fn print_job_call(args: &[Value], cx: &mut Context, to_pdf: bool) -> Answer {
         })
     };
     let answer = if to_pdf {
-        print_job_to_pdf(&print_job, &tmp, &mut create).map(|pdf| Value::from(hex(&pdf)))
+        drive_pdf(begin_print_job_to_pdf(&print_job, &tmp, &mut create))
+            .map(|pdf| Value::from(hex(&pdf)))
     } else {
-        print_job_to_printer(&print_job, &tmp, &mut create).map(Value::Bool)
+        let mut step = begin_print_job_to_printer(&print_job, &tmp, &mut create);
+        loop {
+            step = match step {
+                WindowStep::Await { call, mut job } => {
+                    let answer = job.window().answer(&call);
+                    job.resume(answer)
+                }
+                WindowStep::Done(sent) => break sent.map(Value::Bool),
+            }
+        }
     };
     if let Some(dir) = work_dir.borrow().as_deref() {
         let _ = std::fs::remove_dir_all(dir);

@@ -54,7 +54,7 @@ use crate::packages::project_store::{
     ProjectSearchResult,
 };
 use crate::shell::folder_tree::is_supported_tree_file;
-use crate::shell::knowledge_base::kb_read_max_bytes;
+use crate::shell::knowledge_base::{KbReadPage, kb_read_max_bytes};
 
 /// `PROJECT_SCOPE_UNKNOWN`: a call named no scope, a scope main does not hold,
 /// another window's, or a starred-only scope
@@ -167,15 +167,6 @@ pub trait IndexStore {
 /// it is unavailable; asked on every search
 pub trait ProjectToolsStore {
     fn store(&mut self) -> Option<&mut dyn IndexStore>;
-}
-
-/// `KbReadPage`: one page of a corpus file's text
-#[derive(Debug, Clone, PartialEq)]
-pub struct KbReadPage {
-    pub text: String,
-    /// total parsed characters, so the reader knows whether to page on
-    pub total_chars: u64,
-    pub offset: f64,
 }
 
 /// `readKnowledgeFilePage(filePath, offset)` of `knowledge-base`: engine-waiting
