@@ -1008,19 +1008,34 @@ where
         .and_then(Value::as_array)
         .map(|a| a.iter().filter_map(Value::as_f64).collect())
         .unwrap_or_default();
+    // `killDenied`: the pids whose `process.kill` throws EPERM
+    let kill_denied: Vec<f64> = spec
+        .get("killDenied")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_f64).collect())
+        .unwrap_or_default();
     let kill_sink = sink.clone();
-    let host = HostInfo {
-        kill: Box::new(move |pid, signal| {
-            note(&kill_sink, json!(["killpid", number(pid), signal]));
-            if kill_fails.contains(&pid) {
-                return Err(
-                    JsError::error("kill ESRCH").with("code", JsonValue::String("ESRCH".into()))
-                );
-            }
-            Ok(())
-        }),
-        ..host
-    };
+    let host =
+        HostInfo {
+            kill: Box::new(move |pid, signal| {
+                // `process.kill(pid, 0)` is given the number 0
+                let shown = match signal {
+                    Some("0") => json!(0),
+                    other => json!(other),
+                };
+                note(&kill_sink, json!(["killpid", number(pid), shown]));
+                if kill_denied.contains(&pid) {
+                    return Err(JsError::error("kill EPERM")
+                        .with("code", JsonValue::String("EPERM".into())));
+                }
+                if kill_fails.contains(&pid) {
+                    return Err(JsError::error("kill ESRCH")
+                        .with("code", JsonValue::String("ESRCH".into())));
+                }
+                Ok(())
+            }),
+            ..host
+        };
     let mut runtime = Runtime::new(host);
     let rt = runtime.rt().clone();
     let signal = rt.controller();

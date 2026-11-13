@@ -50,8 +50,9 @@ pub struct SubscriptionTempState {
     pub record_dir: Option<String>,
     /// `process.uptime() * 1000`
     pub uptime_ms: Rc<dyn Fn() -> f64>,
-    /// `processAlive(pid)`: whether a process of that id is running
-    pub alive: Rc<dyn Fn(f64) -> bool>,
+    /// `processAlive(pid)`: whether a process of that id is running; `None`
+    /// asks the system through the runtime (`process.kill(pid, 0)`)
+    pub alive: Option<Rc<dyn Fn(f64) -> bool>>,
 }
 
 impl Default for SubscriptionTempState {
@@ -63,7 +64,7 @@ impl Default for SubscriptionTempState {
         SubscriptionTempState {
             record_dir: None,
             uptime_ms: Rc::new(move || started.elapsed().as_secs_f64() * 1000.0),
-            alive: Rc::new(process_alive),
+            alive: None,
         }
     }
 }
@@ -140,25 +141,17 @@ fn valid_record(content: &str) -> Option<TempDirRecord> {
     })
 }
 
-/// `processAlive(pid)`: a process owned by another user answers "not
-/// permitted", which still means alive. A system without a way to ask is
-/// answered "alive": a record is then kept, never a live folder removed.
-fn process_alive(pid: f64) -> bool {
+/// `processAlive(pid)`: `process.kill(pid, 0)` through the host; a process
+/// owned by another user answers "not permitted", which still means alive.
+pub fn process_alive(rt: &Rt, pid: f64) -> bool {
     if !pid.is_finite() || pid.fract() != 0.0 || pid <= 0.0 {
         return false;
     }
-    #[cfg(unix)]
-    {
-        if pid > f64::from(i32::MAX) {
-            return false;
+    match rt.kill_pid(pid, Some("0")) {
+        Ok(()) => true,
+        Err(error) => {
+            matches!(error.prop("code"), Some(JsonValue::String(code)) if code == "EPERM")
         }
-        // SAFETY: signal 0 only asks whether the process exists; nothing is sent
-        let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
-        result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
-    }
-    #[cfg(not(unix))]
-    {
-        true
     }
 }
 
@@ -311,10 +304,17 @@ pub async fn cleanup_tracked_temp_dirs(
         .temp_root
         .clone()
         .unwrap_or_else(|| rt.tmpdir());
-    let alive = options
+    let alive: Rc<dyn Fn(f64) -> bool> = match options
         .alive
         .clone()
-        .unwrap_or_else(|| state.borrow().alive.clone());
+        .or_else(|| state.borrow().alive.clone())
+    {
+        Some(alive) => alive,
+        None => {
+            let rt = rt.clone();
+            Rc::new(move |pid| process_alive(&rt, pid))
+        }
+    };
     let now = owner_started_at(rt, state);
     let mut removed = 0.0;
     for name in names {

@@ -270,13 +270,13 @@ fn temp_state(module_dir: Option<String>, sink: &Sink) -> TempDirs {
     Rc::new(RefCell::new(SubscriptionTempState {
         record_dir: module_dir,
         uptime_ms: Rc::new(|| 5000.0),
-        alive: Rc::new(move |pid: f64| {
+        alive: Some(Rc::new(move |pid: f64| {
             if !(pid.is_finite() && pid.fract() == 0.0 && pid > 0.0) {
                 return false;
             }
             note(&sink, json!(["killpid", num(pid), 0]));
             true
-        }),
+        })),
     }))
 }
 
@@ -725,10 +725,15 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                         record_dir: None,
                         owner_pid: None,
                     },
-                    alive: Some(Rc::new(move |pid| {
-                        recorded.borrow_mut().push(pid);
-                        alive_pids.contains(&pid)
-                    })),
+                    // `system`: the module's own processAlive, through the world's process.kill
+                    alive: if o.get("system").and_then(Value::as_bool) == Some(true) {
+                        None
+                    } else {
+                        Some(Rc::new(move |pid| {
+                            recorded.borrow_mut().push(pid);
+                            alive_pids.contains(&pid)
+                        }))
+                    },
                 };
                 let removed = cleanup_tracked_temp_dirs(
                     &rt,

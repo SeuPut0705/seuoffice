@@ -792,6 +792,7 @@ interface TempOpts {
   remove?: 'created' | 'missing' | 'twice'
   dir?: string
   alive?: number[]
+  system?: boolean
 }
 
 const CLAUDE_PREFIX = 'seuoffice-claude-code-'
@@ -940,12 +941,17 @@ const tempFns: Group = {
       tempCall(world, o as TempOpts, cx, async () => {
         const opts = o as TempOpts
         const calls: number[] = []
+        // `system`: the module's own processAlive, through the world's process.kill
         const removed = await temp.cleanupTrackedTempDirs(opts.dir as string, {
           tempRoot: opts.tempRoot,
-          alive: (pid: number) => {
-            calls.push(pid)
-            return (opts.alive ?? []).includes(pid)
-          },
+          ...(opts.system
+            ? {}
+            : {
+                alive: (pid: number) => {
+                  calls.push(pid)
+                  return (opts.alive ?? []).includes(pid)
+                },
+              }),
         })
         return { removed, aliveCalls: calls.sort((a, b) => a - b) }
       }),
@@ -957,6 +963,36 @@ const tempFns: Group = {
           [`tmp/${CLAUDE_PREFIX}aaa/inner/file.txt`]: 'x',
         },
         'a dead owner: the folder and its record go',
+      ),
+      cf(
+        [
+          w({ killFails: [77] } as Any),
+          { dir: `${DIR}/rec`, tempRoot: `${DIR}/tmp`, system: true },
+        ],
+        {
+          'rec/ai-temp-dir-aaaa.json': record(`${DIR}/tmp/${CLAUDE_PREFIX}aaa`, 77, OLD_START),
+          [`tmp/${CLAUDE_PREFIX}aaa/inner/file.txt`]: 'x',
+        },
+        'the system says the owner is gone (ESRCH): the folder and its record go',
+      ),
+      cf(
+        [
+          w({ killDenied: [77] } as Any),
+          { dir: `${DIR}/rec`, tempRoot: `${DIR}/tmp`, system: true },
+        ],
+        {
+          'rec/ai-temp-dir-aaaa.json': record(`${DIR}/tmp/${CLAUDE_PREFIX}aaa`, 77, OLD_START),
+          [`tmp/${CLAUDE_PREFIX}aaa/inner/file.txt`]: 'x',
+        },
+        'the owner belongs to another user (EPERM): alive, the folder stays',
+      ),
+      cf(
+        [w(), { dir: `${DIR}/rec`, tempRoot: `${DIR}/tmp`, system: true }],
+        {
+          'rec/ai-temp-dir-aaaa.json': record(`${DIR}/tmp/${CLAUDE_PREFIX}aaa`, 77, OLD_START),
+          [`tmp/${CLAUDE_PREFIX}aaa/inner/file.txt`]: 'x',
+        },
+        'the system says the owner runs: the folder stays',
       ),
       cf(
         [w(), { dir: `${DIR}/rec`, tempRoot: `${DIR}/tmp`, alive: [77] }],

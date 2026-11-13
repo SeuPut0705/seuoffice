@@ -853,5 +853,12 @@
     "find": "            .kill_pid(pid, signal.map(Signal::as_str))\n            .map_err(|e| e.message_or_string())",
     "replace": "            .kill_pid(pid, signal.map(Signal::as_str))\n            .map_err(|e| e.message_or_string())\n            .or(Ok(()))",
     "fn": ["claude-code-cli.listClaudeCodeModels"]
+  },
+  {
+    "name": "temp dirs: a process of another user counts as gone",
+    "file": "main-core/src/packages/ai_provider/subscription_temp_dirs.rs",
+    "find": "if code == \"EPERM\"",
+    "replace": "if code == \"EPERN\"",
+    "fn": ["subscription/temp-dirs.cleanupTrackedTempDirs"]
   }
 ]
