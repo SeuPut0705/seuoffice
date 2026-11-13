@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { extname } from 'node:path'
+import { extname, posix } from 'node:path'
 import {
   fileHoldsHiddenContent,
   HIDDEN_CONTENT_EXTENSIONS,
@@ -21,16 +21,31 @@ import { withheldCellsIn } from './xlsx'
  * hides (@seuoffice/file-parse/hidden-content, which the app's own headless export reads too).
  */
 
-/** a deck's slides (or its slide `only`), a deck the engine cannot lay out judged by every slide part */
+/**
+ * A slide's own part and the SmartArt parts it points to: a diagram's words
+ * (and their marks) live in its data part, which the slide draws from.
+ */
+async function slideParts(zip: JSZip, slidePath: string): Promise<string[]> {
+  const relsPath = slidePath.replace(/([^/]+)$/, '_rels/$1.rels')
+  const rels = (await zip.file(relsPath)?.async('string')) ?? ''
+  const targets = [...rels.matchAll(/\bTarget\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+    .map((m) => posix.normalize(posix.join(posix.dirname(slidePath), m[1] ?? m[2] ?? '')))
+    .filter((path) => path.startsWith('ppt/diagrams/'))
+  return [slidePath, ...targets]
+}
+
+/** a deck's slides (or its slide `only`), a deck the engine cannot lay out judged by every slide and diagram part */
 async function deckHoldsMark(bytes: Uint8Array, only: number | undefined): Promise<boolean> {
   const zip = await JSZip.loadAsync(bytes).catch(() => null)
   if (!zip) return false
   const opened = await openDeck(bytes).catch(() => null)
-  if (!opened) return packageHoldsMark(zip, /^ppt\/slides\/[^/]+\.xml$/)
+  if (!opened) return packageHoldsMark(zip, /^ppt\/(?:slides|diagrams)\/[^/]+\.xml$/)
   for (const [index, slide] of opened.deck.slides.entries()) {
     if (only !== undefined && index !== only) continue
-    const part = zip.file(slide.path)
-    if (part && xmlHoldsMark(await part.async('string'))) return true
+    for (const path of await slideParts(zip, slide.path)) {
+      const part = zip.file(path)
+      if (part && xmlHoldsMark(await part.async('string'))) return true
+    }
   }
   return false
 }
