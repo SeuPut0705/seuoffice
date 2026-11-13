@@ -31,6 +31,7 @@ mod b4_sheets;
 mod b4_slides;
 mod b5_agent;
 mod b5_ai;
+mod b5_kb;
 mod b5_mcp;
 mod b5_provider;
 mod b6_apps;
@@ -122,6 +123,7 @@ const GROUPS: &[Group] = &[
     b3_projects::call,
     b5_mcp::call,
     b5_provider::call,
+    b5_kb::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

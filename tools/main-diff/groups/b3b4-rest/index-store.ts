@@ -355,6 +355,10 @@ const validateCases: Case[] = cases(
   [sys({ d0: score(0, 1, 0, 0) }, { usage: { input_tokens: 0, cost: 0 } }), 1, 'kev'],
   [{ answers: [oaScore('d0', 1.215, 0.1, 0.6, 0.3)] }, 1, 'openai'],
   [{ answers: [oaScore('d0', 2, 0, 0, 1)], usage: { input_tokens: 3 } }, 1, 'openai'],
+  [{ answers: [{ ...oaScore('d0', 1.2, 0.1, 0.6, 0.3), confidence: 1.5 }] }, 1, 'openai'],
+  [{ answers: [{ ...oaScore('d0', 1.2, 0.1, 0.6, 0.3), confidence: 1 }] }, 1, 'openai'],
+  [sys({ d0: score(2.015, 0, 0, 1) }), 1, 'kev'],
+  [sys({ d0: score(2, 0, 0, 1) }), 1, 'kev'],
 )
 
 const jsonBody = (value: unknown): string => JSON.stringify(value)
@@ -999,6 +1003,59 @@ const storeCases: Case[] = [
       ],
     ],
   },
+  {
+    note: 'a stamp that is current keeps the index',
+    args: [
+      [
+        open(),
+        ...CORPUS.slice(0, 2),
+        { op: 'close' },
+        { op: 'setMeta', path: '$DIR/index.db', key: 'tokenizer', value: '2' },
+        { op: 'setMeta', path: '$DIR/index.db', key: 'extract', value: '2' },
+        open(),
+        { op: 'count' },
+        search('revenue'),
+      ],
+    ],
+  },
+  {
+    note: 'a name starting with the query comes before a newer, shorter name',
+    args: [
+      [
+        open(),
+        upsert('rank/alpha-one-two-three-four-five.txt', 'x', { age: 0 }),
+        upsert('rank/zz-alpha.txt', 'x', { age: 100 }),
+        search('alpha'),
+        { op: 'remove', paths: ['$DIR/rank/alpha-one-two-three-four-five.txt'] },
+        upsert('rank/one-alpha-two-three-four-five.txt', 'x', { age: 0 }),
+        search('alpha'),
+      ],
+    ],
+  },
+  {
+    note: 'when no file holds every term, the file holding more terms comes first',
+    args: [
+      [
+        open(),
+        upsert('rank2/zz-tokenone.txt', 'nothing here', { age: 0 }),
+        upsert('rank2/plain.txt', 'tokenone tokentwo here', { age: 0 }),
+        search('tokenone tokentwo tokenthree'),
+      ],
+    ],
+  },
+  {
+    note: 'a page holds at most 200 hits however large the limit',
+    args: [
+      [
+        open(),
+        ...Array.from({ length: 260 }, (_, i) =>
+          upsert(`cap/f${i}.txt`, `capword n${i}`, { age: i }),
+        ),
+        search('capword', { limit: 1000 }),
+        search('capword', { limit: 1000, offset: 100 }),
+      ],
+    ],
+  },
 ]
 
 async function storeScenario(args: unknown[], cx: TsContext): Promise<unknown> {
@@ -1301,6 +1358,46 @@ const rerankCases: Case[] = [
           rr('q0', [PATH('a.txt'), PATH('b.txt')], kevOn, [{ always: ok({ d0: GOOD, d1: ZERO }) }]),
           rr('q2', [PATH('a.txt'), PATH('b.txt')], kevOn, []),
           rr('q200', [PATH('a.txt'), PATH('b.txt')], kevOn, []),
+        ],
+      },
+    ],
+  },
+  {
+    note: 'a blank account or custom URL is refused before the sendable filter runs',
+    args: [
+      {
+        sendable: true,
+        steps: [
+          ...RE_DOCS,
+          rr('revenue', abc, withKey('cloudflare', 'k', { cloudflareAccountId: '   ' }), [
+            three(0, 2, 1),
+          ]),
+          rr('revenue', abc, withKey('custom', '', { customBaseUrl: '   ' }), [three(0, 2, 1)]),
+          rr('revenue', abc, withKey('cloudflare-flash', 'k', { cloudflareAccountId: '\t' }), []),
+          rr('revenue', abc, withKey('custom', 'k', { customBaseUrl: '\n' }), []),
+          rr('revenue', abc, withKey('kev', ''), [three(0, 2, 1)]),
+        ],
+      },
+    ],
+  },
+  {
+    note: 'a 21st path is not judged and does not change the cache key',
+    args: [
+      {
+        steps: [
+          ...Array.from({ length: 21 }, (_, i) => idx(`m${i}.txt`, `common note ${i}`)),
+          rr(
+            'common',
+            Array.from({ length: 21 }, (_, i) => PATH(`m${i}.txt`)),
+            kevOn,
+            [ok(Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`d${i}`, exact(i % 3)])))],
+          ),
+          rr(
+            'common',
+            Array.from({ length: 20 }, (_, i) => PATH(`m${i}.txt`)),
+            kevOn,
+            [],
+          ),
         ],
       },
     ],
@@ -1738,6 +1835,111 @@ const indexerCases: Case[] = [
             1,
             Array.from({ length: 70 }, (_, i) => stat(`f${i}.txt`, `t${i}`)),
           ),
+          { op: 'progress' },
+          { op: 'immediate' },
+          { op: 'progress' },
+        ],
+      },
+    ],
+  },
+  {
+    note: 'a scan stamps its time: refreshIfStale skips a fresh index and rescans a stale one',
+    files: baseFiles,
+    args: [
+      {
+        roots: ['$DIR/root'],
+        steps: [
+          { op: 'scan' },
+          scanReply(1, [A]),
+          extractReply(2, { kind: 'text', text: 'alpha' }),
+          { op: 'refreshIfStale', maxAgeMs: 10_000 },
+          { op: 'progress' },
+          { op: 'clock', ms: 20_000 },
+          { op: 'refreshIfStale', maxAgeMs: 10_000 },
+          { op: 'progress' },
+        ],
+      },
+    ],
+  },
+  {
+    note: 'nameOnly is asked only when a scan has files to index; an unchanged scan does not ask',
+    files: baseFiles,
+    args: [
+      {
+        roots: ['$DIR/root'],
+        nameOnly: { answer: [] },
+        steps: [
+          { op: 'scan' },
+          scanReply(1, []),
+          { op: 'scan' },
+          scanReply(2, [A]),
+          extractReply(3, { kind: 'text', text: 'alpha' }),
+          { op: 'scan' },
+          scanReply(4, [A]),
+          { op: 'listAll' },
+        ],
+      },
+    ],
+  },
+  {
+    note: 'a worker that never answers: the request times out and the worker is retired',
+    files: baseFiles,
+    args: [
+      {
+        roots: ['$DIR/root'],
+        requestTimeoutMs: 500,
+        steps: [
+          { op: 'scan' },
+          scanReply(1, [A]),
+          { op: 'running' },
+          { op: 'timer', n: 2 },
+          { op: 'running' },
+          { op: 'listAll' },
+          { op: 'progress' },
+        ],
+      },
+    ],
+  },
+  {
+    note: 'name-only rows queued behind an extraction yield after the 64th',
+    files: Object.fromEntries(
+      Array.from({ length: 71 }, (_, i) => [`root/f${i}.txt`, fileSpec(`t${i}`)]),
+    ),
+    args: [
+      {
+        roots: ['$DIR/root'],
+        nameOnly: { answer: Array.from({ length: 70 }, (_, i) => `$DIR/root/f${i + 1}.txt`) },
+        steps: [
+          { op: 'scan' },
+          scanReply(
+            1,
+            Array.from({ length: 71 }, (_, i) => stat(`f${i}.txt`, `t${i}`)),
+          ),
+          { op: 'progress' },
+          extractReply(2, { kind: 'text', text: 't0' }),
+          { op: 'progress' },
+          { op: 'immediate' },
+          { op: 'progress' },
+        ],
+      },
+    ],
+  },
+  {
+    note: 'exactly 64 name-only rows behind an extraction: the 64th yields with nothing left',
+    files: Object.fromEntries(
+      Array.from({ length: 65 }, (_, i) => [`root/f${i}.txt`, fileSpec(`t${i}`)]),
+    ),
+    args: [
+      {
+        roots: ['$DIR/root'],
+        nameOnly: { answer: Array.from({ length: 64 }, (_, i) => `$DIR/root/f${i + 1}.txt`) },
+        steps: [
+          { op: 'scan' },
+          scanReply(
+            1,
+            Array.from({ length: 65 }, (_, i) => stat(`f${i}.txt`, `t${i}`)),
+          ),
+          extractReply(2, { kind: 'text', text: 't0' }),
           { op: 'progress' },
           { op: 'immediate' },
           { op: 'progress' },

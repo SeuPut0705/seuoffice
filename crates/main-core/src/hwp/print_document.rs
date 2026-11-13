@@ -3,8 +3,10 @@
 //! sized page by page, which a hidden window with scripts off turns into a PDF
 //! or hands to the system print dialog.
 //!
-//! The TypeScript's async functions are one synchronous function each here;
-//! the order of the calls on the file system and on the window is the same.
+//! The order of the calls on the file system and on the window is the
+//! TypeScript's. The window comes from the caller's `createWindow` as a
+//! [`PrintWindow`]; its renderer calls are the steps of a [`PdfJob`] (to PDF)
+//! or a [`PrinterJob`] (to the system dialog) the caller carries out.
 //! `os.tmpdir()` is the caller's `tmp_dir`.
 
 use jscompat::node_path::host::join;
@@ -13,7 +15,10 @@ use serde_json::{Map, Value};
 
 use super::ipc::{MAX_PRINT_CHARS, MAX_PRINT_PAGES, PrintPage};
 use crate::node_fs::node_error;
-use crate::packages::electron_utils::print_window::{JsError, PrintReport, rm_recursive_force};
+pub use crate::packages::electron_utils::print_html_pdf::{PdfJob, PdfStep, PrintWindow};
+use crate::packages::electron_utils::print_window::{
+    JsError, PrintReport, RendererAnswer, RendererCall, WindowStep, load_call, release_job,
+};
 
 /// Paper sides in mm: ISO A3-A5, JIS B4-B5, US Letter, Legal and Tabloid.
 const PAPER_SIDES_MM: [f64; 11] = [
@@ -184,17 +189,6 @@ pub fn printable_html(pages: &[PrintPage], picture: &mut dyn FnMut(f64) -> Strin
     lines.join("\n")
 }
 
-/// `PrintWindow`: the methods of the window the TypeScript calls.
-pub trait PrintWindow {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError>;
-    /// `webContents.printToPDF(options)`
-    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError>;
-    /// `webContents.print(options, callback)`: the arguments the callback got;
-    /// `Err` is a `print` that throws
-    fn print(&mut self, options: &Value) -> Result<PrintReport, JsError>;
-    fn destroy(&mut self) -> Result<(), JsError>;
-}
-
 /// `PrintJob` without its mode, which these functions do not read.
 #[derive(Debug, Clone)]
 pub struct PrintJob {
@@ -202,18 +196,17 @@ pub struct PrintJob {
     pub images: Vec<String>,
 }
 
-/// Put the job in a folder of its own (the HTML and its pictures), load it in
-/// the window `create_window` makes (hidden, scripts off) and run `use_` on
-/// it. The window and the folder are gone afterwards, whatever happened.
-fn with_print_window<T, W: PrintWindow>(
+/// The start of `withPrintWindow`: put the job in a folder of its own (the
+/// HTML and its pictures), then make the window (hidden, scripts off). `Ok`
+/// is the window, the folder and the page to load; `Err` is what went out,
+/// the folder (and a window made) already gone, or what that cleanup threw.
+fn open_print_window<W: PrintWindow>(
     job: &PrintJob,
     tmp_dir: &str,
     create_window: &mut dyn FnMut() -> Result<W, JsError>,
-    use_: impl FnOnce(&mut W) -> Result<T, JsError>,
-) -> Result<T, JsError> {
+) -> Result<(W, String, String), JsError> {
     let dir = crate::node_fs::mkdtemp_random(&join(&[tmp_dir, "ieum-hwp-print-"]))?;
-    let mut win: Option<W> = None;
-    let outcome = (|| -> Result<T, JsError> {
+    let written = (|| -> Result<String, JsError> {
         let mut names: Vec<String> = Vec::new();
         for (index, data_url) in job.images.iter().enumerate() {
             match image_file(data_url, index as f64) {
@@ -234,57 +227,127 @@ fn with_print_window<T, W: PrintWindow>(
             }
         });
         std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;
-        let window = win.insert(create_window()?);
-        window.load_file(&html_path)?;
-        use_(window)
+        Ok(html_path)
     })();
-    if let Some(window) = win.as_mut() {
-        window.destroy()?;
+    let made = written.and_then(|html_path| create_window().map(|win| (win, html_path)));
+    match made {
+        Ok((win, html_path)) => Ok((win, dir, html_path)),
+        Err(error) => {
+            release_job::<W>(None, &dir, |win| win.destroy())?;
+            Err(error)
+        }
     }
-    rm_recursive_force(&dir)?;
-    outcome
 }
 
-/// The pages as PDF bytes, each page on its own paper.
-pub fn print_job_to_pdf<W: PrintWindow>(
+/// The options `printToPDF` gets: each page on its own paper.
+fn pdf_options() -> Value {
+    let mut margins = Map::new();
+    for side in ["top", "bottom", "left", "right"] {
+        margins.insert(side.to_owned(), Value::from(0));
+    }
+    let mut options = Map::new();
+    options.insert("preferCSSPageSize".to_owned(), Value::Bool(true));
+    options.insert("printBackground".to_owned(), Value::Bool(true));
+    options.insert("margins".to_owned(), Value::Object(margins));
+    Value::Object(options)
+}
+
+/// `printJobToPdf(job)` up to its first await; its [`WindowStep::Done`] holds
+/// the pages as PDF bytes, each page on its own paper.
+pub fn begin_print_job_to_pdf<W: PrintWindow>(
     job: &PrintJob,
     tmp_dir: &str,
     create_window: &mut dyn FnMut() -> Result<W, JsError>,
-) -> Result<Vec<u8>, JsError> {
-    with_print_window(job, tmp_dir, create_window, |win| {
-        let mut margins = Map::new();
-        for side in ["top", "bottom", "left", "right"] {
-            margins.insert(side.to_owned(), Value::from(0));
-        }
-        let mut options = Map::new();
-        options.insert("preferCSSPageSize".to_owned(), Value::Bool(true));
-        options.insert("printBackground".to_owned(), Value::Bool(true));
-        options.insert("margins".to_owned(), Value::Object(margins));
-        win.print_to_pdf(&Value::Object(options))
-    })
+) -> PdfStep<W> {
+    match open_print_window(job, tmp_dir, create_window) {
+        Ok((win, dir, html_path)) => PdfJob::loading(win, dir, &html_path, pdf_options()),
+        Err(error) => WindowStep::Done(Err(error)),
+    }
 }
 
-/// The pages to the system print dialog. Answers when the dialog is done:
-/// `true` when they were sent to a printer, `false` when the user canceled.
-pub fn print_job_to_printer<W: PrintWindow>(
+/// `printJobToPrinter` between its awaits.
+#[derive(Debug)]
+pub struct PrinterJob<W> {
+    win: W,
+    dir: String,
+    loaded: bool,
+}
+
+/// A step of `printJobToPrinter`; [`WindowStep::Done`] answers when the
+/// dialog is done: `true` when the pages were sent to a printer, `false` when
+/// the user canceled.
+pub type PrinterStep<W> = WindowStep<PrinterJob<W>, Result<bool, JsError>>;
+
+/// `printJobToPrinter(job)` up to its first await: the pages to the system
+/// print dialog.
+pub fn begin_print_job_to_printer<W: PrintWindow>(
     job: &PrintJob,
     tmp_dir: &str,
     create_window: &mut dyn FnMut() -> Result<W, JsError>,
-) -> Result<bool, JsError> {
-    with_print_window(job, tmp_dir, create_window, |win| {
-        let mut margins = Map::new();
-        margins.insert("marginType".to_owned(), Value::from("none"));
-        let mut options = Map::new();
-        options.insert("silent".to_owned(), Value::Bool(false));
-        options.insert("printBackground".to_owned(), Value::Bool(true));
-        options.insert("margins".to_owned(), Value::Object(margins));
-        let report = win.print(&Value::Object(options))?;
-        if report.success || js_regex!("cancel", "i").test(&report.failure_reason) {
-            Ok(report.success)
-        } else if report.failure_reason.is_empty() {
-            Err(JsError::plain("print failed"))
-        } else {
-            Err(JsError::plain(report.failure_reason))
+) -> PrinterStep<W> {
+    match open_print_window(job, tmp_dir, create_window) {
+        Ok((win, dir, html_path)) => WindowStep::Await {
+            call: load_call(&html_path),
+            job: PrinterJob {
+                win,
+                dir,
+                loaded: false,
+            },
+        },
+        Err(error) => WindowStep::Done(Err(error)),
+    }
+}
+
+/// The options of the system print dialog.
+fn printer_options() -> Value {
+    let mut margins = Map::new();
+    margins.insert("marginType".to_owned(), Value::from("none"));
+    let mut options = Map::new();
+    options.insert("silent".to_owned(), Value::Bool(false));
+    options.insert("printBackground".to_owned(), Value::Bool(true));
+    options.insert("margins".to_owned(), Value::Object(margins));
+    Value::Object(options)
+}
+
+/// what the `print` callback came to: sent, canceled, or the failure thrown
+fn printed(report: PrintReport) -> Result<bool, JsError> {
+    if report.success || js_regex!("cancel", "i").test(&report.failure_reason) {
+        Ok(report.success)
+    } else if report.failure_reason.is_empty() {
+        Err(JsError::plain("print failed"))
+    } else {
+        Err(JsError::plain(report.failure_reason))
+    }
+}
+
+impl<W: PrintWindow> PrinterJob<W> {
+    /// The window the awaited call is carried out on.
+    pub fn window(&mut self) -> &mut W {
+        &mut self.win
+    }
+
+    /// The answer to the call this print waits for.
+    pub fn resume(mut self, answer: RendererAnswer) -> PrinterStep<W> {
+        if !self.loaded {
+            return match answer.into_loaded() {
+                Ok(()) => {
+                    self.loaded = true;
+                    WindowStep::Await {
+                        call: RendererCall::Print {
+                            options: printer_options(),
+                        },
+                        job: self,
+                    }
+                }
+                Err(error) => self.end(Err(error)),
+            };
         }
-    })
+        let sent = answer.into_printed().and_then(printed);
+        self.end(sent)
+    }
+
+    fn end(mut self, sent: Result<bool, JsError>) -> PrinterStep<W> {
+        let released = release_job(Some(&mut self.win), &self.dir, |win| win.destroy());
+        WindowStep::Done(released.and(sent))
+    }
 }
