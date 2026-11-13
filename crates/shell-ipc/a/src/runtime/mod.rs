@@ -368,6 +368,9 @@ impl Shared {
                     self.net.cancel(self.scoped(id));
                 }
             }
+            Cmd::Release { body, stop } => self
+                .net
+                .release(self.scoped(body), stop.map(|source| self.scoped(source))),
             Cmd::SetTimer { id, ms } => self
                 .timers
                 .borrow_mut()

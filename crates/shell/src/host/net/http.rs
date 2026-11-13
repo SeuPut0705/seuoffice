@@ -939,16 +939,11 @@ mod tests {
             let clone = response.clone_response();
             let text = response.text().await.unwrap();
             drop(clone);
+            // the runtime sends the clone's `Release` at its next poll
+            rt.sleep(1.0).await;
             text
         });
         assert_eq!(text, "hello world");
-        // the runtime's `Cmd::Release { body: clone, stop: None }`, given
-        // here as the host gets it (the runtime of this branch's contract
-        // does not send it yet; once it does, the branch is already gone)
-        let left: Vec<Id> = Inner::lock(&w.net.0.state).bodies.keys().copied().collect();
-        for body in left {
-            w.net.release(body, None);
-        }
         assert_eq!(
             w.held_after_settling((0, 0, 0)),
             (0, 0, 0),
@@ -1135,5 +1130,44 @@ mod tests {
             }
         });
         address
+    }
+
+    /// Responses the program lets go of unread: the fetch's alone, and a
+    /// clone dropped before its original; the host stops each stream (no
+    /// cancel: in JavaScript a dropped body is only garbage) and keeps nothing
+    #[test]
+    fn a_response_dropped_unread_is_stopped_and_freed() {
+        let w = World::new();
+        // a body that never ends: only a stop frees it
+        let url = serve(
+            b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\nconnection: close\r\n\
+              transfer-encoding: chunked\r\n\r\n5\r\nhello\r\n",
+            Duration::from_secs(30),
+        );
+        let statuses = w.run(move |rt| async move {
+            let mut statuses = Vec::new();
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            statuses.push(response.status());
+            drop(response);
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            statuses.push(clone.status());
+            drop(clone);
+            drop(response);
+            rt.sleep(1.0).await;
+            statuses
+        });
+        assert_eq!(statuses, vec![200.0, 200.0]);
+        assert_eq!(
+            w.held_after_settling((0, 0, 0)),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
     }
 }
