@@ -149,6 +149,12 @@ pub type ListFuture = LocalBoxFuture<Result<Option<ListAnswer>, JsError>>;
 /// `None` is "return `latest` itself".
 pub type SettingsUpdate<'a> = &'a dyn Fn(&JsonValue) -> Result<Option<JsonValue>, JsError>;
 
+/// `deps.write`
+pub type WriteFn = Rc<dyn Fn(SettingsUpdate<'_>) -> Result<(), JsError>>;
+
+/// `deps.list`
+pub type ListFn = Rc<dyn Fn(&str, &KeyListConfig) -> ListFuture>;
+
 /// `KeyModelRefresherDeps`
 #[derive(Clone)]
 pub struct KeyModelRefresherDeps {
@@ -156,10 +162,10 @@ pub struct KeyModelRefresherDeps {
     pub read: Rc<dyn Fn() -> Result<JsonValue, JsError>>,
     /// write the settings the update returns, applied to the file as it is at
     /// that moment; a failure is swallowed
-    pub write: Rc<dyn Fn(SettingsUpdate<'_>) -> Result<(), JsError>>,
+    pub write: WriteFn,
     /// the listing; replaced in tests. `None`: `listKeyProviderModelListing`
     /// over the global `fetch`
-    pub list: Option<Rc<dyn Fn(&str, &KeyListConfig) -> ListFuture>>,
+    pub list: Option<ListFn>,
 }
 
 #[derive(Default)]
@@ -316,7 +322,7 @@ impl KeyModelRefresher {
             }
             let futures: Vec<LocalBoxFuture<()>> = waits
                 .into_iter()
-                .map(|wait| Box::pin(async move { wait.await }) as LocalBoxFuture<()>)
+                .map(|wait| Box::pin(wait) as LocalBoxFuture<()>)
                 .collect();
             self.rt.join_all(futures).await;
         }

@@ -38,10 +38,10 @@ use super::provider_selection::is_subscription_provider;
 use super::providers::is_subscription_cli;
 use super::subscription_contract::{SUBSCRIPTION_IPC_CHANNELS, subscription_install_url};
 use super::subscription_launch::{
-    LaunchState, SubscriptionInstallOptions, SubscriptionLaunchResult, SubscriptionLoginOptions,
-    SubscriptionLoginWindowText, SubscriptionLogoutOptions, SubscriptionUpdateOptions,
-    launch_subscription_install, launch_subscription_login, launch_subscription_logout,
-    launch_subscription_update, on_subscription_login_change,
+    KillTree, LaunchState, StartedHook, SubscriptionInstallOptions, SubscriptionLaunchResult,
+    SubscriptionLoginOptions, SubscriptionLoginWindowText, SubscriptionLogoutOptions,
+    SubscriptionUpdateOptions, launch_subscription_install, launch_subscription_login,
+    launch_subscription_logout, launch_subscription_update, on_subscription_login_change,
 };
 use super::subscription_locate::SubscriptionLocator;
 use super::subscription_metered::create_metered_acceptance_file_store;
@@ -53,19 +53,22 @@ use super::subscription_service::{
     SettingWriter, SubscriptionServiceResult, SubscriptionStatusService,
     SubscriptionStatusServiceDeps, create_subscription_status_service,
 };
-use super::subscription_status::{Fut, StatusState, SubscriptionDetector};
-use super::task::{Child, Id, JsError, Rt};
+use super::subscription_status::{Fut, StatusState, SubscriptionDetector, start_now, tick};
+use super::task::{Id, JsError, Rt};
 
-/// `SubscriptionIpcDeps.launchLogin`, `launchLogout`...: provider in, result out
+/// `SubscriptionIpcDeps.launchLogout`, `launchInstall`...: provider in, result out
 pub type Launch = Rc<dyn Fn(String) -> Fut<Result<SubscriptionLaunchResult, JsError>>>;
+/// `launchLogin(provider, mode)`
+pub type LaunchLogin =
+    Rc<dyn Fn(String, Option<String>) -> Fut<Result<SubscriptionLaunchResult, JsError>>>;
+/// `broadcast(channel, payload)`
+pub type Broadcast = Rc<dyn Fn(&str, &JsonValue)>;
 
 /// `SubscriptionIpcDeps`
 pub struct SubscriptionIpcDeps {
     pub service: SubscriptionStatusService,
     /// start the CLI's own login; `mode` `window` asks for its window
-    /// directly, for a code the browser shows (absent: the browser, window hidden)
-    pub launch_login:
-        Rc<dyn Fn(String, Option<String>) -> Fut<Result<SubscriptionLaunchResult, JsError>>>,
+    pub launch_login: LaunchLogin,
     /// run the CLI's own logout to its end
     pub launch_logout: Launch,
     pub launch_install: Launch,
@@ -74,7 +77,7 @@ pub struct SubscriptionIpcDeps {
     /// end a login the app started; nothing to end is not a failure
     pub cancel_login: Launch,
     /// send an event to every window; called with the `changed` channel when a status changes
-    pub broadcast: Option<Rc<dyn Fn(&str, &JsonValue)>>,
+    pub broadcast: Option<Broadcast>,
 }
 
 /// `providerOf(payload)`
@@ -155,7 +158,9 @@ pub fn register_subscription_ipc(
             launch,
             Rc::new(move |provider| {
                 let (service, provider) = (service.clone(), provider.to_owned());
-                rt.spawn_local(async move { service.clear_metered_acceptance(&provider).await });
+                start_now(&rt, async move {
+                    service.clear_metered_acceptance(&provider).await
+                });
                 Ok(())
             }),
         )
@@ -221,7 +226,8 @@ impl SubscriptionIpc {
                 };
                 if checking {
                     let service = service.clone();
-                    self.rt.spawn_local(async move {
+                    // `void service.check().catch(...)`: the check starts now
+                    start_now(&self.rt, async move {
                         service.check(None, false).await;
                     });
                 }
@@ -265,10 +271,16 @@ impl SubscriptionIpc {
             // before the logout ended.
             3 => {
                 let deps = self.deps.clone();
+                let rt = self.rt.clone();
                 self.launch_handler(payload, true, move |provider| {
                     Box::pin(async move {
                         let outcome = (deps.launch_logout)(provider.clone()).await;
+                        // `return await ...`
+                        tick(&rt).await;
+                        // `finally { await service.check(...).catch(...) }`
                         deps.service.check(Some(&[provider][..]), true).await;
+                        tick(&rt).await;
+                        tick(&rt).await;
                         outcome
                     })
                 })
@@ -313,7 +325,9 @@ impl SubscriptionIpc {
                         .to_json(),
                     );
                 };
-                if service.is_off(&provider).await {
+                let off = service.is_off(&provider).await;
+                tick(&self.rt).await;
+                if off {
                     return Some(
                         SubscriptionServiceResult {
                             ok: false,
@@ -322,10 +336,11 @@ impl SubscriptionIpc {
                         .to_json(),
                     );
                 }
-                service
-                    .set_metered_accepted(&provider, *accepted)
-                    .await
-                    .to_json()
+                let answered = service.set_metered_accepted(&provider, *accepted).await;
+                // the async handler returns a promise, which its own promise adopts in two turns
+                tick(&self.rt).await;
+                tick(&self.rt).await;
+                answered.to_json()
             }
             // off: decision 0114: the screen offers it on the Settings cards alone (the shell preload)
             8 => {
@@ -338,11 +353,15 @@ impl SubscriptionIpc {
                     return Some(self.refused().to_json());
                 }
                 let result = service.set_off(&provider, *off).await;
+                tick(&self.rt).await;
                 if !result.ok || !*off {
                     return Some(result.to_json());
                 }
                 // a sign-in the app started for it ends with it: nothing is left running for a program off
+                // `await deps.cancelLogin(provider).catch(...)`: the `catch` is a promise of its own
                 let _ = (self.deps.cancel_login)(provider).await;
+                tick(&self.rt).await;
+                tick(&self.rt).await;
                 SubscriptionServiceResult {
                     ok: true,
                     statuses: service.get_statuses(),
@@ -373,10 +392,26 @@ impl SubscriptionIpc {
         let Some(provider) = provider_of(payload) else {
             return SubscriptionLaunchResult::failure("invalid");
         };
-        if check_off && self.deps.service.is_off(&provider).await {
-            return SubscriptionLaunchResult::failure("invalid");
-        }
-        match start(provider.clone()).await {
+        let rt = &self.rt;
+        let answered = if check_off {
+            // `async (provider) => (await service.isOff(provider)) ? invalid : start(provider)`
+            let off = self.deps.service.is_off(&provider).await;
+            tick(rt).await;
+            if off {
+                Ok(SubscriptionLaunchResult::failure("invalid"))
+            } else {
+                let started = start(provider.clone()).await;
+                // the async arrow returns a promise, which its own promise adopts in two turns
+                tick(rt).await;
+                tick(rt).await;
+                started
+            }
+        } else {
+            start(provider.clone()).await
+        };
+        // `await start(provider)`
+        tick(rt).await;
+        match answered {
             Ok(result) => result,
             Err(error) => failure(&error, &provider),
         }
@@ -406,7 +441,7 @@ pub struct SubscriptionIpcSetup {
     pub set_subscription_off: Option<SettingWriter>,
     /// the app's userData directory: the metered acceptance record is kept here
     pub data_dir: String,
-    pub broadcast: Option<Rc<dyn Fn(&str, &JsonValue)>>,
+    pub broadcast: Option<Broadcast>,
     /// stand-in for tests; `detectSubscriptionLogin` when absent
     pub detect: Option<SubscriptionDetector>,
     /// stand-in for tests; the lists the bridges registered (`listSubscriptionModels`) when absent
@@ -416,7 +451,7 @@ pub struct SubscriptionIpcSetup {
     pub locate: Option<SubscriptionLocator>,
     pub platform: Option<String>,
     /// stand-in for tests: how a login is ended
-    pub kill_tree: Option<Rc<dyn Fn(&Child)>>,
+    pub kill_tree: Option<KillTree>,
     /// stand-in for tests; [`HIDDEN_LOGIN_TIMEOUT_MS`] when absent
     pub hidden_login_timeout_ms: Option<f64>,
     /// What the visible login window says besides what the CLI prints, in the
@@ -483,7 +518,7 @@ impl Ctx {
     /// A check of its own time, off to the side: `void service.check([provider], { fresh: true })`
     fn recheck(&self, provider: &str) {
         let (service, provider) = (self.service.clone(), provider.to_owned());
-        self.rt.spawn_local(async move {
+        start_now(&self.rt, async move {
             service.check(Some(&[provider][..]), true).await;
         });
     }
@@ -516,7 +551,7 @@ impl Ctx {
         self.service.set_signing_in("chatgpt", Some("browser"));
         let pages = (sign_in.pages)()?;
         let ctx = self.clone();
-        self.rt.spawn_local(async move {
+        start_now(&self.rt, async move {
             let result = ctx
                 .chat_gpt
                 .sign_in(
@@ -534,6 +569,9 @@ impl Ctx {
                     http_status: None,
                     oauth_error: None,
                 }));
+            // `.catch(...)` and `.then(...)`
+            tick(&ctx.rt).await;
+            tick(&ctx.rt).await;
             if !ctx.same_login("chatgpt", &login) {
                 return;
             }
@@ -565,8 +603,10 @@ impl Ctx {
         self.service.set_signing_in(provider, None);
         // a check of its own time: one already under way may have asked before the login ended
         let (ctx, provider) = (self.clone(), provider.to_owned());
-        self.rt.spawn_local(async move {
+        start_now(&self.rt, async move {
             let statuses = ctx.service.check(Some(&[provider.clone()][..]), true).await;
+            // `.then(...)`
+            tick(&ctx.rt).await;
             // it ended on its own and still no login: the browser may have handed back a
             // code nobody pasted, so the card offers the window instead of repeating it
             if !unfinished || ctx.logins.borrow().has(&provider) {
@@ -638,7 +678,7 @@ impl Ctx {
         } else {
             None
         };
-        let on_started: Rc<dyn Fn(Rc<dyn Fn()>)> = {
+        let on_started: StartedHook = {
             let (ctx, login) = (self.clone(), login.clone());
             let browser = mode == "browser";
             Rc::new(move |stop| {
@@ -688,6 +728,8 @@ impl Ctx {
             },
         )
         .await;
+        // `await launchSubscriptionLogin(...)`
+        tick(&self.rt).await;
         if !result.ok {
             self.end_login(provider, &login, false);
         }
@@ -696,7 +738,7 @@ impl Ctx {
 
     async fn launch_logout(&self, provider: &str) -> Result<SubscriptionLaunchResult, JsError> {
         if provider != "chatgpt" {
-            return Ok(launch_subscription_logout(
+            let result = launch_subscription_logout(
                 &self.rt,
                 &self.launch,
                 provider,
@@ -705,9 +747,15 @@ impl Ctx {
                     ..SubscriptionLogoutOptions::default()
                 },
             )
-            .await);
+            .await;
+            // the async function returns a promise, which its own promise adopts in two turns
+            tick(&self.rt).await;
+            tick(&self.rt).await;
+            return Ok(result);
         }
         self.chat_gpt.sign_out(&self.rt).await?;
+        // `await chatGpt.signOut()`
+        tick(&self.rt).await;
         Ok(SubscriptionLaunchResult::ok())
     }
 
@@ -798,7 +846,7 @@ pub fn create_subscription_ipc_deps(
         let (rt, service) = (rt.clone(), service.clone());
         chat_gpt.on_change(Rc::new(move || {
             let service = service.clone();
-            rt.spawn_local(async move {
+            start_now(&rt, async move {
                 service.check(Some(&["chatgpt".to_owned()][..]), true).await;
             });
         }));

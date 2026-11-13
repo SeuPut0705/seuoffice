@@ -2174,52 +2174,58 @@ async fn run_claude_code_turn(
     );
     turn.child.on({
         let weak = weak.clone();
+        let exited = turn.exited.clone();
+        let no_pid = turn.child.pid().is_none();
         let remove_cwd = remove_cwd.clone();
         let mut seen = false;
         move |event| {
             if let ChildEvent::Error(error) = event
                 && !seen
-                && let Some(turn) = weak.upgrade()
             {
                 seen = true;
                 // without a pid the program never started, and no close event follows
-                if turn.child.pid().is_none() {
-                    turn.exited.set(true);
+                if no_pid {
+                    exited.set(true);
                     remove_cwd();
                 }
-                turn.finish(Some(start_failure(error)), false);
+                if let Some(turn) = weak.upgrade() {
+                    turn.finish(Some(start_failure(error)), false);
+                }
             }
         }
     });
     turn.child.on({
         let weak = weak.clone();
+        let exited = turn.exited.clone();
         let mut seen = false;
         move |event| {
             if let ChildEvent::Close { code, .. } = event
                 && !seen
-                && let Some(turn) = weak.upgrade()
             {
                 seen = true;
-                turn.exited.set(true);
+                // the listener outlives the turn, as the closure of the TypeScript does
+                exited.set(true);
                 remove_cwd();
-                let (failure_code, failure_text, info, stderr) = {
-                    let st = turn.st.borrow();
-                    (
-                        st.failure_code.clone(),
-                        st.failure_text.clone(),
-                        st.rate_limit_info.clone(),
-                        st.stderr.clone(),
-                    )
-                };
-                turn.finish(
-                    Some(match failure_code.filter(|c| !c.is_empty()) {
-                        Some(code) => {
-                            reported_failure(Some(&code), None, &failure_text, info.as_ref())
-                        }
-                        None => exit_failure(*code, &stderr),
-                    }),
-                    false,
-                );
+                if let Some(turn) = weak.upgrade() {
+                    let (failure_code, failure_text, info, stderr) = {
+                        let st = turn.st.borrow();
+                        (
+                            st.failure_code.clone(),
+                            st.failure_text.clone(),
+                            st.rate_limit_info.clone(),
+                            st.stderr.clone(),
+                        )
+                    };
+                    turn.finish(
+                        Some(match failure_code.filter(|c| !c.is_empty()) {
+                            Some(code) => {
+                                reported_failure(Some(&code), None, &failure_text, info.as_ref())
+                            }
+                            None => exit_failure(*code, &stderr),
+                        }),
+                        false,
+                    );
+                }
             }
         }
     });
@@ -2632,40 +2638,46 @@ pub async fn list_claude_code_models(
     );
     list.child.on({
         let weak = weak.clone();
+        let exited = list.exited.clone();
+        let no_pid = list.child.pid().is_none();
         let remove_cwd = remove_cwd.clone();
         let mut seen = false;
         move |event| {
             if let ChildEvent::Error(error) = event
                 && !seen
-                && let Some(list) = weak.upgrade()
             {
                 seen = true;
                 // without a pid the program never started, and no close event follows
-                if list.child.pid().is_none() {
-                    list.exited.set(true);
+                if no_pid {
+                    exited.set(true);
                     remove_cwd();
                 }
-                list.finish(None, Some(start_failure(error)));
+                if let Some(list) = weak.upgrade() {
+                    list.finish(None, Some(start_failure(error)));
+                }
             }
         }
     });
     list.child.on({
         let weak = weak.clone();
+        let exited = list.exited.clone();
         let mut seen = false;
         move |event| {
             if let ChildEvent::Close { .. } = event
                 && !seen
-                && let Some(list) = weak.upgrade()
             {
                 seen = true;
-                list.exited.set(true);
+                // the listener outlives the reading, as the closure of the TypeScript does
+                exited.set(true);
                 remove_cwd();
-                list.finish(
-                    None,
-                    Some(JsError::error(
-                        "Claude Code exited before it listed its models",
-                    )),
-                );
+                if let Some(list) = weak.upgrade() {
+                    list.finish(
+                        None,
+                        Some(JsError::error(
+                            "Claude Code exited before it listed its models",
+                        )),
+                    );
+                }
             }
         }
     });

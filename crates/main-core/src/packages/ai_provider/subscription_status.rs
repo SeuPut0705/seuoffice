@@ -19,8 +19,10 @@
 //! `task::Rt` like every other await.
 
 use std::cell::RefCell;
+use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::LazyLock;
+use std::task::{Context, Poll, Waker};
 
 use jscompat::{JsObject, JsonValue, js_regex, json_parse, math_round, number_to_string, trim};
 
@@ -39,10 +41,47 @@ use super::subscription_process::{
     SharedChildRegistry, SubscriptionCommandResult, SubscriptionRunOptions, SubscriptionRunner,
     run_subscription_program,
 };
-use super::task::{FsOp, JsError, LocalBoxFuture, Rt, Signal};
+use super::task::{FsOp, JsError, LocalBoxFuture, Rt, Signal, Wait};
 
 /// A promise of an `async` stand-in or hook: the future owns what it needs.
 pub type Fut<T> = LocalBoxFuture<T>;
+
+/// One turn of the JavaScript microtask queue: what an `await` costs where
+/// the awaited value is there already. The runtime polls its tasks in
+/// passes, so a task that yields here goes on one pass later, behind the
+/// others that were ready, as a promise continuation goes behind the
+/// continuations queued before it. The `await`s of the subscription modules
+/// that other work can interleave with are each one of these.
+pub async fn tick(rt: &Rt) {
+    // marks the runtime as having work, so it polls again
+    rt.spawn_local(async {});
+    let mut yielded = false;
+    std::future::poll_fn(move |_| {
+        if yielded {
+            Poll::Ready(())
+        } else {
+            yielded = true;
+            Poll::Pending
+        }
+    })
+    .await
+}
+
+/// An `async` function call: the body runs now, up to its first `await`, as
+/// JavaScript runs it; the rest goes on as a task. The answer is the promise.
+pub fn start_now<T: Clone + 'static>(
+    rt: &Rt,
+    future: impl Future<Output = T> + 'static,
+) -> Wait<T> {
+    let (settle, wait) = rt.deferred::<T>();
+    let mut body: Pin<Box<dyn Future<Output = ()>>> =
+        Box::pin(async move { settle.settle(future.await) });
+    let mut cx = Context::from_waker(Waker::noop());
+    if body.as_mut().poll(&mut cx).is_pending() {
+        rt.spawn_local(body);
+    }
+    wait
+}
 
 /// A status check that has not answered by then is an `error`
 pub const SUBSCRIPTION_STATUS_TIMEOUT_MS: f64 = 20_000.0;
@@ -347,15 +386,16 @@ pub fn parse_claude_auth_status(stdout: &str) -> Option<SubscriptionLogin> {
             account,
         });
     }
-    if auth_method == "claude.ai" && api_provider == "firstParty" {
-        if let Some(plan_name) = plan_name {
-            return Some(SubscriptionLogin::SignedIn {
-                login_method: "subscription".to_owned(),
-                plan_name: Some(plan_name),
-                login_kind,
-                account,
-            });
-        }
+    if auth_method == "claude.ai"
+        && api_provider == "firstParty"
+        && let Some(plan_name) = plan_name
+    {
+        return Some(SubscriptionLogin::SignedIn {
+            login_method: "subscription".to_owned(),
+            plan_name: Some(plan_name),
+            login_kind,
+            account,
+        });
     }
     Some(SubscriptionLogin::SignedIn {
         login_method: "unknown".to_owned(),

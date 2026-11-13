@@ -320,15 +320,15 @@
   {
     "name": "a CLI turned off is refused",
     "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
-    "find": "if check_off && self.deps.service.is_off(&provider).await {",
-    "replace": "if false && self.deps.service.is_off(&provider).await {",
+    "find": "let off = self.deps.service.is_off(&provider).await;",
+    "replace": "let off = false && self.deps.service.is_off(&provider).await;",
     "fn": ["subscription/ipc.registerSubscriptionIpc"]
   },
   {
     "name": "use anyway for a CLI turned off",
     "file": "main-core/src/packages/ai_provider/subscription_ipc.rs",
-    "find": "if service.is_off(&provider).await {",
-    "replace": "if false && service.is_off(&provider).await {",
+    "find": "let off = service.is_off(&provider).await;\n                tick(&self.rt).await;\n                if off {\n                    return Some(",
+    "replace": "let off = false && service.is_off(&provider).await;\n                tick(&self.rt).await;\n                if off {\n                    return Some(",
     "fn": ["subscription/ipc.registerSubscriptionIpc"]
   },
   {

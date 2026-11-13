@@ -22,9 +22,10 @@ use crate::packages::ai_provider::image_backend::ImageBackendState;
 use crate::packages::ai_provider::jsval::Obj;
 use crate::packages::ai_provider::subscription_contract::SUBSCRIPTION_IPC_CHANNELS;
 use crate::packages::ai_provider::subscription_ipc::{
-    HIDDEN_LOGIN_TIMEOUT_MS, SubscriptionIpc, SubscriptionIpcDeps, SubscriptionIpcSetup,
-    SubscriptionIpcShared, create_subscription_ipc_deps, ensure_subscription_ipc,
-    register_subscription_ipc, reset_shared_subscription_ipc, shared_subscription_statuses,
+    Broadcast, HIDDEN_LOGIN_TIMEOUT_MS, LaunchLogin, SubscriptionIpc, SubscriptionIpcDeps,
+    SubscriptionIpcSetup, SubscriptionIpcShared, create_subscription_ipc_deps,
+    ensure_subscription_ipc, register_subscription_ipc, reset_shared_subscription_ipc,
+    shared_subscription_statuses,
 };
 use crate::packages::ai_provider::subscription_launch::{
     LaunchState, LoginChangeListener, OffChangeListener, SUBSCRIPTION_CODEX_UPDATE_COMMAND_NPM,
@@ -49,7 +50,7 @@ use crate::packages::ai_provider::subscription_models::{
 };
 use crate::packages::ai_provider::subscription_process::{RegistryChoice, SharedChildRegistry};
 use crate::packages::ai_provider::subscription_service::{
-    SettingWriter, SubscriptionStatusService, SubscriptionStatusServiceDeps,
+    SettingWriter, StatusListener, SubscriptionStatusService, SubscriptionStatusServiceDeps,
     create_subscription_status_service,
 };
 use crate::packages::ai_provider::subscription_status::{
@@ -58,9 +59,9 @@ use crate::packages::ai_provider::subscription_status::{
     SubscriptionDetectOptions, SubscriptionDetection, SubscriptionDetector, SubscriptionLogin,
     SubscriptionStatusState, codex_account_info, detect_subscription_login,
     detect_subscription_logins, parse_claude_auth_status, parse_codex_login_status,
-    set_codex_account_source, subscription_login_kind,
+    set_codex_account_source, start_now, subscription_login_kind, tick,
 };
-use crate::packages::ai_provider::task::{Child, JsError, LocalBoxFuture, Rt, Signal};
+use crate::packages::ai_provider::task::{Child, JsError, LocalBoxFuture, Rt, Signal, Wait};
 
 // ---------------------------------------------------------------------------
 // reading the arguments
@@ -578,7 +579,9 @@ impl Bench {
 
     fn get_settings(&self) -> Result<JsonValue, JsError> {
         self.gets.set(self.gets.get() + 1);
-        note(&self.sink, json!(["getSettings"]));
+        if !self.flag("quiet") {
+            note(&self.sink, json!(["getSettings"]));
+        }
         let failing = self
             .opts
             .get("failGet")
@@ -648,15 +651,17 @@ impl Bench {
         provider: &str,
         options: &SubscriptionDetectOptions,
     ) -> Result<SubscriptionDetection, JsError> {
-        note(
-            &self.sink,
-            json!([
-                "detect",
-                provider,
-                options.configured_path,
-                options.timeout_ms.map(jnum)
-            ]),
-        );
+        if !self.flag("quiet") {
+            note(
+                &self.sink,
+                json!([
+                    "detect",
+                    provider,
+                    options.configured_path,
+                    options.timeout_ms.map(jnum)
+                ]),
+            );
+        }
         match self.sequence("detect", provider) {
             Some(next) if next.get("reject").is_some() => Err(fail(
                 next.get("reject").and_then(Value::as_str).unwrap_or(""),
@@ -768,11 +773,7 @@ fn lister_of(b: &Rc<Bench>) -> SubscriptionModelLister {
     )
 }
 
-fn status_listener(
-    sink: &Sink,
-    label: &'static str,
-    name: Option<String>,
-) -> Rc<dyn Fn(&JsonValue) -> Result<(), JsError>> {
+fn status_listener(sink: &Sink, label: &'static str, name: Option<String>) -> StatusListener {
     let sink = sink.clone();
     Rc::new(move |statuses| {
         let value = json_value_to_serde(statuses);
@@ -801,13 +802,16 @@ fn deps_of(b: &Rc<Bench>, sink: &Sink) -> SubscriptionStatusServiceDeps {
     }
 }
 
+/// The functions that stop a listener, by its name
+type Listeners = Rc<RefCell<Vec<(String, Rc<dyn Fn()>)>>>;
+
 /// What one step of a scenario reaches
 struct Steps {
     rt: Rt,
     service: SubscriptionStatusService,
     bench: Rc<Bench>,
     sink: Sink,
-    listeners: Rc<RefCell<Vec<(String, Rc<dyn Fn()>)>>>,
+    listeners: Listeners,
     /// the registration, for the `invoke` of the ipc scenario
     ipc: Option<Rc<SubscriptionIpc>>,
     deps: Option<Rc<SubscriptionIpcDeps>>,
@@ -830,8 +834,53 @@ fn launch_result_of(v: &Value) -> SubscriptionLaunchResult {
     }
 }
 
-/// One step of a scenario; `par` runs its steps at the same time
+/// One step of a scenario, and then the turns the TypeScript's harness takes
+/// before the next one (`await run(step)`, with the promises `run` returns)
 fn step(ctx: Rc<Steps>, step: Value) -> LocalBoxFuture<Result<Value, JsError>> {
+    Box::pin(async move {
+        let what = step.get(0).and_then(Value::as_str).unwrap_or("").to_owned();
+        let name = step.get(1).and_then(Value::as_str).unwrap_or("").to_owned();
+        let value = step_body(ctx.clone(), step).await?;
+        for _ in 0..turns(&ctx, &what, &name) {
+            tick(&ctx.rt).await;
+        }
+        Ok(value)
+    })
+}
+
+/// How many turns after its body a step's promise settles in the harness
+fn turns(ctx: &Steps, what: &str, name: &str) -> usize {
+    let run = ctx.ipc.is_some() || ctx.deps.is_some();
+    // `serviceStep` returns a promise (two turns to adopt) or a plain value; `run`
+    // returns what it returns, which adopts again
+    let service_step = match what {
+        "check" | "metered" | "off" | "isOff" => Some(2),
+        "clear" | "settle" => Some(1),
+        "signing" | "unfinished" | "statuses" | "settings" | "record" | "listen" | "unlisten" => {
+            Some(0)
+        }
+        _ => None,
+    };
+    match what {
+        _ if service_step.is_some() => service_step.unwrap_or(0) + if run { 2 } else { 0 },
+        "par" => 3,
+        "invoke" => {
+            if SubscriptionIpc::channels().contains(&channel_of(name).as_str())
+                && !matches!(name, "statuses" | "codexImage")
+            {
+                2
+            } else {
+                0
+            }
+        }
+        "loginChange" | "sleep" => 1,
+        "login" | "logout" | "install" | "update" | "cancel" => 2,
+        _ => 0,
+    }
+}
+
+/// The body of a step; `par` runs its steps at the same time
+fn step_body(ctx: Rc<Steps>, step: Value) -> LocalBoxFuture<Result<Value, JsError>> {
     Box::pin(async move {
         let what = step.get(0).and_then(Value::as_str).unwrap_or("").to_owned();
         let a = step.get(1).cloned().unwrap_or(Value::Null);
@@ -878,7 +927,7 @@ fn step(ctx: Rc<Steps>, step: Value) -> LocalBoxFuture<Result<Value, JsError>> {
                 Value::Null
             }
             "unfinished" => {
-                let failure = y.as_ref().map(|f| json_value_from_serde(f));
+                let failure = y.as_ref().map(json_value_from_serde);
                 service.set_login_unfinished(
                     &name,
                     x.as_ref().and_then(Value::as_bool) == Some(true),
@@ -925,8 +974,16 @@ fn step(ctx: Rc<Steps>, step: Value) -> LocalBoxFuture<Result<Value, JsError>> {
                 Value::Null
             }
             "par" => {
-                let steps = step_list(&ctx, &step);
-                Value::Array(ctx.rt.try_join_all(steps).await?)
+                // `Promise.all(steps.map(...))`: each call runs now, up to its first `await`
+                let waits: Vec<Wait<Result<Value, JsError>>> = step_list(&ctx, &step)
+                    .into_iter()
+                    .map(|future| start_now(&ctx.rt, future))
+                    .collect();
+                let mut out = Vec::new();
+                for wait in waits {
+                    out.push(wait.await?);
+                }
+                Value::Array(out)
             }
             // ---- ipc: registerSubscriptionIpc ----
             "invoke" => {
@@ -999,6 +1056,8 @@ async fn run_steps(ctx: &Rc<Steps>, o: &Value) -> Result<Vec<Value>, JsError> {
         .unwrap_or_default()
     {
         results.push(step(ctx.clone(), s).await?);
+        // `await run(step)`
+        tick(&ctx.rt).await;
     }
     Ok(results)
 }
@@ -1042,12 +1101,7 @@ fn service_scenario(args: &[Value], cx: &mut Context) -> Answer {
 // ---------------------------------------------------------------------------
 
 /// `stubLaunch(o, cx, name, label)`
-fn stub_launch(
-    o: &Value,
-    sink: &Sink,
-    name: &str,
-    label: &'static str,
-) -> Rc<dyn Fn(String, Option<String>) -> Fut<Result<SubscriptionLaunchResult, JsError>>> {
+fn stub_launch(o: &Value, sink: &Sink, name: &str, label: &'static str) -> LaunchLogin {
     let spec = o.get("launch").and_then(|l| l.get(name)).cloned();
     let sink = sink.clone();
     Rc::new(move |provider, mode| {
@@ -1075,7 +1129,7 @@ fn stub_launcher(
     Rc::new(move |provider| stub(provider, None))
 }
 
-fn broadcaster(o: &Value, sink: &Sink) -> Option<Rc<dyn Fn(&str, &JsonValue)>> {
+fn broadcaster(o: &Value, sink: &Sink) -> Option<Broadcast> {
     flag(Some(o), "broadcast").then(|| {
         let sink = sink.clone();
         Rc::new(move |channel: &str, payload: &JsonValue| {
@@ -1083,7 +1137,7 @@ fn broadcaster(o: &Value, sink: &Sink) -> Option<Rc<dyn Fn(&str, &JsonValue)>> {
                 &sink,
                 json!(["broadcast", channel, json_value_to_serde(payload)]),
             );
-        }) as Rc<dyn Fn(&str, &JsonValue)>
+        }) as Broadcast
     })
 }
 

@@ -29,6 +29,17 @@
 //!
 //! The dependencies that read or write the app's settings are callbacks the
 //! caller passes (`Rc<dyn Fn>` answering a future); an `Err` is a rejection.
+//!
+//! ## The order of the turns
+//!
+//! Calls the TypeScript makes on separate promises interleave their `await`s
+//! one turn of the microtask queue at a time, and what the callbacks log
+//! shows it. An `async` call here runs now up to its first `await`
+//! ([`start_now`]) and each `await` that goes on a turn later is a
+//! [`tick`]: `await` of a promise or a plain value is one; `.then`/`.catch`
+//! chains and a promise that adopts another count their own (see each
+//! site). A function whose result the TypeScript `await`s is not given the
+//! turn here; its caller adds it.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -52,9 +63,9 @@ use super::subscription_metered::{
 use super::subscription_models::{SubscriptionModelListOptions, SubscriptionModelLister};
 use super::subscription_status::{
     Fut, StatusState, SubscriptionDetectOptions, SubscriptionDetection, SubscriptionDetector,
-    subscription_detector,
+    start_now, subscription_detector, tick,
 };
-use super::task::{JsError, LocalBoxFuture, Rt, Wait};
+use super::task::{JsError, Rt, Wait};
 
 /// `deps.getSettings`: the AI settings as stored right now (Codex `cliPath`,
 /// `meteredAccepted`, `subscriptionOff`)
@@ -328,14 +339,47 @@ impl SubscriptionStatusService {
         if let Some(previous) = previous {
             previous.await;
         }
+        // `acceptanceQueue.then(task, task)`: the task starts a turn after the queue is clear
+        tick(&self.rt).await;
         let out = task.await;
+        // the promise `then` answers adopts the task's in two turns; `run.catch(...)` clears
+        // the queue, and the caller's `await run` goes on, a turn after that
+        for _ in 0..3 {
+            tick(&self.rt).await;
+        }
         settle.settle(());
         out
     }
 
-    /// `Promise.resolve().then(() => deps.getSettings()).catch(() => null)`
+    /// `await Promise.resolve().then(() => deps.getSettings()).catch(() => null)`:
+    /// the settings are read a turn after the call, and the `await` goes on two
+    /// turns after that (the `catch` is a promise of its own)
     async fn settings_or_null(&self) -> Option<JsonValue> {
-        (self.deps.get_settings)().await.ok()
+        tick(&self.rt).await;
+        let read = (self.deps.get_settings)().await;
+        tick(&self.rt).await;
+        tick(&self.rt).await;
+        read.ok()
+    }
+
+    /// `await promise`: the continuation runs a turn after the promise settled
+    async fn after<T>(&self, promise: impl Future<Output = T>) -> T {
+        let out = promise.await;
+        tick(&self.rt).await;
+        out
+    }
+
+    /// `await fn()` of a function that answers a plain value: a throw is no
+    /// promise to wait for, so it costs no turn
+    async fn after_sync<T>(
+        &self,
+        call: impl Future<Output = Result<T, JsError>>,
+    ) -> Result<T, JsError> {
+        let out = call.await;
+        if out.is_ok() {
+            tick(&self.rt).await;
+        }
+        out
     }
 
     fn epoch_of(&self, provider: &str) -> u64 {
@@ -388,7 +432,7 @@ impl SubscriptionStatusService {
                 let Some(settings) = &settings else {
                     return Err(JsError::error("The settings could not be read"));
                 };
-                let record = self.deps.acceptance_store.read().await?;
+                let record = self.after(self.deps.acceptance_store.read()).await?;
                 let stored = matches!(
                     prop2(Some(settings), "meteredAccepted", &provider),
                     Some(JsonValue::Bool(true))
@@ -399,11 +443,12 @@ impl SubscriptionStatusService {
                 let accepted = outcome.metered_accepted;
                 if outcome.clear {
                     if stored {
-                        (self.deps.set_metered_accepted)(provider.clone(), false).await?;
+                        self.after_sync((self.deps.set_metered_accepted)(provider.clone(), false))
+                            .await?;
                     }
                     if fingerprint.as_deref().is_some_and(|f| !f.is_empty()) {
                         let rest = without(&record, &[provider.as_str()]);
-                        self.deps.acceptance_store.write(rest).await?;
+                        self.after(self.deps.acceptance_store.write(rest)).await?;
                     }
                 }
                 Ok::<bool, JsError>(accepted)
@@ -478,6 +523,11 @@ impl SubscriptionStatusService {
                 },
             )
             .await;
+            // `.then(() => listModels(...))` answers a promise, which the next `.then`
+            // adopts in two turns; the two `.then`s after it take one each
+            for _ in 0..4 {
+                tick(&this.rt).await;
+            }
             let list = read.and_then(|value| subscription_models_value_of(&value));
             if this.st.borrow().model_reading.get(&provider).copied() == Some(epoch) {
                 this.st.borrow_mut().model_reading.delete(&provider);
@@ -524,22 +574,26 @@ impl SubscriptionStatusService {
         if let Some(running) = self.st.borrow().in_flight.get(provider) {
             return running.clone();
         }
-        let (settle, wait) = self.rt.deferred::<()>();
-        self.st.borrow_mut().in_flight.set(provider, wait.clone());
         let this = self.clone();
-        let provider = provider.to_owned();
-        self.rt.spawn_local(async move {
-            this.run_check(&provider).await;
-            this.st.borrow_mut().in_flight.delete(&provider);
-            settle.settle(());
+        let name = provider.to_owned();
+        // `(async () => ...)()` runs now, up to its first `await`
+        let wait = start_now(&self.rt, async move {
+            this.run_check(&name).await;
+            // `.finally(() => inFlight.delete(provider))` runs a turn after the body ended
+            tick(&this.rt).await;
+            this.st.borrow_mut().in_flight.delete(&name);
+            // and the promise `finally` answers takes two more to settle
+            tick(&this.rt).await;
+            tick(&this.rt).await;
         });
+        self.st.borrow_mut().in_flight.set(provider, wait.clone());
         wait
     }
 
     /// The body of the task `checkOne` makes
     async fn run_check(&self, provider: &str) {
         let attempt: Result<Option<(Option<String>, SubscriptionDetection)>, JsError> = async {
-            let mut settings = (self.deps.get_settings)().await?;
+            let mut settings = self.after_sync((self.deps.get_settings)()).await?;
             let name = text(provider);
             if subscription_off_in(&settings, Some(&name)) {
                 // decided again in the queue: "use again" may have been saved since the read above
@@ -564,16 +618,17 @@ impl SubscriptionStatusService {
                 prop2(Some(&settings), "providers", provider).and_then(|p| prop(p, "cliPath")),
             )
             .map(str::to_owned);
-            let detection = (self.detect)(
-                self.rt.clone(),
-                provider.to_owned(),
-                SubscriptionDetectOptions {
-                    configured_path: configured_path.clone(),
-                    timeout_ms: self.deps.timeout_ms,
-                    ..SubscriptionDetectOptions::default()
-                },
-            )
-            .await?;
+            let detection = self
+                .after((self.detect)(
+                    self.rt.clone(),
+                    provider.to_owned(),
+                    SubscriptionDetectOptions {
+                        configured_path: configured_path.clone(),
+                        timeout_ms: self.deps.timeout_ms,
+                        ..SubscriptionDetectOptions::default()
+                    },
+                ))
+                .await?;
             Ok(Some((configured_path, detection)))
         }
         .await;
@@ -612,11 +667,12 @@ impl SubscriptionStatusService {
                 .map(|p| (*p).to_owned())
                 .collect(),
         };
-        let checks: Vec<LocalBoxFuture<()>> = wanted
+        // `wanted.map(async (provider) => ...)`: each call runs now, up to its first `await`
+        let waits: Vec<Wait<()>> = wanted
             .into_iter()
             .map(|provider| {
                 let this = self.clone();
-                Box::pin(async move {
+                start_now(&self.rt, async move {
                     // A check under way may have asked the CLI before this call: let it end. Whatever
                     // runs after that started after this call, so one wait and one check is all it takes.
                     if fresh {
@@ -624,12 +680,21 @@ impl SubscriptionStatusService {
                         if let Some(running) = running {
                             running.await;
                         }
+                        // `await inFlight.get(provider)`, a promise or `undefined`
+                        tick(&this.rt).await;
                     }
                     this.check_one(&provider).await;
-                }) as LocalBoxFuture<()>
+                    tick(&this.rt).await;
+                })
             })
             .collect();
-        self.rt.join_all(checks).await;
+        // `await Promise.all(...)`: the combined promise settles a turn after the last
+        // input, and the `await` goes on a turn after that
+        for wait in waits {
+            wait.await;
+        }
+        tick(&self.rt).await;
+        tick(&self.rt).await;
         self.get_statuses()
     }
 
@@ -655,13 +720,17 @@ impl SubscriptionStatusService {
                 return self.refused();
             }
             let written = async {
-                let mut record = self.deps.acceptance_store.read().await?;
+                let mut record = self.after(self.deps.acceptance_store.read()).await?;
                 match (&fingerprint, accepted) {
                     (Some(fingerprint), true) => record.set(provider, text(fingerprint.clone())),
                     _ => record = without(&record, &[provider]),
                 }
-                self.deps.acceptance_store.write(record).await?;
-                (self.deps.set_metered_accepted)(provider.to_owned(), accepted).await
+                self.after(self.deps.acceptance_store.write(record)).await?;
+                self.after_sync((self.deps.set_metered_accepted)(
+                    provider.to_owned(),
+                    accepted,
+                ))
+                .await
             }
             .await;
             if written.is_err() {
@@ -697,19 +766,22 @@ impl SubscriptionStatusService {
             let _ = async {
                 // the remembered kind first: a flag left behind without it is no acceptance, and
                 // the next check removes it
-                let record = self.deps.acceptance_store.read().await?;
+                let record = self.after(self.deps.acceptance_store.read()).await?;
                 if as_str(record.get(provider)).is_some_and(|f| !f.is_empty()) {
-                    self.deps
-                        .acceptance_store
-                        .write(without(&record, &[provider]))
-                        .await?;
+                    self.after(
+                        self.deps
+                            .acceptance_store
+                            .write(without(&record, &[provider])),
+                    )
+                    .await?;
                 }
-                let settings = (self.deps.get_settings)().await?;
+                let settings = self.after_sync((self.deps.get_settings)()).await?;
                 if matches!(
                     prop2(Some(&settings), "meteredAccepted", provider),
                     Some(JsonValue::Bool(true))
                 ) {
-                    (self.deps.set_metered_accepted)(provider.to_owned(), false).await?;
+                    self.after_sync((self.deps.set_metered_accepted)(provider.to_owned(), false))
+                        .await?;
                 }
                 Ok::<(), JsError>(())
             }
@@ -743,7 +815,11 @@ impl SubscriptionStatusService {
         };
         let result = self
             .queued(async {
-                if save(provider.to_owned(), off).await.is_err() {
+                if self
+                    .after_sync(save(provider.to_owned(), off))
+                    .await
+                    .is_err()
+                {
                     return self.refused();
                 }
                 if off {
@@ -771,7 +847,7 @@ impl SubscriptionStatusService {
             .await;
         // back on: the program is asked again, and its answer arrives as a change
         if result.ok && !off {
-            let _ = self.check_one(provider);
+            drop(self.check_one(provider));
         }
         result
     }

@@ -989,6 +989,12 @@ interface ServiceOpts {
   noOff?: boolean
   noModels?: boolean
   timeoutMs?: number
+  /**
+   * the settings reads and the detections are not logged: a scenario that races them against a
+   * program the world starts (which Node answers at once and the runtime answers a turn
+   * later) would only compare that
+   */
+  quiet?: boolean
   failGet?: number[]
   failSet?: boolean
   failRead?: boolean
@@ -1040,7 +1046,8 @@ function bench(o: ServiceOpts, cx: TsContext): Bench {
     provider: string,
     options?: { configuredPath?: string; timeoutMs?: number },
   ) => {
-    cx.log('detect', provider, options?.configuredPath ?? null, options?.timeoutMs ?? null)
+    if (!o.quiet)
+      cx.log('detect', provider, options?.configuredPath ?? null, options?.timeoutMs ?? null)
     const next = sequence(o.detect?.[provider], detectAt, provider) as Any
     if (next && typeof next === 'object' && 'reject' in next) throw new Error(next.reject)
     return next ?? { provider, state: 'signed-out' }
@@ -1054,7 +1061,7 @@ function bench(o: ServiceOpts, cx: TsContext): Bench {
   b.deps = {
     getSettings: () => {
       gets += 1
-      cx.log('getSettings')
+      if (!o.quiet) cx.log('getSettings')
       if (o.failGet?.includes(gets)) throw new Error('settings')
       return structuredClone(b.settings)
     },
@@ -1858,7 +1865,8 @@ const depsCases: Case[] = [
     {
       locate: found(CODEX),
       killTree: true,
-      steps: [['par', ['login', 'codex'], ['cancel', 'codex']], ['statuses']],
+      quiet: true,
+      steps: [['par', ['login', 'codex'], ['cancel', 'codex']], ['sleep', 50], ['statuses']],
     },
   ),
   cn('logout of ChatGPT', w(MAC), { steps: [['logout', 'chatgpt'], ['statuses']] }),

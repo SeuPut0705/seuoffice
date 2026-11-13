@@ -30,7 +30,7 @@
  */
 import '../../electron-fake.ts'
 import crypto from 'node:crypto'
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { syncBuiltinESMExports } from 'node:module'
 import { join } from 'node:path'
 import type { Case, Group, TsContext } from '../../types.ts'
@@ -997,7 +997,12 @@ async function runOps(
     }
   }
   const results: unknown[] = []
-  for (const op of ops) results.push(await one(op))
+  for (const op of ops) {
+    results.push(await one(op))
+    // a real file system call lets the work the op left running (an account read after a
+    // refresh) go on before the next op reads: the Rust spec does the same
+    for (let turn = 0; turn < 12; turn++) await stat('/nonexistent-settle').catch(() => undefined)
+  }
   return results
 }
 

@@ -18,7 +18,7 @@ use jscompat::JsonValue;
 
 use crate::packages::ai_provider::jsval::js_string;
 
-use super::drive_api::{DriveAccount, DriveApi, DriveApiOptions};
+use super::drive_api::{AccessTokenSource, DriveAccount, DriveApi, DriveApiOptions};
 use super::oauth::{
     Clock, GoogleClient, GoogleSignInFailure, GoogleSignInOptions, GoogleTokens, PickRequest,
     RefreshFailure, SignInPages, clock_now, refresh_google_token, revoke_google_token,
@@ -254,9 +254,7 @@ async fn refresh(
 /// `None` when not connected.
 async fn access_token_for(core: Rc<Core>, rt: Rt, signal: Option<Signal>) -> Option<String> {
     let client = core.options.client.clone()?;
-    if core.st.borrow().refresh_token.is_none() {
-        return None;
-    }
+    core.st.borrow().refresh_token.as_ref()?;
     {
         let st = core.st.borrow();
         if let Some(token) = st.access_token.as_ref().filter(|t| !t.is_empty())
@@ -302,7 +300,7 @@ impl DriveConnection {
             st: RefCell::new(ConnState::default()),
         });
         let source = core.clone();
-        let token: Rc<dyn Fn(Rt, Option<Signal>) -> LocalBoxFuture<Option<String>>> = Rc::new(
+        let token: AccessTokenSource = Rc::new(
             move |rt: Rt, signal: Option<Signal>| -> LocalBoxFuture<Option<String>> {
                 Box::pin(access_token_for(source.clone(), rt, signal))
             },

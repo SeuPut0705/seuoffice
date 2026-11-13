@@ -132,9 +132,8 @@ fn open_ai_base(provider: &str, config: &AiMediaProviderConfig) -> Result<String
     }
     let meta = meta_of(provider)?;
     Ok(trim_slash(
-        &truthy_or(config.base_url.as_deref(), meta.default_base_url)
-            .unwrap_or(OPENAI_IMAGES_BASE_URL)
-            .to_owned(),
+        truthy_or(config.base_url.as_deref(), meta.default_base_url)
+            .unwrap_or(OPENAI_IMAGES_BASE_URL),
     ))
 }
 
@@ -1478,6 +1477,9 @@ async fn generate_image_stability(
     })
 }
 
+/// `cancelWait`: the function that stops the wait in progress
+type CancelWait = Rc<RefCell<Option<Box<dyn FnOnce()>>>>;
+
 const BFL_CANCELLED: &str = "FLUX generation timed out or was cancelled";
 
 /// `BflPollWaits`: the waits between the polls of one queued FLUX job. The
@@ -1486,14 +1488,14 @@ struct BflPollWaits {
     rt: Rt,
     guard: Signal,
     /// `cancelWait`: stops the wait in progress
-    cancel_wait: Rc<RefCell<Option<Box<dyn FnOnce()>>>>,
+    cancel_wait: CancelWait,
     listener: Id,
 }
 
 impl BflPollWaits {
     /// `bflPollWaits(guard)`
     fn new(rt: &Rt, guard: &Signal) -> BflPollWaits {
-        let cancel_wait: Rc<RefCell<Option<Box<dyn FnOnce()>>>> = Rc::new(RefCell::new(None));
+        let cancel_wait: CancelWait = Rc::new(RefCell::new(None));
         let slot = cancel_wait.clone();
         // `onAbort`: `cancelWait?.()`
         let listener = guard.on_abort(move |_| {

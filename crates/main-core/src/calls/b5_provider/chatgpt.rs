@@ -496,6 +496,19 @@ where
     }
 }
 
+/// What the TypeScript spec does between two ops: a real file system call
+/// (`settle` of the spec) lets the work an op left running (an account read
+/// after a refresh) go on, as microtasks do, before the next op reads.
+async fn settle(rt: &Rt) {
+    for _ in 0..12 {
+        let _ = rt
+            .fs(FsOp::Stat {
+                path: "/nonexistent-settle".into(),
+            })
+            .await;
+    }
+}
+
 /// `scenario(run, signal, cx, spec)`
 async fn scenario(
     rt: Rt,
@@ -520,6 +533,7 @@ async fn scenario(
         .unwrap_or_default()
     {
         results.push(one(ops.clone(), op).await);
+        settle(&ops.rt).await;
     }
     Ok(json!({ "results": results, "record": record_json(&made.memory.current()) }))
 }

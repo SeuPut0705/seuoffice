@@ -18,8 +18,7 @@ use crate::packages::ai_provider::key_effort::{
     key_effort_body, key_model_effort, key_provider_effort, takes_key_effort,
 };
 use crate::packages::ai_provider::key_model_refresh::{
-    KeyModelRefresherDeps, ListAnswer, ListFuture, create_key_model_refresher,
-    with_key_provider_models,
+    KeyModelRefresherDeps, ListAnswer, ListFn, create_key_model_refresher, with_key_provider_models,
 };
 use crate::packages::ai_provider::key_models::{
     KeyListConfig, KeyModelListing, Listed, MAX_KEY_PROVIDER_MODELS, key_model_ids_of,
@@ -176,10 +175,11 @@ fn list_answer_of(answer: Option<&Value>) -> Option<ListAnswer> {
     }
 }
 
-/// The scripted listing of a case: the n-th call answers its n-th spec.
-type ScriptedList = Rc<dyn Fn(&str, &KeyListConfig) -> ListFuture>;
-
-fn scripted_list(rt: &Rt, sink: &Sink, lists: Vec<Value>) -> ScriptedList {
+/// The scripted listing of a case: the n-th call answers its n-th spec. The
+/// body of a JavaScript async function runs up to its first `await` at the
+/// call, so the timer of `after` is set there, not when the future is first
+/// polled.
+fn scripted_list(rt: &Rt, sink: &Sink, lists: Vec<Value>) -> ListFn {
     let rt = rt.clone();
     let sink = sink.clone();
     let calls = Rc::new(Cell::new(0usize));
@@ -191,11 +191,15 @@ fn scripted_list(rt: &Rt, sink: &Sink, lists: Vec<Value>) -> ScriptedList {
             &sink,
             json!(["list", provider, config.api_key, config.base_url]),
         );
-        let rt = rt.clone();
+        let after = spec.get("after").and_then(Value::as_f64).unwrap_or(0.0);
+        let slept = (after != 0.0).then(|| {
+            let (settle, wait) = rt.deferred::<()>();
+            rt.set_timeout(after, move || settle.settle(()));
+            wait
+        });
         Box::pin(async move {
-            let after = spec.get("after").and_then(Value::as_f64).unwrap_or(0.0);
-            if after != 0.0 {
-                rt.sleep(after).await;
+            if let Some(slept) = slept {
+                slept.await;
             }
             if let Some(message) = str_of(&spec, "reject") {
                 return Err(JsError::error(message));

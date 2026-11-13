@@ -803,10 +803,18 @@ fn run_fs(op: &FsOp) -> Result<FsAnswer, NodeError> {
             .map(FsAnswer::Bytes)
             .map_err(|e| node_error(&e, "open", path)),
         FsOp::WriteFile {
-            path, data, flag, ..
+            path,
+            data,
+            flag,
+            mode,
         } => {
             let mut options = fs::OpenOptions::new();
             options.write(true);
+            // `mode` applies to a file this call creates, as `open(2)` does
+            #[cfg(unix)]
+            if let Some(mode) = mode {
+                std::os::unix::fs::OpenOptionsExt::mode(&mut options, *mode as u32);
+            }
             if flag.as_deref() == Some("wx") {
                 options.create_new(true);
             } else {

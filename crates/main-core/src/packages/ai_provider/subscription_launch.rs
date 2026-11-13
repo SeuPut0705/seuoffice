@@ -37,6 +37,7 @@ use super::subscription_process::{
     SubscriptionSpawnOptions, TrackedChildInfo, kill_process_tree_rt, run_subscription_program,
     spawn_subscription_program, track_child, windows_system_dir, windows_system_tool,
 };
+use super::subscription_status::tick;
 use super::task::{Child, ChildEvent, JsError, Rt, SpawnRequest, Stdio};
 
 /// The CLI's own sign-in command
@@ -130,6 +131,10 @@ pub struct SubscriptionOffChange {
 
 pub type LoginChangeListener = Rc<dyn Fn(&str) -> Result<(), JsError>>;
 pub type OffChangeListener = Rc<dyn Fn(&SubscriptionOffChange) -> Result<(), JsError>>;
+/// `onStarted`: called with the way to end the login
+pub type StartedHook = Rc<dyn Fn(Rc<dyn Fn()>)>;
+/// `killTree`: how `stop` ends the login's process tree
+pub type KillTree = Rc<dyn Fn(&Child)>;
 
 /// The module state of this file: the listener sets, and the state of the
 /// modules the launchers default to.
@@ -360,7 +365,10 @@ async fn start_failure(rt: &Rt, child: &Child) -> Option<String> {
             settle.settle(Some("The program could not be started".to_owned()));
         });
     }
-    wait.await
+    let failure = wait.await;
+    // `await startFailure(child)`
+    tick(rt).await;
+    failure
 }
 
 /// `SubscriptionLoginWindowText`: the visible login window's own words, in
@@ -390,10 +398,10 @@ pub struct SubscriptionLoginOptions {
     pub window_text: Option<SubscriptionLoginWindowText>,
     /// called once the login has started, with a way to end it (its window
     /// and the CLI in it)
-    pub on_started: Option<Rc<dyn Fn(Rc<dyn Fn()>)>>,
+    pub on_started: Option<StartedHook>,
     /// stand-in for tests: how `stop` ends the login's process tree
     /// (`killProcessTree` when absent)
-    pub kill_tree: Option<Rc<dyn Fn(&Child)>>,
+    pub kill_tree: Option<KillTree>,
     pub locate: Option<SubscriptionLocator>,
     pub platform: Option<String>,
     pub base_env: Option<Vec<(String, String)>>,
@@ -451,13 +459,16 @@ async fn locate_with(
         configured_path: configured_path.clone(),
         ..SubscriptionLocateOptions::default()
     };
-    match locate {
+    let located = match locate {
         Some(locate) => locate(rt.clone(), provider.to_owned(), options).await,
         None => {
             let locate_state = state.borrow().locate.clone();
             locate_subscription_program(rt, &locate_state, provider, &options).await
         }
-    }
+    };
+    // `await locate(...)`
+    tick(rt).await;
+    located
 }
 
 /// `startLogin(program, options)`
@@ -692,6 +703,8 @@ pub async fn launch_subscription_logout(
             run_subscription_program(rt, &shared, &program, &args, &run_options).await
         }
     };
+    // `await run(...)`
+    tick(rt).await;
     let result = match ran {
         // what the CLI printed stays here: it may name the account
         Ok(result) if result.code == Some(0.0) => SubscriptionLaunchResult::ok(),

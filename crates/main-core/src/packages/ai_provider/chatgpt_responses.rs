@@ -455,10 +455,7 @@ async fn run_structured_turn(
     match parse_claude_code_turn(rt, &outcome.raw, tools, PROVIDER) {
         Ok(turn) => {
             // the scanner delivered the text as it came; the rest (or all, for an answer it could not follow)
-            let rest = match turn.text.strip_prefix(emitted.as_str()) {
-                Some(rest) => rest,
-                None => "",
-            };
+            let rest = turn.text.strip_prefix(emitted.as_str()).unwrap_or_default();
             if !rest.is_empty() {
                 (cb.on_delta)(text(rest));
             }

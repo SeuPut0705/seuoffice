@@ -993,27 +993,34 @@ pub async fn run_subscription_program(
     if options.signal.aborted() {
         return Err(abort_error());
     }
-    let child = spawn_subscription_program(
-        rt,
-        shared,
-        program,
-        args,
-        &SubscriptionSpawnOptions {
+    let mut spawning: LocalBoxFuture<Result<Child, JsError>> = {
+        let (rt, shared, program, args) =
+            (rt.clone(), shared.clone(), program.clone(), args.to_vec());
+        let spawn_options = SubscriptionSpawnOptions {
             cwd: Some(options.cwd.clone().unwrap_or_else(|| rt.tmpdir())),
             stdio: Some([Stdio::Ignore, Stdio::Pipe, Stdio::Pipe]),
             base_env: options.base_env.clone(),
             ..SubscriptionSpawnOptions::default()
-        },
-    )
-    .await?;
+        };
+        Box::pin(async move {
+            spawn_subscription_program(&rt, &shared, &program, &args, &spawn_options).await
+        })
+    };
+    // `spawn(...)` of Node starts the process at the call, and the timer and the listeners
+    // come right after it, before anything else runs: the first poll queues the start
+    let first = spawning
+        .as_mut()
+        .poll(&mut std::task::Context::from_waker(std::task::Waker::noop()));
     let (settle, wait) = rt.deferred::<Result<SubscriptionCommandResult, JsError>>();
     let state = Rc::new(RefCell::new(RunState::default()));
+    // the child's pid, once the start is answered
+    let pid_cell: Rc<std::cell::Cell<Option<f64>>> = Rc::new(std::cell::Cell::new(None));
     // `finish(error, code)`
     let finish: Rc<dyn Fn(Option<JsError>, Option<f64>)> = {
         let rt = rt.clone();
         let state = state.clone();
         let signal = options.signal.clone();
-        let pid = child.pid();
+        let pid_cell = pid_cell.clone();
         Rc::new(move |error: Option<JsError>, code: Option<f64>| {
             {
                 let mut run = state.borrow_mut();
@@ -1032,7 +1039,7 @@ pub async fn run_subscription_program(
             }
             match error {
                 Some(error) => {
-                    kill_process_tree_rt(&rt, pid, true);
+                    kill_process_tree_rt(&rt, pid_cell.get(), true);
                     settle.settle(Err(error));
                 }
                 None => {
@@ -1063,6 +1070,19 @@ pub async fn run_subscription_program(
         .signal
         .on_abort(move |_| on_abort(Some(abort_error()), None));
     state.borrow_mut().abort_listener = Some(listener);
+    let child = match first {
+        std::task::Poll::Ready(started) => started,
+        std::task::Poll::Pending => spawning.await,
+    };
+    let child = match child {
+        Ok(child) => child,
+        Err(error) => {
+            // a `spawn` that throws rejects the run: the timer and the listener end with it
+            finish(Some(error), None);
+            return wait.await;
+        }
+    };
+    pid_cell.set(child.pid());
     let on_event = finish;
     let collected = state;
     child.on(move |event| match event {

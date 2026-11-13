@@ -29,12 +29,9 @@
  * The world's children answer by script: the k-th write to stdin gets the
  * k-th reply. `Kid` below builds one with the request ids the client uses.
  * Its working directory is the case's folder (`TMPDIR`), where the session
- * folders are made with a counter for a name (`mkdtemp` is faked here).
+ * folders are made with a counter for a name (`mkdtemp` is the world's).
  */
 import '../../electron-fake.ts'
-import { mkdirSync } from 'node:fs'
-import fsp from 'node:fs/promises'
-import { syncBuiltinESMExports } from 'node:module'
 import type { Case, Group, TsContext } from '../../types.ts'
 import { inWorld, type Chunk, type World } from './world.ts'
 
@@ -300,30 +297,6 @@ function abortedSignal(): AbortSignal {
   return controller.signal
 }
 
-/** `mkdtemp` with a counter for the random part, as the Rust world names folders */
-async function withFakeMkdtemp<T>(call: () => Promise<T>): Promise<T> {
-  const real = fsp.mkdtemp
-  ;(fsp as Any).mkdtemp = async (prefix: string): Promise<string> => {
-    for (let n = 1; n < 1000; n++) {
-      const path = `${prefix}${String(n).padStart(6, '0')}`
-      try {
-        mkdirSync(path)
-        return path
-      } catch (error) {
-        if ((error as { code?: string }).code !== 'EEXIST') throw error
-      }
-    }
-    throw new Error('no free temp name')
-  }
-  syncBuiltinESMExports()
-  try {
-    return await call()
-  } finally {
-    ;(fsp as Any).mkdtemp = real
-    syncBuiltinESMExports()
-  }
-}
-
 /**
  * The module keeps `statusLoginKind` between calls, which a fresh Rust state
  * does not: a read that fails before it answers puts it back to undefined.
@@ -344,7 +317,7 @@ async function resetModule(cx: TsContext): Promise<void> {
 
 function scenario([world, opts]: unknown[], cx: TsContext): Promise<unknown> {
   const o = (opts ?? {}) as Opts
-  return withFakeMkdtemp(async () => {
+  return (async () => {
     await resetModule(cx)
     const restore = mod.setCodexAppServerRuntime({
       resolve: async (_provider: string, options?: { configuredPath?: string }) => {
@@ -367,7 +340,7 @@ function scenario([world, opts]: unknown[], cx: TsContext): Promise<unknown> {
       launch.notifySubscriptionOffChange({ provider: 'codex', off: false })
       mod.shutdownCodexAppServers()
     }
-  })
+  })()
 }
 
 const stream = (s: Extract<Step, { stream: unknown }>['stream'] = {}): Step => ({ stream: s })
@@ -1628,7 +1601,9 @@ const streams: Group = {
             .turn(done('recovered', [], 'turn-2', 'thread-2'), 'turn-2')
             .spec(),
         ]),
-        steps(stream({ sessionId: 's' }), stream({ sessionId: 's' })),
+        // the dropped session's folder is removed by a file system call that runs on its own:
+        // the sleep lets it end, so that the second thread's folder has the same name on both sides
+        steps(stream({ sessionId: 's' }), { sleep: 1 }, stream({ sessionId: 's' })),
       ),
       // Codex turned off: the process serves the run and ends
       c(w([ok('while off').spec()]), steps({ off: true }, stream({ sessionId: 'off' }))),

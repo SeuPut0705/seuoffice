@@ -250,6 +250,21 @@ fn as_error(error: JsError) -> JsError {
 // the bounded stdout reader
 // ---------------------------------------------------------------------------
 
+/// A listener of the notifications of the app-server.
+pub type NotificationListener = Rc<dyn Fn(&RpcMessage)>;
+/// A listener of the end of the process.
+pub type CloseListener = Rc<dyn Fn(&JsError)>;
+/// `onLine`: a line of stdout; the `Err` is what it threw.
+type LineHandler = Box<dyn FnMut(&str) -> Result<(), JsError>>;
+/// `listCodexSubscriptionModels` and `readCodexAccount` as the registries of
+/// the other modules call them: `({ configuredPath, signal })`.
+pub type SourceHook =
+    Rc<dyn Fn(&Rt, Option<String>, Signal) -> LocalBoxFuture<Result<JsonValue, JsError>>>;
+/// `onSubscriptionOffChange(({ provider, off }) => ...)`
+pub type OffChangeHook = Rc<dyn Fn(&str, bool)>;
+/// The list a process gave, shared by the runs that ask for it.
+type ListedModels = Wait<Result<Vec<JsonValue>, JsError>>;
+
 /// `attachBoundedRpcStdout`'s state: the child's stdout split into RPC lines,
 /// with a cap on the line being buffered. Over the cap the reader stops, the
 /// child is killed and `on_overflow` reports a bounded diagnostic, which fails
@@ -264,7 +279,7 @@ pub struct BoundedRpcStdout {
     /// sequence held by the decoder
     pending_bytes: usize,
     stopped: bool,
-    on_line: Box<dyn FnMut(&str) -> Result<(), JsError>>,
+    on_line: LineHandler,
     on_overflow: Box<dyn FnMut(JsError)>,
     kill: Box<dyn FnMut()>,
 }
@@ -378,7 +393,7 @@ pub fn attach_bounded_rpc_stdout(
 ) {
     attach_bounded_rpc_stdout_fallible(
         child,
-        move || kill(),
+        kill,
         move |line| {
             on_line(line);
             Ok(())
@@ -631,13 +646,11 @@ pub struct CodexHooks {
     /// `onSubscriptionLoginChange((provider) => ...)`
     pub login_change: Rc<dyn Fn(&str)>,
     /// `onSubscriptionOffChange(({ provider, off }) => ...)`
-    pub off_change: Rc<dyn Fn(&str, bool)>,
+    pub off_change: OffChangeHook,
     /// `setCodexAccountSource(({ configuredPath, signal }) => ...)`
-    pub account_source:
-        Rc<dyn Fn(&Rt, Option<String>, Signal) -> LocalBoxFuture<Result<JsonValue, JsError>>>,
+    pub account_source: SourceHook,
     /// `setSubscriptionModelSource('codex', ({ configuredPath, signal }) => ...)`
-    pub model_source:
-        Rc<dyn Fn(&Rt, Option<String>, Signal) -> LocalBoxFuture<Result<JsonValue, JsError>>>,
+    pub model_source: SourceHook,
 }
 
 /// The hooks of this module over `app`.
@@ -721,7 +734,7 @@ struct Pending {
 #[derive(Default)]
 struct ClientState {
     pending: Vec<(f64, Pending)>,
-    notification_listeners: Vec<(u64, Rc<dyn Fn(&RpcMessage)>)>,
+    notification_listeners: Vec<(u64, NotificationListener)>,
     sessions: JsMap<SessionRef>,
     next_id: f64,
     next_listener: u64,
@@ -729,10 +742,10 @@ struct ClientState {
     closed: bool,
     users: usize,
     idle_timer: Option<Id>,
-    close_listeners: Vec<(u64, Rc<dyn Fn(&JsError)>)>,
+    close_listeners: Vec<(u64, CloseListener)>,
     stop_when_released: bool,
     /// the list this process gave, read once (`listedModels`)
-    listed_models: Option<(u64, Wait<Result<Vec<JsonValue>, JsError>>)>,
+    listed_models: Option<(u64, ListedModels)>,
     /// the default model this process listed (`defaultModels`)
     default_models: Option<(u64, Wait<Result<String, JsError>>)>,
 }
@@ -961,7 +974,7 @@ impl CodexAppServerClient {
     }
 
     /// `onNotification(listener)`: answers the function that stops the listening.
-    pub fn on_notification(&self, listener: Rc<dyn Fn(&RpcMessage)>) -> Rc<dyn Fn()> {
+    pub fn on_notification(&self, listener: NotificationListener) -> Rc<dyn Fn()> {
         let id = {
             let mut st = self.0.st.borrow_mut();
             st.next_listener += 1;
@@ -982,7 +995,7 @@ impl CodexAppServerClient {
 
     /// `onClose(listener)`: called once with the reason when the process is
     /// gone, however it ended.
-    pub fn on_close(&self, listener: Rc<dyn Fn(&JsError)>) -> Rc<dyn Fn()> {
+    pub fn on_close(&self, listener: CloseListener) -> Rc<dyn Fn()> {
         let id = {
             let mut st = self.0.st.borrow_mut();
             st.next_listener += 1;
@@ -1197,7 +1210,7 @@ impl CodexAppServerClient {
                     return Ok(());
                 }
             }
-            let listeners: Vec<Rc<dyn Fn(&RpcMessage)>> = self
+            let listeners: Vec<NotificationListener> = self
                 .0
                 .st
                 .borrow()
@@ -1226,7 +1239,7 @@ impl CodexAppServerClient {
             st.sessions.clear();
             st.notification_listeners.clear();
             // a turn waits on notifications, not on a request: tell it the process is gone
-            let close_listeners: Vec<Rc<dyn Fn(&JsError)>> = st
+            let close_listeners: Vec<CloseListener> = st
                 .close_listeners
                 .drain(..)
                 .map(|(_, listener)| listener)
@@ -1288,7 +1301,7 @@ impl CodexAppServerClient {
     /// once for what a run needs from it (the default model, the levels a
     /// model takes); an entry is gone with its process, and a failed reading
     /// is not kept, so the next run asks again.
-    fn listed_model_entries(&self) -> Wait<Result<Vec<JsonValue>, JsError>> {
+    fn listed_model_entries(&self) -> ListedModels {
         if let Some((_, known)) = &self.0.st.borrow().listed_models {
             return known.clone();
         }
@@ -2208,10 +2221,10 @@ pub trait CodexTurnTransport {
         params: Option<JsonValue>,
     ) -> LocalBoxFuture<Result<JsonValue, JsError>>;
     /// `onNotification(listener)`: answers the function that stops the listening
-    fn on_notification(&self, listener: Rc<dyn Fn(&RpcMessage)>) -> Rc<dyn Fn()>;
+    fn on_notification(&self, listener: NotificationListener) -> Rc<dyn Fn()>;
     /// `onClose?.(listener)`: the process ended; without it a turn only ends by
     /// its own notifications
-    fn on_close(&self, listener: Rc<dyn Fn(&JsError)>) -> Option<Rc<dyn Fn()>>;
+    fn on_close(&self, listener: CloseListener) -> Option<Rc<dyn Fn()>>;
 }
 
 impl CodexTurnTransport for CodexAppServerClient {
@@ -2220,16 +2233,24 @@ impl CodexTurnTransport for CodexAppServerClient {
         method: &str,
         params: Option<JsonValue>,
     ) -> LocalBoxFuture<Result<JsonValue, JsError>> {
+        // `await this.initialized` takes one tick when the process is up, and
+        // the request is written after it: before anything that follows the
+        // call by two ticks (the end of a cancelled turn, the shutdown).
+        // The port writes at the call when the initialization is over.
+        if let Some(Ok(())) = self.0.initialized.peek() {
+            let started = self.request_wire_start(method, params.as_ref(), REQUEST_TIMEOUT_MS);
+            return Box::pin(async move { started?.await });
+        }
         let client = self.clone();
         let method = method.to_owned();
         Box::pin(async move { client.request(&method, params.as_ref()).await })
     }
 
-    fn on_notification(&self, listener: Rc<dyn Fn(&RpcMessage)>) -> Rc<dyn Fn()> {
+    fn on_notification(&self, listener: NotificationListener) -> Rc<dyn Fn()> {
         CodexAppServerClient::on_notification(self, listener)
     }
 
-    fn on_close(&self, listener: Rc<dyn Fn(&JsError)>) -> Option<Rc<dyn Fn()>> {
+    fn on_close(&self, listener: CloseListener) -> Option<Rc<dyn Fn()>> {
         Some(CodexAppServerClient::on_close(self, listener))
     }
 }
@@ -2699,6 +2720,7 @@ async fn effort_for(
 }
 
 /// `runCodexAppServer(config, system, messages, tools, maxTokens, cb)`
+#[allow(clippy::too_many_arguments)]
 async fn run_codex_app_server(
     rt: &Rt,
     app: &CodexApp,
@@ -2807,6 +2829,7 @@ async fn run_codex_app_server(
 }
 
 /// The `try` block of `run`: one turn on a session.
+#[allow(clippy::too_many_arguments)]
 async fn run_turn(
     rt: &Rt,
     client: &CodexAppServerClient,
@@ -2846,12 +2869,12 @@ async fn run_turn(
     }
     let params = object(params);
     let transport: Rc<dyn CodexTurnTransport> = Rc::new(client.clone());
-    let request = transport.request("turn/start", Some(params));
+    let starter = transport.clone();
     let raw = wait_for_turn(
         rt,
         transport,
         &thread_id,
-        Box::new(move || request),
+        Box::new(move || starter.request("turn/start", Some(params))),
         &cb.signal,
         cb,
     )
@@ -2868,6 +2891,7 @@ async fn run_turn(
 }
 
 /// `streamCodexAppServer(config, system, messages, tools, maxTokens, cb)`
+#[allow(clippy::too_many_arguments)]
 pub async fn stream_codex_app_server(
     rt: &Rt,
     app: &CodexApp,
