@@ -40,10 +40,6 @@ export type OdsLossKind =
   | 'shapes'
   | 'slicers'
   | 'sparklines'
-  /// The marks that hide cells from the AI. The cells themselves are written;
-  /// the ODS writer carries neither the package part nor its defined-name
-  /// copy, so the exported workbook hides nothing.
-  | 'redactions'
 
 export interface OdsLoss {
   readonly kind: OdsLossKind
@@ -76,30 +72,26 @@ export function odsLosses(result: OdsConversionResult): OdsLoss[] {
 }
 
 /**
- * The hide-from-AI marks `sourcePath` carries, as a loss of the export, or
- * null when it carries none. A record that cannot be read is a loss too, with
- * no count: the editor withholds every cell of such a workbook, and the copy
- * withholds none.
+ * Whether `sourcePath` hides cells from the AI. A record that cannot be read
+ * counts: the editor withholds every cell of such a workbook.
  */
-async function redactionLoss(sidecar: ArchiveClient, sourcePath: string): Promise<OdsLoss | null> {
-  let count: number | null
+async function hidesCells(sidecar: ArchiveClient, sourcePath: string): Promise<boolean> {
   try {
     const read = await readWorkbookRedactionPart(sidecar, sourcePath)
-    if (read.status === 'absent') return null
-    count =
-      read.status === 'ok'
-        ? read.states.reduce((marks, state) => marks + state.marks.length, 0)
-        : null
+    if (read.status === 'absent') return false
+    if (read.status === 'unreadable') return true
+    return read.states.some((state) => state.marks.length > 0)
   } catch {
-    count = null
+    return true
   }
-  return count === 0 ? null : { kind: 'redactions', count }
 }
 
 export type OdsExportOutcome =
   | { readonly status: 'exported'; readonly path: string; readonly result: OdsConversionResult }
   /// the person declined the dropped-feature warning; nothing was written
   | { readonly status: 'canceled' }
+  /// the workbook hides cells from the AI and ODS cannot keep that; nothing was written
+  | { readonly status: 'redacted'; readonly choice: 'xlsx' | 'cancel' }
   /// the placed file could not be opened again; it was removed
   | { readonly status: 'unreadable' }
   | { readonly status: 'failed'; readonly message: string }
@@ -109,13 +101,30 @@ export type OdsExportOutcome =
  * ODS package at `targetPath`. The conversion lands in a private temp folder first, so a
  * conversion that fails or a warning the person cancels leaves the target
  * exactly as it was. `confirmLoss` runs before anything reaches the target.
+ *
+ * A workbook that hides cells from the AI is not written silently: the ODS
+ * writer carries neither the package part that records the marks nor its
+ * defined-name copy, so the copy would hold the cells and nothing that says
+ * they were hidden. Before the conversion starts the person is asked
+ * (`confirmHidden`); only "export without the marks" goes on, and the copy
+ * then holds the real values and no mark carrier.
  */
 export async function exportWorkbookAsOds(input: {
   sidecar: OdsExportSidecar
   sourcePath: string
   targetPath: string
   confirmLoss: (losses: readonly OdsLoss[]) => Promise<boolean>
+  /**
+   * Asked when the workbook hides cells from the AI, before anything is
+   * converted: write the copy without the marks, or write nothing (and either
+   * take the person to Save As .xlsx or leave).
+   */
+  confirmHidden: () => Promise<'export' | 'xlsx' | 'cancel'>
 }): Promise<OdsExportOutcome> {
+  if (await hidesCells(input.sidecar, input.sourcePath)) {
+    const choice = await input.confirmHidden()
+    if (choice !== 'export') return { status: 'redacted', choice }
+  }
   const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-ods-export-'))
   const tempOds = join(workDir, `${basename(input.targetPath).replace(/\.ods$/i, '')}.ods`)
   const verifyXlsx = join(workDir, 'verify.xlsx')
@@ -127,8 +136,6 @@ export async function exportWorkbookAsOds(input: {
       return { status: 'failed', message: errorMessage(error) }
     }
     const losses = odsLosses(result)
-    const hidden = await redactionLoss(input.sidecar, input.sourcePath)
-    if (hidden !== null) losses.push(hidden)
     if (losses.length > 0 && !(await input.confirmLoss(losses))) return { status: 'canceled' }
     // Verify the private package before it replaces the target: a bad write
     // must never destroy an ODS the person already had at that path.

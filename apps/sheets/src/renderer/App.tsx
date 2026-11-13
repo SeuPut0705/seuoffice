@@ -424,6 +424,7 @@ import {
   type WorkbookReadContext,
 } from './ai/workbook-readers'
 import { sanitizeLabel, type RedactionIndex } from './ai/redact'
+import type { GuardTable } from './ai/redact-guard'
 import { modelSaveAsName } from './file-naming'
 import {
   followRedactionRead,
@@ -801,6 +802,13 @@ export function App({
    */
   const redactionLoadRef = useRef<RedactionLoad>(REDACTIONS_NONE)
   /** The index the grid, the tint and the model all ask: every cell while the marks are unknown. */
+  /** the tables the AI can edit (made in this session) and where they are, for the write guard */
+  function sessionTablesOf(sheetId: string): readonly GuardTable[] {
+    return (lazyWorkbookRef.current?.editJournal.tableAdds ?? [])
+      .filter((table) => table.sheetId === sheetId)
+      .map((table) => ({ name: table.name, ...table.area }))
+  }
+
   function currentRedactions(): RedactionIndex {
     return redactionIndexOf(redactionLoadRef.current)
   }
@@ -1451,6 +1459,7 @@ export function App({
       lazyWorkbookRef,
       setMessage,
       requestSaveAs: () => void handleSaveRef.current('save-as'),
+      redactions: currentRedactions,
     }
   }
 
@@ -1459,6 +1468,7 @@ export function App({
       lazyWorkbookRef,
       setMessage,
       pendingEdits: async () => (await handleSaveRef.current('ods')).request ?? null,
+      requestSaveAs: () => void handleSaveRef.current('save-as'),
     }
   }
 
@@ -1486,6 +1496,7 @@ export function App({
       // would wipe the withheld-cell marks the file already carries.
       redactionStates: () =>
         loadedRedactionStatesRef.current === null ? null : redactionStatesRef.current,
+      redactions: currentRedactions,
       slicerState: () => {
         // Only a session that changed its slicers rides them on the save:
         // untouched panels keep their parts byte-identical (raw-copied), and
@@ -2692,6 +2703,7 @@ export function App({
       traceDependents: (sheetId, address) =>
         traceWorkbookDependents(readContext(), sheetId, address),
       redactions: currentRedactions,
+      tablesOf: sessionTablesOf,
       proposeOperations,
       attachmentPathOf: imageAttachmentPath,
       createDocument: (request) => createAiDocument({ univerRef, lazyWorkbookRef }, request),
@@ -6345,6 +6357,7 @@ export function App({
         {
           redactionLoad: () => redactionLoadRef.current,
           sheets: () => getActiveSheetInfo().sheets,
+          tablesOf: sessionTablesOf,
           plan: (batch) => planFromOps(batch, workbook, 'mcp'),
           apply: runUiOps,
           readCells: (addresses, sheetId) => readCellsImpl(readContext(), addresses, sheetId),

@@ -60,7 +60,7 @@ import {
 } from './asset-lifecycle'
 import { createMarkdownConversionSession, writeMarkdownConversion } from './conversion-lifecycle'
 import { normalizeMarkdownTheme, type MarkdownTheme } from '../shared/markdown-theme'
-import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
+import { askMarkedOdt, confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { registerMarkdownSeedIpc } from './seed-main'
 import { registerMarkdownNoteAppendIpc } from './note-append'
 import { createTextRecovery } from './recovery'
@@ -1272,6 +1272,18 @@ function registerMarkdownIpc(): void {
       })
     },
   )
+
+  // A document with content hidden from AI is not written as ODT: one message
+  // box with the two ways out; the renderer carries the answer out.
+  ipcMain.handle(MARKDOWN_CHANNELS.confirmMarkedOdt, async (e) => {
+    // a headless export has no one to ask: nothing is written
+    if (isHeadlessMode()) return 'cancel'
+    const win =
+      BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
+    return askMarkedOdt((options) =>
+      win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+    )
+  })
 
   ipcMain.handle(
     MARKDOWN_CHANNELS.exportPdf,

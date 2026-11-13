@@ -4,6 +4,8 @@ import { REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
 import { REDACT_EXT_URI } from '@seuoffice/pptx-engine'
 import JSZip from 'jszip'
 import { CliError, EXIT } from '../result'
+import { decodeText } from '../fs'
+import { decodeHtmlBytes } from './html-text'
 import { openDeck } from './pptx'
 import { withheldCellsIn } from './xlsx'
 
@@ -47,8 +49,11 @@ async function anyMarkIn(zip: JSZip, paths: string[]): Promise<boolean> {
   return false
 }
 
-async function deckHoldsMark(bytes: Uint8Array, only: number | undefined): Promise<boolean> {
-  const zip = await JSZip.loadAsync(bytes)
+async function deckHoldsMark(
+  zip: JSZip,
+  bytes: Uint8Array,
+  only: number | undefined,
+): Promise<boolean> {
   const opened = await openDeck(bytes).catch(() => null)
   // a deck the engine cannot lay out is judged by every slide part it holds
   const slides = opened
@@ -59,39 +64,68 @@ async function deckHoldsMark(bytes: Uint8Array, only: number | undefined): Promi
   return anyMarkIn(zip, slides)
 }
 
-async function documentHoldsMark(bytes: Uint8Array): Promise<boolean> {
-  const zip = await JSZip.loadAsync(bytes)
-  const drawn = Object.keys(zip.files).filter((p) =>
-    /^word\/(?:document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(p),
+async function documentHoldsMark(zip: JSZip): Promise<boolean> {
+  // every part of the document, comments and notes included: the printer may draw any of them
+  return anyMarkIn(
+    zip,
+    Object.keys(zip.files).filter((p) => /^word\/.*\.xml$/.test(p)),
   )
-  return anyMarkIn(zip, drawn)
+}
+
+const HOLDERS = ['pptx', 'docx', 'xlsx', 'xlsm', 'md', 'markdown', 'html', 'htm']
+
+/** the HTML app's three marks: an element, an attribute's value, a script literal (apps/html marked-html.ts) */
+const HTML_MARK = /data-gx-redact|gx:redact:/i
+/** the markdown app's persisted span (apps/markdown editor/Redaction.ts) */
+const MARKDOWN_MARK = /<span\b[^>]*\bdata-redaction\b/i
+
+/** Whether a Markdown file's text holds a span hidden from AI. */
+export function markdownHoldsMark(text: string): boolean {
+  return MARKDOWN_MARK.test(text)
+}
+
+/** Whether an HTML page's text holds any mark of the HTML app. */
+export function htmlHoldsMark(text: string): boolean {
+  return HTML_MARK.test(text)
+}
+
+/** Whether `path` (or its slide `only`, 0-based, of a deck) holds content hidden from AI. */
+export async function holdsHiddenContent(path: string, only?: number): Promise<boolean> {
+  const ext = extname(path).slice(1).toLowerCase()
+  if (!HOLDERS.includes(ext)) return false
+  const bytes = new Uint8Array(await readFile(path))
+  if (ext === 'md' || ext === 'markdown') return markdownHoldsMark(decodeText(bytes))
+  if (ext === 'html' || ext === 'htm') return htmlHoldsMark(decodeHtmlBytes(bytes))
+  if (ext === 'pptx' || ext === 'docx') {
+    // not a package at all: it holds no mark, and the route that reads it fails as it always did
+    const zip = await JSZip.loadAsync(bytes).catch(() => null)
+    if (!zip) return false
+    return ext === 'pptx' ? deckHoldsMark(zip, bytes, only) : documentHoldsMark(zip)
+  }
+  return (await withheldCellsIn(bytes)) !== null
 }
 
 /**
- * Throws when rendering `path` (or its page `only`, a 0-based slide of a deck) would draw
- * content hidden from AI.
+ * Throws when `action` (rendering `path`, or its page `only`; or writing a copy of it in another
+ * format) would hand over content hidden from AI that no placeholder can stand in for.
  */
-export async function refuseHiddenContent(path: string, only?: number): Promise<void> {
-  const ext = extname(path).slice(1).toLowerCase()
-  if (!['pptx', 'docx', 'xlsx', 'xlsm'].includes(ext)) return
-  const bytes = new Uint8Array(await readFile(path))
-  const holds =
-    ext === 'pptx'
-      ? await deckHoldsMark(bytes, only)
-      : ext === 'docx'
-        ? await documentHoldsMark(bytes)
-        : (await withheldCellsIn(bytes)) !== null
-  if (!holds) return
+export async function refuseHiddenContent(
+  path: string,
+  only?: number,
+  action = 'render',
+  alternative = 'read the document with its read command, which gives a placeholder for the hidden content',
+): Promise<void> {
+  if (!(await holdsHiddenContent(path, only))) return
   throw new CliError(
     EXIT.usage,
-    `cannot render ${path}: it holds content hidden from AI, and a picture of the page would show it`,
+    `cannot ${action} ${path}: it holds content hidden from AI, and the result would show it`,
     undefined,
     {
       reason: 'unsupported',
       suggestion:
-        ext === 'pptx' && only === undefined
-          ? 'render a slide that holds none (--page), or read the document with its read command, which gives a placeholder for the hidden content'
-          : 'read the document with its read command, which gives a placeholder for the hidden content',
+        extname(path).toLowerCase() === '.pptx' && only === undefined && action === 'render'
+          ? `render a slide that holds none (--page), or ${alternative}`
+          : alternative,
     },
   )
 }

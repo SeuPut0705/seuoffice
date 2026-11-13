@@ -6,13 +6,20 @@
  * process is a stub that records what would be written.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { blocksToPmDoc } from '../src/renderer/editor/convert'
+import { modelTextOf, type RedactableNode } from '../src/renderer/ai/redact-view'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, readDocxPartBase64 } from '@seuoffice/docx-engine'
+import {
+  buildBlankDocx,
+  docxHoldsHiddenContent,
+  parseDocx,
+  readDocxPartBase64,
+} from '@seuoffice/docx-engine'
 import { docxToOdt, odtToDocx } from '@seuoffice/odt-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import type { DocState } from '../src/renderer/doc-state'
 import { isOdtDoc } from '../src/renderer/doc-state'
-import type { OpenDocxResult } from '../src/shared/ipc'
+import type { OpenDocxResult, OpenFileResult } from '../src/shared/ipc'
 import { setFormatChangeHost } from '../src/renderer/components/format-change-bus'
 import { zipEntryNames } from '../src/main/doc-format'
 import { undoDepth } from '@tiptap/pm/history'
@@ -41,7 +48,8 @@ vi.mock('../src/renderer/components/toast-bus', () => ({
   setToastEmitter: () => {},
 }))
 
-const { loadFile, save, writeRecoveryCopy } = await import('../src/renderer/file-actions')
+const { loadFile, save, templateDocBytes, writeRecoveryCopy } =
+  await import('../src/renderer/file-actions')
 type Ctx = Parameters<typeof loadFile>[0]
 
 let urlSeq = 0
@@ -94,6 +102,7 @@ function installDesktop(): void {
     }),
     captureRect: vi.fn(async () => null),
     materializeDocx: vi.fn(async () => null),
+    confirmMarkedOdt: vi.fn(async () => 'cancel'),
   }
   ;(window as unknown as { desktop: unknown }).desktop = desktop
 }
@@ -772,5 +781,237 @@ describe('saving keeps the ODT baseline it was opened with', () => {
     // and a save with no further edit is the previous output exactly
     expect(await save(ctx, false)).toBe(true)
     expect(written[written.length - 1].bytes).toEqual(outputs[2])
+  })
+})
+
+// ---- content hidden from AI never goes into an ODT ----
+
+const SECRET = '13800138000'
+const LABEL = 'client phone'
+
+/** the words of the paragraph at `index`, hidden from AI the way the editor's mark writes them */
+function hideParagraph(editor: Editor, text: string): void {
+  editor.commands.setContent({
+    type: 'doc',
+    content: [
+      {
+        type: 'docParagraph',
+        attrs: { docxIndex: null },
+        content: [
+          { type: 'text', text: 'Call ' },
+          {
+            type: 'text',
+            text,
+            marks: [
+              {
+                type: 'redaction',
+                attrs: {
+                  label: LABEL,
+                  rawRPr: `<w:rPr><w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/><go:redact w:label="${LABEL}"/></w:rPr>`,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+}
+
+const odtText = async (odt: Uint8Array) => part(odt, 'content.xml')
+const answer = (choice: 'docx' | 'clear' | 'cancel') =>
+  desktop.confirmMarkedOdt.mockResolvedValue(choice)
+
+describe('Save As .odt of a Word document with content hidden from AI', () => {
+  async function markedDocxTab() {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/a.docx', await buildBlankDocx({})))
+    hideParagraph(ctx.editor as Editor, SECRET)
+    ctx.dirtyRef.current = true
+    return ctx
+  }
+
+  it('asks, and writes nothing when the person cancels', async () => {
+    const ctx = await markedDocxTab()
+    answer('cancel')
+    pickedPath = '/docs/a.odt'
+    expect(await save(ctx, true)).toBe(false)
+    expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+    expect(written).toHaveLength(0)
+    expect(docOf(ctx).format).toBe('docx')
+  })
+
+  it('writes ODT only once the marks are cleared, and the tab then is that ODT', async () => {
+    const ctx = await markedDocxTab()
+    answer('clear')
+    setFormatChangeHost((_request, confirm) => confirm(true))
+    pickedPath = '/docs/a.odt'
+    expect(await save(ctx, true)).toBe(true)
+    expect(written).toHaveLength(1)
+    expect(isOdtBytes(written[0].bytes)).toBe(true)
+    // the words are written as they are: that is what clearing the marks means
+    expect(await odtText(written[0].bytes)).toContain(SECRET)
+    expect(docOf(ctx).format).toBe('odt')
+    expect(JSON.stringify((ctx.editor as Editor).state.doc.toJSON())).not.toContain('redaction')
+  })
+
+  it('"save as .docx" offers Save As again with Word first, and writes the marks into the .docx', async () => {
+    const ctx = await markedDocxTab()
+    answer('docx')
+    pickedPath = '/docs/a.odt'
+    desktop.pickSaveAsPath.mockImplementation(async (_n, _s, format) => {
+      pickedPath =
+        format === 'docx' && desktop.pickSaveAsPath.mock.calls.length > 1
+          ? '/docs/a2.docx'
+          : '/docs/a.odt'
+      return { path: pickedPath }
+    })
+    expect(await save(ctx, true)).toBe(true)
+    expect(desktop.pickSaveAsPath).toHaveBeenCalledTimes(2)
+    expect(desktop.pickSaveAsPath.mock.calls[1][2]).toBe('docx')
+    expect(written).toHaveLength(1)
+    expect(written[0].path).toBe('/docs/a2.docx')
+    expect(await docxHoldsHiddenContent(written[0].bytes)).toBe(true)
+  })
+
+  it('writes an unmarked document as before, without asking', async () => {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/a.docx', await buildBlankDocx({})))
+    setParagraphs(ctx.editor as Editor, ['Hello ODT'])
+    ctx.dirtyRef.current = true
+    setFormatChangeHost((_request, confirm) => confirm(true))
+    pickedPath = '/docs/a.odt'
+    expect(await save(ctx, true)).toBe(true)
+    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+  })
+})
+
+describe('an ODT tab holding content hidden from AI', () => {
+  async function markedOdtTab() {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/form.odt', await blankOdt()))
+    hideParagraph(ctx.editor as Editor, SECRET)
+    ctx.dirtyRef.current = true
+    return ctx
+  }
+
+  it('Save asks and writes nothing on cancel', async () => {
+    const ctx = await markedOdtTab()
+    answer('cancel')
+    expect(await save(ctx, false)).toBe(false)
+    expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+    expect(written).toHaveLength(0)
+  })
+
+  it('an automatic save writes nothing and does not ask', async () => {
+    const ctx = await markedOdtTab()
+    expect(await save(ctx, false, true)).toBe(false)
+    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+    expect(written).toHaveLength(0)
+  })
+
+  it('"clear the marks" saves the ODT with the words and no mark, and the tab keeps its marks', async () => {
+    const ctx = await markedOdtTab()
+    answer('clear')
+    expect(await save(ctx, false)).toBe(true)
+    expect(written).toHaveLength(1)
+    expect(written[0].channel).toBe('save')
+    expect(isOdtBytes(written[0].bytes)).toBe(true)
+    expect(await odtText(written[0].bytes)).toContain(SECRET)
+  })
+
+  it('an MCP save to an ODT target is refused with the reason', async () => {
+    const ctx = await markedOdtTab()
+    const errors: string[] = []
+    expect(
+      await save(ctx, false, false, undefined, {
+        path: '/docs/out.odt',
+        overwrite: true,
+        onError: (message) => errors.push(message),
+      }),
+    ).toBe(false)
+    expect(written).toHaveLength(0)
+    expect(errors).toHaveLength(1)
+    expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
+  })
+
+  describe('crash recovery', () => {
+    interface RecoveryCall {
+      path: string | null
+      bytes: Uint8Array
+      meta: unknown
+    }
+    let recovery: RecoveryCall[] = []
+    beforeEach(() => {
+      recovery = []
+      desktop.writeRecoveryCopy.mockImplementation(
+        async (path: string | null, data: ArrayBuffer, meta?: unknown) => {
+          recovery.push({ path, bytes: new Uint8Array(data), meta })
+          return { ok: true }
+        },
+      )
+    })
+
+    it('writes its docx, marks kept, into an untitled slot that names the ODT', async () => {
+      const ctx = await markedOdtTab()
+      expect(await writeRecoveryCopy(ctx)).toBe('written')
+      expect(written).toHaveLength(0)
+      expect(recovery).toHaveLength(1)
+      expect(recovery[0].path).toBeNull()
+      expect(recovery[0].meta).toEqual({
+        title: 'form.odt',
+        format: 'docx',
+        originalPath: '/docs/form.odt',
+      })
+      const copy = recovery[0].bytes
+      expect(isOdtBytes(copy)).toBe(false)
+      expect(await docxHoldsHiddenContent(copy)).toBe(true)
+      const parsed = await parseDocx(copy)
+      const doc = blocksToPmDoc(parsed.blocks)
+      expect(modelTextOf(doc as RedactableNode)).not.toContain(SECRET)
+      expect(modelTextOf(doc as RedactableNode)).toContain(`{{${LABEL}}}`)
+      expect(atob((await readDocxPartBase64(copy, 'word/document.xml')) ?? '')).toContain(LABEL)
+    })
+
+    it('reopens as a docx draft of that tab; saving over the .odt meets the marked-ODT refusal', async () => {
+      const ctx = await markedOdtTab()
+      await writeRecoveryCopy(ctx)
+      const restored = makeCtx()
+      const opened = {
+        ...(openResult('form.docx', recovery[0].bytes, true) as OpenFileResult),
+        untitledCopy: true,
+        saveAsDefaultPath: '/docs/form.odt',
+      }
+      expect(await loadFile(restored, opened)).toBe('ok')
+      expect(docOf(restored).format).toBe('docx')
+      expect(docOf(restored).filePath).toBeNull()
+      expect(docOf(restored).fileName).toBe('form.docx')
+      expect(docOf(restored).saveAsDefaultPath).toBe('/docs/form.odt')
+      expect(restored.dirtyRef.current).toBe(true)
+      expect(JSON.stringify((restored.editor as Editor).state.doc.toJSON())).toContain('redaction')
+
+      desktop.pickSaveAsPath.mockImplementation(async () => ({ path: '/docs/form.odt' }))
+      answer('cancel')
+      expect(await save(restored, false)).toBe(false)
+      expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+      expect(written).toHaveLength(0)
+    })
+
+    it('an unmarked ODT tab keeps its ODT copy under the file', async () => {
+      const ctx = makeCtx()
+      await loadFile(ctx, openResult('/docs/form.odt', await blankOdt()))
+      setParagraphs(ctx.editor as Editor, ['Plain work'])
+      ctx.dirtyRef.current = true
+      expect(await writeRecoveryCopy(ctx)).toBe('written')
+      expect(recovery).toHaveLength(1)
+      expect(recovery[0].path).toBe('/docs/form.odt')
+      expect(recovery[0].meta).toBeUndefined()
+      expect(isOdtBytes(recovery[0].bytes)).toBe(true)
+    })
+  })
+
+  it('gives no template copy', async () => {
+    const ctx = await markedOdtTab()
+    expect(await templateDocBytes(ctx)).toBeNull()
   })
 })

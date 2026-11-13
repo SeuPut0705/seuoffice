@@ -24,7 +24,7 @@ import { formatRangeAggregate, type RangeAggregate } from './aggregate'
 import { guideCatalogSummary, loadGuides } from './guides'
 import { modelCellValueAt, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
 import { UNKNOWN_REDACTION_LABEL } from './redact-load'
-import { redactGuardForOps, redactGuardForSheetExport } from './redact-guard'
+import { redactGuardForOps, redactGuardForSheetExport, type GuardTable } from './redact-guard'
 
 /**
  * The workbook DSL as an AgentSkill tool set: read-only context/reader tools
@@ -266,6 +266,12 @@ export interface SheetsSkillDeps {
    * withheld", so a test or a caller without a session pays nothing.
    */
   redactions?(): RedactionIndex
+  /**
+   * The tables of a sheet and where they are, for the write guard: an op that
+   * adds or deletes a table's rows or columns moves cells across the whole
+   * sheet. Without it such an op is refused on a sheet that holds a mark.
+   */
+  tablesOf?(sheetId: string): readonly GuardTable[]
   /** AI create_document: write a new standalone file (xlsx/csv from a
    * worksheet; docx/pdf/md from content) into the default save folder and
    * open it in a new tab (ai/create-document.ts). */
@@ -1424,6 +1430,7 @@ export function executeWorkbookTool(
         (sheetId) => deps.getActiveSheetInfo().sheets.find((sheet) => sheet.id === sheetId)?.name,
         (sheetName) =>
           deps.getActiveSheetInfo().sheets.find((sheet) => sheet.name === sheetName)?.id,
+        deps.tablesOf,
       )
       if (refusal) {
         return fail(

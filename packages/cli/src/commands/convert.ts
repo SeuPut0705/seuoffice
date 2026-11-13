@@ -11,6 +11,7 @@ import { convertOdp } from '../formats/odf'
 import { convertPdf, type PdfTarget } from '../formats/pdf'
 import { convertLegacyWorkbook, convertToOds, sheetToCsv } from '../formats/xlsx'
 import { exportViaApp, type AppExportTarget } from '../formats/app-export'
+import { holdsHiddenContent, refuseHiddenContent } from '../formats/render-guard'
 import { htmlToMarkdown, markdownToDocx, markdownToHtml } from '../formats/markdown'
 import { closeDocument, documentHtml, openDocument } from '../formats/docx'
 import { docxToHangul } from '../formats/docx-hwp'
@@ -237,6 +238,10 @@ async function run(
   args: ParsedArgs,
   ctx: CommandContext,
 ): Promise<Produced> {
+  await guardHiddenContent(input, from, to)
+  if (from === 'docx' && to === 'html' && (await holdsHiddenContent(input))) {
+    return docxToWithheldHtml(readInput(input), basename(input, extname(input)))
+  }
   if (from === 'odt' || to === 'odt') return runOdt(input, from, to, output, ctx)
   const password = flagString(args, 'password')
   if (from === 'pdf' && to === 'html') {
@@ -295,6 +300,50 @@ async function run(
   }
   const r = await convertLegacyWorkbook(input, output)
   return { detail: { sheets: r.sheets, cells: r.cells } }
+}
+
+/**
+ * A copy of a Word document, deck or workbook in a format that draws or repackages its content
+ * (a printed PDF, an ODT or Hangul file written from the package) carries the words a person
+ * hid from AI: no placeholder can stand in for them there, so such a copy is refused. A
+ * text-like target (Markdown, HTML, CSV) is written from the AI readers' own view instead.
+ */
+const HIDDEN_ALTERNATIVES: Record<string, string> = {
+  docx: 'convert to .md, or read the document with `docs read`, which give a placeholder for the hidden content',
+  pptx: 'read the deck with `slides read --full`, which gives a placeholder for the hidden content',
+  xlsx: 'convert to .csv, or read the workbook with `sheet read`, which give a placeholder for the hidden content',
+  xlsm: 'convert to .csv, or read the workbook with `sheet read`, which give a placeholder for the hidden content',
+  md: 'convert to .docx or .html, which keep the hiding',
+  markdown: 'convert to .docx or .html, which keep the hiding',
+  html: 'the page marks have no run to sit on in another format: keep the page, or clear the marks in the HTML editor first',
+  htm: 'the page marks have no run to sit on in another format: keep the page, or clear the marks in the HTML editor first',
+}
+const REPACKAGING_TARGETS = ['pdf', 'odt', 'hwp', 'hwpx']
+const MARKDOWN = ['md', 'markdown']
+/** a Markdown file's hidden span is carried into these; an HTML page's marks into none */
+const CARRIED_FROM_MARKDOWN = ['docx', 'html']
+
+async function guardHiddenContent(input: string, from: string, to: string): Promise<void> {
+  if (!Object.hasOwn(HIDDEN_ALTERNATIVES, from)) return
+  const carried = MARKDOWN.includes(from) && CARRIED_FROM_MARKDOWN.includes(to)
+  const copies =
+    ['md', 'markdown', 'html', 'htm'].includes(from) || REPACKAGING_TARGETS.includes(to)
+  if (carried || !copies) return
+  await refuseHiddenContent(input, undefined, `convert to .${to}`, HIDDEN_ALTERNATIVES[from])
+}
+
+/** docx to html for a document holding hidden content: the AI reader's HTML, placeholders for the hidden words. */
+async function docxToWithheldHtml(docx: Uint8Array, title: string): Promise<Produced> {
+  const doc = await openDocument(docx)
+  try {
+    const { html } = documentHtml(doc)
+    const page =
+      `<!doctype html>\n<html><head><meta charset="utf-8"><title>${title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</title></head>\n` +
+      `<body>\n${html}\n</body></html>\n`
+    return { bytes: Buffer.from(page, 'utf-8'), detail: { via: 'ai reader view', title } }
+  } finally {
+    closeDocument(doc)
+  }
 }
 
 async function workbookToOds(

@@ -133,11 +133,22 @@ export async function htmlToMarkdown(html: string): Promise<string> {
 
 export async function markdownToHtml(markdown: string, title: string): Promise<string> {
   return withMarkdownEditor(markdown, async (editor) => {
-    const body = editor.getHTML()
+    const body = withHtmlMarks(editor.getHTML())
     return (
       '<!doctype html>\n<html><head><meta charset="utf-8">' +
       `<title>${escapeHtml(title)}</title></head>\n<body>\n${body}\n</body></html>\n`
     )
+  })
+}
+
+/**
+ * The markdown app's hidden span as the HTML app's mark: `data-gx-redact="label"` on the element,
+ * whose content that app withholds.
+ */
+function withHtmlMarks(html: string): string {
+  return html.replace(/<span\b[^>]*\bdata-redaction\b[^>]*>/gi, (tag) => {
+    const label = /\bdata-label\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag)
+    return `<span data-gx-redact="${label?.[1] ?? label?.[2] ?? 'private'}">`
   })
 }
 

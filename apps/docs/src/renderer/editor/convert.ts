@@ -64,6 +64,7 @@ import {
   type EffectiveRPr,
   withheldLabelOf,
 } from '@seuoffice/docx-engine'
+import { encodeBlockLabel } from './block-redact-label'
 import { t } from '../i18n/locale'
 import { symbolFontCovers } from '../font-check'
 import {
@@ -1017,7 +1018,7 @@ function blockToPmNode(
           pageBreakBefore: block.format?.pageBreakBefore ?? false,
           label: block.label ?? block.type,
           previewText: block.previewText ?? '',
-          redact: block.redact ?? null,
+          redact: block.redact === undefined ? null : encodeBlockLabel(block.redact),
           imageDataUrl: block.imageDataUrl ?? null,
           oleProgId: block.oleProgId ?? null,
           imageWidthPx: block.imageWidthPx ?? null,
