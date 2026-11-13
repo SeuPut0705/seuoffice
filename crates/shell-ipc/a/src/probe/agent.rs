@@ -27,6 +27,10 @@
 //! call the session's skill hooks as `propose_skill` / `propose_skill_install`
 //! do. The answer is undefined, or the message the hook refused with.
 //!
+//! `a/agent-settle` waits until the session folders of the case (`ieum-agent-*` in
+//! `temp`) are gone: a stopped session removes its folder in the background, and the
+//! case's folder is compared after its last call. The answer is undefined.
+//!
 //! The host log gets one line per call, named after the TypeScript call it
 //! stands for: `["routeDocumentPath", path]`, `["userSkills.list"]`,
 //! `["userSkills.enabledForAgent", folder]`, `["buildAgentSkillBundle", [name]]`,
@@ -49,7 +53,7 @@ use main_core::shell::agent::agent_skills::{
 use main_core::shell::agent::agent_window::{TemplatePreviewInput, TemplatePreviewOutcome};
 use serde_json::{Value, json};
 use shell_contract::editors::Then;
-use shell_contract::runtime::Services;
+use shell_contract::runtime::{PathName, Services};
 use shell_contract::{IpcError, IpcValue, ViewId};
 
 use super::{Log, push};
@@ -422,6 +426,36 @@ fn text_of(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_owned()
 }
 
+/// `a/agent-settle`: a worker polls the case's `temp` folder until no session folder is left
+/// (at most five seconds), then the core answers
+fn settle(services: &Services, then: Then<IpcValue>) {
+    let temp = services.paths.path(PathName::Temp);
+    let key = NEXT_WAIT.fetch_add(1, Ordering::Relaxed);
+    WAITING.with(|waiting| waiting.borrow_mut().insert(key, then));
+    let core = services.core.clone();
+    services.workers.spawn(Box::new(move || {
+        for _ in 0..100 {
+            let left = std::fs::read_dir(&temp).is_ok_and(|entries| {
+                entries.flatten().any(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("ieum-agent-")
+                })
+            });
+            if !left {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        core.post(Box::new(move || {
+            if let Some(then) = WAITING.with(|waiting| waiting.borrow_mut().remove(&key)) {
+                then(Ok(IpcValue::Undefined));
+            }
+        }));
+    }));
+}
+
 /// Runs the named trigger: `a/agent-propose-skill` `[sessionId, projectRoot, input]` and
 /// `a/agent-propose-install` `[sessionId, projectRoot, address]`; `false` for another name.
 /// The session is one started in the case; the answer is what the hook resolves to
@@ -433,6 +467,10 @@ pub fn trigger(
     _provided: &std::rc::Rc<shell_contract::Provided>,
     then: Then<IpcValue>,
 ) -> bool {
+    if name == "a/agent-settle" {
+        settle(services, then);
+        return true;
+    }
     if !matches!(name, "a/agent-propose-skill" | "a/agent-propose-install") {
         return false;
     }
