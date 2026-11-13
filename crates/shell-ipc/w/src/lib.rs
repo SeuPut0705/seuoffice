@@ -15,6 +15,8 @@ pub mod home_settings;
 pub mod projects;
 /// `quick-look:*`
 pub mod quick_look;
+/// the process's one dialog memory, never locked while a dialog is open
+pub mod shared_dialog;
 /// `tabs:*`, `app:get-split-role`, `app:view-focused`, `app:open-dropped-files`, `home:new-*`
 pub mod tabs;
 

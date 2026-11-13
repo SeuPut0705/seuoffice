@@ -394,6 +394,16 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+Public Suffix List
+
+The Rust shell checks the polling address of a queued FLUX image job with the
+psl crate (https://github.com/addr-rs/psl) and its psl-types crate, both
+dual-licensed under the MIT License and the Apache License, Version 2.0.
+psl compiles in the Public Suffix List (https://publicsuffix.org/list/),
+ICANN and private sections, which is distributed under the Mozilla Public
+License, Version 2.0 (https://mozilla.org/MPL/2.0/). The list is used
+unmodified; its source is https://publicsuffix.org/list/public_suffix_list.dat.
+
 Trademarks
 
 IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft
@@ -468,6 +478,14 @@ License:
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
   DEALINGS IN THE SOFTWARE.
+
+The CEF runtime of the desktop shell, crates/vendor/tauri-runtime-cef, is
+tauri-runtime-cef 3.0.0-alpha.7, Copyright 2019-2024 Tauri Programme within The
+Commons Conservancy, licensed Apache-2.0 OR MIT (crates/vendor/tauri-runtime-cef/
+LICENSE-APACHE-2.0 and LICENSE-MIT; the crates.io archive ships neither, they are
+the Tauri project's own copies). seuoffice patches it to let the application take
+over the page's context menu: crates/vendor/tauri-runtime-cef/patches and
+VENDORED.md.
 
 seuoffice does not include GenOffice's ee/ directory or anything under the
 GenOffice Enterprise License.
