@@ -1,50 +1,44 @@
 name: seuoffice rust
 
 # The Rust document engines (crates/) and their parity gates against the
-# TypeScript engines (tools/docx-diff, tools/pptx-diff, tools/fileparse-diff,
-# tools/epub-diff), on a GitHub runner. Decision 0025.
+# TypeScript engines (tools/docx-diff, tools/pptx-diff), on a GitHub runner.
+# Decision 0025.
 #
-# crates/ lives on a branch until its first unit is merged, so this file does
-# nothing on main yet: start it on that branch by hand,
+# It runs on its own for a push to main that touches the crates or the gates,
+# and by hand on a branch:
 #   gh workflow run "seuoffice rust" --ref <branch>
-# It runs on its own for a push that touches the crates or the gate once they
-# are on main. The workstation that develops the port is shared and slow, which
-# is why the full gate runs here.
+# The workstation that develops the port is shared and slow, which is why the
+# full gate runs here.
+#
+# The `quick` job runs first and every other job needs it: a tree that fails
+# rustfmt, clippy, the unit tests or the gate harness's own tests takes one
+# runner for minutes instead of the gate's and the faults' runners for an hour.
+# A job added here (a gate, a fault matrix) takes `needs: quick` as well.
 
 on:
   push:
     branches: [main]
     paths:
-      - 'crates/**'
-      - 'tools/docx-diff/**'
-      - 'tools/fileparse-diff/**'
-      - 'tools/epub-diff/**'
-      - 'tools/pptx-diff/**'
-      - 'packages/docx-engine/src/**'
-      - 'packages/file-parse/**'
-      - 'packages/epub-engine/src/**'
-      - 'packages/agent-core/src/redact-*.ts'
-      - 'packages/zip-gate/src/**'
-      - 'packages/drawio-model/src/**'
-      - 'packages/pptx-engine/src/**'
-      - 'package-lock.json'
-      - '.github/workflows/seuoffice-rust.yml'
-      - '**/*.docx'
-      - '**/*.pptx'
-      - '**/*.xlsx'
-      - '**/*.xlsm'
-      - '**/*.epub'
-      - '**/*.hwpx'
-      - '**/*.odt'
-      - '**/*.xmind'
-      - '**/*.doc'
-      - '**/*.ppt'
+      [
+        'crates/**',
+        'tools/docx-diff/**',
+        'tools/pptx-diff/**',
+        'packages/docx-engine/src/**',
+        'packages/pptx-engine/src/**',
+      ]
   workflow_dispatch:
     inputs:
       faults:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
         default: ''
+      # 1 while the organisation has few runners; more shards end a long faults
+      # file sooner but hold that many runners at once
+      fault_shards:
+        description: Runners the faults file is split over (FAULT_SHARD of faults.py)
+        type: choice
+        options: ['1', '2', '4', '8']
+        default: '1'
       rhwp_core:
         description: Rebuild vendor/rhwp-core (wasm-pack, tag + patches) and upload it, instead of the gates
         type: boolean
@@ -59,7 +53,80 @@ permissions:
   contents: read
 
 jobs:
+  quick:
+    if: ${{ !inputs.rhwp_core }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # the gate harness's typecheck reads the declarations at MODEL_SOURCE's commit
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+          rustc --version
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - name: Format
+        # the workspace's members only: --all would walk the rhwp source too
+        run: cargo fmt --manifest-path crates/Cargo.toml -- --check
+
+      # every check below runs whether or not an earlier one failed, so that one
+      # run says everything: the job is red when any of them is
+      - name: Clippy
+        if: ${{ !cancelled() }}
+        run: cargo clippy --manifest-path crates/Cargo.toml --workspace --all-targets -- -D warnings
+
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: cargo test --manifest-path crates/Cargo.toml --workspace
+
+      # the vendored regex engine carries patches of its own: its suite runs as published
+      - name: Vendored regress tests
+        if: ${{ !cancelled() }}
+        run: cargo test --manifest-path crates/vendor/regress/Cargo.toml --features utf16
+
+      - uses: actions/setup-node@v4
+        if: ${{ !cancelled() }}
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: ${{ !cancelled() }}
+        run: npm ci
+
+      - name: Gate harness typecheck and tests
+        if: ${{ !cancelled() }}
+        run: |
+          npm --prefix tools/docx-diff run typecheck
+          npm --prefix tools/docx-diff run test
+
   crates:
+    needs: quick
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
@@ -80,21 +147,14 @@ jobs:
         if: steps.rhwp-source.outputs.cache-hit != 'true'
         run: node tools/build-rhwp-core.mjs --source-only
 
-      - name: Is the Rust engine in this tree
-        id: has
-        run: |
-          if [ -f crates/Cargo.toml ]; then echo "crates=true" >> "$GITHUB_OUTPUT"; else echo "crates=false" >> "$GITHUB_OUTPUT"; fi
-
       - name: Rust toolchain with the WASI target
-        if: steps.has.outputs.crates == 'true'
         run: |
-          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup toolchain install stable --profile minimal
           rustup default stable
           rustup target add wasm32-wasip1
           rustc --version
 
       - uses: actions/cache@v4
-        if: steps.has.outputs.crates == 'true'
         with:
           path: |
             ~/.cargo/registry
@@ -103,34 +163,15 @@ jobs:
           key: seuoffice-rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
           restore-keys: seuoffice-rust-${{ runner.os }}-
 
-      - name: Format
-        if: steps.has.outputs.crates == 'true'
-        # the workspace's members only: --all would walk the rhwp source too
-        run: cargo fmt --manifest-path crates/Cargo.toml -- --check
-
       # every check below runs whether or not an earlier one failed, so that one
       # run says everything: the job is red when any of them is
-      - name: Clippy
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
-        run: cargo clippy --manifest-path crates/Cargo.toml --workspace --all-targets -- -D warnings
-
-      - name: Unit tests
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
-        run: cargo test --manifest-path crates/Cargo.toml --workspace
-
       - name: Licences of the dependencies
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: |
           cargo install cargo-deny --locked
           cd crates && cargo deny check licenses
 
-      # the vendored regex engine carries patches of its own: its suite runs as published
-      - name: Vendored regress tests
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
-        run: cargo test --manifest-path crates/vendor/regress/Cargo.toml --features utf16
-
       - uses: actions/setup-node@v4
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        if: ${{ !cancelled() }}
         with:
           node-version: 22
           cache: npm
@@ -138,32 +179,26 @@ jobs:
       # a search past the backtrack bound refuses on wasm32 too, where an
       # unbounded stack traps the module
       - name: Regex bound on wasm32
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        if: ${{ !cancelled() }}
         run: |
           cargo build --manifest-path crates/Cargo.toml -p jscompat --example limit_wasm --target wasm32-wasip1 --release
           node --no-warnings crates/jscompat/examples/limit_wasm.mjs crates/target/wasm32-wasip1/release/examples/limit_wasm.wasm 25000000
 
       - name: Install
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        if: ${{ !cancelled() }}
         run: npm ci
-
-      - name: Gate harness typecheck and tests
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
-        run: |
-          npm --prefix tools/docx-diff run typecheck
-          npm --prefix tools/docx-diff run test
 
       # the whole output is kept as an artifact: the first comparison of a newly
       # ported group is read from there, not from a run on somebody's machine
       - name: Parity gate
-        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        if: ${{ !cancelled() }}
         shell: bash
         run: |
           mkdir -p tools/docx-diff/out
           npm --prefix tools/docx-diff run gate -- --by-function --show 20 2>&1 | tee tools/docx-diff/out/gate.txt
 
       - name: Keep the gate output
-        if: ${{ always() && steps.has.outputs.crates == 'true' }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: docx-diff-out
@@ -173,9 +208,15 @@ jobs:
   # Fault injection: each fault of the file through comparison (f), one at a
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:
+    needs: quick
     if: ${{ inputs.faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        # the shard indices of the fault_shards choice; a matrix cannot count to n itself
+        shard: ${{ fromJSON('{"1":[0],"2":[0,1],"4":[0,1,2,3],"8":[0,1,2,3,4,5,6,7]}')[inputs.fault_shards || '1'] }}
     steps:
       # the model group reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
@@ -220,19 +261,22 @@ jobs:
       - name: Faults
         env:
           FAULTS: ${{ inputs.faults }}
+          FAULT_SHARD: ${{ matrix.shard }}/${{ inputs.fault_shards || '1' }}
         run: python3 tools/docx-diff/faults.py "$FAULTS"
 
       - name: Keep the result
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: docx-diff-faults
+          # one shard keeps the name the trail and crates/README.md cite
+          name: docx-diff-faults${{ inputs.fault_shards != '1' && inputs.fault_shards && format('-{0}', matrix.shard) || '' }}
           path: tools/docx-diff/out
           if-no-files-found: ignore
 
   # The attachment gate over four shards of its specs: one job ran 46-58 of its
   # 60 minutes and reached the limit
   fileparse:
+    needs: quick
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -300,7 +344,7 @@ jobs:
           if-no-files-found: error
 
   fileparse_faults:
-    needs: fileparse
+    needs: [quick, fileparse]
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -368,6 +412,7 @@ jobs:
           if-no-files-found: error
 
   epub:
+    needs: quick
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -429,7 +474,7 @@ jobs:
   # One Rust fault at a time through the EPUB gate, each rebuilding the wasm:
   # eight shards keep every one well inside its limit
   epub_faults:
-    needs: epub
+    needs: [quick, epub]
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
