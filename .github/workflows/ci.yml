@@ -22,6 +22,8 @@ concurrency:
 
 permissions:
   contents: read
+  # the changed-file checks on main read which commit last passed CI
+  actions: read
 
 jobs:
   test:
@@ -84,21 +86,20 @@ jobs:
       - name: Check dependency licenses
         run: npm run licenses
 
-      # The changed-file checks below compare against one base. A pull request's
-      # checkout is its merge commit, so its first parent is the exact main revision
-      # the merge was built against (the event's base.sha can lag behind main). A push
-      # to main compares with the main it replaced. Any other branch, and a run
-      # started by hand (which has no `before`), compares with where it left main, so
-      # an engine branch is checked on everything it would bring into main.
+      # The changed-file checks below compare against one base, chosen by
+      # tools/changed-files-base.mjs (which says why per event); it fails rather
+      # than hand them an empty base, which would check no file and pass. On main
+      # the base is the last commit whose CI passed, so a run started by hand and a
+      # push whose run was cancelled still look at everything since then.
       - name: Choose the base of the changed-file checks
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base=$(git rev-parse HEAD^1)
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            base="${{ github.event.before }}"
-          else
-            base=$(git merge-base HEAD origin/main)
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            LAST_GREEN_MAIN=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty')
+            export LAST_GREEN_MAIN
           fi
+          base=$(node tools/changed-files-base.mjs)
           echo "FORMAT_BASE_REF=$base" >> "$GITHUB_ENV"
 
       - name: Check formatting
