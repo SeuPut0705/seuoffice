@@ -65,6 +65,30 @@ fn open(bytes: &[u8]) -> Result<Package, String> {
     load_package(bytes, &DEFAULT_ZIP_LIMITS, |_| Ok(()))
 }
 
+/// `cutMarks`: `xml` with every mark element cut out of its markup. A CDATA
+/// section is words, not markup: no mark is cut from it. A character reference
+/// of the rest stays as written.
+fn cut_marks(xml: &str) -> Result<String, String> {
+    let mark_tag = try_js_regex!(
+        r#"(?:<w:bdr\s+w:val="single"\s+w:sz="6"\s+w:color="6B4FC0"\s*/>\s*)?<(?:[\w.-]+:)?redact(?:\s(?:"[^"]*"|'[^']*'|[^>"'])*)?(?:/>|>\s*</(?:[\w.-]+:)?redact\s*>)"#,
+        "g"
+    );
+    let cut = |piece: &str| {
+        mark_tag
+            .try_replace_all(piece, |_| String::new())
+            .map_err(|limit| limit.to_string())
+    };
+    let mut out = String::with_capacity(xml.len());
+    let mut at = 0;
+    for section in js_regex!(r"<!\[CDATA\[[\s\S]*?\]\]>", "g").find_iter(xml) {
+        out.push_str(&cut(&xml[at..section.start()])?);
+        out.push_str(section.as_str());
+        at = section.end();
+    }
+    out.push_str(&cut(&xml[at..])?);
+    Ok(out)
+}
+
 /// `docxHoldsHiddenContent`: whether any part of the package (body, headers,
 /// footers, comments, notes) holds the mark.
 pub fn docx_holds_hidden_content(bytes: &[u8]) -> Result<bool, String> {
@@ -79,7 +103,8 @@ pub fn docx_holds_hidden_content(bytes: &[u8]) -> Result<bool, String> {
 }
 
 /// `clearHiddenMarks`: the package with every mark taken off, the words left
-/// readable by anyone. The namespace declaration stays (an ignorable prefix
+/// readable by anyone. The marks are cut out of each part as it is: the decoded
+/// copy only tells whether a trace is left. The namespace declaration stays (an ignorable prefix
 /// must stay declared). Fails when a trace of the mark is left in a part, so
 /// that a copy never claims to be clear when it is not. `now` stamps the parts
 /// it rewrites, as `zip.file` does.
@@ -96,12 +121,7 @@ pub fn clear_hidden_marks(bytes: &[u8], now: f64) -> Result<Vec<u8>, String> {
         if !holds_mark(xml) {
             continue;
         }
-        let cleared = try_js_regex!(
-            r#"(?:<w:bdr\s+w:val="single"\s+w:sz="6"\s+w:color="6B4FC0"\s*/>\s*)?<(?:[\w.-]+:)?redact(?:\s(?:"[^"]*"|'[^']*'|[^>"'])*)?(?:/>|>\s*</(?:[\w.-]+:)?redact\s*>)"#,
-            "g"
-        )
-        .try_replace_all(&spelled_out(xml), |_| String::new())
-        .map_err(|limit| limit.to_string())?;
+        let cleared = cut_marks(xml)?;
         if holds_mark(&cleared) {
             return Err(format!("could not clear the marks in {path}"));
         }

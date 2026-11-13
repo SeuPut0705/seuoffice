@@ -59,6 +59,15 @@ const PACKAGES: Parts[] = [
   packageOf(body(`<!-- ${run('<go:redact w:label="x"/>')} -->`)),
   packageOf(body(`<w:t><![CDATA[<go:redact w:label="x"/>]]></w:t>`)),
   packageOf(body(`<w:t><![CDATA[${OLD_NS}]]></w:t>`)),
+  // a CDATA section that spells a mark is words: not cut, and a trace it leaves makes the clearing fail
+  packageOf(body(`<w:t><![CDATA[<go:redact w:label="x"/>]]></w:t>${run('<go:redact w:label="y"/>')}`)),
+  packageOf(body(`<![CDATA[<go:redact/>]]>${run('<redact/>')}<![CDATA[x]]><![CDATA[</redact>]]>`)),
+  packageOf(body(`<w:t><![CDATA[a&#60;go:redact/&#62;]]></w:t>&#60;go:redact/&#62;`)),
+  packageOf(body(`<!-- <![CDATA[ --><go:redact w:label="x"/><!-- ]]> -->`)),
+  packageOf(body(`<![CDATA[ never closed <go:redact/>`)),
+  packageOf(body(`<![CDATA[<go:redact/>]]]]><go:redact/>`)),
+  // references outside the marks stay as written
+  packageOf(body(`${run('<go:redact w:label="x"/>', '&#65;&#x42;&amp;&#60;')}`)),
   // marks in parts that are no word/*.xml, and in a folder-like name
   [['[Content_Types].xml', '<Types/>'], ['docProps/app.xml', `<go:redact xmlns:go="${OLD_NS}"/>`], ['word/media/x.png', '<go:redact/>'], ['word/_rels/document.xml.rels', '<redact/>']],
   [['word/embeddings/a.xml', '<redact/>'], ['xword/document.xml', '<redact/>'], ['word/document.xml.bak', '<redact/>'], ['word/', ''], ['word/x.xml', 'no mark']],
