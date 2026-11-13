@@ -32,7 +32,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { registerHooks, syncBuiltinESMExports } from 'node:module'
+import { createRequire, registerHooks, syncBuiltinESMExports } from 'node:module'
 import os, { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import v8 from 'node:v8'
@@ -55,7 +55,9 @@ const watchdog = await import('../../../apps/shell/src/main/renderer-watchdog.ts
 const updateRestart = await import('../../../apps/shell/src/main/update-restart.ts')
 const sessionRecord = await import('../../../apps/shell/src/main/session-record.ts')
 
-type Fn = (...args: unknown[]) => unknown
+// any: the fakes take the typed parameters of the function they stand in for
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Fn = (...args: any[]) => unknown
 
 const cases = (...lists: unknown[][]): Case[] => lists.map((args): Case => ({ args }))
 const realImmediate = globalThis.setImmediate
@@ -65,6 +67,13 @@ const tick = async (n = 3): Promise<void> => {
   for (let i = 0; i < n; i++) await new Promise((resolve) => realImmediate(resolve))
 }
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => realTimeout(resolve, ms))
+/** until the case's own child processes (the unpacking of a download) have answered */
+const settle = async (): Promise<void> => {
+  const until = Date.now() + 10_000
+  await tick()
+  while (process.getActiveResourcesInfo().includes('ProcessWrap') && Date.now() < until) await sleep(10)
+  await tick()
+}
 
 /** `Date` and `performance.now` of the case: the clock every call reads */
 function withClock<T>(clock: { ms: number }, run: () => T): T {
@@ -633,7 +642,7 @@ async function runPointer(o: PointerScenario, cx: TsContext): Promise<void> {
     if (o.platform !== 'win32') return
     const until = Date.now() + 5000
     while (runs() <= before && Date.now() < until) await sleep(5)
-    await sleep(150)
+    await sleep(250)
     await tick()
   }
   const contents = Object.fromEntries(
@@ -662,6 +671,7 @@ async function runPointer(o: PointerScenario, cx: TsContext): Promise<void> {
   } as Record<string, string>
   try {
     await withProcess({ platform: o.platform, env }, async () => {
+      let spawned = 1
       setOut(o.initialOut)
       pointer.installPointerSize(app as never)
       await waitForRun(0)
@@ -669,6 +679,7 @@ async function runPointer(o: PointerScenario, cx: TsContext): Promise<void> {
         if ('focus' in step) {
           setOut(step.out)
           const before = runs()
+          spawned += 1
           appListeners['browser-window-focus']?.()
           await waitForRun(before)
         } else if ('created' in step) {
@@ -678,6 +689,9 @@ async function runPointer(o: PointerScenario, cx: TsContext): Promise<void> {
         }
         await tick()
       }
+      // every `reg` the case started has answered before the fakes go away
+      await waitForRun(spawned - 1)
+      await tick(5)
     })
   } finally {
     rmSync(tmp, { recursive: true, force: true })
@@ -1399,7 +1413,8 @@ interface CrashScenario {
   events: CrashEvent[]
 }
 
-let crashBase = 0
+// apart from the ids of the disposal cases: the module keeps the closed ones for good
+let crashBase = 1_000_000
 
 async function runCrashWatch(o: CrashScenario, cx: TsContext): Promise<void> {
   const base = (crashBase += 1000)
@@ -2204,6 +2219,9 @@ const RECOVERY_FAKES: Record<string, string[]> = {
 }
 const FAKE_URL = 'main-diff:recovery-'
 
+// Node keeps the answer of a `require` by the folder of the requiring file and the
+// request text, so these redirects, scoped to recovery-shell.ts, also reach the other
+// files of that folder that make the same request and load after it.
 registerHooks({
   resolve(specifier, context, next) {
     const name = specifier.split('/').pop() ?? ''
@@ -3222,7 +3240,9 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
       },
     },
   })
+  // the updater is CommonJS and holds its own copy of the language module
   setUiLang(o.lang as never)
+  createRequire(import.meta.url)('@seuoffice/i18n').setUiLang(o.lang)
   updateRestart.cancelUpdateRestart()
   // the timers of the case: ids from 1, in the order they are set
   let timerId = 0
@@ -3277,7 +3297,7 @@ async function runUpdater(o: UpdaterScenario, cx: TsContext): Promise<unknown> {
               } else {
                 appListeners['will-quit']?.()
               }
-              await tick()
+              await settle()
             }
           },
         ),

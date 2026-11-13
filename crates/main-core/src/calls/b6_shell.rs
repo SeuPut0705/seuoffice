@@ -2515,6 +2515,8 @@ struct UpHost {
     spec: Value,
     log: Log,
     windows_open: bool,
+    /// a window has been shown: only then do the window's actions exist
+    window_shown: bool,
     timers: Vec<TimerSlot>,
     immediates: usize,
     dialogs: Vec<f64>,
@@ -2633,6 +2635,7 @@ impl UpdaterHost for UpHost {
             vec![text("showUpdateWindow"), to_value(state), options],
         );
         self.windows_open = true;
+        self.window_shown = true;
     }
     fn is_update_window_open(&self) -> bool {
         self.windows_open
@@ -2809,6 +2812,7 @@ fn updater_call(args: &[Value], cx: &mut Context) -> Answer {
         spec: spec.clone(),
         log: Rc::clone(&log),
         windows_open: false,
+        window_shown: false,
         timers: Vec::new(),
         immediates: 0,
         dialogs: list(spec.get("dialogs"))
@@ -2833,6 +2837,9 @@ fn updater_call(args: &[Value], cx: &mut Context) -> Answer {
         } else if let Some(event) = step.get("event") {
             updater.on_event(&mut host, updater_event(event));
         } else if let Some(action) = field_str(step, "action") {
+            if !host.window_shown {
+                continue;
+            }
             updater.on_action(
                 &mut host,
                 match action {

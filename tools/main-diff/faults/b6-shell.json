@@ -1211,8 +1211,8 @@
   {
     "name": "updater: a finished download is started again",
     "file": "main-core/src/shell/updater.rs",
-    "find": "        if matches!(flow.phase, UpdatePhase::Downloading | UpdatePhase::Downloaded) {",
-    "replace": "        if matches!(flow.phase, UpdatePhase::Downloading) {",
+    "find": "        if matches!(\n            flow.phase,\n            UpdatePhase::Downloading | UpdatePhase::Downloaded\n        ) {",
+    "replace": "        if matches!(\n            flow.phase,\n            UpdatePhase::Downloading\n        ) {",
     "fn": [
       "updater.initAutoUpdater"
     ]
