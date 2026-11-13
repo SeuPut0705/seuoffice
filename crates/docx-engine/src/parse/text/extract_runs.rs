@@ -134,6 +134,8 @@ struct Walker<'a, 'c> {
     field_separated: bool,
     field_cached: String,
     field_cached_runs: Vec<Run>,
+    /// the run properties of a field instruction run marked hidden from AI
+    field_instr_hidden: Option<String>,
     field_begin_run: Option<&'a XNode>,
     field_dirty: bool,
     pending_ref_ids: Vec<String>,
@@ -254,6 +256,17 @@ impl<'a, 'c> Walker<'a, 'c> {
         Ok(())
     }
 
+    /// `hiddenFieldMark`: the mark of a field hidden from AI, in the
+    /// instruction or in the result: `{ ...fieldInstrHidden, ...hiddenResultMark(fieldCachedRuns) }`.
+    fn hidden_field_mark(&self) -> Map<String, Value> {
+        let mut mark = Map::new();
+        if let Some(raw) = &self.field_instr_hidden {
+            mark.insert("rawRPr".to_owned(), Value::from(raw.as_str()));
+        }
+        mark_hidden_result(&mut mark, &self.field_cached_runs);
+        mark
+    }
+
     /// `resultFormat`: formatting of the field result: the first cached run, else the field code's rPr.
     fn result_format(&mut self) -> Result<Map<String, Value>, Thrown> {
         let source = if let Some(first) = self.field_cached_runs.first() {
@@ -268,7 +281,7 @@ impl<'a, 'c> Walker<'a, 'c> {
         let Some(mut format) = source else {
             return Ok(Map::new());
         };
-        mark_hidden_result(&mut format, &self.field_cached_runs);
+        format.extend(self.hidden_field_mark());
         Ok(format)
     }
 
@@ -347,6 +360,7 @@ impl<'a, 'c> Walker<'a, 'c> {
                         self.field_cached.clear();
                         self.field_cached_runs.clear();
                         self.field_begin_run = Some(node);
+                        self.field_instr_hidden = None;
                         self.field_dirty = matches!(fld_char.attr("w:dirty"), Some("true" | "1"));
                     }
                 }
@@ -372,6 +386,14 @@ impl<'a, 'c> Walker<'a, 'c> {
             }
             if let Some(instr) = node.find_child("w:instrText") {
                 self.field_instr += &instr.text();
+                if self.field_instr_hidden.is_none()
+                    && let Some(r_pr) = node.find_child("w:rPr")
+                {
+                    let r_pr_xml = serialize(r_pr);
+                    if withheld_label_of(Some(&r_pr_xml)).is_some() {
+                        self.field_instr_hidden = Some(r_pr_xml);
+                    }
+                }
             } else if self.field_separated && self.field_depth == 1 {
                 // REF/HYPERLINK cached result is the display text; other fields' caches are dropped
                 let children: Vec<&XNode> = node.children().iter().collect();
@@ -514,7 +536,7 @@ impl<'a, 'c> Walker<'a, 'c> {
             );
             map.insert("refField".to_owned(), Value::from(name));
             map.insert("refInstr".to_owned(), Value::from(instr.as_str()));
-            mark_hidden_result(&mut map, &self.field_cached_runs);
+            map.extend(self.hidden_field_mark());
             if dirty {
                 map.insert("fldDirty".to_owned(), Value::Bool(true));
             }
@@ -531,8 +553,10 @@ impl<'a, 'c> Walker<'a, 'c> {
                 map.insert("link".to_owned(), Value::Object(link_val));
                 self.push_map(map, rev)?;
             } else {
+                let mark = self.hidden_field_mark();
                 for cached in std::mem::take(&mut self.field_cached_runs) {
                     let mut map = super::convert::into_map(json(&cached));
+                    map.extend(mark.clone());
                     map.insert("link".to_owned(), Value::Object(link_val.clone()));
                     self.push_map(map, rev)?;
                 }
@@ -638,11 +662,19 @@ impl<'a, 'c> Walker<'a, 'c> {
             self.push_map(map, rev)?;
         } else if !self.field_cached_runs.is_empty() {
             // any other field: the cached result is still the visible text
+            let mark = self.hidden_field_mark();
             for cached in std::mem::take(&mut self.field_cached_runs) {
-                self.push_run(cached, rev);
+                if mark.is_empty() {
+                    self.push_run(cached, rev);
+                    continue;
+                }
+                let mut map = super::convert::into_map(json(&cached));
+                map.extend(mark.clone());
+                self.push_map(map, rev)?;
             }
         }
         self.field_instr.clear();
+        self.field_instr_hidden = None;
         self.field_separated = false;
         self.field_cached.clear();
         self.field_cached_runs.clear();
@@ -1116,6 +1148,7 @@ pub fn extract_runs<'a>(
             .is_some_and(|f| f.part != crate::model::RunZoteroFieldPart::Begin),
         field_cached: String::new(),
         field_cached_runs: Vec::new(),
+        field_instr_hidden: None,
         field_begin_run: None,
         field_dirty: false,
         pending_ref_ids: Vec::new(),
