@@ -128,6 +128,11 @@ const toolStart = (index: number | undefined, id: string | undefined, name: stri
     ...(name === undefined ? {} : { name }),
     input: {},
   })
+const rawText = (text: unknown, index = 0) => ({
+  type: 'content_block_delta',
+  index,
+  delta: { type: 'text_delta', text },
+})
 const textDelta = (text: string, index = 0) => ({
   type: 'content_block_delta',
   index,
@@ -643,6 +648,33 @@ const anthropicStream: Group = {
       cn('text without a stop reason', w([stream([start(), textDelta('cut off')])]), {}),
       cn('a body of non-event lines', w([rawStream(['event: ping\n', ': comment\n\n'])]), {}),
       cn('a response with no body', w([plain(null, 200, SSE)]), {}),
+      cn(
+        'text deltas that are not strings are forwarded as they are',
+        w([
+          stream([
+            rawText(5),
+            rawText({ a: 1 }),
+            rawText([1, 'x']),
+            rawText(true),
+            rawText(0),
+            rawText(false),
+            rawText(null),
+            rawText(''),
+            msgDelta('end_turn'),
+          ]),
+        ]),
+        {},
+      ),
+      cn('a falsy text delta alone is no content', w([stream([rawText(0), rawText(null)])]), {}),
+      cn('a stop reason that is a number', w([stream([textDelta('x'), msgDelta(1)])]), {}),
+      cn('a stop reason that is an object', w([stream([textDelta('x'), msgDelta({ a: 1 })])]), {}),
+      cn('a stop reason that is true', w([stream([textDelta('x'), msgDelta(true)])]), {}),
+      cn('a stop reason that is a list', w([stream([textDelta('x'), msgDelta(['end_turn'])])]), {}),
+      cn(
+        'a stop reason that is null does not count',
+        w([stream([textDelta('x'), msgDelta(null)])]),
+        {},
+      ),
       cn('an empty stop reason does not count', w([stream([textDelta('x'), msgDelta('')])]), {}),
 
       // ---- errors inside the stream ----
@@ -718,6 +750,24 @@ const anthropicStream: Group = {
         'a JSON body without a stop reason or usage',
         w([jsonBody({ content: [{ type: 'text', text: 'x' }] })]),
         { bare: true },
+      ),
+      cn(
+        'a JSON body with text and a stop reason that are not strings',
+        w([
+          jsonBody({
+            content: [
+              { type: 'text', text: 7 },
+              { type: 'text', text: { a: 1 } },
+            ],
+            stop_reason: 3,
+          }),
+        ]),
+        {},
+      ),
+      cn(
+        'a JSON body with a stop reason that is an object',
+        w([jsonBody({ content: [{ type: 'text', text: 'x' }], stop_reason: { why: 'done' } })]),
+        {},
       ),
       cn('a JSON body that is an error', w([jsonBody({ error: { message: 'Overloaded' } })]), {}),
       cn('a JSON body error of another shape', w([jsonBody({ error: 'nope' })]), {}),
@@ -1074,6 +1124,44 @@ const geminiGroup: Group = {
         {},
       ),
       cn('empty text parts are not content', w([stream([chunk([part('')], 'STOP')])]), {}),
+      cn(
+        'text parts that are not strings are forwarded as they are',
+        w([
+          stream([
+            chunk(
+              [
+                { text: 5 },
+                { text: { a: 1 } },
+                { text: true },
+                { text: 0 },
+                { text: null },
+                { text: [1] },
+              ],
+              'STOP',
+            ),
+          ]),
+        ]),
+        {},
+      ),
+      cn(
+        'a falsy text alone is no content',
+        w([stream([chunk([{ text: 0 }, { text: false }], 'STOP')])]),
+        {},
+      ),
+      cn(
+        'a JSON body with text parts that are not strings',
+        w([
+          jsonBody({
+            candidates: [
+              {
+                content: { parts: [{ text: 9 }, { text: { b: 2 } }, { text: false }] },
+                finishReason: 'STOP',
+              },
+            ],
+          }),
+        ]),
+        {},
+      ),
       cn(
         'a max_tokens finish',
         w([stream([chunk([part('cut')], 'MAX_TOKENS', gUsage(1, 2))])]),

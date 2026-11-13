@@ -98,12 +98,6 @@ pub(super) fn truthy(value: Option<&JsonValue>) -> bool {
     value.is_some_and(JsonValue::truthy)
 }
 
-/// A value handed to a callback that takes text: the string, or what
-/// `String(value)` makes of another value.
-pub(super) fn callback_text(value: &JsonValue) -> String {
-    js_string(value)
-}
-
 /// `onBytes`: a byte arrived. Pings the watchdog and the caller.
 pub(super) fn on_bytes_of(wd: &StreamWatchdog, cb: &StreamCallbacks) -> Rc<dyn Fn()> {
     let wd = wd.clone();
@@ -248,9 +242,7 @@ fn emit_anthropic_json_message(
         let block_type = read(&block, "type")?;
         if as_str(block_type) == Some("text") && truthy(prop(&block, "text")) {
             emitted = true;
-            (cb.on_delta)(&callback_text(
-                prop(&block, "text").unwrap_or(&JsonValue::Null),
-            ));
+            (cb.on_delta)(prop(&block, "text").cloned().unwrap_or(JsonValue::Null));
         } else if as_str(block_type) == Some("tool_use") && truthy(prop(&block, "name")) {
             emitted = true;
             // A complete JSON body carries the whole turn at once, so the per-turn tool
@@ -288,7 +280,7 @@ fn emit_anthropic_json_message(
         && reason.truthy()
         && let Some(on_stop_reason) = &cb.on_stop_reason
     {
-        on_stop_reason(&callback_text(reason));
+        on_stop_reason(reason.clone());
     }
     let mut json_usage = Obj::new();
     merge_anthropic_usage(&mut json_usage, prop(&msg, "usage"));
@@ -561,7 +553,7 @@ async fn anthropic_turn(
                 let delta_text = delta.and_then(|d| prop(d, "text"));
                 if as_str(delta_type) == Some("text_delta") && truthy(delta_text) {
                     emitted = true;
-                    (cb.on_delta)(&callback_text(delta_text.unwrap_or(&JsonValue::Null)));
+                    (cb.on_delta)(delta_text.cloned().unwrap_or(JsonValue::Null));
                 } else if as_str(delta_type) == Some("input_json_delta") {
                     let key = match index {
                         Some(index) => map_key(index, &mut identity),
@@ -657,7 +649,7 @@ async fn anthropic_turn(
         return Err(JsError::error("Claude stream ended before a stop_reason"));
     };
     if let Some(on_stop_reason) = &cb.on_stop_reason {
-        on_stop_reason(&callback_text(&stop_reason));
+        on_stop_reason(stop_reason.clone());
     }
     if has_usage(&turn_usage)
         && let Some(on_usage) = &cb.on_usage

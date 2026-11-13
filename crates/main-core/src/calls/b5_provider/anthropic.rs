@@ -91,7 +91,9 @@ fn callbacks(o: &Opts, sink: &Sink, signal: Signal) -> StreamCallbacks {
     let delta = sink.clone();
     let tool = sink.clone();
     let mut cb = StreamCallbacks {
-        on_delta: Rc::new(move |t: &str| note(&delta, json!(["delta", t]))),
+        on_delta: Rc::new(move |t: JsonValue| {
+            note(&delta, json!(["delta", json_value_to_serde(&t)]));
+        }),
         on_tool_call: Rc::new(move |call: JsonValue| {
             note(&tool, json!(["tool", json_value_to_serde(&call)]));
         }),
@@ -106,7 +108,9 @@ fn callbacks(o: &Opts, sink: &Sink, signal: Signal) -> StreamCallbacks {
     };
     if !o.bare {
         let stop = sink.clone();
-        cb.on_stop_reason = Some(Rc::new(move |r: &str| note(&stop, json!(["stop", r]))));
+        cb.on_stop_reason = Some(Rc::new(move |r: JsonValue| {
+            note(&stop, json!(["stop", json_value_to_serde(&r)]));
+        }));
         let usage = sink.clone();
         cb.on_usage = Some(Rc::new(move |u: JsonValue| {
             note(&usage, json!(["usage", json_value_to_serde(&u)]));

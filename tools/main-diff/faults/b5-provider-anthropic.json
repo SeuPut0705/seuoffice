@@ -285,5 +285,47 @@
     "find": "&& !is_array(out.get(\"anyOf\"))",
     "replace": "&& true",
     "fn": ["gemini-schema.toGeminiSchema"]
+  },
+  {
+    "name": "a streamed text delta is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "(cb.on_delta)(delta_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "(cb.on_delta)(text(js_string(delta_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a JSON body text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "(cb.on_delta)(prop(&block, \"text\").cloned().unwrap_or(JsonValue::Null));",
+    "replace": "(cb.on_delta)(text(js_string(prop(&block, \"text\").unwrap_or(&JsonValue::Null))));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a streamed stop reason is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "on_stop_reason(stop_reason.clone());",
+    "replace": "on_stop_reason(text(js_string(&stop_reason)));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a JSON body stop reason is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_anthropic.rs",
+    "find": "on_stop_reason(reason.clone());",
+    "replace": "on_stop_reason(text(js_string(reason)));",
+    "fn": ["anthropic.streamAnthropic"]
+  },
+  {
+    "name": "a Gemini JSON body text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "                emitted = true;\n                (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "                emitted = true;\n                (cb.on_delta)(text(js_string(part_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["gemini.streamGemini"]
+  },
+  {
+    "name": "a Gemini streamed text is turned into text",
+    "file": "main-core/src/packages/ai_provider/protocols_gemini.rs",
+    "find": "                    emitted = true;\n                    (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));",
+    "replace": "                    emitted = true;\n                    (cb.on_delta)(text(js_string(part_text.unwrap_or(&JsonValue::Null))));",
+    "fn": ["gemini.streamGemini"]
   }
 ]

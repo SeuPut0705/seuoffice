@@ -18,8 +18,7 @@ use super::jsval::{
     text, value_key,
 };
 use super::protocols_anthropic::{
-    array_to_map, callback_text, has_usage, items_or_empty, on_bytes_of, read, set_some, tool_defs,
-    truthy,
+    array_to_map, has_usage, items_or_empty, on_bytes_of, read, set_some, tool_defs, truthy,
 };
 use super::protocols_gemini_schema::to_gemini_schema;
 use super::protocols_shared::{
@@ -276,7 +275,7 @@ fn emit_gemini_json_message(rt: &Rt, body_text: &str, cb: &StreamCallbacks) -> R
             let part_text = read(&part, "text")?;
             if truthy(part_text) {
                 emitted = true;
-                (cb.on_delta)(&callback_text(part_text.unwrap_or(&JsonValue::Null)));
+                (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));
             }
             if truthy(prop2(Some(&part), "functionCall", "name")) {
                 emitted = true;
@@ -303,7 +302,7 @@ fn emit_gemini_json_message(rt: &Rt, body_text: &str, cb: &StreamCallbacks) -> R
     if let Some(reason) = finish.stop_reason
         && let Some(on_stop_reason) = &cb.on_stop_reason
     {
-        on_stop_reason(reason);
+        on_stop_reason(text(reason));
     }
     if has_usage(&usage)
         && let Some(on_usage) = &cb.on_usage
@@ -483,7 +482,7 @@ async fn gemini_turn(
                 let part_text = read(&part, "text")?;
                 if truthy(part_text) {
                     emitted = true;
-                    (cb.on_delta)(&callback_text(part_text.unwrap_or(&JsonValue::Null)));
+                    (cb.on_delta)(part_text.cloned().unwrap_or(JsonValue::Null));
                 }
                 // Gemini emits function calls whole, never as partial JSON
                 if truthy(prop2(Some(&part), "functionCall", "name")) {
@@ -513,7 +512,7 @@ async fn gemini_turn(
     if let Some(reason) = finish.stop_reason
         && let Some(on_stop_reason) = &cb.on_stop_reason
     {
-        on_stop_reason(reason);
+        on_stop_reason(text(reason));
     }
     if has_usage(&turn_usage)
         && let Some(on_usage) = &cb.on_usage
