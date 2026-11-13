@@ -484,7 +484,6 @@ pub const CHANNELS: &[ChannelSpec] = &[
     ),
     spec("diagram:apply-request", &[Event], D1, &[Diagram]),
     spec("diagram:apply-result", &[Send], D1, &[Diagram]),
-    spec("diagram:bytes-request", &[Event], D1, &[Diagram]),
     spec("diagram:bytes-result", &[Send], D1, &[Diagram]),
     spec("diagram:close-save-request", &[Event], D1, &[Diagram]),
     spec("diagram:close-save-result", &[Send], D1, &[Diagram]),
