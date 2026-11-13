@@ -310,12 +310,34 @@ fn js_string(value: &Value) -> String {
     }
 }
 
+/// The engine's memo list, its dates in the user's zone: the engine writes a
+/// memo date as local time with a literal Z, and a WASI build has no zone of
+/// its own, so the host's clock gives the offset (`fileparse.localOffsetSeconds`).
+/// Where no host answers, the engine keeps `chrono::Local`.
+fn memo_list_json(doc: &HwpDocument) -> String {
+    let _ = rhwp::model::memo_time::set_local_offset(host_offset);
+    doc.get_memo_list_json()
+}
+
+/// The user's offset east of UTC, in seconds, at a Unix time, as the host's
+/// `Date` gives it; `None` without a host or with an answer that is no offset.
+fn host_offset(unix_seconds: i64) -> Option<i32> {
+    let ms = unix_seconds as f64 * 1000.0;
+    let seconds = seu_host::call(
+        "fileparse.localOffsetSeconds",
+        &serde_json::json!({ "ms": ms }),
+    )
+    .ok()?
+    .as_f64()?;
+    (seconds.fract() == 0.0 && seconds.abs() < 86_400.0).then_some(seconds as i32)
+}
+
 /// The document's memos as a `### Comments` block, in the document order the engine
 /// already sorts them in. A document without memos gets no block, so its text is
 /// exactly what it was before memos were read. Memos that cannot be listed are left out
 /// rather than failing the read of a body that could be read.
 fn comment_lines(doc: &HwpDocument) -> Result<Vec<String>, String> {
-    let Ok(listed) = serde_json::from_str::<Value>(&doc.get_memo_list_json()) else {
+    let Ok(listed) = serde_json::from_str::<Value>(&memo_list_json(&doc)) else {
         return Ok(Vec::new());
     };
     let memos = match listed {
@@ -514,7 +536,7 @@ fn assert_container_within_limits(bytes: &[u8]) -> Result<(), String> {
 pub fn hwp_memos_of(bytes: &[u8]) -> Result<Vec<HwpMemo>, String> {
     assert_container_within_limits(bytes)?;
     let doc = HwpDocument::from_bytes(bytes).map_err(|error| engine_error(&error.to_string()))?;
-    match serde_json::from_str::<Value>(&doc.get_memo_list_json()) {
+    match serde_json::from_str::<Value>(&memo_list_json(&doc)) {
         Ok(Value::Array(memos)) => Ok(memos),
         Ok(_) => Ok(Vec::new()),
         Err(error) => Err(engine_error(&error.to_string())),

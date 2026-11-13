@@ -11,7 +11,8 @@
 use std::collections::{HashMap, HashSet};
 
 use jscompat::{
-    JsMap, JsRegex, Radix, js_regex, number_to_string, parse_int, to_number, trim, try_js_regex,
+    JsMap, JsRegex, Radix, is_js_space, js_regex, number_to_string, parse_int, to_number, trim,
+    try_js_regex,
 };
 
 use crate::xlsx::{letters_index, offset_formula_refs};
@@ -19,6 +20,7 @@ use crate::xlsx_formula_reads::{
     AreaLookup, DERIVED_CHECK_BUDGET, FormulaCell, MAX_COLUMN, MAX_ROW, NameDefinition,
     RangeBounds, ReadsSheet, cell_key, cells_derived_from_withheld,
 };
+use crate::xlsx_xml_scan::{Markup, attribute_run_end, skipped_at, xml_elements};
 
 /// Sheet XML above this size is not scanned; the sheet is withheld whole instead.
 pub const FORMULA_SCAN_MAX_BYTES: f64 = 64.0 * 1024.0 * 1024.0;
@@ -159,71 +161,124 @@ impl SheetFormulas {
     }
 }
 
-/// The formulas of one worksheet part, from its raw XML.
-pub fn scan_sheet_formulas(xml: &str) -> Result<SheetFormulas, String> {
-    let Some(open) = js_regex!(r"<(?:[\w.-]+:)?sheetData(?=[\s>])").exec(xml) else {
-        return Ok(SheetFormulas::none());
-    };
-    let close = js_regex!(r"<\/(?:[\w.-]+:)?sheetData>").exec(xml);
-    let end = close.map_or(xml.len(), |close| close.start());
-    // `xml.slice(open.index, end)`: nothing where the close comes first
-    let data = xml.get(open.start()..end).unwrap_or_default();
+/// What the scan stops at inside `<sheetData>` (`SCAN_STOP`): a comment, a
+/// CDATA section or a processing instruction, each read whole, and the tags of
+/// `sheetData`, `c` and `f`, each with any namespace prefix. Text can hold no
+/// `<`, so no other stop can be a false one.
+enum Stop<'t> {
+    Skipped(Option<&'t str>),
+    Tag {
+        closing: bool,
+        local: &'static str,
+        attributes: &'t str,
+    },
+}
 
-    let mut result = SheetFormulas::none();
-    struct Master {
-        formula: String,
-        row: f64,
-        column: f64,
+/// `<(\/?)(?:[\w.-]+:)?(sheetData|c|f)(?=[\s/>])((?:"[^"]*"|'[^']*'|[^>"'])*)>`
+/// from a `<` at `at`: where the tag ends, and what it is.
+fn scan_tag_at(xml: &str, at: usize) -> Option<(usize, Stop<'_>)> {
+    let closing = xml[at + 1..].starts_with('/');
+    let mut name_at = at + 1 + usize::from(closing);
+    let prefix = xml[name_at..]
+        .find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-')))
+        .unwrap_or(xml.len() - name_at);
+    if prefix > 0 && xml[name_at + prefix..].starts_with(':') {
+        name_at += prefix + 1;
     }
-    struct Follower {
-        si: String,
-        row: f64,
-        column: f64,
+    let local = ["sheetData", "c", "f"]
+        .into_iter()
+        .find(|local| xml[name_at..].starts_with(local))?;
+    let after = name_at + local.len();
+    if !xml[after..]
+        .chars()
+        .next()
+        .is_some_and(|c| is_js_space(c) || matches!(c, '/' | '>'))
+    {
+        return None;
     }
-    let mut masters: JsMap<Master> = JsMap::new();
-    let mut followers: Vec<Follower> = Vec::new();
-    // the address of the cell being read; none before the first and for one that has none
-    let mut current: Option<(f64, f64)> = None;
-    let cell_or_formula = js_regex!(
-        r"<(?:[\w.-]+:)?c(?=[\s/>])([^>]*)>|<(?:[\w.-]+:)?f(?=[\s/>])([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w.-]+:)?f>)"
-    );
-    for found in cell_or_formula.find_iter(data) {
-        if let Some(cell) = found.get(1) {
-            // a self-closed cell holds no formula
-            current = if cell.ends_with('/') {
-                None
-            } else {
-                cell_at(xml_attribute!(cell, "r"))
-            };
-            continue;
+    let close = attribute_run_end(xml, after)?;
+    Some((
+        close + 1,
+        Stop::Tag {
+            closing,
+            local,
+            attributes: &xml[after..close],
+        },
+    ))
+}
+
+/// The stops of `SCAN_STOP` in order.
+fn scan_stops(xml: &str) -> impl Iterator<Item = (usize, usize, Stop<'_>)> {
+    let mut at = 0;
+    std::iter::from_fn(move || {
+        while let Some(found) = xml[at..].find('<') {
+            let start = at + found;
+            if let Some(token) = skipped_at(xml, start) {
+                at = token.end;
+                let Markup::Skipped { cdata } = token.markup else {
+                    unreachable!("skipped_at reads no tag");
+                };
+                return Some((start, token.end, Stop::Skipped(cdata)));
+            }
+            if let Some((end, stop)) = scan_tag_at(xml, start) {
+                at = end;
+                return Some((start, end, stop));
+            }
+            at = start + 1;
         }
-        // An `<f>` outside a cell, or in a cell that cannot be placed: nothing on
-        // this sheet can be said to be free of it.
-        let Some(at) = current else {
-            return Ok(SheetFormulas::unscanned());
-        };
-        result.formula_cells.insert(cell_key(at.0, at.1));
-        let attributes = found.get(2).unwrap_or_default();
+        None
+    })
+}
+
+/// The `<f>` being read: its attributes, the text so far and the cell it is in.
+struct OpenFormula {
+    attributes: String,
+    text: String,
+    at: (f64, f64),
+}
+
+struct Master {
+    formula: String,
+    row: f64,
+    column: f64,
+}
+
+struct Follower {
+    si: String,
+    row: f64,
+    column: f64,
+}
+
+/// What a formula's end tag settles: the formulas and the unknown areas found so far.
+struct Scan {
+    result: SheetFormulas,
+    masters: JsMap<Master>,
+    followers: Vec<Follower>,
+}
+
+impl Scan {
+    /// `finish`: false when nothing on the sheet can be said to be free of the formula.
+    fn finish(&mut self, attributes: &str, body: &str, at: (f64, f64)) -> bool {
+        self.result.formula_cells.insert(cell_key(at.0, at.1));
         let kind = xml_attribute!(attributes, "t");
-        let text = decode_entities(found.get(3).unwrap_or_default())?;
-        let text = trim(&text).to_owned();
+        let text = trim(body).to_owned();
         if kind == Some("dataTable") {
             let Some(table) = range_at(xml_attribute!(attributes, "ref")) else {
-                return Ok(SheetFormulas::unscanned());
+                return false;
             };
-            result.unknown.push(table);
-            continue;
+            self.result.unknown.push(table);
+            return true;
         }
         if kind == Some("shared") {
             match xml_attribute!(attributes, "si") {
-                None => result.unknown.push(cell_area(at)),
-                Some(si) if text.is_empty() => followers.push(Follower {
+                None => self.result.unknown.push(cell_area(at)),
+                Some(si) if text.is_empty() => self.followers.push(Follower {
                     si: si.to_owned(),
                     row: at.0,
                     column: at.1,
                 }),
                 Some(si) => {
-                    masters.set(
+                    self.masters.set(
                         si,
                         Master {
                             formula: text.clone(),
@@ -231,33 +286,125 @@ pub fn scan_sheet_formulas(xml: &str) -> Result<SheetFormulas, String> {
                             column: at.1,
                         },
                     );
-                    result.formulas.push(FormulaCell {
+                    self.result.formulas.push(FormulaCell {
                         area: cell_area(at),
                         formula: text,
                     });
                 }
             }
-            continue;
+            return true;
         }
         if text.is_empty() {
-            result.unknown.push(cell_area(at));
-            continue;
+            self.result.unknown.push(cell_area(at));
+            return true;
         }
         if kind == Some("array") {
             let Some(filled) = range_at(xml_attribute!(attributes, "ref")) else {
-                return Ok(SheetFormulas::unscanned());
+                return false;
             };
-            result.formulas.push(FormulaCell {
+            self.result.formulas.push(FormulaCell {
                 area: filled,
                 formula: text,
             });
-            continue;
+            return true;
         }
-        result.formulas.push(FormulaCell {
+        self.result.formulas.push(FormulaCell {
             area: cell_area(at),
             formula: text,
         });
+        true
     }
+}
+
+/// The formulas of one worksheet part, from its raw XML.
+pub fn scan_sheet_formulas(xml: &str) -> Result<SheetFormulas, String> {
+    let mut scan = Scan {
+        result: SheetFormulas::none(),
+        masters: JsMap::new(),
+        followers: Vec::new(),
+    };
+    // the address of the cell being read; none when it has none and between cells
+    let mut current: Option<(f64, f64)> = None;
+    let mut in_data = false;
+    let mut formula: Option<OpenFormula> = None;
+    let mut saw_data = false;
+    let mut last = 0;
+    for (start, end, stop) in scan_stops(xml) {
+        if let Some(open) = formula.as_mut() {
+            open.text += &decode_entities(&xml[last..start])?;
+        }
+        last = end;
+        let Stop::Tag {
+            closing,
+            local,
+            attributes,
+        } = stop
+        else {
+            // CDATA is the formula's text as it is; a comment or an instruction is nothing
+            if let (Some(open), Stop::Skipped(Some(cdata))) = (formula.as_mut(), stop) {
+                open.text += cdata;
+            }
+            continue;
+        };
+        let self_closed = !closing && attributes.ends_with('/');
+        if local == "sheetData" {
+            if closing {
+                in_data = false;
+            } else if !self_closed {
+                in_data = true;
+                saw_data = true;
+            }
+            continue;
+        }
+        if !in_data {
+            continue;
+        }
+        if local == "c" {
+            // a self-closed cell holds no formula
+            current = if closing || self_closed {
+                None
+            } else {
+                cell_at(xml_attribute!(attributes, "r"))
+            };
+            continue;
+        }
+        if closing {
+            if let Some(open) = formula.take()
+                && !scan.finish(&open.attributes, &open.text, open.at)
+            {
+                return Ok(SheetFormulas::unscanned());
+            }
+            continue;
+        }
+        // An `<f>` outside a cell, or in a cell that cannot be placed: nothing on
+        // this sheet can be said to be free of it.
+        let Some(at) = current else {
+            return Ok(SheetFormulas::unscanned());
+        };
+        if self_closed {
+            if !scan.finish(attributes, "", at) {
+                return Ok(SheetFormulas::unscanned());
+            }
+        } else {
+            formula = Some(OpenFormula {
+                attributes: attributes.to_owned(),
+                text: String::new(),
+                at,
+            });
+        }
+    }
+    // a formula the part ends in the middle of is a formula nothing is known of
+    if formula.is_some() {
+        return Ok(SheetFormulas::unscanned());
+    }
+    if !saw_data {
+        return Ok(SheetFormulas::none());
+    }
+    let Scan {
+        mut result,
+        masters,
+        followers,
+    } = scan;
     for follower in followers {
         let Some(master) = masters.get(&follower.si) else {
             result
@@ -324,10 +471,9 @@ pub fn pivot_output_of(
     cache_xml: Option<&str>,
 ) -> Result<PivotOutput, String> {
     let pivot_xml = pivot.map_or("", |(text, _)| text);
-    let location = js_regex!(r"<(?:[\w.-]+:)?location(?=[\s/>])([^>]*)>")
-        .exec(pivot_xml)
-        .and_then(|found| found.get(1));
-    let output = range_at(location.and_then(|location| xml_attribute!(location, "ref")));
+    let locations = xml_elements(pivot_xml, "location");
+    let location = locations.first();
+    let output = range_at(location.and_then(|location| location.attribute("ref")));
     let (Some(location), Some(output)) = (location, output) else {
         return Ok(PivotOutput {
             area: WHOLE_SHEET,
@@ -356,9 +502,7 @@ pub fn pivot_output_of(
     // none. A layout that is not two counts, or does not hold every filter, leaves their
     // extent unknown, and it is not guessed: every row from the top of the sheet down to the
     // end of the output is the pivot's, in every column.
-    let filters = js_regex!(r"<(?:[\w.-]+:)?pageField(?=[\s/>])")
-        .find_iter(pivot_xml)
-        .count() as f64;
+    let filters = xml_elements(pivot_xml, "pageField").len() as f64;
     let count = |value: Option<&str>| -> f64 {
         let value = to_number(value.unwrap_or_default());
         if value.is_finite() && value.trunc() == value && value > 0.0 {
@@ -367,8 +511,8 @@ pub fn pivot_output_of(
             0.0
         }
     };
-    let page_rows = count(xml_attribute!(location, "rowPageCount"));
-    let page_columns = count(xml_attribute!(location, "colPageCount"));
+    let page_rows = count(location.attribute("rowPageCount"));
+    let page_columns = count(location.attribute("colPageCount"));
     let area = if filters == 0.0 && page_rows == 0.0 && page_columns == 0.0 {
         output
     } else if page_rows == 0.0 || page_columns == 0.0 || page_rows * page_columns < filters {
@@ -392,45 +536,40 @@ pub fn pivot_output_of(
 
 fn pivot_source_formula(cache_xml: Option<&str>) -> Result<Option<String>, String> {
     let cache_xml = cache_xml.unwrap_or_default();
-    let cache_source = js_regex!(r"<(?:[\w.-]+:)?cacheSource(?=[\s/>])([^>]*)>")
-        .exec(cache_xml)
-        .and_then(|found| found.get(1));
-    let source_element =
-        js_regex!(r"<(?:[\w.-]+:)?worksheetSource(?=[\s/>])([^>]*)>").exec(cache_xml);
-    let (Some(cache_source), Some(source_element)) = (cache_source, source_element) else {
+    let cache_sources = xml_elements(cache_xml, "cacheSource");
+    let source_elements = xml_elements(cache_xml, "worksheetSource");
+    let (Some(cache_source), Some(source_element)) =
+        (cache_sources.first(), source_elements.first())
+    else {
         return Ok(None);
     };
-    let source = source_element.get(1).unwrap_or_default();
-    if xml_attribute!(cache_source, "type") != Some("worksheet") {
+    if cache_source.attribute("type") != Some("worksheet") {
         return Ok(None);
     }
     // A relationship on the source: the range is in another workbook. Told the
     // way the workbook gateway tells it for the editor, so the two agree.
-    let before = &cache_xml[..source_element.start()];
-    if relationship_id_of(source_element.as_str(), before)
+    let tag = &cache_xml[source_element.start..source_element.open_end];
+    if relationship_id_of(tag, &cache_xml[..source_element.start])
         .map_err(|limit| limit.to_string())?
         .is_some()
     {
         return Ok(None);
     }
-    let reference = xml_attribute!(source, "ref");
-    let sheet = xml_attribute!(source, "sheet");
-    let name = xml_attribute!(source, "name");
+    let reference = source_element.attribute("ref");
+    let sheet = source_element.attribute("sheet");
+    let name = source_element.attribute("name");
     if let (Some(reference), Some(sheet)) = (reference, sheet) {
         if range_at(Some(reference)).is_none() {
             return Ok(None);
         }
         return Ok(Some(format!(
             "='{}'!{}",
-            decode_entities(sheet)?.replace('\'', "''"),
+            sheet.replace('\'', "''"),
             reference.replace('$', "")
         )));
     }
-    if reference.is_none()
-        && sheet.is_none()
-        && let Some(name) = name
-    {
-        return Ok(Some(format!("={}", decode_entities(name)?)));
+    if reference.is_none() && sheet.is_none() {
+        return Ok(name.map(|name| format!("={name}")));
     }
     Ok(None)
 }

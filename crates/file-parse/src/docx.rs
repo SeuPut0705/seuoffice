@@ -416,11 +416,24 @@ fn redact_element_names(xml: &str) -> RedactElements {
     if !namespaced && !js_regex!(r"<[\w.-]+:redact\b").test(xml) {
         return found;
     }
-    for m in js_regex!(r#"xmlns:([\w.-]+)="([^"]*)""#).find_iter(xml) {
-        if REDACT_NAMESPACES.contains(&m.get(2).unwrap_or("")) {
-            found
-                .names
-                .insert(format!("{}:redact", m.get(1).unwrap_or("")));
+    let mut at = 0;
+    while let Some(found_at) = xml[at..].find("xmlns:") {
+        let start = at + found_at;
+        let bytes = xml.as_bytes();
+        let mut end = start + "xmlns:".len();
+        let prefix_start = end;
+        while end < bytes.len() && is_name_byte(bytes[end]) && bytes[end] != b':' {
+            end += 1;
+        }
+        let prefix = &xml[prefix_start..end];
+        match (prefix.is_empty(), quoted_value_after_eq(xml, end)) {
+            (false, Some((value, value_end))) => {
+                if REDACT_NAMESPACES.contains(&value) {
+                    found.names.insert(format!("{prefix}:redact"));
+                }
+                at = value_end;
+            }
+            _ => at = start + 1,
         }
     }
     found.count = count_marks(xml, namespaced);
@@ -445,10 +458,190 @@ fn is_redact_element(found: &RedactElements, name: &str, attrs: &str) -> bool {
     if name != "redact" {
         return false;
     }
-    js_regex!(r#"(?:^|\s)xmlns=(["'])([^"']*)\1"#)
-        .exec(attrs)
-        .and_then(|m| m.get(2))
-        .is_some_and(|ns| REDACT_NAMESPACES.contains(&ns))
+    attr_value(attrs, "xmlns").is_some_and(|ns| REDACT_NAMESPACES.contains(&ns))
+}
+
+/// `[\w.-]`
+fn is_name_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'-' | b':')
+}
+
+/// `\s*=\s*("([^"]*)"|'([^']*)')` at `at`: the value and where the match ends.
+fn quoted_value_after_eq(text: &str, at: usize) -> Option<(&str, usize)> {
+    let skip_space = |from: usize| {
+        let rest = &text[from..];
+        from + rest.len() - rest.trim_start_matches(is_js_space).len()
+    };
+    let at = skip_space(at);
+    if text.as_bytes().get(at) != Some(&b'=') {
+        return None;
+    }
+    let at = skip_space(at + 1);
+    let quote = *text.as_bytes().get(at)?;
+    if quote != b'"' && quote != b'\'' {
+        return None;
+    }
+    let len = text[at + 1..].find(char::from(quote))?;
+    Some((&text[at + 1..at + 1 + len], at + len + 2))
+}
+
+/// An attribute's value in a tag's attribute text: any quotes, white space around `=`.
+/// `(?:^|\s)NAME\s*=\s*(?:"([^"]*)"|'([^']*)')`, leftmost match.
+fn attr_value<'a>(attrs: &'a str, name: &str) -> Option<&'a str> {
+    let try_at = |at: usize| {
+        let rest = attrs[at..].strip_prefix(name)?;
+        quoted_value_after_eq(attrs, attrs.len() - rest.len()).map(|(value, _)| value)
+    };
+    if let Some(value) = try_at(0) {
+        return Some(value);
+    }
+    for (i, c) in attrs.char_indices() {
+        if is_js_space(c)
+            && let Some(value) = try_at(i + c.len_utf8())
+        {
+            return Some(value);
+        }
+    }
+    None
+}
+
+enum Token<'a> {
+    /// a comment, a processing instruction or a declaration
+    Skipped,
+    Cdata(&'a str),
+    Tag {
+        close: bool,
+        name: &'a str,
+        attrs: &'a str,
+        self_close: bool,
+    },
+    Text(&'a str),
+}
+
+/// The tokens of a part, read as an XML parser reads them (the port of the TS `TOKEN` regex):
+/// a comment, a processing instruction or a declaration, a CDATA section, a tag whose attribute
+/// values may hold `>` or `/>` inside their quotes, or text. A `<` that starts none of these is
+/// skipped, and reading goes on after it.
+struct Tokens<'a> {
+    xml: &'a str,
+    at: usize,
+    // a search for `-->`, `?>`, `]]>` that failed once fails from every later start
+    no_comment_end: bool,
+    no_pi_end: bool,
+    no_cdata_end: bool,
+}
+
+impl<'a> Tokens<'a> {
+    fn new(xml: &'a str) -> Self {
+        Self {
+            xml,
+            at: 0,
+            no_comment_end: false,
+            no_pi_end: false,
+            no_cdata_end: false,
+        }
+    }
+
+    fn tag(&self, start: usize) -> Option<(Token<'a>, usize)> {
+        let bytes = self.xml.as_bytes();
+        let mut i = start + 1;
+        let close = bytes.get(i) == Some(&b'/');
+        if close {
+            i += 1;
+        }
+        let name_start = i;
+        while i < bytes.len() && is_name_byte(bytes[i]) {
+            i += 1;
+        }
+        if i == name_start {
+            return None;
+        }
+        let name = &self.xml[name_start..i];
+        let attrs_start = i;
+        loop {
+            match *bytes.get(i)? {
+                b'>' => {
+                    let attrs = &self.xml[attrs_start..i];
+                    return Some((
+                        Token::Tag {
+                            close,
+                            name,
+                            attrs,
+                            self_close: false,
+                        },
+                        i + 1,
+                    ));
+                }
+                b'/' if bytes.get(i + 1) == Some(&b'>') => {
+                    let attrs = &self.xml[attrs_start..i];
+                    return Some((
+                        Token::Tag {
+                            close,
+                            name,
+                            attrs,
+                            self_close: true,
+                        },
+                        i + 2,
+                    ));
+                }
+                quote @ (b'"' | b'\'') => {
+                    i += 1 + self.xml[i + 1..].find(char::from(quote))? + 1;
+                }
+                _ => i += 1,
+            }
+        }
+    }
+
+    fn markup(&mut self, start: usize) -> Option<(Token<'a>, usize)> {
+        let rest = &self.xml[start..];
+        if rest.starts_with("<!--") && !self.no_comment_end {
+            match rest[4..].find("-->") {
+                Some(n) => return Some((Token::Skipped, start + 4 + n + 3)),
+                None => self.no_comment_end = true,
+            }
+        }
+        if rest.starts_with("<?") && !self.no_pi_end {
+            match rest[2..].find("?>") {
+                Some(n) => return Some((Token::Skipped, start + 2 + n + 2)),
+                None => self.no_pi_end = true,
+            }
+        }
+        if rest.starts_with("<![CDATA[") && !self.no_cdata_end {
+            match rest[9..].find("]]>") {
+                Some(n) => {
+                    return Some((Token::Cdata(&rest[9..9 + n]), start + 9 + n + 3));
+                }
+                None => self.no_cdata_end = true,
+            }
+        }
+        if rest.starts_with("<!")
+            && let Some(n) = rest[2..].find('>')
+        {
+            return Some((Token::Skipped, start + 2 + n + 1));
+        }
+        self.tag(start)
+    }
+
+    fn next_token(&mut self) -> Option<(usize, Token<'a>)> {
+        while self.at < self.xml.len() {
+            let start = self.at;
+            if self.xml.as_bytes()[start] == b'<' {
+                if let Some((token, end)) = self.markup(start) {
+                    self.at = end;
+                    return Some((start, token));
+                }
+                // no token starts here: the next start is the following character
+                self.at += 1;
+                continue;
+            }
+            let end = self.xml[start..]
+                .find('<')
+                .map_or(self.xml.len(), |n| start + n);
+            self.at = end;
+            return Some((start, Token::Text(&self.xml[start..end])));
+        }
+        None
+    }
 }
 
 fn emit_para(
@@ -527,31 +720,41 @@ fn scan_body(
     let mut note_separator = false;
     let mut note_lines: Vec<Units> = Vec::new();
 
-    for m in js_regex!(r"<(\/?)([\w:.-]+)([^>]*?)(\/?)>|([^<]+)").find_iter(xml) {
+    let mut tokens = Tokens::new(xml);
+    while let Some((start, token)) = tokens.next_token() {
         if out.full {
             // the text collected so far may already hold a run whose mark was not read
-            if redact_seen != count_marks(&xml[..m.start()], redact_elements.namespaced) {
+            if redact_seen != count_marks(&xml[..start], redact_elements.namespaced) {
                 return Err(redaction_error(MARK_UNREADABLE));
             }
             return Ok(());
         }
-        if let Some(text) = m.get(5) {
-            if in_text && skip.is_none() && !run_hidden {
-                let decoded = decode_entities(text)?;
-                append_text(&mut paras, &run_labels, &decoded);
+        let (close, name, attrs, self_close) = match token {
+            Token::Cdata(cdata) => {
+                if in_text && skip.is_none() && !run_hidden {
+                    append_text(&mut paras, &run_labels, &units(cdata));
+                }
+                continue;
             }
-            continue;
-        }
-        let close = !m.get(1).unwrap_or("").is_empty();
-        let name = m.get(2).unwrap_or("");
-        let attrs = m.get(3).unwrap_or("");
-        let self_close = !m.get(4).unwrap_or("").is_empty();
+            Token::Text(text) => {
+                if in_text && skip.is_none() && !run_hidden {
+                    let decoded = decode_entities(text)?;
+                    append_text(&mut paras, &run_labels, &decoded);
+                }
+                continue;
+            }
+            // a comment, a processing instruction or a declaration holds no text
+            Token::Skipped => continue,
+            Token::Tag {
+                close,
+                name,
+                attrs,
+                self_close,
+            } => (close, name, attrs, self_close),
+        };
         let opening = !close;
         if opening && is_redact_element(&redact_elements, name, attrs) {
-            let label = js_regex!(r#"(?:^|\s)w:label="([^"]*)""#)
-                .exec(attrs)
-                .and_then(|m| m.get(1))
-                .filter(|label| !label.is_empty());
+            let label = attr_value(attrs, "w:label").filter(|label| !label.is_empty());
             let Some(label) = label else {
                 return Err(redaction_error("a mark carries no label"));
             };
