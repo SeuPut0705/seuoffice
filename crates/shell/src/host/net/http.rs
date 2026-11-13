@@ -550,8 +550,14 @@ impl Net for HttpNet {
         if let Some(source) = stop {
             stop_source(&mut st, source);
         } else if let Some(source) = source {
-            // the chunks only this branch had still to read go with it
-            trim(&mut st, source);
+            if st.bodies.values().any(|b| b.source == source) {
+                // the chunks only this branch had still to read go with it
+                trim(&mut st, source);
+            } else {
+                // the last branch of a stream that ended (the runtime stops
+                // one that has not): nothing reads it any more
+                stop_source(&mut st, source);
+            }
         }
     }
 
@@ -738,93 +744,160 @@ mod tests {
         (st.sources.len(), st.bodies.len(), st.ops.len())
     }
 
+    /// The host on a tokio runtime of its own and one AI runtime driver on a
+    /// core thread, as the shell builds them
+    struct World {
+        net: Arc<HttpNet>,
+        core: Arc<CoreThread>,
+        services: Services,
+        stop: Option<tokio::sync::oneshot::Sender<()>>,
+        runner: Option<std::thread::JoinHandle<()>>,
+    }
+
+    impl World {
+        fn new() -> World {
+            let tokio_rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let handle = tokio_rt.handle().clone();
+            let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+            let runner = std::thread::spawn(move || {
+                tokio_rt.block_on(async {
+                    let _ = stopped.await;
+                })
+            });
+            let spawn: Spawn = Arc::new(move |future| {
+                handle.spawn(future);
+            });
+            let core = CoreThread::spawn("http-test-core");
+            let core_thread: Arc<dyn Thread> = core.clone();
+            let views = Arc::new(ViewTable::new(
+                Arc::new(TauriOutlet::default()),
+                core_thread.clone(),
+            ));
+            World {
+                net: Arc::new(HttpNet::new(spawn)),
+                services: Services {
+                    ui: CoreThread::spawn("http-test-ui"),
+                    core: core_thread,
+                    workers: Arc::new(ThreadWorkers) as Arc<dyn Workers>,
+                    events: Arc::new(NoEvents),
+                    views: views as Arc<dyn Views>,
+                    paths: Arc::new(ShellPaths::new()),
+                    hosts: Arc::new(Hosts::default()),
+                },
+                core,
+                stop: Some(stop),
+                runner: Some(runner),
+            }
+        }
+
+        /// Runs `program` on the runtime of a new driver; what it comes to
+        fn run<T: Send + 'static, F: Future<Output = T> + 'static>(
+            &self,
+            program: impl FnOnce(main_core::packages::ai_provider::task::Rt) -> F + Send + 'static,
+        ) -> T {
+            let (tx, rx) = mpsc::channel::<T>();
+            let host: shell_ipc_a::NetHost = self.net.clone();
+            let services = self.services.clone();
+            run_on(self.core.as_ref(), move || {
+                let driver = Driver::new(&services, host);
+                driver.run(program(driver.rt()), move |out| {
+                    let _ = tx.send(out);
+                });
+                // the driver lives on for the rest of the test process
+                std::mem::forget(driver);
+            });
+            rx.recv_timeout(Duration::from_secs(20))
+                .expect("the program ended")
+        }
+
+        /// What the host holds once its answers settled
+        fn held_after_settling(&self, expected: (usize, usize, usize)) -> (usize, usize, usize) {
+            let end = std::time::Instant::now() + Duration::from_secs(5);
+            while held(&self.net) != expected && std::time::Instant::now() < end {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            held(&self.net)
+        }
+    }
+
+    impl Drop for World {
+        fn drop(&mut self) {
+            let _ = self.stop.take().map(|stop| stop.send(()));
+            let _ = self.runner.take().map(std::thread::JoinHandle::join);
+        }
+    }
+
     /// Bodies read to their end, a clone read after its original, and a
     /// clone read first: none of it stays with the host afterwards
     #[test]
     fn a_body_read_to_its_end_leaves_nothing_behind() {
-        let tokio_rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let handle = tokio_rt.handle().clone();
-        let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
-        let runner = std::thread::spawn(move || {
-            tokio_rt.block_on(async {
-                let _ = stop_rx.await;
-            })
-        });
-        let spawn: Spawn = Arc::new(move |future| {
-            handle.spawn(future);
-        });
-        let net = Arc::new(HttpNet::new(spawn));
-        let core = CoreThread::spawn("http-test-core");
-        let core_thread: Arc<dyn Thread> = core.clone();
-        let views = Arc::new(ViewTable::new(
-            Arc::new(TauriOutlet::default()),
-            core_thread.clone(),
-        ));
-        let services = Services {
-            ui: CoreThread::spawn("http-test-ui"),
-            core: core_thread,
-            workers: Arc::new(ThreadWorkers) as Arc<dyn Workers>,
-            events: Arc::new(NoEvents),
-            views: views as Arc<dyn Views>,
-            paths: Arc::new(ShellPaths::new()),
-            hosts: Arc::new(Hosts::default()),
-        };
+        let w = World::new();
         let url = server();
-        let (tx, rx) = mpsc::channel::<Vec<String>>();
-        let host: shell_ipc_a::NetHost = net.clone();
-        run_on(core.as_ref(), move || {
-            let driver = Driver::new(&services, host);
-            let rt = driver.rt();
-            driver.run(
-                async move {
-                    let mut texts = Vec::new();
-                    for _ in 0..3 {
-                        let response = rt
-                            .fetch(Fetcher::Node, &url, Request::default(), None)
-                            .await
-                            .unwrap();
-                        texts.push(response.text().await.unwrap());
-                    }
-                    let response = rt
-                        .fetch(Fetcher::Node, &url, Request::default(), None)
-                        .await
-                        .unwrap();
-                    let clone = response.clone_response();
-                    texts.push(response.text().await.unwrap());
-                    texts.push(clone.text().await.unwrap());
-                    let response = rt
-                        .fetch(Fetcher::Node, &url, Request::default(), None)
-                        .await
-                        .unwrap();
-                    let clone = response.clone_response();
-                    texts.push(clone.text().await.unwrap());
-                    texts.push(response.text().await.unwrap());
-                    texts
-                },
-                move |texts| {
-                    let _ = tx.send(texts);
-                },
-            );
-            // the driver lives on for the rest of the test process
-            std::mem::forget(driver);
+        let texts = w.run(move |rt| async move {
+            let mut texts = Vec::new();
+            for _ in 0..3 {
+                let response = rt
+                    .fetch(Fetcher::Node, &url, Request::default(), None)
+                    .await
+                    .unwrap();
+                texts.push(response.text().await.unwrap());
+            }
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            texts.push(response.text().await.unwrap());
+            texts.push(clone.text().await.unwrap());
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            texts.push(clone.text().await.unwrap());
+            texts.push(response.text().await.unwrap());
+            texts
         });
-        let texts = rx
-            .recv_timeout(Duration::from_secs(20))
-            .expect("the reads ended");
         assert_eq!(texts, vec!["hello world"; 7]);
-        let end = std::time::Instant::now() + Duration::from_secs(5);
-        while held(&net) != (0, 0, 0) && std::time::Instant::now() < end {
-            std::thread::sleep(Duration::from_millis(10));
-        }
         assert_eq!(
-            held(&net),
+            w.held_after_settling((0, 0, 0)),
             (0, 0, 0),
             "(sources, bodies, ops) the host still holds"
         );
-        let _ = stop_tx.send(());
-        let _ = runner.join();
+    }
+
+    /// The original read to its end and its clone left unread: the stream
+    /// ended, so the clone's release comes without `stop`, and the host lets
+    /// go of the stream with that last branch
+    #[test]
+    fn the_unread_clone_of_an_ended_stream_is_freed_when_released() {
+        let w = World::new();
+        let url = server();
+        let text = w.run(move |rt| async move {
+            let response = rt
+                .fetch(Fetcher::Node, &url, Request::default(), None)
+                .await
+                .unwrap();
+            let clone = response.clone_response();
+            let text = response.text().await.unwrap();
+            drop(clone);
+            text
+        });
+        assert_eq!(text, "hello world");
+        // the runtime's `Cmd::Release { body: clone, stop: None }`, given
+        // here as the host gets it (the runtime of this branch's contract
+        // does not send it yet; once it does, the branch is already gone)
+        let left: Vec<Id> = Inner::lock(&w.net.0.state).bodies.keys().copied().collect();
+        for body in left {
+            w.net.release(body, None);
+        }
+        assert_eq!(
+            w.held_after_settling((0, 0, 0)),
+            (0, 0, 0),
+            "(sources, bodies, ops) the host still holds"
+        );
     }
 }
