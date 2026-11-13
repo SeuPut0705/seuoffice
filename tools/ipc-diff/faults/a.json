@@ -721,10 +721,10 @@
     "groups": ["a/generate"]
   },
   {
-    "name": "generate-window-contents-id-zero",
+    "name": "generate-window-contents-id-offset",
     "file": "shell-ipc/a/src/generate/bridge.rs",
     "find": ".map_or(f64::NAN, |ViewId(id)| f64::from(id))",
-    "replace": ".map_or(0.0, |ViewId(id)| f64::from(id))",
+    "replace": ".map_or(f64::NAN, |ViewId(id)| f64::from(id) + 1.0)",
     "groups": ["a/generate"]
   },
   {
