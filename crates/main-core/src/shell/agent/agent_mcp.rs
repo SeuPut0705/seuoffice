@@ -344,7 +344,7 @@ pub fn withholding_slides<'h>(step: ToolStep<'h>, deck_withholds: bool) -> ToolS
                 },
                 then: Box::new(move |settled: Settled| match settled {
                     Err(message) => rewrap(Err(message)),
-                    Ok(withholds) if withholds.is_some_and(|value| value.truthy()) => {
+                    Ok(withholds) if withholds.as_ref().is_some_and(|value| value.truthy()) => {
                         rewrap(Err(WITHHELD_DECK.to_owned()))
                     }
                     Ok(_) => ToolStep::Await {

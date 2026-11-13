@@ -69,12 +69,12 @@ use super::hub::{
 use super::limits::MCP_CALL_TIMEOUT_MS;
 use super::listing::{ListedTool, McpListing};
 use super::oauth::{
-    AuthFetch, McpOAuthAccess, McpSignInFailure, McpSignInOptions, McpSignInResult, NetHost,
-    RefreshOutcome, SignIn, SignInContext, SignInHost, SignInResult, StoredOAuth,
-    access_token_expired, check_address, is_unresolved, parse_stored_oauth, refresh_stored_oauth,
-    revoke_stored_oauth, serialize_stored_oauth,
+    AuthFetch, McpOAuthAccess, McpSignInFailure, McpSignInOptions, McpSignInResult, RefreshOutcome,
+    SignIn, SignInContext, SignInHost, SignInResult, StoredOAuth, access_token_expired,
+    check_address, is_unresolved, parse_stored_oauth, refresh_stored_oauth, revoke_stored_oauth,
+    serialize_stored_oauth,
 };
-use super::oauth_loopback::{LoopbackHost, LoopbackPages};
+use super::oauth_loopback::LoopbackPages;
 use crate::packages::ai_provider::jsval::{as_str, object, prop, text};
 use crate::packages::google_drive::oauth::SignInPage;
 use crate::packages::i18n::PRODUCT_NAME;

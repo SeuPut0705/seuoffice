@@ -217,7 +217,9 @@ pub mod schema {
     fn stringify_primitive(value: &JsonValue) -> String {
         match value {
             JsonValue::String(s) => format!("\"{s}\""),
-            other => other.to_js_string(),
+            other => jscompat::to_primitive(Some(other))
+                .map(|value| value.to_js_string())
+                .unwrap_or_default(),
         }
     }
 
@@ -749,7 +751,7 @@ pub mod schema {
             Schema::Number { coerce } => {
                 let value = if *coerce {
                     Some(JsonValue::Number(
-                        input.map_or(f64::NAN, |value| value.to_number()),
+                        jscompat::to_primitive(input).map_or(f64::NAN, |value| value.to_number()),
                     ))
                 } else {
                     input.cloned()
