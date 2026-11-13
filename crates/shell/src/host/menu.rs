@@ -18,9 +18,12 @@ mod context;
 mod dock;
 
 pub(crate) use app::{app_menu_activate, app_menu_popup};
-// D2's `docs:view-menu-state` host reports a docs view's View menu state here
+// what D2's docs host (`DocsShell`) drives: the Docs View and Insert state
 #[allow(unused_imports)]
-pub(crate) use app::{DocsViewState, note_docs_view_state};
+pub(crate) use app::{
+    DocsViewState, rebuild_docs_menu, set_docs_view_state_source, set_menu_item_checked,
+    set_menu_item_enabled,
+};
 
 pub(crate) use cef_ops::{host_of, print_preview};
 

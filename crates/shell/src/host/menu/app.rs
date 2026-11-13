@@ -74,6 +74,12 @@ use std::sync::Arc;
 /// The id prefix of this menu's items; the one global listener takes these only
 const ID_PREFIX: &str = "m-app-";
 
+// Docs' template ids, which the docs host patches through `getMenuItemById`
+const AI_SIDEBAR: &str = "docs-menu-ai-sidebar";
+const DARK_MODE: &str = "docs-menu-dark-mode";
+const INSERT_EQUATION: &str = "docs-menu-insert-equation";
+const INSERT_COMMENT: &str = "docs-menu-insert-comment";
+
 /// DevTools exist in a debug build or with the `devtools` feature (Tauri's own gate)
 const DEV_TOOLS: bool = cfg!(any(debug_assertions, feature = "devtools"));
 
@@ -192,6 +198,8 @@ enum MenuRole {
 struct Item {
     /// `m-app-<n>` once [`number`] ran; items with no action have none
     id: Option<String>,
+    /// Electron's `id` of the template, what `getMenuItemById` finds
+    name: Option<&'static str>,
     label: String,
     accelerator: Option<String>,
     enabled: bool,
@@ -218,6 +226,7 @@ enum Node {
 fn item(label: &str, accelerator: Option<&str>, act: Act) -> Node {
     Node::Item(Item {
         id: None,
+        name: None,
         label: label.to_owned(),
         accelerator: accelerator.map(str::to_owned),
         enabled: true,
@@ -638,6 +647,7 @@ impl Ctx {
         }
         let mut items = vec![Node::Item(Item {
             id: None,
+            name: None,
             label: self.tm("menuSectionNew"),
             accelerator: None,
             enabled: false,
@@ -1083,6 +1093,7 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
     let recent = if ctx.recent.is_empty() {
         vec![Node::Item(Item {
             id: None,
+            name: None,
             label: d("menuNoRecent"),
             accelerator: None,
             enabled: false,
@@ -1152,9 +1163,10 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
             role(Role::SelectAll, &d("menuSelectAll")),
         ],
     );
-    let checkbox = |label: String, checked: bool| {
+    let checkbox = |name: &'static str, label: String, checked: bool| {
         Node::Item(Item {
             id: None,
+            name: Some(name),
             label,
             accelerator: None,
             enabled: true,
@@ -1177,17 +1189,18 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
         unbound(&d("menuZoom100"), Some("CmdOrCtrl+0")),
         submenu(&d("menuZoom"), zoom),
         Node::Separator,
-        checkbox(d("menuAiSidebar"), ctx.docs_view.ai_sidebar),
-        checkbox(d("menuDarkMode"), ctx.docs_view.dark_canvas),
+        checkbox(AI_SIDEBAR, d("menuAiSidebar"), ctx.docs_view.ai_sidebar),
+        checkbox(DARK_MODE, d("menuDarkMode"), ctx.docs_view.dark_canvas),
         Node::Separator,
         role(Role::Fullscreen, &d("menuFullscreen")),
     ];
     view.extend(ctx.dev_tools_item());
     let view = submenu(&d("menuView"), view);
     // an ODT document switches off what it cannot hold
-    let odt_off = |label: String, act: Act| {
+    let odt_off = |name: &'static str, label: String, act: Act| {
         Node::Item(Item {
             id: None,
+            name: Some(name),
             label,
             accelerator: None,
             enabled: !ctx.docs_view.odt,
@@ -1202,9 +1215,9 @@ fn docs_menus(ctx: &Ctx) -> Vec<Node> {
             unbound(&d("menuInsertImage"), None),
             unbound(&d("menuInsertPageBreak"), None),
             unbound(&d("menuInsertLink"), Some("CmdOrCtrl+K")),
-            odt_off(d("menuInsertEquation"), Act::Unbound),
+            odt_off(INSERT_EQUATION, d("menuInsertEquation"), Act::Unbound),
             Node::Separator,
-            odt_off(d("menuComment"), Act::Unbound),
+            odt_off(INSERT_COMMENT, d("menuComment"), Act::Unbound),
         ],
     );
     let format = submenu(
@@ -1674,8 +1687,18 @@ static POPUP: Mutex<Option<(TabKind, HashMap<u32, Act>)>> = Mutex::new(None);
 /// The kind of the menu last asked for, for a rebuild in another language
 static KIND: Mutex<Option<TabKind>> = Mutex::new(None);
 
-/// What a docs view last reported for its View and Insert menus
-static DOCS_VIEWS: Mutex<Option<HashMap<ViewId, DocsViewState>>> = Mutex::new(None);
+/// The items of the menu now set that carry a template id, for `getMenuItemById`
+static NAMED: Mutex<Option<HashMap<&'static str, NamedItem>>> = Mutex::new(None);
+
+#[derive(Clone)]
+enum NamedItem {
+    Check(CheckMenuItem<DynRuntime>),
+    Plain(TauriItem<DynRuntime>),
+}
+
+/// The docs host's `activeViewMenuState()`: what a docs view last reported for
+/// its View and Insert menus (`docs:view-menu-state`); the docs host keeps it
+static DOCS_VIEW_STATE: OnceLock<fn(&Provided, ViewId) -> Option<DocsViewState>> = OnceLock::new();
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex
@@ -1729,15 +1752,18 @@ fn predefined(
     }
 }
 
-fn build_node(app: &AppHandle, node: &Node) -> tauri::Result<Built> {
+/// The items with a template id go to `named` as well
+type Named = HashMap<&'static str, NamedItem>;
+
+fn build_node(app: &AppHandle, node: &Node, named: &mut Named) -> tauri::Result<Built> {
     Ok(match node {
         Node::Separator => Built::Predefined(PredefinedMenuItem::separator(app)?),
         Node::Role { role, label } => Built::Predefined(predefined(app, *role, label.as_deref())?),
         Node::Item(item) => {
             let id = item.id.clone().unwrap_or_default();
             let accelerator = item.accelerator.as_deref();
-            match item.checked {
-                Some(checked) => Built::Check(CheckMenuItem::with_id(
+            let handle = match item.checked {
+                Some(checked) => NamedItem::Check(CheckMenuItem::with_id(
                     app,
                     id,
                     &item.label,
@@ -1745,17 +1771,24 @@ fn build_node(app: &AppHandle, node: &Node) -> tauri::Result<Built> {
                     checked,
                     accelerator,
                 )?),
-                None => Built::Item(TauriItem::with_id(
+                None => NamedItem::Plain(TauriItem::with_id(
                     app,
                     id,
                     &item.label,
                     item.enabled,
                     accelerator,
                 )?),
+            };
+            if let Some(name) = item.name {
+                named.insert(name, handle.clone());
+            }
+            match handle {
+                NamedItem::Check(check) => Built::Check(check),
+                NamedItem::Plain(plain) => Built::Item(plain),
             }
         }
         Node::Menu { label, role, items } => {
-            let built = build_nodes(app, items)?;
+            let built = build_nodes(app, items, named)?;
             let refs: Vec<&dyn IsMenuItem<DynRuntime>> = built.iter().map(Built::as_item).collect();
             let menu = Submenu::with_items(app, label, true, &refs)?;
             // the NSApp roles exist only in the macOS build of muda
@@ -1772,12 +1805,19 @@ fn build_node(app: &AppHandle, node: &Node) -> tauri::Result<Built> {
     })
 }
 
-fn build_nodes(app: &AppHandle, nodes: &[Node]) -> tauri::Result<Vec<Built>> {
-    nodes.iter().map(|node| build_node(app, node)).collect()
+fn build_nodes(app: &AppHandle, nodes: &[Node], named: &mut Named) -> tauri::Result<Vec<Built>> {
+    nodes
+        .iter()
+        .map(|node| build_node(app, node, named))
+        .collect()
 }
 
-fn build_menu(app: &AppHandle, menus: &[Node]) -> tauri::Result<Menu<DynRuntime>> {
-    let built = build_nodes(app, menus)?;
+fn build_menu(
+    app: &AppHandle,
+    menus: &[Node],
+    named: &mut Named,
+) -> tauri::Result<Menu<DynRuntime>> {
+    let built = build_nodes(app, menus, named)?;
     let refs: Vec<&dyn IsMenuItem<DynRuntime>> = built.iter().map(Built::as_item).collect();
     Menu::with_items(app, &refs)
 }
@@ -1785,9 +1825,11 @@ fn build_menu(app: &AppHandle, menus: &[Node]) -> tauri::Result<Menu<DynRuntime>
 /// On the UI thread: numbers the items, makes the Tauri menu and sets it
 fn set_menu(app: &AppHandle, kind: TabKind, mut menus: Vec<Node>, check_updates: String) {
     let clicks = number(&mut menus, &NEXT_ID);
-    match build_menu(app, &menus).and_then(|menu| app.set_menu(menu)) {
+    let mut named = Named::new();
+    match build_menu(app, &menus, &mut named).and_then(|menu| app.set_menu(menu)) {
         Ok(_) => {
             *lock(&CLICKS) = Some((kind, clicks));
+            *lock(&NAMED) = Some(named);
             *lock(&SHOWN) = Some(Shown {
                 kind,
                 menus,
@@ -1831,7 +1873,7 @@ pub(crate) fn apply_menu_for(app: &AppHandle, kind: TabKind) {
         let docs_view = if kind == TabKind::Docs {
             shell_tabs(provided)
                 .and_then(|tabs| tabs.active_editor(TabKind::Docs))
-                .and_then(|view| lock(&DOCS_VIEWS).as_ref()?.get(&view).copied())
+                .and_then(|view| DOCS_VIEW_STATE.get()?(provided, view))
                 .unwrap_or_default()
         } else {
             DocsViewState::default()
@@ -1869,20 +1911,76 @@ fn seams_of(provided: &Provided) -> Seams {
     }
 }
 
-/// A docs view reported the state of its View and Insert menus
-/// (`docs:view-menu-state`): the menu shows it while the view is the active docs tab
-#[allow(dead_code)] // called by D2's `docs:view-menu-state` host
-pub(crate) fn note_docs_view_state(app: &AppHandle, view: ViewId, state: DocsViewState) {
-    lock(&DOCS_VIEWS)
-        .get_or_insert_with(HashMap::new)
-        .insert(view, state);
-    let app = app.clone();
-    post_core(move |provided, _| {
-        let active = shell_tabs(provided).and_then(|tabs| tabs.active_editor(TabKind::Docs));
-        if active == Some(view) && *lock(&KIND) == Some(TabKind::Docs) {
-            apply_menu_for(&app, TabKind::Docs);
+/// Where the Docs menu reads the active docs view's View and Insert state;
+/// the docs host sets it once
+#[allow(dead_code)] // set by D2's docs host
+pub(crate) fn set_docs_view_state_source(source: fn(&Provided, ViewId) -> Option<DocsViewState>) {
+    let _ = DOCS_VIEW_STATE.set(source);
+}
+
+/// `Menu.getApplicationMenu()?.getMenuItemById(id).checked = checked`: the
+/// item of the menu now set, nothing when it has no such item. Any thread.
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn set_menu_item_checked(id: &str, checked: bool) {
+    patch_named(
+        id,
+        |node| node.checked = Some(checked),
+        |named| match named {
+            NamedItem::Check(item) => item.set_checked(checked),
+            NamedItem::Plain(_) => Ok(()),
+        },
+    );
+}
+
+/// `...getMenuItemById(id).enabled = enabled`. Any thread.
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn set_menu_item_enabled(id: &str, enabled: bool) {
+    patch_named(
+        id,
+        |node| node.enabled = enabled,
+        |named| match named {
+            NamedItem::Check(item) => item.set_enabled(enabled),
+            NamedItem::Plain(item) => item.set_enabled(enabled),
+        },
+    );
+}
+
+/// `buildDocsMenu()`: the Docs menu again (Open Recent follows recent.json)
+/// when it is the one set; a Docs menu set later is built fresh anyway
+#[allow(dead_code)] // called by D2's docs host
+pub(crate) fn rebuild_docs_menu() {
+    if *lock(&KIND) != Some(TabKind::Docs) {
+        return;
+    }
+    if let Some(shell) = SHELL.get() {
+        apply_menu_for(&shell.app, TabKind::Docs);
+    }
+}
+
+/// Changes the named item in the live menu and in the tree the ☰ popup lists
+fn patch_named(
+    id: &str,
+    tree: impl Fn(&mut Item),
+    live: impl FnOnce(&NamedItem) -> tauri::Result<()>,
+) {
+    fn walk(nodes: &mut [Node], id: &str, tree: &impl Fn(&mut Item)) {
+        for node in nodes {
+            match node {
+                Node::Item(item) if item.name == Some(id) => tree(item),
+                Node::Menu { items, .. } => walk(items, id, tree),
+                _ => {}
+            }
         }
-    });
+    }
+    if let Some(shown) = lock(&SHOWN).as_mut() {
+        walk(&mut shown.menus, id, &tree);
+    }
+    let named = lock(&NAMED)
+        .as_ref()
+        .and_then(|named| named.get(id).cloned());
+    if let Some(Err(error)) = named.as_ref().map(live) {
+        eprintln!("shell: the menu item {id}: {error}");
+    }
 }
 
 /// `readJson<string[]>(RECENT_PATH(), []).slice(0, 10)`: Docs' own list
@@ -3197,5 +3295,31 @@ mod tests {
             .find(|e| e.label == "Undo")
             .expect("Undo");
         assert_eq!(acts.get(&undo.id), Some(&Act::Frame(FrameEdit::Undo)));
+    }
+
+    /// The docs host's `getMenuItemById` patches reach the ☰ popup's entries too
+    #[test]
+    fn named_items_patch_the_menu_the_popup_lists() {
+        let mut menus = menu_for(TabKind::Docs, &ctx(Os::Windows, Lang::En));
+        number(&mut menus, &AtomicU32::new(1));
+        *lock(&SHOWN) = Some(Shown {
+            kind: TabKind::Docs,
+            menus,
+            check_updates: String::new(),
+        });
+        set_menu_item_enabled(INSERT_EQUATION, false);
+        set_menu_item_checked(DARK_MODE, true);
+        set_menu_item_checked("no-such-item", true);
+        let (entries, _) = popup_entries(&lock(&SHOWN).as_ref().expect("shown").menus, "");
+        let find = |menu: &str, label: &str| {
+            entries
+                .iter()
+                .find(|e| e.label == menu)
+                .and_then(|m| m.submenu.iter().find(|e| e.label == label).cloned())
+                .unwrap_or_else(|| panic!("{menu} > {label}"))
+        };
+        assert!(!find("Insert", "Equation\u{2026}").enabled);
+        assert!(find("Insert", "Comment").enabled);
+        assert!(find("View", "Dark Mode").checked);
     }
 }
