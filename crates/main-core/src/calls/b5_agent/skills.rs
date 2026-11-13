@@ -9,9 +9,10 @@
 //! (`[name, ...args]`), as the TypeScript's fakes write them. The deck behind
 //! the redaction check is the archive the case lists.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
-use jscompat::node_path::host::{join, resolve};
+use jscompat::node_path::host::join;
 use jscompat::{JsObject, JsonValue, json_value_from_serde};
 use serde_json::{Map, Value, json};
 
@@ -25,6 +26,14 @@ use crate::shell::agent::agent_api::{
     AgentPrefs, AgentPrepareStep, AgentProjectPrefs, AgentProjectPrefsPatch, AgentProjectSkillView,
     AgentProjectSkillsView, AgentStartFailure,
 };
+use crate::shell::agent::agent_session_folders::{
+    ExecRequest, FolderHost, make_agent_session_folder,
+};
+use crate::shell::agent::agent_sessions::{
+    AgentHost, AgentManager, AgentMcpSession as ManagerSession, AgentPermissionAnswer,
+    AgentSessionHandle, AgentSessionOptions, AgentStartAnswer, AgentStartCall, AgentStartRequest,
+    AgentStartResult, AppMcp, CodexRunOptions, RelayAnswer, RemoveOptions, Stoppable,
+};
 use crate::shell::agent::agent_skills::{
     AgentOpenTab, AgentSessionSkill, AgentSessionSkillName, AgentSkillEntry, AgentSkillListEntry,
     AgentSkillProposalInput, AgentSkillProposalResult, AgentTemplateCandidate, DeckArchive,
@@ -35,8 +44,8 @@ use crate::shell::agent::agent_skills::{
     user_skills_manage_gate,
 };
 use crate::shell::agent::agent_window::{
-    AgentMcpSession, AgentSkillTools, AgentSkillToolsDeps, AgentStartOutcome, AgentStartRequest,
-    AgentWindowHost, AgentWindowShown, PermissionAnswer, ShownProposal, SubscriptionStatus,
+    AgentMcpSession, AgentSkillTools, AgentSkillToolsDeps, AgentWindowHost, AgentWindowSendStep,
+    AgentWindowShown, AgentWindowStartJob, AgentWindowStartStep, ShownProposal, SubscriptionStatus,
     TemplateAsIs, TemplateBlank, TemplateCheck, TemplatePreviewInput, TemplatePreviewOutcome,
     WindowState, agent_answer, agent_codex_start_choices, agent_connections, agent_emit,
     agent_event_view, agent_get_init, agent_get_project_prefs, agent_get_project_skills,
@@ -44,7 +53,7 @@ use crate::shell::agent::agent_window::{
     agent_open_file, agent_permission_answer, agent_pick_folder, agent_send, agent_set_prefs,
     agent_set_project_prefs, agent_set_project_skills, agent_start, agent_stop,
     agent_template_as_is, agent_template_blank, agent_template_check, agent_window_load,
-    agent_window_options, agent_window_reuse, start_agent_for_window,
+    agent_window_options, agent_window_reuse, plan_agent_start,
 };
 use crate::shell::renderer_disposal::Failure;
 
@@ -582,9 +591,9 @@ fn failure_of(v: &Value) -> AgentStartFailure {
     }
 }
 
-fn outcome_of(v: &Value) -> AgentStartOutcome {
+fn outcome_of(v: &Value) -> AgentStartResult {
     if flag(v, "ok") {
-        AgentStartOutcome::Started {
+        AgentStartResult::Started {
             session_id: text(v, "sessionId"),
             skills: list(v, "skills").iter().map(session_skill_of).collect(),
             mcp_keep_inside: v.get("mcpKeepInside").map(|_| texts(v, "mcpKeepInside")),
@@ -593,7 +602,7 @@ fn outcome_of(v: &Value) -> AgentStartOutcome {
                 .map(|_| texts(v, "instructionsTruncated")),
         }
     } else {
-        AgentStartOutcome::Failed {
+        AgentStartResult::Failed {
             failure: failure_of(v.get("failure").unwrap_or(&Value::Null)),
             cause: opt_text(v, "cause"),
         }
@@ -609,11 +618,69 @@ fn failing(what: Option<&Value>) -> Result<&Value, Failure> {
     }
 }
 
-/// a program that is running: the TypeScript's `LiveSession`
-struct Session {
-    id: String,
-    owner: i64,
-    root: String,
+/// where the scenario's calls are logged: shared with the programs and servers the manager owns
+#[derive(Clone)]
+struct Logger {
+    lines: Rc<RefCell<Vec<Vec<Value>>>>,
+    /// the sessions end with the app at the end of a case: nothing of that is logged
+    quiet: Rc<Cell<bool>>,
+}
+
+impl Logger {
+    fn put(&self, line: Vec<Value>) {
+        if !self.quiet.get() {
+            self.lines.borrow_mut().push(line);
+        }
+    }
+}
+
+/// the program of a session, as the TypeScript's fake runner gives it
+struct WorldSession {
+    log: Logger,
+}
+
+impl AgentSessionHandle for WorldSession {
+    fn send(&mut self, text: &str) {
+        self.log.put(vec![json!("session.send"), json!(text)]);
+    }
+
+    fn answer(&mut self, id: &str, answer: &AgentPermissionAnswer) {
+        self.log.put(vec![
+            json!("session.answer"),
+            json!(id),
+            jscompat::json_value_to_serde(&answer.to_json()),
+        ]);
+    }
+
+    fn set_open_documents(&mut self, paths: &[String]) {
+        self.log.put(vec![json!("setOpenDocuments"), json!(paths)]);
+    }
+
+    fn stop(&mut self) {
+        self.log.put(vec![json!("session.stop")]);
+    }
+}
+
+/// the app's MCP server of a session
+struct WorldAppMcp {
+    log: Logger,
+}
+
+impl Stoppable for WorldAppMcp {
+    fn stop(&mut self) {
+        self.log.put(vec![json!("appMcp.stop")]);
+    }
+}
+
+/// `Math.random()` letters of a session folder's name
+fn random_letters() -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    (0..6)
+        .map(|_| {
+            let at = (jscompat::math_random() * CHARS.len() as f64) as usize;
+            char::from(CHARS[at.min(CHARS.len() - 1)])
+        })
+        .collect()
 }
 
 /// the window of the module state: `win`
@@ -623,47 +690,57 @@ struct Win {
     minimized: bool,
 }
 
-/// What the window's services and its manager do, as the case describes
-/// them. The manager is the TypeScript's real one with a fake runner: a start
-/// succeeds when the folder is there and the program is connected, and a
-/// session answers what the runner's fake logs.
+/// What the window's services do, as the case describes them. The manager is the real one
+/// (the caller owns it) with a fake runner: this scenario is its host and carries out the calls
+/// of its start steps, the way the TypeScript's fake `startAppMcp` and runner do.
 struct World<'a> {
     v: &'a Value,
     deps: &'a Value,
-    log: RefCell<Vec<Vec<Value>>>,
+    log: Logger,
     deck: Deck,
     win: Option<Win>,
     /// the id the next window gets
     next_window: i64,
     /// the page `win` stands for in a step: the last window made, or 5 before
     page: i64,
-    live: Vec<Session>,
-    /// every session started, in order: its tools and its events are named by it
-    started: Vec<(i64, String, String)>,
     uuids: usize,
+    /// the clock of the case
+    now_ms: f64,
+    /// every app MCP server started, in order: `(owner, session, project root)`; the tools of a
+    /// session are named by it
+    hooks: Vec<(i64, String, String)>,
+    /// the owner and the session of every program started, in order: its events are named by it
+    programs: Vec<(i64, String)>,
     /// a start that answers as the case says (`startAgentForWindow` on its own)
     scripted_start: Option<&'a Value>,
+    /// a start whose program the case holds back: its job and the answer the runner will give
+    held: Option<(AgentWindowStartJob, AgentStartAnswer)>,
 }
 
 impl<'a> World<'a> {
-    fn new(v: &'a Value) -> World<'a> {
+    fn new(v: &'a Value, now_ms: f64) -> World<'a> {
         World {
             v,
             deps: v.get("deps").unwrap_or(&Value::Null),
-            log: RefCell::new(Vec::new()),
+            log: Logger {
+                lines: Rc::new(RefCell::new(Vec::new())),
+                quiet: Rc::new(Cell::new(false)),
+            },
             deck: Deck::of(v.get("deck").and_then(|d| d.get("entries"))),
             win: None,
             next_window: 5,
             page: 5,
-            live: Vec::new(),
-            started: Vec::new(),
             uuids: 0,
+            now_ms,
+            hooks: Vec::new(),
+            programs: Vec::new(),
             scripted_start: v.get("start"),
+            held: None,
         }
     }
 
     fn put(&self, line: Vec<Value>) {
-        self.log.borrow_mut().push(line);
+        self.log.put(line);
     }
 
     fn dep(&self, key: &str) -> &'a Value {
@@ -676,26 +753,27 @@ impl<'a> World<'a> {
         format!("uuid-{}", self.uuids)
     }
 
-    /// `cleanup(entry)`: the session is let go of; its app server stops
-    fn cleanup(&mut self, id: &str) {
-        if let Some(at) = self.live.iter().position(|s| s.id == id) {
-            self.live.remove(at);
-            self.put(vec![json!("appMcp.stop")]);
-        }
+    /// the manager, over this scenario: `createAgentManager(deps)` of `configureAgentWindow`
+    fn manager(&self) -> AgentManager {
+        let home_dir = opt_text(self.deps, "homeDir").unwrap_or_else(os_home_dir);
+        AgentManager::new(&text(self.deps, "userData"), &home_dir, node_platform())
     }
 
-    /// `manager.stopOwner(ownerId)`
-    fn stop_owner(&mut self, owner: i64) {
-        let ids: Vec<String> = self
-            .live
-            .iter()
-            .filter(|s| s.owner == owner)
-            .map(|s| s.id.clone())
-            .collect();
-        for id in ids {
-            self.put(vec![json!("session.stop")]);
-            self.cleanup(&id);
+    /// the `m.start(owner, request)` of a case that scripts the manager: logged, the outcome
+    /// the case says
+    fn scripted_outcome(&mut self, owner_id: i64, request: &AgentStartRequest) -> AgentStartResult {
+        let mut logged = Map::new();
+        logged.insert("provider".into(), json!(request.provider));
+        logged.insert("mode".into(), json!(request.mode));
+        logged.insert("projectRoot".into(), json!(request.project_root));
+        if let Some(codex) = &request.codex {
+            logged.insert(
+                "codex".into(),
+                json!({ "webSearch": codex.web_search, "network": codex.network }),
+            );
         }
+        self.put(vec![json!("start"), json!(owner_id), Value::Object(logged)]);
+        outcome_of(self.scripted_start.unwrap_or(&Value::Null))
     }
 
     /// `openAgentWindow()`; `renderer_url` is `ELECTRON_RENDERER_URL`
@@ -750,6 +828,93 @@ impl<'a> World<'a> {
             "home" => 1,
             "other" => 77,
             _ => self.page,
+        }
+    }
+
+    /// An awaited call of a start, carried out as the TypeScript's fakes do, and what it came to
+    /// (with whether the case holds the program back)
+    fn perform(&mut self, call: AgentStartCall) -> (AgentStartAnswer, bool) {
+        match call {
+            AgentStartCall::SessionFolder => (
+                AgentStartAnswer::SessionFolder(make_agent_session_folder(self, None)),
+                false,
+            ),
+            AgentStartCall::AppMcp {
+                project_root,
+                session,
+            } => {
+                self.put(vec![json!("startAppMcp"), json!(project_root)]);
+                self.hooks
+                    .push((session.owner_id, session.session_id, project_root));
+                let started = AppMcp {
+                    url: "http://localhost:1".to_owned(),
+                    token: "t".to_owned(),
+                    server: Box::new(WorldAppMcp {
+                        log: self.log.clone(),
+                    }),
+                };
+                (AgentStartAnswer::AppMcp(Ok(started)), false)
+            }
+            AgentStartCall::Relays { .. } | AgentStartCall::BuildSkills { .. } => {
+                unreachable!("the window's host gives no relays and no skills copy")
+            }
+            AgentStartCall::RunClaude { options, session } => self.run(&options, None, session),
+            AgentStartCall::RunCodex {
+                options,
+                codex,
+                session,
+            } => self.run(&options, Some(&codex), session),
+        }
+    }
+
+    /// a runner call: logged, then its program; the case holds it back with `hold`
+    fn run(
+        &mut self,
+        options: &AgentSessionOptions,
+        codex: Option<&CodexRunOptions>,
+        session: ManagerSession,
+    ) -> (AgentStartAnswer, bool) {
+        let mut logged = Map::new();
+        logged.insert("projectRoot".into(), json!(options.project_root));
+        logged.insert("mode".into(), json!(options.mode));
+        if let Some(codex) = codex {
+            logged.insert("webSearch".into(), json!(codex.web_search));
+            logged.insert("network".into(), json!(codex.network));
+        }
+        let kind = if codex.is_some() { "codex" } else { "claude" };
+        self.put(vec![json!("runner"), json!(kind), Value::Object(logged)]);
+        self.programs.push((session.owner_id, session.session_id));
+        let program = WorldSession {
+            log: self.log.clone(),
+        };
+        (
+            AgentStartAnswer::Run(Ok(Box::new(program))),
+            flag(self.v, "hold"),
+        )
+    }
+}
+
+/// Runs the steps of a window's start: the scenario carries out each awaited call and answers
+/// it. With `detach`, a program the case holds back ends the run (its job waits in the scenario
+/// for `release`) and there is no response yet.
+fn drive_window_start(
+    world: &mut World<'_>,
+    manager: &mut AgentManager,
+    mut step: AgentWindowStartStep,
+    detach: bool,
+    now_ms: f64,
+) -> Option<Value> {
+    loop {
+        match step {
+            AgentWindowStartStep::Done(response) => return Some(response),
+            AgentWindowStartStep::Await { call, job } => {
+                let (answer, hold) = world.perform(call);
+                if hold && detach {
+                    world.held = Some((job, answer));
+                    return None;
+                }
+                step = job.resume(world, manager, answer, now_ms);
+            }
         }
     }
 }
@@ -945,117 +1110,116 @@ impl AgentWindowHost for World<'_> {
         &mut self.deck
     }
 
-    fn start(&mut self, owner_id: i64, request: &AgentStartRequest) -> AgentStartOutcome {
-        if let Some(scripted) = self.scripted_start {
-            let mut logged = Map::new();
-            logged.insert("provider".into(), json!(request.provider));
-            logged.insert("mode".into(), json!(request.mode));
-            logged.insert("projectRoot".into(), json!(request.project_root));
-            if let Some(codex) = &request.codex {
-                logged.insert("codex".into(), to_value(codex));
-            }
-            self.put(vec![json!("start"), json!(owner_id), Value::Object(logged)]);
-            return outcome_of(scripted);
-        }
-        let root = resolve(&[&request.project_root]);
-        if !std::path::Path::new(&root).is_dir() {
-            return AgentStartOutcome::Failed {
-                failure: AgentStartFailure::BadFolder,
-                cause: None,
-            };
-        }
-        let connected = self
-            .dep("statuses")
-            .get(&request.provider)
-            .is_some_and(|status| text(status, "state") == "ready");
-        if !connected {
-            return AgentStartOutcome::Failed {
-                failure: AgentStartFailure::NotConnected,
-                cause: None,
-            };
-        }
-        let id = self.uuid();
-        self.put(vec![json!("startAppMcp"), json!(root)]);
-        let mut options = Map::new();
-        options.insert("projectRoot".into(), json!(root));
-        options.insert("mode".into(), json!(request.mode));
-        let kind = if request.provider == "claude-code" {
-            "claude"
-        } else {
-            let codex = request.codex.as_ref();
-            options.insert(
-                "webSearch".into(),
-                json!(codex.map_or("cached", |c| c.web_search.as_str())),
-            );
-            options.insert("network".into(), json!(codex.is_some_and(|c| c.network)));
-            "codex"
-        };
-        self.put(vec![json!("runner"), json!(kind), Value::Object(options)]);
-        self.live.push(Session {
-            id: id.clone(),
-            owner: owner_id,
-            root: root.clone(),
-        });
-        self.started.push((owner_id, id.clone(), root));
-        AgentStartOutcome::Started {
-            session_id: id,
-            skills: Vec::new(),
-            mcp_keep_inside: None,
-            instructions_truncated: None,
-        }
+    fn agent(&mut self) -> &mut dyn AgentHost {
+        self
+    }
+}
+
+impl FolderHost for World<'_> {
+    fn tmpdir(&self) -> String {
+        std::env::temp_dir().to_string_lossy().into_owned()
     }
 
-    fn send(&mut self, owner_id: i64, session_id: &str, text: &str) -> Result<(), Failure> {
-        if !self
-            .live
-            .iter()
-            .any(|s| s.id == session_id && s.owner == owner_id)
-        {
-            return Err(Failure("No such agent session".to_owned()));
-        }
-        let documents = self.open_documents();
-        self.put(vec![json!("setOpenDocuments"), json!(documents)]);
-        self.put(vec![json!("session.send"), json!(text)]);
-        Ok(())
+    fn now_ms(&self) -> f64 {
+        self.now_ms
     }
 
-    fn answer(
-        &mut self,
-        owner_id: i64,
-        session_id: &str,
-        request_id: &str,
-        answer: PermissionAnswer,
-    ) {
-        if self
-            .live
-            .iter()
-            .any(|s| s.id == session_id && s.owner == owner_id)
-        {
+    fn pid(&self) -> f64 {
+        4242.0
+    }
+
+    fn uptime_secs(&self) -> f64 {
+        0.0
+    }
+
+    fn platform(&self) -> String {
+        node_platform().to_owned()
+    }
+
+    fn windows_system_dir(&self) -> String {
+        String::new()
+    }
+
+    fn windows_system_tool(&self, _segments: &[&str]) -> String {
+        String::new()
+    }
+
+    fn random_suffix(&mut self) -> String {
+        random_letters()
+    }
+
+    fn process_alive(&mut self, _pid: f64) -> bool {
+        false
+    }
+
+    fn exec_file(&mut self, _request: &ExecRequest) -> String {
+        String::new()
+    }
+}
+
+/// the manager's host: the `deps` of the window as `createAgentManager` gets them
+impl AgentHost for World<'_> {
+    fn statuses(&mut self) -> JsonValue {
+        json_value_from_serde(self.dep("statuses"))
+    }
+
+    fn ai_settings(&mut self) -> JsonValue {
+        let mut settings = Map::new();
+        settings.insert("providers".into(), json!({}));
+        if let Some(metered) = self.dep("metered").as_object() {
+            settings.insert("meteredAccepted".into(), Value::Object(metered.clone()));
+        }
+        json_value_from_serde(&Value::Object(settings))
+    }
+
+    fn open_documents(&mut self) -> Vec<String> {
+        texts(self.deps, "openDocuments")
+    }
+
+    fn language(&mut self) -> String {
+        text(self.deps, "lang")
+    }
+
+    fn random_uuid(&mut self) -> String {
+        self.uuid()
+    }
+
+    /// the `emit` of `configureAgentWindow`: the event reaches the window's page while it is
+    /// open and still the session's owner
+    fn emit(&mut self, owner_id: i64, session_id: &str, event: &JsonValue) {
+        if let Some(payload) = agent_emit(&*self, owner_id, session_id, event) {
+            let page = self.window().map_or(0, |win| win.contents_id);
             self.put(vec![
-                json!("session.answer"),
-                json!(request_id),
-                answer.to_json(),
+                json!("send"),
+                json!(page),
+                json!("agent-window:event"),
+                payload,
             ]);
         }
     }
 
-    fn stop(&mut self, owner_id: i64, session_id: &str) {
-        if self
-            .live
-            .iter()
-            .any(|s| s.id == session_id && s.owner == owner_id)
-        {
-            self.put(vec![json!("session.stop")]);
-            self.cleanup(session_id);
-        }
+    fn has_app_mcp(&self) -> bool {
+        true
     }
 
-    fn project_root_of(&self, owner_id: i64, session_id: &str) -> Option<String> {
-        self.live
-            .iter()
-            .find(|s| s.id == session_id && s.owner == owner_id)
-            .map(|s| s.root.clone())
+    fn has_relays(&self) -> bool {
+        false
     }
+
+    fn has_build_skills(&self) -> bool {
+        false
+    }
+
+    /// the folder goes at once; nothing of it is logged here
+    fn remove_folder(&mut self, dir: &str, _options: &RemoveOptions) {
+        let _ = crate::markdown::fs_util::rm_recursive_force(dir);
+    }
+
+    fn remove_folder_sync(&mut self, dir: &str, _options: &RemoveOptions) -> bool {
+        crate::markdown::fs_util::rm_recursive_force(dir).is_ok()
+    }
+
+    fn relay_settled(&mut self, _ask_id: &str, _answer: &RelayAnswer) {}
 }
 
 /// the tools of a session, over the world: its window, its skills list and its cards
@@ -1125,7 +1289,13 @@ fn view_json(view: Option<JsonValue>) -> Value {
 }
 
 /// One step of a case: its result, the calls it made being in `world.log`
-fn step(world: &mut World<'_>, shown: &mut AgentWindowShown, step: &Value, now_ms: f64) -> Value {
+fn step(
+    world: &mut World<'_>,
+    manager: &mut AgentManager,
+    shown: &mut AgentWindowShown,
+    step: &Value,
+    now_ms: f64,
+) -> Value {
     if let Some(open) = step.get("open") {
         world.open(open.get("rendererUrl").and_then(Value::as_str));
     } else if let Some(minimize) = step.get("minimize") {
@@ -1140,7 +1310,7 @@ fn step(world: &mut World<'_>, shown: &mut AgentWindowShown, step: &Value, now_m
         if event == "ready-to-show" {
             world.put(vec![json!("show")]);
         } else if let Some(id) = world.win.as_ref().map(|win| win.id) {
-            world.stop_owner(id);
+            manager.stop_owner(world, id);
             world.win = None;
         }
     } else if let Some(url) = step.get("openUrl").and_then(Value::as_str) {
@@ -1149,30 +1319,25 @@ fn step(world: &mut World<'_>, shown: &mut AgentWindowShown, step: &Value, now_m
         }
         return json!({ "action": "deny" });
     } else if let Some(key) = step.get("invoke").and_then(Value::as_str) {
-        return invoke(world, shown, key, step, now_ms);
+        return invoke(world, manager, shown, key, step, now_ms);
     } else if let Some(who) = step.get("isWindowContents").and_then(Value::as_str) {
         let sender = world.sender(who);
         return Value::Bool(agent_is_window_contents(&*world, sender));
     } else if let Some(n) = step.get("sessionEvent").and_then(Value::as_u64) {
-        let Some((owner, id, _)) = world.started.get(n as usize).cloned() else {
+        let Some((owner, id)) = world.programs.get(n as usize).cloned() else {
             return Value::Null;
         };
         let event = json_value_from_serde(step.get("event").unwrap_or(&Value::Null));
-        if let Some(payload) = agent_emit(&*world, owner, &id, &event) {
-            let page = world.window().map_or(0, |win| win.contents_id);
-            world.put(vec![
-                json!("send"),
-                json!(page),
-                json!("agent-window:event"),
-                payload,
-            ]);
-        }
-        if event.get("type").as_deref() == Some(&JsonValue::String("ended".to_owned())) {
-            world.cleanup(&id);
-        }
+        manager.on_event(world, owner, &id, &event);
+    } else if step.get("release").is_some() {
+        let Some((job, answer)) = world.held.take() else {
+            return Value::Null;
+        };
+        let next = job.resume(world, manager, answer, now_ms);
+        return drive_window_start(world, manager, next, false, now_ms).unwrap_or(Value::Null);
     } else if let Some(tool) = step.get("tool").and_then(Value::as_str) {
         let n = step.get("session").and_then(Value::as_u64).unwrap_or(0) as usize;
-        let Some((owner, id, root)) = world.started.get(n).cloned() else {
+        let Some((owner, id, root)) = world.hooks.get(n).cloned() else {
             return Value::Null;
         };
         let tools = AgentSkillTools {
@@ -1212,6 +1377,7 @@ fn step(world: &mut World<'_>, shown: &mut AgentWindowShown, step: &Value, now_m
 /// a handler of the window, called by the key of its channel
 fn invoke(
     world: &mut World<'_>,
+    manager: &mut AgentManager,
     shown: &mut AgentWindowShown,
     key: &str,
     step: &Value,
@@ -1253,17 +1419,25 @@ fn invoke(
         "setProjectSkills" => view_json(
             agent_set_project_skills(world, sender, arg(0), arg(1)).map(|view| view.to_json()),
         ),
-        "start" => agent_start(world, sender, arg(0), now_ms),
-        "send" => Value::Bool(agent_send(world, sender, arg(0), arg(1))),
+        "start" => {
+            let first = agent_start(world, manager, sender, arg(0), now_ms);
+            let detach = step.get("detach") == Some(&Value::Bool(true));
+            drive_window_start(world, manager, first, detach, now_ms).unwrap_or(Value::Null)
+        }
+        "send" => Value::Bool(match agent_send(world, manager, sender, arg(0), arg(1)) {
+            AgentWindowSendStep::Done(done) => done,
+            // the fake program takes every message
+            AgentWindowSendStep::Await { job, .. } => job.resume(Ok(())),
+        }),
         "answer" => {
-            agent_answer(world, sender, arg(0), arg(1), arg(2), arg(3));
+            agent_answer(world, manager, sender, arg(0), arg(1), arg(2), arg(3));
             Value::Null
         }
         "stop" => {
-            agent_stop(world, sender, arg(0));
+            agent_stop(world, manager, sender, arg(0));
             Value::Null
         }
-        "openFile" => Value::Bool(agent_open_file(world, sender, arg(0), arg(1))),
+        "openFile" => Value::Bool(agent_open_file(world, manager, sender, arg(0), arg(1))),
         "templateCheck" => match agent_template_check(world, shown, sender, arg(0), arg(1)) {
             TemplateCheck::Ok { redaction } => {
                 json!({ "ok": true, "redaction": redaction.as_str() })
@@ -1295,22 +1469,31 @@ fn window_call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     Some(match name {
         "agent-window.window" => (|| {
             let spec = need(args, 0)?;
-            let mut world = World::new(spec);
+            let mut world = World::new(spec, now_ms);
+            let mut manager = world.manager();
             let mut shown = AgentWindowShown::new();
             let results: Vec<Value> = list(spec, "steps")
                 .iter()
-                .map(|s| step(&mut world, &mut shown, s, now_ms))
+                .map(|s| step(&mut world, &mut manager, &mut shown, s, now_ms))
                 .collect();
             // the sessions end with the app: nothing of that is logged
-            cx.logs.extend(world.log.into_inner());
+            world.log.quiet.set(true);
+            manager.stop_all(&mut world);
+            cx.logs.extend(world.log.lines.borrow_mut().drain(..));
             Ok(Some(Value::Array(results)))
         })(),
         "agent-window.startAgentForWindow" => (|| {
             let spec = need(args, 0)?;
-            let mut world = World::new(spec);
+            let mut world = World::new(spec, now_ms);
             let request = arg(args, 1).map(json_value_from_serde);
-            let answer = start_agent_for_window(&mut world, 5, request.as_ref(), now_ms);
-            cx.logs.extend(world.log.into_inner());
+            let answer = match plan_agent_start(&mut world, request.as_ref()) {
+                Ok(plan) => {
+                    let result = world.scripted_outcome(5, plan.request());
+                    plan.finish(&mut world, result, now_ms)
+                }
+                Err(response) => response,
+            };
+            cx.logs.extend(world.log.lines.borrow_mut().drain(..));
             Ok(Some(answer))
         })(),
         _ => return None,

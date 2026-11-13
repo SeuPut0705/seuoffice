@@ -23,6 +23,10 @@
  *   id of the first start); `os.tmpdir` is the case's `tmp`; `fs.rmSync` and
  *   `fsPromises.rm` are fakes that log and remove the folder as the case says.
  *   What happens while a step of `start` waits is the case's `during` table.
+ *   A runner whose spec says `hold` does not answer until a `release` step; the
+ *   `start` step that meets it says `detach`, so the steps after it (a stop, a
+ *   send, an answer) run while the start waits, and the `release` step has the
+ *   start's result.
  *   A session folder's random six letters read as `<rand>`.
  */
 import crypto, { createHash } from 'node:crypto'
@@ -1125,6 +1129,15 @@ const sleepTick = async (): Promise<void> => {
   for (let i = 0; i < 3; i++) await new Promise((resolve) => setImmediate(resolve))
 }
 
+/** a promise and the call that settles it */
+const gate = (): { promise: Promise<void>; open: () => void } => {
+  let open: () => void = () => undefined
+  const promise = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { promise, open }
+}
+
 async function runManager(o: J, cx: TsContext): Promise<unknown> {
   const log = (...line: unknown[]): void => cx.log(...line.map(maskDeep))
   let counter = 0
@@ -1133,6 +1146,10 @@ async function runManager(o: J, cx: TsContext): Promise<unknown> {
   const asksBySession = new Map<string, (request: unknown, signal: unknown) => Promise<unknown>>()
   const asks: { signal: { aborted: boolean; listeners: (() => void)[] } }[] = []
   const deferred: unknown[][] = []
+  /** a program held back until a `release` step: the runner reaches the gate, the step opens it */
+  const reachedGate = gate()
+  const openedGate = gate()
+  let pending: Promise<unknown> | undefined
   const slow: { path: string; resolve: () => void }[] = []
   let manager: J
 
@@ -1178,6 +1195,10 @@ async function runManager(o: J, cx: TsContext): Promise<unknown> {
       onEvents.push(onEvent)
       during('runner', onEvent)
       if (spec.setSettings !== undefined) state.settings = spec.setSettings
+      if (spec.hold) {
+        reachedGate.open()
+        await openedGate.promise
+      }
       if (spec.throw) throw thrownOf(spec.throw)
       return session(provider, spec)
     }
@@ -1253,8 +1274,25 @@ async function runManager(o: J, cx: TsContext): Promise<unknown> {
       const entry: J = { op: step.op }
       try {
         switch (step.op) {
-          case 'start':
-            entry.result = await manager.start(step.owner, step.request)
+          case 'start': {
+            const started = manager.start(step.owner, step.request)
+            if (step.detach) {
+              const settled = await Promise.race([
+                reachedGate.promise.then(() => false),
+                started.then(
+                  () => true,
+                  () => true,
+                ),
+              ])
+              if (settled) entry.result = await started
+              else pending = started
+            } else entry.result = await started
+            break
+          }
+          case 'release':
+            openedGate.open()
+            if (pending) entry.result = await pending
+            pending = undefined
             break
           case 'send':
             await manager.send(step.owner, step.session, step.text)
@@ -2040,6 +2078,61 @@ const managerCases: Case[] = [
     }),
     files: PROJECT_FILES,
     note: 'one document written in several ways',
+  },
+  {
+    args: scenario({
+      ...ALL_DEPS,
+      runner: runnerOf('claude-code', { hold: true }),
+      steps: [
+        { ...start(), detach: true },
+        at('send', { text: 'too early' }),
+        at('projectRootOf'),
+        at('stop'),
+        at('projectRootOf'),
+        { op: 'release' },
+        at('projectRootOf'),
+      ],
+    }),
+    files: PROJECT_FILES,
+    note: 'stop while start awaits: the stop runs at once, the program the runner then gives is stopped and the start is stopped',
+  },
+  {
+    args: scenario({
+      ...ALL_DEPS,
+      runner: runnerOf('codex', { hold: true }),
+      steps: [
+        { ...start('codex'), detach: true },
+        ask(1),
+        at('answer', { request: 'uuid-2', answer: { allow: true, scope: 'session' } }),
+        ask(2),
+        { op: 'stopAll' },
+        { op: 'release' },
+        at('projectRootOf'),
+      ],
+    }),
+    files: PROJECT_FILES,
+    note: 'while start awaits: a relay asks and is answered, one more is refused at the quit, the program it gets is stopped',
+  },
+  {
+    args: scenario({
+      ...ALL_DEPS,
+      runner: runnerOf('claude-code', { hold: true }),
+      steps: [{ ...start(), detach: true }, at('projectRootOf'), { op: 'release' }, at('stop')],
+    }),
+    files: PROJECT_FILES,
+    note: 'the program answers after a wait and nothing stopped it: the start goes on',
+  },
+  {
+    args: scenario({
+      ...ALL_DEPS,
+      runner: runnerOf('claude-code', {
+        hold: true,
+        throw: { class: 'error', message: 'boom' },
+      }),
+      steps: [{ ...start(), detach: true }, at('stop'), { op: 'release' }, at('projectRootOf')],
+    }),
+    files: PROJECT_FILES,
+    note: 'the program fails after the stop: the stop already cleaned up, and the failure is the answer',
   },
 ]
 export const group: Group = {
