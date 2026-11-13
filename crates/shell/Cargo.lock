@@ -4696,6 +4696,7 @@ dependencies = [
 name = "shell-ipc-u"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 

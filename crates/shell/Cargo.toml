@@ -74,8 +74,9 @@ trash = "5"
 windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT"] }
 
 [dev-dependencies]
-# the fakes of M's hosts for the_batches_register_over_the_stubs
+# the fakes of M's and U's hosts for the_batches_register_over_the_stubs
 shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
+shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
 
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
