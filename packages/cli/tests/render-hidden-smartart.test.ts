@@ -41,7 +41,7 @@ const DATA =
   '</dgm:cxnLst></dgm:dataModel>'
 
 /** a plain deck with a SmartArt on its first slide whose data, and nothing else, holds the mark */
-async function smartArtDeck(): Promise<string> {
+async function smartArtDeck(target = '../diagrams/data1.xml'): Promise<string> {
   const dir = tempDir()
   const spec = join(dir, 'deck.json')
   writeFileSync(
@@ -76,7 +76,7 @@ async function smartArtDeck(): Promise<string> {
     relsPath,
     rels.replace(
       '</Relationships>',
-      `<Relationship Id="rIdDm" Type="${REL}/diagramData" Target="../diagrams/data1.xml"/></Relationships>`,
+      `<Relationship Id="rIdDm" Type="${REL}/diagramData" Target="${target}"/></Relationships>`,
     ),
   )
   zip.file('ppt/diagrams/data1.xml', DATA)
@@ -93,8 +93,12 @@ async function smartArtDeck(): Promise<string> {
 }
 
 describe('a slide whose SmartArt data holds a hidden run', () => {
-  it('is not rendered', async () => {
-    const file = await smartArtDeck()
+  it.each([
+    ['a relative target', '../diagrams/data1.xml'],
+    ['a target from the package root', '/ppt/diagrams/data1.xml'],
+    ['a percent-encoded target', '../diagrams/data%31.xml'],
+  ])('is not rendered (%s)', async (_name, target) => {
+    const file = await smartArtDeck(target)
     for (const extra of [[], ['--page', '1']]) {
       const r = await run(
         ['render', file, '--out', join(tempDir(), 'png'), '--json', ...extra],
