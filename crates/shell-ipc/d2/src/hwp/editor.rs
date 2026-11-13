@@ -203,12 +203,6 @@ pub(super) fn view_of(wc_id: i64) -> ViewId {
     ViewId(wc_id as u32)
 }
 
-fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_secs_f64() * 1000.0)
-}
-
 /// `data instanceof Uint8Array`
 pub(super) fn uint8(v: &IpcValue) -> Option<&[u8]> {
     match v {
@@ -1148,7 +1142,7 @@ impl Hwp {
                                 None => configured_default_save_dir(
                                     &AppPaths(self.services.paths.clone()),
                                     &mut self.save_dir.borrow_mut(),
-                                    now_ms(),
+                                    self.shell.now_ms(),
                                 )
                                 .map_err(|e| e.0)?,
                             };
