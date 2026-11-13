@@ -1,5 +1,4 @@
 import type { NoteInfo, NoteRun } from './types'
-import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import { invoke } from './engine'
 
 /**
@@ -63,21 +62,7 @@ export type NoteParagraphReader = (pXml: string) => NoteParagraph
  * or rejects a change in the note.
  */
 export function noteModelText(richParas: readonly NoteRun[][]): string | undefined {
-  if (!richParas.some((runs) => runs.some((r) => r.redact !== undefined && !r.del)))
-    return undefined
-  return richParas
-    .map((runs) => {
-      let line = ''
-      let label: string | undefined
-      for (const run of runs) {
-        if (run.del) continue
-        if (run.redact === undefined) line += run.text
-        else if (run.redact !== label) line += placeholderSource(run.redact)
-        label = run.redact
-      }
-      return line
-    })
-    .join('\n')
+  return invoke('noteModelText', [richParas], { undef: true }) as never
 }
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
