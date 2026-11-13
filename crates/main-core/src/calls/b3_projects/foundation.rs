@@ -83,7 +83,7 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
         }
 
         "folder-files.hashText" => str_arg(args, 0).map(|t| Some(Value::from(hash_text(t)))),
-        "folder-files.plainFileIn" => on_folder(args, |a| {
+        "folder-files.plainFileIn" | "folder-files.plainFileIn.hardLinks" => on_folder(args, |a| {
             let segments = strings(arg(a, 1))?;
             Ok(opt_text(plain_file_in(str_arg(a, 0)?, &segments)))
         }),
