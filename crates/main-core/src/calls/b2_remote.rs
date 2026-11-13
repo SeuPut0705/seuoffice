@@ -8,6 +8,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use jscompat::{JsObject, js_regex};
 use serde_json::{Map, Value};
@@ -65,7 +66,9 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "safe-remote-url.isBlockedAddress" => {
             str_arg(args, 0).map(|ip| Some(Value::Bool(is_blocked_address(ip))))
         }
-        "safe-remote-url.isIP" => str_arg(args, 0).map(|ip| Some(Value::from(is_ip(ip)))),
+        "safe-remote-url.isIP" => str_arg(args, 0)
+            .and_then(|ip| is_ip(ip).map_err(|limit| CallError::plain(limit.to_string())))
+            .map(|family| Some(Value::from(family))),
         "safe-remote-url.resolveSafeRemoteTarget" => resolve_target_call(args, cx),
         "safe-remote-url.isSafeRemoteUrl" => is_safe_call(args, cx),
         "safe-remote-url.pinnedLookup" => pinned_lookup_call(args),
@@ -391,12 +394,12 @@ fn parse_world(value: Option<&Value>) -> Result<World, CallError> {
     };
     let mock = value.get("mock").and_then(Value::as_bool) == Some(true);
     let dispatcher = if mock {
-        GlobalDispatcher::Declared(Rc::new(|_: &Url| true))
+        GlobalDispatcher::Declared(Arc::new(|_: &Url| true))
     } else {
         match value.get("dispatcher") {
             Some(Value::Object(d)) if d.contains_key("proxyHosts") => {
                 let hosts = string_list(d.get("proxyHosts"));
-                GlobalDispatcher::Declared(Rc::new(move |url: &Url| {
+                GlobalDispatcher::Declared(Arc::new(move |url: &Url| {
                     hosts.iter().any(|h| Some(h.as_str()) == url.host_str())
                 }))
             }

@@ -240,7 +240,7 @@
   {
     "name": "agent-skills: a link leading out of the project is followed",
     "file": "main-core/src/shell/agent/agent_skills.rs",
-    "find": "is_inside_path(&set.key(real), &set.key(real_root), platform)",
+    "find": "is_inside_path(&set.key(real), &set.key(real_root), Some(platform))",
     "replace": "true",
     "fn": ["agent-skills.agentTemplateCandidates"]
   },

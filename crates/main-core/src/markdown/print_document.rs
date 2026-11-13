@@ -3,16 +3,19 @@
 //!
 //! The window (`new BrowserWindow(...)` with its `webPreferences`) and
 //! `process.platform` come from the caller: the window as a
-//! [`MarkdownPrintWindow`], the platform as a string. `os.tmpdir()` is a
-//! parameter.
+//! [`MarkdownPrintWindow`], the platform as a string. Its renderer calls
+//! (`loadFile`, `print`) are the steps of a [`MarkdownPrintJob`] the caller
+//! carries out. `os.tmpdir()` is a parameter.
 
 use jscompat::js_regex;
 use jscompat::node_path::host::join;
 use serde_json::{Map, Number, Value};
 
 use crate::node_fs::{mkdtemp_random, node_error};
+use crate::packages::electron_utils::print_html_pdf::PrintWindow;
 use crate::packages::electron_utils::print_window::{
-    JsError, PrintDialogOutcome, PrintReport, rm_recursive_force,
+    JsError, PrintDialogOutcome, PrintReport, RendererAnswer, RendererCall, WindowStep, load_call,
+    release_job,
 };
 
 /// `MarkdownPrintOptions` of `apps/markdown/src/shared/print-options.ts`,
@@ -44,15 +47,11 @@ pub struct MarkdownPageRange {
     pub to: f64,
 }
 
-/// The methods of the throwaway `BrowserWindow` the module calls.
-pub trait MarkdownPrintWindow {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError>;
+/// What the module calls on its throwaway `BrowserWindow` without waiting for
+/// the renderer, besides `destroy`.
+pub trait MarkdownPrintWindow: PrintWindow {
     fn show(&mut self) -> Result<(), JsError>;
     fn focus(&mut self) -> Result<(), JsError>;
-    /// `webContents.print(options, callback)`: what the callback got; `Err` is
-    /// a `print` that throws
-    fn print(&mut self, options: &Value) -> Result<PrintReport, JsError>;
-    fn destroy(&mut self) -> Result<(), JsError>;
 }
 
 fn number(x: f64) -> Value {
@@ -102,39 +101,96 @@ pub fn print_result(report: &PrintReport) -> PrintDialogOutcome {
     }
 }
 
-/// `printMarkdownDocument(html, pages, options)`. An `Err` is what the
-/// TypeScript lets through: the folder that cannot be made, a window that
+/// `printMarkdownDocument` between its awaits.
+#[derive(Debug)]
+pub struct MarkdownPrintJob<W> {
+    win: W,
+    work_dir: String,
+    win32: bool,
+    /// the options of `print`, `Some` while the load is awaited
+    print_options: Option<Value>,
+}
+
+/// A step of `printMarkdownDocument`; [`WindowStep::Done`] holds the outcome
+/// once the window is destroyed and the folder removed. An `Err` there is what
+/// the TypeScript lets through: the folder that cannot be made, a window that
 /// cannot be destroyed, a folder that cannot be removed.
-pub fn print_markdown_document<W: MarkdownPrintWindow>(
+pub type MarkdownPrintStep<W> =
+    WindowStep<MarkdownPrintJob<W>, Result<PrintDialogOutcome, JsError>>;
+
+/// `printMarkdownDocument(html, pages, options)` up to its first await.
+pub fn begin_print_markdown_document<W: MarkdownPrintWindow>(
     create_window: impl FnOnce() -> Result<W, JsError>,
     html: &str,
     pages: Option<&MarkdownPageRange>,
     options: &MarkdownPrintOptions,
     platform: &str,
     tmp_dir: &str,
-) -> Result<PrintDialogOutcome, JsError> {
-    let work_dir = mkdtemp_random(&join(&[tmp_dir, "seuoffice-md-print-"]))?;
-    let mut win: Option<W> = None;
-    let printed = (|| -> Result<PrintDialogOutcome, JsError> {
-        let target = win.insert(create_window()?);
-        let html_path = join(&[&work_dir, "print.html"]);
-        std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;
-        target.load_file(&html_path)?;
-        // Windows attaches the native dialog to the printed window, so it must be visible.
-        if platform == "win32" {
-            target.show()?;
-            target.focus()?;
-        }
-        let report = target.print(&print_options(pages, options))?;
-        Ok(print_result(&report))
-    })();
-    let outcome = match printed {
-        Ok(outcome) => outcome,
-        Err(error) => PrintDialogOutcome::Failed(error.message),
+) -> MarkdownPrintStep<W> {
+    let work_dir = match mkdtemp_random(&join(&[tmp_dir, "seuoffice-md-print-"])) {
+        Ok(dir) => dir,
+        Err(error) => return WindowStep::Done(Err(error.into())),
     };
-    if let Some(window) = win.as_mut() {
-        window.destroy()?;
+    let mut win = match create_window() {
+        Ok(win) => win,
+        Err(error) => return end::<W>(None, &work_dir, Err(error)),
+    };
+    let html_path = join(&[&work_dir, "print.html"]);
+    if let Err(e) = std::fs::write(&html_path, html) {
+        let error = node_error(&e, "open", &html_path).into();
+        return end(Some(&mut win), &work_dir, Err(error));
     }
-    rm_recursive_force(&work_dir)?;
-    Ok(outcome)
+    WindowStep::Await {
+        call: load_call(&html_path),
+        job: MarkdownPrintJob {
+            win,
+            work_dir,
+            win32: platform == "win32",
+            print_options: Some(print_options(pages, options)),
+        },
+    }
+}
+
+impl<W: MarkdownPrintWindow> MarkdownPrintJob<W> {
+    /// The window the awaited call is carried out on.
+    pub fn window(&mut self) -> &mut W {
+        &mut self.win
+    }
+
+    /// The answer to the call this print waits for.
+    pub fn resume(mut self, answer: RendererAnswer) -> MarkdownPrintStep<W> {
+        match self.print_options.take() {
+            Some(options) => {
+                if let Err(error) = answer.into_loaded() {
+                    return end(Some(&mut self.win), &self.work_dir, Err(error));
+                }
+                // Windows attaches the native dialog to the printed window, so it must be visible.
+                if self.win32
+                    && let Err(error) = self.win.show().and_then(|()| self.win.focus())
+                {
+                    return end(Some(&mut self.win), &self.work_dir, Err(error));
+                }
+                WindowStep::Await {
+                    call: RendererCall::Print { options },
+                    job: self,
+                }
+            }
+            None => {
+                let printed = answer.into_printed().map(|report| print_result(&report));
+                end(Some(&mut self.win), &self.work_dir, printed)
+            }
+        }
+    }
+}
+
+/// the `catch` and `finally`: an error becomes a failed outcome, then the
+/// window is destroyed and the folder removed; what those throw goes out
+fn end<W: PrintWindow>(
+    win: Option<&mut W>,
+    work_dir: &str,
+    printed: Result<PrintDialogOutcome, JsError>,
+) -> MarkdownPrintStep<W> {
+    let outcome = printed.unwrap_or_else(|error| PrintDialogOutcome::Failed(error.message));
+    let released = release_job(win, work_dir, |win| win.destroy());
+    WindowStep::Done(released.map(|()| outcome))
 }

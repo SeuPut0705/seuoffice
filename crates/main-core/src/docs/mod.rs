@@ -7,6 +7,7 @@ pub mod atomic_write;
 pub mod byte_handoff;
 pub mod copy_image_guard;
 pub mod doc_format;
+pub mod docs_recovery;
 pub mod external_change;
 pub mod free_ai_ipc;
 pub mod free_ai_strings;

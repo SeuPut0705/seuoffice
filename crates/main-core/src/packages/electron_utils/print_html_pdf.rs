@@ -1,23 +1,115 @@
 //! `packages/electron-utils/src/print-html-pdf.ts`.
 //!
 //! Render a standalone HTML document to PDF bytes in a hidden window, shared
-//! by the AI create_document flows. The caller supplies the window as a
-//! [`PrintWindow`]. The HTML is parsed and written by `crate::html_parse`, which
-//! follows parse5.
+//! by the AI create_document flows. The caller makes the window through
+//! `createWindow` (a [`PrintWindow`]); the renderer calls on it are the steps
+//! of a [`PdfJob`] the caller carries out. The HTML is parsed and written by
+//! `crate::html_parse`, which follows parse5.
 
 use jscompat::node_path::host::join;
 use serde_json::{Map, Value};
 
-use super::print_window::{JsError, rm_recursive_force};
+use super::print_window::{
+    JsError, RendererAnswer, RendererCall, WindowStep, load_call, release_job,
+};
 use crate::html_parse::{self, Node};
 use crate::node_fs::node_error;
 
-/// `PrintWindow`: `loadFile`, `destroy` and `webContents.printToPDF`
+/// `PrintWindow`: what a job calls on the hidden window it made without
+/// waiting for its renderer. `loadFile` and `printToPDF` are the steps of a
+/// [`PdfStep`].
 pub trait PrintWindow {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError>;
-    /// `printToPDF(options)`; `options` is the plain object the TypeScript passes
-    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError>;
     fn destroy(&mut self) -> Result<(), JsError>;
+}
+
+/// A job that loads a page it wrote into its own hidden window and prints it to
+/// PDF bytes (`printHtmlToPdf`, and the PDF exports of markdown and Hangul
+/// that do the same): the window, the work folder, and the `printToPDF`
+/// options until the load is done.
+#[derive(Debug)]
+pub struct PdfJob<W> {
+    win: W,
+    work_dir: String,
+    /// `Some` while the load is awaited
+    options: Option<Value>,
+}
+
+/// A step of a [`PdfJob`]; [`WindowStep::Done`] holds the PDF once the window
+/// is destroyed and the folder removed, or what the job or that cleanup threw
+/// (the cleanup's error replaces the job's).
+pub type PdfStep<W> = WindowStep<PdfJob<W>, Result<Vec<u8>, JsError>>;
+
+impl<W: PrintWindow> PdfJob<W> {
+    /// The job once its window is made and its page written at `html_path`:
+    /// `await win.loadFile(htmlPath)`, then `printToPDF(options)`.
+    pub(crate) fn loading(win: W, work_dir: String, html_path: &str, options: Value) -> PdfStep<W> {
+        WindowStep::Await {
+            call: load_call(html_path),
+            job: PdfJob {
+                win,
+                work_dir,
+                options: Some(options),
+            },
+        }
+    }
+
+    /// The window the awaited call is carried out on.
+    pub fn window(&mut self) -> &mut W {
+        &mut self.win
+    }
+
+    /// The answer to the call this job waits for.
+    pub fn resume(mut self, answer: RendererAnswer) -> PdfStep<W> {
+        match self.options.take() {
+            Some(options) => match answer.into_loaded() {
+                Ok(()) => WindowStep::Await {
+                    call: RendererCall::PrintToPdf { options },
+                    job: self,
+                },
+                Err(error) => self.end(Err(error)),
+            },
+            None => {
+                let pdf = answer.into_pdf();
+                self.end(pdf)
+            }
+        }
+    }
+
+    fn end(mut self, pdf: Result<Vec<u8>, JsError>) -> PdfStep<W> {
+        let released = release_job(Some(&mut self.win), &self.work_dir, |win| win.destroy());
+        WindowStep::Done(released.and(pdf))
+    }
+}
+
+/// The start every job of this shape shares: a work folder named `dir_prefix`
+/// under `tmp_dir`, then (in the `try`) the window made and the page written
+/// as `print.html`. What fails after the folder exists goes through the job's
+/// `finally`.
+pub(crate) fn begin_pdf_job<W: PrintWindow>(
+    create_window: impl FnOnce() -> Result<W, JsError>,
+    html: &str,
+    tmp_dir: &str,
+    dir_prefix: &str,
+    options: Value,
+) -> PdfStep<W> {
+    let work_dir = match crate::node_fs::mkdtemp_random(&join(&[tmp_dir, dir_prefix])) {
+        Ok(dir) => dir,
+        Err(error) => return WindowStep::Done(Err(error.into())),
+    };
+    let mut win = match create_window() {
+        Ok(win) => win,
+        Err(error) => {
+            let released = release_job::<W>(None, &work_dir, |win| win.destroy());
+            return WindowStep::Done(released.and(Err(error)));
+        }
+    };
+    let html_path = join(&[&work_dir, "print.html"]);
+    if let Err(e) = std::fs::write(&html_path, html) {
+        let error = node_error(&e, "open", &html_path).into();
+        let released = release_job(Some(&mut win), &work_dir, |win| win.destroy());
+        return WindowStep::Done(released.and(Err(error)));
+    }
+    PdfJob::loading(win, work_dir, &html_path, options)
 }
 
 fn escape_html_text(text: &str) -> String {
@@ -163,28 +255,22 @@ fn pdf_options() -> Value {
     Value::Object(options)
 }
 
-/// Load the HTML in the supplied hidden window and print it to A4 PDF bytes.
-/// The HTML goes through a temp file (data: URLs truncate long documents); the
-/// window is destroyed and the temp dir removed in every outcome. `tmp_dir` is
-/// `os.tmpdir()`; `create_window` is `createWindow`. Where `destroy` throws,
-/// the temp dir stays, as in the TypeScript.
-pub fn print_html_to_pdf<W: PrintWindow>(
+/// `printHtmlToPdf(html, createWindow)` up to its first await: load the HTML in
+/// the supplied hidden window and print it to A4 PDF bytes. The HTML goes
+/// through a temp file (data: URLs truncate long documents); the window is
+/// destroyed and the temp dir removed in every outcome. `tmp_dir` is
+/// `os.tmpdir()`. Where `destroy` throws, the temp dir stays, as in the
+/// TypeScript.
+pub fn begin_print_html_to_pdf<W: PrintWindow>(
     html: &str,
     create_window: impl FnOnce() -> Result<W, JsError>,
     tmp_dir: &str,
-) -> Result<Vec<u8>, JsError> {
-    let work_dir = crate::node_fs::mkdtemp_random(&join(&[tmp_dir, "seuoffice-ai-doc-"]))?;
-    let mut print_win: Option<W> = None;
-    let printed = (|| -> Result<Vec<u8>, JsError> {
-        let win = print_win.insert(create_window()?);
-        let html_path = join(&[&work_dir, "print.html"]);
-        std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;
-        win.load_file(&html_path)?;
-        win.print_to_pdf(&pdf_options())
-    })();
-    if let Some(win) = print_win.as_mut() {
-        win.destroy()?;
-    }
-    rm_recursive_force(&work_dir)?;
-    printed
+) -> PdfStep<W> {
+    begin_pdf_job(
+        create_window,
+        html,
+        tmp_dir,
+        "seuoffice-ai-doc-",
+        pdf_options(),
+    )
 }

@@ -39,7 +39,7 @@ use super::agent_session_folders::{FolderHost, make_agent_session_folder};
 use super::agent_skills::{AgentSessionSkill, AgentSkillEntry, agent_session_skills_of};
 use crate::node_fs::{NodeError, namespaced};
 use crate::packages::agent_core::skill_mcp_refs::SKILL_SKIPPED_STEPS_SENTENCE;
-use crate::packages::ai_provider::agent_policy::{comparable_path, is_inside_path};
+use crate::packages::ai_provider::agent_session_policy::{comparable_path, is_inside_path};
 use crate::packages::ai_provider::agent_session_program_problem::AgentProgramError;
 use crate::packages::ai_provider::provider_selection::{
     SubscriptionConnection, subscription_connection, subscription_off_in,
@@ -566,17 +566,19 @@ pub fn project_folder_problem(
     if !info.is_dir() {
         return Some("not-a-folder");
     }
-    let root = comparable_path(folder, folder, platform);
+    let root = comparable_path(folder, folder, Some(platform));
     let top = parse(&root).root;
-    if top == root || comparable_path(&top, &root, platform) == root {
+    if top == root || comparable_path(&top, &root, Some(platform)) == root {
         return Some("drive-root");
     }
-    if root == comparable_path(home_dir, home_dir, platform) {
+    if root == comparable_path(home_dir, home_dir, Some(platform)) {
         return Some("home-folder");
     }
     for guard in protected_paths {
-        let guard = comparable_path(guard, guard, platform);
-        if is_inside_path(&root, &guard, platform) || is_inside_path(&guard, &root, platform) {
+        let guard = comparable_path(guard, guard, Some(platform));
+        if is_inside_path(&root, &guard, Some(platform))
+            || is_inside_path(&guard, &root, Some(platform))
+        {
             return Some("protected");
         }
     }
@@ -690,8 +692,8 @@ fn note_inside_project(path: &str, project_root: &str, platform: &str) -> bool {
         return false;
     };
     let rel = relative(
-        &comparable_path(&real_root, &real_root, platform),
-        &comparable_path(&real, &real, platform),
+        &comparable_path(&real_root, &real_root, Some(platform)),
+        &comparable_path(&real, &real, Some(platform)),
     );
     // a folder named "..x" inside the project is inside: only ".." itself leads out
     !(rel == ".." || rel.starts_with(&format!("..{SEP}")) || is_absolute(&rel))
@@ -1120,7 +1122,7 @@ impl AgentManager {
             skills: None,
             protected_documents: open_at_start
                 .iter()
-                .map(|path| comparable_path(path, path, &platform))
+                .map(|path| comparable_path(path, path, Some(&platform)))
                 .collect(),
             warned_documents: HashSet::new(),
         }));
@@ -1309,7 +1311,7 @@ impl AgentManager {
         {
             let mut live = entry.borrow_mut();
             for path in &current {
-                let key = comparable_path(path, path, &self.platform);
+                let key = comparable_path(path, path, Some(&self.platform));
                 if live.protected_documents.contains(&key) {
                     continue;
                 }
@@ -1439,8 +1441,12 @@ pub fn openable_project_file(project_root: &str, path: &str, platform: &str) -> 
     } else {
         join(&[project_root, path])
     };
-    let root = comparable_path(project_root, project_root, platform);
-    if !is_inside_path(&comparable_path(&full, &root, platform), &root, platform) {
+    let root = comparable_path(project_root, project_root, Some(platform));
+    if !is_inside_path(
+        &comparable_path(&full, &root, Some(platform)),
+        &root,
+        Some(platform),
+    ) {
         return None;
     }
     match fs::metadata(namespaced(&full)) {

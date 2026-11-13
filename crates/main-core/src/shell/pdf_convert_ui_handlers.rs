@@ -1,8 +1,13 @@
 //! `apps/shell/src/main/pdf-convert-ui-handlers.ts`.
 //!
 //! `view_id` is the `number` the TypeScript passes around (a webContents id).
-//! `closeTab` is the one dependency that returns a promise; its rejection is
-//! the `Err` of [`PdfConvertUiTabs::close_tab`], which `releaseTarget` passes on.
+//! `closeTab` is the one dependency that returns a promise, and it asks the
+//! tab's editor whether the document may close (its answer arrives on the
+//! thread that asked), so `releaseTarget` is a pair of calls:
+//! [`PdfConvertUiHandlers::release_target`] answers a [`ReleaseStep`], and
+//! once the caller has closed the tab as asked,
+//! [`PdfConvertUiHandlers::finish_release_target`] answers the rest (the
+//! rejection of `closeTab` is its `Err` argument and passes on).
 
 use jscompat::{JsonValue, js_regex};
 
@@ -10,12 +15,29 @@ use jscompat::{JsonValue, js_regex};
 pub trait PdfConvertUiTabs {
     /// the Markdown tab showing the file, if any
     fn find_markdown_tab(&mut self, path: &str) -> Option<String>;
-    /// close a tab; its unsaved-changes guard applies (the user may keep it open)
-    fn close_tab(&mut self, tab_id: &str) -> Result<(), String>;
     /// bring the pdf view's tab back to the front after closing another tab
     fn activate_view(&mut self, view_id: f64);
     /// open a file the way File > Open does
     fn open_document(&mut self, path: &str) -> bool;
+}
+
+/// What the caller does next for `releaseTarget`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReleaseStep {
+    /// `await deps.closeTab(tabId)`: close a tab, its unsaved-changes guard
+    /// applies (the user may keep it open); then answer with
+    /// [`PdfConvertUiHandlers::finish_release_target`], `Err` where the
+    /// promise rejects
+    CloseTab { tab_id: String, run: ReleaseRun },
+    /// `releaseTarget` returned (`Ok`) or threw (`Err`)
+    Done(Result<bool, String>),
+}
+
+/// `releaseTarget` while its tab is being closed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReleaseRun {
+    view_id: f64,
+    path: String,
 }
 
 /// `PdfConvertUiDeps`
@@ -76,23 +98,32 @@ impl<D: PdfConvertUiDeps> PdfConvertUiHandlers<D> {
         Some(path)
     }
 
-    /// `releaseTarget(viewId, req)`: true when no Markdown tab shows the
-    /// target (any more)
-    pub fn release_target(
-        &mut self,
-        view_id: f64,
-        req: Option<&JsonValue>,
-    ) -> Result<bool, String> {
+    /// `releaseTarget(viewId, req)` up to its `await`: true when no Markdown
+    /// tab shows the target (any more)
+    pub fn release_target(&mut self, view_id: f64, req: Option<&JsonValue>) -> ReleaseStep {
         let Some(path) = self.request_of(view_id, req) else {
-            return Ok(false);
+            return ReleaseStep::Done(Ok(false));
         };
         if !is_markdown(&path) {
-            return Ok(false);
+            return ReleaseStep::Done(Ok(false));
         }
         let Some(tab) = self.deps.find_markdown_tab(&path) else {
-            return Ok(true);
+            return ReleaseStep::Done(Ok(true));
         };
-        self.deps.close_tab(&tab)?;
+        ReleaseStep::CloseTab {
+            tab_id: tab,
+            run: ReleaseRun { view_id, path },
+        }
+    }
+
+    /// the rest of `releaseTarget`, once `closeTab` has answered
+    pub fn finish_release_target(
+        &mut self,
+        run: ReleaseRun,
+        closed: Result<(), String>,
+    ) -> Result<bool, String> {
+        let ReleaseRun { view_id, path } = run;
+        closed?;
         self.deps.activate_view(view_id);
         Ok(self.deps.find_markdown_tab(&path).is_none())
     }

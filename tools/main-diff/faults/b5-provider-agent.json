@@ -1,0 +1,407 @@
+[
+  {
+    "name": "launch args: the listen flag",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "args.push(\"--listen\".to_owned());",
+    "replace": "args.push(\"--listen2\".to_owned());",
+    "fn": ["agent-session/codex.codexAgentLaunchArgs", "agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "launch args: an unknown web search value means cached",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "_ => \"cached\",",
+    "replace": "_ => \"live\",",
+    "fn": ["agent-session/codex.codexAgentLaunchArgs", "agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "launch args: live web search",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "Some(\"live\") => \"live\",",
+    "replace": "Some(\"live\") => \"cached\",",
+    "fn": ["agent-session/codex.codexAgentLaunchArgs", "agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "approval policy: trusting the project never asks",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "AgentPermissionMode::TrustProject => \"never\",",
+    "replace": "AgentPermissionMode::TrustProject => \"untrusted\",",
+    "fn": [
+      "agent-session/codex.codexAgentApprovalPolicy",
+      "agent-session/codex.codexAgentThreadParams"
+    ]
+  },
+  {
+    "name": "profile: the minimal set is read-only",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "filesystem.set(\":minimal\", \"read\".to_owned());",
+    "replace": "filesystem.set(\":minimal\", \"write\".to_owned());",
+    "fn": ["agent-session/codex.codexAgentFilesystem", "agent-session/codex.codexAgentThreadParams"]
+  },
+  {
+    "name": "profile: the project folder is writable",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "filesystem.set(options.project_root.as_str(), \"write\".to_owned());",
+    "replace": "filesystem.set(options.project_root.as_str(), \"read\".to_owned());",
+    "fn": ["agent-session/codex.codexAgentFilesystem", "agent-session/codex.codexAgentThreadParams"]
+  },
+  {
+    "name": "profile: an empty skill folder is no folder",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": ".filter(|dir| !dir.is_empty())",
+    "replace": ".filter(|_| true)",
+    "fn": ["agent-session/codex.codexAgentFilesystem"]
+  },
+  {
+    "name": "profile: a closing bracket is a glob character",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "js_regex!(r\"[*?\\[\\]]\").test(path)",
+    "replace": "js_regex!(r\"[*?\\[]\").test(path)",
+    "fn": ["agent-session/codex.codexProfilePathsLiteral"]
+  },
+  {
+    "name": "readable dirs: a drive root is skipped",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "seen.contains(&key) || root == key",
+    "replace": "seen.contains(&key)",
+    "fn": ["agent-session/codex.codexAgentReadableDirs"]
+  },
+  {
+    "name": "thread params: the relay's bearer token",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "format!(\"Bearer {}\", relay.token)",
+    "replace": "format!(\"Bearer {}\", relay.name)",
+    "fn": [
+      "agent-session/codex.codexAgentThreadParams",
+      "agent-session/codex.startCodexAgentSession"
+    ]
+  },
+  {
+    "name": "thread params: the thread is ephemeral",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "(\"ephemeral\", JsonValue::Bool(true)),",
+    "replace": "(\"ephemeral\", JsonValue::Bool(false)),",
+    "fn": [
+      "agent-session/codex.codexAgentThreadParams",
+      "agent-session/codex.startCodexAgentSession"
+    ]
+  },
+  {
+    "name": "action: the command summary separator",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "commands.join(\"; \")",
+    "replace": "commands.join(\", \")",
+    "fn": ["agent-session/codex.codexAgentAction", "agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "decline decision: no list means decline",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "_ => \"decline\",",
+    "replace": "_ => \"cancel\",",
+    "fn": ["agent-session/codex.codexDeclineDecision", "agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "extra tools: the app's own tools are allowed",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "if !is_agent_app_mcp_tool(&tool) {",
+    "replace": "if is_agent_app_mcp_tool(&tool) {",
+    "fn": [
+      "agent-session/codex.codexAppMcpExtraTools",
+      "agent-session/codex.startCodexAgentSession"
+    ]
+  },
+  {
+    "name": "elicitation: only a form is accepted",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "Some(\"form\")",
+    "replace": "Some(\"url\")",
+    "fn": [
+      "agent-session/codex.codexElicitationAnswer",
+      "agent-session/codex.startCodexAgentSession"
+    ]
+  },
+  {
+    "name": "item status: a declined item is denied",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "Some(\"declined\") => \"denied\",",
+    "replace": "Some(\"declined\") => \"done\",",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "stderr: the diagnostic keeps its last 4000 units",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "DIAGNOSTIC_LIMIT: usize = 4_000",
+    "replace": "DIAGNOSTIC_LIMIT: usize = 4_001",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "request timeout",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "REQUEST_TIMEOUT_MS: f64 = 30_000.0",
+    "replace": "REQUEST_TIMEOUT_MS: f64 = 31_000.0",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "idle timeout",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "DEFAULT_IDLE_MS: f64 = 30.0",
+    "replace": "DEFAULT_IDLE_MS: f64 = 31.0",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "thread start timeout",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "unwrap_or(THREAD_START_TIMEOUT_MS)",
+    "replace": "unwrap_or(REQUEST_TIMEOUT_MS)",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "mcp status: ten pages at most",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "MAX_MCP_STATUS_PAGES: usize = 10",
+    "replace": "MAX_MCP_STATUS_PAGES: usize = 11",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "login: a metered login needs the acceptance",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "login_method != \"subscription\" && !options.metered_accepted",
+    "replace": "login_method != \"subscription\" || !options.metered_accepted",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "thread: an opened network is refused when it was left off",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "!core.network && codex_thread",
+    "replace": "core.network && codex_thread",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "mcp status: the attachment message",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "Codex attached an MCP server the app did not give it",
+    "replace": "Codex attached an MCP server the app did not give",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "startup status: a starting server counts",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "Some(\"starting\") ||",
+    "replace": "Some(\"startingx\") ||",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "approval: an accepted request answers accept",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "if accept { \"accept\" }",
+    "replace": "if accept { \"decline\" }",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "policy: a denied action is declined",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "AgentPolicyVerdict::Deny(_) => self.answer_approval(&rpc_id, false, decline_as),",
+    "replace": "AgentPolicyVerdict::Deny(_) => self.answer_approval(&rpc_id, true, decline_as),",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "turn: an interrupted turn is not ok",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "ok: status != Some(\"interrupted\"),",
+    "replace": "ok: status == Some(\"interrupted\"),",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "close: a stopped session ends without an error",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "core.end(if stopping {",
+    "replace": "core.end(if !stopping {",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "error notification: a retried stream is still live",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "params.get(\"willRetry\") !=",
+    "replace": "params.get(\"willRetry\") ==",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "effort: a blank level is none",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "!trim(level).is_empty()",
+    "replace": "trim(level).is_empty()",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "default model: the first listed one",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "first = id;",
+    "replace": "first = String::new();",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "send: one message at a time",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "if st.busy {",
+    "replace": "if false {",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "stop: interrupt only a running turn",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "!st.thread_id.is_empty() && !st.turn_id.is_empty()",
+    "replace": "!st.thread_id.is_empty() || !st.turn_id.is_empty()",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "sandbox check: only on Windows",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex.rs",
+    "find": "if platform == \"win32\" {\n        // the profile as the session uses it",
+    "replace": "if platform != \"win32\" {\n        // the profile as the session uses it",
+    "fn": ["agent-session/codex.startCodexAgentSession"]
+  },
+  {
+    "name": "probe: the timeout",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "PROBE_TIMEOUT_MS: f64 = 60_000.0",
+    "replace": "PROBE_TIMEOUT_MS: f64 = 61_000.0",
+    "fn": [
+      "agent-session/codex-sandbox-probe.probeCodexSandbox",
+      "agent-session/codex.startCodexAgentSession"
+    ]
+  },
+  {
+    "name": "probe: the output limit",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "OUTPUT_LIMIT: usize = 16_000",
+    "replace": "OUTPUT_LIMIT: usize = 20_000",
+    "fn": ["agent-session/codex-sandbox-probe.probeCodexSandbox"]
+  },
+  {
+    "name": "probe verdict: a readable denied file is not contained",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "return CodexSandboxProbeResult::NotContained;",
+    "replace": "return CodexSandboxProbeResult::Contained;",
+    "fn": [
+      "agent-session/codex-sandbox-probe.codexSandboxProbeVerdict",
+      "agent-session/codex-sandbox-probe.probeCodexSandbox"
+    ]
+  },
+  {
+    "name": "probe args: the denied folder is denied",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "profile.set(denied_dir.as_str(), \"deny\".to_owned());",
+    "replace": "profile.set(denied_dir.as_str(), \"read\".to_owned());",
+    "fn": [
+      "agent-session/codex-sandbox-probe.codexSandboxProbeArgs",
+      "agent-session/codex-sandbox-probe.probeCodexSandbox"
+    ]
+  },
+  {
+    "name": "probe args: the network switch",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "network.enabled=true",
+    "replace": "network.enabled=false",
+    "fn": [
+      "agent-session/codex-sandbox-probe.codexSandboxProbeArgs",
+      "agent-session/codex-sandbox-probe.probeCodexSandbox"
+    ]
+  },
+  {
+    "name": "probe: a child error is unavailable",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "ChildEvent::Error(_) => finish(CodexSandboxProbeResult::Unavailable),",
+    "replace": "ChildEvent::Error(_) => finish(CodexSandboxProbeResult::Contained),",
+    "fn": ["agent-session/codex-sandbox-probe.probeCodexSandbox"]
+  },
+  {
+    "name": "probe: the timeout ends the child's tree",
+    "file": "main-core/src/packages/ai_provider/agent_session_codex_sandbox_probe.rs",
+    "find": "kill_tree(pid);",
+    "replace": "let _ = &kill_tree;",
+    "fn": ["agent-session/codex-sandbox-probe.probeCodexSandbox"]
+  },
+  {
+    "name": "messages: the protected path text",
+    "file": "main-core/src/packages/ai_provider/agent_session_messages.rs",
+    "find": "This location is protected (sign-in data or app data)",
+    "replace": "This location is protected (sign-in data)",
+    "fn": ["agent-session/messages.denyMessage"]
+  },
+  {
+    "name": "types: the mode list",
+    "file": "main-core/src/packages/ai_provider/agent_session_types.rs",
+    "find": "[\"ask-commands\", \"ask-writes\", \"trust-project\"];",
+    "replace": "[\"ask-writes\", \"ask-commands\", \"trust-project\"];",
+    "fn": ["agent-session/types.AGENT_PERMISSION_MODES"]
+  },
+  {
+    "name": "types: the default mode",
+    "file": "main-core/src/packages/ai_provider/agent_session_types.rs",
+    "find": "DEFAULT_AGENT_PERMISSION_MODE: &str = \"ask-commands\"",
+    "replace": "DEFAULT_AGENT_PERMISSION_MODE: &str = \"ask-writes\"",
+    "fn": ["agent-session/types.DEFAULT_AGENT_PERMISSION_MODE"]
+  },
+  {
+    "name": "types: a mode is matched as written",
+    "file": "main-core/src/packages/ai_provider/agent_session_types.rs",
+    "find": "AGENT_PERMISSION_MODES.contains(&value.as_str())",
+    "replace": "AGENT_PERMISSION_MODES.contains(&value.to_lowercase().as_str())",
+    "fn": ["agent-session/types.isAgentPermissionMode"]
+  },
+  {
+    "name": "types: the web search list",
+    "file": "main-core/src/packages/ai_provider/agent_session_types.rs",
+    "find": "[\"cached\", \"live\", \"disabled\"];",
+    "replace": "[\"live\", \"cached\", \"disabled\"];",
+    "fn": ["agent-session/types.AGENT_CODEX_WEB_SEARCH"]
+  },
+  {
+    "name": "claude: the server prefix of a tool name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "let bare = name.strip_prefix(prefix.as_str()).unwrap_or(name);",
+    "replace": "let bare = name;",
+    "fn": ["agent-session/claude.isAgentAppMcpTool"]
+  },
+  {
+    "name": "claude: the app's own name is taken",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "seen.insert(APP_MCP_SERVER_NAME.to_lowercase());",
+    "replace": "let _ = APP_MCP_SERVER_NAME;",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: relay names are compared without case",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "let key = relay.name.to_lowercase();",
+    "replace": "let key = relay.name.clone();",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no underscore at the start of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "^(?!_)(?!.*__)",
+    "replace": "^(?!.*__)",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no double underscore in a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "(?!.*__)[A-Za-z0-9_-]+(?<!_)$",
+    "replace": "[A-Za-z0-9_-]+(?<!_)$",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: no underscore at the end of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "[A-Za-z0-9_-]+(?<!_)$",
+    "replace": "[A-Za-z0-9_-]+$",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  },
+  {
+    "name": "claude: the characters of a relay name",
+    "file": "main-core/src/packages/ai_provider/agent_session_claude.rs",
+    "find": "[A-Za-z0-9_-]+",
+    "replace": "[A-Za-z0-9_.-]+",
+    "fn": ["agent-session/claude.agentUsableRelays"]
+  }
+]

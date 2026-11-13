@@ -10,4 +10,5 @@ pub mod marked_html;
 pub mod old_names;
 pub mod preview_document;
 pub mod preview_protocol;
+pub mod recovery;
 pub mod single_file_html;

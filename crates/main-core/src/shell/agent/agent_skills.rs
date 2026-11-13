@@ -25,7 +25,7 @@ use serde::Serialize;
 
 use crate::node_fs::namespaced;
 use crate::packages::agent_core::redact_range::REDACT_NAMESPACES;
-use crate::packages::ai_provider::agent_policy::{comparable_path, is_inside_path};
+use crate::packages::ai_provider::agent_session_policy::{comparable_path, is_inside_path};
 use crate::packages::ai_provider::agent_session_skills::AGENT_SKILL_PLUGIN_NAME;
 use crate::packages::ai_provider::user_skill_md::{
     IEUM_TEMPLATE_KEY, MAX_USER_SKILL_BYTES, USER_SKILL_PRIORITY, is_inside_codex_home,
@@ -496,7 +496,7 @@ struct CandidateSet<'a> {
 impl CandidateSet<'_> {
     /// `key(path)`
     fn key(&self, path: &str) -> String {
-        comparable_path(path, path, self.platform)
+        comparable_path(path, path, Some(self.platform))
     }
 
     fn add(&mut self, path: &str, from: &'static str, unsaved: bool, title: Option<&str>) {
@@ -587,10 +587,10 @@ pub fn agent_template_candidates(
             // inside the project folder as written and where it really is: a link leading out is refused
             let real_root = real_path(options.project_root);
             let real = real_path(&full);
-            let inside = is_inside_path(&set.key(&full), &root, platform)
+            let inside = is_inside_path(&set.key(&full), &root, Some(platform))
                 && match (&real_root, &real) {
                     (Some(real_root), Some(real)) if !real_root.is_empty() && !real.is_empty() => {
-                        is_inside_path(&set.key(real), &set.key(real_root), platform)
+                        is_inside_path(&set.key(real), &set.key(real_root), Some(platform))
                     }
                     _ => false,
                 };
@@ -756,9 +756,9 @@ fn is_protected_path(path: &str, guard: &TemplateReadGuard, platform: &str) -> b
             }
             for base in bases {
                 if is_inside_path(
-                    &comparable_path(at, at, platform),
-                    &comparable_path(base, base, platform),
-                    platform,
+                    &comparable_path(at, at, Some(platform)),
+                    &comparable_path(base, base, Some(platform)),
+                    Some(platform),
                 ) {
                     return true;
                 }
