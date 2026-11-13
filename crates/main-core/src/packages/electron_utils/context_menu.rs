@@ -17,7 +17,7 @@ use serde::ser::{SerializeMap, Serializer};
 pub const VIEW_IMAGE_CHANNEL: &str = "seuoffice:view-image";
 
 /// `ContextMenuLabels`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextMenuLabels {
     pub cut: &'static str,

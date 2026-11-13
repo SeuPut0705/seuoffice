@@ -16,10 +16,16 @@
  *   windows: each event is a right-click on a window, the native menu's
  *   template is logged, and the listed entries are clicked. The Rust plays
  *   the adapter: it carries out the commands it decides on the same fakes.
+ * - app-menu: the templates are compared as JSON (the clicks are functions,
+ *   which JSON leaves out); an app's own entry is `{ label }`. `app-menu.click`
+ *   clicks the menus' own entries in a scenario over fake windows, a fake
+ *   `webContents` registry, the About box and the shell's two invokers.
  * - renderer-protocol: the handler the scheme installs answers each request
  *   URL, logged as `fetch` with the file URL or `404`.
  */
 import { createHash } from 'node:crypto'
+import { setUiLang } from '@seuoffice/i18n'
+import type { MenuItemConstructorOptions as Item } from 'electron'
 import { useElectron } from '../electron-fake.ts'
 import { fakeDialog, fakeParent } from '../fakes.ts'
 import type { Case, FileSpec, Group, TsContext } from '../types.ts'
@@ -31,6 +37,7 @@ const conflict = await import('../../../packages/electron-utils/src/save-conflic
 const image = await import('../../../packages/electron-utils/src/save-image.ts')
 const menu = await import('../../../packages/electron-utils/src/context-menu.ts')
 const rendererProtocol = await import('../../../packages/electron-utils/src/renderer-protocol.ts')
+const appMenu = await import('../../../packages/electron-utils/src/app-menu.ts')
 
 const cases = (...lists: unknown[][]): Case[] => lists.map((args): Case => ({ args }))
 const sha = (text: string): string => createHash('sha256').update(text).digest('hex')
@@ -813,9 +820,346 @@ const rendererProtocolGroup: Group = {
   },
 }
 
+// ---------------------------------------------------------------------------
+// app-menu
+// ---------------------------------------------------------------------------
+
+const json = (value: unknown): unknown =>
+  value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+const appItems = (items: unknown): Item[] =>
+  ((items as { label: string }[] | undefined) ?? []).map((item) => ({
+    label: item.label,
+    click: () => {},
+  }))
+const PLATFORMS = ['darwin', 'win32', 'linux']
+const MENU_LANGS = ['en', 'ko', 'ko-KR', 'fr', '', 'constructor']
+const labelsOf = (lang: unknown) => appMenu.appMenuLabels(lang as string)
+
+interface DevContents {
+  id: number
+  devTools: number | null
+  opened: boolean
+  destroyed?: boolean
+}
+
+interface ClickStep {
+  click?: 'minimize' | 'close' | 'devTools' | 'about' | 'checkUpdates' | 'settings'
+  window?: boolean
+  focused?: number | null
+  destroy?: number
+  response?: unknown
+  fallback?: string
+}
+
+interface ClickScenario {
+  lang: string
+  uiLang?: string
+  version?: string
+  canCheck?: boolean
+  settings?: boolean
+  contents?: DevContents[]
+  steps: ClickStep[]
+}
+
+async function runClicks(o: ClickScenario, cx: TsContext): Promise<void> {
+  const labels = appMenu.appMenuLabels(o.lang)
+  appMenu.setUpdateCheckInvoker(o.canCheck ? () => cx.log('checkUpdates') : null)
+  appMenu.setSettingsInvoker(o.settings ? () => cx.log('settings') : null)
+  setUiLang((o.uiLang ?? 'en') as never)
+  const states = (o.contents ?? []).map((c) => ({ ...c }))
+  const objects = new Map<number, unknown>()
+  const objectOf = (id: number | null | undefined): unknown =>
+    id === null || id === undefined ? null : objects.get(id)
+  for (const state of states) {
+    objects.set(state.id, {
+      isDestroyed: () => state.destroyed === true,
+      get devToolsWebContents() {
+        return objectOf(state.devTools)
+      },
+      isDevToolsOpened: () => state.opened,
+      closeDevTools: () => {
+        cx.log('closeDevTools', state.id)
+        state.opened = false
+      },
+      openDevTools: (options: unknown) => {
+        cx.log('openDevTools', state.id, options)
+        state.opened = true
+      },
+    })
+  }
+  let focused: number | null = null
+  const windowMenu = appMenu.windowMenuTemplate('linux', labels).submenu as Item[]
+  try {
+    for (const step of o.steps) {
+      if (step.destroy !== undefined) {
+        const state = states.find((c) => c.id === step.destroy)
+        if (state) state.destroyed = true
+        continue
+      }
+      useElectron({
+        webContents: { getFocusedWebContents: () => objectOf(focused) },
+        app: { getVersion: () => o.version ?? '' },
+        dialog: fakeDialog(step.response, cx.log),
+        clipboard: { writeText: (text: string) => cx.log('writeText', text) },
+      })
+      const win = step.window
+        ? { minimize: () => cx.log('minimize'), close: () => cx.log('close') }
+        : undefined
+      const item: Item | undefined =
+        step.click === 'minimize'
+          ? windowMenu[0]
+          : step.click === 'close'
+            ? windowMenu[2]
+            : step.click === 'devTools'
+              ? appMenu.toggleDevToolsItem(labels)
+              : step.click === 'about'
+                ? appMenu.aboutMenuItem(labels)
+                : step.click === 'checkUpdates'
+                  ? appMenu.checkUpdatesMenuItem(labels)
+                  : step.click === 'settings'
+                    ? appMenu.settingsMenuItem(
+                        labels,
+                        step.fallback === undefined
+                          ? undefined
+                          : () => cx.log('fallback', step.fallback),
+                      )
+                    : undefined
+      if (step.click === 'devTools') focused = step.focused ?? null
+      await (item?.click as ((...args: unknown[]) => unknown) | undefined)?.({}, win, {})
+    }
+  } finally {
+    // the Developer Tools entry remembers its last window in the module: a
+    // destroyed one is forgotten by the next case
+    for (const state of states) state.destroyed = true
+  }
+}
+
+const DEV_CONTENTS: DevContents[] = [
+  { id: 1, devTools: 11, opened: false },
+  { id: 2, devTools: 12, opened: false },
+  { id: 11, devTools: null, opened: false },
+  { id: 12, devTools: null, opened: false },
+]
+
+const clickCases: Case[] = [
+  {
+    args: [
+      {
+        lang: 'en',
+        steps: [
+          { click: 'minimize', window: true },
+          { click: 'close', window: true },
+          { click: 'minimize' },
+          { click: 'close' },
+        ],
+      },
+    ],
+    note: 'the window entries, with and without a window',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        contents: DEV_CONTENTS,
+        steps: [
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 11 },
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: null },
+          { click: 'devTools', focused: 2 },
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 12 },
+        ],
+      },
+    ],
+    note: 'open, close from its own DevTools window, open again, nothing focused',
+  },
+  {
+    args: [
+      {
+        lang: 'ko',
+        contents: DEV_CONTENTS,
+        steps: [
+          { click: 'devTools', focused: null },
+          { click: 'devTools', focused: 1 },
+          { destroy: 1 },
+          { click: 'devTools', focused: null },
+          { click: 'devTools', focused: 11 },
+        ],
+      },
+    ],
+    note: 'the remembered window is destroyed',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        contents: [
+          { id: 1, devTools: 11, opened: true },
+          { id: 11, devTools: null, opened: false },
+        ],
+        steps: [
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 1 },
+          { click: 'devTools', focused: 11 },
+        ],
+      },
+    ],
+    note: 'already open when first clicked',
+  },
+  ...[0, 1, 2, 3, 'x'].flatMap((response): Case[] =>
+    [true, false].map((canCheck): Case => ({
+      args: [
+        {
+          lang: 'en',
+          uiLang: 'en',
+          version: '0.12.40',
+          canCheck,
+          steps: [{ click: 'about', response }],
+        },
+      ],
+      note: `about: response ${response}, update check ${canCheck}`,
+    })),
+  ),
+  ...['ko', 'ko-KR', 'fr', 'zz'].map((uiLang): Case => ({
+    args: [
+      {
+        lang: 'ko',
+        uiLang,
+        version: '1.0.0-beta.2',
+        canCheck: true,
+        steps: [{ click: 'about', response: 1 }],
+      },
+    ],
+    note: `about in ${uiLang}`,
+  })),
+  {
+    args: [
+      {
+        lang: 'en',
+        canCheck: true,
+        settings: true,
+        steps: [
+          { click: 'checkUpdates' },
+          { click: 'settings' },
+          { click: 'settings', fallback: 'prefs' },
+        ],
+      },
+    ],
+    note: 'the shell registered both',
+  },
+  {
+    args: [
+      {
+        lang: 'en',
+        steps: [
+          { click: 'checkUpdates' },
+          { click: 'settings' },
+          { click: 'settings', fallback: 'prefs' },
+        ],
+      },
+    ],
+    note: 'an app on its own',
+  },
+]
+
+const appMenuGroup: Group = {
+  'app-menu.appMenuLabels': {
+    ts: (a) => labelsOf(a[0]),
+    cases: cases(...MENU_LANGS.map((lang) => [lang]), ['en-GB']),
+  },
+  'app-menu.windowMenuTemplate': {
+    ts: (a) => json(appMenu.windowMenuTemplate(a[0] as NodeJS.Platform, labelsOf(a[1]))),
+    cases: cases(
+      ...PLATFORMS.flatMap((p) => [
+        [p, 'en'],
+        [p, 'ko'],
+      ]),
+    ),
+  },
+  'app-menu.editMenuTemplate': {
+    ts: (a) => json(appMenu.editMenuTemplate(a[0] as NodeJS.Platform, labelsOf(a[1]))),
+    cases: cases(
+      ...PLATFORMS.flatMap((p) => [
+        [p, 'en'],
+        [p, 'ko'],
+      ]),
+    ),
+  },
+  'app-menu.toggleDevToolsItem': {
+    ts: (a) => json(appMenu.toggleDevToolsItem(labelsOf(a[0]))),
+    cases: cases(['en'], ['ko']),
+  },
+  'app-menu.viewMenuTemplate': {
+    ts: (a) =>
+      json(
+        a.length > 1
+          ? appMenu.viewMenuTemplate(labelsOf(a[0]), a[1] as never)
+          : appMenu.viewMenuTemplate(labelsOf(a[0])),
+      ),
+    cases: cases(
+      ['en'],
+      ['ko', {}],
+      ['en', { devItems: false }],
+      ['en', { pageZoom: false }],
+      ['ko', { devItems: false, pageZoom: false }],
+      ['en', { devItems: true, pageZoom: true }],
+    ),
+  },
+  'app-menu.helpCheckUpdatesItems': {
+    ts: (a) => json(appMenu.helpCheckUpdatesItems(labelsOf(a[0]), a[1] as NodeJS.Platform)),
+    cases: cases(...PLATFORMS.map((p) => ['ko', p])),
+  },
+  'app-menu.appMenuPopupTemplate': {
+    ts: (a) => json(appMenu.appMenuPopupTemplate(appItems(a[0]), labelsOf(a[1]))),
+    cases: cases([[], 'en'], [[{ label: 'File' }, { label: 'Edit' }], 'ko']),
+  },
+  'app-menu.settingsMenuItem': {
+    ts: (a) => json(appMenu.settingsMenuItem(labelsOf(a[0]), a[1] ? () => {} : undefined)),
+    cases: cases(['en'], ['ko', 'prefs']),
+  },
+  'app-menu.appMenuTemplate': {
+    ts: (a) => {
+      const o = a[2] as { extra?: unknown; appLabel?: string } | undefined
+      return json(
+        appMenu.appMenuTemplate(
+          a[0] as NodeJS.Platform,
+          labelsOf(a[1]),
+          o === undefined
+            ? undefined
+            : {
+                ...(o.extra === undefined ? {} : { extra: appItems(o.extra) }),
+                ...(o.appLabel === undefined ? {} : { appLabel: o.appLabel }),
+              },
+        ),
+      )
+    },
+    cases: [
+      ...PLATFORMS.map((p): Case => ({ args: [p, 'en'] })),
+      { args: ['darwin', 'ko', { extra: [{ label: 'Preferences' }] }] },
+      { args: ['darwin', 'en', { appLabel: 'Seu Docs' }] },
+      { args: ['darwin', 'en', { appLabel: '' }] },
+      { args: ['darwin', 'ko', { extra: [{ label: 'A' }, { label: 'B' }], appLabel: 'X' }] },
+    ],
+  },
+  'app-menu.helpMenuTemplate': {
+    ts: (a) =>
+      json(appMenu.helpMenuTemplate(labelsOf(a[0]), appItems(a[1]), a[2] as NodeJS.Platform)),
+    cases: [
+      ...PLATFORMS.map((p): Case => ({ args: ['en', [], p] })),
+      ...PLATFORMS.map((p): Case => ({ args: ['ko', [{ label: 'Guide' }], p] })),
+    ],
+  },
+  'app-menu.click': {
+    ts: (a, cx) => runClicks(a[0] as ClickScenario, cx),
+    cases: clickCases,
+  },
+}
+
 export const group: Group = {
   ...saveConflict,
   ...saveImage,
   ...contextMenu,
+  ...appMenuGroup,
   ...rendererProtocolGroup,
 }

@@ -3,6 +3,7 @@
 
 pub mod abort_on_destroyed;
 pub mod ai_run_guard;
+pub mod app_menu;
 pub mod atomic_write;
 pub mod author_name;
 pub mod context_menu;

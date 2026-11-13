@@ -13,12 +13,19 @@ use serde_json::Value;
 
 use super::fakes::{FakeDialog, FakeWindow, fake_parent};
 use super::{Answer, CallError, Context, arg, str_arg};
+use crate::packages::electron_utils::app_menu::{
+    AboutAnswer, DevToolsHost, DevToolsToggle, MenuClick, MenuItem, ViewMenuOptions, about_answer,
+    about_box, about_menu_item, app_menu_labels, app_menu_popup_template, app_menu_template,
+    check_updates_menu_item, edit_menu_template, help_check_updates_items, help_menu_template,
+    settings_menu_item, toggle_dev_tools_item, view_menu_template, window_menu_template,
+};
 use crate::packages::electron_utils::context_menu::{
     ContextMenuInterceptors, ContextMenuParams, EditFlags, MenuCommand, MenuEntry,
     VIEW_IMAGE_CHANNEL, after_interceptor, base_lang, build_context_menu_items,
     context_menu_labels, context_menu_template,
 };
 use crate::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
+use crate::packages::electron_utils::message_box::MessageBox;
 use crate::packages::electron_utils::remote_image::MemoryResponse;
 use crate::packages::electron_utils::renderer_protocol::{
     RendererProtocolAnswer, renderer_protocol_answer, renderer_scheme_privileges,
@@ -101,6 +108,91 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             Ok(Some(to_value(&build_context_menu_items(&params, &labels))))
         })(),
         "context-menu.installContextMenu" => context_menu_call(args, cx),
+
+        // ---- app-menu ----
+        "app-menu.appMenuLabels" => {
+            str_arg(args, 0).map(|lang| Some(to_value(&app_menu_labels(lang))))
+        }
+        "app-menu.windowMenuTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 1)?);
+            Ok(Some(to_value(&window_menu_template::<String>(
+                str_arg(args, 0)?,
+                &labels,
+            ))))
+        })(),
+        "app-menu.editMenuTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 1)?);
+            Ok(Some(to_value(&edit_menu_template::<String>(
+                str_arg(args, 0)?,
+                &labels,
+            ))))
+        })(),
+        "app-menu.toggleDevToolsItem" => str_arg(args, 0).map(|lang| {
+            Some(to_value(&toggle_dev_tools_item::<String>(
+                node_platform(),
+                &app_menu_labels(lang),
+            )))
+        }),
+        "app-menu.viewMenuTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 0)?);
+            let options = arg(args, 1).filter(|o| o.is_object());
+            let flag = |key: &str| {
+                options
+                    .and_then(|o| o.get(key))
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true)
+            };
+            Ok(Some(to_value(&view_menu_template::<String>(
+                node_platform(),
+                &labels,
+                ViewMenuOptions {
+                    dev_items: flag("devItems"),
+                    page_zoom: flag("pageZoom"),
+                },
+            ))))
+        })(),
+        "app-menu.helpCheckUpdatesItems" => (|| {
+            let labels = app_menu_labels(str_arg(args, 0)?);
+            Ok(Some(to_value(&help_check_updates_items::<String>(
+                &labels,
+                str_arg(args, 1)?,
+            ))))
+        })(),
+        "app-menu.appMenuPopupTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 1)?);
+            Ok(Some(to_value(&app_menu_popup_template(
+                app_items(arg(args, 0)),
+                &labels,
+            ))))
+        })(),
+        "app-menu.settingsMenuItem" => str_arg(args, 0).map(|lang| {
+            let fallback = arg(args, 1).and_then(Value::as_str).map(str::to_owned);
+            Some(to_value(&settings_menu_item(
+                &app_menu_labels(lang),
+                fallback,
+            )))
+        }),
+        "app-menu.appMenuTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 1)?);
+            let options = arg(args, 2);
+            let extra = app_items(options.and_then(|o| o.get("extra")));
+            let app_label = options
+                .and_then(|o| o.get("appLabel"))
+                .and_then(Value::as_str);
+            Ok(
+                app_menu_template(str_arg(args, 0)?, &labels, extra, app_label)
+                    .map(|menu| to_value(&menu)),
+            )
+        })(),
+        "app-menu.helpMenuTemplate" => (|| {
+            let labels = app_menu_labels(str_arg(args, 0)?);
+            Ok(Some(to_value(&help_menu_template(
+                &labels,
+                app_items(arg(args, 1)),
+                str_arg(args, 2)?,
+            ))))
+        })(),
+        "app-menu.click" => app_menu_click_call(args, cx),
 
         // ---- renderer-protocol ----
         "renderer-protocol.registerRendererScheme" => {
@@ -510,5 +602,208 @@ fn renderer_protocol_call(args: &[Value], cx: &mut Context) -> Answer {
             RendererProtocolAnswer::Fetch(file) => vec![Value::from("fetch"), Value::from(file)],
         });
     }
+    Ok(None)
+}
+
+// ---- app-menu ----
+
+/// `process.platform` of this machine, as Node names it
+fn node_platform() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "darwin",
+        "windows" => "win32",
+        other => other,
+    }
+}
+
+/// An app's own entries: `[{ label }]`, each clicked as `App(label)`
+fn app_items(value: Option<&Value>) -> Vec<MenuItem<String>> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|item| {
+            let label = item.get("label").and_then(Value::as_str).unwrap_or("");
+            MenuItem::clickable(label, MenuClick::App(label.to_owned()))
+        })
+        .collect()
+}
+
+/// The `webContents` of a Developer Tools scenario: `id`, `devTools` (the id
+/// of its DevTools window's contents, or null), `opened`, `destroyed`.
+struct DevToolsFake<'a> {
+    contents: Vec<Value>,
+    focused: Option<u64>,
+    log: &'a Log,
+}
+
+impl DevToolsFake<'_> {
+    fn of(&self, id: u64) -> Option<&Value> {
+        self.contents
+            .iter()
+            .find(|c| c.get("id").and_then(Value::as_u64) == Some(id))
+    }
+
+    fn set(&mut self, id: u64, key: &str, value: Value) {
+        if let Some(Value::Object(c)) = self
+            .contents
+            .iter_mut()
+            .find(|c| c.get("id").and_then(Value::as_u64) == Some(id))
+        {
+            c.insert(key.into(), value);
+        }
+    }
+
+    fn flag(&self, id: u64, key: &str) -> bool {
+        self.of(id)
+            .and_then(|c| c.get(key))
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+    }
+}
+
+impl DevToolsHost<u64> for DevToolsFake<'_> {
+    fn focused(&self) -> Option<u64> {
+        self.focused
+    }
+
+    fn is_destroyed(&self, contents: &u64) -> bool {
+        self.flag(*contents, "destroyed")
+    }
+
+    fn dev_tools_web_contents(&self, contents: &u64) -> Option<u64> {
+        self.of(*contents)
+            .and_then(|c| c.get("devTools"))
+            .and_then(Value::as_u64)
+    }
+
+    fn is_dev_tools_opened(&self, contents: &u64) -> bool {
+        self.flag(*contents, "opened")
+    }
+
+    fn close_dev_tools(&mut self, contents: &u64) {
+        log_line(
+            self.log,
+            vec![Value::from("closeDevTools"), Value::from(*contents)],
+        );
+        self.set(*contents, "opened", Value::Bool(false));
+    }
+
+    fn open_dev_tools_detached(&mut self, contents: &u64) {
+        log_line(
+            self.log,
+            vec![
+                Value::from("openDevTools"),
+                Value::from(*contents),
+                serde_json::json!({ "mode": "detach" }),
+            ],
+        );
+        self.set(*contents, "opened", Value::Bool(true));
+    }
+}
+
+/// Clicks on the menus' own entries, as a scenario `[{ lang, uiLang, version,
+/// canCheck, settings, contents, steps }]`. A step is `{ click: "minimize" |
+/// "close", window }`, `{ click: "devTools", focused }`, `{ destroy: id }`,
+/// `{ click: "about", response }`, `{ click: "checkUpdates" }` or `{ click:
+/// "settings", fallback }`. The fakes log what they are asked: the shell's
+/// update check `["checkUpdates"]`, its Settings `["settings"]`, a fallback
+/// `["fallback", name]`, a window its method, the clipboard `["writeText",
+/// text]`, the About box as the dialog fake does.
+fn app_menu_click_call(args: &[Value], cx: &mut Context) -> Answer {
+    let spec = arg(args, 0).ok_or_else(|| CallError::plain("options"))?;
+    let log: Log = Rc::new(RefCell::new(Vec::new()));
+    let text = |key: &str| spec.get(key).and_then(Value::as_str).unwrap_or("");
+    let labels = app_menu_labels(text("lang"));
+    let can_check = spec
+        .get("canCheck")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let has_settings = spec
+        .get("settings")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let check_updates = |log: &Log| {
+        if can_check {
+            log_line(log, vec![Value::from("checkUpdates")]);
+        }
+    };
+    let mut toggle = DevToolsToggle::default();
+    let mut devtools = DevToolsFake {
+        contents: spec
+            .get("contents")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default(),
+        focused: None,
+        log: &log,
+    };
+    for step in spec
+        .get("steps")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        if let Some(id) = step.get("destroy").and_then(Value::as_u64) {
+            devtools.set(id, "destroyed", Value::Bool(true));
+            continue;
+        }
+        let window = step.get("window").and_then(Value::as_bool).unwrap_or(false);
+        let item: MenuItem<String> = match step.get("click").and_then(Value::as_str) {
+            Some("minimize") => window_menu_template::<String>("linux", &labels)
+                .submenu
+                .and_then(|items| items.into_iter().next())
+                .ok_or_else(|| CallError::plain("no minimize"))?,
+            Some("close") => window_menu_template::<String>("linux", &labels)
+                .submenu
+                .and_then(|items| items.into_iter().nth(2))
+                .ok_or_else(|| CallError::plain("no close"))?,
+            Some("devTools") => toggle_dev_tools_item(node_platform(), &labels),
+            Some("about") => about_menu_item(&labels),
+            Some("checkUpdates") => check_updates_menu_item(&labels),
+            Some("settings") => settings_menu_item(
+                &labels,
+                step.get("fallback")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            ),
+            _ => continue,
+        };
+        match item.click {
+            Some(MenuClick::MinimizeWindow) if window => {
+                log_line(&log, vec![Value::from("minimize")])
+            }
+            Some(MenuClick::CloseWindow) if window => log_line(&log, vec![Value::from("close")]),
+            Some(MenuClick::MinimizeWindow | MenuClick::CloseWindow) => {}
+            Some(MenuClick::ToggleDevTools) => {
+                devtools.focused = step.get("focused").and_then(Value::as_u64);
+                toggle.toggle(&mut devtools);
+            }
+            Some(MenuClick::CheckUpdates) => check_updates(&log),
+            Some(MenuClick::About) => {
+                let version = text("version");
+                let dialog = FakeDialog::of(step);
+                let options = about_box(&labels, version, text("uiLang"), can_check);
+                let response = dialog.show_message_box(&options);
+                log.borrow_mut().extend(dialog.log.into_inner());
+                match about_answer(response, version) {
+                    AboutAnswer::CopyText(text) => {
+                        log_line(&log, vec![Value::from("writeText"), Value::from(text)]);
+                    }
+                    AboutAnswer::CheckUpdates => check_updates(&log),
+                    AboutAnswer::Nothing => {}
+                }
+            }
+            Some(MenuClick::Settings(fallback)) => {
+                if has_settings {
+                    log_line(&log, vec![Value::from("settings")]);
+                } else if let Some(name) = fallback {
+                    log_line(&log, vec![Value::from("fallback"), Value::from(name)]);
+                }
+            }
+            Some(MenuClick::App(_)) | None => {}
+        }
+    }
+    cx.logs.extend(log.take());
     Ok(None)
 }

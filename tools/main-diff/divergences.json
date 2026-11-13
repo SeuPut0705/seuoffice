@@ -124,5 +124,19 @@
       "files": {}
     },
     "reason": "The label tables are plain objects, so LABELS[\"constructor\"] finds Object.prototype.constructor, a function, and contextMenuLabels answers it (JSON writes nothing). The Rust table holds only its languages and falls back to English. No caller passes such a language: the language comes from normalizeLang, which answers one of LANGS. Final."
+  },
+  {
+    "id": "app-menu-labels-of-a-prototype-member-language",
+    "fn": "app-menu.appMenuLabels",
+    "case": 5,
+    "typescript": {
+      "answer": "{\"value\":{}}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":{\"cut\":\"Cut\",\"copy\":\"Copy\",\"paste\":\"Paste\",\"selectAll\":\"Select All\",\"viewImage\":\"View Image\",\"copyImage\":\"Copy Image\",\"saveImageAs\":\"Save Image As…\",\"window\":\"Window\",\"minimize\":\"Minimize\",\"closeWindow\":\"Close Window\",\"edit\":\"Edit\",\"undo\":\"Undo\",\"redo\":\"Redo\",\"delete\":\"Delete\",\"view\":\"View\",\"reload\":\"Reload\",\"forceReload\":\"Force Reload\",\"toggleDevTools\":\"Developer Tools\",\"actualSize\":\"Actual Size\",\"zoomIn\":\"Zoom In\",\"zoomOut\":\"Zoom Out\",\"fullscreen\":\"Full Screen\",\"help\":\"Help\",\"about\":\"About SeuOffice\",\"checkUpdates\":\"Check for Updates…\",\"version\":\"Version\",\"settings\":\"Settings…\",\"nameWithAi\":\"Name with AI…\"}}",
+      "files": {}
+    },
+    "reason": "As labels-of-a-prototype-member-language: both tables answer Object.prototype.constructor for the language \"constructor\", a function whose spread copies no key, so appMenuLabels answers an object without labels. The Rust falls back to English. Languages come from normalizeLang. Final."
   }
 ]
