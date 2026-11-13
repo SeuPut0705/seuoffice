@@ -38,11 +38,11 @@ use crate::shell::agent::agent_session_folders::{
     ExecRequest, FolderHost, SweepOptions, make_agent_session_folder, sweep_agent_session_folders,
 };
 use crate::shell::agent::agent_sessions::{
-    AgentHost, AgentManager, AgentMcpRelay, AgentMcpSession, AgentPermissionAnswer,
-    AgentSessionHandle, AgentSessionOptions, AgentSkillBundle, AgentStartRequest, AppMcp,
-    CodexChoices, CodexRunOptions, McpRelays, Meanwhile, RelayAnswer, RelayAsk, RelayAskRequest,
-    RemoveOptions, RunnerError, StartError, Stoppable, agent_instructions,
-    agent_instructions_and_cuts, agent_protected_paths, agent_start_failed,
+    AgentHost, AgentManager, AgentMcpRelay, AgentMcpSession, AgentPermissionAnswer, AgentSendStep,
+    AgentSessionHandle, AgentSkillBundle, AgentStartAnswer, AgentStartCall, AgentStartJob,
+    AgentStartRequest, AgentStartResult, AgentStartStep, AppMcp, CodexChoices, McpRelays,
+    RelayAnswer, RelayAsk, RelayAskRequest, RemoveOptions, RunnerError, StartError, Stoppable,
+    agent_instructions, agent_instructions_and_cuts, agent_protected_paths, agent_start_failed,
     codex_skill_instructions, openable_project_file, project_folder_problem, relay_input_preview,
 };
 use crate::shell::agent::agent_skills::AgentSkillEntry;
@@ -530,20 +530,15 @@ impl Stoppable for LogStop {
 struct FakeSession {
     provider: String,
     log: Log,
-    send_error: Option<String>,
 }
 
 impl AgentSessionHandle for FakeSession {
-    fn send(&mut self, message: &str) -> Result<(), String> {
+    fn send(&mut self, message: &str) {
         self.log.borrow_mut().push(vec![
             text("session.send"),
             text(&self.provider),
             text(message),
         ]);
-        match &self.send_error {
-            Some(error) => Err(error.clone()),
-            None => Ok(()),
-        }
     }
 
     fn answer(&mut self, id: &str, answer: &AgentPermissionAnswer) {
@@ -587,6 +582,10 @@ struct Scenario<'a> {
     uuids: u32,
     /// the owner and the session of each runner call, in order
     runner_calls: Vec<(i64, String)>,
+    /// what each program's `send` answers, by session: the message of the rejection, if any
+    send_errors: Vec<(String, Option<String>)>,
+    /// a start whose program is still starting: its job and the answer the runner will give
+    held: Option<(AgentStartJob, AgentStartAnswer)>,
     asks: Vec<AskInfo>,
     /// what the promises settled in a step log once the step is over
     deferred: Vec<Vec<Value>>,
@@ -661,17 +660,49 @@ impl Scenario<'_> {
         field_str(self.o, key)
     }
 
-    /// a runner call: logged, its program or its failure
+    /// What happens while an awaited call runs: the case's `during` table for `step`, run
+    /// against the manager as the TypeScript's fakes do from inside the call. `event` is the
+    /// program the call is starting, which only the runner's `onEvent` reaches
+    fn during(&mut self, manager: &mut AgentManager, step: &str, event: Option<&(i64, String)>) {
+        let o = self.o;
+        for op in list(o.get("during").and_then(|during| during.get(step))) {
+            match field_str(op, "op").as_str() {
+                "stop" => manager.stop(
+                    self,
+                    field_f64(op, "owner").unwrap_or(0.0) as i64,
+                    &field_str(op, "session"),
+                ),
+                "stopOwner" => {
+                    manager.stop_owner(self, field_f64(op, "owner").unwrap_or(0.0) as i64);
+                }
+                "stopAll" => manager.stop_all(self),
+                "event" => {
+                    if let Some((owner_id, session_id)) = event {
+                        let event = jsv(op.get("event").unwrap_or(&Value::Null));
+                        manager.on_event(self, *owner_id, session_id, &event);
+                    }
+                }
+                "setSettings" => self.settings = jsv(op.get("settings").unwrap_or(&Value::Null)),
+                "setStatuses" => self.statuses = jsv(op.get("statuses").unwrap_or(&Value::Null)),
+                _ => {}
+            }
+        }
+    }
+
+    /// a runner call: logged, then its program or its failure; whether the case holds the
+    /// program back (`hold`) until a `release` step
     fn run(
         &mut self,
+        manager: &mut AgentManager,
         key: &str,
         provider: &str,
         logged: Value,
         session: &AgentMcpSession,
-    ) -> Result<Box<dyn AgentSessionHandle>, RunnerError> {
+    ) -> (AgentStartAnswer, bool) {
         self.line(vec![text(key), logged]);
-        self.runner_calls
-            .push((session.owner_id, session.session_id.clone()));
+        let target = (session.owner_id, session.session_id.clone());
+        self.runner_calls.push(target.clone());
+        self.during(manager, "runner", Some(&target));
         let spec = self
             .o
             .get("runner")
@@ -681,14 +712,133 @@ impl Scenario<'_> {
         if let Some(settings) = spec.get("setSettings") {
             self.settings = jsv(settings);
         }
-        if let Some(descriptor) = spec.get("throw") {
-            return Err(Self::runner_error(descriptor));
+        let hold = field_bool(&spec, "hold");
+        let ran: Result<Box<dyn AgentSessionHandle>, RunnerError> = match spec.get("throw") {
+            Some(descriptor) => Err(Self::runner_error(descriptor)),
+            None => {
+                self.send_errors.push((
+                    session.session_id.clone(),
+                    field_opt_str(&spec, "sendError"),
+                ));
+                Ok(Box::new(FakeSession {
+                    provider: provider.to_owned(),
+                    log: self.log.clone(),
+                }))
+            }
+        };
+        (AgentStartAnswer::Run(ran), hold)
+    }
+
+    /// Carries out an awaited call of a start the way the TypeScript's fakes do, and gives the
+    /// answer (with whether the program is held back)
+    fn perform(
+        &mut self,
+        manager: &mut AgentManager,
+        call: AgentStartCall,
+    ) -> (AgentStartAnswer, bool) {
+        match call {
+            AgentStartCall::SessionFolder => (
+                AgentStartAnswer::SessionFolder(make_agent_session_folder(self, None)),
+                false,
+            ),
+            AgentStartCall::AppMcp {
+                project_root,
+                session,
+            } => {
+                let spec = self.o.get("appMcp").cloned().unwrap_or(Value::Null);
+                self.line(vec![
+                    text("startAppMcp"),
+                    text(&project_root),
+                    session_json(&session),
+                ]);
+                self.during(manager, "app-tools", None);
+                let started = match spec.get("throw") {
+                    Some(descriptor) => Err(Self::thrown(descriptor)),
+                    None => Ok(AppMcp {
+                        url: field_str(&spec, "url"),
+                        token: field_str(&spec, "token"),
+                        server: Box::new(LogStop {
+                            log: self.log.clone(),
+                            label: "appMcp.stop",
+                        }),
+                    }),
+                };
+                (AgentStartAnswer::AppMcp(started), false)
+            }
+            AgentStartCall::Relays { session } => {
+                let spec = self.o.get("relays").cloned().unwrap_or(Value::Null);
+                self.line(vec![text("startRelays"), session_json(&session)]);
+                self.during(manager, "user-mcp", None);
+                let started = match spec.get("throw") {
+                    Some(descriptor) => Err(Self::thrown(descriptor)),
+                    None => Ok(McpRelays {
+                        relays: list(spec.get("relays"))
+                            .iter()
+                            .map(|relay| AgentMcpRelay {
+                                name: field_str(relay, "name"),
+                                url: field_str(relay, "url"),
+                                token: field_str(relay, "token"),
+                                tools: str_list(relay.get("tools")),
+                            })
+                            .collect(),
+                        keep_results_inside: str_list(spec.get("keepResultsInside")),
+                        handle: Box::new(LogStop {
+                            log: self.log.clone(),
+                            label: "relays.stop",
+                        }),
+                    }),
+                };
+                (AgentStartAnswer::Relays(started), false)
+            }
+            AgentStartCall::BuildSkills { project_root } => {
+                let spec = self.o.get("buildSkills").cloned().unwrap_or(Value::Null);
+                self.line(vec![text("buildSkills"), text(&project_root)]);
+                self.during(manager, "skills", None);
+                let built = match spec.get("throw") {
+                    Some(descriptor) => Err(Self::thrown(descriptor)),
+                    None => Ok(match spec.get("bundle") {
+                        Some(bundle) if bundle.is_object() => Some(AgentSkillBundle {
+                            dir: field_str(bundle, "dir"),
+                            skills: skill_entries(bundle.get("skills")),
+                        }),
+                        _ => None,
+                    }),
+                };
+                (AgentStartAnswer::BuildSkills(built), false)
+            }
+            AgentStartCall::RunClaude { options, session } => self.run(
+                manager,
+                "claude",
+                "claude-code",
+                json(&options.to_json()),
+                &session,
+            ),
+            AgentStartCall::RunCodex {
+                options,
+                codex,
+                session,
+            } => self.run(
+                manager,
+                "codex",
+                "codex",
+                json(&codex.merged_json(&options)),
+                &session,
+            ),
         }
-        Ok(Box::new(FakeSession {
-            provider: provider.to_owned(),
-            log: self.log.clone(),
-            send_error: field_opt_str(&spec, "sendError"),
-        }))
+    }
+
+    /// what the program of `session` answers to the message it was just given
+    fn send_answer(&self, session: &str) -> Result<(), String> {
+        match self
+            .send_errors
+            .iter()
+            .rev()
+            .find(|(known, _)| known == session)
+            .and_then(|(_, error)| error.clone())
+        {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 }
 
@@ -776,95 +926,12 @@ impl AgentHost for Scenario<'_> {
         matches!(self.o.get("appMcp"), Some(spec) if !spec.is_null())
     }
 
-    fn start_app_mcp(
-        &mut self,
-        project_root: &str,
-        session: &AgentMcpSession,
-    ) -> Result<AppMcp, Box<Thrown>> {
-        let spec = self.o.get("appMcp").cloned().unwrap_or(Value::Null);
-        self.line(vec![
-            text("startAppMcp"),
-            text(project_root),
-            session_json(session),
-        ]);
-        if let Some(descriptor) = spec.get("throw") {
-            return Err(Self::thrown(descriptor));
-        }
-        Ok(AppMcp {
-            url: field_str(&spec, "url"),
-            token: field_str(&spec, "token"),
-            server: Box::new(LogStop {
-                log: self.log.clone(),
-                label: "appMcp.stop",
-            }),
-        })
-    }
-
     fn has_relays(&self) -> bool {
         matches!(self.o.get("relays"), Some(spec) if !spec.is_null())
     }
 
-    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Box<Thrown>> {
-        let spec = self.o.get("relays").cloned().unwrap_or(Value::Null);
-        self.line(vec![text("startRelays"), session_json(session)]);
-        if let Some(descriptor) = spec.get("throw") {
-            return Err(Self::thrown(descriptor));
-        }
-        Ok(McpRelays {
-            relays: list(spec.get("relays"))
-                .iter()
-                .map(|relay| AgentMcpRelay {
-                    name: field_str(relay, "name"),
-                    url: field_str(relay, "url"),
-                    token: field_str(relay, "token"),
-                    tools: str_list(relay.get("tools")),
-                })
-                .collect(),
-            keep_results_inside: str_list(spec.get("keepResultsInside")),
-            handle: Box::new(LogStop {
-                log: self.log.clone(),
-                label: "relays.stop",
-            }),
-        })
-    }
-
     fn has_build_skills(&self) -> bool {
         matches!(self.o.get("buildSkills"), Some(spec) if !spec.is_null())
-    }
-
-    fn build_skills(
-        &mut self,
-        project_root: &str,
-    ) -> Result<Option<AgentSkillBundle>, Box<Thrown>> {
-        let spec = self.o.get("buildSkills").cloned().unwrap_or(Value::Null);
-        self.line(vec![text("buildSkills"), text(project_root)]);
-        if let Some(descriptor) = spec.get("throw") {
-            return Err(Self::thrown(descriptor));
-        }
-        Ok(match spec.get("bundle") {
-            Some(bundle) if bundle.is_object() => Some(AgentSkillBundle {
-                dir: field_str(bundle, "dir"),
-                skills: skill_entries(bundle.get("skills")),
-            }),
-            _ => None,
-        })
-    }
-
-    fn run_claude(
-        &mut self,
-        options: &AgentSessionOptions,
-        session: &AgentMcpSession,
-    ) -> Result<Box<dyn AgentSessionHandle>, RunnerError> {
-        self.run("claude", "claude-code", json(&options.to_json()), session)
-    }
-
-    fn run_codex(
-        &mut self,
-        options: &AgentSessionOptions,
-        codex: &CodexRunOptions,
-        session: &AgentMcpSession,
-    ) -> Result<Box<dyn AgentSessionHandle>, RunnerError> {
-        self.run("codex", "codex", json(&codex.merged_json(options)), session)
     }
 
     fn remove_folder(&mut self, dir: &str, options: &RemoveOptions) {
@@ -909,36 +976,6 @@ impl AgentHost for Scenario<'_> {
             ]);
         }
     }
-
-    fn meanwhile(&mut self, step: &str) -> Vec<Meanwhile> {
-        let o = self.o;
-        let mut out: Vec<Meanwhile> = Vec::new();
-        for op in list(o.get("during").and_then(|during| during.get(step))) {
-            match field_str(op, "op").as_str() {
-                "stop" => out.push(Meanwhile::Stop {
-                    owner_id: field_f64(op, "owner").unwrap_or(0.0) as i64,
-                    session_id: field_str(op, "session"),
-                }),
-                "stopOwner" => out.push(Meanwhile::StopOwner {
-                    owner_id: field_f64(op, "owner").unwrap_or(0.0) as i64,
-                }),
-                "stopAll" => out.push(Meanwhile::StopAll),
-                "event" => {
-                    if let Some((owner_id, session_id)) = self.runner_calls.last().cloned() {
-                        out.push(Meanwhile::Event {
-                            owner_id,
-                            session_id,
-                            event: jsv(op.get("event").unwrap_or(&Value::Null)),
-                        });
-                    }
-                }
-                "setSettings" => self.settings = jsv(op.get("settings").unwrap_or(&Value::Null)),
-                "setStatuses" => self.statuses = jsv(op.get("statuses").unwrap_or(&Value::Null)),
-                _ => {}
-            }
-        }
-        out
-    }
 }
 
 fn request_of(value: &Value) -> AgentStartRequest {
@@ -962,6 +999,30 @@ fn answer_of(value: Option<&Value>) -> AgentPermissionAnswer {
     }
 }
 
+/// Runs the steps of a start: the scenario carries out each awaited call and answers it. With
+/// `detach`, a program the case holds back ends the run: its job waits in the scenario for
+/// `release`, and there is no result yet.
+fn drive_start(
+    manager: &mut AgentManager,
+    fake: &mut Scenario<'_>,
+    mut step: AgentStartStep,
+    detach: bool,
+) -> Option<AgentStartResult> {
+    loop {
+        match step {
+            AgentStartStep::Done(result) => return Some(result),
+            AgentStartStep::Await { call, job } => {
+                let (answer, hold) = fake.perform(manager, call);
+                if hold && detach {
+                    fake.held = Some((job, answer));
+                    return None;
+                }
+                step = job.resume(manager, fake, answer);
+            }
+        }
+    }
+}
+
 fn manager_call(args: &[Value], cx: &mut Context) -> Answer {
     let o = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log: Log = Rc::new(RefCell::new(Vec::new()));
@@ -974,6 +1035,8 @@ fn manager_call(args: &[Value], cx: &mut Context) -> Answer {
         open_documents: str_list(o.get("openDocuments")),
         uuids: 0,
         runner_calls: Vec::new(),
+        send_errors: Vec::new(),
+        held: None,
         asks: Vec::new(),
         deferred: Vec::new(),
         slow: Vec::new(),
@@ -994,12 +1057,29 @@ fn manager_call(args: &[Value], cx: &mut Context) -> Answer {
         match op.as_str() {
             "start" => {
                 let request = request_of(step.get("request").unwrap_or(&Value::Null));
-                let result = manager.start(&mut fake, owner, &request);
-                entry.insert("result".into(), json(&result.to_json()));
+                let first = manager.start_begin(&mut fake, owner, &request);
+                let detach = field_bool(step, "detach");
+                if let Some(result) = drive_start(&mut manager, &mut fake, first, detach) {
+                    entry.insert("result".into(), json(&result.to_json()));
+                }
+            }
+            "release" => {
+                if let Some((job, answer)) = fake.held.take() {
+                    let next = job.resume(&mut manager, &mut fake, answer);
+                    if let Some(result) = drive_start(&mut manager, &mut fake, next, false) {
+                        entry.insert("result".into(), json(&result.to_json()));
+                    }
+                }
             }
             "send" => {
                 let message = field_str(step, "text");
-                if let Err(error) = manager.send(&mut fake, owner, &session, &message) {
+                let sent = match manager.send_begin(&mut fake, owner, &session, &message) {
+                    AgentSendStep::Done(done) => done,
+                    AgentSendStep::Await { call, job } => {
+                        job.resume(fake.send_answer(&call.session_id))
+                    }
+                };
+                if let Err(error) = sent {
                     entry.insert("error".into(), text(&error));
                 }
             }

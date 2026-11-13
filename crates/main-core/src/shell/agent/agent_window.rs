@@ -32,13 +32,17 @@ use crate::shell::agent::agent_api::{
     agent_channel, agent_project_prefs_patch, agent_start_failure_code, normalize_agent_prefs,
     with_recent_folder,
 };
-use crate::shell::agent::agent_sessions::{agent_protected_paths, openable_project_file};
+use crate::shell::agent::agent_sessions::{
+    AgentHost, AgentManager, AgentPermissionAnswer, AgentSendCall, AgentSendJob, AgentSendStep,
+    AgentStartAnswer, AgentStartCall, AgentStartJob, AgentStartRequest, AgentStartResult,
+    AgentStartStep, CodexChoices, agent_protected_paths, openable_project_file,
+};
 use crate::shell::agent::agent_skills::{
-    AgentOpenTab, AgentSessionSkill, AgentSessionSkillName, AgentSkillListEntry,
-    AgentSkillProposalInput, AgentSkillProposalResult, AgentTemplateCandidate, DeckArchive,
-    SkillProposal, TemplateCandidateOptions, TemplateReadGuard, TemplateReadRefusal,
-    TemplateRedaction, agent_skill_proposal_of, agent_template_candidates, candidate_view,
-    read_template_candidate, template_redaction_of,
+    AgentOpenTab, AgentSessionSkillName, AgentSkillListEntry, AgentSkillProposalInput,
+    AgentSkillProposalResult, AgentTemplateCandidate, DeckArchive, SkillProposal,
+    TemplateCandidateOptions, TemplateReadGuard, TemplateReadRefusal, TemplateRedaction,
+    agent_skill_proposal_of, agent_template_candidates, candidate_view, read_template_candidate,
+    template_redaction_of,
 };
 use crate::shell::app_settings::{
     AgentProjectPref, read_agent_project_pref, write_agent_project_pref,
@@ -101,6 +105,23 @@ pub fn agent_permission_answer(
         } else {
             "once"
         },
+    }
+}
+
+impl From<PermissionAnswer> for AgentPermissionAnswer {
+    fn from(answer: PermissionAnswer) -> Self {
+        match answer {
+            PermissionAnswer::Deny => AgentPermissionAnswer {
+                allow: false,
+                scope: None,
+                message: None,
+            },
+            PermissionAnswer::Allow { scope } => AgentPermissionAnswer {
+                allow: true,
+                scope: Some(scope.to_owned()),
+                message: None,
+            },
+        }
     }
 }
 
@@ -309,37 +330,14 @@ pub enum TemplatePreviewOutcome {
     Refused { reason: String },
 }
 
-/// What `createAgentManager` answers to a start
-#[derive(Debug, Clone, PartialEq)]
-pub enum AgentStartOutcome {
-    Started {
-        session_id: String,
-        skills: Vec<AgentSessionSkill>,
-        mcp_keep_inside: Option<Vec<String>>,
-        instructions_truncated: Option<Vec<String>>,
-    },
-    Failed {
-        failure: AgentStartFailure,
-        cause: Option<String>,
-    },
-}
-
-/// `AgentStartRequest`
-#[derive(Debug, Clone, PartialEq)]
-pub struct AgentStartRequest {
-    pub provider: String,
-    pub project_root: String,
-    pub mode: String,
-    pub codex: Option<CodexStartChoices>,
-}
-
-/// The window's services and its manager, as the handlers call them (the
-/// `deps` and the `manager` of the TypeScript, and the Electron objects they
-/// reach). A method that may throw gives a [`Failure`]. Rule d6/d7 audit: the
-/// only call that waits on a renderer is `context.openTabs()`, which is an
-/// argument of `AgentSkillTools::propose_skill` and not a method here; the
-/// dialog, the file system, the manager (app MCP server, relays and the
-/// agent CLI) and the services stay synchronous.
+/// The window's services, as the handlers call them (the `deps` of the TypeScript and the
+/// Electron objects they reach). A method that may throw gives a [`Failure`]. Rule d6/d7 audit:
+/// the only call that waits on a renderer is `context.openTabs()`, which is an argument of
+/// `AgentSkillTools::propose_skill` and not a method here; the dialog, the file system and the
+/// services stay synchronous. What the manager awaits (the session folder, the app MCP server,
+/// the relays, the skills copy, the agent CLI, the program taking a message) is a step the
+/// caller drives (`AgentManager::start_begin` and `send_begin`, through the handlers below),
+/// never a method of this trait: a stop or an answer must be able to run while a start waits.
 pub trait AgentWindowHost {
     /// `win`, `None` when null
     fn window(&self) -> Option<WindowState>;
@@ -404,18 +402,9 @@ pub trait AgentWindowHost {
     /// the JSZip behind the deck check (engine-waiting; pure bytes in, entries out)
     fn deck(&mut self) -> &mut dyn DeckArchive;
 
-    // the manager
-    fn start(&mut self, owner_id: i64, request: &AgentStartRequest) -> AgentStartOutcome;
-    fn send(&mut self, owner_id: i64, session_id: &str, text: &str) -> Result<(), Failure>;
-    fn answer(
-        &mut self,
-        owner_id: i64,
-        session_id: &str,
-        request_id: &str,
-        answer: PermissionAnswer,
-    );
-    fn stop(&mut self, owner_id: i64, session_id: &str);
-    fn project_root_of(&self, owner_id: i64, session_id: &str) -> Option<String>;
+    /// the host of the manager (the `deps` of `createAgentManager`), which is this same object.
+    /// The manager itself is the caller's; the handlers that reach it take it as an argument
+    fn agent(&mut self) -> &mut dyn AgentHost;
 }
 
 /// `ownerOf(event)`: the sender's id when it is the page of the open window
@@ -685,96 +674,210 @@ fn failed(failure: &AgentStartFailure) -> Value {
     json!({ "ok": false, "failure": json_value_to_serde(&failure.to_json()) })
 }
 
-/// `startAgentForWindow(d, m, owner, request)`: the response of the `start`
-/// channel; `now_ms` is the clock of the crash log
-pub fn start_agent_for_window(
+/// What a start decides before the manager is asked, and what the response needs afterwards
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentWindowStartPlan {
+    provider: String,
+    mode: String,
+    folder: String,
+    /// the preferences as read before the start: the response writes them back even if a
+    /// `setPrefs` stored others while the start waited
+    prefs: AgentPrefs,
+    request: AgentStartRequest,
+}
+
+/// `startAgentForWindow(d, m, owner, request)`, up to the call of `m.start`: `Err` is the
+/// response of the `start` channel when it is decided before the manager is asked
+pub fn plan_agent_start(
     host: &mut dyn AgentWindowHost,
-    owner: i64,
     request: Option<&JsonValue>,
-    now_ms: f64,
-) -> Value {
+) -> Result<AgentWindowStartPlan, Value> {
     let provider = string_of(own(request, "provider"));
     let mode = string_of(own(request, "mode"));
     let folder = string_of(own(request, "folder")).unwrap_or("");
     let (Some(provider), Some(mode)) = (provider, mode) else {
-        return failed(&AgentStartFailure::InvalidRequest);
+        return Err(failed(&AgentStartFailure::InvalidRequest));
     };
     if !AGENT_PROVIDERS.contains(&provider) || !AGENT_MODES.contains(&mode) {
-        return failed(&AgentStartFailure::InvalidRequest);
+        return Err(failed(&AgentStartFailure::InvalidRequest));
     }
     if AGENT_BLOCKED_PROVIDERS.contains(&provider) {
-        return failed(&AgentStartFailure::ProviderBlocked);
+        return Err(failed(&AgentStartFailure::ProviderBlocked));
     }
     let prefs = host.read_prefs();
     // the warning is a precondition the main process checks, not only the window
     if prefs.warning_accepted < AGENT_WARNING_VERSION {
-        return failed(&AgentStartFailure::NotAccepted);
+        return Err(failed(&AgentStartFailure::NotAccepted));
     }
     // the folder's remembered Codex choices, read here rather than taken from the window
     let codex = match read_project_prefs_of(host, folder) {
         Ok(project_prefs) => agent_codex_start_choices(provider, &project_prefs),
-        Err(_) => return failed(&AgentStartFailure::BadFolder),
+        Err(_) => return Err(failed(&AgentStartFailure::BadFolder)),
     };
-    let result = host.start(
-        owner,
-        &AgentStartRequest {
+    Ok(AgentWindowStartPlan {
+        provider: provider.to_owned(),
+        mode: mode.to_owned(),
+        folder: folder.to_owned(),
+        prefs,
+        request: AgentStartRequest {
             provider: provider.to_owned(),
             project_root: folder.to_owned(),
             mode: mode.to_owned(),
-            codex,
+            codex: codex.map(|choices| CodexChoices {
+                web_search: choices.web_search,
+                network: choices.network,
+            }),
         },
-    );
-    let (session_id, skills, mcp_keep_inside, instructions_truncated) = match result {
-        AgentStartOutcome::Failed { failure, cause } => {
-            if let Some(cause) = cause {
-                let mut entry: CrashEntry = JsObject::new();
-                entry.set("kind", JsonValue::String("agent-start".to_owned()));
-                entry.set("program", JsonValue::String(provider.to_owned()));
-                entry.set(
-                    "reason",
-                    JsonValue::String(agent_start_failure_code(&failure)),
-                );
-                entry.set("cause", JsonValue::String(cause));
-                if let AgentStartFailure::ProgramProblem {
-                    problem:
-                        AgentProgramProblem::Exited {
-                            exit_code: Some(exit_code),
-                        },
-                } = &failure
-                {
-                    entry.set("exitCode", JsonValue::Number(*exit_code));
+    })
+}
+
+impl AgentWindowStartPlan {
+    /// the request the manager starts (`m.start(owner, request)`)
+    pub fn request(&self) -> &AgentStartRequest {
+        &self.request
+    }
+
+    /// `startAgentForWindow` after `m.start` answered: the response of the `start` channel;
+    /// `now_ms` is the clock of the crash log
+    pub fn finish(
+        self,
+        host: &mut dyn AgentWindowHost,
+        result: AgentStartResult,
+        now_ms: f64,
+    ) -> Value {
+        let AgentWindowStartPlan {
+            provider,
+            mode,
+            folder,
+            prefs,
+            ..
+        } = self;
+        let (session_id, skills, mcp_keep_inside, instructions_truncated) = match result {
+            AgentStartResult::Failed { failure, cause } => {
+                if let Some(cause) = cause {
+                    let mut entry: CrashEntry = JsObject::new();
+                    entry.set("kind", JsonValue::String("agent-start".to_owned()));
+                    entry.set("program", JsonValue::String(provider.clone()));
+                    entry.set(
+                        "reason",
+                        JsonValue::String(agent_start_failure_code(&failure)),
+                    );
+                    entry.set("cause", JsonValue::String(cause));
+                    if let AgentStartFailure::ProgramProblem {
+                        problem:
+                            AgentProgramProblem::Exited {
+                                exit_code: Some(exit_code),
+                            },
+                    } = &failure
+                    {
+                        entry.set("exitCode", JsonValue::Number(*exit_code));
+                    }
+                    let log = join(&[&host.user_data(), CRASH_LOG_FILE]);
+                    let _ = append_crash_log(&log, &entry, CRASH_LOG_MAX_BYTES, now_ms);
                 }
-                let log = join(&[&host.user_data(), CRASH_LOG_FILE]);
-                let _ = append_crash_log(&log, &entry, CRASH_LOG_MAX_BYTES, now_ms);
+                return failed(&failure);
             }
-            return failed(&failure);
+            AgentStartResult::Started {
+                session_id,
+                skills,
+                mcp_keep_inside,
+                instructions_truncated,
+            } => (session_id, skills, mcp_keep_inside, instructions_truncated),
+        };
+        let mut next = prefs;
+        next.provider = provider;
+        next.mode = mode;
+        host.write_prefs(&with_recent_folder(&next, &folder));
+        let mut response = serde_json::Map::new();
+        response.insert("ok".into(), json!(true));
+        response.insert("sessionId".into(), json!(session_id));
+        response.insert(
+            "skills".into(),
+            serde_json::to_value(&skills).expect("skills print"),
+        );
+        // an empty list is still a list: the TypeScript tests the array, not its length
+        if let Some(inside) = mcp_keep_inside {
+            response.insert("mcpKeepInside".into(), json!(inside));
         }
-        AgentStartOutcome::Started {
-            session_id,
-            skills,
-            mcp_keep_inside,
-            instructions_truncated,
-        } => (session_id, skills, mcp_keep_inside, instructions_truncated),
+        if let Some(truncated) = instructions_truncated {
+            response.insert("instructionsTruncated".into(), json!(truncated));
+        }
+        Value::Object(response)
+    }
+}
+
+/// What a start of the window asks of the caller next
+pub enum AgentWindowStartStep {
+    /// carry `call` out, then give `job` its answer through [`AgentWindowStartJob::resume`]
+    Await {
+        call: AgentStartCall,
+        job: AgentWindowStartJob,
+    },
+    /// the response of the `start` channel
+    Done(Value),
+}
+
+/// A start of the window that waits on the manager's [`AgentStartCall`]. Between the two the
+/// caller runs the other handlers (`stop`, `answer`, `send`, a closed window, a session event).
+pub struct AgentWindowStartJob {
+    state: Box<WindowStartState>,
+}
+
+struct WindowStartState {
+    plan: AgentWindowStartPlan,
+    job: AgentStartJob,
+}
+
+fn window_start_step(
+    host: &mut dyn AgentWindowHost,
+    plan: AgentWindowStartPlan,
+    step: AgentStartStep,
+    now_ms: f64,
+) -> AgentWindowStartStep {
+    match step {
+        AgentStartStep::Await { call, job } => AgentWindowStartStep::Await {
+            call,
+            job: AgentWindowStartJob {
+                state: Box::new(WindowStartState { plan, job }),
+            },
+        },
+        AgentStartStep::Done(result) => {
+            AgentWindowStartStep::Done(plan.finish(host, result, now_ms))
+        }
+    }
+}
+
+impl AgentWindowStartJob {
+    /// Go on once the caller has carried out the call: `answer` is what it came to (see
+    /// [`AgentStartJob::resume`]); `now_ms` is the clock of the crash log
+    pub fn resume(
+        self,
+        host: &mut dyn AgentWindowHost,
+        manager: &mut AgentManager,
+        answer: AgentStartAnswer,
+        now_ms: f64,
+    ) -> AgentWindowStartStep {
+        let WindowStartState { plan, job } = *self.state;
+        let step = job.resume(manager, host.agent(), answer);
+        window_start_step(host, plan, step, now_ms)
+    }
+}
+
+/// `startAgentForWindow(d, m, owner, request)`: the response of the `start` channel, as steps of
+/// the manager's start; `now_ms` is the clock of the crash log
+pub fn start_agent_for_window(
+    host: &mut dyn AgentWindowHost,
+    manager: &mut AgentManager,
+    owner: i64,
+    request: Option<&JsonValue>,
+    now_ms: f64,
+) -> AgentWindowStartStep {
+    let plan = match plan_agent_start(host, request) {
+        Ok(plan) => plan,
+        Err(response) => return AgentWindowStartStep::Done(response),
     };
-    let mut next = prefs;
-    next.provider = provider.to_owned();
-    next.mode = mode.to_owned();
-    host.write_prefs(&with_recent_folder(&next, folder));
-    let mut response = serde_json::Map::new();
-    response.insert("ok".into(), json!(true));
-    response.insert("sessionId".into(), json!(session_id));
-    response.insert(
-        "skills".into(),
-        serde_json::to_value(&skills).expect("skills print"),
-    );
-    // an empty list is still a list: the TypeScript tests the array, not its length
-    if let Some(inside) = mcp_keep_inside {
-        response.insert("mcpKeepInside".into(), json!(inside));
-    }
-    if let Some(truncated) = instructions_truncated {
-        response.insert("instructionsTruncated".into(), json!(truncated));
-    }
-    Value::Object(response)
+    let step = manager.start_begin(host.agent(), owner, plan.request());
+    window_start_step(host, plan, step, now_ms)
 }
 
 // ---- the handlers ------------------------------------------------------------
@@ -928,24 +1031,48 @@ pub fn agent_set_project_skills(
 /// the `start` handler
 pub fn agent_start(
     host: &mut dyn AgentWindowHost,
+    manager: &mut AgentManager,
     sender: i64,
     request: Option<&JsonValue>,
     now_ms: f64,
-) -> Value {
+) -> AgentWindowStartStep {
     let owner = agent_owner_of(host, sender);
     let Some(owner) = owner.filter(|_| host.has_deps() && host.has_manager()) else {
-        return failed(&AgentStartFailure::InvalidRequest);
+        return AgentWindowStartStep::Done(failed(&AgentStartFailure::InvalidRequest));
     };
-    start_agent_for_window(host, owner, request, now_ms)
+    start_agent_for_window(host, manager, owner, request, now_ms)
+}
+
+/// What the `send` handler asks of the caller next
+pub enum AgentWindowSendStep {
+    /// the program is taking the message: give `job` the answer through
+    /// [`AgentWindowSendJob::resume`]
+    Await {
+        call: AgentSendCall,
+        job: AgentWindowSendJob,
+    },
+    /// the handler's answer
+    Done(bool),
+}
+
+/// A `send` that waits on the program
+pub struct AgentWindowSendJob(AgentSendJob);
+
+impl AgentWindowSendJob {
+    /// the program's answer to the message (`Err` is a rejection): the handler's answer
+    pub fn resume(self, answer: Result<(), String>) -> bool {
+        self.0.resume(answer).is_ok()
+    }
 }
 
 /// the `send` handler
 pub fn agent_send(
     host: &mut dyn AgentWindowHost,
+    manager: &mut AgentManager,
     sender: i64,
     session_id: Option<&JsonValue>,
     text: Option<&JsonValue>,
-) -> bool {
+) -> AgentWindowSendStep {
     let owner = agent_owner_of(host, sender);
     let (Some(owner), true, Some(session_id), Some(text)) = (
         owner,
@@ -953,17 +1080,24 @@ pub fn agent_send(
         string_of(session_id),
         string_of(text),
     ) else {
-        return false;
+        return AgentWindowSendStep::Done(false);
     };
     if trim(text).is_empty() {
-        return false;
+        return AgentWindowSendStep::Done(false);
     }
-    host.send(owner, session_id, text).is_ok()
+    match manager.send_begin(host.agent(), owner, session_id, text) {
+        AgentSendStep::Await { call, job } => AgentWindowSendStep::Await {
+            call,
+            job: AgentWindowSendJob(job),
+        },
+        AgentSendStep::Done(done) => AgentWindowSendStep::Done(done.is_ok()),
+    }
 }
 
 /// the `answer` handler
 pub fn agent_answer(
     host: &mut dyn AgentWindowHost,
+    manager: &mut AgentManager,
     sender: i64,
     session_id: Option<&JsonValue>,
     request_id: Option<&JsonValue>,
@@ -979,22 +1113,23 @@ pub fn agent_answer(
     ) else {
         return;
     };
-    host.answer(
-        owner,
-        session_id,
-        request_id,
-        agent_permission_answer(allow, scope),
-    );
+    let answer = AgentPermissionAnswer::from(agent_permission_answer(allow, scope));
+    manager.answer(host.agent(), owner, session_id, request_id, &answer);
 }
 
 /// the `stop` handler
-pub fn agent_stop(host: &mut dyn AgentWindowHost, sender: i64, session_id: Option<&JsonValue>) {
+pub fn agent_stop(
+    host: &mut dyn AgentWindowHost,
+    manager: &mut AgentManager,
+    sender: i64,
+    session_id: Option<&JsonValue>,
+) {
     let owner = agent_owner_of(host, sender);
     let (Some(owner), true, Some(session_id)) = (owner, host.has_manager(), string_of(session_id))
     else {
         return;
     };
-    host.stop(owner, session_id);
+    manager.stop(host.agent(), owner, session_id);
 }
 
 /// what the template channels answer when they refuse
@@ -1155,6 +1290,7 @@ pub fn agent_template_blank(
 /// the `openFile` handler
 pub fn agent_open_file(
     host: &mut dyn AgentWindowHost,
+    manager: &AgentManager,
     sender: i64,
     session_id: Option<&JsonValue>,
     path: Option<&JsonValue>,
@@ -1169,7 +1305,7 @@ pub fn agent_open_file(
     ) else {
         return false;
     };
-    let file = host
+    let file = manager
         .project_root_of(owner, session_id)
         .filter(|root| !root.is_empty())
         .and_then(|root| openable_project_file(&root, path, &host.platform()));

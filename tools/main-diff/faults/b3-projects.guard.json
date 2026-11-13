@@ -254,8 +254,8 @@
   {
     "name": "write-guard: a file with two names is appended to",
     "file": "main-core/src/shell/projects/write_guard.rs",
-    "find": "link_count(&info) > 1",
-    "replace": "link_count(&info) > 2",
+    "find": "link_count(&target, &info) > 1",
+    "replace": "link_count(&target, &info) > 2",
     "fn": ["write-guard.appendData"]
   },
   {
