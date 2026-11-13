@@ -345,6 +345,9 @@ export function sharedSubscriptionStatuses(): unknown[] {
 
 // ---- packages/pdf-structure/src/store ----
 
+/** the store's own key of a PDF: note-link's `afterSave` looks the link up by it */
+export { noteLinkKey } from '../../../../packages/pdf-structure/src/store/note-links.ts'
+
 export class ResultStore {
   constructor(_dir: string) {}
   async readNoteLinks() {
