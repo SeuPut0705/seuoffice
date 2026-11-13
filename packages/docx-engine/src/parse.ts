@@ -4550,6 +4550,13 @@ function extractRuns(
   let fieldCachedRuns: Run[] = []
   let fieldBeginRun: XNode | null = null
   let fieldDirty = false
+  // the run properties of a field instruction run marked hidden from AI: the
+  // whole field is hidden then, its result as well as its instruction
+  let fieldInstrHidden: Pick<Run, 'rawRPr'> = {}
+  const hiddenFieldMark = (): Pick<Run, 'rawRPr'> => ({
+    ...fieldInstrHidden,
+    ...hiddenResultMark(fieldCachedRuns),
+  })
   const eqField = (instr: string) => (/^\s*EQ\b/i.test(instr) ? eqFieldToOmml(instr) : null)
   // formatting of the field result: the first cached run, else the field code's rPr
   const resultFormat = (): Partial<Run> => {
@@ -4569,7 +4576,7 @@ function extractRuns(
     if (!src) return {}
     return {
       ...Object.fromEntries(Object.entries(src).filter(([k]) => !RESULT_FORMAT_SKIP.has(k))),
-      ...hiddenResultMark(fieldCachedRuns),
+      ...hiddenFieldMark(),
     }
   }
   // reference-only comments (bare w:commentReference, LibreOffice style) anchor
@@ -4623,6 +4630,7 @@ function extractRuns(
           fieldCached = ''
           fieldCachedRuns = []
           fieldBeginRun = node
+          fieldInstrHidden = {}
           fieldDirty = /^(?:true|1)$/.test(String(attrsOf(fldChar)['w:dirty'] ?? ''))
         }
       } else if (type === 'separate') {
@@ -4642,7 +4650,7 @@ function extractRuns(
                 text: fieldCached || name,
                 refField: name,
                 refInstr: fieldInstr,
-                ...hiddenResultMark(fieldCachedRuns),
+                ...hiddenFieldMark(),
                 ...(fieldDirty ? { fldDirty: true } : {}),
               },
               rev,
@@ -4655,7 +4663,8 @@ function extractRuns(
               ...(hyper.tooltip ? { tooltip: hyper.tooltip } : {}),
             }
             if (fieldCachedRuns.length > 0) {
-              for (const cached of fieldCachedRuns) pushRun({ ...cached, link: linkVal }, rev)
+              for (const cached of fieldCachedRuns)
+                pushRun({ ...cached, ...hiddenFieldMark(), link: linkVal }, rev)
             } else pushRun({ text: hyper.href, link: linkVal }, rev)
           } else if (/^\s*FORMCHECKBOX\s*$/.test(fieldInstr)) {
             // Legacy checkbox form field: no cached result — Word draws the box
@@ -4736,7 +4745,7 @@ function extractRuns(
             // with these fields stay on the passthrough path (onlyXeFields
             // rejects them), so this only feeds display-only contexts such as
             // table cells and textbox content.
-            for (const cached of fieldCachedRuns) pushRun(cached, rev)
+            for (const cached of fieldCachedRuns) pushRun({ ...cached, ...hiddenFieldMark() }, rev)
           }
           fieldInstr = ''
           fieldSeparated = false
@@ -4751,8 +4760,13 @@ function extractRuns(
       // keep the fragment index aligned even for ruby inside a field cache
       if (findChild(node, 'w:ruby')) rubyIndex++
       const instr = findChild(node, 'w:instrText')
-      if (instr) fieldInstr += textOf(instr)
-      else if (fieldSeparated && fieldDepth === 1) {
+      if (instr) {
+        fieldInstr += textOf(instr)
+        const rPr = findChild(node, 'w:rPr')
+        const rPrXml = rPr && !fieldInstrHidden.rawRPr ? serializeXNode(rPr) : undefined
+        if (rPrXml !== undefined && withheldLabelOf(rPrXml) !== null)
+          fieldInstrHidden = { rawRPr: rPrXml }
+      } else if (fieldSeparated && fieldDepth === 1) {
         // REF/HYPERLINK cached result is the display text; other fields' caches are dropped
         const cached = buildRun(
           node,

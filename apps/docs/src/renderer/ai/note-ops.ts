@@ -164,7 +164,7 @@ export function noteInsertPos(
     }
     return { pos: end }
   }
-  return posAfterText(block, start + 1, afterText, `block ${blockIndex}`)
+  return posAfterText(doc, block, start + 1, afterText, `block ${blockIndex}`)
 }
 
 /** Rewrite every reference mark of `kind` in `tr` to its 1-based document-order number. */

@@ -1,3 +1,4 @@
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import { clipText } from '../preview'
 import type { Editor } from '@tiptap/core'
 import JSZip from 'jszip'
@@ -10,6 +11,7 @@ import {
   compareDocuments,
   countTrackedChangesXml,
   findChartWorkbookPath,
+  hasWithheldTrace,
   nextNoteId,
   parseChartPartXml,
   parseDocx,
@@ -1601,27 +1603,48 @@ function fieldText(doc: OpenDocument, node: PmNode): string {
   return doc.mods.redactView.projectedNodeText(node.toJSON() as never)
 }
 
-/** Every field with its block: editable inline fields from the editor, the rest from the block XML. */
+/**
+ * Every field with its block: editable inline fields from the editor, the rest from the block XML.
+ * A field inside or over words a person hid from AI, or one whose instruction repeats them,
+ * reads as the placeholder in each of its parts.
+ */
 export function listFields(doc: OpenDocument): FieldSummary[] {
+  const { redactView } = doc.mods
+  const hiddenWords = redactView.hiddenWordsOf(doc.editor.getJSON() as never)
   const out: FieldSummary[] = []
+  const push = (field: FieldSummary, hiddenLabel: string | undefined) => {
+    const label = hiddenLabel ?? redactView.repeatedHiddenLabel(field.instr, hiddenWords)
+    if (label === undefined) return out.push(field)
+    const placeholder = placeholderSource(label)
+    out.push({ ...field, type: placeholder, instr: placeholder, result: placeholder })
+  }
   doc.editor.state.doc.forEach((block, _offset, blockIndex) => {
     if (block.type.name === 'docProtected') {
-      for (const f of xmlFields(protectedXml(doc, block))) {
-        out.push({ blockIndex, type: keywordOf(f.instr), ...f, protected: true })
+      const xml = protectedXml(doc, block)
+      // a block whose mark cannot be read withholds every field it holds
+      const blockLabel =
+        redactView.withheldBlockLabel(block.toJSON() as never) ??
+        (hasWithheldTrace(xml) ? 'private' : undefined)
+      for (const f of xmlFields(xml)) {
+        push({ blockIndex, type: keywordOf(f.instr), ...f, protected: true }, blockLabel)
       }
       return
     }
     // a result split by formatting is one field: join text nodes that touch and carry the same mark
     type FieldMark = Editor['state']['doc']['marks'][number]
-    let prev: { mark: FieldMark; end: number; field: FieldSummary } | null = null
+    const fields: Array<{ field: FieldSummary; hiddenLabel?: string }> = []
+    let prev: { mark: FieldMark; end: number; entry: (typeof fields)[number] } | null = null
     block.descendants((node, pos) => {
       if (!node.isText) return true
       const instr = node.marks.find((m) => m.type.name === 'instrField')
       const ref = node.marks.find((m) => m.type.name === 'refField')
       const mark = instr ?? ref
       if (!mark) return true
+      const hidden = node.marks.find((m) => m.type.name === 'redaction')
+      const hiddenLabel = hidden ? String(hidden.attrs.label ?? 'private') : undefined
       if (prev && prev.end === pos && prev.mark.eq(mark)) {
-        prev.field.result += fieldText(doc, node)
+        prev.entry.field.result += fieldText(doc, node)
+        prev.entry.hiddenLabel ??= hiddenLabel
         prev.end += node.nodeSize
         return true
       }
@@ -1642,10 +1665,12 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
             result: fieldText(doc, node),
             dirty: mark.attrs.dirty === true,
           }
-      out.push(field)
-      prev = { mark, end: pos + node.nodeSize, field }
+      const entry = { field, hiddenLabel }
+      fields.push(entry)
+      prev = { mark, end: pos + node.nodeSize, entry }
       return true
     })
+    for (const { field, hiddenLabel } of fields) push(field, hiddenLabel)
   })
   return out
 }
