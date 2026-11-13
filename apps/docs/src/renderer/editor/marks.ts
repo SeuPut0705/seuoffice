@@ -494,7 +494,7 @@ export function fontAttrsFromFamilyChain(chain: string | undefined): Record<stri
         // internal fonts.css aliases are not user picks: 'SeuOffice *', the
         // '* GO' renamed/range-limited faces (Carlito GO, KR Theme Latin GO,
         // Noto Sans/Serif CJK GO...) and the size-adjusted Noto Arabic aliases
-        !/^genoffice /i.test(x) &&
+        !/^seuoffice /i.test(x) &&
         !/ go$/i.test(x) &&
         !/^noto (naskh|sans) arabic (w|ta|tnr)$/i.test(x),
     )

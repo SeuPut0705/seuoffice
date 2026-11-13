@@ -12,13 +12,13 @@
     "source": "Carlito 1.103, patched by tools/patch-carlito-vi.py and renamed Carlito GO"
   },
   {
-    "files": "apps/docs/src/renderer/fonts/GenOfficePUABlank.woff2",
+    "files": "apps/docs/src/renderer/fonts/SeuOfficePUABlank.woff2",
     "licence": "Apache-2.0",
     "record": "apps/docs/src/renderer/fonts/README.md",
     "source": "blank glyphs drawn by tools/build-pua-blank-font.py; no outline from another font"
   },
   {
-    "files": "apps/docs/src/renderer/fonts/GenOfficeBalancedSpace.woff2",
+    "files": "apps/docs/src/renderer/fonts/SeuOfficeBalancedSpace.woff2",
     "licence": "Apache-2.0",
     "record": "tools/build-balanced-space-font.py",
     "source": "blank glyphs drawn by tools/build-balanced-space-font.py; no outline from another font"

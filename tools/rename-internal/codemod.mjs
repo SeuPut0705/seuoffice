@@ -17,7 +17,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import {
-  EXTRA_FONT_FAMILIES,
   FILE_RULE_LIMITS,
   KEEP_LINES,
   KEEP_TOKENS,
@@ -60,37 +59,8 @@ function isBinary(buffer) {
 
 const tracked = git(['ls-files', '-z']).toString('utf8').split('\0').filter(Boolean)
 
-/** `GenOffice <Family>` faces declared in the tree's CSS, with their file-name and slug spellings */
-function bundledFontKeep() {
-  const families = new Set(EXTRA_FONT_FAMILIES)
-  for (const path of tracked) {
-    if (!path.endsWith('.css')) continue
-    const text = readFileSync(join(repo, path), 'utf8')
-    for (const m of text.matchAll(/font-family:\s*['"]((?:GenOffice|SeuOffice) [^'"]+)['"]/g)) {
-      families.add(m[1].replace(/^SeuOffice/, 'GenOffice'))
-    }
-  }
-  const spellings = new Set()
-  for (const family of families) {
-    spellings.add(family)
-    spellings.add(family.replaceAll(' ', ''))
-    spellings.add(family.toLowerCase().replaceAll(' ', '-'))
-    // the lookup key of metric tables (apps/docs fonts/stand-in-boxes.json): the family lower-cased
-    spellings.add(family.toLowerCase())
-  }
-  const escaped = [...spellings]
-    .sort((a, b) => b.length - a.length)
-    .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  return {
-    id: 'bundled-font',
-    re: new RegExp(`(?:${escaped.join('|')})`, 'g'),
-    why: 'bundled font faces: the names are inside the binary font files, the OFL rename notes and the third-party notices; kept until the fonts are rebuilt',
-    families: [...families].sort(),
-  }
-}
-const fontKeep = bundledFontKeep()
 // a keep with `files` holds only there; without it, everywhere
-const keepTokens = [fontKeep, ...KEEP_TOKENS].map((k) => ({
+const keepTokens = KEEP_TOKENS.map((k) => ({
   ...k,
   inFiles: k.files ? matcher(k.files) : () => true,
 }))
@@ -470,9 +440,6 @@ for (const [reason, e] of [...kept].sort((a, b) => b[1].hits - a[1].hits)) {
   for (const s of e.samples.slice(0, 3)) say(`    e.g. ${s}`)
 }
 say(`total left: ${leftTotal}`)
-say()
-say(`## bundled font families kept (${fontKeep.families.length})`)
-say(fontKeep.families.join(', '))
 say()
 say(`## lines where two old names became one (${collisions.length}): review by hand`)
 for (const c of collisions) say(`- ${c}`)

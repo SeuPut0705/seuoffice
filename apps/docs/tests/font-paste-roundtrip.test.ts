@@ -83,7 +83,7 @@ describe('fontAttrsFromFamilyChain', () => {
 
   it('skips internal SeuOffice aliases even at the chain head', () => {
     expect(
-      fontAttrsFromFamilyChain("'GenOffice Songti SC','STSong','SimSun','Noto Serif CJK SC',serif"),
+      fontAttrsFromFamilyChain("'SeuOffice Songti SC','STSong','SimSun','Noto Serif CJK SC',serif"),
     ).toEqual({ font: 'STSong' })
   })
 
@@ -93,7 +93,7 @@ describe('fontAttrsFromFamilyChain', () => {
       fontAscii: 'SomeCustomFont',
     })
     expect(
-      fontAttrsFromFamilyChain("'PT Serif Custom','Noto Serif CJK GO','GenOffice PUA Blank',serif"),
+      fontAttrsFromFamilyChain("'PT Serif Custom','Noto Serif CJK GO','SeuOffice PUA Blank',serif"),
     ).toEqual({ font: 'PT Serif Custom', fontAscii: 'PT Serif Custom' })
   })
 

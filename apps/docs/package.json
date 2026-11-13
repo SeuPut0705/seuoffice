@@ -50,7 +50,7 @@
   },
   "author": "SeuOffice",
   "build": {
-    "appId": "com.genoffice.docs",
+    "appId": "com.seuput.seuoffice.docs",
     "productName": "SeuOffice Docs",
     "electronVersion": "43.3.0",
     "artifactName": "AIDocx-${version}-${arch}.${ext}",

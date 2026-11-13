@@ -476,7 +476,7 @@ Nothing in this list is uploaded by the app.
   get no copy at all, so no unlocked content of them is kept. The PDF editor
   works on a file, so when it brings back a PDF that was never saved it also
   places the restored copy as a working file in the operating system's
-  temporary folder (`genoffice-pdf-recovery`). That file is your document
+  temporary folder (`seuoffice-pdf-recovery`). That file is your document
   content as well, kept as a plain file; it is removed when the tab closes or
   the document is saved, and leftovers older than a day are removed when the
   app starts.
@@ -550,9 +550,9 @@ Nothing in this list is uploaded by the app.
   A skill exported as a zip carries its template documents with it. Removing
   a skill moves it to the system trash. Which skills are on is kept in
   `app-settings.json` in the data folder.
-- **The command-line audit log** (`~/.ieumoffice/cli-audit.jsonl`): one line
-  per `ieumoffice` command with the time, the arguments, the result and the
-  output path. Set `GENOFFICE_AUDIT_LOG=off` to disable it.
+- **The command-line audit log** (`~/.seuoffice/cli-audit.jsonl`): one line
+  per `seuoffice` command with the time, the arguments, the result and the
+  output path. Set `SEUOFFICE_AUDIT_LOG=off` to disable it.
 
 Uninstalling the app does not necessarily delete these folders; remove them
 yourself if you want them gone.
