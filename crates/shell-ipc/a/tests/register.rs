@@ -126,7 +126,7 @@ fn echo_case() -> serde_json::Value {
 
 fn registered(case: &serde_json::Value) -> Checked {
     let mut hosts = Hosts::default();
-    shell_ipc_a::probe_hosts(&mut hosts, case);
+    shell_ipc_a::fake_ports(&mut hosts, case);
     let mut registry = Checked::default();
     shell_ipc_a::register(&mut registry, &services(hosts)).expect("batch A registers");
     registry

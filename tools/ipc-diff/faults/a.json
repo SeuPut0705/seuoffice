@@ -1,0 +1,51 @@
+[
+  {
+    "name": "the panel side defaults to the right",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            _ => \"left\",",
+    "replace": "            _ => \"right\",",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the custom font size is clamped one pixel higher",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "const AI_CUSTOM_FONT_MAX_PX: f64 = 32.0;",
+    "replace": "const AI_CUSTOM_FONT_MAX_PX: f64 = 33.0;",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "an unchanged patch is written and sent",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "        if next == prev {",
+    "replace": "        if next == prev && patch.is_none() {",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "a key sent as undefined keeps the previous value",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "                Some(value) => to_json(value),",
+    "replace": "                Some(value) => to_json(value).or_else(|| prev_json.get(key).map(|v| v.into_owned())),",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the changed preferences reach the shell views only",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": ".emit(Target::All, PREFS_CHANGED",
+    "replace": ".emit(Target::Surface(shell_contract::Surface::Shell), PREFS_CHANGED",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "the slides AI fonts read ignores the document language",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            &self.ui.document_locale(),\n",
+    "replace": "            \"ko\",\n",
+    "groups": ["a/shell-ai-prefs"]
+  },
+  {
+    "name": "model settings open without bringing the shell window forward",
+    "file": "shell-ipc/a/src/shell_ai_prefs.rs",
+    "find": "            self.ui.show_home_tab();\n",
+    "replace": "",
+    "groups": ["a/shell-ai-prefs"]
+  }
+]

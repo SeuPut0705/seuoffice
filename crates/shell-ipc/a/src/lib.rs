@@ -76,18 +76,32 @@ pub fn port_table() -> Vec<(&'static str, &'static [PortChannel])> {
     all_ports!(table)
 }
 
-/// Inserts the fakes of this batch's hosts, answering from the case's
-/// `hosts.a` value (Null when absent; tools/ipc-diff/README.md)
+/// Inserts a fake for every port, answering each channel from `answers`
+/// (`probe::Fake`): what a port not yet ported stands on in the probe
 #[cfg(feature = "probe")]
-pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+pub fn fake_ports(hosts: &mut shell_contract::Hosts, answers: &serde_json::Value) {
     use std::rc::Rc;
     macro_rules! insert_each {
         ($($port:ident),*) => {$(
-            let answers = case.clone();
+            let given = answers.clone();
             hosts.insert(Factory::<dyn ports::$port>::new(move |_, _| {
-                Ok(Rc::new(probe::Fake::new(&answers)))
+                Ok(Rc::new(probe::Fake::new(&given)))
             }));
         )*};
     }
     all_ports!(insert_each);
+}
+
+/// Inserts the fakes of this batch's hosts, answering from the case's
+/// `hosts.a` value (Null when absent; tools/ipc-diff/README.md): the ported
+/// modules over fakes of their batch-only hosts, the others as
+/// [`fake_ports`] answering from `hosts.a.fake`
+#[cfg(feature = "probe")]
+pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+    fake_ports(hosts, &case["fake"]);
+    let log = hosts.get::<probe::Log>().cloned();
+    hosts.insert(shell_ai_prefs::factory());
+    hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
+        case, log,
+    )));
 }

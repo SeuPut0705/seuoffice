@@ -46,3 +46,38 @@ fn from_json(value: &serde_json::Value) -> IpcValue {
         }
     }
 }
+
+/// The case's host log (tools/ipc-diff/README.md)
+pub type Log = std::sync::Arc<std::sync::Mutex<Vec<serde_json::Value>>>;
+
+fn push(log: &Option<Log>, line: serde_json::Value) {
+    if let Some(log) = log {
+        log.lock().expect("the log").push(line);
+    }
+}
+
+/// `ShellUi` of the shell entry: `hosts.a.documentLocale` (`ko` by default);
+/// bringing the shell window forward logs one line
+pub struct FakeShellUi {
+    locale: String,
+    log: Option<Log>,
+}
+
+impl FakeShellUi {
+    pub fn new(case: &serde_json::Value, log: Option<Log>) -> Self {
+        FakeShellUi {
+            locale: case["documentLocale"].as_str().unwrap_or("ko").to_owned(),
+            log,
+        }
+    }
+}
+
+impl crate::shell_ai_prefs::ShellUi for FakeShellUi {
+    fn document_locale(&self) -> String {
+        self.locale.clone()
+    }
+
+    fn show_home_tab(&self) {
+        push(&self.log, serde_json::json!(["shellWindow.showHomeTab"]));
+    }
+}
