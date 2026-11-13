@@ -8,7 +8,8 @@ publish.workspace = true
 
 [dependencies]
 jscompat.workspace = true
-# JSZip's zip writer, for the skill zip of packages/cli_agent_skills
+# JSZip: the skill zip of packages/cli_agent_skills, and loadAsync of the MCP
+# runtime archives (shell/mcp_client/runtime_archive)
 ooxml-pkg.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -28,6 +29,10 @@ flate2.workspace = true
 icu_normalizer = "2"
 # String.prototype.localeCompare of html/asset_lifecycle (root collation; Unicode-3.0, as docx-engine uses it)
 icu_collator = "2.4"
+# node:sqlite of the file index (shell/file_index/store): SQLite with FTS5, built in (public domain; the crates MIT)
+rusqlite = { version = "0.32", features = ["bundled"] }
+# Intl.Segmenter('grapheme') of shell/text_marks; already in the lockfile through convert_case (MIT/Apache-2.0)
+unicode-segmentation = "1"
 
 # errno numbers of the platform, read as Node names them (node_fs)
 [target.'cfg(unix)'.dependencies]
