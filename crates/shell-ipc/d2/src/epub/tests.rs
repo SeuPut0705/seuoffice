@@ -11,23 +11,23 @@ use shell_contract::editors::{SaveMode, Then};
 use shell_contract::ipc::{Sender, Target};
 use shell_contract::{DocumentEditors, IpcError, IpcValue, Surface, editor_for};
 
-use super::hosts::{FakeEngine, FakeShell};
+use super::hosts::{FakeEngine, FakeShell, Log};
 use super::{EpubEditors, EpubEngineHost, EpubShellHost};
 use crate::kit::{IntoIpc, field, obj};
 use crate::testing::{HostCall, Rt};
 
 const CHAPTER: &str = "<p>OEBPS/c1.xhtml</p>";
 
-fn rt(case: Value) -> (Rt, Arc<FakeShell>) {
-    let shell = Arc::new(FakeShell::new(&case["shell"]));
-    let engine = case["engine"].clone();
-    let host = shell.clone();
+/// A shell with the EPUB editor's fakes; the log is what they were asked
+fn rt(case: Value) -> (Rt, Log) {
+    let log = Log::default();
+    let (engine, shell, into) = (case["engine"].clone(), case["shell"].clone(), log.clone());
     let mut rt = Rt::new(move |h| {
-        h.insert::<EpubEngineHost>(Arc::new(FakeEngine::new(&engine)));
-        h.insert::<EpubShellHost>(host);
+        h.insert::<EpubEngineHost>(Arc::new(FakeEngine::new(&engine, into.clone())));
+        h.insert::<EpubShellHost>(Arc::new(FakeShell::new(&shell, into)));
     });
     rt.register(super::entries).unwrap();
-    (rt, shell)
+    (rt, log)
 }
 
 fn editors(rt: &Rt) -> Rc<EpubEditors> {
@@ -51,7 +51,7 @@ fn granted(rt: &mut Rt, id: u32) -> (Sender, String) {
     let path = rt.dir.join(format!("book{id}.epub"));
     std::fs::write(&path, b"BOOK").unwrap();
     let sender = rt.view(id, Surface::Epub);
-    editors(rt).create_view(sender.view, Some(&path));
+    editors(rt).open_view(sender.view, Some(&path));
     (sender, path_str(&path))
 }
 
@@ -514,8 +514,8 @@ fn save_as_asks_for_a_file_and_tells_the_shell() {
     assert_eq!(field(&saved, "written"), &true.into_ipc());
     assert_eq!(std::fs::read(&target).unwrap(), b"BOOK");
     assert_eq!(
-        *shell.saved.lock().unwrap(),
-        vec![(sender.view, target.clone())]
+        *shell.lock().unwrap(),
+        vec![json!(["fileSavedHook", sender.view.0, target])]
     );
     let HostCall::Save(_, dialog) = &rt.script().calls[0] else {
         panic!()
@@ -1000,4 +1000,36 @@ fn an_unsaved_open_file_is_not_read() {
         )
         .unwrap();
     assert_eq!(field(&ok, "text"), &s("secret"));
+}
+
+/// The probe's trigger steps reach the editor as the shell would
+#[test]
+fn probe_triggers_call_the_editor() {
+    let (mut rt, _) = rt(Value::Null);
+    let (sender, path) = opened(&mut rt, 1);
+    let view = sender.view;
+    let (provided, services) = (rt.provided(), rt.services.clone());
+    let trigger = |what: &str, args: Value| {
+        let (answer, then) = slot();
+        let known = super::probe_trigger(what, view, &args, &services, &provided, then);
+        (known, answer)
+    };
+    let (known, answer) = trigger("file-path", json!([]));
+    assert!(known);
+    assert_eq!(*answer.borrow(), Some(Ok(s(&path))));
+    let (_, answer) = trigger("menu-command", json!(["find"]));
+    assert_eq!(*answer.borrow(), Some(Ok(IpcValue::Undefined)));
+    assert_eq!(
+        events(&rt),
+        vec![(Target::View(view), "epub:menu-command", vec![s("find")])]
+    );
+    edit(&mut rt, sender, "x");
+    let (_, answer) = trigger("request-save", json!(["save"]));
+    assert_eq!(
+        events(&rt),
+        vec![(Target::View(view), "epub:save-request", vec![s("save")])]
+    );
+    rt.send("epub:save-request-ack", sender, vec![true.into_ipc()]);
+    assert_eq!(*answer.borrow(), Some(Ok(true.into_ipc())));
+    assert!(!trigger("export-request", json!([])).0);
 }

@@ -290,17 +290,23 @@ pub trait EpubShell: Send + Sync {
     /// the `unsaved-files` source (`setOpenFilesSource`): `None` when none is
     /// set, `Some(Err)` when it threw
     fn open_files(&self) -> Option<Result<Vec<OpenFileState>, ()>>;
+    /// `randomBytes(16).toString('hex')`: a view's asset token, a flush
+    /// request id
+    fn random_token(&self) -> String;
 }
 
 pub type EpubShellHost = Arc<dyn EpubShell>;
 
 #[cfg(any(test, feature = "probe"))]
-pub(crate) use fake::{FakeEngine, FakeShell};
+pub(crate) use fake::{FakeEngine, FakeShell, Log};
 
 #[cfg(any(test, feature = "probe"))]
 mod fake {
     use std::collections::HashMap;
-    use std::sync::Mutex;
+    use std::sync::{Arc, Mutex};
+
+    /// The case's host log (ipc-probe's `ProbeLog`)
+    pub(crate) type Log = Arc<Mutex<Vec<Value>>>;
 
     use main_core::epub::store_handlers::{StoreError, StoredTranslation};
     use main_core::packages::electron_utils::unsaved_files::OpenFileState;
@@ -375,12 +381,21 @@ mod fake {
     /// - `pictureHoldsDiagram`: by default `true`
     /// - store: `listTranslations`, `readTranslation`, `unfinishedJobs`,
     ///   `deleteTranslationExceptEdited`, `heartbeatJob`; by default empty,
-    ///   writes succeed
-    pub(crate) struct FakeEngine(Answers);
+    ///   writes succeed. Every write is logged as `ResultStore.<method>` with
+    ///   its arguments, the mode last when it is `easy`.
+    pub(crate) struct FakeEngine(Answers, Log);
 
     impl FakeEngine {
-        pub(crate) fn new(case: &Value) -> Self {
-            FakeEngine(Answers::new(case))
+        pub(crate) fn new(case: &Value, log: Log) -> Self {
+            FakeEngine(Answers::new(case), log)
+        }
+
+        fn store_line(&self, method: &str, mut args: Vec<Value>, mode: Option<TranslationMode>) {
+            args.insert(0, json!(format!("ResultStore.{method}")));
+            if let Some(mode) = mode {
+                args.push(json!(mode.as_str()));
+            }
+            self.1.lock().unwrap().push(Value::Array(args));
         }
     }
 
@@ -812,43 +827,64 @@ mod fake {
         fn store_write_translation_meta(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _lang: &str,
-            _provider: &str,
-            _model: &str,
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            lang: &str,
+            provider: &str,
+            model: &str,
+            mode: Option<TranslationMode>,
         ) -> Result<(), StoreError> {
+            let meta = json!({ "provider": provider, "model": model });
+            self.store_line(
+                "writeTranslationMeta",
+                vec![json!(doc_hash), json!(lang), meta],
+                mode,
+            );
             Ok(())
         }
 
         fn store_write_translation_blocks(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _lang: &str,
-            _blocks: &[Value],
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            lang: &str,
+            blocks: &[Value],
+            mode: Option<TranslationMode>,
         ) -> Result<(), StoreError> {
+            self.store_line(
+                "writeTranslationBlocks",
+                vec![json!(doc_hash), json!(lang), json!(blocks)],
+                mode,
+            );
             Ok(())
         }
 
         fn store_delete_translation(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _lang: &str,
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            lang: &str,
+            mode: Option<TranslationMode>,
         ) -> Result<(), StoreError> {
+            self.store_line(
+                "deleteTranslation",
+                vec![json!(doc_hash), json!(lang)],
+                mode,
+            );
             Ok(())
         }
 
         fn store_delete_translation_except_edited(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _lang: &str,
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            lang: &str,
+            mode: Option<TranslationMode>,
         ) -> Result<f64, StoreError> {
+            self.store_line(
+                "deleteTranslationExceptEdited",
+                vec![json!(doc_hash), json!(lang)],
+                mode,
+            );
             Ok(self
                 .0
                 .next("deleteTranslationExceptEdited")
@@ -859,20 +895,26 @@ mod fake {
         fn store_write_job(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _job: &Value,
+            doc_hash: &str,
+            job: &Value,
         ) -> Result<(), StoreError> {
+            self.store_line("writeJob", vec![json!(doc_hash), job.clone()], None);
             Ok(())
         }
 
         fn store_heartbeat_job(
             &self,
             _dir: &str,
-            _doc_hash: &str,
-            _kind: &str,
-            _key: Option<&str>,
-            _mode: Option<TranslationMode>,
+            doc_hash: &str,
+            kind: &str,
+            key: Option<&str>,
+            mode: Option<TranslationMode>,
         ) -> Result<bool, StoreError> {
+            self.store_line(
+                "heartbeatJob",
+                vec![json!(doc_hash), json!(kind), json!(key)],
+                mode,
+            );
             Ok(self
                 .0
                 .next("heartbeatJob")
@@ -880,7 +922,8 @@ mod fake {
                 .unwrap_or(true))
         }
 
-        fn store_migrate_document(&self, _dir: &str, _info: Value) -> Result<Value, StoreError> {
+        fn store_migrate_document(&self, _dir: &str, info: Value) -> Result<Value, StoreError> {
+            self.store_line("migrateDocument", vec![info], None);
             Ok(Value::Null)
         }
     }
@@ -888,18 +931,21 @@ mod fake {
     /// The shell's fake, answering from `hosts.d2.epub.shell`: `uiLang`
     /// (`"en"` by default), `openElsewhere` (a boolean, `false`),
     /// `openInTab` (the paths a tab has open, or `"throws"`), `openFiles`
-    /// (`[{ filePath, dirty }]` or `"throws"`; absent: no source). It keeps
-    /// the paths `fileSavedHook` was told.
+    /// (`[{ filePath, dirty }]` or `"throws"`; absent: no source). Tokens
+    /// are 1, 2, ... as 32 hex digits. `fileSavedHook` and
+    /// `migrateJobRecords` are logged.
     pub(crate) struct FakeShell {
         case: Value,
-        pub(crate) saved: Mutex<Vec<(ViewId, String)>>,
+        log: Log,
+        tokens: Mutex<u64>,
     }
 
     impl FakeShell {
-        pub(crate) fn new(case: &Value) -> Self {
+        pub(crate) fn new(case: &Value, log: Log) -> Self {
             FakeShell {
                 case: case.clone(),
-                saved: Mutex::default(),
+                log,
+                tokens: Mutex::default(),
             }
         }
     }
@@ -927,12 +973,19 @@ mod fake {
             }
         }
 
-        fn migrate_job_records(&self, _dir: &str, _old: &str, _new: &str) -> Result<f64, String> {
+        fn migrate_job_records(&self, _dir: &str, old: &str, new: &str) -> Result<f64, String> {
+            self.log
+                .lock()
+                .unwrap()
+                .push(json!(["migrateJobRecords", old, new]));
             Ok(0.0)
         }
 
         fn file_saved(&self, view: ViewId, path: &str) {
-            self.saved.lock().unwrap().push((view, path.to_owned()))
+            self.log
+                .lock()
+                .unwrap()
+                .push(json!(["fileSavedHook", view.0, path]));
         }
 
         fn open_files(&self) -> Option<Result<Vec<OpenFileState>, ()>> {
@@ -946,6 +999,12 @@ mod fake {
                     .collect())),
                 _ => Some(Err(())),
             }
+        }
+
+        fn random_token(&self) -> String {
+            let mut n = self.tokens.lock().unwrap();
+            *n += 1;
+            format!("{:032x}", *n)
         }
     }
 }
