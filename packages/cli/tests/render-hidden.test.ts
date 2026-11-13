@@ -1,8 +1,10 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import JSZip from 'jszip'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { redactExtXml } from '../../pptx-engine/src/redaction-xml'
 import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
 import {
   mutatedStoriesDocx,
@@ -60,6 +62,48 @@ describe('render of a deck holding hidden text, a hidden picture', () => {
   it('is refused for a hidden picture alone', async () => {
     const file = await mutatedHiddenDeck(tempDir(), 'none', 'pic.pptx', ['P'])
     expect(refused(await render(file))).toBe(true)
+  })
+
+  it.each(['K', 'A'] as const)(
+    'is refused for a chart whose %s text run is hidden, nothing else on the slide is',
+    async (tag) => {
+      const file = await mutatedHiddenDeck(tempDir(), 'none', 'chart.pptx', [tag])
+      expect(refused(await render(file))).toBe(true)
+      expect(refused(await render(file, '--page', '1'))).toBe(true)
+    },
+  )
+
+  it.each([
+    ['SmartArt data', 'diagramData', 'ppt/diagrams/data1.xml'],
+    ['SmartArt drawing', 'diagramDrawing', 'ppt/diagrams/drawing1.xml'],
+    ['a chart overlay drawing', 'chartDrawing', 'ppt/drawings/drawing1.xml'],
+  ])('is refused for a run hidden in %s', async (_what, kind, part) => {
+    const dir = tempDir()
+    const file = await mutatedHiddenDeck(dir, 'none', 'related.pptx', [])
+    const zip = await JSZip.loadAsync(readFileSync(file))
+    const RELS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+    const marked = `<a:r><a:rPr>${redactExtXml('client phone')}</a:rPr><a:t>${SECRET}</a:t></a:r>`
+    zip.file(
+      part,
+      `<root xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:p>${marked}</a:p></root>`,
+    )
+    const relsPath =
+      kind === 'chartDrawing'
+        ? 'ppt/charts/_rels/chart2.xml.rels'
+        : 'ppt/slides/_rels/slide1.xml.rels'
+    const rels = zip.file(relsPath)
+    const entry = `<Relationship Id="rId99" Type="${RELS}/${kind === 'chartDrawing' ? 'chartUserShapes' : kind}" Target="${kind === 'chartDrawing' ? '../drawings/drawing1.xml' : `../diagrams/${part.split('/').pop()}`}"/>`
+    const before = rels
+      ? await rels.async('string')
+      : '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
+    zip.file(relsPath, before.replace('</Relationships>', `${entry}</Relationships>`))
+    writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
+    expect(refused(await render(file))).toBe(true)
+  })
+
+  it('is not refused for the plain chart alone', async () => {
+    const file = await mutatedHiddenDeck(tempDir(), 'none', 'plain-chart.pptx', [])
+    expect(refused(await render(file))).toBe(false)
   })
 
   it('is not refused for a deck that holds none', async () => {

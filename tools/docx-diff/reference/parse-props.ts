@@ -5,6 +5,7 @@ import {
   childrenOf,
   findChild,
   findChildren,
+  maskOpaque,
   nameOf,
   textOf,
   xmlParser,
@@ -38,6 +39,8 @@ import { resolveThemeColor } from './theme'
 import { isOn } from './checkbox-control'
 import { sameInlineWrapChain } from './inline-opaque'
 import { ownValue } from './own-value'
+import { findStartTag, removeSegments } from './xml-tag'
+import { canonicalXmlSyntax } from './ooxml-normalize'
 
 /** No run un-hides itself and nothing anchors here (bookmarks, comments, sectPr,
  *  drawings): safe to collapse a style-vanished paragraph entirely. Numbering is
@@ -116,8 +119,8 @@ export function bookmarkNamesOf(xml: string): {
 } {
   const names: string[] = []
   const hidden: string[] = []
-  for (const m of xml.matchAll(/<w:bookmarkStart [^>]*w:name=(?:"([^"]+)"|'([^']+)')/g)) {
-    const name = decodeEntities(m[1] ?? m[2] ?? '')
+  for (const m of canonicalXmlSyntax(xml).matchAll(/<w:bookmarkStart [^>]*w:name="([^"]+)"/g)) {
+    const name = decodeEntities(m[1] ?? '')
     // A _ prefix marks Word internal bookmarks (_Ref/_Toc/_Hlk): hidden from the UI, but
     // they must be re-emitted when the paragraph rebuilds, otherwise REF cross-references
     // and TOC anchors pointing at them break
@@ -135,26 +138,30 @@ export function bookmarkNamesOf(xml: string): {
  * another w:pPr inside). undefined when the paragraph has no properties.
  */
 export function rawPPrOf(xml: string): string | undefined {
+  // tags are found in the XML with its comments and CDATA blanked, so their
+  // text is never a tag; the slice is of the XML itself
+  const masked = maskOpaque(xml)
   // the paragraph's own pPr must be the first child of w:p; a later match
   // would belong to nested content (textbox paragraphs)
-  const openEnd = xml.indexOf('>') + 1
-  if (openEnd === 0) return undefined
+  const openEnd = findStartTag(masked)?.end
+  if (openEnd === undefined) return undefined
   // pretty-printed sources put whitespace between <w:p> and its pPr
-  const start = openEnd + (/^\s*/.exec(xml.slice(openEnd))?.[0].length ?? 0)
-  if (!xml.startsWith('<w:pPr', start)) return undefined
-  const re = /<w:pPr(?=[\s/>])|<\/w:pPr>/g
+  const start = openEnd + (/^\s*/.exec(masked.slice(openEnd))?.[0].length ?? 0)
+  if (!masked.startsWith('<w:pPr', start)) return undefined
+  const re = /<w:pPr(?=[\s/>])|<\/w:pPr\s*>/g
   re.lastIndex = start
   let depth = 0
   let match: RegExpExecArray | null
-  while ((match = re.exec(xml)) !== null) {
-    if (match[0] === '</w:pPr>') {
+  while ((match = re.exec(masked)) !== null) {
+    if (match[0].startsWith('</')) {
       depth--
       if (depth === 0) return xml.slice(start, match.index + match[0].length)
     } else {
       // self-closing <w:pPr/> never opens
-      const gt = xml.indexOf('>', match.index)
-      if (xml[gt - 1] === '/') {
-        if (depth === 0) return xml.slice(start, gt + 1)
+      const tag = findStartTag(masked, 'w:pPr', match.index)
+      if (tag?.selfClosing) {
+        if (depth === 0) return xml.slice(start, tag.end)
+        re.lastIndex = tag.end
         continue
       }
       depth++
@@ -169,7 +176,7 @@ export function rawPPrOf(xml: string): string | undefined {
  * line instead of a drawing-object chip.
  */
 export function isThinRule(xml: string): boolean {
-  const m = /<wp:extent cx="(\d+)" cy="(\d+)"/.exec(xml)
+  const m = /<wp:extent cx="(\d+)" cy="(\d+)"/.exec(canonicalXmlSyntax(xml))
   if (!m) return false
   const cx = parseInt(m[1], 10)
   const cy = parseInt(m[2], 10)
@@ -179,8 +186,9 @@ export function isThinRule(xml: string): boolean {
 
 /** stroke color/thickness (a:ln) + extent width of a decorative rule drawing */
 export function ruleDisplayOf(
-  xml: string,
+  source: string,
 ): Pick<Block, 'ruleColorHex' | 'ruleThicknessPx' | 'ruleWidthPx'> {
+  const xml = canonicalXmlSyntax(source)
   const out: Pick<Block, 'ruleColorHex' | 'ruleThicknessPx' | 'ruleWidthPx'> = {}
   const ln = /<a:ln\b[^>]*>[\s\S]*?<\/a:ln>/.exec(xml)?.[0]
   if (ln) {
@@ -229,7 +237,8 @@ export function isInvisibleEmptyShape(xml: string): boolean {
  * furniture). Word renders nothing there — an "Embedded object" chip would
  * paint a box on an otherwise blank page.
  */
-export function isInvisibleVmlPict(xml: string): boolean {
+export function isInvisibleVmlPict(source: string): boolean {
+  const xml = canonicalXmlSyntax(source)
   if (!/<v:(?:shapetype|shape|rect|roundrect|oval|line|polyline)\b/.test(xml)) return false
   if (xml.includes('<v:imagedata') || xml.includes('<w:txbxContent')) return false
   const shapes = xml.match(/<v:(?:shape|rect|roundrect|oval|line|polyline)\b[^>]*>/g) ?? []
@@ -245,9 +254,7 @@ export function isInvisibleVmlPict(xml: string): boolean {
 
 /** drop textbox content so "does the paragraph itself have text" checks work */
 export function stripTextboxes(xml: string): string {
-  return xml.includes('<w:txbxContent')
-    ? xml.replace(/<w:txbxContent>[\s\S]*?<\/w:txbxContent>/g, '')
-    : xml
+  return xml.includes('<w:txbxContent') ? removeSegments(xml, 'w:txbxContent') : xml
 }
 
 /** page-type w:br carried by the anchor paragraph itself (not inside box content) */

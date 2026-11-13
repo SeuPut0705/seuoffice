@@ -29,6 +29,12 @@ export interface RevisionXmlFilter {
   date?: string
   /** w:id of the wrapper / record */
   ids?: string[]
+  /**
+   * leave pending the changes that would remove words a person hid from AI (a
+   * deletion accepted, an insertion rejected, a row either way): for callers acting
+   * for a model, which cannot see the words it would be taking away
+   */
+  keepHidden?: boolean
 }
 /** one accept / reject the editor applied to a part it holds as a display model */
 export interface RevisionResolution {

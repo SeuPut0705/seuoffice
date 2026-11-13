@@ -17,6 +17,9 @@ export interface OdsExportContext {
   /// them but sent nowhere: the export hands it to the main process, which
   /// writes it into its own copy. Null when the edits could not be gathered.
   pendingEdits: () => Promise<WorkbookSaveRequest | null>
+  /// Routes into the regular Save As flow when the person answers the refusal
+  /// of a workbook that hides cells from the AI with "Save as .xlsx".
+  requestSaveAs: () => void
 }
 
 /// Runs a save and, when its Save As ended on the ODS format, the export
@@ -56,6 +59,10 @@ export async function handleExportOds(
       workbook,
     })
     if (result.canceled) {
+      if (result.saveAsXlsxInstead) {
+        ctx.requestSaveAs()
+        return false
+      }
       // The main process already showed the dialog for a refusal or a failed
       // write; the status line just records that nothing was exported.
       ctx.setMessage(

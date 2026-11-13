@@ -95,11 +95,14 @@ function grid(rows: Array<Array<string | string[] | Raw | null>>): string {
   return table(rows.length, rows[0]?.length ?? 0, cells)
 }
 
-/** A memo: `body` are its paragraphs, `anchor` the text it covers. */
-function memo(author: string, number: number, body: string[], anchor = '메모 앵커'): string {
+/**
+ * A memo: `body` are its paragraphs, `anchor` the text it covers, `filetime` the low and high
+ * DWORD of its UTC FILETIME in the command (`MEMO/shape/number/low/high/author`).
+ */
+function memo(author: string, number: number, body: string[], anchor = '메모 앵커', filetime: [bigint, bigint] = [BigInt(number), 1n]): string {
   return '<hp:ctrl>' +
     `<hp:fieldBegin id="${number}" type="MEMO" name="" editable="1" dirty="1"><hp:parameters cnt="6" name=""><hp:integerParam name="Prop">0</hp:integerParam>` +
-    `<hp:stringParam name="Command">MEMO/65535/${number}/${number}/1/${escapeXml(author)}/\\;;</hp:stringParam><hp:stringParam name="ID">memo${number}</hp:stringParam>` +
+    `<hp:stringParam name="Command">MEMO/65535/${number}/${filetime[0]}/${filetime[1]}/${escapeXml(author)}/\\;;</hp:stringParam><hp:stringParam name="ID">memo${number}</hp:stringParam>` +
     `<hp:integerParam name="Number">${number}</hp:integerParam><hp:stringParam name="Author">${escapeXml(author)}</hp:stringParam><hp:stringParam name="MemoShapeIDRef">65535</hp:stringParam></hp:parameters>` +
     `${subList(...body.map(p))}</hp:fieldBegin></hp:ctrl>${t(anchor)}<hp:ctrl><hp:fieldEnd beginIDRef="${number}"/></hp:ctrl>`
 }
@@ -221,6 +224,15 @@ async function documents(): Promise<Input[]> {
   await add('memo with a reference in its text', paragraph(memo('작성자', 1, ['◦ &#65; 글'])))
   await add('memos in several places', paragraph(memo('가', 1, ['첫째'])) + paragraph(memo('나', 2, ['둘째'])) + grid([[{ raw: [paragraph(memo('다', 3, ['칸']))] }, 'b']]))
   await add('memo and a table', paragraph(memo('가', 1, ['글'])) + grid([['a', 'b']]))
+  // memo dates are the host's local time (fileparse.localOffsetSeconds): the gate job runs in a
+  // zone with daylight saving time, and these sit on both sides of its changes in 2026
+  const at = (iso: string): [bigint, bigint] => {
+    const ticks = BigInt(Date.parse(iso) / 1000) * 10_000_000n + 116_444_736_000_000_000n
+    return [ticks & 0xffff_ffffn, ticks >> 32n]
+  }
+  for (const iso of ['2026-03-08T06:30:00Z', '2026-03-08T07:30:00Z', '2026-11-01T05:30:00Z', '2026-11-01T06:30:00Z', '1601-01-01T00:00:01Z']) {
+    await add(`memo dated ${iso}`, paragraph(memo('작성자', 1, ['글'], '메모 앵커', at(iso))))
+  }
   await add('memo over an empty anchor', paragraph(memo('작성자', 1, ['글'], '')))
   await add('memo in a text box', paragraph(textBox(paragraph(memo('상자', 1, ['상자 메모'])))))
   // the page of a memo is the page the engine lays it on

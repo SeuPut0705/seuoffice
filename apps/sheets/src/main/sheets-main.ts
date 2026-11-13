@@ -378,7 +378,10 @@ const tMain = createI18n({
     odsLossShapes: 'Shapes and text boxes: {count}',
     odsLossSlicers: 'Slicers: {count}',
     odsLossSparklines: 'Sparklines: {count}',
-    odsLossRedactions: 'Hide-from-AI marks (the cells stay, no longer hidden): {count}',
+    withheldExportMsg: "A copy as {format} can't keep the cells hidden from the AI",
+    withheldExportDetail:
+      '{format} has nowhere to record which cells are hidden from the AI, so a copy would hand those cells to anyone who opens it, an AI included.\n\nSave as .xlsx keeps the marks. Export {format} without the marks writes the real values, and the marks are gone from that file. Nothing has been written yet.',
+    withheldExportWithoutMarksBtn: 'Export {format} without the marks',
     odsContinueBtn: 'Continue',
     errOdsExportFailed: 'The ODS export failed: {message}',
     errOdsReopenFailed:
@@ -469,7 +472,10 @@ const tMain = createI18n({
     odsLossShapes: '도형·글상자: {count}',
     odsLossSlicers: '슬라이서: {count}',
     odsLossSparklines: '스파크라인: {count}',
-    odsLossRedactions: 'AI에서 숨김 표시 (셀은 남고 더 이상 숨겨지지 않음): {count}',
+    withheldExportMsg: '{format} 사본에는 AI에서 숨긴 셀의 표시를 담을 수 없습니다',
+    withheldExportDetail:
+      '{format}에는 AI에서 숨긴 셀을 기록할 곳이 없어, 사본을 여는 누구에게나(AI 포함) 그 셀이 그대로 보입니다.\n\n.xlsx로 저장하면 숨김 표시가 유지됩니다. 표시 없이 {format} 내보내기는 실제 값을 그대로 저장하며, 그 파일에서는 숨김 표시가 사라집니다. 아직 아무것도 저장하지 않았습니다.',
+    withheldExportWithoutMarksBtn: '표시 없이 {format} 내보내기',
     odsContinueBtn: '계속',
     errOdsExportFailed: 'ODS 내보내기에 실패했습니다: {message}',
     errOdsReopenFailed: '내보낸 ODS 파일을 다시 열지 못해 지웠습니다. 워크북은 그대로입니다.',
@@ -925,7 +931,6 @@ const ODS_LOSS_LABELS: Record<OdsLossKind, Parameters<typeof tMain>[1]> = {
   shapes: 'odsLossShapes',
   slicers: 'odsLossSlicers',
   sparklines: 'odsLossSparklines',
-  redactions: 'odsLossRedactions',
 }
 
 /** One warning listing only what this workbook actually loses, then Continue/Cancel. */
@@ -953,6 +958,35 @@ async function confirmOdsLoss(
       ? await dialog.showMessageBox(parent, options)
       : await dialog.showMessageBox(options)
   return response === 0
+}
+
+/**
+ * A copy format that cannot keep the marks hiding cells from the AI is refused
+ * before anything is written. The person chooses the native format, which
+ * keeps them, or Cancel and clears the marks first.
+ */
+async function askWithheldExport(
+  parent: BrowserWindow | undefined,
+  format: 'ODS' | 'CSV',
+): Promise<'xlsx' | 'export' | 'cancel'> {
+  const options = {
+    type: 'warning' as const,
+    message: tm('withheldExportMsg', { format }),
+    detail: tm('withheldExportDetail', { format }),
+    buttons: [
+      tm('csvKeepXlsxBtn'),
+      tm('withheldExportWithoutMarksBtn', { format }),
+      tm('btnCancel'),
+    ],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  }
+  const { response } =
+    parent && !parent.isDestroyed()
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+  return response === 0 ? 'xlsx' : response === 1 ? 'export' : 'cancel'
 }
 
 async function showOdsMessage(
@@ -3362,6 +3396,7 @@ export function registerSheetsIpc(): void {
         sourcePath,
         targetPath,
         confirmLoss: (losses) => confirmOdsLoss(parent, losses),
+        confirmHidden: () => askWithheldExport(parent, 'ODS'),
       })
     } catch (error) {
       outcome = {
@@ -3375,6 +3410,13 @@ export function registerSheetsIpc(): void {
     }
     if (outcome.status === 'exported') {
       return { canceled: false, path: outcome.path, ...outcome.result }
+    }
+    if (outcome.status === 'redacted') {
+      return {
+        canceled: true,
+        reason: 'redacted',
+        ...(outcome.choice === 'xlsx' ? { saveAsXlsxInstead: true } : {}),
+      }
     }
     if (outcome.status === 'unreadable') {
       await showOdsMessage(parent, 'error', tm('errOdsReopenFailed'))
@@ -3436,6 +3478,11 @@ export function registerSheetsIpc(): void {
 
   // First Save of a CSV session: Excel's "keep this format?" question. The
   // renderer remembers the answer for the file, so it is asked once.
+  ipcMain.handle(IPC_CHANNELS.csvWithheldChoice, async (event) => {
+    sessionFor(event)
+    return askWithheldExport(dialogParent(event), 'CSV')
+  })
+
   ipcMain.handle(IPC_CHANNELS.csvSaveConfirm, async (event) => {
     sessionFor(event)
     const options = {

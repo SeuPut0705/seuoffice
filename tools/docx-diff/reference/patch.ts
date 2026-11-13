@@ -31,7 +31,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
-import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
+import { hfKeptRoot, hfRootOpen, hfWrapNamespaces } from './hf-root'
 import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import {
@@ -2864,7 +2864,7 @@ function headerFooterPartXml(
   }
   return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
+      `${hfRootOpen(root, originalXml)}${body}</${root}>`,
   )
 }
 

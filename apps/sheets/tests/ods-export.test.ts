@@ -604,13 +604,8 @@ describe('ODS export', () => {
     expect(messageBoxes).toHaveLength(0)
   })
 
-  it('says that the copy does not keep the cells hidden from the AI', async () => {
-    const path = writeWorkbook('Budget.xlsx')
-    const tab = newTab()
-    const opened = await openWorkbook(tab, path)
-    const target = join(dir, 'Budget.ods')
-    // two marks on the one sheet: a cell and a range
-    redactionPart.text = serializeRedactionPart([
+  const MARKED = () =>
+    serializeRedactionPart([
       {
         sheetName: 'Data',
         marks: [
@@ -619,50 +614,86 @@ describe('ODS export', () => {
         ],
       },
     ])
+
+  it('asks about a workbook that hides cells from the AI, and Cancel converts and writes nothing', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const target = join(dir, 'Budget.ods')
+    redactionPart.text = MARKED()
+    saveDialogAnswers.push(target)
+    messageAnswers.push(2)
+
+    const refused = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    // Cancel: nothing was converted, nothing was written, and the two ways on are on offer
+    expect(refused).toEqual({ canceled: true, reason: 'redacted' })
+    expect(existsSync(target)).toBe(false)
+    expect(convertOdsCalls).toHaveLength(0)
+    expect(messageBoxes).toHaveLength(1)
+    expect(messageBoxes[0]?.message).toMatch(/can't keep the cells hidden from the AI/)
+    expect(messageBoxes[0]?.buttons).toEqual([
+      'Save as .xlsx',
+      'Export ODS without the marks',
+      'Cancel',
+    ])
+    expect(messageBoxes[0]?.detail).toMatch(/Save as \.xlsx keeps the marks/)
+    expect(messageBoxes[0]?.detail).toMatch(/without the marks writes the real values/)
+    // the labels are the model's to see, not the dialog's to repeat
+    expect(messageBoxes[0]?.detail).not.toContain('client phone')
+  })
+
+  it('takes the person to Save As .xlsx when they choose it, writing nothing', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    redactionPart.text = MARKED()
+    saveDialogAnswers.push(join(dir, 'Budget.ods'))
+    messageAnswers.push(0)
+
+    const refused = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    expect(refused).toEqual({ canceled: true, reason: 'redacted', saveAsXlsxInstead: true })
+    expect(existsSync(join(dir, 'Budget.ods'))).toBe(false)
+  })
+
+  it('writes the copy without the marks only when the person asks for that', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const target = join(dir, 'Budget.ods')
+    redactionPart.text = MARKED()
     saveDialogAnswers.push(target)
     messageAnswers.push(1)
 
-    const canceled = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
-
-    // nothing else is dropped: the marks alone raise the warning, and Cancel writes nothing
-    expect(canceled).toEqual({ canceled: true, reason: 'canceled' })
-    expect(existsSync(target)).toBe(false)
-    expect(messageBoxes).toHaveLength(1)
-    expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: 2$/im)
-    expect(messageBoxes[0]?.detail).not.toContain('client phone')
-
-    saveDialogAnswers.push(target)
-    messageAnswers.push(0)
     const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
     expect((exported as { canceled: boolean }).canceled).toBe(false)
     expect(readFileSync(target, 'utf8')).toBe(ODS_BYTES)
+    // asked once, and no second warning about the marks
+    expect(messageBoxes).toHaveLength(1)
   })
 
   it.each([
     ['the record of hidden cells is damaged', () => (redactionPart.text = '{"version":1,')],
     ['the package cannot be listed', () => (redactionPart.manifestFails = true)],
-  ])('warns without a count when %s', async (_name, damage) => {
+  ])('asks when %s: not knowing what is hidden is not nothing hidden', async (_name, damage) => {
     const path = writeWorkbook('Budget.xlsx')
     const tab = newTab()
     const opened = await openWorkbook(tab, path)
     damage()
     saveDialogAnswers.push(join(dir, 'Budget.ods'))
-    messageAnswers.push(0)
+    messageAnswers.push(2)
 
-    await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+    const refused = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
 
-    // not knowing what is hidden is not the same as nothing being hidden
-    expect(messageBoxes).toHaveLength(1)
-    expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: \?$/im)
+    expect(refused).toEqual({ canceled: true, reason: 'redacted' })
+    expect(convertOdsCalls).toHaveLength(0)
+    expect(existsSync(join(dir, 'Budget.ods'))).toBe(false)
   })
 
   it('says it in each language', async () => {
-    redactionPart.text = serializeRedactionPart([
-      {
-        sheetName: 'Data',
-        marks: [{ startRow: 0, endRow: 0, startColumn: 0, endColumn: 0, label: 'x' }],
-      },
-    ])
+    redactionPart.text = MARKED()
     const path = writeWorkbook('Budget.xlsx')
     const tab = newTab()
     const opened = await openWorkbook(tab, path)
@@ -670,13 +701,15 @@ describe('ODS export', () => {
     for (const lang of LANGS) {
       setUiLang(lang)
       saveDialogAnswers.push(join(dir, `Budget-${lang}.ods`))
-      messageAnswers.push(0)
+      messageAnswers.push(2)
       await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
-      const line = messageBoxes.at(-1)?.detail?.split('\n').at(-1) ?? ''
-      expect(line, lang).toMatch(/^• .+1$/)
-      lines.add(line)
+      const box = messageBoxes.at(-1)
+      expect(box?.message, lang).toContain('ODS')
+      expect(box?.detail, lang).toContain('.xlsx')
+      expect(box?.buttons, lang).toHaveLength(3)
+      lines.add(`${box?.message}|${box?.detail}|${box?.buttons?.join()}`)
     }
-    // a language without its own line would repeat another's
+    // a language without its own text would repeat another's
     expect(lines.size).toBe(LANGS.length)
   })
 

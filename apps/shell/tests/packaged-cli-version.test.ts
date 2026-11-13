@@ -68,6 +68,10 @@ function loadConfig(opts: {
       if (id === 'node:child_process') {
         return {
           execFileSync: (_file: string, args: string[], runOpts: { env?: NodeJS.ProcessEnv }) => {
+            // the notice gate asks how many crates office_wasm.wasm holds
+            if (args[0].replace(/\\/g, '/').endsWith('tools/office-wasm-crates.mjs')) {
+              return JSON.stringify({ count: 1 })
+            }
             rebuilds.push({ script: args[0], appVersion: runOpts.env?.SEUOFFICE_APP_VERSION })
             if (opts.rebuildApplies !== false) baked = runOpts.env?.SEUOFFICE_APP_VERSION ?? baked
             return Buffer.from('')
@@ -96,7 +100,8 @@ function loadConfig(opts: {
                 require('node:fs').readFileSync(resolve(shellRoot, '../../NOTICE'), 'utf8').trim(),
                 `${PRODUCT_NAME} — Third-Party Software Notices`,
                 '@embedpdf/pdfium\nCopyright 2014 PDFium Authors\nApache License',
-                '1 crates, all under permissive terms:\n1 crates, all under permissive terms:\n',
+                '1 crates, all under permissive terms:\n1 crates, all under permissive terms:',
+                '1 crates compiled into office_wasm.wasm:\n',
               ].join('\n')
             }
             return require('node:fs').readFileSync(path, encoding as BufferEncoding)

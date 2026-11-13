@@ -152,6 +152,7 @@ fn notes() {
     let note = |id: &str| NoteInfo {
         id: id.to_owned(),
         text: String::new(),
+        model_text: None,
         style_id: None,
         zotero_field: None,
         no_ref_mark: None,

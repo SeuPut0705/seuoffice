@@ -12,6 +12,10 @@ use super::thrown;
 use crate::generate::{escape_xml_attr, escape_xml_text};
 use crate::model::CommentInfo;
 use crate::notes::root_attributes;
+use crate::withheld::{
+    comment_entries, first_mark_label, has_withheld_trace, over_withheld, parse_entry, runs_text,
+    with_redact_namespace,
+};
 
 const COMMENTS_NS: &str = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"";
 
@@ -32,19 +36,13 @@ pub fn build_comments_xml(
     image_runs: Option<&HashMap<String, String>>,
     kept_image_runs: Option<&HashMap<String, String>>,
 ) -> Result<String, String> {
+    let entries = match truthy(original_xml) {
+        Some(original_xml) => comment_entries(original_xml).map_err(thrown)?,
+        None => Vec::new(),
+    };
     let mut originals: HashMap<&str, (String, &str)> = HashMap::new();
-    if let Some(original_xml) = truthy(original_xml) {
-        for found in
-            js_regex!(r"<w:comment\s[^>]*>[\s\S]*?<\/w:comment>", "g").find_iter(original_xml)
-        {
-            let comment = found.as_str();
-            let id = js_regex!(r#"w:id="([^"]+)""#)
-                .exec(comment)
-                .and_then(|id| id.get(1));
-            if let Some(id) = id {
-                originals.insert(id, (comment_plain_text(comment), comment));
-            }
-        }
+    for entry in &entries {
+        originals.insert(&entry.id, (comment_plain_text(&entry.xml), &entry.xml));
     }
     let has_image = |id: &str| image_runs.is_some_and(|runs| runs.contains_key(id));
     let mut body = String::new();
@@ -64,11 +62,16 @@ pub fn build_comments_xml(
         {
             // in-paragraph w:t-level patch: text edits keep the rich formatting, the
             // paragraphs and the inline links
-            if let Some(patched) = patch_paragraph_texts(xml, &c.text, false) {
+            if let Some(patched) = patch_paragraph_texts(xml, &c.text, false).map_err(thrown)? {
                 body.push_str(&patched);
                 continue;
             }
         }
+        // an edit that cannot be patched around hidden runs: written anew, every
+        // word of the comment is hidden under the first label it carried
+        let hidden_label = original
+            .filter(|(_, xml)| has_withheld_trace(xml))
+            .map(|(_, xml)| first_mark_label(xml));
         let mut attrs = format!(
             "w:id=\"{}\" w:author=\"{}\"",
             escape_xml_attr(&c.id),
@@ -111,10 +114,11 @@ pub fn build_comments_xml(
             last.push_str(run);
             last.push_str("</w:p>");
         }
-        body.push_str(&format!(
-            "<w:comment {attrs}>{}</w:comment>",
-            paras.concat()
-        ));
+        let entry = format!("<w:comment {attrs}>{}</w:comment>", paras.concat());
+        body.push_str(&match hidden_label {
+            Some(label) => over_withheld(&entry, &label),
+            None => entry,
+        });
     }
     // Rebuilt comments always emit w14:paraId, so w14 must be bound even when the
     // original root never declared it. A picture-bearing rebuild draws with wp:/r:
@@ -136,9 +140,13 @@ pub fn build_comments_xml(
         ));
     }
     let ns = root_attributes(original_xml, "w:comments", COMMENTS_NS, &required).map_err(thrown)?;
-    Ok(format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:comments {ns}>{body}</w:comments>"
-    ))
+    with_redact_namespace(
+        &format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:comments {ns}>{body}</w:comments>"
+        ),
+        "w:comments",
+    )
+    .map_err(thrown)
 }
 
 /// `buildCommentsExtendedXml`: one commentEx per comment (reply parent-child and resolved flag).
@@ -175,26 +183,17 @@ pub fn build_comments_extended_xml(comments: &[CommentInfo]) -> String {
     )
 }
 
-/// `commentPlainText`: aligned with parseComments' textOf, each w:p's w:t text with '\n' between paragraphs.
+/// `commentPlainText`: a comment's text as `parseComments` reads it, so an
+/// unchanged comment keeps its bytes.
 pub fn comment_plain_text(comment_xml: &str) -> String {
-    let mut paras: Vec<String> = Vec::new();
-    // the self-closing form first: the open-to-close alternative would swallow it
-    for p in js_regex!(r"<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>", "g").find_iter(comment_xml)
-    {
-        let texts: String = js_regex!(r"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>", "g")
-            .find_iter(p.as_str())
-            .map(|t| t.get(1).unwrap_or_default())
-            .collect();
-        paras.push(
-            texts
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&apos;", "'")
-                .replace("&amp;", "&"),
-        );
+    match parse_entry(comment_xml) {
+        Some(node) => node
+            .find_children("w:p")
+            .map(runs_text)
+            .collect::<Vec<_>>()
+            .join("\n"),
+        None => String::new(),
     }
-    paras.join("\n")
 }
 
 /// `removeDeletedCommentMarkers`: a comment-list edit is authoritative, so the

@@ -490,6 +490,12 @@ export interface ChartStyleInfo {
 
 export interface ChartRenderNode extends RenderNodeBase {
   type: 'chart'
+  /**
+   * Withheld from the model: a run of the chart's rich text (title, axis title, data label) is
+   * hidden from AI, and the picture the renderer draws of it shows the words. The label is what
+   * the model sees; see `ChartModel.redact` in the engine.
+   */
+  redact?: string
   /** Inserted by this app (cNvPr descr="aislides-chart"): chart editing enabled; passthrough charts lack this flag */
   appCreated?: boolean
   styleInfo?: ChartStyleInfo

@@ -29,6 +29,7 @@ import { SAVE } from './calls-save'
 import { createCallsRunner } from './calls-runner'
 import { SECTION } from './calls-section'
 import { VML } from './calls-vml'
+import { WITHHELD } from './calls-withheld'
 
 export const {
   callOutcomes,
@@ -60,6 +61,7 @@ export const {
   save: SAVE,
   section: SECTION,
   vml: VML,
+  withheld: WITHHELD,
   xmltag: XMLTAG,
   genRpr: GEN_RPR,
   genProps: GEN_PROPS,

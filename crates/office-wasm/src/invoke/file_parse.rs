@@ -18,7 +18,7 @@ use file_parse::{attachable, csv, opc, xlsx_dates, zip_text_parts};
 
 /// The records of withheld cells `xlsxWithheldCells` opened, newest last. The
 /// binding's closure asks by handle and opens the workbook again when its
-/// record was let go (`WithheldEvicted`), so a few are enough.
+/// record was let go (`WithheldEvictedError`), so a few are enough.
 const WITHHELD_KEPT: usize = 4;
 
 thread_local! {
@@ -50,9 +50,13 @@ pub fn js_error_name(message: &str) -> &'static str {
     }
 }
 
-/// A reader's error as the binding reads it: `<Name>: <message>`.
+/// A reader's error as the binding reads it: `<Name>: <message>`, or the
+/// message alone for a plain `Error`.
 fn thrown(message: String) -> String {
-    format!("{}: {message}", js_error_name(&message))
+    match js_error_name(&message) {
+        "Error" => message,
+        name => format!("{name}: {message}"),
+    }
 }
 
 fn text(args: &[Value], index: usize) -> Result<&str, String> {
@@ -237,7 +241,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
                 let (_, cells) = kept
                     .iter()
                     .find(|(id, _)| u64::from(*id) == handle)
-                    .ok_or_else(|| format!("WithheldEvicted: record {handle} was let go"))?;
+                    .ok_or_else(|| format!("WithheldEvictedError: record {handle} was let go"))?;
                 Ok(Some(json!(cells.marker(sheet, cell_ref, has_formula))))
             })
         }

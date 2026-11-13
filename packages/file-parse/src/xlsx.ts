@@ -30,7 +30,7 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
 export const UNKNOWN_CELL_MARKER = '{{private}}'
 
 /** The engine keeps a few opened records of withheld cells; one it let go is opened again. */
-const EVICTED = 'WithheldEvicted'
+const EVICTED = 'WithheldEvictedError'
 
 /**
  * A reader for the cells of a workbook that its sheet editor withholds from a

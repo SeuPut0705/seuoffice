@@ -3,6 +3,7 @@ import {
   type WithheldMark,
   type WithheldNode,
 } from '@seuoffice/agent-core/redact-range'
+import { decodeBlockLabel } from '../editor/block-redact-label'
 import { REDACT_MARK, placeholderSource } from './redact'
 
 /**
@@ -141,14 +142,18 @@ export function redactTextBetween(
  * The block has no run for a mark to sit on; the parser lifts the label here.
  */
 export function withheldBlockLabel(node: RedactableNode): string | undefined {
-  const label = node.attrs?.redact
-  return nameOf(node) === 'docProtected' && typeof label === 'string' ? label : undefined
+  const stored = node.attrs?.redact
+  return nameOf(node) === 'docProtected' && typeof stored === 'string'
+    ? decodeBlockLabel(stored)
+    : undefined
 }
 
 /** What a model reads as the preview of a protected block: the placeholder of a hidden one, else its own preview text. */
 export function protectedPreviewOf(attrs: Record<string, unknown> | undefined): string {
-  const label = attrs?.redact
-  return typeof label === 'string' ? placeholderSource(label) : String(attrs?.previewText ?? '')
+  const stored = attrs?.redact
+  return typeof stored === 'string'
+    ? placeholderSource(decodeBlockLabel(stored))
+    : String(attrs?.previewText ?? '')
 }
 
 /** The same document with spans replaced, for callers that need the nodes. */
@@ -164,7 +169,8 @@ export function redactNode<T extends RedactableNode>(node: T): T {
         blockType: node.attrs?.blockType ?? 'passthrough',
         label: node.attrs?.label ?? '',
         previewText: placeholderSource(hiddenBlock),
-        redact: hiddenBlock,
+        // as stored, so that what reads it again decodes it once
+        redact: node.attrs?.redact,
       },
     } as unknown as T
   }

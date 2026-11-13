@@ -1411,6 +1411,8 @@ export interface ChartSeries {
  * updated, so Word's "Edit Data" sheet will still show the pre-edit numbers.
  */
 export interface ChartDisplay {
+  /** label of a mark hiding the chart from AI: a run of its rich text (title, axis title, data label) is marked */
+  redact?: string
   /** zip path of the chart part this model was read from */
   partPath: string
   kind: 'bar' | 'line' | 'pie' | 'area' | 'scatter' | 'bubble' | 'radar' | 'other'

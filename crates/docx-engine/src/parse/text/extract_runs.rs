@@ -2,14 +2,14 @@
 
 use std::collections::{BTreeSet, HashSet};
 
-use jscompat::{JsMap, Radix, js_regex, parse_int, truthy};
+use jscompat::{JsMap, Radix, js_regex, parse_int, trim, truthy};
 use omml::omml_ends_with_break;
 use ooxml_xml::{XElement, XNode, serialize};
 use serde_json::{Map, Value};
 
 use super::build_run::{build_run, find_in};
 use super::context::BuildContext;
-use super::convert::{json, model_of, num};
+use super::convert::{PictureUrls, json, model_of, num, put_picture_urls, take_picture_urls};
 use super::paragraph::{ParaResolve, inherited_cs_font, run_resolve_of};
 use super::runs::RunResolve;
 use super::{ZoteroFieldParagraph, break_char_of};
@@ -278,13 +278,13 @@ impl<'a, 'c> Walker<'a, 'c> {
                 id
             }
         };
-        let instruction = self
-            .zotero_field
-            .map_or(self.field_instr.as_str(), |field| {
-                field.instruction.as_str()
-            })
-            .trim()
-            .to_owned();
+        let instruction = trim(
+            self.zotero_field
+                .map_or(self.field_instr.as_str(), |field| {
+                    field.instruction.as_str()
+                }),
+        )
+        .to_owned();
         let count = cached_runs.len();
         for (index, cached) in cached_runs.into_iter().enumerate() {
             let run_part = if part == "single" && count > 1 {
@@ -564,7 +564,7 @@ impl<'a, 'c> Walker<'a, 'c> {
                     cached.as_str()
                 }),
             );
-            map.insert("instrField".to_owned(), Value::from(instr.trim()));
+            map.insert("instrField".to_owned(), Value::from(trim(&instr)));
             if dirty {
                 map.insert("fldDirty".to_owned(), Value::Bool(true));
             }
@@ -582,7 +582,7 @@ impl<'a, 'c> Walker<'a, 'c> {
                     cached.as_str()
                 }),
             );
-            map.insert("instrField".to_owned(), Value::from(instr.trim()));
+            map.insert("instrField".to_owned(), Value::from(trim(&instr)));
             if dirty {
                 map.insert("fldDirty".to_owned(), Value::Bool(true));
             }
@@ -599,7 +599,7 @@ impl<'a, 'c> Walker<'a, 'c> {
             math.insert("omml".to_owned(), Value::from(eq.omml.as_str()));
             map.insert("math".to_owned(), Value::Object(math));
             self.push_map(map, rev)?;
-        } else if instr.trim().is_empty() {
+        } else if trim(&instr).is_empty() {
             // an instruction-less field keeps its result as an empty-instruction run
             let mut map = self.result_format()?;
             map.insert(
@@ -676,7 +676,7 @@ impl<'a, 'c> Walker<'a, 'c> {
             map.insert("refField".to_owned(), Value::from(name));
             map.insert(
                 "refInstr".to_owned(),
-                Value::from(format!(" {} ", instr.trim())),
+                Value::from(format!(" {} ", trim(&instr))),
             );
         } else if let Some(merge) = merge {
             map = format;
@@ -692,14 +692,14 @@ impl<'a, 'c> Walker<'a, 'c> {
                     text.as_str()
                 }),
             );
-            map.insert("instrField".to_owned(), Value::from(instr.trim()));
+            map.insert("instrField".to_owned(), Value::from(trim(&instr)));
         } else {
             map = format;
             map.insert(
                 "text".to_owned(),
                 Value::from(if text.is_empty() { " " } else { text.as_str() }),
             );
-            map.insert("instrField".to_owned(), Value::from(instr.trim()));
+            map.insert("instrField".to_owned(), Value::from(trim(&instr)));
         }
         if dirty {
             map.insert("fldDirty".to_owned(), Value::Bool(true));
@@ -1135,13 +1135,35 @@ pub fn extract_runs<'a>(
     Ok(merged)
 }
 
-/// `mergeRuns` over model runs.
+/// `mergeRuns` over model runs. A run with a picture never merges with another,
+/// so the pictures come out in the order they went in: their data URLs stay
+/// out of the JSON, which would copy each, and are put back.
 fn merge_runs_model(runs: &[Run]) -> Result<Vec<Run>, Thrown> {
+    let mut urls: Vec<PictureUrls> = Vec::new();
     let maps: Vec<Map<String, Value>> = runs
         .iter()
-        .map(|run| super::convert::into_map(json(run)))
+        .map(|run| {
+            let map = if run.image.is_some() {
+                let mut bare = run.clone();
+                urls.extend(take_picture_urls(&mut bare));
+                json(&bare)
+            } else {
+                json(run)
+            };
+            super::convert::into_map(map)
+        })
         .collect();
-    merge_runs(&maps).into_iter().map(run_of).collect()
+    let mut merged = merge_runs(&maps)
+        .into_iter()
+        .map(run_of)
+        .collect::<Result<Vec<Run>, Thrown>>()?;
+    let mut urls = urls.into_iter();
+    for run in merged.iter_mut().filter(|run| run.image.is_some()) {
+        if let Some(urls) = urls.next() {
+            put_picture_urls(run, urls);
+        }
+    }
+    Ok(merged)
 }
 
 /// `extractRuns(p, ctx, [], [], withImages)`

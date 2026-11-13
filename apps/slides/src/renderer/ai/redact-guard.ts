@@ -52,6 +52,7 @@ const CONTENT_OPS = new Set([
   'insertEquation',
   'pasteElements',
   'setShapeCustomGeometry',
+  'setChart',
 ])
 
 /** Ops that drop a whole page, and so any span on it. */
@@ -63,7 +64,7 @@ const PAGE_DELETE_OPS = new Set(['deleteSlide'])
  * or ungrouping it would take its withheld descendants with it.
  */
 function labelOf(node: RenderNode): string | null {
-  if (node.type === 'picture') return node.redact ?? null
+  if (node.type === 'picture' || node.type === 'chart') return node.redact ?? null
   if (node.type === 'group') {
     for (const child of node.children) {
       const hit = labelOf(child)

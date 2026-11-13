@@ -175,7 +175,7 @@ fn attach_inline_content_controls(text: &str, args: &Value) -> Returned {
             .is_some_and(|c| c.is_whitespace() || c == '\u{feff}' || c == '/' || c == '>')
     });
     if !present && is_para {
-        let inline = text::inline_content_controls_of(text).map_err(|limit| limit.to_string())?;
+        let inline = text::inline_content_controls_of(text);
         if !inline.is_empty() {
             block.insert(
                 "inlineContentControls".to_owned(),

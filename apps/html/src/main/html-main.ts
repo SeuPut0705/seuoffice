@@ -24,7 +24,7 @@ import {
   shell,
   webContents,
 } from 'electron'
-import type { WebContents } from 'electron'
+import type { MessageBoxOptions, WebContents } from 'electron'
 import {
   configuredDefaultSaveDir,
   confirmOverwriteIfConflicted,
@@ -90,7 +90,14 @@ import {
   extensionlessAssetMime,
 } from './asset-mime'
 import { buildPreviewDocument } from './preview-document'
-import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
+import {
+  askMarkedExport,
+  confirmOdtReport,
+  exportOdt,
+  markedExportRefusal,
+  odtFilterName,
+} from './odt-export'
+import { planMarkedExport } from './marked-html'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
 import { registerHtmlHandoffIpc } from './generate-handoff-ipc'
 import { registerHtmlSeedIpc } from './seed-main'
@@ -631,7 +638,20 @@ async function writeHtmlDocx(
   html: string,
   docPath: string | undefined,
   target: string,
+  win?: BrowserWindow,
 ): Promise<ExportResult> {
+  // The Word export writes the page's words and no mark: a marked page is exported
+  // only with its marks cleared, when the person agrees; a headless export writes nothing.
+  const plan = await planMarkedExport(
+    html,
+    isHeadlessMode() ? null : () => askMarkedExport('docx', (options) => showBox(win, options)),
+  )
+  if (plan.kind === 'declined') {
+    return isHeadlessMode()
+      ? { ok: false, error: markedExportRefusal() }
+      : { ok: true, canceled: true }
+  }
+  html = plan.html
   if (docxExportPrepareHook && !(await docxExportPrepareHook(target))) {
     return { ok: true, canceled: true }
   }
@@ -648,6 +668,9 @@ async function writeHtmlDocx(
   }
 }
 
+const showBox = (win: BrowserWindow | undefined, options: MessageBoxOptions) =>
+  win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options)
+
 /** The ODT export: the Word export's bytes converted by docxToOdt, a change report confirmed. */
 async function writeHtmlOdt(
   html: string,
@@ -656,12 +679,21 @@ async function writeHtmlOdt(
   pickPath: () => Promise<string | null>,
   skipConfirm: boolean,
 ): Promise<ExportResult> {
+  // An ODT cannot keep content hidden from AI: a marked page is exported only with
+  // its marks cleared, when the person agrees; a headless export writes nothing.
+  const plan = await planMarkedExport(
+    html,
+    skipConfirm ? null : () => askMarkedExport('odt', (options) => showBox(win, options)),
+  )
+  if (plan.kind === 'declined') {
+    return skipConfirm ? { ok: false, error: markedExportRefusal() } : { ok: true, canceled: true }
+  }
   const outcome = await exportOdt({
     pickPath,
     docx: async () => {
       const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
       try {
-        return await renderHtmlDocx(html, docPath(), workDir)
+        return await renderHtmlDocx(plan.html, docPath(), workDir)
       } finally {
         await rm(workDir, { recursive: true, force: true }).catch(() => {})
       }
@@ -1267,7 +1299,7 @@ function registerHtmlIpc(): void {
             exportAs === 'pdf'
               ? await writeHtmlPdf(html, pathAtRequest, target)
               : exportAs === 'docx'
-                ? await writeHtmlDocx(html, pathAtRequest, target)
+                ? await writeHtmlDocx(html, pathAtRequest, target, win)
                 : await writeHtmlOdt(
                     html,
                     () => pathAtRequest,
@@ -1522,7 +1554,7 @@ function registerHtmlIpc(): void {
               configuredDefaultSaveDir(app),
             )
       if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
-      return writeHtmlDocx(request.html, savePathByWc.get(e.sender.id), picked.filePath)
+      return writeHtmlDocx(request.html, savePathByWc.get(e.sender.id), picked.filePath, win)
     },
   )
 

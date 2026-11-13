@@ -13,6 +13,7 @@ use crate::model::{
 use crate::props::themed_r_fonts;
 use crate::resolve::{self, ResolveCtx, resolve_run_props};
 use crate::theme::ThemeFonts;
+use crate::withheld::withheld_label_of;
 use crate::xml_text::on_off_of;
 
 /// `RunResolve`, the members `effectiveRunOf` reads: the paragraph resolved,
@@ -145,6 +146,7 @@ pub fn note_run_of(run: &Run, base: &EffectiveRPr) -> NoteRun {
         text: run.text.as_deref().unwrap_or_default().to_owned(),
         ..NoteRun::default()
     };
+    out.redact = withheld_label_of(run.raw_r_pr.as_deref());
     let cs = run.effective.as_ref().filter(|effective| effective.cs);
     if (*run.bold).or(cs.map(|cs| cs.bold)).unwrap_or(base.bold) {
         out.bold = Some(true);
