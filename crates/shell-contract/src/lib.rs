@@ -9,15 +9,19 @@
 //! contract).
 
 pub mod channels;
+pub mod editors;
 pub mod error;
 pub mod hosts;
 pub mod ids;
 pub mod ipc;
+pub mod provided;
 pub mod runtime;
 pub mod value;
 
 pub use channels::{Batch, CHANNELS, ChannelSpec, PRELOADS, PreloadSpec, Surface};
+pub use editors::{DocumentEditors, SaveMode, editor_for};
 pub use error::IpcError;
 pub use hosts::{ClipboardHost, ContentsHost, DialogsHost, Hosts, MainWindowHost, OsShellHost};
 pub use ids::{DocumentHandle, RequestId, ViewId, WindowId};
+pub use provided::Provided;
 pub use value::{BytesKind, IpcValue};
