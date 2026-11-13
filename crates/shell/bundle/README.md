@@ -10,6 +10,8 @@ npx tauri build --config bundle/windows.conf.json      # crates/shell에서, Win
 node crates/shell/bundle/release-feed.mjs feed --version <판> <설치 파일>...  # 블록맵과 채널 파일
 ```
 
+러너에서는 `seuoffice shell` 작업 흐름을 손으로 `bundle=true`(필요하면 `version`)로 시작하면 위 순서대로 설치본, `.blockmap`, 채널 파일을 지어 `shell-bundle-win`, `shell-bundle-mac` 아티팩트로 올린다. 넘어가기 시험의 `to_run`, `next_run`에 그 실행 번호를 준다(`next_run`은 더 높은 `version`으로 지은 실행).
+
 ## 파일
 
 | 파일                | 내용                                                                                                                                                                                                                                                 |

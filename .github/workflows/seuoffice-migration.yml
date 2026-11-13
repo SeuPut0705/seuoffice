@@ -24,11 +24,11 @@ on:
         required: false
         default: oldest,previous
       to_run:
-        description: Run id whose artifacts hold the candidate (SeuOffice-Setup-<v>.exe, SeuOffice-<v>-arm64-mac.zip); empty updates to the second latest release
+        description: Run id whose artifacts hold the candidate (SeuOffice-Setup-<v>.exe, SeuOffice-<v>-arm64-mac.zip, each with its .blockmap; a "seuoffice shell" run with bundle=true); empty updates to the second latest release
         required: false
         default: ''
       next_run:
-        description: Run id of the build the candidate updates to next; empty uses the latest release when to_run is empty, else skips
+        description: Run id of the build the candidate updates to next (a bundle=true run with a higher version); empty uses the latest release when to_run is empty, else skips
         required: false
         default: ''
 
