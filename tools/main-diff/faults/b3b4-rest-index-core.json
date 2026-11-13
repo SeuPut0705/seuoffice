@@ -1,0 +1,1111 @@
+[
+  {
+    "name": "a Latin hit at the very start is dropped",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "|| pos == 0",
+    "replace": "|| pos == usize::MAX",
+    "fn": [
+      "text-marks.findRanges",
+      "text-marks.findTextRanges",
+      "text-marks.markText",
+      "snippet.buildSnippet",
+      "snippet.containsAny"
+    ]
+  },
+  {
+    "name": "a hit right after a word character is kept",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "|| !is_word_unit(hay[pos - 1])",
+    "replace": "|| is_word_unit(hay[pos - 1])",
+    "fn": [
+      "text-marks.findRanges",
+      "text-marks.findTextRanges",
+      "text-marks.markText",
+      "snippet.buildSnippet"
+    ]
+  },
+  {
+    "name": "half of a surrogate pair counts as a word character",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": ".is_some_and(is_word_char)",
+    "replace": ".is_none_or(is_word_char)",
+    "fn": ["text-marks.findRanges"]
+  },
+  {
+    "name": "a CJK needle needs a word start too",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "let word_start = !cjk_start_re().test(n) && is_word_char(first);",
+    "replace": "let word_start = is_word_char(first);",
+    "fn": ["text-marks.findRanges", "text-marks.findTextRanges", "text-marks.markText"]
+  },
+  {
+    "name": "every needle needs a word start",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "let word_start = !cjk_start_re().test(n) && is_word_char(first);",
+    "replace": "let word_start = !cjk_start_re().test(n);",
+    "fn": ["text-marks.findRanges"]
+  },
+  {
+    "name": "Hangul is not CJK for the word start",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "\\p{Script=Hangul}",
+    "replace": "\\p{Script=Han}",
+    "fn": ["text-marks.findRanges", "text-marks.findTextRanges", "text-marks.markText"]
+  },
+  {
+    "name": "the next search skips the overlap",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "at = index_of_units(hay, &needle, pos + 1);",
+    "replace": "at = index_of_units(hay, &needle, pos + needle.len());",
+    "fn": ["text-marks.findRanges"]
+  },
+  {
+    "name": "a mid-word hit is never allowed",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "|| allow_mid_word.is_some_and(|allowed| allowed(pos))",
+    "replace": "|| false",
+    "fn": ["text-marks.findRanges", "text-marks.findTextRanges"]
+  },
+  {
+    "name": "touching ranges stay apart",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "Some(last) if r.0 <= last.1 =>",
+    "replace": "Some(last) if r.0 < last.1 =>",
+    "fn": ["text-marks.findRanges", "text-marks.markText"]
+  },
+  {
+    "name": "a fused range ends with the last range",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "last.1 = last.1.max(r.1)",
+    "replace": "last.1 = r.1",
+    "fn": ["text-marks.findRanges"]
+  },
+  {
+    "name": "the ranges are not sorted by start",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "ranges.sort_by(|a, b| a.0.cmp(&b.0));",
+    "replace": "ranges.sort_by(|a, b| b.0.cmp(&a.0));",
+    "fn": ["text-marks.findRanges", "text-marks.markText"]
+  },
+  {
+    "name": "a length mismatch is no longer an empty answer",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "if starts.len() != folded.len() {",
+    "replace": "if starts.len() != folded.len() + 99 {",
+    "fn": ["text-marks.findTextRanges", "text-marks.markText"]
+  },
+  {
+    "name": "a changed length is not noted",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "if length != segment_length {",
+    "replace": "if length == segment_length {",
+    "fn": ["text-marks.findTextRanges"]
+  },
+  {
+    "name": "the grapheme offset counts characters",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "index += segment_length;",
+    "replace": "index += 1;",
+    "fn": ["text-marks.findTextRanges", "text-marks.markText", "snippet.buildSnippet"]
+  },
+  {
+    "name": "a hit ends at the start of its last grapheme",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "(starts[s], ends[e - 1])",
+    "replace": "(starts[s], starts[e - 1])",
+    "fn": ["text-marks.findTextRanges", "text-marks.markText"]
+  },
+  {
+    "name": "a run that starts where the cursor is gets an empty lead",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "if s > cursor {",
+    "replace": "if s >= cursor {",
+    "fn": ["text-marks.markText"]
+  },
+  {
+    "name": "a run at the end of the text is always added",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "if cursor < units.len() {",
+    "replace": "if cursor <= units.len() {",
+    "fn": ["text-marks.markText"]
+  },
+  {
+    "name": "fold upper-cases",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": ".to_lowercase()",
+    "replace": ".to_uppercase()",
+    "fn": [
+      "text-marks.foldText",
+      "tokenize.foldText",
+      "tokenize.tokenize",
+      "text-marks.findTextRanges"
+    ]
+  },
+  {
+    "name": "fold is NFC",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "new_nfkc()",
+    "replace": "new_nfc()",
+    "fn": [
+      "text-marks.foldText",
+      "tokenize.foldText",
+      "tokenize.tokenize",
+      "text-marks.findTextRanges"
+    ]
+  },
+  {
+    "name": "a digit is no word character",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "return c.is_ascii_alphanumeric();",
+    "replace": "return c.is_ascii_alphabetic();",
+    "fn": ["text-marks.findRanges", "tokenize.tokenize"]
+  },
+  {
+    "name": "a mark is no word character",
+    "file": "main-core/src/shell/text_marks.rs",
+    "find": "[\\p{L}\\p{N}\\p{M}]",
+    "replace": "[\\p{L}\\p{N}]",
+    "fn": ["text-marks.findRanges", "tokenize.tokenize"]
+  },
+  {
+    "name": "the window is one longer",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "const WINDOW: usize = 150;",
+    "replace": "const WINDOW: usize = 151;",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "the lead is one longer",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "const LEAD: usize = 40;",
+    "replace": "const LEAD: usize = 41;",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "no leading ellipsis for a start of one",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "if start > 0 {",
+    "replace": "if start > 1 {",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "a hit that starts at the window end is entered",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "if s >= end {",
+    "replace": "if s > end {",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "an empty lead run is added",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "if s > cursor {",
+    "replace": "if s >= cursor {",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "a hit runs past the window",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "let stop = e.min(end);",
+    "replace": "let stop = e;",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "a trailing run at the end is always added",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "if cursor < end {",
+    "replace": "if cursor <= end {",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "a closing ellipsis at the text end",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "if end < units.len() {",
+    "replace": "if end <= units.len() {",
+    "fn": ["snippet.buildSnippet"]
+  },
+  {
+    "name": "white space is collapsed one character at a time",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "r\"\\s+\"",
+    "replace": "r\"\\s\"",
+    "fn": ["snippet.buildSnippet", "snippet.excerpt"]
+  },
+  {
+    "name": "the excerpt starts further back",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "(chars / 4.0).floor()",
+    "replace": "(chars / 2.0).floor()",
+    "fn": ["snippet.excerpt"]
+  },
+  {
+    "name": "the excerpt is not trimmed",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "let compact = trim(&compact);",
+    "replace": "let compact = compact.as_str();",
+    "fn": ["snippet.excerpt"]
+  },
+  {
+    "name": "containsAny reads the text unfolded",
+    "file": "main-core/src/shell/file_index/snippet.rs",
+    "find": "!find_ranges(&fold_text(text), &needles, None).is_empty()",
+    "replace": "!find_ranges(text, &needles, None).is_empty()",
+    "fn": ["snippet.containsAny"]
+  },
+  {
+    "name": "the iteration marks end early",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "(0x3005, 0x3007),",
+    "replace": "(0x3005, 0x3006),",
+    "fn": ["tokenize.isCjk", "tokenize.tokenize"]
+  },
+  {
+    "name": "the CJK extension range ends early",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "(0x20000, 0x323af),",
+    "replace": "(0x20000, 0x323ae),",
+    "fn": ["tokenize.isCjk"]
+  },
+  {
+    "name": "halfwidth katakana end early",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "(0xff66, 0xff9f),",
+    "replace": "(0xff66, 0xff9e),",
+    "fn": ["tokenize.isCjk"]
+  },
+  {
+    "name": "a range start is excluded",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "cp >= lo && cp <= hi",
+    "replace": "cp > lo && cp <= hi",
+    "fn": ["tokenize.isCjk", "tokenize.tokenize"]
+  },
+  {
+    "name": "a run goes on after a non-word character",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "Some(run) if current && run.kind == kind",
+    "replace": "Some(run) if run.kind == kind",
+    "fn": ["tokenize.tokenize"]
+  },
+  {
+    "name": "a word and a CJK run fuse",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "current && run.kind == kind =>",
+    "replace": "current =>",
+    "fn": ["tokenize.tokenize"]
+  },
+  {
+    "name": "a lone CJK character has no bigram",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "if run.chars.len() == 1 {",
+    "replace": "if run.chars.len() == 0 {",
+    "fn": ["tokenize.tokenize", "tokenize.parseQuery"]
+  },
+  {
+    "name": "the unigram stream keeps one character of a run",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "uni.extend(run.chars.iter().cloned());",
+    "replace": "uni.extend(run.chars.iter().take(1).cloned());",
+    "fn": ["tokenize.tokenize"]
+  },
+  {
+    "name": "a bigram is written backwards",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "bi.push(format!(\"{}{}\", run.chars[i], run.chars[i + 1]));",
+    "replace": "bi.push(format!(\"{}{}\", run.chars[i + 1], run.chars[i]));",
+    "fn": ["tokenize.tokenize", "tokenize.parseQuery"]
+  },
+  {
+    "name": "the last bigram is dropped",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "for i in 0..run.chars.len().saturating_sub(1) {",
+    "replace": "for i in 0..run.chars.len().saturating_sub(2) {",
+    "fn": ["tokenize.tokenize"]
+  },
+  {
+    "name": "the index text is joined with commas",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "tokens.join(\" \")\n}",
+    "replace": "tokens.join(\",\")\n}",
+    "fn": ["tokenize.toIndexText"]
+  },
+  {
+    "name": "an excluded term is included",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "if m.get(1).is_some() {",
+    "replace": "if m.get(1).is_none() {",
+    "fn": ["tokenize.parseQuery", "tokenize.toMatchExpression", "tokenize.termExpr"]
+  },
+  {
+    "name": "the term text is not trimmed",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "let raw = trim(m.get(2).or(m.get(3)).unwrap_or(\"\"));",
+    "replace": "let raw = m.get(2).or(m.get(3)).unwrap_or(\"\");",
+    "fn": ["tokenize.parseQuery"]
+  },
+  {
+    "name": "a quoted phrase may be a prefix",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "make_term(raw, m.get(2).is_none())",
+    "replace": "make_term(raw, true)",
+    "fn": ["tokenize.parseQuery"]
+  },
+  {
+    "name": "a one-letter word is a prefix",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "last.kind == RunKind::Word && last.chars.len() >= 2",
+    "replace": "last.kind == RunKind::Word && last.chars.len() >= 1",
+    "fn": ["tokenize.parseQuery", "tokenize.termExpr"]
+  },
+  {
+    "name": "a CJK run may be a prefix",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "allow_prefix && last.kind == RunKind::Word",
+    "replace": "allow_prefix",
+    "fn": ["tokenize.parseQuery", "tokenize.termExpr"]
+  },
+  {
+    "name": "a one-character CJK run is bigram safe",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "r.kind == RunKind::Word || r.chars.len() >= 2",
+    "replace": "r.kind == RunKind::Word || r.chars.len() >= 1",
+    "fn": ["tokenize.parseQuery", "tokenize.termExpr", "tokenize.tokenExprs"]
+  },
+  {
+    "name": "the prefix star has no space",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "format!(\"{quoted} *\")",
+    "replace": "format!(\"{quoted}*\")",
+    "fn": ["tokenize.termExpr", "tokenize.toMatchExpression", "tokenize.tokenExprs"]
+  },
+  {
+    "name": "the columns of a term are swapped",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "if term.bigram_safe {\n        format!(\"{BI_COLUMNS}",
+    "replace": "if !term.bigram_safe {\n        format!(\"{BI_COLUMNS}",
+    "fn": ["tokenize.termExpr", "tokenize.toMatchExpression"]
+  },
+  {
+    "name": "an empty query has an expression",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "if parsed.include.is_empty() {",
+    "replace": "if parsed.include.is_empty() && false {",
+    "fn": ["tokenize.toMatchExpression"]
+  },
+  {
+    "name": "an excluded term is joined with AND",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "\"({expr}) NOT ({})\"",
+    "replace": "\"({expr}) AND NOT ({})\"",
+    "fn": ["tokenize.toMatchExpression"]
+  },
+  {
+    "name": "OR is written AND",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "MatchJoin::Or => \"OR\",",
+    "replace": "MatchJoin::Or => \"AND\",",
+    "fn": ["tokenize.toMatchExpression"]
+  },
+  {
+    "name": "a token of one character is a bigram of one",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "} else if !term.bigram_safe || n == 1 {",
+    "replace": "} else if !term.bigram_safe || n == 2 {",
+    "fn": ["tokenize.tokenExprs"]
+  },
+  {
+    "name": "the offset ignores the run length",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "pos += n;",
+    "replace": "pos += 1;",
+    "fn": ["tokenize.tokenExprs"]
+  },
+  {
+    "name": "a bigram covers one character",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "vec![pos + i, pos + i + 1],",
+    "replace": "vec![pos + i],",
+    "fn": ["tokenize.tokenExprs"]
+  },
+  {
+    "name": "every token is a prefix",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "prefix && t.text == last",
+    "replace": "prefix",
+    "fn": ["tokenize.tokenExprs"]
+  },
+  {
+    "name": "a token expression uses the other columns",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": "let cols = if term.bigram_safe {",
+    "replace": "let cols = if !term.bigram_safe {",
+    "fn": ["tokenize.tokenExprs"]
+  },
+  {
+    "name": "a run counts as one character",
+    "file": "main-core/src/shell/file_index/tokenize.rs",
+    "find": ".iter().map(|r| r.chars.len()).sum()",
+    "replace": ".iter().map(|r| r.chars.len().min(1)).sum()",
+    "fn": ["tokenize.termChars"]
+  },
+  {
+    "name": "the walk stops at the depth",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "if depth as f64 > self.max_depth {",
+    "replace": "if depth as f64 >= self.max_depth {",
+    "fn": ["scan.scanFiles"]
+  },
+  {
+    "name": "the budget is one more",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "if self.out.len() as f64 >= self.max_files {",
+    "replace": "if self.out.len() as f64 > self.max_files {",
+    "fn": ["scan.scanFiles"]
+  },
+  {
+    "name": "hidden folders are walked",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "if !is_hidden_entry(dir, &ent.name, true) {",
+    "replace": "if true {",
+    "fn": ["scan.scanFiles", "extract-worker.message"]
+  },
+  {
+    "name": "unsupported files are listed",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "&& is_supported_tree_file(&ent.name)",
+    "replace": "&& true",
+    "fn": ["scan.scanFiles", "extract-worker.message"]
+  },
+  {
+    "name": "hidden files are listed",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "&& !is_hidden_entry(dir, &ent.name, false)",
+    "replace": "&& true",
+    "fn": ["scan.scanFiles", "extract-worker.message"]
+  },
+  {
+    "name": "a folder is a file for statOrNull",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "if !meta.is_file() {",
+    "replace": "if !meta.is_file() && !meta.is_dir() {",
+    "fn": ["scan.statOrNull"]
+  },
+  {
+    "name": "the size is one more",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "size_bytes: info.size as f64,",
+    "replace": "size_bytes: info.size as f64 + 1.0,",
+    "fn": ["scan.scanFiles", "scan.statOrNull", "extract-worker.message"]
+  },
+  {
+    "name": "the default depth is one less",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "pub const SCAN_MAX_DEPTH: f64 = 32.0;",
+    "replace": "pub const SCAN_MAX_DEPTH: f64 = 31.0;",
+    "fn": ["scan.SCAN_MAX_DEPTH"]
+  },
+  {
+    "name": "the default budget is one less",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "pub const SCAN_MAX_FILES: f64 = 200_000.0;",
+    "replace": "pub const SCAN_MAX_FILES: f64 = 199_999.0;",
+    "fn": ["scan.SCAN_MAX_FILES"]
+  },
+  {
+    "name": "a limit left out is not the default",
+    "file": "main-core/src/shell/file_index/scan.rs",
+    "find": "limits.max_depth.unwrap_or(SCAN_MAX_DEPTH)",
+    "replace": "limits.max_depth.unwrap_or(0.0)",
+    "fn": ["scan.scanFiles", "extract-worker.message"]
+  },
+  {
+    "name": "the size limit is one more",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "pub const MAX_EXTRACT_BYTES: u64 = 64 * 1024 * 1024;",
+    "replace": "pub const MAX_EXTRACT_BYTES: u64 = 64 * 1024 * 1024 + 1;",
+    "fn": ["extract.extractText", "extract.MAX_EXTRACT_BYTES"]
+  },
+  {
+    "name": "a file of exactly the limit is name only",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "if meta.len() > MAX_EXTRACT_BYTES {",
+    "replace": "if meta.len() >= MAX_EXTRACT_BYTES {",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "the body is one longer",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "pub const MAX_BODY_CHARS: usize = 1_000_000;",
+    "replace": "pub const MAX_BODY_CHARS: usize = 1_000_001;",
+    "fn": ["extract.extractText", "extract.MAX_BODY_CHARS"]
+  },
+  {
+    "name": "only .html is a page",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "if ext == \"html\" || ext == \"htm\" {",
+    "replace": "if ext == \"html\" {",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "the file is not stat-ed first",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "node_error(&e, \"stat\", path)",
+    "replace": "node_error(&e, \"lstat\", path)",
+    "fn": ["extract.extractText", "extract-worker.message"]
+  },
+  {
+    "name": "a script block runs to the last closing tag",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "[\\s\\S]*?</\\1>",
+    "replace": "[\\s\\S]*</\\1>",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "a script tag is matched in lower case only",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "\"gi\")",
+    "replace": "\"g\")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "a non-breaking space is dropped",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": ".replace(\"&nbsp;\", \" \")",
+    "replace": ".replace(\"&nbsp;\", \"\")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "an ampersand entity is dropped",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": ".replace(\"&amp;\", \"&\")",
+    "replace": ".replace(\"&amp;\", \"\")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "a less-than entity stays",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": ".replace(\"&lt;\", \"<\")",
+    "replace": ".replace(\"&lt;\", \"&lt;\")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "a quote entity is a space",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": ".replace(\"&quot;\", \"\\\"\")",
+    "replace": ".replace(\"&quot;\", \" \")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "an apostrophe entity stays",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": ".replace(\"&#39;\", \"'\")",
+    "replace": ".replace(\"&#39;\", \"&#39;\")",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "an image is text",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "if parsed.kind == ParsedFileKind::Unsupported {",
+    "replace": "if parsed.kind == ParsedFileKind::Image {",
+    "fn": ["extract.extractText", "extract-worker.message"]
+  },
+  {
+    "name": "a non-text result that is ok is text",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "if !parsed.ok || parsed.kind != ParsedFileKind::Text {",
+    "replace": "if !parsed.ok {",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "the failure text is another",
+    "file": "main-core/src/shell/file_index/extract.rs",
+    "find": "\"parse failed\"",
+    "replace": "\"parse failure\"",
+    "fn": ["extract.extractText"]
+  },
+  {
+    "name": "the scan reply has another type",
+    "file": "main-core/src/shell/file_index/extract_worker.rs",
+    "find": "Value::from(\"scan\")",
+    "replace": "Value::from(\"scans\")",
+    "fn": ["extract-worker.message"]
+  },
+  {
+    "name": "the extract reply has another type",
+    "file": "main-core/src/shell/file_index/extract_worker.rs",
+    "find": "Value::from(\"extract\")",
+    "replace": "Value::from(\"extracts\")",
+    "fn": ["extract-worker.message"]
+  },
+  {
+    "name": "the reply has no truncated flag",
+    "file": "main-core/src/shell/file_index/extract_worker.rs",
+    "find": "out.insert(\"truncated\".into(), Value::Bool(*truncated));",
+    "replace": "out.insert(\"truncated\".into(), Value::Bool(false));",
+    "fn": ["extract-worker.message"]
+  },
+  {
+    "name": "draw.io pictures are not listed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"drawio.png\",",
+    "replace": "\"drawio.pngx\",",
+    "fn": [
+      "folder-tree.isSupportedTreeFile",
+      "folder-tree.TREE_FILE_EXTENSIONS",
+      "scan.scanFiles",
+      "folder-tree.listFolder"
+    ]
+  },
+  {
+    "name": ".hwpx is not listed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"hwpx\",",
+    "replace": "\"hwpxx\",",
+    "fn": ["folder-tree.isSupportedTreeFile", "folder-tree.TREE_FILE_EXTENSIONS"]
+  },
+  {
+    "name": "a __MACOSX folder is shown",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"__macosx\"",
+    "replace": "\"__macosxx\"",
+    "fn": ["folder-tree.isHiddenEntry", "scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "desktop.ini is shown",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"desktop.ini\"",
+    "replace": "\"desktop.in\"",
+    "fn": ["folder-tree.isHiddenEntry"]
+  },
+  {
+    "name": "an Office lock file is shown",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "name.starts_with(\"~$\")",
+    "replace": "name.starts_with(\"~#\")",
+    "fn": ["folder-tree.isHiddenEntry", "scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "the name is compared as written",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let lower = name.to_lowercase();",
+    "replace": "let lower = name.to_owned();",
+    "fn": ["folder-tree.isHiddenEntry"]
+  },
+  {
+    "name": "an assets folder is hidden without a list",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "std::iter::once(ASSET_MANIFEST_FILENAME)",
+    "replace": "std::iter::once(\"\")",
+    "fn": ["folder-tree.isHiddenEntry", "scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "the earlier list name is not read",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": ".chain(OLD_ASSET_MANIFEST_FILENAMES)",
+    "replace": ".chain([])",
+    "fn": ["folder-tree.isHiddenEntry", "scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "a root with no name keeps its empty name",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "name: if name.is_empty() {",
+    "replace": "name: if false {",
+    "fn": ["folder-tree.describeRoot"]
+  },
+  {
+    "name": "a root is removable",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "removable: false,",
+    "replace": "removable: true,",
+    "fn": ["folder-tree.describeRoot"]
+  },
+  {
+    "name": "a root is readable when it exists",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "readable: usable,",
+    "replace": "readable: true,",
+    "fn": ["folder-tree.describeRoot"]
+  },
+  {
+    "name": "a link to a file is a file of the listing",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "} else if file_type.is_file() {",
+    "replace": "} else if fs::metadata(entry.path()).is_ok_and(|m| m.is_file()) {",
+    "fn": ["scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "a link to a folder is a folder of the listing",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let kind = if file_type.is_dir() {",
+    "replace": "let kind = if fs::metadata(entry.path()).is_ok_and(|m| m.is_dir()) {",
+    "fn": ["scan.scanFiles", "folder-tree.listFolder"]
+  },
+  {
+    "name": "the listing is in reverse order",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "out.sort_by(|a, b| a.name.as_bytes().cmp(b.name.as_bytes()));",
+    "replace": "out.sort_by(|a, b| b.name.as_bytes().cmp(a.name.as_bytes()));",
+    "fn": ["scan.scanFiles", "folder-tree.listFolder", "extract-worker.message"]
+  },
+  {
+    "name": "folders sort by bytes",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "folders.sort_by(|a, b| NUMERIC_COLLATOR.compare(&a.name, &b.name));",
+    "replace": "folders.sort_by(|a, b| a.name.as_bytes().cmp(b.name.as_bytes()));",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "folders sort without numbers",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "CollationNumericOrdering::True",
+    "replace": "CollationNumericOrdering::False",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "files sort oldest first",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "sort_by_number(&mut files, |a, b| b.mtime_ms - a.mtime_ms);",
+    "replace": "sort_by_number(&mut files, |a, b| a.mtime_ms - b.mtime_ms);",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "a missing folder says not missing",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "missing: Some(true),",
+    "replace": "missing: Some(false),",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "a hidden sub-folder counts",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": ".any(|d| d.kind == DirentKind::Directory && !is_hidden_entry(dir, &d.name, true))",
+    "replace": ".any(|d| d.kind == DirentKind::Directory)",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "a hidden folder is listed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if is_hidden_entry(dir, &d.name, true) {",
+    "replace": "if false {",
+    "fn": ["folder-tree.listFolder"]
+  },
+  {
+    "name": "the base folder is under itself",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if resolved != base && resolved.starts_with(&prefix)",
+    "replace": "if resolved.starts_with(&base)",
+    "fn": ["folder-tree.pathsUnder"]
+  },
+  {
+    "name": "a repeated path is listed twice",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "&& !out.contains(path)",
+    "replace": "&& true",
+    "fn": ["folder-tree.pathsUnder"]
+  },
+  {
+    "name": "a root separator is doubled",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if dir.ends_with(SEP) {",
+    "replace": "if false {",
+    "fn": [
+      "folder-tree.pathsUnder",
+      "folder-tree.isSelfOrDescendant",
+      "folder-tree.rebasePath",
+      "folder-tree.isInsideRoot"
+    ]
+  },
+  {
+    "name": "a sibling with the same prefix is inside",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "real == real_root || real.starts_with(&with_trailing_sep(&real_root))",
+    "replace": "real.starts_with(&real_root)",
+    "fn": ["folder-tree.isInsideRoot"]
+  },
+  {
+    "name": "the name is not trimmed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let trimmed = trim(name);",
+    "replace": "let trimmed = name;",
+    "fn": ["folder-tree.createFolder"]
+  },
+  {
+    "name": "the folder is made under the untrimmed name",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let target = join(&[parent, trimmed]);",
+    "replace": "let target = join(&[parent, name]);",
+    "fn": ["folder-tree.createFolder"]
+  },
+  {
+    "name": "a missing parent is not noticed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !exists_sync(parent) {",
+    "replace": "if exists_sync(parent) {",
+    "fn": ["folder-tree.createFolder"]
+  },
+  {
+    "name": "a free name is changed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !exists_sync(&join(&[dir, name])) {\n        return name.to_owned();",
+    "replace": "if exists_sync(&join(&[dir, name])) {\n        return name.to_owned();",
+    "fn": ["folder-tree.uniqueNameIn"]
+  },
+  {
+    "name": "a folder keeps its extension",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let ext = if is_dir {",
+    "replace": "let ext = if false {",
+    "fn": ["folder-tree.uniqueNameIn"]
+  },
+  {
+    "name": "a picture loses its double extension",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "doc_ext.contains('.')",
+    "replace": "doc_ext.contains(\"#\")",
+    "fn": ["folder-tree.uniqueNameIn"]
+  },
+  {
+    "name": "the double extension is one character short",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "slice_utf16(name, -utf16_len(&doc_ext), None)",
+    "replace": "slice_utf16(name, -utf16_len(&doc_ext) + 1.0, None)",
+    "fn": ["folder-tree.uniqueNameIn"]
+  },
+  {
+    "name": "the counter starts at three",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let mut i: u64 = 2;",
+    "replace": "let mut i: u64 = 3;",
+    "fn": ["folder-tree.uniqueNameIn", "folder-tree.movePathsInto"]
+  },
+  {
+    "name": "the counter has no space",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "format!(\"{base} ({i}){ext}\")",
+    "replace": "format!(\"{base}({i}){ext}\")",
+    "fn": ["folder-tree.uniqueNameIn", "folder-tree.movePathsInto"]
+  },
+  {
+    "name": "every rename error is copied",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if err.code != Some(\"EXDEV\") {",
+    "replace": "if false {",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "the source stays after a copy",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "cp_recursive(from, to)?;\n            rm_recursive_force(from)",
+    "replace": "cp_recursive(from, to)?;\n            Ok(())",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a nested exists error has no code in front",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"[ERR_FS_CP_EEXIST]: Target",
+    "replace": "\"Target",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a nested entry is a top-level one",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "cp_item(&join(&[from, &entry.name]), &join(&[to, &entry.name]), true)?;",
+    "replace": "cp_item(&join(&[from, &entry.name]), &join(&[to, &entry.name]), false)?;",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a folder over a file words its error otherwise",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"Cannot overwrite non-directory {to} with directory {from}\"",
+    "replace": "\"Cannot overwrite {to} with directory {from}\"",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a file over a folder words its error otherwise",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "\"Cannot overwrite directory {to} with non-directory {from}\"",
+    "replace": "\"Cannot overwrite {to} with non-directory {from}\"",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a folder is not made on the target",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if dest.is_none() {\n            mkdir(to)?;",
+    "replace": "if dest.is_some() {\n            mkdir(to)?;",
+    "fn": ["folder-tree.moveOnDisk"]
+  },
+  {
+    "name": "a missing target folder fails the files one by one",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !exists_sync(target_dir) {",
+    "replace": "if exists_sync(target_dir) {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a missing source is moved",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !exists_sync(from) {",
+    "replace": "if exists_sync(from) {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "an item already in the target is moved",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if dirname(&resolve(&[from])) == resolve(&[target_dir]) {",
+    "replace": "if false {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a folder may move into itself",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if is_dir && is_self_or_descendant(from, target_dir) {",
+    "replace": "if false {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a skip policy moves over the collision",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if policy == MoveConflictPolicy::Ask || policy == MoveConflictPolicy::Skip {",
+    "replace": "if policy == MoveConflictPolicy::Ask {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "keepBoth replaces",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if policy == MoveConflictPolicy::KeepBoth {",
+    "replace": "if policy == MoveConflictPolicy::Skip {",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a folder is named as a file by keepBoth",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "unique_name_in(target_dir, &name, is_dir)",
+    "replace": "unique_name_in(target_dir, &name, false)",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a failed commit is ignored",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "item.commit()?;",
+    "replace": "let _ = item.commit();",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a failed rollback is ignored",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "item.rollback()?;",
+    "replace": "let _ = item.rollback();",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a thrown non-error has no text",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "thrown.unwrap_or_else(|| errors.failed.clone())",
+    "replace": "thrown.unwrap_or_default()",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "an unknown policy asks",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "_ => MoveConflictPolicy::Replace,",
+    "replace": "_ => MoveConflictPolicy::Ask,",
+    "fn": ["folder-tree.movePathsInto"]
+  },
+  {
+    "name": "a descendant is not self or descendant",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "a == b || b.starts_with(&with_trailing_sep(&a))",
+    "replace": "a == b || b.starts_with(&a)",
+    "fn": ["folder-tree.isSelfOrDescendant"]
+  },
+  {
+    "name": "the same folder is not self",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "a == b || b.starts_with(&with_trailing_sep(&a))",
+    "replace": "b.starts_with(&with_trailing_sep(&a))",
+    "fn": ["folder-tree.isSelfOrDescendant"]
+  },
+  {
+    "name": "the new name is not trimmed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let name = trim(new_name);",
+    "replace": "let name = new_name;",
+    "fn": ["folder-tree.renameFolder"]
+  },
+  {
+    "name": "a missing folder is renamed",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !exists_sync(dir) {",
+    "replace": "if exists_sync(dir) {",
+    "fn": ["folder-tree.renameFolder"]
+  },
+  {
+    "name": "the new folder goes under the old path",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "let target = join(&[&dirname(dir), name]);",
+    "replace": "let target = join(&[dir, name]);",
+    "fn": ["folder-tree.renameFolder"]
+  },
+  {
+    "name": "the same entry counts as a clash",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if exists_sync(&target) && !is_same_file(dir, &target) {",
+    "replace": "if exists_sync(&target) {",
+    "fn": ["folder-tree.renameFolder"]
+  },
+  {
+    "name": "a sibling with the same prefix is rebased",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if abs != base && !abs.starts_with(&with_trailing_sep(&base)) {",
+    "replace": "if !abs.starts_with(&base) {",
+    "fn": ["folder-tree.rebasePath"]
+  },
+  {
+    "name": "the old folder itself is not rebased",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if abs != base && !abs.starts_with(&with_trailing_sep(&base)) {",
+    "replace": "if !abs.starts_with(&with_trailing_sep(&base)) {",
+    "fn": ["folder-tree.rebasePath"]
+  },
+  {
+    "name": "the debounce is one more",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "pub const WATCH_DEBOUNCE_MS: u64 = 250;",
+    "replace": "pub const WATCH_DEBOUNCE_MS: u64 = 251;",
+    "fn": ["folder-tree.FolderWatcher"]
+  },
+  {
+    "name": "a folder is reported twice",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "if !self.pending.contains(&dir) {",
+    "replace": "if !self.pending.is_empty() || true {",
+    "fn": ["folder-tree.FolderWatcher"]
+  },
+  {
+    "name": "a changed folder is not reported as such",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "fs::metadata(namespaced(&changed)).is_ok_and(|meta| meta.is_dir())",
+    "replace": "false",
+    "fn": ["folder-tree.FolderWatcher"]
+  },
+  {
+    "name": "the parent of the change is not reported",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "self.add_pending(dirname(&changed));",
+    "replace": "self.add_pending(dirname(&dirname(&changed)));",
+    "fn": ["folder-tree.FolderWatcher"]
+  },
+  {
+    "name": "a close keeps the handle active",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "self.timer_armed = false;\n        self.active = false;",
+    "replace": "self.timer_armed = false;",
+    "fn": ["folder-tree.FolderWatcher"]
+  },
+  {
+    "name": "the pending folders are kept after the report",
+    "file": "main-core/src/shell/folder_tree.rs",
+    "find": "Some(std::mem::take(&mut self.pending))",
+    "replace": "Some(self.pending.clone())",
+    "fn": ["folder-tree.FolderWatcher"]
+  }
+]

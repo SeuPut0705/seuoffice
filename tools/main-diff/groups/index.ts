@@ -32,4 +32,5 @@ export const groups: Record<string, () => Promise<{ group: Group }>> = {
   'b6-shell': () => import('./b6-shell.ts'),
   'b6-apps': () => import('./b6-apps.ts'),
   'b6-tabs': () => import('./b6-tabs.ts'),
+  'b3b4-rest': () => import('./b3b4-rest.ts'),
 }

@@ -1,0 +1,646 @@
+[
+  {
+    "name": "drop-open: the skill list is capped one over (control)",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "if out.skill_files.len() < MAX_DROPPED_FILES {",
+    "replace": "if out.skill_files.len() <= MAX_DROPPED_FILES {",
+    "fn": ["drop-open.partitionDropPayload", "dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "drop-open: the openable list is capped one over",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "if out.supported.len() < MAX_DROPPED_FILES {",
+    "replace": "if out.supported.len() <= MAX_DROPPED_FILES {",
+    "fn": ["drop-open.partitionDropPayload", "dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "drop-open: a path is not trimmed",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "let path = trim(entry);",
+    "replace": "let path = entry.as_str();",
+    "fn": ["drop-open.partitionDropPayload", "dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "drop-open: an extension keeps its case",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "let ext = path[at..].to_ascii_lowercase();",
+    "replace": "let ext = path[at..].to_owned();",
+    "fn": ["drop-open.partitionDropPayload", "dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "drop-open: a path seen before is listed again",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "seen.iter().any(|held| held == path)",
+    "replace": "seen.iter().any(|held| held == path && false)",
+    "fn": ["drop-open.partitionDropPayload"]
+  },
+  {
+    "name": "drop-open: SKILL.md is not checked before markdown",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "if skill_drop_re().test(path) {",
+    "replace": "if false {",
+    "fn": ["drop-open.partitionDropPayload", "dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "drop-open: numbers is not an unsupported format",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "r\"\\.(rtf|pps|xlsb|pages|key|numbers)$\"",
+    "replace": "r\"\\.(rtf|pps|xlsb|pages|key)$\"",
+    "fn": ["drop-open.partitionDropPayload"]
+  },
+  {
+    "name": "drop-open: otp is not openable",
+    "file": "main-core/src/packages/electron_utils/drop_open.rs",
+    "find": "odp|otp|pdf",
+    "replace": "odp|pdf",
+    "fn": ["drop-open.partitionDropPayload"]
+  },
+  {
+    "name": "dropped-files: opening stops at the first path that opens",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "opened = deps.open_document_path(path) || opened;",
+    "replace": "opened = opened || deps.open_document_path(path);",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "dropped-files: a drop that opened nothing reveals the window",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "if opened {",
+    "replace": "if true {",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "dropped-files: an unsupported warning does not count as an action",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "let mut acted = opened || !drop.unsupported_exts.is_empty();",
+    "replace": "let mut acted = opened;",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "dropped-files: a miss beside an action still says so",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "if missed && !acted {",
+    "replace": "if missed {",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "dropped-files: a miss is not remembered",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "None => missed = true,",
+    "replace": "None => {}",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "dropped-files: a found skill is not an action",
+    "file": "main-core/src/shell/dropped_files.rs",
+    "find": "                acted = true;\n",
+    "replace": "                acted = acted;\n",
+    "fn": ["dropped-files.handleDroppedFiles"]
+  },
+  {
+    "name": "headless-export: the stale slack is zero",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "pub const MTIME_SLACK_MS: f64 = 2_000.0;",
+    "replace": "pub const MTIME_SLACK_MS: f64 = 0.0;",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: a file at the slack is stale",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "fs.mtime_ms(path) < started_at - MTIME_SLACK_MS",
+    "replace": "fs.mtime_ms(path) <= started_at - MTIME_SLACK_MS",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the output may be the input",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if canonical_input == canonical_out {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the output directory is not checked",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if !fs.exists(&dirname(&out_path)) {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: an output folder is not refused",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if fs.exists(&out_path) && !fs.is_file(&out_path) {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: an input folder is not refused",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if !fs.is_file(&input) {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the target is not checked against the module",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if !targets.contains(&request.target_format) {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: diagram switches are allowed on documents",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if module != \"diagram\" {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.validateHeadlessPaths", "shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the first wrong switch skips ops",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": ".find(|key| **key != \"page\")",
+    "replace": ".find(|key| **key != \"ops\")",
+    "fn": ["shell/headless-export.validateHeadlessPaths"]
+  },
+  {
+    "name": "headless-export: the diagram extension is read case-sensitively",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "            .to_lowercase()\n            .ends_with(&format!(\".{}\", request.target_format))",
+    "replace": "            .ends_with(&format!(\".{}\", request.target_format))",
+    "fn": ["shell/headless-export.validateHeadlessPaths"]
+  },
+  {
+    "name": "headless-export: a Word document to md is refused too",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if module == \"docs\" && (format == \"html\" || format == \"md\") {",
+    "replace": "if module == \"docs\" && format == \"html\" {",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: placeholders wanted without any go to the exporter",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if use_placeholders && placeholders.is_none() {",
+    "replace": "if false {",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: an extension is read with its case",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "let ext = ext_with_dot.get(1..).unwrap_or(\"\").to_lowercase();",
+    "replace": "let ext = ext_with_dot.get(1..).unwrap_or(\"\").to_owned();",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: md is not a hidden-content format",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "\"xlsm\", \"md\", \"markdown\"",
+    "replace": "\"xlsm\", \"markdown\"",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: an exporter failure is an input error",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "HeadlessFailure::of(HEADLESS_EXIT_CONVERSION_FAILURE, message).into_outcome()",
+    "replace": "HeadlessFailure::of(HEADLESS_EXIT_INPUT_ERROR, message).into_outcome()",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the detail of a product is dropped",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "detail: product.detail.filter(|detail| value_truthy(Some(detail))),",
+    "replace": "detail: None,",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: nothing is checked when no file is reported",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "None => vec![checked.out_path.clone()],",
+    "replace": "None => Vec::new(),",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: reported paths are not resolved",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": ".map(|path| resolve(&[path]))",
+    "replace": ".map(|path| path.clone())",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "headless-export: the mtime probe is always used",
+    "file": "main-core/src/shell/headless_export.rs",
+    "find": "if fs.has_mtime() && fs.mtime_ms(path)",
+    "replace": "if fs.mtime_ms(path)",
+    "fn": ["shell/headless-export.runHeadlessExport"]
+  },
+  {
+    "name": "session-txn: 51 ops are allowed",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "pub const MAX_TXN_OPS: usize = 50;",
+    "replace": "pub const MAX_TXN_OPS: usize = 51;",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: no ops is allowed",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "if ops.is_empty() || ops.len() > MAX_TXN_OPS {",
+    "replace": "if ops.len() > MAX_TXN_OPS {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: atomic tolerates one invalid op",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "Isolation::Atomic => invalid > 0,",
+    "replace": "Isolation::Atomic => invalid > 1,",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: per_op runs when every op is invalid",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "Isolation::PerOp => invalid >= ops.len(),",
+    "replace": "Isolation::PerOp => invalid > ops.len(),",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a failed run keeps its history step",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "history.drop_step(session);",
+    "replace": "let _ = &history;",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an applied run leaves the session looking clean",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "session.mark_meta_dirty();",
+    "replace": "let _ = &session;",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a chart is not reparsed",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "if op_name == Some(\"setTableStyle\") || op_name == Some(\"setChart\") {",
+    "replace": "if op_name == Some(\"setTableStyle\") {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an op in a group is post-processed",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "if value_truthy(o.get(\"group\")) {",
+    "replace": "if false {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a level change is post-processed",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "&& value_truthy(rec.after.as_ref().and_then(|after| after.get(\"levelDirty\")))",
+    "replace": "&& false",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an indent change is not materialized",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "&& value_truthy(o.get(\"format\").and_then(|format| format.get(\"indentDelta\")))",
+    "replace": "&& false",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a render kept for the slide is rebuilt each time",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "Some(held) => held,",
+    "replace": "Some(_held) => session.rebuild_slide(idx),",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an empty slide id is looked up",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "match rec.slide_id.as_deref().filter(|id| !id.is_empty()) {",
+    "replace": "match rec.slide_id.as_deref() {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: created ids are not reported",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "created: rec.created.clone(),",
+    "replace": "created: None,",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a dry run answers no plan",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "plan: r.plan.clone().unwrap_or_default(),",
+    "replace": "plan: Vec::new(),",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an empty failures list is reported",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "Some(list) if !list.is_empty() => compact(failures),",
+    "replace": "Some(_) => compact(failures),",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: the target separator differs",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "format!(\"{slide}/{}\", value_to_string(el))",
+    "replace": "format!(\"{slide}:{}\", value_to_string(el))",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: an element of zero is a target",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "Some(if value_truthy(el) {",
+    "replace": "Some(if el.is_some() {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: per_op is not read",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "== Some(\"per_op\")",
+    "replace": "== Some(\"atomic\")",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "session-txn: a falsy dry run flag is a dry run",
+    "file": "main-core/src/slides/session_txn.rs",
+    "find": "if value_truthy(req.get(\"dryRun\")) {",
+    "replace": "if req.get(\"dryRun\").is_some() {",
+    "fn": ["session-txn.applyTxnToSession"]
+  },
+  {
+    "name": "autofit: a pixel off is unchanged",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "(need_h - node.box_h).abs() < 1.0 && (need_w - node.box_w).abs() < 1.0",
+    "replace": "(need_h - node.box_h).abs() <= 1.0 && (need_w - node.box_w).abs() <= 1.0",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: right aligned text shifts the wrong way",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "Some(\"right\") => node.box_w - need_w,",
+    "replace": "Some(\"right\") => need_w - node.box_w,",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: centered text shifts by a third",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "Some(\"center\") => (node.box_w - need_w) / 2.0,",
+    "replace": "Some(\"center\") => (node.box_w - need_w) / 3.0,",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: a size may round to zero EMU",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "math_max(math_round((px / scale) * EMU_PER_PX_96), 1.0)",
+    "replace": "math_max(math_round((px / scale) * EMU_PER_PX_96), 0.0)",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: a vertical body follows its widest line",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "if !text.wrap && truthy(text.vert.as_deref()).is_none() {",
+    "replace": "if !text.wrap {",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: the nowrap width counts a negative span",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "let content = if right > left { right - left } else { 0.0 };",
+    "replace": "let content = right - left;",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: the shift is not rounded",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "let x = el.offset_x + math_round((shift_x / scale) * EMU_PER_PX_96);",
+    "replace": "let x = el.offset_x + (shift_x / scale) * EMU_PER_PX_96;",
+    "fn": ["autofit-writeback.applyAutofitResize"]
+  },
+  {
+    "name": "autofit: a shape is not a text element",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "if el.el_type == \"text\" || el.el_type == \"shape\" {",
+    "replace": "if el.el_type == \"text\" {",
+    "fn": ["autofit-writeback.applyAutofitResize", "autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: a node of text kind is refused",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "if node.node_type != \"shape\" && node.node_type != \"text\" {",
+    "replace": "if node.node_type != \"shape\" {",
+    "fn": ["autofit-writeback.applyAutofitResize", "autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: the scale threshold is a hundredth",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "(effective - body.font_scale.unwrap_or(1.0)).abs() < 0.005",
+    "replace": "(effective - body.font_scale.unwrap_or(1.0)).abs() < 0.01",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: no stored scale reads as zero",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "body.font_scale.unwrap_or(1.0)",
+    "replace": "body.font_scale.unwrap_or(0.0)",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: a changed reduction alone is not written",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "&& (effective_red - body.ln_spc_reduction.unwrap_or(0.0)).abs() < 0.005",
+    "replace": "&& true",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: a zero reduction is stored",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "if number_truthy(effective_red) {",
+    "replace": "if effective_red.is_finite() {",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: a failed rebuild answers nothing",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "Some(host.rebuild_slide(slide_index).unwrap_or(rendered))",
+    "replace": "host.rebuild_slide(slide_index)",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "autofit: the slide is not marked dirty",
+    "file": "main-core/src/slides/autofit_writeback.rs",
+    "find": "host.mark_structure_dirty(slide_index);",
+    "replace": "let _ = slide_index;",
+    "fn": ["autofit-writeback.syncAutofitScale"]
+  },
+  {
+    "name": "seed-deck: an ask of false still asks",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "let ask = entry.options.ask_path_on_first_save == Some(true);",
+    "replace": "let ask = entry.options.ask_path_on_first_save.is_some();",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the suggested name is kept without the ask",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "first_save_name: if ask {",
+    "replace": "first_save_name: if true {",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the session is not marked unsaved",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "host.mark_meta_dirty(&mut session);",
+    "replace": "let _ = &session;",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the history notice is not scheduled",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "host.schedule_history_notify(wc_id);",
+    "replace": "let _ = wc_id;",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the metrics are not awaited",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "host.shaped_metrics_ready();",
+    "replace": "let _ = &host;",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the message goes to a destroyed view",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "if !wc.is_destroyed() {",
+    "replace": "if true {",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: an empty password is dropped",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "password: entry.options.password.clone(),",
+    "replace": "password: entry.options.password.clone().filter(|p| !p.is_empty()),",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "seed-deck: the recovery slot is dropped",
+    "file": "main-core/src/slides/seed_deck.rs",
+    "find": "recovery_id: entry.options.recovery_id.clone(),",
+    "replace": "recovery_id: None,",
+    "fn": ["seed-deck.openSlidesSeed"]
+  },
+  {
+    "name": "print-window: the file has another name",
+    "file": "main-core/src/slides/print_window.rs",
+    "find": "file_name: Some(\"slides.html\"),",
+    "replace": "file_name: Some(\"print.html\"),",
+    "fn": ["slides/print-window.printSlidesHtml"]
+  },
+  {
+    "name": "print-window: the folder has another prefix",
+    "file": "main-core/src/slides/print_window.rs",
+    "find": "dir_prefix: Some(\"seuoffice-slides-print-\"),",
+    "replace": "dir_prefix: Some(\"seuoffice-print-\"),",
+    "fn": ["slides/print-window.printSlidesHtml"]
+  },
+  {
+    "name": "print-window: a printed page is not ok",
+    "file": "main-core/src/slides/print_window.rs",
+    "find": "            ok: true,\n",
+    "replace": "            ok: false,\n",
+    "fn": ["slides/print-window.printSlidesHtml"]
+  },
+  {
+    "name": "print-window: a failure drops its reason",
+    "file": "main-core/src/slides/print_window.rs",
+    "find": "error: Some(error),",
+    "replace": "error: None,",
+    "fn": ["slides/print-window.printSlidesHtml"]
+  },
+  {
+    "name": "document-links-shell: a file that may be open always counts as saved",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "if may_be_open == Some(true) {",
+    "replace": "if false {",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: a destroyed webContents is still noted",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "        if contents.is_destroyed() {\n            return Ok(());",
+    "replace": "        if false {\n            return Ok(());",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: a destroyed webContents still makes",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "        if contents.is_destroyed() {\n            return;",
+    "replace": "        if false {\n            return;",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: every kind gets the menu",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "if !EDITOR_KINDS.contains(&kind) {",
+    "replace": "if false {",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: the menu is not rebuilt for a deleted file",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "self.shown_signature = String::new();",
+    "replace": "let _ = &self.shown_signature;",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: a deleted file is opened",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "if host.path_exists(path) {",
+    "replace": "if true {",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: an empty path is passed on",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "file_path: doc.file_path.filter(|path| !path.is_empty()),",
+    "replace": "file_path: doc.file_path,",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: the menu is rebuilt every time",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "if signature(kind, doc.as_ref(), self.links.as_ref()) == self.shown_signature {",
+    "replace": "if false {",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: the signature ignores the records version",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "            links.version()\n",
+    "replace": "            0u64\n",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: the signature ignores the file path",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "doc.file_path.as_deref().unwrap_or(\"\"),",
+    "replace": "\"\",",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: a moved file is not told to the records",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "links.file_moved(old_path, new_path);",
+    "replace": "let _ = (old_path, new_path);",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: the make window has no parent",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "let parent = host.parent_for(contents);",
+    "replace": "let parent = None;",
+    "fn": ["document-links-shell.scenario"]
+  },
+  {
+    "name": "document-links-shell: a save that may be open is always fresh",
+    "file": "main-core/src/shell/document_links_shell.rs",
+    "find": "links.note_tab_path(contents, path, Some(fresh))?;",
+    "replace": "links.note_tab_path(contents, path, Some(true))?;",
+    "fn": ["document-links-shell.scenario"]
+  }
+]
