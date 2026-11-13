@@ -87,6 +87,16 @@ Some events no handler emits: a native menu item's click, a right-click. A
   `app.on('web-contents-created')` replayed for each view's contents after
   `load`, and `webContents.on/once/emit`.
 
+### Deferred invokes
+
+A handler that waits for another call of the renderer (a close check answered
+by `close-check-result`, a save request answered by its ack) is compared on
+its full path: give the invoke `defer: true`, then the renderer's answering
+call, then `{ channel: '', args: [], await: <index of the deferred call> }`.
+The deferred call's own answer is `{deferred: true}`; the await step's answer
+is the invoke's reply (`{timeout: true}` after 20 s); every step records its
+events as a call does.
+
 ### What is compared
 
 For every call: the answer (`{value, buffers}`, `{error}` with Electron's

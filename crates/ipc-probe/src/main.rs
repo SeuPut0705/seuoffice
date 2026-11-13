@@ -255,7 +255,27 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     }
 
     let mut calls = Vec::new();
+    // deferred invokes by the index of their call, until an `await` step takes them
+    let mut deferred: HashMap<u64, (ChannelKind, String, mpsc::Receiver<Reply>)> = HashMap::new();
     for (i, call) in case["calls"].as_array().into_iter().flatten().enumerate() {
+        if let Some(at) = call["await"].as_u64() {
+            let answer = match deferred.remove(&at) {
+                Some((kind, channel, rx)) => {
+                    answer(kind, &channel, rx.recv_timeout(CALL_TIMEOUT).ok())
+                }
+                None => json!({ "thrown": format!("no deferred call {at}") }),
+            };
+            let drained = drain(&core, &ui, &tracked);
+            let mut out = json!({
+                "answer": answer,
+                "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+            });
+            if !drained {
+                out["undrained"] = json!(true);
+            }
+            calls.push(out);
+            continue;
+        }
         let channel = call["channel"].as_str().ok_or("a call without a channel")?;
         let view = call["view"].as_u64().unwrap_or(views[0].view.0 as u64) as u32;
         let sender = *views
@@ -340,10 +360,15 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                 );
             })
         }));
-        let reply = rx.recv_timeout(CALL_TIMEOUT).ok();
+        let answer = if call["defer"].as_bool() == Some(true) {
+            deferred.insert(i as u64, (kind, channel.to_string(), rx));
+            json!({ "deferred": true })
+        } else {
+            answer(kind, channel, rx.recv_timeout(CALL_TIMEOUT).ok())
+        };
         let drained = drain(&core, &ui, &tracked);
         let mut out = json!({
-            "answer": answer(kind, channel, reply),
+            "answer": answer,
             "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
         });
         if !drained {

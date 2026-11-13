@@ -76,6 +76,8 @@ const arg = (flag: string): string | undefined => {
 const args = (flag: string): string[] =>
   process.argv.flatMap((a, i) => (a === flag ? [process.argv[i + 1]] : []))
 const show = Number(arg('--show') ?? 10)
+/** how long an awaited deferred invoke may take, as ipc-probe's CALL_TIMEOUT */
+const CALL_TIMEOUT_MS = 20_000
 
 /**
  * `<batch>/<file>` for every groups/<batch>/<file>.ts that exports a group;
@@ -140,7 +142,24 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
   electron.replayWebContentsCreated()
   const views = c.views ?? [{ view: 1, window: 1, surface: 'Shell' }]
   const calls = []
-  for (const call of c.calls) {
+  /** deferred invokes by the index of their call, until an `await` step takes them */
+  const deferred = new Map<number, Promise<Record<string, unknown>>>()
+  for (const [index, call] of c.calls.entries()) {
+    if (call.await !== undefined) {
+      const pending = deferred.get(call.await)
+      deferred.delete(call.await)
+      const answer = pending
+        ? await Promise.race([
+            pending,
+            new Promise<Record<string, unknown>>((r) =>
+              setTimeout(() => r({ timeout: true }), CALL_TIMEOUT_MS).unref(),
+            ),
+          ])
+        : { thrown: `no deferred call ${call.await}` }
+      await settle()
+      calls.push({ answer, events: electron.takeEvents() })
+      continue
+    }
     const kind = call.kind ?? 'invoke'
     const view = views.find((v) => v.view === (call.view ?? views[0].view))
     if (!view) throw new Error(`no view ${call.view}`)
@@ -185,30 +204,36 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
         }
       }
     } else {
-      try {
-        if (refused !== undefined) throw { shell: refused }
-        let value: unknown
-        if (kind === 'invoke') {
-          const fn = electron.handlers.invoke.get(call.channel)
-          if (!fn) throw { shell: noHandler(call.channel) }
-          value = await fn(event, ...values)
-        } else {
-          const fn = electron.handlers.on.get(call.channel)?.[0]
-          if (!fn) throw { shell: noHandler(call.channel) }
-          await fn(event, ...values)
-          value = event.returnValue
-        }
-        const e = new Encoder()
+      const reply = async (): Promise<Record<string, unknown>> => {
         try {
-          answer = { value: e.value(value), buffers: e.buffers.map(hex) }
+          if (refused !== undefined) throw { shell: refused }
+          let value: unknown
+          if (kind === 'invoke') {
+            const fn = electron.handlers.invoke.get(call.channel)
+            if (!fn) throw { shell: noHandler(call.channel) }
+            value = await fn(event, ...values)
+          } else {
+            const fn = electron.handlers.on.get(call.channel)?.[0]
+            if (!fn) throw { shell: noHandler(call.channel) }
+            await fn(event, ...values)
+            value = event.returnValue
+          }
+          const e = new Encoder()
+          try {
+            return { value: e.value(value), buffers: e.buffers.map(hex) }
+          } catch (err) {
+            if (!(err instanceof WireError)) throw err
+            throw new Error('An object could not be cloned.')
+          }
         } catch (err) {
-          if (!(err instanceof WireError)) throw err
-          throw new Error('An object could not be cloned.')
+          const text = (err as { shell?: string } | null)?.shell ?? String(err)
+          return { error: remote(call.channel, text) }
         }
-      } catch (err) {
-        const text = (err as { shell?: string } | null)?.shell ?? String(err)
-        answer = { error: remote(call.channel, text) }
       }
+      if (call.defer) {
+        deferred.set(index, reply())
+        answer = { deferred: true }
+      } else answer = await reply()
     }
     await settle()
     calls.push({ answer, events: electron.takeEvents() })
@@ -274,8 +299,8 @@ async function runGroup(name: string): Promise<void> {
       continue
     }
     for (const [k, call] of c.calls.entries()) {
-      // a trigger calls no channel: only the events it emitted count
-      if (call.kind === 'trigger') {
+      // a trigger calls no channel, an await step takes a deferred reply: only their events count
+      if (call.kind === 'trigger' || call.await !== undefined) {
         for (const e of tsRecord.calls[k]?.events ?? []) events.add(e.channel)
         continue
       }
@@ -398,7 +423,9 @@ else if (!groupNames().includes(only)) {
   const group = await loadGroup(only)
   const seen = new Set(
     group.cases.flatMap((c) =>
-      c.calls.filter((call) => call.kind !== 'trigger').map((call) => call.channel),
+      c.calls
+        .filter((call) => call.kind !== 'trigger' && call.await === undefined)
+        .map((call) => call.channel),
     ),
   )
   for (const channel of [...seen].sort()) console.log(`${only}\t${channel}`)
