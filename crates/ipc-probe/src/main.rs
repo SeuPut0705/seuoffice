@@ -100,7 +100,28 @@ impl AppPaths for CasePaths {
 /// Every event, one entry per view it reaches
 struct Recorder {
     views: Arc<CaseViews>,
-    events: Mutex<Vec<Value>>,
+    events: Events,
+}
+
+/// The events of a case so far. While `muted` names a thread, what that
+/// thread sends is not kept ([`register_keeping_own`]); other threads' sends
+/// (a worker a batch started) are.
+#[derive(Default)]
+struct Events {
+    list: Mutex<Vec<Value>>,
+    muted: Mutex<Option<std::thread::ThreadId>>,
+}
+
+impl Events {
+    fn push(&self, event: Value) {
+        if *self.muted.lock().unwrap() != Some(std::thread::current().id()) {
+            self.list.lock().unwrap().push(event);
+        }
+    }
+
+    fn take(&self) -> Vec<Value> {
+        std::mem::take(&mut *self.list.lock().unwrap())
+    }
 }
 
 impl EventSink for Recorder {
@@ -108,9 +129,8 @@ impl EventSink for Recorder {
         let mut e = wire::Encoder::default();
         let header = e.values(&args);
         let buffers: Vec<String> = e.buffers.iter().map(|b| hex(b)).collect();
-        let mut events = self.events.lock().unwrap();
         for view in resolve(self.views.as_ref(), target) {
-            events.push(json!({
+            self.events.push(json!({
                 "view": view.0,
                 "channel": channel,
                 "args": header,
@@ -227,27 +247,30 @@ fn trigger_answer(reply: Option<Reply>) -> Value {
     }
 }
 
-/// Registers `batches` in order and keeps, of what they send while they
-/// register, only what the batch `own` sends. The TypeScript side loads only
-/// the module of the group's batch and keeps what it sends while loading;
-/// what another batch sends while it registers (A's hub load tells every
-/// window) belongs to no call. Without `own`, everything is kept. Sends after
-/// registration are not this function's business and stay.
+/// Registers `batches` in order on the calling thread and keeps, of what
+/// they send while they register, only what the batch `own` sends. The
+/// TypeScript side loads only the module of the group's batch and keeps what
+/// it sends while loading; what another batch sends while it registers (A's
+/// hub load tells every window) belongs to no call. Only the registering
+/// thread's own sends are dropped: a worker that sends meanwhile (one the
+/// group's batch started) is kept. Without `own`, everything is kept.
 fn register_keeping_own<F>(
     table: &mut Table,
     batches: impl IntoIterator<Item = (&'static str, F)>,
     own: Option<&str>,
-    events: &Mutex<Vec<Value>>,
+    events: &Events,
 ) -> Result<(), RegisterError>
 where
     F: FnOnce(&mut Table) -> Result<(), RegisterError>,
 {
     for (name, register) in batches {
-        let before = events.lock().unwrap().len();
-        register(table)?;
-        if own.is_some_and(|own| own != name) {
-            events.lock().unwrap().truncate(before);
+        let other = own.is_some_and(|own| own != name);
+        if other {
+            *events.muted.lock().unwrap() = Some(std::thread::current().id());
         }
+        let registered = register(table);
+        *events.muted.lock().unwrap() = None;
+        registered?;
     }
     Ok(())
 }
@@ -263,7 +286,7 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     let case_views = Arc::new(CaseViews(views.clone()));
     let recorder = Arc::new(Recorder {
         views: case_views.clone(),
-        events: Mutex::default(),
+        events: Events::default(),
     });
     let log: ProbeLog = Arc::default();
     let mut hosts = Hosts::default();
@@ -326,7 +349,7 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
             let drained = drain(&core, &ui, &tracked);
             let mut out = json!({
                 "answer": answer,
-                "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+                "events": recorder.events.take(),
             });
             if !drained {
                 out["undrained"] = json!(true);
@@ -397,7 +420,7 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
             let drained = drain(&core, &ui, &tracked);
             let mut out = json!({
                 "answer": answer,
-                "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+                "events": recorder.events.take(),
             });
             if !drained {
                 out["undrained"] = json!(true);
@@ -442,7 +465,7 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
         let drained = drain(&core, &ui, &tracked);
         let mut out = json!({
             "answer": answer,
-            "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+            "events": recorder.events.take(),
         });
         if !drained {
             out["undrained"] = json!(true);
@@ -510,8 +533,9 @@ mod tests {
         json!({ "view": 1, "channel": channel })
     }
 
-    fn channels(events: &Mutex<Vec<Value>>) -> Vec<String> {
+    fn channels(events: &Events) -> Vec<String> {
         events
+            .list
             .lock()
             .unwrap()
             .iter()
@@ -521,12 +545,12 @@ mod tests {
 
     /// A batch whose registration sends `channels`
     fn sending<'a>(
-        events: &'a Mutex<Vec<Value>>,
+        events: &'a Events,
         channels: &'a [&'a str],
     ) -> impl FnOnce(&mut Table) -> Result<(), RegisterError> + 'a {
         move |_| {
             for channel in channels {
-                events.lock().unwrap().push(sent(channel));
+                events.push(sent(channel));
             }
             Ok(())
         }
@@ -534,7 +558,7 @@ mod tests {
 
     #[test]
     fn only_the_groups_own_batch_keeps_what_it_sends_while_registering() {
-        let events = Mutex::new(Vec::new());
+        let events = Events::default();
         let batches = [
             ("A", sending(&events, &["mcp-tools:changed"])),
             // W's quick-look sends M's channel: the sender's batch counts, not the channel's
@@ -553,13 +577,13 @@ mod tests {
             ["quick-look:will-show", "quick-look:theme-changed"]
         );
         // what another batch sends once every batch registered is a call's
-        events.lock().unwrap().push(sent("mcp-tools:changed"));
+        events.push(sent("mcp-tools:changed"));
         assert_eq!(channels(&events).last().unwrap(), "mcp-tools:changed");
     }
 
     #[test]
     fn without_a_batch_everything_is_kept() {
-        let events = Mutex::new(Vec::new());
+        let events = Events::default();
         let batches = [
             ("A", sending(&events, &["mcp-tools:changed"])),
             ("W", sending(&events, &["quick-look:will-show"])),
@@ -569,5 +593,29 @@ mod tests {
             channels(&events),
             ["mcp-tools:changed", "quick-look:will-show"]
         );
+    }
+
+    type Register<'a> = dyn FnOnce(&mut Table) -> Result<(), RegisterError> + 'a;
+
+    #[test]
+    fn a_worker_sending_while_another_batch_registers_is_kept() {
+        let events = Events::default();
+        // A's drive port started a worker at A's registration; it reports
+        // while M registers, and M's own registration send is still dropped
+        let batches: [(&str, Box<Register<'_>>); 2] = [
+            ("A", Box::new(|_| Ok(()))),
+            (
+                "M",
+                Box::new(|_| {
+                    events.push(sent("home:open-settings"));
+                    std::thread::scope(|s| {
+                        s.spawn(|| events.push(sent("drive:state-changed")));
+                    });
+                    Ok(())
+                }),
+            ),
+        ];
+        register_keeping_own(&mut Table::default(), batches, Some("A"), &events).unwrap();
+        assert_eq!(channels(&events), ["drive:state-changed"]);
     }
 }
