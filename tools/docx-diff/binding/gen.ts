@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join } from 'node:path'
 import * as prettier from 'prettier'
 import ts from 'typescript'
-import { type ExportInfo, REFERENCE, ROOT, build } from './manifest'
+import { type ExportInfo, REFERENCE, ROOT, build, writeManifest } from './manifest'
 import { APPEND, type Override, UNUSED_MODULES, overrideOf } from './overrides'
 import { rustTable } from './rust-table'
 
@@ -580,10 +580,7 @@ async function writeIfChanged(path: string, raw: string): Promise<boolean> {
 }
 
 const { exports: all } = build()
-writeFileSync(
-  join(ROOT, 'tools/docx-diff/binding/manifest.json'),
-  JSON.stringify({ exports: all }, null, 1) + '\n',
-)
+await writeManifest({ exports: all })
 const { outputs, verbatim, dropped, wrapped } = generateModules(all)
 let changed = 0
 for (const out of outputs)
