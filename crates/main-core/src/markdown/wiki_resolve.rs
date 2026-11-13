@@ -11,7 +11,6 @@ use std::fs;
 use jscompat::node_path::host::{SEP, basename, dirname, extname, is_absolute, join, relative};
 use jscompat::{JsMap, trim};
 
-use super::ord_map::OrdMap;
 use crate::node_fs::{NodeError, namespaced, node_error};
 use crate::shell::recent_files::StatInfo;
 
@@ -307,7 +306,7 @@ pub fn resolve_wiki_links(
 
     // 2. breadth-first from the root: a shallower file beats a deeper one
     if !remaining.is_empty() && !options.root.is_empty() {
-        let mut wanted: OrdMap<Vec<usize>> = OrdMap::new();
+        let mut wanted: JsMap<Vec<usize>> = JsMap::new();
         // `[[dir/Note]]` keys match as a suffix of the root-relative path
         let mut wanted_paths: Vec<String> = Vec::new();
         for &at in &remaining {
@@ -389,7 +388,7 @@ pub fn resolve_wiki_links(
                             continue;
                         }
                         for key in &satisfied {
-                            wanted.remove(key);
+                            wanted.delete(key);
                         }
                         if wanted.is_empty() {
                             break;

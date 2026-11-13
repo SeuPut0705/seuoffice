@@ -14,13 +14,13 @@ use jscompat::{js_regex, string_less_than};
 use serde::Serialize;
 
 use super::fs_util::read_file_utf8;
-use super::ord_map::OrdMap;
 use super::wiki_resolve::{
     Listing, MAX_DEPTH, NodeWikiFs, ResolveOptions, WikiFs, is_skip_dir, node_fs,
     resolve_wiki_links,
 };
 use crate::node_fs::{NodeError, namespaced};
 use crate::shell::recent_files::StatInfo;
+use jscompat::JsMap;
 
 /// notes one build may walk, mirroring the suggester's cap
 pub const MAX_INDEX_FILES: usize = 2000;
@@ -176,9 +176,9 @@ struct EdgeMemo {
 
 #[derive(Default)]
 struct IndexState {
-    files: OrdMap<VaultFileEntry>,
+    files: JsMap<VaultFileEntry>,
     /// resolved edges per file, valid for the mtime the file was parsed at
-    edges: OrdMap<EdgeMemo>,
+    edges: JsMap<EdgeMemo>,
 }
 
 /// The module-level `indexes` map of the TypeScript, per root.
@@ -296,7 +296,7 @@ impl WikiIndex {
                             tags,
                         },
                     );
-                    state.edges.remove(&path);
+                    state.edges.delete(&path);
                 }
                 if seen.len() >= MAX_INDEX_FILES || depth + 1 > MAX_DEPTH {
                     continue;
@@ -315,7 +315,7 @@ impl WikiIndex {
         let known: Vec<String> = state.files.keys().map(str::to_owned).collect();
         for path in known {
             if !seen.contains(&path) {
-                state.files.remove(&path);
+                state.files.delete(&path);
                 set_moved = true;
             }
         }
@@ -330,7 +330,7 @@ impl WikiIndex {
 
     /// `refreshEdges(root, fs)`: resolve every link in the vault to the note
     /// it lands on, memoised per file mtime.
-    fn refresh_edges(&mut self, root: &str, fs: &mut dyn VaultFs) -> OrdMap<Vec<Edge>> {
+    fn refresh_edges(&mut self, root: &str, fs: &mut dyn VaultFs) -> JsMap<Vec<Edge>> {
         self.refresh_files(root, fs);
         let files: Vec<(String, f64, Vec<String>)> = self
             .index_for(root)
@@ -338,7 +338,7 @@ impl WikiIndex {
             .iter()
             .map(|(path, entry)| (path.to_owned(), entry.mtime_ms, entry.targets.clone()))
             .collect();
-        let mut out: OrdMap<Vec<Edge>> = OrdMap::new();
+        let mut out: JsMap<Vec<Edge>> = JsMap::new();
         for (path, mtime_ms, targets) in files {
             if let Some(done) = self.index_for(root).edges.get(&path)
                 && done.mtime_ms == mtime_ms
@@ -416,7 +416,7 @@ impl WikiIndex {
     /// carry it, most-used first.
     pub fn wiki_tags(&mut self, root: &str, fs: &mut dyn VaultFs) -> Vec<WikiTagEntry> {
         self.refresh_files(root, fs);
-        let mut by_tag: OrdMap<Vec<String>> = OrdMap::new();
+        let mut by_tag: JsMap<Vec<String>> = JsMap::new();
         for (path, entry) in self.index_for(root).files.iter() {
             for tag in &entry.tags {
                 if let Some(list) = by_tag.get_mut(tag) {

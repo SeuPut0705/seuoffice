@@ -25,11 +25,11 @@ use super::fs_util::{
     write_file_excl,
 };
 use super::old_names::{ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES};
-use super::ord_map::OrdMap;
 use crate::node_fs::{NodeError, namespaced, node_error};
 use crate::packages::electron_utils::atomic_write::atomic_write_file;
 use crate::packages::i18n::existing_or_current;
 use crate::shell::recent_files::StatInfo;
+use jscompat::JsMap;
 
 pub const ASSET_MANIFEST_FILENAME: &str = ".seuoffice-assets.json";
 
@@ -68,23 +68,23 @@ pub struct OwnedAssetRecord {
 pub struct OwnedAssetManifest {
     pub files: Vec<OwnedAssetRecord>,
     /// Markdown file name -> app-owned files referenced by its last successful save.
-    pub documents: OrdMap<Vec<String>>,
+    pub documents: JsMap<Vec<String>>,
     /// Newly created files stay protected until their owning document successfully saves.
-    pub pending: OrdMap<Vec<String>>,
+    pub pending: JsMap<Vec<String>>,
 }
 
 impl OwnedAssetManifest {
     fn empty() -> Self {
         OwnedAssetManifest {
             files: Vec::new(),
-            documents: OrdMap::new(),
-            pending: OrdMap::new(),
+            documents: JsMap::new(),
+            pending: JsMap::new(),
         }
     }
 
     /// the manifest as the TypeScript's object holds it
     fn to_json(&self) -> JsonValue {
-        let names = |table: &OrdMap<Vec<String>>| {
+        let names = |table: &JsMap<Vec<String>>| {
             let mut object: JsObject<JsonValue> = JsObject::new();
             for (key, list) in table.iter() {
                 object.set(
@@ -282,8 +282,8 @@ fn normalized_manifest(value: &JsonValue) -> R<OwnedAssetManifest> {
         files.push(OwnedAssetRecord { name, sha256 });
     }
 
-    let references = |field: &str, bad: &str, unsafe_message: &str| -> R<OrdMap<Vec<String>>> {
-        let mut table: OrdMap<Vec<String>> = OrdMap::new();
+    let references = |field: &str, bad: &str, unsafe_message: &str| -> R<JsMap<Vec<String>>> {
+        let mut table: JsMap<Vec<String>> = JsMap::new();
         let Some(raw) = value.get(field) else {
             return Ok(table);
         };
@@ -661,7 +661,7 @@ fn is_owned_file(path: &str, sha256: &str) -> R<bool> {
     Ok(sha256_file(path)? == sha256)
 }
 
-fn prune(table: &mut OrdMap<Vec<String>>, keep: &dyn Fn(&str) -> bool) {
+fn prune(table: &mut JsMap<Vec<String>>, keep: &dyn Fn(&str) -> bool) {
     let keys: Vec<String> = table.keys().map(str::to_owned).collect();
     for key in keys {
         let kept: Vec<String> = table
@@ -669,7 +669,7 @@ fn prune(table: &mut OrdMap<Vec<String>>, keep: &dyn Fn(&str) -> bool) {
             .map(|names| names.iter().filter(|name| keep(name)).cloned().collect())
             .unwrap_or_default();
         if kept.is_empty() {
-            table.remove(&key);
+            table.delete(&key);
         } else {
             table.set(&key, kept);
         }
@@ -696,7 +696,7 @@ fn remove_created_records(document_path: &str, created: &[OwnedAssetRecord]) -> 
         })
         .unwrap_or_default();
     if left.is_empty() {
-        manifest.pending.remove(&key);
+        manifest.pending.delete(&key);
     } else {
         manifest.pending.set(&key, left);
     }
@@ -769,7 +769,7 @@ pub fn prepare_assets_for_save_as(
     }
 
     let mut created: Vec<OwnedAssetRecord> = Vec::new();
-    let mut rewrites: OrdMap<String> = OrdMap::new();
+    let mut rewrites: JsMap<String> = JsMap::new();
     let target_assets_dir = ensure_assets_dir(target_document_path)?;
     let locked = (|| -> R<()> {
         let manifest_path = locked_manifest_path(target_document_path);
@@ -779,7 +779,7 @@ pub fn prepare_assets_for_save_as(
             .iter()
             .map(|file| file.name.clone())
             .collect();
-        let mut copied_by_real_path: OrdMap<String> = OrdMap::new();
+        let mut copied_by_real_path: JsMap<String> = JsMap::new();
         for source in &all_image_sources {
             if rewrites.has(source) {
                 continue;
@@ -925,7 +925,7 @@ fn resolve_pending_inner(
         .cloned()
         .collect();
     if left.is_empty() {
-        manifest.pending.remove(&key);
+        manifest.pending.delete(&key);
     } else {
         manifest.pending.set(&key, left);
     }
@@ -933,7 +933,7 @@ fn resolve_pending_inner(
     let Some(assets_dir) = existing_assets_dir(document_path)? else {
         return Ok(());
     };
-    let mut records_by_name: OrdMap<OwnedAssetRecord> = OrdMap::new();
+    let mut records_by_name: JsMap<OwnedAssetRecord> = JsMap::new();
     for record in &manifest.files {
         records_by_name.set(&record.name, record.clone());
     }
@@ -1069,7 +1069,7 @@ fn reconcile_inner(
             .documents
             .set(&key, sorted_unique(current_references));
     } else {
-        manifest.documents.remove(&key);
+        manifest.documents.delete(&key);
     }
     let pending_to_resolve: HashSet<String> = match pending_names {
         Some(names) => names.iter().cloned().collect(),
@@ -1093,7 +1093,7 @@ fn reconcile_inner(
         })
         .unwrap_or_default();
     if left.is_empty() {
-        manifest.pending.remove(&key);
+        manifest.pending.delete(&key);
     } else {
         manifest.pending.set(&key, left);
     }
@@ -1175,13 +1175,13 @@ pub fn rename_owned_asset_document(old_document_path: &str, new_document_path: &
             .unwrap_or_default();
         names.extend(old_references);
         manifest.documents.set(&new_key, sorted_unique(names));
-        manifest.documents.remove(&old_key);
+        manifest.documents.delete(&old_key);
     }
     if let Some(old_pending) = old_pending {
         let mut names: Vec<String> = manifest.pending.get(&new_key).cloned().unwrap_or_default();
         names.extend(old_pending);
         manifest.pending.set(&new_key, sorted_unique(names));
-        manifest.pending.remove(&old_key);
+        manifest.pending.delete(&old_key);
     }
     write_manifest_unlocked(new_document_path, &manifest, &manifest_path)
 }

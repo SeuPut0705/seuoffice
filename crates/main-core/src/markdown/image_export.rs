@@ -8,9 +8,9 @@ use jscompat::node_path::host::{basename, dirname, extname, join};
 use jscompat::{js_regex, pad_start, slice_utf16, trim};
 
 use super::fs_util::{plain_error, rename, rm_recursive_force, write_file_excl};
-use super::ord_map::OrdMap;
 use crate::node_fs::NodeError;
 use crate::packages::electron_utils::numbered_export_paths::numbered_export_paths;
+use jscompat::JsMap;
 
 fn page_file_name(page: u64) -> String {
     format!("page-{}.png", pad_start(&page.to_string(), 2, '0'))
@@ -43,7 +43,7 @@ pub struct ImageExportEnv<'a> {
 /// `ImageExportSessions`: only dialog-approved folders are registered.
 #[derive(Default)]
 pub struct ImageExportSessions {
-    sessions: OrdMap<Session>,
+    sessions: JsMap<Session>,
 }
 
 impl ImageExportSessions {
@@ -158,7 +158,7 @@ impl ImageExportSessions {
         success: bool,
     ) -> Result<Option<FinishedExport>, NodeError> {
         self.get(owner, id)?;
-        let Some(session) = self.sessions.remove(id) else {
+        let Some(session) = self.sessions.delete(id) else {
             return Err(plain_error("Export session is not authorized"));
         };
         if !success || session.pages == 0 {

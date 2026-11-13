@@ -26,7 +26,6 @@ use crate::markdown::image_host::{
 use crate::markdown::old_names::{
     ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES, OLD_CONVERSION_SESSION_MARKERS,
 };
-use crate::markdown::ord_map::OrdMap;
 use crate::markdown::wiki_create::{CreateNoteOptions, create_wiki_note};
 use crate::markdown::wiki_fragment::WikiFragments;
 use crate::markdown::wiki_heads::{MAX_HEAD_ENTRIES_PER_KIND, parse_wiki_heads, wiki_heads};
@@ -39,6 +38,7 @@ use crate::markdown::wiki_resolve::{
 };
 use crate::node_fs::NodeError;
 use crate::packages::electron_utils::atomic_write::atomic_write_file;
+use jscompat::JsMap;
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     Some(match name {
@@ -821,7 +821,7 @@ fn asset_call(name: &str, args: &[Value]) -> Option<Answer> {
         }),
         "markdown/asset-lifecycle.rewriteMarkdownImageSources" => (|| -> Answer {
             let markdown = str_arg(args, 0)?;
-            let mut rewrites: OrdMap<String> = OrdMap::new();
+            let mut rewrites: JsMap<String> = JsMap::new();
             for pair in arg(args, 1)
                 .and_then(Value::as_array)
                 .ok_or_else(|| bad("rewrites"))?

@@ -4,14 +4,14 @@
 //! The TypeScript keeps one module-level `Map`; here it is a value the caller
 //! owns.
 
-use super::ord_map::OrdMap;
+use jscompat::JsMap;
 
 /// paths whose fragment is still waiting; a click whose note is never opened must not pile up
 pub const MAX_PENDING: usize = 32;
 
 #[derive(Default)]
 pub struct WikiFragments {
-    pending: OrdMap<String>,
+    pending: JsMap<String>,
 }
 
 impl WikiFragments {
@@ -26,14 +26,14 @@ impl WikiFragments {
         }
         // a link with no fragment cancels an earlier one aimed at the same note
         if fragment.is_empty() {
-            self.pending.remove(path);
+            self.pending.delete(path);
             return;
         }
         while self.pending.len() >= MAX_PENDING {
             let Some(oldest) = self.pending.keys().next().map(str::to_owned) else {
                 break;
             };
-            self.pending.remove(&oldest);
+            self.pending.delete(&oldest);
         }
         self.pending.set(path, fragment.to_owned());
     }
@@ -43,6 +43,6 @@ impl WikiFragments {
         if path.is_empty() {
             return String::new();
         }
-        self.pending.remove(path).unwrap_or_default()
+        self.pending.delete(path).unwrap_or_default()
     }
 }

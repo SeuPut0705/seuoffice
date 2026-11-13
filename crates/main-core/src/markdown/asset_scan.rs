@@ -8,8 +8,8 @@
 use jscompat::{Radix, is_js_space, js_regex, parse_int, try_js_regex};
 
 use super::fs_util::plain_error;
-use super::ord_map::OrdMap;
 use crate::node_fs::NodeError;
+use jscompat::JsMap;
 
 /// where a `src` or destination sits and how the replacement is written back
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -702,7 +702,7 @@ fn encode_html_attribute_replacement(value: &str, quote: HtmlQuote) -> String {
 /// `rewriteMarkdownImageSources(markdown, rewrites)`
 pub fn rewrite_markdown_image_sources(
     markdown: &str,
-    rewrites: &OrdMap<String>,
+    rewrites: &JsMap<String>,
 ) -> Result<String, NodeError> {
     if rewrites.is_empty() {
         return Ok(markdown.to_owned());

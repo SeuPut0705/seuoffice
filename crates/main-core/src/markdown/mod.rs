@@ -16,4 +16,3 @@ pub mod wiki_resolve;
 
 pub mod asset_scan;
 pub mod fs_util;
-pub mod ord_map;

@@ -54,6 +54,27 @@ impl<V> JsMap<V> {
         self.index.contains_key(key)
     }
 
+    /// `map.delete(key)`: the entry leaves the order; set again, the key goes
+    /// to the end. Nothing is left behind, so deleting and setting again does
+    /// not grow the map.
+    pub fn delete(&mut self, key: &str) -> Option<V> {
+        let at = self.index.remove(key)?;
+        let (_, value) = self.entries.remove(at);
+        for later in self.index.values_mut() {
+            if *later > at {
+                *later -= 1;
+            }
+        }
+        Some(value)
+    }
+
+    /// `map.clear()`
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.index.clear();
+    }
+
+    /// `map.size`
     pub fn len(&self) -> usize {
         self.entries.len()
     }
@@ -133,5 +154,28 @@ mod tests {
         assert_eq!(map.get("b"), Some(&3));
         assert!(!map.has("c"));
         assert_eq!(serde_json::to_string(&map).unwrap(), r#"[["b",3],["a",2]]"#);
+    }
+
+    #[test]
+    fn a_key_deleted_and_set_again_goes_to_the_end() {
+        let mut map = JsMap::new();
+        for key in ["a", "b", "c"] {
+            map.set(key, key.len());
+        }
+        assert_eq!(map.delete("a"), Some(1));
+        assert_eq!(map.delete("a"), None);
+        map.set("a", 9);
+        assert_eq!(map.keys().collect::<Vec<_>>(), ["b", "c", "a"]);
+        assert_eq!(map.get("c"), Some(&1));
+        // an edit loop: delete and set the same keys many times
+        for round in 0..1000 {
+            map.delete("b");
+            map.set("b", round);
+        }
+        assert_eq!(map.len(), 3);
+        assert_eq!(map.keys().collect::<Vec<_>>(), ["c", "a", "b"]);
+        assert_eq!(map.get("b"), Some(&999));
+        map.clear();
+        assert!(map.is_empty() && !map.has("c"));
     }
 }
