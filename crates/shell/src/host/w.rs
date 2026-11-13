@@ -9,7 +9,7 @@
 //! | `quick_look::QuickLookRuntime`, `QuickLookWindow`, `main_core`'s `QuickLookEngines` | stub (the preview window, the Explorer hook and the tray, the zip and text engines) |
 //! | `doc_picker::DocPickerWindow`, `DocPickerSources` | stub |
 //! | `editor_files::DocsTabs`, `SheetsTabs`, `OpenFiles`, `FileParse`, `UiLanguage` | stub |
-//! | `home_files::HomeFiles`, `FileSearch`, `FolderTree`, `FolderWatch` | stub |
+//! | `home_files::HomeFiles`, `FileSearch`, `FolderWatch` | stub |
 //! | `home_settings::HomeApp` | stub |
 //! | `tabs::WindowsHost` | stub: the window system of the tab strip ([`super::window::Windows`] has the Tauri half) |
 //! | `tabs::TabHooks` (provided, on the core thread) | stub, [`register_hooks`] |
@@ -27,8 +27,9 @@ use shell_ipc_w::doc_picker::{DocPickerSourcesHost, DocPickerWindowHost};
 use shell_ipc_w::editor_files::{
     Clock, ClockHost, DocsTabsHost, FileParseHost, OpenFilesHost, SheetsTabsHost, UiLanguageHost,
 };
-use shell_ipc_w::home_files::{FileSearchHost, FolderTreeHost, FolderWatchHost, HomeFilesHost};
+use shell_ipc_w::home_files::{FileSearchHost, FolderWatchHost, HomeFilesHost};
 use shell_ipc_w::home_settings::HomeAppHost;
+use shell_ipc_w::projects::host::{LegacyProjectStoreHost, ProjectFilesHost, ProjectsHostRef};
 use shell_ipc_w::quick_look::{QuickLookEnginesHost, QuickLookHost, QuickLookWindowHost};
 use shell_ipc_w::tabs::{TabHooks, WindowsHostRef};
 
@@ -76,10 +77,12 @@ fn install_hosts(hosts: &mut Hosts) {
         UiLanguageHost,
         HomeFilesHost,
         FileSearchHost,
-        FolderTreeHost,
         FolderWatchHost,
         HomeAppHost,
         WindowsHostRef,
+        ProjectsHostRef,
+        ProjectFilesHost,
+        LegacyProjectStoreHost,
     );
 }
 
@@ -254,8 +257,10 @@ mod tests {
         hosts.insert(contents);
         crate::host::window::install_main_window(&mut hosts, &views);
         install_hosts(&mut hosts);
-        // M's own hosts come from host::menu with an AppHandle; its fakes stand in here
+        crate::host::install_process_state(&mut hosts);
+        // M's and U's own hosts come from their host files with an AppHandle; their fakes stand in here
         shell_ipc_m::probe_hosts(&mut hosts, &serde_json::Value::Null);
+        shell_ipc_u::probe_hosts(&mut hosts, &serde_json::Value::Null);
         let ui: Arc<dyn Thread> = CoreThread::spawn("w-test-ui");
         let services = Services {
             ui,

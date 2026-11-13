@@ -24,8 +24,10 @@ impl CoreThread {
         let join = thread::Builder::new()
             .name(name.into())
             .spawn(move || {
+                // a job that panics (a worker's result coming back, a timer)
+                // answers the replies it held and does not end the thread
                 for job in rx {
-                    job();
+                    crate::dispatch::catching(job);
                 }
             })
             .expect("spawning the core thread");
@@ -89,6 +91,75 @@ mod tests {
         let probe = core.clone();
         assert!(run_on(core.as_ref(), move || probe.is_current()));
         assert_eq!(*seen.lock().unwrap(), (0..100).collect::<Vec<_>>());
+        core.stop();
+    }
+
+    /// A job that panics (a worker's result coming back, a timer) must not end
+    /// the core thread: the reply it held is answered with the panic's text and
+    /// the next job still runs.
+    #[test]
+    fn a_panicking_job_answers_its_reply_and_the_thread_goes_on() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        use shell_contract::ids::{ViewId, WindowId};
+        use shell_contract::ipc::{CallContext, ChannelKind, Handler, Registry, Responder, Sender};
+        use shell_contract::value::IpcValue;
+        use shell_contract::{Batch, CHANNELS};
+
+        use crate::dispatch::Dispatcher;
+        use crate::table::Table;
+
+        thread_local! {
+            static KEPT: RefCell<Option<Responder>> = const { RefCell::new(None) };
+        }
+        struct Keep;
+        impl Handler for Keep {
+            fn call(&self, _: &CallContext, _: Vec<IpcValue>, reply: Responder) {
+                KEPT.with(|k| *k.borrow_mut() = Some(reply));
+            }
+        }
+
+        let core = CoreThread::spawn("core-panic-test");
+        let (replies, answered) = mpsc::channel();
+        core.post(Box::new(move || {
+            let spec = CHANNELS
+                .iter()
+                .find(|s| s.batch == Batch::W && s.kinds == [ChannelKind::Invoke])
+                .unwrap();
+            let mut table = Table::default();
+            table
+                .register(Batch::W, spec.name, ChannelKind::Invoke, Rc::new(Keep))
+                .unwrap();
+            let sender = Sender {
+                view: ViewId(1),
+                window: WindowId(1),
+                surface: spec.surfaces[0],
+            };
+            Dispatcher::new(table).dispatch(
+                sender,
+                ChannelKind::Invoke,
+                None,
+                spec.name,
+                vec![],
+                Box::new(move |r| replies.send(r).unwrap()),
+            );
+        }));
+        // the worker's result comes back and its continuation panics
+        core.post(Box::new(|| {
+            let _reply = KEPT.with(|k| k.borrow_mut().take());
+            panic!("late boom")
+        }));
+        let (ran, after) = mpsc::channel();
+        core.post(Box::new(move || ran.send(()).unwrap()));
+
+        let reply = answered.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!(reply.unwrap_err().to_string(), "Error: late boom");
+        after
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the core thread ended with the panic");
         core.stop();
     }
 }

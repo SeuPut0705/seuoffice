@@ -319,9 +319,17 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                     let p = p.borrow();
                     let provided = p.as_ref().expect("the case's provided");
                     // one arm per batch crate that exports `probe_trigger`,
-                    // matched on the name's prefix
+                    // matched on the name's prefix; the batch adds its own
                     match name.split_once('/').map(|(batch, _)| batch) {
                         Some("m") => shell_ipc_m::probe_trigger(
+                            &name,
+                            ViewId(view),
+                            &args,
+                            &services,
+                            provided,
+                            then,
+                        ),
+                        Some("w") => shell_ipc_w::projects::probe_trigger(
                             &name,
                             ViewId(view),
                             &args,

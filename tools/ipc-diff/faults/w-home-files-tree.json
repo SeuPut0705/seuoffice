@@ -1,0 +1,65 @@
+[
+  {
+    "name": "folder-list takes any string for a folder in the roots",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "let Some(path) = as_str(dir).filter(|_| h.inside_root(dir).unwrap_or(false)) else {",
+    "replace": "let Some(path) = as_str(dir) else {",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "folder-create is open to any parent",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        if !h.inside_any_root(parent)? {",
+    "replace": "        if false && !h.inside_any_root(parent)? {",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "folder-rename renames a root",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if !h.inside_any_root(dir)? || h.is_any_root(dir)? {\n            return Ok(failed(h.tm(Msg::BadArgs)));",
+    "replace": "if !h.inside_any_root(dir)? {\n            return Ok(failed(h.tm(Msg::BadArgs)));",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "folder-rename leaves the files under it where they were",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "            h.after_folder_moved(dir, path, &files_before)?;",
+    "replace": "            let _ = &files_before;",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "folder-delete forgets nothing",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        h.remove_recent_files(&files)?;\n        h.remove_starred_files(&files)?;\n        Ok(IpcValue::Undefined)\n    })?;\n\n    let h = home.clone();\n    handle(registry, \"home:move-paths\"",
+    "replace": "        Ok(IpcValue::Undefined)\n    })?;\n\n    let h = home.clone();\n    handle(registry, \"home:move-paths\"",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "move-paths takes any policy for replace",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "            _ => MoveConflictPolicy::Ask,",
+    "replace": "            _ => MoveConflictPolicy::Replace,",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "move-paths names the parked file by another clock",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "number_to_string(self.home.host.now_ms()),",
+    "replace": "number_to_string(self.home.host.now_ms() + 1.0),",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "move-paths re-keys a moved folder as a file",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "Some((_, files)) => h.after_folder_moved(from, to, files)?,",
+    "replace": "Some(_) => h.after_file_moved(from, to)?,",
+    "groups": ["w/home-files-tree"]
+  },
+  {
+    "name": "move-paths does not remove a parked folder the trash refused",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "let _ = std::fs::remove_dir_all(parked).or_else(|_| std::fs::remove_file(parked));",
+    "replace": "let _ = parked;",
+    "groups": ["w/home-files-tree"]
+  }
+]

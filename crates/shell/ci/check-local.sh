@@ -16,7 +16,10 @@
 set -euo pipefail
 
 shell_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-work="${SHELL_CHECK_DIR:-${TMPDIR:-/tmp}/seuoffice-shell-check}"
+# one folder per checkout: worktrees of this repository run it side by side,
+# and a shared folder's symlinks would point at whichever ran last
+key="$(printf '%s' "$shell_dir" | shasum | cut -c1-12)"
+work="${SHELL_CHECK_DIR:-${TMPDIR:-/tmp}/seuoffice-shell-check-$key}"
 target="${CARGO_TARGET_DIR:-$work/target}"
 
 mkdir -p "$work"

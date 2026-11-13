@@ -37,6 +37,13 @@ tauri-runtime-cef = { version = "=3.0.0-alpha.7", features = ["unstable"] }
 # the CEF API itself, the version tauri-runtime-cef pulls (no second copy):
 # CefBrowserHost and the request context's preferences, which Tauri does not expose
 cef = "=154.5.0"
+# the shell's one HTTP client, the version tauri already pulls: the updater's
+# feed and download (U, host/update.rs, blocking on workers) and A's network
+# ports (host/net.rs). The system's TLS and trust store and proxy, as
+# Chromium's net in the Electron build used.
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls", "system-proxy", "stream", "multipart", "http2", "charset"] }
+# the feed's sha512 of a download (host/update.rs)
+sha2 = "0.10"
 
 shell-contract = { path = "../shell-contract" }
 shell-core = { path = "../shell-core" }
@@ -75,8 +82,9 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT"] }
 
 [dev-dependencies]
-# the fakes of M's hosts for the_batches_register_over_the_stubs
+# the fakes of M's and U's hosts for the_batches_register_over_the_stubs
 shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
+shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
 
 [patch.crates-io]
 regress = { path = "../vendor/regress" }
