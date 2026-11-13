@@ -1,0 +1,709 @@
+[
+  {
+    "name": "docs:recent always answers an empty list",
+    "file": "shell-ipc/d2/src/docs/open.rs",
+    "find": "Some(v) => kit::from_js_json(&v),",
+    "replace": "Some(_) => IpcValue::Array(Vec::new()),",
+    "groups": ["d2/docs-open"]
+  },
+  {
+    "name": "an open document's original is not archived",
+    "file": "shell-ipc/d2/src/docs/open.rs",
+    "find": "if !headless {",
+    "replace": "if headless {",
+    "groups": ["d2/docs-open"]
+  },
+  {
+    "name": "docs:save writes a path this view never opened",
+    "file": "shell-ipc/d2/src/docs/save.rs",
+    "find": ".filter(|p| d.can_doc_write(view, p))",
+    "replace": ".filter(|_| true)",
+    "groups": ["d2/docs-save"]
+  },
+  {
+    "name": "an autosave is treated as a manual save and asks",
+    "file": "shell-ipc/d2/src/docs/save.rs",
+    "find": "let auto = args.get(2) == &IpcValue::Bool(true);",
+    "replace": "let auto = false;",
+    "groups": ["d2/docs-save"]
+  },
+  {
+    "name": "the free name of a first save skips -2",
+    "file": "shell-ipc/d2/src/docs/save.rs",
+    "find": "let mut i = 2;",
+    "replace": "let mut i = 3;",
+    "groups": ["d2/docs-save"]
+  },
+  {
+    "name": "an empty open password is accepted",
+    "file": "shell-ipc/d2/src/docs/save.rs",
+    "find": "IpcValue::String(p) if !p.is_empty() => Some(p.as_str()),",
+    "replace": "IpcValue::String(p) => Some(p.as_str()),",
+    "groups": ["d2/docs-save"]
+  },
+  {
+    "name": "a negative intent revision is accepted",
+    "file": "shell-ipc/d2/src/docs/save.rs",
+    "find": "*n >= 0.0",
+    "replace": "*n >= -1.0",
+    "groups": ["d2/docs-save"]
+  },
+  {
+    "name": "an export writes a path no dialog authorized",
+    "file": "shell-ipc/d2/src/docs/export.rs",
+    "find": "IpcValue::String(p) if docs.can_pdf_write(view, p) => Ok(Some(p.clone())),",
+    "replace": "IpcValue::String(p) => Ok(Some(p.clone())),",
+    "groups": ["d2/docs-export"]
+  },
+  {
+    "name": "the Markdown picture folder keeps an opening parenthesis",
+    "file": "shell-ipc/d2/src/docs/export.rs",
+    "find": ".replace('(', \"%28\")",
+    "replace": ".replace('(', \"(\")",
+    "groups": ["d2/docs-export"]
+  },
+  {
+    "name": "the page-image temp PDF stays after it is read back",
+    "file": "shell-ipc/d2/src/docs/export.rs",
+    "find": "let _ = std::fs::remove_file(&path);",
+    "replace": "let _ = &path;",
+    "groups": ["d2/docs-export"]
+  },
+  {
+    "name": "a capture as wide as the limit is refused",
+    "file": "shell-ipc/d2/src/docs/misc.rs",
+    "find": "!(1.0..=20000.0).contains(&width)",
+    "replace": "!(1.0..20000.0).contains(&width)",
+    "groups": ["d2/docs-misc"]
+  },
+  {
+    "name": "a copied picture's layout meta keeps a raw <",
+    "file": "shell-ipc/d2/src/docs/misc.rs",
+    "find": ".replace('<', \"&lt;\")",
+    "replace": ".replace('<', \"<\")",
+    "groups": ["d2/docs-misc"]
+  },
+  {
+    "name": "an inactive tab patches the View menu",
+    "file": "shell-ipc/d2/src/docs/close.rs",
+    "find": "if d.shell.active_docs_view() != Some(view) {",
+    "replace": "if false {",
+    "groups": ["d2/docs-close"]
+  },
+  {
+    "name": "the no-reply close box defaults to Close Anyway",
+    "file": "shell-ipc/d2/src/docs/close.rs",
+    "find": "default_id: Some(1),",
+    "replace": "default_id: Some(0),",
+    "groups": ["d2/docs-close"]
+  },
+  {
+    "name": "a failed autosave on close closes with no prompt",
+    "file": "shell-ipc/d2/src/docs/close.rs",
+    "find": "docs.close_prompt(view, parent, state, done)",
+    "replace": "done(true)",
+    "groups": ["d2/docs-close"]
+  },
+  {
+    "name": "open-file refuses with another text",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "\"epub: path not granted to this view\"",
+    "replace": "\"epub: path not granted\"",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "dirty-changed keeps the flag of a book that did not open",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "let dirty = args.get(0) == &IpcValue::Bool(true) && epub.may_write(view);",
+    "replace": "let dirty = args.get(0) == &IpcValue::Bool(true);",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "set-translation-lock takes any value but false as true",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "session.locked = args.get(0) == &IpcValue::Bool(true);",
+    "replace": "session.locked = args.get(0) != &IpcValue::Bool(false);",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "replace-ranges accepts an older version",
+    "file": "shell-ipc/d2/src/epub/session.rs",
+    "find": "if version != state.version as f64 {",
+    "replace": "if version > state.version as f64 {",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "an edit counts the version twice",
+    "file": "shell-ipc/d2/src/epub/session.rs",
+    "find": "state.version += 1;",
+    "replace": "state.version += 2;",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "a written result book keeps its grant",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "v.result_targets.remove(&path_key(&path, None))",
+    "replace": "v.result_targets.contains(&path_key(&path, None))",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "view settings also go back to the sender",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "if other.surface == Surface::Epub && other.view != view {",
+    "replace": "if other.surface == Surface::Epub {",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "an attachment page is cut short",
+    "file": "shell-ipc/d2/src/epub/attachments.rs",
+    "find": "const READ_MAX_CHARS: f64 = 48_000.0;",
+    "replace": "const READ_MAX_CHARS: f64 = 4.0;",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "the Korean unreadable-file text is the English one",
+    "file": "shell-ipc/d2/src/epub/attachments.rs",
+    "find": "\"errUnreadable\" if ko => \"읽을 수 없습니다\",",
+    "replace": "\"errUnreadable\" if ko => \"cannot be read\",",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "the shell is told of saves to the same file, not of Save As",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "if !same_file {",
+    "replace": "if same_file {",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "a menu save of a dirty book answers at once",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "if mode == SaveMode::Save && !epub.is_dirty(view) && has_path {",
+    "replace": "if mode == SaveMode::Save && has_path {",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "a flush while typing answers the generic failure",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "Flush::Composing => Some(\"typing in progress, try again shortly\"),",
+    "replace": "Flush::Composing => Some(\"could not flush the book\"),",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "the close question defaults to Don't Save",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "default_id: Some(0),",
+    "replace": "default_id: Some(1),",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "every chapter listed is refused as too many",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "IpcValue::Array(items) if items.len() <= count => items,",
+    "replace": "IpcValue::Array(items) if items.len() < count => items,",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "mailto links are not opened",
+    "file": "shell-ipc/d2/src/epub/mod.rs",
+    "find": "\"mailto:\".into()",
+    "replace": "\"ftp:\".into()",
+    "groups": ["d2/epub"]
+  },
+  {
+    "name": "a bad save request is refused with another text",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "failure(\"html: bad save request\")",
+    "replace": "failure(\"html: bad save\")",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "image references of another type are accepted",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "_ => return done(failure(\"html: bad image references\")),",
+    "replace": "_ => Vec::new(),",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the AI's silent save numbers a taken name with a space",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "format!(\"{base}-{n}.html\")",
+    "replace": "format!(\"{base} {n}.html\")",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the save dialog has another title",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "Some(tr(&lang, \"Save HTML Document\", \"HTML 문서 저장\")),",
+    "replace": "Some(tr(&lang, \"Save HTML\", \"HTML 문서 저장\")),",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "an attachment read is cut at a few characters",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "const READ_MAX_CHARS: f64 = 48_000.0;",
+    "replace": "const READ_MAX_CHARS: f64 = 4.0;",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "attachment pictures are capped at five bytes",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "const IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "const IMAGE_MAX_BYTES: f64 = 5.0;",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a pasted picture of another type is refused with another text",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "\"not a supported image type\",",
+    "replace": "\"unsupported\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "an attachment path of another type throws a plain TypeError",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "\"TypeError [ERR_INVALID_ARG_TYPE]\",",
+    "replace": "\"TypeError\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a provisional title keeps 60 characters",
+    "file": "shell-ipc/d2/src/html/mod.rs",
+    "find": "jscompat::slice_utf16(&collapsed, 0.0, Some(80.0))",
+    "replace": "jscompat::slice_utf16(&collapsed, 0.0, Some(60.0))",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the ODT report box has another message",
+    "file": "shell-ipc/d2/src/html/odt_export.rs",
+    "find": "\"Some content will change or be left out in the ODT file.\",",
+    "replace": "\"Some content will change.\",",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "a headless export of a marked page is refused with another text",
+    "file": "shell-ipc/d2/src/html/odt_export.rs",
+    "find": "\"this page has content hidden from AI, and this export cannot keep that; clear the marks first\",",
+    "replace": "\"marked\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a file name keeps its colons",
+    "file": "shell-ipc/d2/src/html/text_doc.rs",
+    "find": "if matches!(c, '/' | '\\\\' | ':' | '*' | '?' | '\"' | '<' | '>' | '|') {",
+    "replace": "if matches!(c, '/' | '\\\\' | '*' | '?' | '\"' | '<' | '>' | '|') {",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "an ungranted read names no editor",
+    "file": "shell-ipc/d2/src/html/text_doc.rs",
+    "find": "\"{}: path not granted to this view\",",
+    "replace": "\"{}: path not granted\",",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "a recovery copy an untracked view asks for is reported written",
+    "file": "shell-ipc/d2/src/text_recovery.rs",
+    "find": "WriteResult::Skipped => \"skipped\",",
+    "replace": "WriteResult::Skipped => \"written\",",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "commit-save without a begun save answers another message",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "\"hwp: no save in progress\"",
+    "replace": "\"hwp: no save pending\"",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "begin-save takes Save As for a plain save",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "as_str(mode) == Some(\"saveAs\")",
+    "replace": "as_str(mode) == Some(\"save-as\")",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "new-tabs answers outside a save",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "if hwp1.get(cx.sender.view, |v| v.pending_save.is_none()) {",
+    "replace": "if false {",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "the first overwrite keeps no backup",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "if needs_backup(&job.target, Path::new(&job.target).exists(), &job.written) {",
+    "replace": "if false {",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "the File menu's preview prints",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "Some(\"preview\") => hwp1.request_preview(view, \"open\"),",
+    "replace": "Some(\"preview\") => hwp1.request_preview(view, \"print\"),",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "a second menu save goes out while one is in flight",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "if self.save_waiters.borrow().contains_key(&view) {",
+    "replace": "if false {",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "recovery-begin always answers hwp",
+    "file": "shell-ipc/d2/src/hwp/recovery.rs",
+    "find": "(\"format\", format.as_str().into_ipc()),",
+    "replace": "(\"format\", \"hwp\".into_ipc()),",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "recovery-new-tabs answers without a turn",
+    "file": "shell-ipc/d2/src/hwp/recovery.rs",
+    "find": "if !h.recovery.borrow().has_turn(wc(view)) {",
+    "replace": "if false {",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "an image of 5 MiB and one byte is attached",
+    "file": "shell-ipc/d2/src/hwp/attachments.rs",
+    "find": "const ATTACHABLE_IMAGE_MAX_BYTES: u64 = 5 * 1024 * 1024;",
+    "replace": "const ATTACHABLE_IMAGE_MAX_BYTES: u64 = 6 * 1024 * 1024;",
+    "groups": ["d2/hwp-attach"]
+  },
+  {
+    "name": "the text cache keeps nine files",
+    "file": "shell-ipc/d2/src/hwp/attachments.rs",
+    "find": "const TEXT_CACHE_FILES: usize = 8;",
+    "replace": "const TEXT_CACHE_FILES: usize = 9;",
+    "groups": ["d2/hwp-attach"]
+  },
+  {
+    "name": "files-read-document refuses an .hwpx",
+    "file": "shell-ipc/d2/src/hwp/attachments.rs",
+    "find": "if ext != \"hwp\" && ext != \"hwpx\" {",
+    "replace": "if ext != \"hwp\" {",
+    "groups": ["d2/hwp-attach"]
+  },
+  {
+    "name": "analyze-media keeps addresses that are not image data",
+    "file": "shell-ipc/d2/src/hwp/ai_image.rs",
+    "find": ".filter(|url| is_image_data_url(url))",
+    "replace": ".filter(|_| true)",
+    "groups": ["d2/hwp-attach"]
+  },
+  {
+    "name": "a close that saves never asks the renderer",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "self.emit(view, \"hwp:close-save-request\", vec![]);",
+    "replace": "",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "tracking-dropped answers whether the file was tracked",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "v.tracking_dropped = read.dropped;",
+    "replace": "v.tracking_dropped = read.tracked;",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "a skill template copy is opened as the file itself",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "UntitledOption::Copy => Some(basename(path, None)),",
+    "replace": "UntitledOption::Copy => None,",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "a bad save request is refused with another text",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "failure(\"markdown: bad save request\")",
+    "replace": "failure(\"markdown: bad save\")",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "a Save As export target is approved for any path of its format",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "Some(a) if a.format == format && kit::as_str(requested) == Some(a.path.as_str()) => {",
+    "replace": "Some(a) if a.format == format => {",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "Save As PDF prints a marked note without asking",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "if ext == \".pdf\" && !holds_hidden {",
+    "replace": "if ext == \".pdf\" {",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "the marked export box is shown for any format",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "Some(f @ (\"odt\" | \"pdf\" | \"png\")) => f,",
+    "replace": "Some(f) => f,",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "the marked PDF box has another message",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "\"This document has content hidden from AI, and a PDF file cannot keep that.\",",
+    "replace": "\"This document has hidden content.\",",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "the image host lives in another settings file",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "\"markdown-settings.json\",",
+    "replace": "\"markdown-host.json\",",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "an upload with no host reports another error",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "return responder.reply(Ok(fail(\"no usable image host configured\")));",
+    "replace": "return responder.reply(Ok(fail(\"no host\")));",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "an upload without data reports another error",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "_ => return responder.reply(Ok(fail(\"missing image data\"))),",
+    "replace": "_ => return responder.reply(Ok(fail(\"no data\"))),",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "an empty page image export reports another error",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "_ => return responder.reply(Ok(failure(\"Empty document\"))),",
+    "replace": "_ => return responder.reply(Ok(failure(\"Empty\"))),",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "a conversion opened in Docs is not handed to the shell",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "me.shell.docx_exported(Path::new(&target));",
+    "replace": "let _ = (&me, Path::new(&target));",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "a bare wiki name lands in the vault root, not beside the note",
+    "file": "shell-ipc/d2/src/markdown/mod.rs",
+    "find": "                        dirname(&from_path)\n",
+    "replace": "                        String::new()\n",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "an untitled export is named in another word",
+    "file": "shell-ipc/d2/src/markdown/save.rs",
+    "find": "tr(&self.lang(), \"Untitled\", \"제목 없음\")",
+    "replace": "tr(&self.lang(), \"Unnamed\", \"제목 없음\")",
+    "groups": ["d2/markdown"]
+  },
+  {
+    "name": "positive control: a refused path says something else",
+    "file": "shell-ipc/d2/src/pdf/editor/mod.rs",
+    "find": "const NOT_GRANTED: &str = \"pdf: path not granted to this view\";",
+    "replace": "const NOT_GRANTED: &str = \"pdf: path not allowed\";",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "decrypt accepts a request without bytes",
+    "file": "shell-ipc/d2/src/pdf/editor/save.rs",
+    "find": "return reply.reply(Ok(refused(\"pdf: malformed decrypt request\")));",
+    "replace": "return reply.reply(Ok(refused(\"malformed\")));",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "a wrong password reads as another refusal",
+    "file": "shell-ipc/d2/src/pdf/editor/save.rs",
+    "find": "Err(DecryptError::WrongPassword) => refused(\"wrong-password\"),",
+    "replace": "Err(DecryptError::WrongPassword) => refused(\"certificate-encryption\"),",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "an empty OCR payload reaches the engine",
+    "file": "shell-ipc/d2/src/pdf/editor/media.rs",
+    "find": ".filter(|p| !p.is_empty() && p.encode_utf16().count() <= MAX_OCR_PNG_CHARS)",
+    "replace": ".filter(|p| p.encode_utf16().count() <= MAX_OCR_PNG_CHARS)",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "can-draw-text takes any truthy italic",
+    "file": "shell-ipc/d2/src/pdf/editor/media.rs",
+    "find": "(args.bool(2) == Some(true), args.bool(3) == Some(true));",
+    "replace": "(args.bool(2) == Some(true), kit::truthy(args.get(3)));",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "export-images skips the page number check",
+    "file": "shell-ipc/d2/src/pdf/editor/media.rs",
+    "find": "if !has_valid_export_page_numbers(&page_numbers, images.len() as f64) {",
+    "replace": "if !has_valid_export_page_numbers(&page_numbers, images.len() as f64 + 1.0) {",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "removing a signature never writes the file",
+    "file": "shell-ipc/d2/src/pdf/editor/sign.rs",
+    "find": "if next.len() != list.len() {",
+    "replace": "if next.len() == list.len() {",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "the picked certificate answers its full path",
+    "file": "shell-ipc/d2/src/pdf/editor/sign.rs",
+    "find": "let name = jscompat::node_path::host::basename(&file, None);",
+    "replace": "let name = file.clone();",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "a view without a file reads as saved for notes",
+    "file": "shell-ipc/d2/src/pdf/editor/open.rs",
+    "find": "            None => true,\n            Some(p) => e.st.borrow().unsaved_blank.contains(&p),",
+    "replace": "            None => false,\n            Some(p) => e.st.borrow().unsaved_blank.contains(&p),",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "flattening is allowed in place",
+    "file": "shell-ipc/d2/src/pdf/editor/save.rs",
+    "find": "if annotations != \"keep\" && target == path {",
+    "replace": "if annotations == \"strip\" && target == path {",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "17 pages per sheet pass the check",
+    "file": "shell-ipc/d2/src/pdf/editor/pages.rs",
+    "find": ".filter(|n| n.fract() == 0.0 && (2.0..=16.0).contains(n));",
+    "replace": ".filter(|n| n.fract() == 0.0 && (2.0..=17.0).contains(n));",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "auto-rename hops off its own name",
+    "file": "shell-ipc/d2/src/pdf/editor/open.rs",
+    "find": "            if candidate == path {\n                return not();",
+    "replace": "            if candidate == path && suffix > 1 {\n                return not();",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "Save As > PNG accepts any name",
+    "file": "shell-ipc/d2/src/pdf/editor/editors.rs",
+    "find": "|| !target.to_ascii_lowercase().ends_with(\".png\")",
+    "replace": "|| target.is_empty()",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "Don't Save no longer stops copies",
+    "file": "shell-ipc/d2/src/pdf/editor/recovery.rs",
+    "find": "        let state = self.view(id);\n        if state.dropped {\n            return Err(CopyResult::Superseded);\n        }\n        if state.unprotectable",
+    "replace": "        let state = self.view(id);\n        if state.unprotectable",
+    "groups": ["d2/pdf-editor"]
+  },
+  {
+    "name": "get-init answers a fixed theme",
+    "file": "shell-ipc/d2/src/pdf/tools/window.rs",
+    "find": "(\"theme\", me.ctx.shell.theme().into_ipc()),",
+    "replace": "(\"theme\", \"light\".into_ipc()),",
+    "groups": ["d2/pdf-tools-window"]
+  },
+  {
+    "name": "an empty job id passes the job id check",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "js_regex!(r\"^[A-Za-z0-9_-]{1,64}$\")",
+    "replace": "js_regex!(r\"^[A-Za-z0-9_-]{0,64}$\")",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "store calls always pass the translation mode",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "    if mode == \"easy\" {",
+    "replace": "    if !mode.is_empty() {",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "highlight runs oldest first",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "return d.partial_cmp(&0.0).unwrap();",
+    "replace": "return (-d).partial_cmp(&0.0).unwrap();",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "a used write target stays granted",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "            t.remove(&key);",
+    "replace": "            let _ = (t, &key);",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "the target's file name keeps forbidden characters dropped instead of replaced",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": ".replace_all(&raw, |_| \"_\".to_owned());",
+    "replace": ".replace_all(&raw, |_| String::new());",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "a minimum image size of 0 is accepted",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "(1.0..=10_000.0).contains(&m)",
+    "replace": "(0.0..=10_000.0).contains(&m)",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "a heartbeat without a running job answers ok",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "WriteAnswer::Found(\"no running job record\"),",
+    "replace": "WriteAnswer::Ok,",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "delete counts leave out the easy explanations' edits",
+    "file": "shell-ipc/d2/src/pdf/tools/structure.rs",
+    "find": "(as_num(&plain).unwrap_or(f64::NAN) + as_num(&easy).unwrap_or(f64::NAN))",
+    "replace": "(as_num(&plain).unwrap_or(f64::NAN) + 0.0 * as_num(&easy).unwrap_or(f64::NAN))",
+    "groups": ["d2/pdf-tools-structure"]
+  },
+  {
+    "name": "blank-page removal skips the found-pages check",
+    "file": "shell-ipc/d2/src/pdf/tools/window.rs",
+    "find": "                return self.fail(\"not-found\");",
+    "replace": "                let _ = \"not-found\";",
+    "groups": ["d2/pdf-tools-window"]
+  },
+  {
+    "name": "pick-inputs picks several files unless told otherwise",
+    "file": "shell-ipc/d2/src/pdf/tools/window.rs",
+    "find": "args.bool(0) == Some(true)",
+    "replace": "args.bool(0) != Some(false)",
+    "groups": ["d2/pdf-tools-window"]
+  },
+  {
+    "name": "a submitted password does not show the prompt busy",
+    "file": "shell-ipc/d2/src/pdf/tools/password.rs",
+    "find": "let next = with(current, \"busy\", IpcValue::Bool(true));",
+    "replace": "let next = with(current, \"busy\", IpcValue::Bool(false));",
+    "groups": ["d2/pdf-tools-password"]
+  },
+  {
+    "name": "an EPUB result is not shown in its folder",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "r\"\\.(md|epub|png|pdf)$\"",
+    "replace": "r\"\\.(md|png|pdf)$\"",
+    "groups": ["d2/pdf-tools-convert"]
+  },
+  {
+    "name": "an office export writes no file",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "move || atomic_write_file(&target, &bytes).map_err(|e| e.message),",
+    "replace": "move || { let _ = (&target, &bytes); Ok::<(), String>(()) },",
+    "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "an office export shows no progress",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "ctx.shell.set_progress_bar(self.host, 2.0);",
+    "replace": "",
+    "groups": ["d2/pdf-tools-office"]
+  },
+  {
+    "name": "the Hangul copy is made without a tab manager",
+    "file": "shell-ipc/d2/src/pdf/tools/convert.rs",
+    "find": "if !self.ctx.shell.has_tab_manager() {",
+    "replace": "if false {",
+    "groups": ["d2/pdf-tools-office"]
+  }
+]
