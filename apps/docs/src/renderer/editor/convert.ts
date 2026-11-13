@@ -1089,7 +1089,8 @@ function blockToPmNode(
           strayAlign: block.strayAlign ?? null,
           strayList: block.strayList ?? null,
           formulaDisplay: block.formulaDisplay ?? null,
-          chartDisplay: block.chartDisplay ?? null,
+          // the hiding label travels as the block's own (escaped) `redact`
+          chartDisplay: block.chartDisplay ? { ...block.chartDisplay, redact: undefined } : null,
         },
       }
   }

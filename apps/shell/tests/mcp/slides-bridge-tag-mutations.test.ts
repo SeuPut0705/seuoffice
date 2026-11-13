@@ -72,3 +72,31 @@ describe.each(VARIANTS)('slide tags rewritten: %s', (mutation) => {
     expect(await control.deckWithholds!(1)).toBe(true)
   })
 })
+
+describe.each(['K', 'A'] as const)(
+  'a chart with its %s text run hidden, nothing else hidden',
+  (tag) => {
+    it('is a deck that withholds, and a withholding readout gives the chart no word', async () => {
+      const file = await mutatedHiddenDeck(
+        mkdtempSync(join(tmpdir(), 'bridge-chart-')),
+        'none',
+        'chart.pptx',
+        [tag],
+      )
+      sessions.set(2, { opened: await openPptx(new Uint8Array(readFileSync(file))) })
+      expect(await control.deckWithholds!(2)).toBe(true)
+      expect(JSON.stringify(await control.readDeck(2, { withhold: true }))).not.toContain(SECRET)
+    })
+
+    it('a deck with only the plain chart withholds nothing', async () => {
+      const file = await mutatedHiddenDeck(
+        mkdtempSync(join(tmpdir(), 'bridge-chart-')),
+        'none',
+        'plain.pptx',
+        [],
+      )
+      sessions.set(3, { opened: await openPptx(new Uint8Array(readFileSync(file))) })
+      expect(await control.deckWithholds!(3)).toBe(false)
+    })
+  },
+)

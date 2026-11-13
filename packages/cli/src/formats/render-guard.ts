@@ -49,6 +49,54 @@ async function anyMarkIn(zip: JSZip, paths: string[]): Promise<boolean> {
   return false
 }
 
+const RELATIONSHIP = /<Relationship\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
+const attribute = (tag: string, name: string): string | undefined =>
+  new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i')
+    .exec(tag)
+    ?.slice(1)
+    .find((v) => v !== undefined)
+
+/** where a relationship's target is, in the package, from the part that names it */
+function resolveTarget(from: string, target: string): string {
+  const parts = (
+    target.startsWith('/') ? target.slice(1) : `${from.replace(/[^/]*$/, '')}${target}`
+  ).split('/')
+  const out: string[] = []
+  for (const part of parts) {
+    if (part === '..') out.pop()
+    else if (part !== '.' && part !== '') out.push(part)
+  }
+  return out.join('/')
+}
+
+/** the parts a package part points at through its relationships, internal ones only */
+async function relatedParts(zip: JSZip, part: string): Promise<string[]> {
+  const rels = zip.file(part.replace(/([^/]*)$/, '_rels/$1.rels'))
+  if (!rels) return []
+  const xml = await rels.async('string')
+  return [...xml.matchAll(RELATIONSHIP)]
+    .filter((m) => attribute(m[0], 'TargetMode')?.toLowerCase() !== 'external')
+    .map((m) => attribute(m[0], 'Target'))
+    .filter((t): t is string => t !== undefined)
+    .map((t) => resolveTarget(part, t))
+}
+
+/**
+ * What the renderer draws for a slide besides its own XML: the chart parts (their titles, axis
+ * titles and data labels are rich text) and the diagram parts (SmartArt data and drawing) the
+ * slide points at, and the drawings those charts point at in turn (user shapes).
+ */
+async function drawnWith(zip: JSZip, slide: string): Promise<string[]> {
+  const direct = (await relatedParts(zip, slide)).filter((p) =>
+    /^ppt\/(?:charts|diagrams|drawings)\/.*\.xml$/.test(p),
+  )
+  const nested = await Promise.all(direct.map((p) => relatedParts(zip, p)))
+  return [
+    ...direct,
+    ...nested.flat().filter((p) => /^ppt\/(?:drawings|diagrams)\/.*\.xml$/.test(p)),
+  ]
+}
+
 async function deckHoldsMark(
   zip: JSZip,
   bytes: Uint8Array,
@@ -61,7 +109,10 @@ async function deckHoldsMark(
         .filter((_, index) => only === undefined || index === only)
         .map((s) => s.path)
     : Object.keys(zip.files).filter((p) => /^ppt\/slides\/[^/]+\.xml$/.test(p))
-  return anyMarkIn(zip, slides)
+  for (const slide of slides) {
+    if (await anyMarkIn(zip, [slide, ...(await drawnWith(zip, slide))])) return true
+  }
+  return false
 }
 
 async function documentHoldsMark(zip: JSZip): Promise<boolean> {

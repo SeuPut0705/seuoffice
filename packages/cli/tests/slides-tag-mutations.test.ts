@@ -57,6 +57,10 @@ function expectStoriesWithheld(texts: string[], listing: string): void {
   // the pictures nobody hid stay listed, and the hidden ones are not named
   expect(listing).toContain('Plain photo')
   expect(listing).toContain('Grouped plain photo')
+  // a chart with hidden text in it is named by its marker, the plain one is listed as it is
+  expect(listing).toContain('Plain chart')
+  expect(listing).not.toMatch(/"name":"Chart"/)
+  expect(listing).toContain(`"name":"${PLACEHOLDER}"`)
   const shown = texts.join('\n')
   expect(shown).toMatch(new RegExp(`^(Call|Ring) ${PLACEHOLDER} now$`, 'm'))
   expect(shown).toMatch(new RegExp(`^(Phone|Zed) \\| (Tel|Phone) ${PLACEHOLDER}$`, 'm'))

@@ -149,9 +149,13 @@ export function elementText(xml: string, element: XmlElement): string {
 /// the patterns cannot read; a smaller one is always read token by token.
 const LARGE_PART_CHARS = 2 * 1024 * 1024
 
-/// What the cheap test looks for. All of it sits inside a tag or is itself
-/// markup, so ordinary text (a formula with `=` in it) does not trip it.
-const NON_CANONICAL = /<!--|<!\[CDATA\[|<\/[^>\s]+\s+>|<[^<>]*(?:='|\s=|=\s)/
+/// What the cheap test looks for: a comment, a CDATA section, an end tag with
+/// space before its `>`, a single-quoted value, space around `=`, and a `>`
+/// inside a double-quoted value (`="` then text with no quote or `<` then `>`:
+/// in a tag written canonically that run is always closed by the `"` first).
+/// A false hit only costs the full rewrite; a miss would leave a spelling the
+/// patterns cannot read, so the cells and the marks would move apart.
+const NON_CANONICAL = /<!--|<!\[CDATA\[|<\/[^>\s]+\s+>|<[^<>]*(?:='|\s=|=\s)|="[^"<]*>/
 
 /// The part written the way the patterns that edit the serialized text read
 /// it: attributes as ` name="value"` (single quotes, spaces around `=` and a

@@ -41,6 +41,7 @@ const CONTENT_OPS = new Set([
   'insertEquation',
   'pasteElements',
   'setShapeCustomGeometry',
+  'setChart',
 ])
 
 type Paragraphs =

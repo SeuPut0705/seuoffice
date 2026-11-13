@@ -21,7 +21,9 @@ export const PICTURE_TAGS = ['P', 'Q', 'S'] as const
 /** a hidden run whose words are the placeholder itself: a reader that compares texts finds nothing withheld */
 export const ECHO_TAG = 'E'
 /** the stories of the whole deck; the echo is left out, as it is a case of its own */
-export const ALL_STORIES = [...STORY_TAGS, ...PICTURE_TAGS] as const
+/** a chart whose title run (K) and category axis title run (A) are marked hidden */
+export const CHART_TAGS = ['K', 'A'] as const
+export const ALL_STORIES = [...STORY_TAGS, ...PICTURE_TAGS, ...CHART_TAGS] as const
 /** the runs of the slide that hold the secret: body, table cell, grouped shape, field, picture-filled shape */
 export const SECRET_RUNS = 5
 
@@ -51,6 +53,33 @@ const storyRun = (tag: StoryTag, marked: ReadonlySet<StoryTag>) =>
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 const IMAGE_REL = 'rId91'
+const CHART_REL = 'rId92'
+const PLAIN_CHART_REL = 'rId93'
+const C = 'http://schemas.openxmlformats.org/drawingml/2006/chart'
+const CHART_CT = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml'
+
+/** a chart part: its title and category axis title are rich text, the runs of the two stories when marked */
+const chartXml = (title: string, axisTitle: string) => {
+  const rich = (run: string) =>
+    `<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>${run}</a:p></c:rich></c:tx>`
+  return (
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="${C}" xmlns:a="${A}" xmlns:r="${R}">` +
+    `<c:chart><c:title>${rich(title)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>` +
+    '<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:ser><c:idx val="0"/><c:order val="0"/>' +
+    '<c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strCache></c:strRef></c:tx>' +
+    '<c:cat><c:strRef><c:f>Sheet1!$A$2:$A$3</c:f><c:strCache><c:ptCount val="2"/><c:pt idx="0"><c:v>One</c:v></c:pt><c:pt idx="1"><c:v>Two</c:v></c:pt></c:strCache></c:strRef></c:cat>' +
+    '<c:val><c:numRef><c:f>Sheet1!$C$2:$C$3</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numCache></c:numRef></c:val>' +
+    '</c:ser><c:axId val="1"/><c:axId val="2"/></c:barChart>' +
+    `<c:catAx><c:axId val="1"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:title>${rich(axisTitle)}<c:overlay val="0"/></c:title><c:crossAx val="2"/></c:catAx>` +
+    '<c:valAx><c:axId val="2"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>' +
+    '</c:plotArea><c:plotVisOnly val="1"/></c:chart></c:chartSpace>'
+  )
+}
+
+const chartFrame = (id: number, name: string, rel: string, y: number) =>
+  `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${id}" name="${name}"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>` +
+  `<p:xfrm><a:off x="5200000" y="${y}"/><a:ext cx="3000000" cy="1500000"/></p:xfrm>` +
+  `<a:graphic><a:graphicData uri="${C}"><c:chart xmlns:c="${C}" xmlns:r="${R}" r:id="${rel}"/></a:graphicData></a:graphic></p:graphicFrame>`
 
 const XFRM = (x: number, y: number) =>
   `<a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="300000" cy="300000"/></a:xfrm>`
@@ -144,6 +173,8 @@ const slideXml = (marked: ReadonlySet<StoryTag>) =>
   hiddenPicture('P', 9, 5200000, 500000, marked) +
   picture(10, 'Plain photo', 'plain control alt', 5600000, 500000) +
   textured(marked) +
+  chartFrame(14, 'Chart', CHART_REL, 2400000) +
+  chartFrame(15, 'Plain chart', PLAIN_CHART_REL, 4000000) +
   '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>'
 
 const commentsXml = (marked: ReadonlySet<StoryTag>) =>
@@ -190,13 +221,19 @@ export async function hiddenDeckBytes(
       `<Relationship Id="rId90" Type="${REL_MODERN_COMMENTS}" Target="../comments/comment1.xml"/></Relationships>`,
     ),
   )
+  const titleRun = (tag: 'K' | 'A', words: string) =>
+    marked.has(tag) ? storyRun(tag, marked) : plain(words)
+  zip.file('ppt/charts/chart1.xml', chartXml(titleRun('K', 'Revenue'), titleRun('A', 'Quarter')))
+  zip.file('ppt/charts/chart2.xml', chartXml(plain('Plain revenue'), plain('Plain quarter')))
   zip.file('ppt/media/image1.png', PNG_BASE64, { base64: true })
   const slideRels = await zip.file('ppt/slides/_rels/slide1.xml.rels')!.async('string')
   zip.file(
     'ppt/slides/_rels/slide1.xml.rels',
     slideRels.replace(
       '</Relationships>',
-      `<Relationship Id="${IMAGE_REL}" Type="${R}/image" Target="../media/image1.png"/></Relationships>`,
+      `<Relationship Id="${IMAGE_REL}" Type="${R}/image" Target="../media/image1.png"/>` +
+        `<Relationship Id="${CHART_REL}" Type="${R}/chart" Target="../charts/chart1.xml"/>` +
+        `<Relationship Id="${PLAIN_CHART_REL}" Type="${R}/chart" Target="../charts/chart2.xml"/></Relationships>`,
     ),
   )
   const types = await zip.file('[Content_Types].xml')!.async('string')
@@ -207,6 +244,8 @@ export async function hiddenDeckBytes(
       (types.includes('Extension="png"')
         ? ''
         : '<Default Extension="png" ContentType="image/png"/>') +
+        `<Override PartName="/ppt/charts/chart1.xml" ContentType="${CHART_CT}"/>` +
+        `<Override PartName="/ppt/charts/chart2.xml" ContentType="${CHART_CT}"/>` +
         '<Override PartName="/ppt/comments/comment1.xml" ContentType="application/vnd.ms-powerpoint.comments+xml"/>' +
         '<Override PartName="/ppt/authors.xml" ContentType="application/vnd.ms-powerpoint.authors+xml"/></Types>',
     ),
