@@ -125,6 +125,9 @@ const RESTARTS_THAT_MAY_READ_AHEAD: &[(&str, usize)] = &[
     ("docx-engine/src/save/save/helpers.rs", 1),
     // one search per SDT, over a pattern held in a constant
     ("docx-engine/src/sdt.rs", 1),
+    // commentEntries: a search restarts only where a match began inside the
+    // comment just read and ended past it
+    ("docx-engine/src/withheld.rs", 1),
     // one pass over the attributes of one tag
     ("ooxml-pkg/src/normalize.rs", 1),
     // scanSlide: one pass over the shape tree, once per part it scans

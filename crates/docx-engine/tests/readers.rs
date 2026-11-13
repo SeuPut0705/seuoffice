@@ -492,10 +492,10 @@ fn the_raw_ppr_scan_keeps_the_quirks_of_the_original() {
         props::raw_ppr_of("<w:p><w:pPrChange/><w:pPr/></w:p>"),
         Some("<w:pPrChange/><w:pPr/>")
     );
-    // a closer with white space in it is not seen
+    // a closer with white space before its `>` closes it (main 3f9c4cebb)
     assert_eq!(
         props::raw_ppr_of("<w:p><w:pPr\t><w:keepNext/></w:pPr\t></w:p>"),
-        None
+        Some("<w:pPr\t><w:keepNext/></w:pPr\t>")
     );
 }
 

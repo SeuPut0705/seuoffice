@@ -25,7 +25,7 @@ import type {
   TableModel,
 } from './types'
 import { EMPHASIS_MARKS, TEXT_EFFECTS } from './types'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { escapeXmlAttr, escapeXmlText, maskOpaque } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
 import {
@@ -37,7 +37,7 @@ import {
   xmlPositiveCoordinate,
   xmlUnsignedInt,
 } from './xml-number'
-import { removeElements } from './xml-tag'
+import { findStartTag, removeElements, replaceSegments, xmlSegments } from './xml-tag'
 
 export interface GenerateContext {
   /** heading level -> styleId existing in the original styles.xml */
@@ -599,53 +599,6 @@ export function patchMathTokens(xml: string, tokens: readonly string[]): string 
 
 // ---- table cell text patching ----
 
-/** top-level segments of `tag` between [from, to), depth-aware for nesting */
-export function xmlSegments(
-  xml: string,
-  tag: string,
-  from: number,
-  to: number,
-): Array<{ start: number; end: number }> {
-  const openPrefix = '<' + tag
-  const closeTag = '</' + tag + '>'
-  const segs: Array<{ start: number; end: number }> = []
-  let depth = 0
-  let segStart = -1
-  let i = from
-  while (i < to) {
-    const o = xml.indexOf(openPrefix, i)
-    const c = xml.indexOf(closeTag, i)
-    const hasOpen = o !== -1 && o < to
-    const hasClose = c !== -1 && c < to
-    // a trailing self-closing element (Word's empty <w:p/>) has no close tag after it
-    if (!hasOpen && !hasClose) break
-    if (hasOpen && (!hasClose || o < c)) {
-      const after = xml.charAt(o + openPrefix.length)
-      if (after !== '>' && after !== ' ' && after !== '/') {
-        i = o + openPrefix.length // prefix of a longer tag (w:tr vs w:trPr)
-        continue
-      }
-      const gt = xml.indexOf('>', o)
-      if (gt !== -1 && xml.charAt(gt - 1) === '/') {
-        if (depth === 0) segs.push({ start: o, end: gt + 1 }) // self-closing
-        i = gt + 1
-        continue
-      }
-      if (depth === 0) segStart = o
-      depth++
-      i = o + openPrefix.length
-    } else if (depth === 0) {
-      break
-    } else {
-      depth--
-      if (depth === 0) segs.push({ start: segStart, end: c + closeTag.length })
-      if (depth < 0) break
-      i = c + closeTag.length
-    }
-  }
-  return segs
-}
-
 /**
  * Rebuild one cell's paragraphs, keeping tcPr. String entries keep the legacy
  * behavior (first paragraph's pPr / first run's rPr for every paragraph); rich
@@ -954,9 +907,10 @@ function patchTxbxContent(
   paras: ReadonlyArray<TextboxParaPatch | null | undefined>,
   part: ContentControlPart,
 ): string {
-  const open = /^<w:txbxContent(?: [^>]*)?>/.exec(segXml)?.[0]
-  if (!open) return segXml
-  const pSegs = xmlSegments(segXml, 'w:p', open.length, segXml.length - '</w:txbxContent>'.length)
+  const open = findStartTag(segXml, 'w:txbxContent')?.text
+  const close = /<\/w:txbxContent\s*>$/.exec(segXml)?.[0]
+  if (!open || !close) return segXml
+  const pSegs = xmlSegments(segXml, 'w:p', open.length, segXml.length - close.length)
   if (pSegs.length === 0) return segXml
   const originals = pSegs.map((s) => segXml.slice(s.start, s.end))
   const parts: string[] = []
@@ -975,7 +929,7 @@ function patchTxbxContent(
     // survive re-generation, new links degrade to plain text
     parts.push(`<w:p>${pPr}${runsXml(patch.runs, null, { part })}</w:p>`)
   }
-  return open + parts.join('') + '</w:txbxContent>'
+  return open + parts.join('') + close
 }
 
 /**
@@ -1004,12 +958,7 @@ export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPat
   const segs = xmlSegments(paragraphXml, 'w:txbxContent', 0, paragraphXml.length)
   let xml = paragraphXml
   if (segs.length > 0 && byIndex.length > 0) {
-    const fallbacks: Array<{ start: number; end: number }> = []
-    const fbRe = /<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g
-    let fb: RegExpExecArray | null
-    while ((fb = fbRe.exec(paragraphXml)) !== null) {
-      fallbacks.push({ start: fb.index, end: fb.index + fb[0].length })
-    }
+    const fallbacks = xmlSegments(paragraphXml, 'mc:Fallback', 0, paragraphXml.length)
     const inFallback = (pos: number) => fallbacks.some((f) => pos >= f.start && pos < f.end)
 
     let out = ''
@@ -1160,7 +1109,7 @@ export function patchTextboxHeights(
   let resizedXml = out + paragraphXml.slice(cursor)
 
   let fallbackIndex = -1
-  resizedXml = resizedXml.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g, (fallback) => {
+  resizedXml = replaceSegments(resizedXml, 'mc:Fallback', (fallback) => {
     if (!fallback.includes('<w:txbxContent') || paraPlainText(fallback) === '') return fallback
     fallbackIndex++
     const heightPx = heightsPx[fallbackIndex]
@@ -1226,7 +1175,7 @@ export function patchTextboxSizes(
   let resizedXml = out + paragraphXml.slice(cursor)
 
   let fallbackIndex = -1
-  resizedXml = resizedXml.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g, (fallback) => {
+  resizedXml = replaceSegments(resizedXml, 'mc:Fallback', (fallback) => {
     if (!isBoxDrawing(fallback) && !fallback.includes('<w:txbxContent')) return fallback
     if (fallback.includes('<w:txbxContent') && paraPlainText(fallback) === '') return fallback
     fallbackIndex++
@@ -1678,18 +1627,21 @@ const FORMAT_MANAGED_TAGS = new Set([
 export function splitXmlChildren(xml: string): PPrChild[] {
   const out: PPrChild[] = []
   const tagRe = /<(\/?)([A-Za-z0-9:._-]+)((?:"[^"]*"|'[^']*'|[^"'>])*)>/g
+  // tags are found where comments and CDATA cannot fake one; bytes come from xml
+  const masked = maskOpaque(xml)
   let depth = 0
   let start = -1
   let name = ''
   let match: RegExpExecArray | null
-  while ((match = tagRe.exec(xml)) !== null) {
+  while ((match = tagRe.exec(masked)) !== null) {
     const closing = match[1] === '/'
     const selfClosing = match[3].endsWith('/')
     if (closing) {
       depth--
       if (depth === 0) out.push({ name, xml: xml.slice(start, match.index + match[0].length) })
     } else if (selfClosing) {
-      if (depth === 0) out.push({ name: match[2], xml: match[0] })
+      if (depth === 0)
+        out.push({ name: match[2], xml: xml.slice(match.index, match.index + match[0].length) })
     } else {
       if (depth === 0) {
         start = match.index

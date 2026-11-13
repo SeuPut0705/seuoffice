@@ -292,6 +292,20 @@ export const GEN_PROPS: CallSpec[] = [
     fn: 'genProps.splitXmlChildren',
     call: (text) => splitXmlChildren(text),
     fromDocument: (parts) => texts(corpusPPrs(parts).map((p) => p.replace(/^<w:pPr[^>]*>|<\/w:pPr>$/g, ''))),
-    built: texts([...RAWS, '<a><b></a>', '</x><y/>', "<w:t a='>'>x</w:t><c/>"]),
+    built: texts([
+      ...RAWS,
+      '<a><b></a>',
+      '</x><y/>',
+      "<w:t a='>'>x</w:t><c/>",
+      // a comment, CDATA or a processing instruction that fakes a tag or hides one
+      '<w:r><!-- </w:r> --><w:t>a</w:t></w:r><w:b/>',
+      '<w:r><w:t><![CDATA[</w:r><w:r>]]></w:t></w:r><w:i/>',
+      '<w:r><?pi </w:r> ?></w:r><w:u/>',
+      '<!-- <w:b/> --><w:i/><![CDATA[<w:u/>]]><?pi <w:u/> ?>',
+      '<w:a/><!-- never closed <w:b/>',
+      '<w:a><!--></w:a>--></w:a><w:b/>',
+      '<w:rFonts w:ascii="\u{1F600}"/><!-- \u{1F600} --><w:b w:x=\'<!-- x -->\'/>',
+      '<w:a w:x="<![CDATA["/><w:b/>]]>',
+    ]),
   },
 ]

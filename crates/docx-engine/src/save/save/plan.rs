@@ -32,6 +32,7 @@ use crate::section::{hf_reference_r_id, hf_reference_tags, hf_reference_type};
 use crate::sources::{CUSTOM_XML_REL_TYPE, find_sources_part};
 use crate::theme::THEME_PART_PATH;
 use crate::watermark::{BoxPt, Watermark, is_picture_watermark, read_picture_watermark};
+use crate::withheld::comment_entries;
 
 pub const NUMBERING_PATH: &str = "word/numbering.xml";
 pub const STYLES_PATH: &str = "word/styles.xml";
@@ -242,7 +243,7 @@ impl Saver<'_> {
                     };
                     let path = self.land_media(&MediaSource {
                         base64: &picture.base64,
-                        mime: picture.mime,
+                        mime: picture.mime.clone(),
                         source_part: None,
                     });
                     let target = path.strip_prefix("word/").unwrap_or(&path);
@@ -636,7 +637,7 @@ impl Saver<'_> {
             for pic in numbering.pic_bullets.as_deref().unwrap_or_default() {
                 let media_path = self.land_media(&MediaSource {
                     base64: &pic.base64,
-                    mime: pic.mime,
+                    mime: pic.mime.clone(),
                     source_part: None,
                 });
                 let r_id = format!("rId{}", number_to_string(rel_num));
@@ -755,16 +756,8 @@ impl Saver<'_> {
                 .text("word/_rels/comments.xml.rels")
                 .map_err(|e| e.to_string())?
                 .map(str::to_owned);
-            for found in try_js_regex!(r"<w:comment\s[^>]*>[\s\S]*?<\/w:comment>", "g")
-                .try_find_iter(original)
-            {
-                let comment = found.map_err(limit)?.as_str().to_owned();
-                let Some(id) = js_regex!(r#"w:id="([^"]+)""#)
-                    .exec(&comment)
-                    .and_then(|f| f.get(1).map(str::to_owned))
-                else {
-                    continue;
-                };
+            for entry in comment_entries(original).map_err(limit)? {
+                let (id, comment) = (entry.id, entry.xml);
                 let blip_rel = js_regex!(r#"r:embed="([^"]+)""#)
                     .exec(&comment)
                     .and_then(|f| f.get(1).map(str::to_owned));
@@ -842,10 +835,10 @@ impl Saver<'_> {
                 }
                 let media_path = self.land_media(&MediaSource {
                     base64: &image.base64,
-                    mime: image.mime,
+                    mime: image.mime.clone(),
                     source_part: None,
                 });
-                self.note_extension(image_ext(image.mime));
+                self.note_extension(image_ext(&image.mime));
                 rel_seq += 1.0;
                 let r_id = format!("rId{}", number_to_string(rel_seq));
                 let target = media_path.strip_prefix("word/").unwrap_or(&media_path);

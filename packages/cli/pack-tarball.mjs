@@ -42,6 +42,7 @@ const REQUIRED = [
   'wasm/pdfium.wasm',
   'wasm/rhwp_bg.wasm',
   'wasm/hb-subset.wasm',
+  'wasm/office_wasm.wasm',
   'native/xlsx-sidecar',
 ]
 

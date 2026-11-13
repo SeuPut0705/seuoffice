@@ -151,11 +151,14 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
         with:
           toolchain: stable
+          targets: wasm32-wasip1
 
-      - name: Cache cargo (xlsx-sidecar)
+      - name: Cache cargo (xlsx-sidecar, office-wasm)
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          workspaces: apps/sheets/native/xlsx-engine
+          workspaces: |
+            apps/sheets/native/xlsx-engine
+            crates
 
       - name: Cache electron binaries
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -398,11 +401,14 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
         with:
           toolchain: stable
+          targets: wasm32-wasip1
 
-      - name: Cache cargo (xlsx-sidecar)
+      - name: Cache cargo (xlsx-sidecar, office-wasm)
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          workspaces: apps/sheets/native/xlsx-engine
+          workspaces: |
+            apps/sheets/native/xlsx-engine
+            crates
 
       - name: Cache electron binaries
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -641,6 +647,10 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           node -e "const fs=require('fs');for(const f of ['packages/embed/package.json','packages/collab/package.json','apps/web/package.json']){const p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')}"
+
+      # the docx engine of every module is crates/office-wasm
+      - name: Build the engine wasm
+        run: npm run build:wasm
 
       - name: Build the web bundle
         run: npm run build -w @seuoffice/web

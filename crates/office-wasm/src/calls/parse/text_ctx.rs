@@ -10,7 +10,7 @@ use docx_engine::model::{Block, Run};
 use docx_engine::numbering::parse_numbering;
 use docx_engine::parse::drawings::host::{MediaEnv, NoHost};
 use docx_engine::parse::text::{self, BuildContext, ZoteroFieldParagraph};
-use docx_engine::resolve::{ResolveCtx, TableCond};
+use docx_engine::resolve::ResolveCtx;
 use jscompat::{JsMap, JsNum};
 use serde_json::Value;
 
@@ -70,10 +70,18 @@ fn with_build_ctx(args: &Value, call: impl FnOnce(&BuildContext<'_>) -> Returned
 
 fn cell_resolver_of(_text: &str, args: &Value) -> Returned {
     let table_style_id: Option<String> = arg(args, "tableStyleId")?;
-    let cond: Vec<TableCond> = required(args, "cond")?;
     with_build_ctx(args, |ctx| {
-        let scoped = text::cell_resolver_of(ctx, table_style_id.as_deref(), &cond);
-        value(serde_json::json!({ "table": scoped.table, "compat": scoped.compat }))
+        // The TypeScript stores `cond` as given, whatever its elements are;
+        // only the compat is read from the scoped resolver.
+        let scoped = text::cell_resolver_of(ctx, table_style_id.as_deref(), &[]);
+        let mut table = serde_json::Map::new();
+        if let Some(id) = table_style_id.as_deref().filter(|id| !id.is_empty()) {
+            table.insert("styleId".to_owned(), Value::String(id.to_owned()));
+        }
+        if let Some(cond) = args.get("cond") {
+            table.insert("cond".to_owned(), cond.clone());
+        }
+        value(serde_json::json!({ "table": table, "compat": scoped.compat }))
     })
 }
 
@@ -145,11 +153,37 @@ fn char_units_of(text: &str, args: &Value) -> Returned {
     })
 }
 
-/// The block comes as `args.block`, the paragraph XML as the text.
+/// The block comes as `args.block`, the paragraph XML as the text. The block
+/// stays the JSON object it is: the function only reads and sets one key.
 fn attach_inline_content_controls(text: &str, args: &Value) -> Returned {
-    let mut block: Block = required(args, "block")?;
-    text::attach_inline_content_controls(&mut block, text).map_err(|limit| limit.to_string())?;
-    value(block)
+    let Some(Value::Object(block)) = args.get("block") else {
+        return Err(
+            "TypeError: Cannot read properties of non-object (reading 'inlineContentControls')"
+                .to_owned(),
+        );
+    };
+    let mut block = block.clone();
+    let present = match block.get("inlineContentControls") {
+        None | Some(Value::Null) | Some(Value::Bool(false)) => false,
+        Some(Value::String(s)) => !s.is_empty(),
+        Some(Value::Number(n)) => n.as_f64().is_some_and(|n| n != 0.0 && !n.is_nan()),
+        Some(_) => true,
+    };
+    let is_para = text.strip_prefix("<w:p").is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_some_and(|c| c.is_whitespace() || c == '\u{feff}' || c == '/' || c == '>')
+    });
+    if !present && is_para {
+        let inline = text::inline_content_controls_of(text);
+        if !inline.is_empty() {
+            block.insert(
+                "inlineContentControls".to_owned(),
+                serde_json::to_value(inline).map_err(|error| error.to_string())?,
+            );
+        }
+    }
+    value(Value::Object(block))
 }
 
 fn theme_colors_of(
@@ -191,7 +225,16 @@ fn ppr_only_format(text: &str, args: &Value) -> Returned {
 }
 
 fn resolved_para_format(text: &str, args: &Value) -> Returned {
-    let eff: docx_engine::resolve::EffectivePPr = required(args, "eff")?;
+    let mut eff: docx_engine::resolve::EffectivePPr = required(args, "eff")?;
+    // `align` is not deserialized: the resolver only ever produces these five
+    eff.align = match args.pointer("/eff/align").and_then(Value::as_str) {
+        Some("left") => Some("left"),
+        Some("center") => Some("center"),
+        Some("right") => Some("right"),
+        Some("justify") => Some("justify"),
+        Some("distribute") => Some("distribute"),
+        _ => None,
+    };
     with_build_ctx(args, |ctx| {
         let theme = theme_colors_of(ctx, args)?;
         with_node(text, args, |p_pr| {

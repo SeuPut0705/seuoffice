@@ -5,7 +5,10 @@
 
 use std::sync::LazyLock;
 
-use jscompat::{RegexLimit, js_regex};
+use jscompat::{
+    RegexError, RegexLimit, TryJsRegex, js_regex, try_js_regex, try_replace_first_with,
+};
+use ooxml_xml::mask_opaque;
 
 use crate::generate::split_xml_children;
 use crate::inline_opaque::{PartNamespaces, part_namespaces};
@@ -88,6 +91,38 @@ pub fn is_text_para(name: &str, xml: &str) -> bool {
     name == "w:p" && !is_watermark_child(name, xml) && !is_protected_para(xml)
 }
 
+/// `hfRootOpen`: the opening tag of a header/footer part written anew. Content
+/// the rewrite keeps from the original part (a picture's drawing, a run's mark)
+/// uses the prefixes the original root declares and may be named in its
+/// mc:Ignorable, so the new root is the original's with the prefixes of
+/// `HF_ROOT_ATTRS` added where it lacks them.
+pub fn hf_root_open(root: HfRootName, original_xml: Option<&str>) -> Result<String, RegexError> {
+    let root = root.as_str();
+    let fresh = format!("<{root}{}>", hf_root_attrs());
+    let Some(original) = original_xml
+        .filter(|xml| !xml.is_empty())
+        .and_then(|xml| find_start_tag(xml, TagName::Exact(root), 0))
+    else {
+        return Ok(fresh);
+    };
+    if original.text.ends_with("/>") {
+        return Ok(fresh);
+    }
+    let mut open = original.text.to_owned();
+    let attrs = hf_root_attrs();
+    for found in try_js_regex!(r#"xmlns:([\w.-]+)="([^"]*)""#, "g").try_find_iter(&attrs) {
+        let found = found?;
+        let (prefix, uri) = (found.get(1).unwrap_or(""), found.get(2).unwrap_or(""));
+        let declared = TryJsRegex::new(&format!(r"\sxmlns:{prefix}\s*="), "")?.try_test(&open)?;
+        if !declared {
+            open = try_replace_first_with(try_js_regex!(r"\s*>$"), &open, |_| {
+                format!(" xmlns:{prefix}=\"{uri}\">")
+            })?;
+        }
+    }
+    Ok(open)
+}
+
 /// `hfKeptRoot`: the original part split at its root, when the rewritten part
 /// keeps that root: it holds something besides text paragraphs (a table, a
 /// block control, a paragraph with a drawing the text model does not carry),
@@ -101,7 +136,7 @@ pub fn hf_kept_root(
     let Some(root_tag) = find_start_tag(original_xml, TagName::Exact(root), 0) else {
         return Ok(None);
     };
-    let Some(close_idx) = original_xml.rfind(&format!("</{root}>")) else {
+    let Some(close_idx) = mask_opaque(original_xml).rfind(&format!("</{root}>")) else {
         return Ok(None);
     };
     let (open, open_idx) = (root_tag.text, root_tag.start);

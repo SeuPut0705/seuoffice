@@ -12,7 +12,7 @@ use super::extract_runs::extract_runs_plain;
 use super::note_run_of;
 use crate::model::{NoteInfo, NoteInfoSpacing};
 use crate::notes::{NoteKind, NoteParagraph, parse_notes_xml_with};
-use crate::package::{Thrown, parse_part, part_text};
+use crate::package::{Thrown, canonical_part_text, parse_part};
 use crate::parse::drawings::host::{MediaEnv, NoHost};
 use crate::resolve::{
     ResolveCompat, ResolveCtx, ResolveParaOptions, effective_spacing_twips,
@@ -77,29 +77,41 @@ pub fn parse_notes_part(
     kind: NoteKind,
     ctx: &BuildContext<'_>,
 ) -> Result<Vec<NoteInfo>, Thrown> {
-    let Some(xml) = part_text(zip, note_part_path(kind))? else {
+    let Some(xml) = canonical_part_text(zip, note_part_path(kind))? else {
         return Ok(Vec::new());
     };
     let mut read = note_paragraph_reader(ctx);
-    parse_notes_xml_with(xml, kind, &mut read)
+    parse_notes_xml_with(&xml, kind, &mut read)
 }
 
-/// `standaloneNoteParagraphReader`'s notes: a notes part on its own (no
-/// styles: builtin defaults; tests, tools).
-pub fn parse_notes_standalone(xml: &str, kind: NoteKind) -> Result<Vec<NoteInfo>, Thrown> {
-    let resolver = ResolveCtx {
-        styles: JsMap::new(),
-        numbering: JsMap::new(),
+/// The resolver of `standaloneNoteParagraphReader`: no styles, builtin defaults.
+fn standalone_resolver() -> ResolveCtx {
+    ResolveCtx {
+        styles: Rc::new(JsMap::new()),
+        numbering: Rc::new(JsMap::new()),
         compat: ResolveCompat {
             mode: jscompat::JsNum(0.0),
             additive_para_spacing: false,
             indent_not_numbering_tab_stop: false,
         },
         ..ResolveCtx::default()
-    };
+    }
+}
+
+/// `standaloneNoteParagraphReader`'s notes: a notes part on its own (no
+/// styles: builtin defaults; tests, tools).
+pub fn parse_notes_standalone(xml: &str, kind: NoteKind) -> Result<Vec<NoteInfo>, Thrown> {
     let package = Package::default();
     let media = MediaEnv::new(&NoHost);
-    let ctx = BuildContext::bare(&package, Rc::new(resolver), &media);
+    let ctx = BuildContext::bare(&package, Rc::new(standalone_resolver()), &media);
     let mut read = note_paragraph_reader(&ctx);
     parse_notes_xml_with(xml, kind, &mut read)
+}
+
+/// `standaloneNoteParagraphReader()(pXml)`: one `<w:p>` slice read on its own.
+pub fn read_note_paragraph_standalone(p_xml: &str) -> Result<NoteParagraph, Thrown> {
+    let package = Package::default();
+    let media = MediaEnv::new(&NoHost);
+    let ctx = BuildContext::bare(&package, Rc::new(standalone_resolver()), &media);
+    note_paragraph_reader(&ctx)(p_xml)
 }

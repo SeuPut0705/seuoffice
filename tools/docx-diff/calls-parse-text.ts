@@ -14,16 +14,27 @@ import { parseNumbering } from './reference/parse-package'
 import { parseStyles } from './reference/parse-styles'
 import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
 import { scanBody } from './reference/scan'
-import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
+import type {
+  DocDefaults,
+  NumberingDef,
+  StyleInfo,
+  ThemeColors,
+  ThemeFonts,
+} from './reference/types'
 import { parseNotesXml, type NoteKind, type NoteParagraphReader } from './reference/notes'
 import { nameOf, serializeXNode, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
+import { ENTRIES, hiddenRun, marks, NOTE_PARTS, plainRun, STORIES } from './withheld-inputs'
 import { parseInternals } from './parse-internals'
+import { lineRuleOutsideItsType } from './listed'
+import { hiddenIn } from './calls-markup'
 
 const internals = await parseInternals()
 
 const attrsOf = (value: unknown): Record<string, string> | undefined =>
-  value && typeof value === 'object' && !Array.isArray(value) &&
+  value &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
   Object.values(value).every((v) => typeof v === 'string')
     ? (value as Record<string, string>)
     : undefined
@@ -31,7 +42,8 @@ const attrsOf = (value: unknown): Record<string, string> | undefined =>
 /** A model value as it crosses JSON, taken at the call. */
 const json = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
-const isNode = (value: unknown): value is XNode => !!value && typeof value === 'object' && !Array.isArray(value)
+const isNode = (value: unknown): value is XNode =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
 
 /** A parsed node argument: its XML text and the name to find it by. */
 function nodeInput(node: unknown): { text: string; node?: string } | undefined {
@@ -47,11 +59,17 @@ function named(text: string, name: unknown): XNode | undefined {
   return (xmlParser.parse(text) as XNode[]).find((node) => nameOf(node) === name)
 }
 
-const nodeOf = (text: string, args: Record<string, unknown>): XNode | undefined => named(text, args.node)
+const nodeOf = (text: string, args: Record<string, unknown>): XNode | undefined =>
+  named(text, args.node)
 
 // ---------------------------------------------------------------- contexts
 
-const CTX_PARTS = ['word/styles.xml', 'word/numbering.xml', 'word/theme/theme1.xml', 'word/settings.xml']
+const CTX_PARTS = [
+  'word/styles.xml',
+  'word/numbering.xml',
+  'word/theme/theme1.xml',
+  'word/settings.xml',
+]
 /** Characters of parts per spec and document: every call carries its parts. */
 const PARTS_BUDGET = 400_000
 const MAX_CTX_INPUTS = 40
@@ -68,7 +86,10 @@ interface Parsed {
 
 async function parse(parts: unknown): Promise<Parsed> {
   const zip = zipOf(parts)
-  const theme = (await internals.parseTheme!(zip)) as { fonts: ThemeFonts | null; colors: ThemeColors | null }
+  const theme = (await internals.parseTheme!(zip)) as {
+    fonts: ThemeFonts | null
+    colors: ThemeColors | null
+  }
   const { styles, docDefaults } = await parseStyles(zip, theme.colors, theme.fonts)
   const { defs, formats } = await parseNumbering(zip)
   const defaultParaStyle = [...styles.values()].find((s) => s.type === 'paragraph' && s.isDefault)
@@ -104,7 +125,8 @@ async function buildCtxOf(args: Record<string, unknown>): Promise<Record<string,
   const parsed = await parsedOf(args.parts)
   const has = new Set(args.ctx as Member[])
   const ctx: Record<string, unknown> = {}
-  for (const member of MEMBERS) if (has.has(member) && parsed[member] !== undefined) ctx[member] = parsed[member]
+  for (const member of MEMBERS)
+    if (has.has(member) && parsed[member] !== undefined) ctx[member] = parsed[member]
   return ctx
 }
 
@@ -168,16 +190,23 @@ function membersOf(
       reference.values.set(name, value)
       reference.sizes.set(name, sizeOf(value))
     }
-    if (reference.values.get(name) !== value || reference.sizes.get(name) !== sizeOf(value)) return undefined
+    if (reference.values.get(name) !== value || reference.sizes.get(name) !== sizeOf(value))
+      return undefined
     present.push(name)
   }
   return present
 }
 
 /** The parts a context is read from, one array per document. */
-const ownParts = new WeakMap<ReadonlyMap<string, string>, { parts: Array<[string, string]>; cap: number }>()
+const ownParts = new WeakMap<
+  ReadonlyMap<string, string>,
+  { parts: Array<[string, string]>; cap: number }
+>()
 
-function partsOf(parts: ReadonlyMap<string, string>): { parts: Array<[string, string]>; cap: number } {
+function partsOf(parts: ReadonlyMap<string, string>): {
+  parts: Array<[string, string]>
+  cap: number
+} {
   let own = ownParts.get(parts)
   if (!own) {
     const pairs = CTX_PARTS.flatMap((name) => {
@@ -185,7 +214,10 @@ function partsOf(parts: ReadonlyMap<string, string>): { parts: Array<[string, st
       return text === undefined ? [] : [[name, text] as [string, string]]
     })
     const size = pairs.reduce((sum, [, text]) => sum + text.length, 0)
-    own = { parts: pairs, cap: Math.max(3, Math.min(MAX_CTX_INPUTS, Math.floor(PARTS_BUDGET / Math.max(1, size)))) }
+    own = {
+      parts: pairs,
+      cap: Math.max(3, Math.min(MAX_CTX_INPUTS, Math.floor(PARTS_BUDGET / Math.max(1, size)))),
+    }
     ownParts.set(parts, own)
   }
   return own
@@ -198,7 +230,11 @@ const takenByDocument = new WeakMap<ReadonlyMap<string, string>, Map<string, Set
  * The input with the document's parts, or undefined once the spec has taken
  * as many distinct ones as the parts budget allows for this document.
  */
-function withParts(fn: string, parts: ReadonlyMap<string, string>, input: Input): Input | undefined {
+function withParts(
+  fn: string,
+  parts: ReadonlyMap<string, string>,
+  input: Input,
+): Input | undefined {
   const own = partsOf(parts)
   const byFn = takenByDocument.get(parts) ?? new Map<string, Set<string>>()
   takenByDocument.set(parts, byFn)
@@ -223,11 +259,23 @@ const STYLES = `<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val="
   style('paragraph', 'Normal', '<w:rPr><w:sz w:val="24"/></w:rPr>', ' w:default="1"'),
   style('paragraph', 'Heading1', '<w:pPr><w:outlineLvl w:val="0"/></w:pPr>'),
   style('paragraph', 'Heading3', '<w:pPr><w:outlineLvl w:val="2"/></w:pPr>'),
-  style('paragraph', 'ListBullet', '<w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr><w:bidi w:val="0"/></w:pPr>'),
+  style(
+    'paragraph',
+    'ListBullet',
+    '<w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr><w:bidi w:val="0"/></w:pPr>',
+  ),
   style('paragraph', 'ListPlain', '<w:pPr><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr>'),
   style('paragraph', 'NoList', '<w:pPr><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr>', ''),
-  style('paragraph', 'RtlPara', '<w:pPr><w:bidi/></w:pPr><w:rPr><w:rtl/><w:szCs w:val="30"/></w:rPr>'),
-  style('paragraph', 'LtrPara', '<w:pPr><w:bidi w:val="0"/></w:pPr><w:rPr><w:sz w:val="40"/></w:rPr>'),
+  style(
+    'paragraph',
+    'RtlPara',
+    '<w:pPr><w:bidi/></w:pPr><w:rPr><w:rtl/><w:szCs w:val="30"/></w:rPr>',
+  ),
+  style(
+    'paragraph',
+    'LtrPara',
+    '<w:pPr><w:bidi w:val="0"/></w:pPr><w:rPr><w:sz w:val="40"/></w:rPr>',
+  ),
   style('paragraph', 'Heading7x', ''),
   style('paragraph', 'constructor', '<w:pPr><w:outlineLvl w:val="4"/></w:pPr>'),
   style('character', 'Strong', '<w:rPr><w:b/><w:color w:val="00AA00"/></w:rPr>'),
@@ -251,7 +299,12 @@ const BARE: Array<[string, string]> = []
 const PACKAGES = [RICH, PLAIN, BARE]
 
 const ALL_MEMBERS: string[] = [...MEMBERS]
-const MEMBER_SETS: string[][] = [ALL_MEMBERS, ['styles', 'docDefaults'], ['numbering', 'numFormats'], []]
+const MEMBER_SETS: string[][] = [
+  ALL_MEMBERS,
+  ['styles', 'docDefaults'],
+  ['numbering', 'numFormats'],
+  [],
+]
 
 const pPr = (inner: string): string => `<w:pPr>${inner}</w:pPr>`
 const numPr = (numId?: string, ilvl?: string): string =>
@@ -313,7 +366,12 @@ function nodeBuilt(): Input[] {
       const ctx = at % 7 === 0 ? MEMBER_SETS[(at / 7) % MEMBER_SETS.length]! : ALL_MEMBERS
       inputs.push({
         text: p ?? '',
-        args: { parts, ctx, ...(p === undefined ? {} : { node: 'w:pPr' }), ...(styleId === undefined ? {} : { styleId }) },
+        args: {
+          parts,
+          ctx,
+          ...(p === undefined ? {} : { node: 'w:pPr' }),
+          ...(styleId === undefined ? {} : { styleId }),
+        },
       })
     }
   })
@@ -355,13 +413,35 @@ const PARA_INDENT = { left: 0, right: 0, firstLine: 0 }
 const SPACING = { before: 0, after: 0, beforeAuto: false, afterAuto: false }
 
 /** `values` with its keys in `order`, the order the resolver writes them in. */
-function inOrder(order: readonly string[], values: Record<string, unknown>): Record<string, unknown> {
+function inOrder(
+  order: readonly string[],
+  values: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const key of order) if (key in values) out[key] = values[key]
   return out
 }
 
-const MARK_KEYS = ['styleId', 'cs', 'bold', 'italic', 'sizeHalfPoints', 'fonts', 'color', 'underline', 'strike', 'caps', 'vanish', 'charSpacingTwips', 'kernHalfPoints', 'vertAlign', 'bdr', 'shading', 'eastAsiaLang', 'source']
+const MARK_KEYS = [
+  'styleId',
+  'cs',
+  'bold',
+  'italic',
+  'sizeHalfPoints',
+  'fonts',
+  'color',
+  'underline',
+  'strike',
+  'caps',
+  'vanish',
+  'charSpacingTwips',
+  'kernHalfPoints',
+  'vertAlign',
+  'bdr',
+  'shading',
+  'eastAsiaLang',
+  'source',
+]
 
 const markOf = (more: Record<string, unknown> = {}): Record<string, unknown> =>
   inOrder(MARK_KEYS, {
@@ -379,7 +459,32 @@ const markOf = (more: Record<string, unknown> = {}): Record<string, unknown> =>
     ...more,
   })
 
-const EFF_KEYS = ['styleId', 'align', 'bidi', 'indent', 'spacing', 'keepNext', 'keepLines', 'pageBreakBefore', 'widowControl', 'contextualSpacing', 'suppressLineNumbers', 'snapToGrid', 'autoSpaceDE', 'autoSpaceDN', 'wordWrap', 'overflowPunct', 'tabStops', 'borders', 'shading', 'eastAsiaLang', 'list', 'mark', 'hidden', 'source']
+const EFF_KEYS = [
+  'styleId',
+  'align',
+  'bidi',
+  'indent',
+  'spacing',
+  'keepNext',
+  'keepLines',
+  'pageBreakBefore',
+  'widowControl',
+  'contextualSpacing',
+  'suppressLineNumbers',
+  'snapToGrid',
+  'autoSpaceDE',
+  'autoSpaceDN',
+  'wordWrap',
+  'overflowPunct',
+  'tabStops',
+  'borders',
+  'shading',
+  'eastAsiaLang',
+  'list',
+  'mark',
+  'hidden',
+  'source',
+]
 
 const effOf = (more: Record<string, unknown> = {}): Record<string, unknown> =>
   inOrder(EFF_KEYS, {
@@ -407,12 +512,33 @@ const effOf = (more: Record<string, unknown> = {}): Record<string, unknown> =>
 const EFFS: Array<Record<string, unknown>> = [
   effOf(),
   effOf({ styleId: 'Heading1', bidi: true, autoSpaceDE: false }),
-  effOf({ autoSpaceDN: false, wordWrap: false, overflowPunct: false, eastAsiaLang: 'ko-KR', source: { eastAsiaLang: 'paraStyle' } }),
-  effOf({ autoSpaceDE: false, autoSpaceDN: false, eastAsiaLang: 'zh-CN', source: { eastAsiaLang: 'docDefaults' } }),
-  effOf({ eastAsiaLang: '', tabStops: [{ pos: 720, val: 'left' }, { pos: 360, val: 'center', leader: 'dot' }] }),
+  effOf({
+    autoSpaceDN: false,
+    wordWrap: false,
+    overflowPunct: false,
+    eastAsiaLang: 'ko-KR',
+    source: { eastAsiaLang: 'paraStyle' },
+  }),
+  effOf({
+    autoSpaceDE: false,
+    autoSpaceDN: false,
+    eastAsiaLang: 'zh-CN',
+    source: { eastAsiaLang: 'docDefaults' },
+  }),
+  effOf({
+    eastAsiaLang: '',
+    tabStops: [
+      { pos: 720, val: 'left' },
+      { pos: 360, val: 'center', leader: 'dot' },
+    ],
+  }),
   effOf({
     bidi: true,
-    tabStops: [{ pos: 1440, val: 'right' }, { pos: 720, val: 'decimal' }, { pos: 720, val: 'bar' }],
+    tabStops: [
+      { pos: 1440, val: 'right' },
+      { pos: 720, val: 'decimal' },
+      { pos: 720, val: 'bar' },
+    ],
     indent: { left: 420, right: 210, firstLine: 0, chars: { left: 200 } },
     source: { indentFirstLine: 'paraStyle' },
   }),
@@ -425,7 +551,10 @@ const EFFS: Array<Record<string, unknown>> = [
     source: { indentFirstLine: 'direct' },
     mark: markOf({ sizeHalfPoints: 1, source: { sizeHalfPoints: 'paraStyle' } }),
   }),
-  effOf({ indent: { left: 0, right: 0, firstLine: 0, chars: {} }, mark: markOf({ sizeHalfPoints: 30 }) }),
+  effOf({
+    indent: { left: 0, right: 0, firstLine: 0, chars: {} },
+    mark: markOf({ sizeHalfPoints: 30 }),
+  }),
 ]
 
 const FORMATS: Array<Record<string, unknown> | undefined> = [
@@ -436,8 +565,20 @@ const FORMATS: Array<Record<string, unknown> | undefined> = [
   { align: 'center', bidi: true },
   { align: 'left', bidiInherited: true, wordWrap: true },
   { overflowPunct: true, eastAsiaLang: 'ja-JP', autoSpace: 'latin' },
-  { tabStops: [{ pos: 720, val: 'right' }, { pos: 2000, val: 'left' }], indentFirstLine: 100 },
-  { indentLeft: 5, indentFirstLine: 7, indentRight: 9, charIndents: { left: 1 }, effective: effOf() },
+  {
+    tabStops: [
+      { pos: 720, val: 'right' },
+      { pos: 2000, val: 'left' },
+    ],
+    indentFirstLine: 100,
+  },
+  {
+    indentLeft: 5,
+    indentFirstLine: 7,
+    indentRight: 9,
+    charIndents: { left: 1 },
+    effective: effOf(),
+  },
 ]
 
 const EFF_P_PRS: Array<string | undefined> = [
@@ -456,18 +597,60 @@ const TAB_STOPS: Array<Array<Record<string, unknown>> | undefined> = [
   [],
   [{ pos: 720, val: 'left' }],
   [{ pos: 720, val: 'clear' }],
-  [{ pos: 1440, val: 'center', leader: 'dot' }, { pos: 720, val: 'right' }, { pos: 720, val: 'decimal' }],
-  [{ pos: 360, val: 'clear' }, { pos: 2160, val: 'bar' }, { pos: 360, val: 'left', rel: 'margin' }],
-  [{ pos: 720, val: 'clear' }, { pos: 1440, val: 'clear' }],
-  [{ pos: -100, val: 'left' }, { pos: 0, val: 'right' }, { pos: 1440, val: 'left', inherited: true }],
+  [
+    { pos: 1440, val: 'center', leader: 'dot' },
+    { pos: 720, val: 'right' },
+    { pos: 720, val: 'decimal' },
+  ],
+  [
+    { pos: 360, val: 'clear' },
+    { pos: 2160, val: 'bar' },
+    { pos: 360, val: 'left', rel: 'margin' },
+  ],
+  [
+    { pos: 720, val: 'clear' },
+    { pos: 1440, val: 'clear' },
+  ],
+  [
+    { pos: -100, val: 'left' },
+    { pos: 0, val: 'right' },
+    { pos: 1440, val: 'left', inherited: true },
+  ],
 ]
 
 const RUNS: Array<Record<string, unknown>> = [
   { text: 'a' },
-  { text: 'b', bold: false, italic: true, underline: false, strike: true, color: '1f497d', sizeHalfPoints: 0, fontAscii: '', caps: 'none' },
-  { text: 'c', color: 'auto', sizeHalfPoints: 30, fontAscii: 'Arial', caps: 'small', textOutline: { color: 'FF0000', widthPt: 0.75 } },
-  { text: 'd', effective: markOf({ cs: true, bold: true, italic: true, sizeHalfPoints: 28 }), ins: { author: 'A', date: '2024-01-01T00:00:00Z' } },
-  { text: 'e', effective: markOf({ cs: false, bold: true, sizeHalfPoints: 50 }), del: { author: 'B' }, color: 'FFAA00', caps: 'all' },
+  {
+    text: 'b',
+    bold: false,
+    italic: true,
+    underline: false,
+    strike: true,
+    color: '1f497d',
+    sizeHalfPoints: 0,
+    fontAscii: '',
+    caps: 'none',
+  },
+  {
+    text: 'c',
+    color: 'auto',
+    sizeHalfPoints: 30,
+    fontAscii: 'Arial',
+    caps: 'small',
+    textOutline: { color: 'FF0000', widthPt: 0.75 },
+  },
+  {
+    text: 'd',
+    effective: markOf({ cs: true, bold: true, italic: true, sizeHalfPoints: 28 }),
+    ins: { author: 'A', date: '2024-01-01T00:00:00Z' },
+  },
+  {
+    text: 'e',
+    effective: markOf({ cs: false, bold: true, sizeHalfPoints: 50 }),
+    del: { author: 'B' },
+    color: 'FFAA00',
+    caps: 'all',
+  },
   { text: '', bold: true, effective: markOf({ cs: true, bold: false, sizeHalfPoints: 0 }) },
   { text: 'g', color: '12345G', sizeHalfPoints: -2 },
   { text: 'h', color: 'ABCDEF0' },
@@ -475,8 +658,23 @@ const RUNS: Array<Record<string, unknown>> = [
 
 const BASES: Array<Record<string, unknown>> = [
   markOf(),
-  markOf({ bold: true, italic: true, underline: true, strike: true, color: 'c0504d', caps: 'all', fonts: { ascii: 'Times' }, source: { sizeHalfPoints: 'builtin' } }),
-  markOf({ sizeHalfPoints: 24, caps: 'small', color: '', fonts: { ascii: '' }, source: { sizeHalfPoints: 'docDefaults' } }),
+  markOf({
+    bold: true,
+    italic: true,
+    underline: true,
+    strike: true,
+    color: 'c0504d',
+    caps: 'all',
+    fonts: { ascii: 'Times' },
+    source: { sizeHalfPoints: 'builtin' },
+  }),
+  markOf({
+    sizeHalfPoints: 24,
+    caps: 'small',
+    color: '',
+    fonts: { ascii: '' },
+    source: { sizeHalfPoints: 'docDefaults' },
+  }),
   markOf({ sizeHalfPoints: 0, color: 'auto', source: { sizeHalfPoints: 'paraStyle' } }),
 ]
 
@@ -505,13 +703,28 @@ const NOTE_DOCS: string[] = [
   `<w:p><w:r><w:txbxContent><w:p><w:pPr><w:sectPr/></w:pPr><w:r><w:footnoteReference w:id="1"/></w:r></w:p></w:txbxContent><w:footnoteReference w:id="2"/></w:r></w:p><w:p><w:r><w:footnoteReference w:id="3"/></w:r></w:p></w:p><w:p><w:r><w:footnoteReference w:id="4"/></w:r></w:p>`,
 ]
 
-const notes = (ids: string[]): Array<Record<string, unknown>> => ids.map((id) => ({ id, text: `note ${id}` }))
+const notes = (ids: string[]): Array<Record<string, unknown>> =>
+  ids.map((id) => ({ id, text: `note ${id}` }))
 
 const NOTE_ARGS: Array<Record<string, unknown>> = [
   { footnotes: notes(['1', '2', '3', '4']), endnotes: notes(['4', '5', '6']) },
-  { footnotes: notes(['1', '2', '3', '4']), endnotes: notes(['5', '4']), footnoteProps: { numRestart: 'eachSect' }, endnoteProps: { numStart: 3 } },
-  { footnotes: notes(['2', '2', '1', '3']), endnotes: [], footnoteProps: { numStart: 5, numRestart: 'eachSect' }, endnoteProps: { numRestart: 'eachSect', numStart: 0 } },
-  { footnotes: [], endnotes: notes(['6', '5']), footnoteProps: { numRestart: 'continuous', pos: 'pageBottom' } },
+  {
+    footnotes: notes(['1', '2', '3', '4']),
+    endnotes: notes(['5', '4']),
+    footnoteProps: { numRestart: 'eachSect' },
+    endnoteProps: { numStart: 3 },
+  },
+  {
+    footnotes: notes(['2', '2', '1', '3']),
+    endnotes: [],
+    footnoteProps: { numStart: 5, numRestart: 'eachSect' },
+    endnoteProps: { numRestart: 'eachSect', numStart: 0 },
+  },
+  {
+    footnotes: [],
+    endnotes: notes(['6', '5']),
+    footnoteProps: { numRestart: 'continuous', pos: 'pageBottom' },
+  },
 ]
 
 // ---------------------------------------------------------------- the specs
@@ -541,34 +754,121 @@ async function fullCtxOf(args: Record<string, unknown>): Promise<Record<string, 
     sdtGroupSeq: 0,
     resolver,
     compat: resolver.compat,
-    ...(typeof args.compatibilityMode === 'number' ? { compatibilityMode: args.compatibilityMode } : {}),
+    ...(typeof args.compatibilityMode === 'number'
+      ? { compatibilityMode: args.compatibilityMode }
+      : {}),
     xmlSpacePreserve: args.xmlSpacePreserve === true,
     ...(namespaces ? { partNamespaces: new Map(namespaces) } : {}),
   }
 }
 
 /** The ctx part of the arguments of a captured whole context: undefined where it is not the document's own. */
-function fullCtxArgs(parts: ReadonlyMap<string, string>, ctx: unknown): Record<string, unknown> | undefined {
+function fullCtxArgs(
+  parts: ReadonlyMap<string, string>,
+  ctx: unknown,
+): Record<string, unknown> | undefined {
   const members = membersOf(parts, ctx, ['styles', 'numbering'])
   if (!members || members.length < 2) return undefined
-  const context = ctx as { resolver?: ResolveCtx; compat?: ResolveCtx['compat']; compatibilityMode?: unknown; xmlSpacePreserve?: unknown; partNamespaces?: unknown }
+  const context = ctx as {
+    resolver?: ResolveCtx
+    compat?: ResolveCtx['compat']
+    compatibilityMode?: unknown
+    xmlSpacePreserve?: unknown
+    partNamespaces?: unknown
+  }
   const compat = context.resolver?.compat ?? context.compat
   return {
     compat: {
-      compatibilityMode: compat?.mode ?? (typeof context.compatibilityMode === 'number' ? context.compatibilityMode : 0),
+      compatibilityMode:
+        compat?.mode ??
+        (typeof context.compatibilityMode === 'number' ? context.compatibilityMode : 0),
       doNotUseHTMLParagraphAutoSpacing: compat?.additiveParaSpacing ?? false,
       indentNotNumberingTabStop: compat?.indentNotNumberingTabStop ?? false,
     },
-    ...(typeof context.compatibilityMode === 'number' ? { compatibilityMode: context.compatibilityMode } : {}),
+    ...(typeof context.compatibilityMode === 'number'
+      ? { compatibilityMode: context.compatibilityMode }
+      : {}),
     ...(context.xmlSpacePreserve === true ? { xmlSpacePreserve: true } : {}),
-    ...(context.partNamespaces instanceof Map ? { partNamespaces: [...context.partNamespaces] } : {}),
+    ...(context.partNamespaces instanceof Map
+      ? { partNamespaces: [...context.partNamespaces] }
+      : {}),
   }
 }
 
 /** Parts of a paragraph the bare context cannot answer for: relationships, media, comments, shapes. */
-const NEEDS_DOCUMENT = /r:id=|r:embed|r:link|r:pict|<w:drawing|<w:pict|<w:object|mc:AlternateContent|Reference\b|<w:sdt\b|w:fldChar|<w:tbl\b/
+const NEEDS_DOCUMENT =
+  /r:id=|r:embed|r:link|r:pict|<w:drawing|<w:pict|<w:object|mc:AlternateContent|Reference\b|<w:sdt\b|w:fldChar|<w:tbl\b/
+
+/** A complex field whose result is `result`: the cached runs a person may have hidden from AI. */
+const markedField = (instr: string, result: string): string =>
+  `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve">${instr}</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const SEEN_RUN = '<w:r><w:rPr><w:i/></w:rPr><w:t>seen</w:t></w:r>'
+const HIDDEN_RUN = '<w:r><w:rPr><w:b/><go:redact w:label="secret"/></w:rPr><w:t>hid</w:t></w:r>'
+
+/** A complex field whose instruction run carries `rPr` (a mark hidden from AI among its properties, or none). */
+const instrMarkedField = (instrRun: string, rPr: string, result: string): string =>
+  `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${rPr}${instrRun}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const HIDDEN_RPR = '<w:rPr><w:b/><go:redact w:label="secret"/></w:rPr>'
+const INSTR = (text: string): string => `<w:instrText xml:space="preserve">${text}</w:instrText>`
+
+/** Field instructions hidden from AI: the field's cached result is hidden with it, whatever the field. */
+const HIDDEN_INSTR_FIELD_XMLS: string[] = [
+  `<w:p>${instrMarkedField(INSTR(' REF bm \\h '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, SEEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, HIDDEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, '')}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><w:b/></w:rPr>', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' PAGE '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' AUTHOR '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' HYPERLINK "http://example.com" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' HYPERLINK \\l "anchor" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' TOC \\o "1-3" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' XE "term" '), HIDDEN_RPR, SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><redact xmlns="urn:r" w:label="a"/></w:rPr>', SEEN_RUN)}</w:p>`,
+  `<w:p>${instrMarkedField(INSTR(' REF bm '), '<w:rPr><w:b/><go:redact/></w:rPr>', SEEN_RUN)}</w:p>`,
+  // the second instruction run is the hidden one; the first mark wins when both are
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${INSTR(' REF ')}</w:r><w:r>${HIDDEN_RPR}${INSTR(' bm ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${SEEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><go:redact w:label="one"/></w:rPr>${INSTR(' REF ')}</w:r><w:r>${HIDDEN_RPR}${INSTR(' bm ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${SEEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  // a field after a hidden one is not hidden with it
+  `<w:p>${instrMarkedField(INSTR(' REF a '), HIDDEN_RPR, SEEN_RUN)}${instrMarkedField(INSTR(' REF b '), '', SEEN_RUN)}</w:p>`,
+  // nested: the hidden instruction sits in the inner field
+  `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r>${INSTR(' IF ')}</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${instrMarkedField(INSTR(' REF bm '), HIDDEN_RPR, SEEN_RUN)}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+]
+
+/** Field results with a run marked hidden from AI, among others and alone: the result carries the mark. */
+const MARKED_FIELD_XMLS: string[] = [
+  ...HIDDEN_INSTR_FIELD_XMLS,
+  `<w:p>${markedField(' REF bm \\h ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '')}</w:p>`,
+  `<w:p>${markedField(' REF bm ', SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', HIDDEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', SEEN_RUN + HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK \\l "anchor" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' FILLIN "who" ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' TOC \\o "1-3" ', HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' MERGEFIELD name ', SEEN_RUN + HIDDEN_RUN + SEEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' PAGE ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' PAGE ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' AUTHOR ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' HYPERLINK "http://example.com" ', SEEN_RUN + HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' XE "term" ', HIDDEN_RUN)}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '<w:r><w:rPr><redact xmlns="urn:r" w:label="a"/></w:rPr><w:t>x</w:t></w:r>')}</w:p>`,
+  `<w:p>${markedField(' REF bm ', '<w:r><w:rPr><w:b/><go:redact/></w:rPr><w:t>x</w:t></w:r>')}</w:p>`,
+  `<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText> REF bm </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${HIDDEN_RUN}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+  `<w:p><w:fldSimple w:instr=" REF bm ">${SEEN_RUN}${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" REF bm ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" PAGE ">${SEEN_RUN}${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" MERGEFIELD name ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" XE &quot;t&quot; ">${HIDDEN_RUN}</w:fldSimple></w:p>`,
+  `<w:p><w:fldSimple w:instr=" PAGE " w:dirty="1">${SEEN_RUN}</w:fldSimple></w:p>`,
+]
 
 const P_XMLS: string[] = [
+  ...MARKED_FIELD_XMLS,
   '<w:p/>',
   '<w:p><w:r><w:t>plain</w:t></w:r></w:p>',
   '<w:p><w:pPr><w:jc w:val="center"/><w:ind w:left="720" w:firstLine="360"/><w:spacing w:before="120" w:after="60" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r></w:p>',
@@ -598,8 +898,6 @@ const P_XMLS: string[] = [
   '<w:r><w:t>not a paragraph</w:t></w:r>',
 ]
 
-const BLOCK_BASE = { id: 'b0', docxIndex: 0 }
-
 /** Every paragraph over each package, with the context knobs turned in turn. */
 function paraBuilt(extra: (index: number) => Record<string, unknown> = () => ({})): Input[] {
   const inputs: Input[] = []
@@ -612,7 +910,10 @@ function paraBuilt(extra: (index: number) => Record<string, unknown> = () => ({}
         parts: RICH,
         compat: { compatibilityMode: 15 },
         xmlSpacePreserve: index % 2 === 0,
-        partNamespaces: [['w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'], ['m', 'http://schemas.openxmlformats.org/officeDocument/2006/math']],
+        partNamespaces: [
+          ['w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'],
+          ['m', 'http://schemas.openxmlformats.org/officeDocument/2006/math'],
+        ],
         ...extra(index + 1),
       },
     })
@@ -621,11 +922,9 @@ function paraBuilt(extra: (index: number) => Record<string, unknown> = () => ({}
 }
 
 /** A paragraph of a document the bare context stands for. */
-const plainParagraph = (xml: unknown): xml is string => typeof xml === 'string' && !NEEDS_DOCUMENT.test(xml)
+const plainParagraph = (xml: unknown): xml is string =>
+  typeof xml === 'string' && !NEEDS_DOCUMENT.test(xml)
 
-const PARA_OF = (text: string): { text: string; node?: string } => ({ text })
-
-const THEME_FLAGS = [false, true]
 const STYLE_BIDIS = [undefined, false, true]
 
 const P_PRS_DEFINED = P_PRS.filter((p): p is string => p !== undefined)
@@ -633,7 +932,10 @@ const P_PRS_DEFINED = P_PRS.filter((p): p is string => p !== undefined)
 /** A pPr node over each package, style and theme flag. */
 function pPrBuilt(extra: (index: number) => Record<string, unknown>): Input[] {
   return P_PRS_DEFINED.flatMap((p, index) =>
-    [RICH, PLAIN, BARE].map((parts, at) => ({ text: p, args: { parts, node: 'w:pPr', ...extra(index + at) } })),
+    [RICH, PLAIN, BARE].map((parts, at) => ({
+      text: p,
+      args: { parts, node: 'w:pPr', ...extra(index + at) },
+    })),
   )
 }
 
@@ -641,7 +943,10 @@ const P_NODE_RUNS: Array<Array<Record<string, unknown>>> = [
   [],
   [{ text: '' }],
   [{ text: 'a' }],
-  [{ text: '', sizeHalfPoints: 99 }, { text: 'b', sizeHalfPoints: 30 }],
+  [
+    { text: '', sizeHalfPoints: 99 },
+    { text: 'b', sizeHalfPoints: 30 },
+  ],
   [{ text: 'c', styleId: 'Strong' }],
   [{ text: 'd', styleId: 'Missing' }],
   [{ text: 'e', sizeHalfPoints: 0 }],
@@ -686,7 +991,11 @@ const NOTES_PARTS: string[] = [
 ]
 
 /** A TypeScript spec for a function of one paragraph's XML and the context. */
-function paragraphSpec(fn: string, call: (xml: string, ctx: Record<string, unknown>) => unknown, extra?: Partial<CallSpec>): CallSpec {
+function paragraphSpec(
+  fn: string,
+  call: (xml: string, ctx: Record<string, unknown>) => unknown,
+  extra?: Partial<CallSpec>,
+): CallSpec {
   return {
     fn: `parse.${fn}`,
     call: async (text, args) => call(text, await fullCtxOf(args)),
@@ -706,7 +1015,8 @@ function paragraphSpec(fn: string, call: (xml: string, ctx: Record<string, unkno
 const PARSE_TEXT_B2: CallSpec[] = [
   {
     fn: 'parse.outlineOnlyHeading',
-    call: async (text, args) => internals.outlineOnlyHeading!(nodeOf(text, args), args.styleId, await fullCtxOf(args)),
+    call: async (text, args) =>
+      internals.outlineOnlyHeading!(nodeOf(text, args), args.styleId, await fullCtxOf(args)),
     fromParse: {
       fn: 'outlineOnlyHeading',
       input: ([pPr, styleId, ctx], parts) => {
@@ -715,35 +1025,60 @@ const PARSE_TEXT_B2: CallSpec[] = [
         if (!p || !own || (styleId !== undefined && typeof styleId !== 'string')) return undefined
         return withParts('outlineOnlyHeading', parts, {
           text: p.text,
-          args: { ...own, ...(p.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+          args: {
+            ...own,
+            ...(p.node ? { node: p.node } : {}),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
         })
       },
     },
     built: [
       ...NODE_BUILT,
-      ...['<w:pPr><w:outlineLvl w:val="2"/></w:pPr>', '<w:pPr><w:outlineLvl w:val="9"/><w:pStyle w:val="Heading1"/></w:pPr>', '<w:pPr/>'].flatMap((p) =>
-        STYLE_IDS.map((styleId) => ({ text: p, args: { parts: RICH, node: 'w:pPr', ...(styleId === undefined ? {} : { styleId }) } })),
+      ...[
+        '<w:pPr><w:outlineLvl w:val="2"/></w:pPr>',
+        '<w:pPr><w:outlineLvl w:val="9"/><w:pStyle w:val="Heading1"/></w:pPr>',
+        '<w:pPr/>',
+      ].flatMap((p) =>
+        STYLE_IDS.map((styleId) => ({
+          text: p,
+          args: { parts: RICH, node: 'w:pPr', ...(styleId === undefined ? {} : { styleId }) },
+        })),
       ),
     ],
     mutation: 'none',
   },
   {
     fn: 'parse.inheritedCsFont',
-    call: async (_text, args) => internals.inheritedCsFont!(args.rStyleId, args.pStyleId, await fullCtxOf(args)),
+    call: async (_text, args) =>
+      internals.inheritedCsFont!(args.rStyleId, args.pStyleId, await fullCtxOf(args)),
     fromParse: {
       fn: 'inheritedCsFont',
       input: ([rStyleId, pStyleId, ctx], parts) => {
         const own = fullCtxArgs(parts, ctx)
-        if (!own || (rStyleId !== undefined && typeof rStyleId !== 'string') || (pStyleId !== undefined && typeof pStyleId !== 'string')) return undefined
+        if (
+          !own ||
+          (rStyleId !== undefined && typeof rStyleId !== 'string') ||
+          (pStyleId !== undefined && typeof pStyleId !== 'string')
+        )
+          return undefined
         return withParts('inheritedCsFont', parts, {
-          args: { ...own, ...(rStyleId === undefined ? {} : { rStyleId }), ...(pStyleId === undefined ? {} : { pStyleId }) },
+          args: {
+            ...own,
+            ...(rStyleId === undefined ? {} : { rStyleId }),
+            ...(pStyleId === undefined ? {} : { pStyleId }),
+          },
         })
       },
     },
     built: PACKAGES.flatMap((parts) =>
       STYLE_IDS.flatMap((rStyleId, index) =>
         [STYLE_IDS[(index * 5 + 3) % STYLE_IDS.length], undefined].map((pStyleId) => ({
-          args: { parts, ...(rStyleId === undefined ? {} : { rStyleId }), ...(pStyleId === undefined ? {} : { pStyleId }) },
+          args: {
+            parts,
+            ...(rStyleId === undefined ? {} : { rStyleId }),
+            ...(pStyleId === undefined ? {} : { pStyleId }),
+          },
         })),
       ),
     ),
@@ -757,25 +1092,50 @@ const PARSE_TEXT_B2: CallSpec[] = [
       input: ([ctx, styleId], parts) => {
         const own = fullCtxArgs(parts, ctx)
         if (!own || (styleId !== undefined && typeof styleId !== 'string')) return undefined
-        return withParts('paraCsSize', parts, { args: { ...own, ...(styleId === undefined ? {} : { styleId }) } })
+        return withParts('paraCsSize', parts, {
+          args: { ...own, ...(styleId === undefined ? {} : { styleId }) },
+        })
       },
     },
-    built: PACKAGES.flatMap((parts) => STYLE_IDS.map((styleId) => ({ args: { parts, ...(styleId === undefined ? {} : { styleId }) } }))),
+    built: PACKAGES.flatMap((parts) =>
+      STYLE_IDS.map((styleId) => ({
+        args: { parts, ...(styleId === undefined ? {} : { styleId }) },
+      })),
+    ),
     mutation: 'none',
   },
   {
     fn: 'parse.paraTextSizeHalfPoints',
     call: async (text, args) =>
-      internals.paraTextSizeHalfPoints!(await fullCtxOf(args), args.runs, named(args.pNode as string, 'w:p'), nodeOf(text, args), args.styleId),
+      internals.paraTextSizeHalfPoints!(
+        await fullCtxOf(args),
+        args.runs,
+        named(args.pNode as string, 'w:p'),
+        nodeOf(text, args),
+        args.styleId,
+      ),
     fromParse: {
       fn: 'paraTextSizeHalfPoints',
       input: ([ctx, runs, pNode, pPr, styleId], parts) => {
         const own = fullCtxArgs(parts, ctx)
         const p = nodeInput(pPr)
-        if (!own || !Array.isArray(runs) || !isNode(pNode) || (pPr !== undefined && !p) || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        if (
+          !own ||
+          !Array.isArray(runs) ||
+          !isNode(pNode) ||
+          (pPr !== undefined && !p) ||
+          (styleId !== undefined && typeof styleId !== 'string')
+        )
+          return undefined
         return withParts('paraTextSizeHalfPoints', parts, {
           text: p?.text ?? '',
-          args: { ...own, runs: json(runs), pNode: serializeXNode(pNode), ...(p?.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+          args: {
+            ...own,
+            runs: json(runs),
+            pNode: serializeXNode(pNode),
+            ...(p?.node ? { node: p.node } : {}),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
         })
       },
     },
@@ -786,16 +1146,37 @@ const PARSE_TEXT_B2: CallSpec[] = [
   {
     fn: 'parse.charUnitsOf',
     call: async (text, args) =>
-      internals.charUnitsOf!(await fullCtxOf(args), args.runs, named(args.pNode as string, 'w:p'), nodeOf(text, args), args.styleId, undefined),
+      internals.charUnitsOf!(
+        await fullCtxOf(args),
+        args.runs,
+        named(args.pNode as string, 'w:p'),
+        nodeOf(text, args),
+        args.styleId,
+        undefined,
+      ),
     fromParse: {
       fn: 'charUnitsOf',
       input: ([ctx, runs, pNode, pPr, styleId, docOffset], parts) => {
         const own = fullCtxArgs(parts, ctx)
         const p = nodeInput(pPr)
-        if (docOffset !== undefined || !own || !Array.isArray(runs) || !isNode(pNode) || (pPr !== undefined && !p) || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        if (
+          docOffset !== undefined ||
+          !own ||
+          !Array.isArray(runs) ||
+          !isNode(pNode) ||
+          (pPr !== undefined && !p) ||
+          (styleId !== undefined && typeof styleId !== 'string')
+        )
+          return undefined
         return withParts('charUnitsOf', parts, {
           text: p?.text ?? '',
-          args: { ...own, runs: json(runs), pNode: serializeXNode(pNode), ...(p?.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+          args: {
+            ...own,
+            runs: json(runs),
+            pNode: serializeXNode(pNode),
+            ...(p?.node ? { node: p.node } : {}),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
         })
       },
     },
@@ -805,37 +1186,57 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.extractParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const parsed = await parsedOf(args.parts)
-      return internals.extractParaFormat!(nodeOf(text, args), args.theme ? parsed.themeColors : undefined, args.styleBidi)
+      return internals.extractParaFormat!(
+        nodeOf(text, args),
+        args.theme ? parsed.themeColors : undefined,
+        args.styleBidi,
+      )
     },
     fromParse: {
       fn: 'extractParaFormat',
       input: ([pPr, theme, styleBidi], parts) => {
         const p = nodeInput(pPr)
-        if (!p || !p.node || (styleBidi !== undefined && typeof styleBidi !== 'boolean')) return undefined
+        if (!p || !p.node || (styleBidi !== undefined && typeof styleBidi !== 'boolean'))
+          return undefined
         if (theme !== undefined && theme !== null && typeof theme !== 'object') return undefined
         return withParts('extractParaFormat', parts, {
           text: p.text,
-          args: { node: p.node, theme: theme !== undefined && theme !== null, ...(styleBidi === undefined ? {} : { styleBidi }) },
+          args: {
+            node: p.node,
+            theme: theme !== undefined && theme !== null,
+            ...(styleBidi === undefined ? {} : { styleBidi }),
+          },
         })
       },
     },
-    built: pPrBuilt((index) => ({ theme: index % 2 === 0, ...(STYLE_BIDIS[index % 3] === undefined ? {} : { styleBidi: STYLE_BIDIS[index % 3] }) })),
+    built: pPrBuilt((index) => ({
+      theme: index % 2 === 0,
+      ...(STYLE_BIDIS[index % 3] === undefined ? {} : { styleBidi: STYLE_BIDIS[index % 3] }),
+    })),
     mutation: 'none',
   },
   {
     fn: 'parse.pPrOnlyFormat',
     call: async (text, args) => {
       const parsed = await parsedOf(args.parts)
-      return internals.pPrOnlyFormat!(nodeOf(text, args), args.theme ? parsed.themeColors : undefined)
+      return internals.pPrOnlyFormat!(
+        nodeOf(text, args),
+        args.theme ? parsed.themeColors : undefined,
+      )
     },
     fromParse: {
       fn: 'pPrOnlyFormat',
       input: ([pPr, theme], parts) => {
         const p = nodeInput(pPr)
-        if (!p || !p.node || (theme !== undefined && theme !== null && typeof theme !== 'object')) return undefined
-        return withParts('pPrOnlyFormat', parts, { text: p.text, args: { node: p.node, theme: theme !== undefined && theme !== null } })
+        if (!p || !p.node || (theme !== undefined && theme !== null && typeof theme !== 'object'))
+          return undefined
+        return withParts('pPrOnlyFormat', parts, {
+          text: p.text,
+          args: { node: p.node, theme: theme !== undefined && theme !== null },
+        })
       },
     },
     built: pPrBuilt((index) => ({ theme: index % 2 === 0 })),
@@ -843,51 +1244,97 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.resolvedParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const parsed = await parsedOf(args.parts)
-      return internals.resolvedParaFormat!(args.eff, nodeOf(text, args), args.theme ? parsed.themeColors : undefined)
+      return internals.resolvedParaFormat!(
+        args.eff,
+        nodeOf(text, args),
+        args.theme ? parsed.themeColors : undefined,
+      )
     },
     fromParse: {
       fn: 'resolvedParaFormat',
       input: ([eff, pPr, theme], parts) => {
         const p = nodeInput(pPr)
-        if (!eff || typeof eff !== 'object' || (pPr !== undefined && !p) || (theme !== undefined && theme !== null && typeof theme !== 'object')) return undefined
+        if (
+          !eff ||
+          typeof eff !== 'object' ||
+          (pPr !== undefined && !p) ||
+          (theme !== undefined && theme !== null && typeof theme !== 'object')
+        )
+          return undefined
         return withParts('resolvedParaFormat', parts, {
           text: p?.text ?? '',
-          args: { eff: json(eff), ...(p?.node ? { node: p.node } : {}), theme: theme !== undefined && theme !== null },
+          args: {
+            eff: json(eff),
+            ...(p?.node ? { node: p.node } : {}),
+            theme: theme !== undefined && theme !== null,
+          },
         })
       },
     },
     built: EFFS.flatMap((eff, index) =>
       [undefined, ...P_PRS_DEFINED.filter((_, at) => at % 3 === index % 3)].map((p, at) => ({
         text: p ?? '',
-        args: { parts: PACKAGES[(index + at) % PACKAGES.length]!, eff, ...(p === undefined ? {} : { node: 'w:pPr' }), theme: at % 2 === 0 },
+        args: {
+          parts: PACKAGES[(index + at) % PACKAGES.length]!,
+          eff,
+          ...(p === undefined ? {} : { node: 'w:pPr' }),
+          theme: at % 2 === 0,
+        },
       })),
     ),
     mutation: 'none',
     argMutation: true,
   },
-  paragraphSpec('anchorLineOf', (xml, ctx) => internals.anchorLineOf!(xml, ctx), { mutation: 'none' }),
-  paragraphSpec('strayAnchorLine', (xml, ctx) => internals.strayAnchorLine!(xml, ctx), { mutation: 'none' }),
-  paragraphSpec('anchoredRuleOverlays', (xml, ctx) => internals.anchoredRuleOverlays!(xml, ctx), { mutation: 'none' }),
+  paragraphSpec('anchorLineOf', (xml, ctx) => internals.anchorLineOf!(xml, ctx), {
+    mutation: 'none',
+  }),
+  paragraphSpec('strayAnchorLine', (xml, ctx) => internals.strayAnchorLine!(xml, ctx), {
+    mutation: 'none',
+  }),
+  paragraphSpec('anchoredRuleOverlays', (xml, ctx) => internals.anchoredRuleOverlays!(xml, ctx), {
+    mutation: 'none',
+  }),
   {
     fn: 'parse.cellResolverOf',
     call: async (_text, args) => {
-      const scoped = internals.cellResolverOf!(await fullCtxOf(args), args.tableStyleId, args.cond) as ResolveCtx
+      const scoped = internals.cellResolverOf!(
+        await fullCtxOf(args),
+        args.tableStyleId,
+        args.cond,
+      ) as ResolveCtx
       return { table: scoped.table, compat: scoped.compat }
     },
     fromParse: {
       fn: 'cellResolverOf',
       input: ([ctx, tableStyleId, cond], parts) => {
         const own = fullCtxArgs(parts, ctx)
-        if (!own || !Array.isArray(cond) || (tableStyleId !== undefined && typeof tableStyleId !== 'string')) return undefined
-        return withParts('cellResolverOf', parts, { args: { ...own, cond: json(cond), ...(tableStyleId === undefined ? {} : { tableStyleId }) } })
+        if (
+          !own ||
+          !Array.isArray(cond) ||
+          (tableStyleId !== undefined && typeof tableStyleId !== 'string')
+        )
+          return undefined
+        return withParts('cellResolverOf', parts, {
+          args: {
+            ...own,
+            cond: json(cond),
+            ...(tableStyleId === undefined ? {} : { tableStyleId }),
+          },
+        })
       },
     },
     built: PACKAGES.flatMap((parts) =>
       [undefined, '', 'TableGrid', 'constructor'].flatMap((tableStyleId) =>
         [[], [{ type: 'firstRow' }], [{ type: 'band1Horz' }, { type: 'lastCol' }]].map((cond) => ({
-          args: { parts, compat: { compatibilityMode: 15 }, cond, ...(tableStyleId === undefined ? {} : { tableStyleId }) },
+          args: {
+            parts,
+            compat: { compatibilityMode: 15 },
+            cond,
+            ...(tableStyleId === undefined ? {} : { tableStyleId }),
+          },
         })),
       ),
     ),
@@ -917,7 +1364,15 @@ const PARSE_TEXT_B2: CallSpec[] = [
       { text, args: { block: { id: 'b0', docxIndex: 0, type: 'paragraph', runs: [] } } },
       {
         text,
-        args: { block: { id: 'b0', docxIndex: 0, type: 'paragraph', runs: [], inlineContentControls: [{ alias: 'kept' }] } },
+        args: {
+          block: {
+            id: 'b0',
+            docxIndex: 0,
+            type: 'paragraph',
+            runs: [],
+            inlineContentControls: [{ alias: 'kept' }],
+          },
+        },
       },
     ]),
     mutation: 'none',
@@ -936,7 +1391,8 @@ const PARSE_TEXT_B2: CallSpec[] = [
         const own = fullCtxArgs(parts, ctx)
         if (!own || !isNode(pNode) || para !== undefined || raw !== undefined) return undefined
         const xml = serializeXNode(pNode)
-        if (!plainParagraph(xml) || !Array.isArray(math ?? []) || !Array.isArray(ruby ?? [])) return undefined
+        if (!plainParagraph(xml) || !Array.isArray(math ?? []) || !Array.isArray(ruby ?? []))
+          return undefined
         return withParts('extractRuns', parts, {
           text: xml,
           args: {
@@ -962,13 +1418,21 @@ const PARSE_TEXT_B2: CallSpec[] = [
             zotero: { id: 7, instruction: 'ADDIN ZOTERO_ITEM {}', part: 'single' },
           },
         },
-        { text, args: { parts: PLAIN, withImages: true, zotero: { id: 2, instruction: ' ADDIN ZOTERO_BIBL ', part: 'begin' } } },
+        {
+          text,
+          args: {
+            parts: PLAIN,
+            withImages: true,
+            zotero: { id: 2, instruction: ' ADDIN ZOTERO_BIBL ', part: 'begin' },
+          },
+        },
       ]),
     ],
     mutation: 'none',
   },
   {
     fn: 'parse.buildTextParagraph',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.buildTextParagraph!(
         { id: args.id, docxIndex: args.docxIndex, originalXml: text },
@@ -983,10 +1447,25 @@ const PARSE_TEXT_B2: CallSpec[] = [
       input: ([base, xml, ctx, withImages, docOffset, zotero], parts) => {
         const own = fullCtxArgs(parts, ctx)
         const b = base as { id?: unknown; docxIndex?: unknown; originalXml?: unknown } | undefined
-        if (!own || docOffset !== undefined || !plainParagraph(xml) || !b || typeof b.id !== 'string' || typeof b.docxIndex !== 'number' || b.originalXml !== xml) return undefined
+        if (
+          !own ||
+          docOffset !== undefined ||
+          !plainParagraph(xml) ||
+          !b ||
+          typeof b.id !== 'string' ||
+          typeof b.docxIndex !== 'number' ||
+          b.originalXml !== xml
+        )
+          return undefined
         return withParts('buildTextParagraph', parts, {
           text: xml,
-          args: { ...own, id: b.id, docxIndex: b.docxIndex, ...(withImages ? { withImages: true } : {}), ...(zotero ? { zotero: json(zotero) } : {}) },
+          args: {
+            ...own,
+            id: b.id,
+            docxIndex: b.docxIndex,
+            ...(withImages ? { withImages: true } : {}),
+            ...(zotero ? { zotero: json(zotero) } : {}),
+          },
         })
       },
     },
@@ -998,8 +1477,19 @@ const PARSE_TEXT_B2: CallSpec[] = [
   },
   {
     fn: 'parse.standaloneNoteParagraphReader',
-    call: (text, args) => parseNotesXml(text, args.kind as NoteKind, internals.standaloneNoteParagraphReader!() as NoteParagraphReader),
-    built: NOTES_PARTS.flatMap((text) => (['footnote', 'endnote'] as const).map((kind) => ({ text, args: { kind } }))),
+    listed: lineRuleOutsideItsType,
+    call: (text, args) =>
+      parseNotesXml(
+        text,
+        args.kind as NoteKind,
+        internals.standaloneNoteParagraphReader!() as NoteParagraphReader,
+      ),
+    built: [...NOTES_PARTS, ...NOTE_PARTS].flatMap((text) =>
+      (['footnote', 'endnote'] as const).map((kind) => ({
+        text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
+        args: { kind },
+      })),
+    ),
   },
 ]
 
@@ -1035,37 +1525,56 @@ export const PARSE_TEXT: CallSpec[] = [
     fromParse: {
       fn: 'wtText',
       input: ([raw, preserve]) =>
-        typeof raw === 'string' && typeof preserve === 'boolean' ? { text: raw, args: { preserve } } : undefined,
+        typeof raw === 'string' && typeof preserve === 'boolean'
+          ? { text: raw, args: { preserve } }
+          : undefined,
     },
-    built: ['', ' a ', '\ta\tb\t', 'a\r\nb', 'a\rb', 'a\n\rb', ' \r\n ', '\u00a0x\u00a0', '\u3000y', 'a\u2028b'].flatMap(
-      (text) => [true, false].map((preserve) => ({ text, args: { preserve } })),
-    ),
+    built: [
+      '',
+      ' a ',
+      '\ta\tb\t',
+      'a\r\nb',
+      'a\rb',
+      'a\n\rb',
+      ' \r\n ',
+      '\u00a0x\u00a0',
+      '\u3000y',
+      'a\u2028b',
+    ].flatMap((text) => [true, false].map((preserve) => ({ text, args: { preserve } }))),
   },
   {
     fn: 'parse.emuToPx',
     call: (_text, args) => internals.emuToPx!(args.emu),
     fromParse: {
       fn: 'emuToPx',
-      input: ([emu]) => (typeof emu === 'number' && Number.isFinite(emu) ? { args: { emu } } : undefined),
+      input: ([emu]) =>
+        typeof emu === 'number' && Number.isFinite(emu) ? { args: { emu } } : undefined,
     },
-    built: [0, 9525, 4762.5, 12345, -9525, 1e15, 0.5, 47.625, 95.25, 238.125, -238.125, -4762.5, 1e300, 5e-324, 914400, 1270].map(
-      (emu) => ({ args: { emu } }),
-    ),
+    built: [
+      0, 9525, 4762.5, 12345, -9525, 1e15, 0.5, 47.625, 95.25, 238.125, -238.125, -4762.5, 1e300,
+      5e-324, 914400, 1270,
+    ].map((emu) => ({ args: { emu } })),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'parse.listRefOf',
-    call: async (text, args) => internals.listRefOf!(await buildCtxOf(args), nodeOf(text, args), args.styleId),
+    call: async (text, args) =>
+      internals.listRefOf!(await buildCtxOf(args), nodeOf(text, args), args.styleId),
     fromParse: {
       fn: 'listRefOf',
       input: ([ctx, node, styleId], parts) => {
         const p = nodeInput(node)
         const ctxMembers = membersOf(parts, ctx, ['styles'])
-        if (!p || !ctxMembers || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        if (!p || !ctxMembers || (styleId !== undefined && typeof styleId !== 'string'))
+          return undefined
         return withParts('listRefOf', parts, {
           text: p.text,
-          args: { ctx: ctxMembers, ...(p.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+          args: {
+            ctx: ctxMembers,
+            ...(p.node ? { node: p.node } : {}),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
         })
       },
     },
@@ -1073,12 +1582,19 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.listKindOf',
-    call: async (_text, args) => internals.listKindOf!(await buildCtxOf(args), args.numId, args.ilvl),
+    call: async (_text, args) =>
+      internals.listKindOf!(await buildCtxOf(args), args.numId, args.ilvl),
     fromParse: {
       fn: 'listKindOf',
       input: ([ctx, numId, ilvl], parts) => {
         const ctxMembers = membersOf(parts, ctx, ['numbering', 'numFormats'])
-        if (!ctxMembers || typeof numId !== 'string' || typeof ilvl !== 'number' || !Number.isFinite(ilvl)) return undefined
+        if (
+          !ctxMembers ||
+          typeof numId !== 'string' ||
+          typeof ilvl !== 'number' ||
+          !Number.isFinite(ilvl)
+        )
+          return undefined
         return withParts('listKindOf', parts, { args: { ctx: ctxMembers, numId, ilvl } })
       },
     },
@@ -1087,16 +1603,22 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.headingLevelOf',
-    call: async (text, args) => internals.headingLevelOf!(nodeOf(text, args), args.styleId, await buildCtxOf(args)),
+    call: async (text, args) =>
+      internals.headingLevelOf!(nodeOf(text, args), args.styleId, await buildCtxOf(args)),
     fromParse: {
       fn: 'headingLevelOf',
       input: ([node, styleId, ctx], parts) => {
         const p = nodeInput(node)
         const ctxMembers = membersOf(parts, ctx, ['styles'])
-        if (!p || !ctxMembers || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        if (!p || !ctxMembers || (styleId !== undefined && typeof styleId !== 'string'))
+          return undefined
         return withParts('headingLevelOf', parts, {
           text: p.text,
-          args: { ctx: ctxMembers, ...(p.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+          args: {
+            ctx: ctxMembers,
+            ...(p.node ? { node: p.node } : {}),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
         })
       },
     },
@@ -1104,11 +1626,17 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.styleBidiOf',
-    call: async (_text, args) => internals.styleBidiOf!(await buildCtxOf(args), args.styleId, args.listRef),
+    call: async (_text, args) =>
+      internals.styleBidiOf!(await buildCtxOf(args), args.styleId, args.listRef),
     fromParse: {
       fn: 'styleBidiOf',
       input: ([ctx, styleId, listRef], parts) => {
-        const ctxMembers = membersOf(parts, ctx, ['styles', 'numbering', 'defaultParaStyle', 'docDefaults'])
+        const ctxMembers = membersOf(parts, ctx, [
+          'styles',
+          'numbering',
+          'defaultParaStyle',
+          'docDefaults',
+        ])
         if (!ctxMembers || (styleId !== undefined && typeof styleId !== 'string')) return undefined
         return withParts('styleBidiOf', parts, {
           args: {
@@ -1121,10 +1649,12 @@ export const PARSE_TEXT: CallSpec[] = [
     },
     built: ctxBuilt(
       LIST_REFS.flatMap((listRef, index) =>
-        [STYLE_IDS[index % STYLE_IDS.length], STYLE_IDS[(index * 3 + 7) % STYLE_IDS.length]].map((styleId) => ({
-          ...(styleId === undefined ? {} : { styleId }),
-          ...(listRef === undefined ? {} : { listRef }),
-        })),
+        [STYLE_IDS[index % STYLE_IDS.length], STYLE_IDS[(index * 3 + 7) % STYLE_IDS.length]].map(
+          (styleId) => ({
+            ...(styleId === undefined ? {} : { styleId }),
+            ...(listRef === undefined ? {} : { listRef }),
+          }),
+        ),
       ),
     ),
     mutation: 'none',
@@ -1136,7 +1666,9 @@ export const PARSE_TEXT: CallSpec[] = [
       fn: 'normalSizeHalfPoints',
       input: ([ctx], parts) => {
         const ctxMembers = membersOf(parts, ctx, ['defaultParaStyle', 'docDefaults'])
-        return ctxMembers ? withParts('normalSizeHalfPoints', parts, { args: { ctx: ctxMembers } }) : undefined
+        return ctxMembers
+          ? withParts('normalSizeHalfPoints', parts, { args: { ctx: ctxMembers } })
+          : undefined
       },
     },
     built: ctxBuilt([{}]),
@@ -1144,6 +1676,7 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.paraStyleDisplay',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) => internals.paraStyleDisplay!(await buildCtxOf(args), args.styleId),
     fromParse: {
       fn: 'paraStyleDisplay',
@@ -1160,18 +1693,29 @@ export const PARSE_TEXT: CallSpec[] = [
   },
   {
     fn: 'parse.defaultParaStyle',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) =>
-      internals.defaultParaStyle!((args.ctx as string[]).includes('styles') ? (await parsedOf(args.parts)).styles : undefined),
+      internals.defaultParaStyle!(
+        (args.ctx as string[]).includes('styles') ? (await parsedOf(args.parts)).styles : undefined,
+      ),
     fromParse: {
       fn: 'defaultParaStyle',
       input: ([styles], parts) => {
         const ctxMembers = membersOf(parts, { styles }, ['styles'])
-        return ctxMembers ? withParts('defaultParaStyle', parts, { args: { ctx: ctxMembers } }) : undefined
+        return ctxMembers
+          ? withParts('defaultParaStyle', parts, { args: { ctx: ctxMembers } })
+          : undefined
       },
     },
-    built: [...PACKAGES, [['word/styles.xml', `<w:styles ${W}>${style('character', 'C', '', ' w:default="1"')}${style('table', 'T', '', ' w:default="1"')}${style('paragraph', 'P1', '<w:rPr><w:i/></w:rPr>', ' w:default="1"')}${style('paragraph', 'P2', '', ' w:default="1"')}</w:styles>`] as [string, string]]].flatMap(
-      (parts) => [['styles'], []].map((ctx) => ({ args: { parts, ctx } })),
-    ),
+    built: [
+      ...PACKAGES,
+      [
+        [
+          'word/styles.xml',
+          `<w:styles ${W}>${style('character', 'C', '', ' w:default="1"')}${style('table', 'T', '', ' w:default="1"')}${style('paragraph', 'P1', '<w:rPr><w:i/></w:rPr>', ' w:default="1"')}${style('paragraph', 'P2', '', ' w:default="1"')}</w:styles>`,
+        ] as [string, string],
+      ],
+    ].flatMap((parts) => [['styles'], []].map((ctx) => ({ args: { parts, ctx } }))),
     mutation: 'none',
   },
   {
@@ -1190,6 +1734,23 @@ export const PARSE_TEXT: CallSpec[] = [
       '<w:p><w:sdt><w:sdtPr><w:id w:val="-1"/></w:sdtPr><w:sdtContent></w:sdtContent></w:sdt><w:sdt><w:sdtPr/></w:sdt></w:p>',
       '<w:p><w:sdt><w:sdtContent><w:r><w:t>unclosed</w:t></w:r></w:sdtContent></w:p>',
       '<w:p><w:sdt><w:sdtPr><w:alias w:val="\u{1F600}"/></w:sdtPr><w:sdtContent><w:r><w:t>\u{1F601}x</w:t></w:r><w:r><w:tab/></w:r></w:sdtContent></w:sdt></w:p>',
+      // hidden from AI: a control holding hidden runs, in every spelling of the mark
+      ...marks().map(
+        (mark) =>
+          `<w:p><w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>${plainRun('Call ')}${hiddenRun('138', mark)}${hiddenRun('000', mark)}${plainRun(' now')}</w:sdtContent></w:sdt></w:p>`,
+      ),
+      // a mark no run accounts for, one outside the control, a control inside a hidden run
+      `<w:p><w:sdt><w:sdtContent><w:r><w:t>a</w:t><go:redact w:label="x"/></w:r></w:sdtContent></w:sdt></w:p>`,
+      `<w:p>${hiddenRun('outside', '<go:redact w:label="x"/>')}<w:sdt><w:sdtContent>${plainRun('inside')}</w:sdtContent></w:sdt></w:p>`,
+      `<w:p><w:sdt><w:sdtContent><w:r><w:rPr><go:redact w:label="x"/></w:rPr><w:sdt><w:sdtContent>${plainRun('nested')}</w:sdtContent></w:sdt></w:r></w:sdtContent></w:sdt></w:p>`,
+      // tags a pattern reads differently from the parser
+      `<w:p><w:sdt w:x="a>b"><w:sdtPr><w:tag w:val='a&amp;b'/><w:alias w:val = "T"/></w:sdtPr><w:sdtContent>${plainRun('a&#65;b')}</w:sdtContent></w:sdt></w:p>`,
+      `<w:p><w:sdt><w:sdtContent><w:r><w:t><![CDATA[<w:sdt><w:sdtContent><w:r><w:t>fake</w:t></w:r></w:sdtContent></w:sdt>]]></w:t></w:r></w:sdtContent></w:sdt></w:p>`,
+      `<w:p><!-- <w:sdt><w:sdtContent><w:r><w:t>fake</w:t></w:r></w:sdtContent></w:sdt> --><w:sdt><w:sdtContent>${plainRun('real')}</w:sdtContent></w:sdt></w:p>`,
+      '<w:p><w:sdt><w:sdtPr><w:tag/><w:alias w:val=""/><w:lock/><w:id w:val="1"/></w:sdtPr><w:sdtContent/></w:sdt><w:sdt/></w:p>',
+      '<w:p><w:r><w:t>unclosed',
+      ...ENTRIES,
+      ...STORIES.map((story) => story.document),
     ].map((text) => ({ text })),
   },
   {
@@ -1202,21 +1763,39 @@ export const PARSE_TEXT: CallSpec[] = [
           ? {
               text: documentXml,
               args: {
-                elements: (elements as Array<{ name: string; start: number; end: number }>).map(({ name, start, end }) => ({
-                  name,
-                  start,
-                  end,
-                })),
+                elements: (elements as Array<{ name: string; start: number; end: number }>).map(
+                  ({ name, start, end }) => ({
+                    name,
+                    start,
+                    end,
+                  }),
+                ),
               },
             }
           : undefined,
     },
     built: [
       ...ZOTERO_DOCS.map((text) => ({ text, args: { elements: elementsOf(text) } })),
-      { text: ZOTERO_DOCS[0]!, args: { elements: [...elementsOf(ZOTERO_DOCS[0]!), ...elementsOf(ZOTERO_DOCS[0]!)] } },
-      { text: ZOTERO_DOCS[0]!, args: { elements: elementsOf(ZOTERO_DOCS[0]!).map((el) => ({ ...el, start: el.start - 1e6 })) } },
-      { text: ZOTERO_DOCS[4]!, args: { elements: elementsOf(ZOTERO_DOCS[4]!).map((el) => ({ ...el, start: el.start + 1 })) } },
-      { text: ZOTERO_DOCS[4]!, args: { elements: elementsOf(ZOTERO_DOCS[4]!).map((el) => ({ ...el, end: el.end + 40 })) } },
+      {
+        text: ZOTERO_DOCS[0]!,
+        args: { elements: [...elementsOf(ZOTERO_DOCS[0]!), ...elementsOf(ZOTERO_DOCS[0]!)] },
+      },
+      {
+        text: ZOTERO_DOCS[0]!,
+        args: {
+          elements: elementsOf(ZOTERO_DOCS[0]!).map((el) => ({ ...el, start: el.start - 1e6 })),
+        },
+      },
+      {
+        text: ZOTERO_DOCS[4]!,
+        args: {
+          elements: elementsOf(ZOTERO_DOCS[4]!).map((el) => ({ ...el, start: el.start + 1 })),
+        },
+      },
+      {
+        text: ZOTERO_DOCS[4]!,
+        args: { elements: elementsOf(ZOTERO_DOCS[4]!).map((el) => ({ ...el, end: el.end + 40 })) },
+      },
     ],
     mutation: 'none',
   },
@@ -1226,14 +1805,28 @@ export const PARSE_TEXT: CallSpec[] = [
     fromParse: {
       fn: 'mathParaAlign',
       input: ([paragraphXml, p]) =>
-        typeof paragraphXml === 'string' && typeof p === 'string' ? { text: paragraphXml, args: { pPr: p } } : undefined,
+        typeof paragraphXml === 'string' && typeof p === 'string'
+          ? { text: paragraphXml, args: { pPr: p } }
+          : undefined,
     },
     built: [
       ['<w:p><m:oMathPara><m:oMath/></m:oMathPara></w:p>', ''],
-      ['<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val="left"/></m:oMathParaPr></m:oMathPara></w:p>', '<w:pPr><w:jc w:val="right"/></w:pPr>'],
-      ['<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val=\'right\'/></m:oMathParaPr></m:oMathPara></w:p>', ''],
-      ['<w:p><m:oMathPara><m:oMathParaPr><m:jc  m:val="center"/></m:oMathParaPr></m:oMathPara></w:p>', ''],
-      ['<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val="centerGroup"/></m:oMathParaPr></m:oMathPara></w:p>', ''],
+      [
+        '<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val="left"/></m:oMathParaPr></m:oMathPara></w:p>',
+        '<w:pPr><w:jc w:val="right"/></w:pPr>',
+      ],
+      [
+        "<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val='right'/></m:oMathParaPr></m:oMathPara></w:p>",
+        '',
+      ],
+      [
+        '<w:p><m:oMathPara><m:oMathParaPr><m:jc  m:val="center"/></m:oMathParaPr></m:oMathPara></w:p>',
+        '',
+      ],
+      [
+        '<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val="centerGroup"/></m:oMathParaPr></m:oMathPara></w:p>',
+        '',
+      ],
       ['<w:p><m:oMathPara><m:jc m:val="left\'/></m:oMathPara></w:p>', ''],
       ['<w:p><m:oMath/></w:p>', '<w:pPr><w:jc w:val="center"/></w:pPr>'],
       ['<w:p><m:oMath/></w:p>', '<w:pPr><w:jc w:val="end"/></w:pPr>'],
@@ -1248,7 +1841,8 @@ export const PARSE_TEXT: CallSpec[] = [
     call: (text, args) => internals.mathSizeHalfPoints!(text, args.eff),
     fromParse: {
       fn: 'mathSizeHalfPoints',
-      input: ([omml, eff]) => (typeof omml === 'string' && eff ? { text: omml, args: { eff: json(eff) } } : undefined),
+      input: ([omml, eff]) =>
+        typeof omml === 'string' && eff ? { text: omml, args: { eff: json(eff) } } : undefined,
     },
     built: [
       '<m:oMath><m:r><w:rPr><w:sz w:val="28"/></w:rPr></m:r></m:oMath>',
@@ -1258,7 +1852,9 @@ export const PARSE_TEXT: CallSpec[] = [
       '<m:oMath><m:r><w:rPr><w:sz w:val="x"/></w:rPr></m:r></m:oMath>',
       '<m:oMath><m:r><w:rPr><w:szCs w:val="40"/></w:rPr></m:r></m:oMath>',
       '<m:oMath/>',
-    ].flatMap((text, index) => [EFFS[index % EFFS.length]!, EFFS[6]!].map((eff) => ({ text, args: { eff } }))),
+    ].flatMap((text, index) =>
+      [EFFS[index % EFFS.length]!, EFFS[6]!].map((eff) => ({ text, args: { eff } })),
+    ),
     argMutation: true,
   },
   {
@@ -1274,6 +1870,25 @@ export const PARSE_TEXT: CallSpec[] = [
       '<w:p><mc:Fallback><w:txbxContent><m:oMath/></w:txbxContent></mc:Fallback><w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>',
       '<w:p><mc:Fallback>unclosed<w:txbxContent>also</w:p>',
       '<w:p><mc:FallbackX>x</mc:Fallback><w:txbxContent a="1">kept</w:txbxContent></w:p>',
+      // the fallback and the text boxes in other valid spellings: markup hidden in a comment,
+      // CDATA or an instruction, spaced end tags, a `>` in an attribute value
+      ...hiddenIn('<mc:Fallback>').map(
+        (hidden) =>
+          `<w:p>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><m:oMath/></mc:Choice><mc:Fallback><m:oMath/></mc:Fallback></mc:AlternateContent><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('</mc:Fallback>').map(
+        (hidden) =>
+          `<w:p><mc:Fallback>${hidden}<m:oMath/></mc:Fallback><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('<w:txbxContent>').map(
+        (hidden) => `<w:p>${hidden}<w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+      ),
+      ...hiddenIn('</w:txbxContent>').map(
+        (hidden) => `<w:p><w:txbxContent><w:p>${hidden}<m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+      ),
+      '<w:p><mc:Fallback><m:oMath/></mc:Fallback ><w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent ><m:oMath/></w:p>',
+      '<w:p><mc:Fallback a=">"><m:oMath/></mc:Fallback><w:txbxContent a=">"><m:oMath/></w:txbxContent><m:oMath/></w:p>',
+      "<w:p><mc:Fallback a='>' b=\"'>\"><m:oMath/></mc:Fallback><w:txbxContent a='>'>x</w:txbxContent>\n<m:oMath/></w:p>",
     ].map((text) => ({ text })),
   },
   {
@@ -1287,17 +1902,27 @@ export const PARSE_TEXT: CallSpec[] = [
     fromParse: {
       fn: 'effectiveRunOf',
       input: ([res, rPr, key], parts) => {
-        if (!res || typeof res !== 'object' || (key !== undefined && typeof key !== 'string')) return undefined
+        if (!res || typeof res !== 'object' || (key !== undefined && typeof key !== 'string'))
+          return undefined
         const { eff, rctx } = res as { eff: unknown; rctx: ResolveCtx }
         const r = nodeInput(rPr)
         if (!r) return undefined
         // the first call of each key on this paragraph: a later one is a memo hit
-        const calls = earlierCalls.get(res) ?? new Map<string, { text: string; node?: string; key?: string }>()
+        const calls =
+          earlierCalls.get(res) ?? new Map<string, { text: string; node?: string; key?: string }>()
         earlierCalls.set(res, calls)
         const earlier = calls.get(key ?? '')
         if (!earlier) calls.set(key ?? '', { ...r, ...(key === undefined ? {} : { key }) })
-        const members = membersOf(parts, rctx, ['styles', 'numbering', 'docDefaults', 'defaultParaStyle', 'themeFonts', 'themeColors'])
-        if (!members || !members.includes('styles') || !members.includes('numbering')) return undefined
+        const members = membersOf(parts, rctx, [
+          'styles',
+          'numbering',
+          'docDefaults',
+          'defaultParaStyle',
+          'themeFonts',
+          'themeColors',
+        ])
+        if (!members || !members.includes('styles') || !members.includes('numbering'))
+          return undefined
         return withParts('effectiveRunOf', parts, {
           text: r.text,
           args: {
@@ -1335,7 +1960,9 @@ export const PARSE_TEXT: CallSpec[] = [
             compat: { compatibilityMode: 15 },
             ...(k === 1 ? { table: { cond: [] } } : {}),
             ...(k === 2 ? { earlier: { text: '<w:rPr><w:b/></w:rPr>', node: 'w:rPr', key } } : {}),
-            ...(k === 0 && index % 2 === 1 ? { earlier: { text: '<w:rPr><w:caps/></w:rPr>', node: 'w:rPr' } } : {}),
+            ...(k === 0 && index % 2 === 1
+              ? { earlier: { text: '<w:rPr><w:caps/></w:rPr>', node: 'w:rPr' } }
+              : {}),
           },
         }
       }),
@@ -1348,7 +1975,9 @@ export const PARSE_TEXT: CallSpec[] = [
       fn: 'markSizeOf',
       input: ([eff, node]) => {
         const p = nodeInput(node)
-        return p && eff ? { text: p.text, args: { ...(p.node ? { node: p.node } : {}), eff: json(eff) } } : undefined
+        return p && eff
+          ? { text: p.text, args: { ...(p.node ? { node: p.node } : {}), eff: json(eff) } }
+          : undefined
       },
     },
     built: EFF_P_PRS.flatMap((p, index) =>
@@ -1369,24 +1998,46 @@ export const PARSE_TEXT: CallSpec[] = [
         if (!p || !eff) return undefined
         return {
           text: p.text,
-          args: { ...(p.node ? { node: p.node } : {}), ...(format === undefined ? {} : { format: json(format) }), eff: json(eff) },
+          args: {
+            ...(p.node ? { node: p.node } : {}),
+            ...(format === undefined ? {} : { format: json(format) }),
+            eff: json(eff),
+          },
         }
       },
     },
-    built: EFFS.flatMap((eff, index) =>
-      [FORMATS[index % FORMATS.length], FORMATS[(index * 5 + 3) % FORMATS.length]].map((format, k) => {
-        const p = EFF_P_PRS[(index + k) % EFF_P_PRS.length]
-        return {
-          text: p ?? '',
-          args: { ...(p === undefined ? {} : { node: 'w:pPr' }), ...(format === undefined ? {} : { format }), eff },
-        }
-      }),
-    ),
+    built: [
+      ...EFFS.flatMap((eff, index) =>
+        [FORMATS[index % FORMATS.length], FORMATS[(index * 5 + 3) % FORMATS.length]].map(
+          (format, k) => {
+            const p = EFF_P_PRS[(index + k) % EFF_P_PRS.length]
+            return {
+              text: p ?? '',
+              args: {
+                ...(p === undefined ? {} : { node: 'w:pPr' }),
+                ...(format === undefined ? {} : { format }),
+                eff,
+              },
+            }
+          },
+        ),
+      ),
+      // a resolved bidi paragraph without its own w:bidi flips a physical jc to the logical side:
+      // right to left and left to right, center and an absent jc stay
+      ...[
+        { align: 'right' },
+        { align: 'left' },
+        { align: 'center' },
+        { align: 'right', bidiInherited: false },
+        {},
+      ].map((format) => ({ text: pPr(''), args: { node: 'w:pPr', format, eff: EFFS[1]! } })),
+    ],
     argMutation: true,
   },
   {
     fn: 'parse.legacyDirectRunFormat',
-    call: (text, args) => internals.legacyDirectRunFormat!(nodeOf(text, args), args.cs, args.themeFonts),
+    call: (text, args) =>
+      internals.legacyDirectRunFormat!(nodeOf(text, args), args.cs, args.themeFonts),
     fromParse: {
       fn: 'legacyDirectRunFormat',
       input: ([node, cs, themeFonts]) => {
@@ -1394,7 +2045,11 @@ export const PARSE_TEXT: CallSpec[] = [
         if (!r || typeof cs !== 'boolean') return undefined
         return {
           text: r.text,
-          args: { ...(r.node ? { node: r.node } : {}), cs, ...(themeFonts === undefined ? {} : { themeFonts: json(themeFonts) }) },
+          args: {
+            ...(r.node ? { node: r.node } : {}),
+            cs,
+            ...(themeFonts === undefined ? {} : { themeFonts: json(themeFonts) }),
+          },
         }
       },
     },
@@ -1419,7 +2074,17 @@ export const PARSE_TEXT: CallSpec[] = [
             ? {}
             : (index + k) % 3 === 1
               ? { themeFonts: null }
-              : { themeFonts: { major: 'Major Latin', minor: 'Minor Latin', eastAsia: 'Minor Ea', majorEastAsia: '', minorCs: '', majorCs: 'Major Cs', eaLang: 'ko-KR' } }),
+              : {
+                  themeFonts: {
+                    major: 'Major Latin',
+                    minor: 'Minor Latin',
+                    eastAsia: 'Minor Ea',
+                    majorEastAsia: '',
+                    minorCs: '',
+                    majorCs: 'Major Cs',
+                    eaLang: 'ko-KR',
+                  },
+                }),
         },
       })),
     ),
@@ -1463,16 +2128,63 @@ export const PARSE_TEXT: CallSpec[] = [
     built: [
       {},
       { 'w:w': '2000' },
-      { 'w:w': '2000', 'w:x': '100', 'w:y': '-50', 'w:h': '300', 'w:hRule': 'exact', 'w:hAnchor': 'margin', 'w:vAnchor': 'text', 'w:wrap': 'around' },
-      { 'w:w': '1e3', 'w:x': 'x', 'w:h': '0', 'w:hAnchor': 'page', 'w:vAnchor': 'margin', 'w:wrap': 'notBeside', 'w:hSpace': '-20', 'w:vSpace': '0' },
+      {
+        'w:w': '2000',
+        'w:x': '100',
+        'w:y': '-50',
+        'w:h': '300',
+        'w:hRule': 'exact',
+        'w:hAnchor': 'margin',
+        'w:vAnchor': 'text',
+        'w:wrap': 'around',
+      },
+      {
+        'w:w': '1e3',
+        'w:x': 'x',
+        'w:h': '0',
+        'w:hAnchor': 'page',
+        'w:vAnchor': 'margin',
+        'w:wrap': 'notBeside',
+        'w:hSpace': '-20',
+        'w:vSpace': '0',
+      },
       { 'w:w': '0' },
       { 'w:w': '-5' },
-      { 'w:w': '500', 'w:h': '200', 'w:hRule': 'auto', 'w:hAnchor': 'text', 'w:vAnchor': 'page', 'w:wrap': 'none', 'w:xAlign': 'inside', 'w:yAlign': 'inline', 'w:anchorLock': 'true' },
-      { 'w:w': '500', 'w:wrap': 'through', 'w:xAlign': 'outside', 'w:yAlign': 'outside', 'w:anchorLock': '1', 'w:hSpace': '7' },
-      { 'w:w': '500', 'w:wrap': 'auto', 'w:xAlign': 'left', 'w:yAlign': 'top', 'w:anchorLock': 'on', 'w:vSpace': '9' },
+      {
+        'w:w': '500',
+        'w:h': '200',
+        'w:hRule': 'auto',
+        'w:hAnchor': 'text',
+        'w:vAnchor': 'page',
+        'w:wrap': 'none',
+        'w:xAlign': 'inside',
+        'w:yAlign': 'inline',
+        'w:anchorLock': 'true',
+      },
+      {
+        'w:w': '500',
+        'w:wrap': 'through',
+        'w:xAlign': 'outside',
+        'w:yAlign': 'outside',
+        'w:anchorLock': '1',
+        'w:hSpace': '7',
+      },
+      {
+        'w:w': '500',
+        'w:wrap': 'auto',
+        'w:xAlign': 'left',
+        'w:yAlign': 'top',
+        'w:anchorLock': 'on',
+        'w:vSpace': '9',
+      },
       { 'w:w': '500', 'w:wrap': 'tight', 'w:xAlign': 'center', 'w:yAlign': 'center' },
       { 'w:w': '500', 'w:xAlign': 'right', 'w:yAlign': 'bottom' },
-      { 'w:w': '500', 'w:xAlign': 'Right', 'w:yAlign': 'inside', 'w:x': '99999999999999999999999999' },
+      {
+        'w:w': '500',
+        'w:xAlign': 'Right',
+        'w:yAlign': 'inside',
+        'w:x': '99999999999999999999999999',
+      },
     ].map((attrs) => ({ args: { attrs } })),
     mutation: 'none',
     argMutation: true,
@@ -1483,20 +2195,49 @@ export const PARSE_TEXT: CallSpec[] = [
     fromParse: {
       fn: 'propChangeInfo',
       input: ([xml, changeName]) =>
-        typeof xml === 'string' && typeof changeName === 'string' ? { text: xml, args: { changeName } } : undefined,
+        typeof xml === 'string' && typeof changeName === 'string'
+          ? { text: xml, args: { changeName } }
+          : undefined,
     },
     built: [
       ['<w:tblPr><w:tblW w:w="0"/></w:tblPr>', 'w:tblPrChange'],
-      ['<w:tblPr><w:tblW w:w="0"/><w:tblPrChange w:id="3" w:author="A" w:date="2024-01-02T03:04:05Z"><w:tblPr><w:jc w:val="center"/></w:tblPr></w:tblPrChange></w:tblPr>', 'w:tblPrChange'],
-      ['<w:tblPr><w:tblPrChange w:author="B"><w:tblPr/></w:tblPrChange></w:tblPr>', 'w:tblPrChange'],
-      ['<w:trPr><w:trPrChange w:id="" w:author="" w16du:dateUtc="2024-01-01T00:00:00Z"><w:trPr><w:cantSplit/></w:trPr></w:trPrChange></w:trPr>', 'w:trPrChange'],
-      ['<w:tcPr><w:cellMerge w:id="1" w:author="C" w:vMerge="cont" w:vMergeOrig="rest"/></w:tcPr>', 'w:cellMerge'],
-      ['<w:tcPr><w:tcPrChange w:id="1" w:author="D"><w:tcPr><w:tcW w:w="100"/></w:tcPr></w:tcPrChange></w:tcPr>', 'w:tcPrChange'],
-      ['<w:sectPr><w:sectPrChange w:id="9" w:author="E"><w:sectPr><w:pgSz w:w="1"/></w:sectPr></w:sectPrChange></w:sectPr>', 'w:sectPrChange'],
-      ['<w:tblGrid><w:tblGridChange w:id="2"><w:tblGrid><w:gridCol w:w="10"/></w:tblGrid></w:tblGridChange></w:tblGrid>', 'w:tblGridChange'],
-      ['<w:tblPrEx><w:tblPrExChange w:author="F"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>', 'w:tblPrExChange'],
+      [
+        '<w:tblPr><w:tblW w:w="0"/><w:tblPrChange w:id="3" w:author="A" w:date="2024-01-02T03:04:05Z"><w:tblPr><w:jc w:val="center"/></w:tblPr></w:tblPrChange></w:tblPr>',
+        'w:tblPrChange',
+      ],
+      [
+        '<w:tblPr><w:tblPrChange w:author="B"><w:tblPr/></w:tblPrChange></w:tblPr>',
+        'w:tblPrChange',
+      ],
+      [
+        '<w:trPr><w:trPrChange w:id="" w:author="" w16du:dateUtc="2024-01-01T00:00:00Z"><w:trPr><w:cantSplit/></w:trPr></w:trPrChange></w:trPr>',
+        'w:trPrChange',
+      ],
+      [
+        '<w:tcPr><w:cellMerge w:id="1" w:author="C" w:vMerge="cont" w:vMergeOrig="rest"/></w:tcPr>',
+        'w:cellMerge',
+      ],
+      [
+        '<w:tcPr><w:tcPrChange w:id="1" w:author="D"><w:tcPr><w:tcW w:w="100"/></w:tcPr></w:tcPrChange></w:tcPr>',
+        'w:tcPrChange',
+      ],
+      [
+        '<w:sectPr><w:sectPrChange w:id="9" w:author="E"><w:sectPr><w:pgSz w:w="1"/></w:sectPr></w:sectPrChange></w:sectPr>',
+        'w:sectPrChange',
+      ],
+      [
+        '<w:tblGrid><w:tblGridChange w:id="2"><w:tblGrid><w:gridCol w:w="10"/></w:tblGrid></w:tblGridChange></w:tblGrid>',
+        'w:tblGridChange',
+      ],
+      [
+        '<w:tblPrEx><w:tblPrExChange w:author="F"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>',
+        'w:tblPrExChange',
+      ],
       ['<w:tblPr><w:tblPrChangeX w:author="G"/></w:tblPr>', 'w:tblPrChange'],
-      ["<w:tblPr><w:tblPrChange w:author='H' w:date='d'><w:tblPr><w:x/></w:tblPr></w:tblPrChange></w:tblPr>", 'w:tblPrChange'],
+      [
+        "<w:tblPr><w:tblPrChange w:author='H' w:date='d'><w:tblPr><w:x/></w:tblPr></w:tblPrChange></w:tblPr>",
+        'w:tblPrChange',
+      ],
     ].map(([text, changeName]) => ({ text, args: { changeName } })),
   },
   {
@@ -1505,12 +2246,22 @@ export const PARSE_TEXT: CallSpec[] = [
     fromParse: {
       fn: 'mergeTabStops',
       input: ([style, direct]) => ({
-        args: { ...(style === undefined ? {} : { style: json(style) }), ...(direct === undefined ? {} : { direct: json(direct) }) },
+        args: {
+          ...(style === undefined ? {} : { style: json(style) }),
+          ...(direct === undefined ? {} : { direct: json(direct) }),
+        },
       }),
     },
     built: TAB_STOPS.flatMap((style, index) =>
-      [TAB_STOPS[(index + 1) % TAB_STOPS.length], TAB_STOPS[(index * 3 + 2) % TAB_STOPS.length], undefined].map((direct) => ({
-        args: { ...(style === undefined ? {} : { style }), ...(direct === undefined ? {} : { direct }) },
+      [
+        TAB_STOPS[(index + 1) % TAB_STOPS.length],
+        TAB_STOPS[(index * 3 + 2) % TAB_STOPS.length],
+        undefined,
+      ].map((direct) => ({
+        args: {
+          ...(style === undefined ? {} : { style }),
+          ...(direct === undefined ? {} : { direct }),
+        },
       })),
     ),
     mutation: 'none',
@@ -1521,17 +2272,40 @@ export const PARSE_TEXT: CallSpec[] = [
     call: (_text, args) => internals.noteRunOf!(args.run, args.base),
     fromParse: {
       fn: 'noteRunOf',
-      input: ([run, base]) => (run && base ? { args: { run: json(run), base: json(base) } } : undefined),
+      input: ([run, base]) =>
+        run && base ? { args: { run: json(run), base: json(base) } } : undefined,
     },
-    built: RUNS.flatMap((run, index) =>
-      [BASES[index % BASES.length]!, BASES[(index + 1) % BASES.length]!].map((base) => ({ args: { run, base } })),
+    built: [
+      ...RUNS,
+      // hidden from AI: the label the run's rPr carries, read the way the serialiser spells it
+      ...marks().map((mark) => ({ text: 'secret', rawRPr: `<w:rPr>${mark}</w:rPr>` })),
+      { text: 'a', rawRPr: '<w:rPr><go:redact/></w:rPr>' },
+      { text: 'b', rawRPr: '<w:rPr><go:redact w:label=""/></w:rPr>', bold: true },
+      {
+        text: 'c',
+        rawRPr: '<w:rPr><go:redact w:label="a &amp; b"/></w:rPr>',
+        del: { author: 'Ann' },
+      },
+      { text: 'd', rawRPr: '<w:rPr><w:b/></w:rPr>' },
+      { text: 'e', rawRPr: '' },
+    ].flatMap((run, index) =>
+      [BASES[index % BASES.length]!, BASES[(index + 1) % BASES.length]!].map((base) => ({
+        args: { run, base },
+      })),
     ),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'parse.noteNumbersOf',
-    call: (text, args) => internals.noteNumbersOf!(text, args.footnotes, args.endnotes, args.footnoteProps, args.endnoteProps),
+    call: (text, args) =>
+      internals.noteNumbersOf!(
+        text,
+        args.footnotes,
+        args.endnotes,
+        args.footnoteProps,
+        args.endnoteProps,
+      ),
     fromParse: {
       fn: 'noteNumbersOf',
       input: ([documentXml, footnotes, endnotes, footnoteProps, endnoteProps]) =>
@@ -1548,7 +2322,10 @@ export const PARSE_TEXT: CallSpec[] = [
           : undefined,
     },
     built: NOTE_DOCS.flatMap((body) =>
-      NOTE_ARGS.map((args) => ({ text: `<w:document ${W}><w:body>${body}</w:body></w:document>`, args })),
+      NOTE_ARGS.map((args) => ({
+        text: `<w:document ${W}><w:body>${body}</w:body></w:document>`,
+        args,
+      })),
     ),
     argMutation: true,
   },
@@ -1556,4 +2333,7 @@ export const PARSE_TEXT: CallSpec[] = [
 ]
 
 /** The calls of effectiveRunOf made so far on each RunResolve, by key. */
-const earlierCalls = new WeakMap<object, Map<string, { text: string; node?: string; key?: string }>>()
+const earlierCalls = new WeakMap<
+  object,
+  Map<string, { text: string; node?: string; key?: string }>
+>()

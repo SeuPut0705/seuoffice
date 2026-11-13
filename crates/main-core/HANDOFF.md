@@ -33,6 +33,7 @@ npx tsx main.ts --list                                                          
 node faults.mjs faults/b1.json,faults/b2.json      # FAULT_SHARD=i/n 으로 나눠 돌림
 
 # 러너(비교 + Windows + 결함 6조각)
+# 실행 파일의 작업은 모두 `needs: quick`이다(main 0d78db19c의 규칙): 서식·clippy·단위 시험은 quick에서 돈다.
 # 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 6,109개 전부는 한 실행에 들지 않으므로
 # 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store, b5-kb):
 gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
@@ -53,7 +54,7 @@ gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
 
 ## 알려진 빨강 (이 가지 탓 아님)
 
-- 없음(680d88362 기준). B4가 main에 들어오면 `office-wasm/src/invoke/table.rs`, `jscompat/tests/sites.rs`, `tools/docx-diff/model-schema.ts`, `tools/docx-diff/engine.ts`는 B4 쪽을 따른다.
+- 없음. B4가 main에 들어온 뒤(main 0d78db19c) main을 합치며 `crates/`의 엔진 쪽(`office-wasm`, `docx-engine`, `pptx-engine`, `tools/docx-diff`, `jscompat/tests/sites.rs`)은 main 그대로 두었다. `jscompat`과 `ooxml-pkg`에는 이 가지가 더한 것(`node_path`, `json_print`, `date_parse`, `jszip`의 `unix_permissions` 등)만 남는다.
 
 ## 열린 질문
 

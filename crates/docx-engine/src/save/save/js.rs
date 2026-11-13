@@ -68,7 +68,12 @@ pub fn replace_all_with(
 /// `new RegExp(pattern, flags)` over a pattern built at run time: refused as
 /// JavaScript refuses a bad pattern.
 pub fn dynamic(pattern: &str, flags: &str) -> Result<TryJsRegex, String> {
-    TryJsRegex::new(pattern, flags).map_err(|error| error.to_string())
+    let pattern = if flags.contains(['u', 'v']) {
+        std::borrow::Cow::Borrowed(pattern)
+    } else {
+        jscompat::units_pattern(pattern)
+    };
+    TryJsRegex::new(&pattern, flags).map_err(|error| error.to_string())
 }
 
 /// JSZip's `base64.decode` of a `{ base64: true }` file: characters outside

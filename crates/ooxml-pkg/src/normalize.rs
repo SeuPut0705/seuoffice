@@ -5,8 +5,11 @@
 //! of the engine matches literally. It runs once per XML part at load, so the
 //! parser's offsets and the saved output see the same text.
 
+use std::borrow::Cow;
+
 use jscompat::{
-    JsRegex, RegexLimit, js_regex, math_round, number_to_string, parse_float, try_js_regex,
+    JsRegex, RegexLimit, is_js_space, js_regex, math_round, number_to_string, parse_float,
+    try_js_regex,
 };
 
 const S: &str = "http://purl.oclc.org/ooxml/";
@@ -257,6 +260,222 @@ pub fn needs_ooxml_normalization(xml: &str) -> bool {
         canonical_prefix(found.get(3).unwrap_or(""))
             .is_some_and(|canonical| canonical != found.get(1).unwrap_or(""))
     })
+}
+
+/// `canonicalXmlSyntax`: for a reader that only reads, the text with the
+/// spellings a pattern cannot follow written the usual way. Comments and
+/// processing instructions (but the XML declaration) go, a CDATA section
+/// becomes the same text escaped, an end tag has no white space before its
+/// `>`, and a start tag's attributes are `name="value"`: double quotes, no
+/// white space around `=`, a `>` in a value written `&gt;`. Text written the
+/// usual way comes back as it was.
+///
+/// The TypeScript finds the tokens with one regular expression
+/// (`SYNTAX_TOKEN_RE`); this reads them in the order it tries them, with the
+/// same answers, and has no bound that a long tag could pass.
+pub fn canonical_xml_syntax(xml: &str) -> Cow<'_, str> {
+    let mut out: Option<String> = None;
+    let (mut copied, mut at) = (0, 0);
+    while let Some(found) = xml[at..].find('<') {
+        let start = at + found;
+        let Some((end, replacement)) = syntax_token(xml, start) else {
+            at = start + 1;
+            continue;
+        };
+        if let Some(replacement) = replacement {
+            let out = out.get_or_insert_with(|| String::with_capacity(xml.len()));
+            out.push_str(&xml[copied..start]);
+            out.push_str(&replacement);
+            copied = end;
+        }
+        at = end;
+    }
+    match out {
+        Some(mut out) => {
+            out.push_str(&xml[copied..]);
+            Cow::Owned(out)
+        }
+        None => Cow::Borrowed(xml),
+    }
+}
+
+/// The token of `SYNTAX_TOKEN_RE` that starts at the `<` at byte `start`: its
+/// end and what replaces it (`None`: it is kept as it is).
+fn syntax_token(xml: &str, start: usize) -> Option<(usize, Option<String>)> {
+    let rest = &xml[start..];
+    if let Some(body) = rest.strip_prefix("<!--") {
+        let close = body.find("-->")?;
+        return Some((start + 4 + close + 3, Some(String::new())));
+    }
+    if let Some(body) = rest.strip_prefix("<![CDATA[") {
+        let close = body.find("]]>")?;
+        let text = body[..close]
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;");
+        return Some((start + 9 + close + 3, Some(text)));
+    }
+    if let Some(body) = rest.strip_prefix("<?") {
+        let close = body.find("?>")?;
+        let declaration = body[..close]
+            .strip_prefix("xml")
+            .and_then(|after| after.chars().next())
+            .is_some_and(is_js_space);
+        return Some((start + 2 + close + 2, (!declaration).then(String::new)));
+    }
+    if let Some(body) = rest.strip_prefix("</") {
+        let name_len = body
+            .find(|c: char| is_js_space(c) || c == '>')
+            .filter(|&len| len > 0)?;
+        let after_name = &body[name_len..];
+        let spaces = after_name.len() - after_name.trim_start_matches(is_js_space).len();
+        if spaces == 0 || !after_name[spaces..].starts_with('>') {
+            return None;
+        }
+        let end = start + 2 + name_len + spaces + 1;
+        return Some((end, Some(format!("</{}>", &body[..name_len]))));
+    }
+    if !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') {
+        return None;
+    }
+    start_tag_token(xml, start)
+}
+
+/// The byte of the `>` that ends the attribute text starting at `from`: a
+/// quoted value is read whole, `None` when a quote is never closed or no `>`
+/// follows.
+fn attributes_end(xml: &str, from: usize) -> Option<usize> {
+    let bytes = xml.as_bytes();
+    let mut at = from;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'>' => return Some(at),
+            quote @ (b'"' | b'\'') => {
+                at += 1 + xml[at + 1..].bytes().position(|byte| byte == quote)? + 1;
+            }
+            _ => at += 1,
+        }
+    }
+    None
+}
+
+/// `<([A-Za-z_][^\s/>]*)((?:[^>"']|"[^"]*"|'[^']*')*)>` at `start`, with the
+/// name as long as the attributes allow: a name holding a quote may end
+/// before it so that the quote opens a value.
+fn start_tag_token(xml: &str, start: usize) -> Option<(usize, Option<String>)> {
+    let name_from = start + 2;
+    let longest = xml[name_from..]
+        .find(|c: char| is_js_space(c) || c == '/' || c == '>')
+        .map_or(xml.len(), |len| name_from + len);
+    let last_quote = xml[name_from..longest]
+        .rfind(['"', '\''])
+        .map(|at| name_from + at);
+    let ends = std::iter::once(longest).chain(
+        last_quote
+            .into_iter()
+            .flat_map(|quote| (name_from..=quote).rev())
+            .filter(|&at| xml.is_char_boundary(at)),
+    );
+    for name_end in ends {
+        let Some(close) = attributes_end(xml, name_end) else {
+            continue;
+        };
+        let name = &xml[start + 1..name_end];
+        let attributes = &xml[name_end..close];
+        let replacement = (!plain_attributes(attributes)).then(|| {
+            let mut out = format!("<{name}");
+            for (key, value) in attribute_pairs(attributes) {
+                out.push_str(&format!(" {key}=\"{value}\""));
+            }
+            out.push_str(if attributes.trim_end_matches(is_js_space).ends_with('/') {
+                "/>"
+            } else {
+                ">"
+            });
+            out
+        });
+        return Some((close + 1, replacement));
+    }
+    None
+}
+
+/// `PLAIN_ATTRS_RE`: `^(?:\s+[^\s=/>"']+="[^"<>]*")*\s*\/?$`
+fn plain_attributes(attributes: &str) -> bool {
+    let mut at = 0;
+    while let Some(next) = plain_attribute(attributes, at) {
+        at = next;
+    }
+    let rest = attributes[at..].trim_start_matches(is_js_space);
+    rest.is_empty() || rest == "/"
+}
+
+/// One `\s+[^\s=/>"']+="[^"<>]*"` of `PLAIN_ATTRS_RE` at byte `at`: where it ends.
+fn plain_attribute(attributes: &str, at: usize) -> Option<usize> {
+    let rest = &attributes[at..];
+    let name = rest.trim_start_matches(is_js_space);
+    let spaces = rest.len() - name.len();
+    if spaces == 0 {
+        return None;
+    }
+    let name_len = name
+        .find(|c: char| is_js_space(c) || matches!(c, '=' | '/' | '>' | '"' | '\''))
+        .unwrap_or(name.len());
+    let value = name[name_len..].strip_prefix("=\"")?;
+    if name_len == 0 {
+        return None;
+    }
+    let value_len = value.find(['"', '<', '>'])?;
+    value[value_len..]
+        .starts_with('"')
+        .then_some(at + spaces + name_len + 2 + value_len + 1)
+}
+
+/// The matches of `ANY_ATTR_RE`, `([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')`,
+/// over an attribute text, each as its name and its value written for a
+/// double-quoted attribute.
+fn attribute_pairs(attributes: &str) -> Vec<(&str, String)> {
+    let is_name = |c: char| !(is_js_space(c) || matches!(c, '=' | '/' | '>'));
+    let mut pairs = Vec::new();
+    let mut at = 0;
+    while let Some(c) = attributes[at..].chars().next() {
+        if !is_name(c) {
+            at += c.len_utf8();
+            continue;
+        }
+        // every start inside one run of name characters reads the same tail
+        let name_end = attributes[at..]
+            .find(|c: char| !is_name(c))
+            .map_or(attributes.len(), |len| at + len);
+        match attribute_value(attributes, name_end) {
+            Some((value, end)) => {
+                pairs.push((&attributes[at..name_end], value));
+                at = end;
+            }
+            None => at = name_end,
+        }
+    }
+    pairs
+}
+
+/// `\s*=\s*(?:"([^"]*)"|'([^']*)')` at byte `at`: the value as a
+/// double-quoted attribute holds it (`"` as `&quot;`, `>` as `&gt;`), and where the match ends.
+fn attribute_value(attributes: &str, at: usize) -> Option<(String, usize)> {
+    let after_name = attributes[at..].trim_start_matches(is_js_space);
+    let after_equals = after_name
+        .strip_prefix('=')?
+        .trim_start_matches(is_js_space);
+    let quote = after_equals
+        .chars()
+        .next()
+        .filter(|c| matches!(c, '"' | '\''))?;
+    let value = &after_equals[1..];
+    let len = value.find(quote)?;
+    let escaped = if quote == '"' {
+        value[..len].replace('>', "&gt;")
+    } else {
+        value[..len].replace('"', "&quot;").replace('>', "&gt;")
+    };
+    Some((escaped, attributes.len() - value.len() + len + 1))
 }
 
 struct Attr {

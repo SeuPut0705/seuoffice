@@ -9,6 +9,7 @@ pub mod hf_part;
 pub mod hf_root;
 
 use jscompat::{JsNum, Radix, Slot, js_regex, math_max, parse_int, to_int32, to_number};
+use ooxml_pkg::canonical_xml_syntax;
 use ooxml_xml::XNode;
 use serde::{Deserialize, Serialize};
 
@@ -60,7 +61,8 @@ pub struct TableSummary {
 
 /// `tableSummary`: rows counted over the whole table, columns over its first
 /// row, nested tables included; the text cut at 120 UTF-16 units.
-pub fn table_summary(xml: &str) -> TableSummary {
+pub fn table_summary(source: &str) -> TableSummary {
+    let xml = &*canonical_xml_syntax(source);
     let rows = js_regex!(r"<w:tr[\s>]").find_iter(xml).count();
     let first_row = js_regex!(r"<w:tr[\s>][\s\S]*?<\/w:tr>")
         .exec(xml)
@@ -169,7 +171,37 @@ pub fn reconcile_grid_columns(
     row_tcws: &[Vec<Option<JsNum>>],
     grid_cols: Option<&[JsNum]>,
 ) -> Result<Option<Vec<JsNum>>, String> {
-    let span_of = |cell: &TableCell| cell.col_span.map_or(1.0, |span| span.0);
+    let spans: Vec<Vec<Option<JsNum>>> = rows
+        .iter()
+        .map(|row| row.iter().map(|cell| *cell.col_span).collect())
+        .collect();
+    let Some((new_spans, widths)) = reconcile_grid_spans(&spans, row_tcws, grid_cols)? else {
+        return Ok(None);
+    };
+    for (row, spans) in rows.iter_mut().zip(&new_spans) {
+        for (cell, &span) in row.iter_mut().zip(spans) {
+            if span > 1 {
+                cell.col_span.set(JsNum(span as f64));
+            } else {
+                cell.col_span.delete();
+            }
+        }
+    }
+    Ok(Some(widths))
+}
+
+/// The new spans of each row's cells, and the column widths.
+pub type GridSpans = (Vec<Vec<i64>>, Vec<JsNum>);
+
+/// The new spans of each row's cells and the column widths: `reconcileGridColumns`
+/// over the cells' `colSpan` alone (`None` where a cell has none), the one
+/// field it reads. The binding sends only these, not the cells.
+pub fn reconcile_grid_spans(
+    rows: &[Vec<Option<JsNum>>],
+    row_tcws: &[Vec<Option<JsNum>>],
+    grid_cols: Option<&[JsNum]>,
+) -> Result<Option<GridSpans>, String> {
+    let span_of = |span: &Option<JsNum>| span.map_or(1.0, |span| span.0);
     let span_sums: Vec<f64> = rows
         .iter()
         .map(|row| row.iter().fold(0.0, |sum, cell| sum + span_of(cell)))
@@ -258,21 +290,13 @@ pub fn reconcile_grid_columns(
         }
         new_spans.push(spans);
     }
-    for (row, spans) in rows.iter_mut().zip(&new_spans) {
-        for (cell, &span) in row.iter_mut().zip(spans) {
-            if span > 1 {
-                cell.col_span.set(JsNum(span as f64));
-            } else {
-                cell.col_span.delete();
-            }
-        }
-    }
-    Ok(Some(
+    Ok(Some((
+        new_spans,
         reps.iter()
             .enumerate()
             .map(|(i, &v)| JsNum(v - if i > 0 { reps[i - 1] } else { 0.0 }))
             .collect(),
-    ))
+    )))
 }
 
 /// `flattenedTableModel`: the whole subtree as a 1×1 table of the plain texts

@@ -3,14 +3,22 @@
 //! `parseWriteProtection`, `parseRemovePersonalInfo` of
 //! packages/docx-engine/src/parse-package.ts).
 
+use std::collections::HashMap;
+
 use jscompat::{
-    JsNum, JsRegex, Radix, TryJsRegex, base64, js_regex, math_round, parse_int, truthy,
+    JsNum, JsRegex, Radix, RegexLimit, TryJsRegex, base64, js_regex, math_round, parse_int, truthy,
+    units_pattern,
 };
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
 use serde::Serialize;
 
 use crate::package::{Thrown, parse_part, part_text};
+use crate::save::parts::text_patch::patch_paragraph_texts;
+use crate::withheld::{
+    WITHHELD_ENTRY_TEXT, comment_entries, first_mark_label, has_mark_element,
+    over_withheld_model_text, parse_entry, runs_text, withheld_node,
+};
 use crate::xml_text::EMU_PER_PX;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -33,6 +41,15 @@ pub struct CommentInfo {
     pub date: Option<String>,
     /// Plain text, the paragraphs joined with a line feed.
     pub text: String,
+    /// The text as a model may read it, each run hidden from AI as its
+    /// placeholder; absent when the comment hides nothing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_text: Option<String>,
+    /// The comment's own XML as the file holds it, kept only when it carries a
+    /// hidden-from-AI mark: a person's edit of `text` is patched into it on
+    /// save. Never shown or sent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub marked_xml: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub para_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,15 +61,45 @@ pub struct CommentInfo {
     pub parent_id: Option<String>,
 }
 
-/// w:t text only: field instructions and deleted runs are not display text.
-fn result_text_of(node: &XNode, out: &mut String) {
-    for child in node.children() {
-        match child.name() {
-            None | Some("w:instrText" | "w:delInstrText" | "w:delText") => {}
-            Some("w:t") => out.push_str(&child.text()),
-            Some(_) => result_text_of(child, out),
-        }
+/// A comment's text as a model may read it, from the parser's own node: each
+/// hidden run as its placeholder, the whole comment withheld when a mark sits
+/// where no run accounts for it; `None` when it hides nothing.
+fn comment_model_text(node: &XNode) -> Option<String> {
+    if !has_mark_element(node) {
+        return None;
     }
+    Some(match withheld_node(node) {
+        None => WITHHELD_ENTRY_TEXT.to_owned(),
+        Some(view) => view
+            .find_children("w:p")
+            .map(runs_text)
+            .collect::<Vec<_>>()
+            .join("\n"),
+    })
+}
+
+/// What a model reads of a marked comment once a person's edit has given it
+/// `text`: the save patches the text into the comment's own XML, keeping its
+/// runs and their marks (`patchParagraphTexts`, as `buildCommentsXml` does). An
+/// edit the runs cannot carry is written with every word hidden, and reads so.
+///
+/// `editedCommentModelText`
+pub fn edited_comment_model_text(
+    marked_xml: &str,
+    text: &str,
+) -> Result<Option<String>, RegexLimit> {
+    // an edit the runs cannot carry is saved with every word hidden under the
+    // first label (buildCommentsXml), and reads that way now
+    let node =
+        patch_paragraph_texts(marked_xml, text, false)?.and_then(|patched| parse_entry(&patched));
+    let model_text = match node {
+        Some(node) => comment_model_text(&node),
+        None => Some(over_withheld_model_text(
+            text,
+            &first_mark_label(marked_xml),
+        )),
+    };
+    Ok(model_text)
 }
 
 /// The first picture a comment carries. The blip's relationship resolves
@@ -86,8 +133,11 @@ fn comment_image_of(package: &Package, comment: &XNode) -> Result<Option<Comment
         return Ok(None);
     };
     // the id goes into the pattern unescaped, as in the original
-    let rel_pattern = TryJsRegex::new(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#), "")
-        .map_err(|error| error.to_string())?;
+    let rel_pattern = TryJsRegex::new(
+        &units_pattern(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#)),
+        "",
+    )
+    .map_err(|error| error.to_string())?;
     let Some(rel) = rel_pattern
         .try_exec(rels_xml)
         .map_err(|limit| limit.to_string())?
@@ -140,6 +190,12 @@ pub fn parse_comments(package: &Package) -> Result<Vec<CommentInfo>, Thrown> {
     let Some(root) = parsed.iter().find(|node| node.name() == Some("w:comments")) else {
         return Ok(Vec::new());
     };
+    // each marked comment's own bytes, for a person's edit to be read against
+    let slices: HashMap<String, String> = comment_entries(text)
+        .map_err(|limit| limit.to_string())?
+        .into_iter()
+        .map(|entry| (entry.id, entry.xml))
+        .collect();
     let mut out: Vec<CommentInfo> = Vec::new();
     for node in root.find_children("w:comment") {
         let Some(id) = truthy(node.attr("w:id")) else {
@@ -150,20 +206,23 @@ pub fn parse_comments(package: &Package) -> Result<Vec<CommentInfo>, Thrown> {
             .last()
             .and_then(|last| truthy(last.attr("w14:paraId")));
         let image = comment_image_of(package, node)?;
-        let texts: Vec<String> = paras
+        let comment_text: String = paras
             .iter()
-            .map(|para| {
-                let mut text = String::new();
-                result_text_of(para, &mut text);
-                text
-            })
-            .collect();
+            .map(|para| runs_text(para))
+            .collect::<Vec<_>>()
+            .join("\n");
         out.push(CommentInfo {
             id: id.to_owned(),
             author: node.attr("w:author").unwrap_or("").to_owned(),
             initials: node.attr("w:initials").map(str::to_owned),
             date: node.attr("w:date").map(str::to_owned),
-            text: texts.join("\n"),
+            model_text: comment_model_text(node),
+            marked_xml: if has_mark_element(node) {
+                slices.get(id).cloned()
+            } else {
+                None
+            },
+            text: comment_text,
             para_id: para_id.map(str::to_owned),
             image,
             done: None,

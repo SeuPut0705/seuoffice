@@ -1,8 +1,26 @@
-import { decodeEntities } from './parse-xml-text'
+import { decodeEntities, decodeNumericCharRefs } from './parse-xml-text'
 import { applyRevisionResolutions } from './revision-xml'
 import { patchParagraphTexts } from './text-patch'
 import type { NoteInfo, NoteRun } from './types'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import {
+  attrsOf,
+  childrenOf,
+  escapeXmlAttr,
+  escapeXmlText,
+  findChildren,
+  serializeXNode,
+  type XNode,
+} from './xml-utils'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withheldText,
+  withRedactRoot,
+} from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -83,9 +101,47 @@ export interface NoteParagraph {
 /** supplied by the document parser; without it notes carry plain text only */
 export type NoteParagraphReader = (pXml: string) => NoteParagraph
 
+/**
+ * A note's text as a model may read it, from its display runs: each run hidden
+ * from AI as its placeholder (neighbours under one label as one), undefined
+ * when no run hides anything. Kept in step with the runs when a person accepts
+ * or rejects a change in the note.
+ */
+export function noteModelText(richParas: readonly NoteRun[][]): string | undefined {
+  if (!richParas.some((runs) => runs.some((r) => r.redact !== undefined && !r.del)))
+    return undefined
+  return richParas
+    .map((runs) => {
+      let line = ''
+      let label: string | undefined
+      for (const run of runs) {
+        if (run.del) continue
+        if (run.redact === undefined) line += run.text
+        else if (run.redact !== label) line += placeholderSource(run.redact)
+        label = run.redact
+      }
+      return line
+    })
+    .join('\n')
+}
+
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
-  return noteEntriesOf(xml, kind).map(({ id, text, xml: entryXml }) => {
+  // the entries as the parser finds them: markup inside CDATA is text, not a note
+  const root = parseEntry(xml)
+  const entries = root ? findChildren(root, ENTRY[kind]) : []
+  return entries.flatMap((entry) => {
+    const attrs = attrsOf(entry)
+    if (attrs['w:type'] !== undefined) return [] // separator / continuation entries
+    const id = attrs['w:id']
+    // an entry with no body at all (<w:footnote w:id="1"/>) is no note
+    if (!id || childrenOf(entry).length === 0) return []
+    const text = noteTreeText(entry)
+    // each run hidden from AI as its placeholder, or the whole note withheld
+    // when a mark sits where no run accounts for it
+    const modelText = withheldText(entry, noteTreeText)
+    // the entry as the parser read it, for the readers below that take XML
+    const entryXml = serializeXNode(entry)
     const paras = read ? noteParagraphsOf(entryXml).map(read) : []
     const first = paras[0]
     const richParas = paras.map((p) => p.runs)
@@ -102,6 +158,7 @@ export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphR
     return {
       id,
       text,
+      ...(modelText !== undefined ? { modelText } : {}),
       ...(first ? { richParas } : {}),
       ...(styleId ? { styleId } : {}),
       ...(/ADDIN\s+(?:ZOTERO_|CSL_)/.test(entryXml) ? { zoteroField: true as const } : {}),
@@ -117,25 +174,69 @@ function noteParagraphsOf(entryXml: string): string[] {
   return entryXml.match(/<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>/g) ?? []
 }
 
-/** typeless (real) note entries with their exact XML slice + plain text */
+/**
+ * Every entry of a notes part with its exact XML slice, found the way the
+ * parser finds them: any quotes, white space around = and before >, `>` or
+ * `/>` inside a value, and nothing inside a comment or CDATA taken for a tag.
+ * The save keeps an entry's bytes only when it finds it here; one it misses
+ * is written anew from plain text and loses its runs, a hidden-from-AI mark
+ * among them.
+ */
+function noteSlicesOf(
+  xml: string,
+  kind: NoteKind,
+): Array<{ id: string | undefined; typed: boolean; xml: string }> {
+  const out: Array<{ id: string | undefined; typed: boolean; xml: string }> = []
+  const tokens = new RegExp(
+    `<!--[\\s\\S]*?-->|<!\\[CDATA\\[[\\s\\S]*?\\]\\]>|<\\?[\\s\\S]*?\\?>|` +
+      `<(/?)${ENTRY[kind]}\\b((?:[^>"']|"[^"]*"|'[^']*')*?)(/?)>`,
+    'g',
+  )
+  let open: { start: number; attrs: string } | null = null
+  let m: RegExpExecArray | null
+  while ((m = tokens.exec(xml)) !== null) {
+    if (m[2] === undefined) continue // a comment, CDATA or a processing instruction
+    if (m[1] !== '/') {
+      // a self-closing entry has no body: it is no note, and nothing to keep
+      if (m[3] !== '/') open = { start: m.index, attrs: m[2] }
+      continue
+    }
+    if (!open) continue
+    const attr = (name: string) => {
+      const v = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`).exec(open!.attrs)
+      return v ? decodeEntities(v[1] ?? v[2]!) : undefined
+    }
+    out.push({
+      id: attr('w:id'),
+      typed: attr('w:type') !== undefined,
+      xml: xml.slice(open.start, tokens.lastIndex),
+    })
+    open = null
+  }
+  return out
+}
+
+/** typeless (real) note entries with their exact XML slice and their text as the parser reads it */
 function noteEntriesOf(
   xml: string,
   kind: NoteKind,
 ): Array<{ id: string; text: string; xml: string }> {
-  const out: Array<{ id: string; text: string; xml: string }> = []
-  const entry = ENTRY[kind]
-  // the attribute run must not end in "/" so a self-closing empty entry
-  // ("<w:footnote w:id="1"/>") is not read as an open tag over the next entry
-  const re = new RegExp(`<${entry}(\\s[^>]*[^/>])?>([\\s\\S]*?)</${entry}>`, 'g')
-  let m: RegExpExecArray | null
-  while ((m = re.exec(xml)) !== null) {
-    const attrs = m[1] ?? ''
-    if (/w:type=(?:"[^"]*"|'[^']*')/.test(attrs)) continue // separator / continuation entries
-    const id = /w:id=(?:"([^"]+)"|'([^']+)')/.exec(attrs)?.slice(1, 3).find(Boolean)
-    if (!id) continue
-    out.push({ id, text: noteEntryPlainText(m[2]), xml: m[0] })
-  }
-  return out
+  return noteSlicesOf(xml, kind).flatMap(({ id, typed, xml: entryXml }) =>
+    typed || !id ? [] : [{ id, text: entryText(entryXml), xml: entryXml }],
+  )
+}
+
+/** a note slice's text as the parser reads it (the pattern's reading when it does not parse) */
+function entryText(entryXml: string): string {
+  const node = parseEntry(entryXml)
+  return node ? noteTreeText(node) : noteEntryPlainText(entryXml)
+}
+
+/** a parsed note's text: its paragraphs' run text, the first one's leading spacer dropped */
+function noteTreeText(entry: XNode): string {
+  const paras = findChildren(entry, 'w:p').map((p) => decodeNumericCharRefs(runsText(p)))
+  if (paras.length > 0) paras[0] = paras[0]!.replace(/^\s+/, '')
+  return paras.join('\n')
 }
 
 /** paragraph texts joined with newlines; the first paragraph starts with the self-reference mark + a spacer */
@@ -262,6 +363,18 @@ function noteEntryXml(kind: NoteKind, note: NoteInfo, revAttrs: NoteRevAttrs): s
   return `<${entry} w:id="${escapeXmlAttr(note.id)}">${paras.join('')}</${entry}>`
 }
 
+/** the runs of a note's own XML that hold a picture, a drawing or an object: each as a run of its own, without the run's properties */
+function pictureRunsOf(entryXml: string): string[] {
+  const drawings = entryXml.match(/<w:(drawing|pict|object)(?:\s[^>]*)?>[\s\S]*?<\/w:\1>/g)
+  return (drawings ?? []).map((drawing) => `<w:r>${drawing}</w:r>`)
+}
+
+/** `entryXml` with the pictures of the entry it replaces at the end of its last paragraph, as comments keep theirs */
+function withPictureRuns(entryXml: string, originalEntryXml: string): string {
+  const runs = pictureRunsOf(originalEntryXml).join('')
+  return runs === '' ? entryXml : entryXml.replace(/<\/w:p>(?![\s\S]*<\/w:p>)/, `${runs}</w:p>`)
+}
+
 /**
  * Regenerate the notes part from the full desired list. Structural entries
  * (separator/continuation) from the original part are kept byte-identical;
@@ -276,15 +389,13 @@ export function buildNotesXml(
   notes: NoteInfo[],
   originalXml: string | null,
 ): string {
-  const entry = ENTRY[kind]
   let structural = ''
   const originals = new Map<string, { text: string; xml: string }>()
   if (originalXml) {
-    const re = new RegExp(
-      `<${entry}\\s[^>]*w:type=(?:"[^"]*"|'[^']*')[^>]*>[\\s\\S]*?</${entry}>`,
-      'g',
-    )
-    structural = (originalXml.match(re) ?? []).join('')
+    structural = noteSlicesOf(originalXml, kind)
+      .filter((e) => e.typed)
+      .map((e) => e.xml)
+      .join('')
     for (const e of noteEntriesOf(originalXml, kind)) originals.set(e.id, e)
   }
   if (!structural) structural = separatorEntries(kind)
@@ -295,19 +406,24 @@ export function buildNotesXml(
       if (!orig) return noteEntryXml(kind, n, revAttrs)
       if (n.revisionsResolved?.length) {
         const xml = applyRevisionResolutions(orig.xml, n.revisionsResolved)
-        const inner = new RegExp(`^<${entry}[^>]*>([\\s\\S]*)</${entry}>$`).exec(xml)?.[1] ?? ''
-        orig = { text: noteEntryPlainText(inner), xml }
+        orig = { text: entryText(xml), xml }
       }
       if (orig.text === n.text) return orig.xml
       const patched = patchParagraphTexts(orig.xml, n.text, {
         stripFirstParaLeadingSpace: true,
       })
-      return patched ?? noteEntryXml(kind, n, revAttrs)
+      if (patched !== null) return patched
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the note is hidden under the first label it carried
+      // The note's pictures ride into the new entry: a picture is no text, and
+      // one that sat in a hidden run is hidden with the rest of the note.
+      const entry = withPictureRuns(noteEntryXml(kind, n, revAttrs), orig.xml)
+      return hasWithheldTrace(orig.xml) ? overWithheld(entry, firstMarkLabel(orig.xml)) : entry
     })
     .join('')
-  return (
+  return withRedactRoot(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`
+      `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`,
   )
 }
 

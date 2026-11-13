@@ -35,6 +35,8 @@ import {
   type ZipFile,
 } from './reference/zip-splice'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
+import { commentEntries } from './reference/comment-slices'
+import { COMMENT_PARTS, editsOf, entrySlices } from './withheld-inputs'
 import { saveInternals } from './save-internals'
 
 // ---------------------------------------------------------------- the copy of patch.ts
@@ -318,7 +320,7 @@ const HFS: Array<Record<string, unknown>> = [
       {
         runs: [
           run('One', {
-            wrap: [{ open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' }],
+            wrap: [{ seq: 1, open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' }],
           }),
           run('Two'),
         ],
@@ -343,7 +345,7 @@ const HFS: Array<Record<string, unknown>> = [
   },
   { text: '', paras: [{ runs: [run('a & <b>')] }] },
   { text: 'a & <b> \u0001 "q"' },
-  { text: '', paras: [{ runs: [run('x')], alignOriginal: 'left' }], revisionsResolved: [] },
+  { text: '', paras: [{ runs: [run('x')], align: 'left' }], revisionsResolved: [] },
 ]
 
 const WATERMARK_XMLS: Array<string | undefined> = [
@@ -713,6 +715,8 @@ const BINDING_BODIES = [
   BOUND_SDT('{aaaa-1111}'),
   BOUND_SDT('{BBBB-2222}') + BOUND_SDT('AAAA-1111'),
   BOUND_SDT('{cccc-3333}'),
+  // a GUID with white space around it still names the store (normalizeItemId trims it)
+  BOUND_SDT(' \t{aaaa-1111}\n '),
   `<w:sdt><w:sdtPr><w:id w:val="9"/><w15:dataBinding xmlns:w15="x" w:storeItemID='{aaaa-1111}'/></w:sdtPr><w:sdtContent/></w:sdt>`,
 ]
 
@@ -1517,24 +1521,24 @@ export const SAVE_PARTS: CallSpec[] = [
       { hf: { text: '' }, originalXml: '' },
       { hf: { text: '', revisionsResolved: [] }, originalXml: REVISED_PART },
       {
-        hf: { text: '', revisionsResolved: [{ id: '1', action: 'accept' }] },
+        hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] },
         originalXml: REVISED_PART,
       },
       {
         hf: {
           text: '',
           revisionsResolved: [
-            { id: '2', action: 'reject' },
-            { id: '1', action: 'reject' },
+            { mode: 'reject', filter: { ids: ['2'] } },
+            { mode: 'reject', filter: { ids: ['1'] } },
           ],
         },
         originalXml: REVISED_PART,
       },
       {
-        hf: { text: '', revisionsResolved: [{ id: '99', action: 'accept' }] },
+        hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['99'] } }] },
         originalXml: REVISED_PART,
       },
-      { hf: { text: '', revisionsResolved: [{ id: '1', action: 'accept' }] }, originalXml: null },
+      { hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] }, originalXml: null },
     ].map((args): Input => ({ args })),
     mutation: 'none',
   },
@@ -1614,6 +1618,15 @@ export const SAVE_PARTS: CallSpec[] = [
           args: { comments, ...(originalXml === null ? {} : { originalXml }) },
         })),
       ),
+      // hidden from AI: every spelling of the mark and every tag mutation, each comment with the edits a person can make
+      ...COMMENT_PARTS.flatMap((originalXml): Input[] => {
+        const entries = commentEntries(originalXml).slice(0, 2)
+        return entries.flatMap(({ id, xml }) =>
+          editsOf(call('commentPlainText')(xml) as string).map((text) => ({
+            args: { comments: [{ id, author: 'Kim', text }, { id: '99', author: 'Kim', text: 'new' }], originalXml },
+          })),
+        )
+      }),
       ...IMAGE_RUNS.flatMap((imageRuns): Input[] =>
         [COMMENT_SETS[2]!, COMMENT_SETS[3]!, COMMENT_SETS[5]!].flatMap((comments) =>
           [undefined, [['0', '<w:r><w:t>kept</w:t></w:r>']] as Array<[string, string]>].map(
@@ -1661,6 +1674,8 @@ export const SAVE_PARTS: CallSpec[] = [
       '<w:p><w:r><w:tab/><w:t>x</w:t><w:t>y</w:t></w:r></w:p><w:p></w:p>',
       '<w:pp>text</w:pp><w:p>a</w:p>',
       '<w:p><w:r><w:t>é 😀</w:t></w:r></w:p>',
+      // a comment as the parser reads it: marks, CDATA, a comment faking an end tag
+      ...COMMENT_PARTS.flatMap((part) => entrySlices(part, 'w:comment')),
     ].map((text): Input => ({ text })),
   },
   {

@@ -52,7 +52,7 @@ import { delimiter, join, resolve } from 'node:path'
 import { HOME_DIR_NAME } from '../packages/cli/src/names'
 import { PRODUCT_NAME } from '../packages/i18n/src/product'
 // the engine behind buildBlankDocx starts first (this script imports the source by path)
-import '../packages/docx-engine/src/engine-node'
+import '../packages/engine-wasm/src/node'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 import { createBlankPptx } from '../packages/pptx-engine/src/blank'
 import { buildSheetsFixture } from '../apps/sheets/tests/fixture-builder'

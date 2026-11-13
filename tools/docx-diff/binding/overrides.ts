@@ -17,9 +17,14 @@ export interface Override {
   args?: string[]
   /** The statements that are the TypeScript body of the function, where the call is not one line (a mutated argument, a Set written back) */
   body?: string
-  /** The body of the row, where the Rust function is not called with the arguments one to one. `args` is `&[Value]`, `env` the InvokeEnv. */
+  /** The body of the row, where the Rust function is not called with the arguments one to one. `args` is `Args` (the positional `&[Value]` with long texts read in place by `rstr`/`opt`), `env` the InvokeEnv. */
   rust?: string
+  /** a parameter is a function the engine calls back, under a type name that does not say so */
+  callbacks?: true
 }
+
+const HOT_PER_CHARACTER =
+  'a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower'
 
 /** The 21 exports whose hand routes PortParseText wrote in crates/office-wasm/src/invoke/routes.rs. */
 export const ROUTES_HAND: Readonly<Record<string, true>> = {
@@ -68,15 +73,31 @@ export const OVERRIDES: Record<string, Override> = {
   scanBody: { command: true },
 
   // ---- the clock and entropy the engine has not: the host supplies them as arguments
-  buildBlankDocx: { args: ['options', '$now'] },
+  buildBlankDocx: { args: ['options ?? {}', '$now'] },
   buildChartWorkbookXlsxBase64: { args: ['categories', 'series', '$now'] },
   patchChartWorkbookXlsxBase64: { args: ['base64', 'categories', 'series', '$now'] },
   // ---- a whole document where the Rust reads the part of it that it needs
-  readSections: { args: ['parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))', 'parsed.gutterAtTop'] },
-  readSectionSettings: { args: ['parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))', 'parsed.gutterAtTop'] },
+  readSections: {
+    args: [
+      'parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))',
+      'parsed.gutterAtTop',
+    ],
+  },
+  readSectionSettings: {
+    args: [
+      'parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))',
+      'parsed.gutterAtTop',
+    ],
+  },
   readPageColor: { args: ['parsed.internal.documentXml'] },
   compareBlocks: {
-    args: ['original.blocks', 'revised.blocks', 'revised.internal.documentXml', 'options ?? {}', '$nowIso'],
+    args: [
+      'original.blocks',
+      'revised.blocks',
+      'revised.internal.documentXml',
+      'options ?? {}',
+      '$nowIso',
+    ],
     rust: `let original: Vec<docx_engine::model::Block> = req(args, 0)?;
         let revised: Vec<docx_engine::model::Block> = req(args, 1)?;
         let xml: String = req(args, 2)?;
@@ -89,8 +110,30 @@ export const OVERRIDES: Record<string, Override> = {
         put(docx_engine::save::features::doc_properties_write::parse_property_changes(&input)?.to_json())`,
   },
   loadDocxZip: { reject: 'returns a JSZip (a host object)' },
-  assertZipWithinLimits: { reject: 'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)' },
-  xmlSegments: { reject: 'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ' },
+  // ---- per-character predicates the layout calls millions of times: a wasm call
+  // each (~4 us) made the render benchmark +13.2% slower and a 256 KiB edit
+  // time out (main's B4 decision 1: over 5% stays TypeScript only)
+  charClass: { reject: HOT_PER_CHARACTER },
+  isHangulChar: { reject: HOT_PER_CHARACTER },
+  isEastAsianChar: { reject: HOT_PER_CHARACTER },
+  isDoubleByteChar: { reject: HOT_PER_CHARACTER },
+  isCjkLetterChar: { reject: HOT_PER_CHARACTER },
+  isLatinAlnumChar: { reject: HOT_PER_CHARACTER },
+  textHasEastAsian: { reject: HOT_PER_CHARACTER },
+  textHasHangulChars: { reject: HOT_PER_CHARACTER },
+  isEastAsianLangTag: { reject: HOT_PER_CHARACTER },
+  assertZipWithinLimits: {
+    reject:
+      'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)',
+  },
+  findStartTag: {
+    reject:
+      'takes a RegExp (a host object) and answers UTF-16 offsets; the Rust port matches by name and answers UTF-8 offsets for the engine',
+  },
+  xmlSegments: {
+    reject:
+      'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ',
+  },
   // ---- protection: a spin count is any JSON value, as `unknown` in the TypeScript
   hashProtectionPassword: {
     args: ['password', 'spinCount', 'globalThis.crypto.getRandomValues(new Uint8Array(16))'],
@@ -124,13 +167,105 @@ export const OVERRIDES: Record<string, Override> = {
         let original: Option<String> = opt(args, 1)?;
         put(docx_engine::generate::table::generate_table_model_xml(&model, original.as_deref(), None).map_err(|error| error.to_string())?)`,
   },
+  // the reader: none (plain text), the standalone one (read in the engine, no
+  // call back), or the caller's own (called back for each paragraph)
   parseNotesXml: {
-    args: ['xml', 'kind'],
+    args: [
+      'xml',
+      'kind',
+      "read === undefined ? null : Symbol.for('seuoffice.standaloneNoteReader') in read ? 'standalone' : read",
+    ],
+    callbacks: true,
     rust: `let xml: String = req(args, 0)?;
         let kind: docx_engine::notes::NoteKind = req(args, 1)?;
-        put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)`,
+        match args.get(2) {
+            None | Some(Value::Null) => put(docx_engine::notes::parse_notes_xml(&xml, kind)),
+            Some(Value::String(standalone)) if standalone == "standalone" => {
+                put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)
+            }
+            Some(_) => {
+                let host = &*env;
+                let mut read = |p_xml: &str| -> Result<docx_engine::notes::NoteParagraph, String> {
+                    let answer = host.callback("read", &json!([p_xml]))?;
+                    serde_json::from_value(answer).map_err(|error| format!("TypeError: read: {error}"))
+                };
+                put(docx_engine::notes::parse_notes_xml_with(&xml, kind, &mut read)?)
+            }
+        }`,
+  },
+  // ---- a node the engine answers: `node_value` writes it as the TypeScript holds it ({ name: [children], ':@': { attr: value } })
+  clearHiddenMarks: { args: ['bytes', '$now'] },
+  parseEntry: {
+    rust: `let xml = rstr(args, 0)?;
+        Ok(docx_engine::withheld::parse_entry(xml).as_ref().map(node_value))`,
+  },
+  withheldNode: {
+    rust: `let node = xnode(args, 0)?;
+        Ok(Some(docx_engine::withheld::withheld_node(&node).as_ref().map_or(Value::Null, node_value)))`,
+  },
+  // the reader of the text is the caller's function, called back with the node it is to read
+  withheldText: {
+    args: ['xnodeArg(node)', 'textOf'],
+    callbacks: true,
+    rust: `let node = xnode(args, 0)?;
+        ${CALL_BACK}
+        let text_of = |view: &ooxml_xml::XNode| -> String {
+            match ask("textOf", json!([node_value(view)])) {
+                Value::String(text) => text,
+                other => other.to_string(),
+            }
+        };
+        let read = docx_engine::withheld::withheld_text(&node, &text_of);
+        ${FAILED}
+        put(read)`,
   },
   resolveRunProps: { args: ['xnodeArg(rPr)', 'para.styleId', '!!para.bidi', 'ctx', 'mark'] },
+  // ---- an optional TypeScript parameter the Rust port takes as a plain value, or an options object it takes field by field
+  buildChartPartXml: { args: ['chart', "externalDataRId ?? ''"] },
+  decodeSymbolText: { args: ['font', 'text', '!!opts?.textGlyphsOnly'] },
+  patchParagraphTexts: { args: ['entryXml', 'newText', '!!opts.stripFirstParaLeadingSpace'] },
+  sectionSettingsFromXml: { args: ['xml', 'opts.gutterAtTop'] },
+  rootAttributes: { args: ['originalXml', 'rootTag', 'fallback', 'Object.entries(required)'] },
+  resolveParagraphProps: { args: ['xnodeArg(pPr)', 'ctx', 'opts ?? {}'] },
+  resolveParagraphPropsXml: { args: ['xml', 'ctx', 'opts ?? {}'] },
+  removeElements: { args: ['xml', 'name', 'Number.isFinite(limit) ? limit : null'] },
+  // `unknown` in the TypeScript, which answers undefined for anything not a number: so does NaN in the port
+  usableNumber: { args: ["typeof value === 'number' ? value : NaN", 'emuPerUnit'] },
+  usablePositionOffset: { args: ["typeof value === 'number' ? value : NaN", 'emuPerUnit'] },
+  // a Pick<> of a model type: the fields the builder does not read cross as placeholders
+  anchoredInkRunXml: { args: ["{ blockIndex: 0, base64: '', ...ink }", 'rId', 'docPrId'] },
+  // a style id that is no string (a caller's partial StyleInfo) matches no
+  // pattern and no key of the map in the TypeScript: it is no TOC level. Only
+  // the style it names crosses: the renderer asks once per paragraph style,
+  // and the whole map each time made opening a document 30% slower
+  tocLevelOf: {
+    body: `if (typeof styleId !== 'string') return null
+  const style = styles?.get(styleId)
+  return invoke('tocLevelOf', [styleId, style ? new Map([[styleId, style]]) : undefined]) as never`,
+  },
+  // ---- a Rust tuple where the TypeScript answers an object
+  mergeRecords: {
+    body: `const [merged, cursor] = invoke('mergeRecords', [blocks, data, startIndex]) as [Block[], MergeCursorState]
+  return { blocks: merged, cursor }`,
+  },
+  usablePictureSize: {
+    body: `const [w, h] = invoke('usablePictureSize', [
+    typeof widthPx === 'number' ? widthPx : NaN,
+    typeof heightPx === 'number' ? heightPx : NaN,
+  ]) as [number, number]
+  return { widthPx: w, heightPx: h }`,
+  },
+  splitXmlChildren: {
+    body: `return (invoke('splitXmlChildren', [xml]) as Array<[string, string]>).map(([name, child]) => ({ name, xml: child }))`,
+  },
+  // the route reads three fields of the document, not the whole model
+  previewFontSettings: {
+    args: [
+      '{ originalBytes: parsed.internal.originalBytes, themeColors: parsed.themeColors, themeFonts: parsed.themeFonts }',
+      'upserts',
+      'defaults',
+    ],
+  },
   // ---- functions of the caller the engine calls back (synchronous, for the length of the call)
   generateParagraphXml: {
     args: ['block', '{ ...ctx, part: undefined }'],
@@ -202,35 +337,46 @@ export const OVERRIDES: Record<string, Override> = {
   readZipEntries: { reject: 'reads through a ByteSource object (a file handle of the host)' },
   materializeDocx: { reject: 'calls back for a ZipFile object' },
   // ---- functions that write into an argument: the engine answers the argument again, the wrapper writes it back
+  // the engine reads and writes the cells' colSpan alone: only the spans cross (a TableCell is large in the engine)
   reconcileGridColumns: {
-    args: ['rows', 'rowTcws', 'gridCols'],
-    rust: `let mut rows: Vec<Vec<docx_engine::model::TableCell>> = req(args, 0)?;
+    args: ['rows.map((row) => row.map((cell) => cell.colSpan))', 'rowTcws', 'gridCols'],
+    rust: `let spans: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 0)?;
         let row_tcws: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 1)?;
         let grid_cols: Option<Vec<jscompat::JsNum>> = opt(args, 2)?;
-        let widths = {{path}}(&mut rows, &row_tcws, grid_cols.as_deref())?;
-        Ok(Some(json!({ "widths": to_json(&widths)?, "rows": to_json(&rows)? })))`,
-    body: `const r = invoke('reconcileGridColumns', [rows, rowTcws, gridCols]) as { widths: number[] | null; rows: TableCell[][] }
+        match docx_engine::parse::tables::reconcile_grid_spans(&spans, &row_tcws, grid_cols.as_deref())? {
+            None => Ok(None),
+            Some((spans, widths)) => Ok(Some(json!({ "widths": to_json(&widths)?, "spans": spans }))),
+        }`,
+    body: `const r = invoke('reconcileGridColumns', [rows.map((row) => row.map((cell) => cell.colSpan)), rowTcws, gridCols]) as { widths: number[]; spans: number[][] } | null
+  if (!r) return undefined
   rows.forEach((row, i) =>
     row.forEach((cell, c) => {
-      const span = r.rows[i]?.[c]?.colSpan
-      if (span === undefined) delete cell.colSpan
-      else cell.colSpan = span
+      const span = r.spans[i]![c]!
+      if (span > 1) cell.colSpan = span
+      else delete cell.colSpan
     }),
   )
-  return r.widths ?? undefined`,
+  return r.widths`,
   },
+  // the blocks are written back key by key: a caller keeps its references to them
   applyProtectedLeadingBreaks: {
     rust: `let mut blocks: Vec<docx_engine::model::Block> = req(args, 0)?;
         {{path}}(&mut blocks).map_err(|error| error.to_string())?;
         put(blocks)`,
     body: `const done = invoke('applyProtectedLeadingBreaks', [blocks]) as typeof blocks
-  blocks.splice(0, blocks.length, ...done)`,
+  blocks.forEach((block, i) => {
+    const next = done[i]! as unknown as Record<string, unknown>
+    const held = block as unknown as Record<string, unknown>
+    for (const key of Object.keys(held)) if (!(key in next)) delete held[key]
+    Object.assign(held, next)
+  })`,
   },
+  // a reader that works on its own, and that parseNotesXml recognizes to read in the engine without calling back
   standaloneNoteParagraphReader: {
-    body: `// parseNotesXml reads a notes part on its own in the engine, with this reader's rules: the reader itself has nothing left to do
-  return (() => {
-    throw new Error('standaloneNoteParagraphReader: the engine reads the paragraphs of a notes part')
-  }) as never`,
+    rust: `let p_xml: String = req(args, 0)?;
+        put(docx_engine::parse::text::notes_part::read_note_paragraph_standalone(&p_xml).map_err(|error| error.to_string())?)`,
+    body: `const read = ((pXml: string) => invoke('standaloneNoteParagraphReader', [pXml])) as NoteParagraphReader
+  return Object.assign(read, { [Symbol.for('seuoffice.standaloneNoteReader')]: true })`,
   },
   inlineRunsXml: {
     args: ['runs', 'options'],
@@ -277,4 +423,10 @@ export function overrideOf(name: string): Override | undefined {
 
 export function isHandRoute(name: string): boolean {
   return Object.hasOwn(ROUTES_HAND, name)
+}
+
+/** Modules of the reference that the binding does not carry: nothing in the product or the tests imports them. */
+export const UNUSED_MODULES: Readonly<Record<string, string>> = {
+  'own-value': 'its one user was the codec, which @seuoffice/engine-wasm holds now',
+  'hf-root': 'a type no module imports',
 }

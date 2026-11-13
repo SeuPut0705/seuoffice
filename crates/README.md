@@ -391,16 +391,6 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 
 ## Known debt
 
-- `encoding_rs` ((Apache-2.0 OR MIT) AND BSD-3-Clause) decodes the legacy
-  charsets of `alt_chunk.rs`. It has to appear in the third-party notices
-  when the crates are wired into the product. `crates/deny.toml` holds the
-  licences the workspace may depend on, and the runner checks it.
-- `crates/mtx` (MPL-2.0) is a derived work of libeot (Brennan T. Vincent),
-  after Monotype's MTX reference code, as `packages/pptx-engine/src/vendor/mtx`
-  is. The repository's notices do not name libeot today, for the TypeScript
-  either: the third-party notices of a release have to name it, with the MPL's
-  pointer to the source of the covered files, before or when the crate is
-  wired into the product.
 - `JsRegex::new` refuses a pattern under `i` without `u` that names a cased
   character outside ASCII. One site puts a caller's text into such a
   pattern: `xml_text::on_off_tag_in(xml, name)`, whose callers pass the
@@ -450,6 +440,15 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   with their checksums. A unit adds its own there.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
+- The hidden-from-AI batch (`withheld.rs`, group `withheld` of (f)) reads
+  entries from the parser's tree and finds tags in the XML with comments,
+  CDATA and processing instructions blanked (`ooxml_xml::mask_opaque`, same
+  length in bytes, so offsets index the original). `comment_entries` restarts
+  its search past a comment only where a match began inside the comment just
+  read and ended beyond it: one allowed restart of `jscompat/tests/sites.rs`.
+  `withheldNode` and `parseEntry` answer an `XNode` through the binding
+  (`node_value` of the generated table: attributes as an object); the gate
+  compares them with attributes as entries, as for `rPrNodeOf`.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
   subtags taken from one ICU (`tools/docx-diff/blank-locale-table.mjs` says
   which and regenerates it). The TypeScript asks the host's `Intl.Locale`, so

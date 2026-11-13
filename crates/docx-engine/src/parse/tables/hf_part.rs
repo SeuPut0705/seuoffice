@@ -12,13 +12,14 @@ use super::hf_fields::{
 };
 use super::hf_images::{hf_images, hf_table_media};
 use super::hf_paras::hf_paragraphs;
-use crate::model::{HfImage, HfParagraph, HfPartInfo, PictureWatermarkInfo};
-use crate::package::{RelInfo, Thrown, part_text, resolve_relationship_target_path};
+use crate::model::{HfImage, HfParagraph, HfPartInfo, PictureWatermarkInfo, SharedStr};
+use crate::package::{RelInfo, Thrown, canonical_part_text, resolve_relationship_target_path};
 use crate::parse::drawings::host::MediaEnv;
 use crate::parse::text::bridge;
 use crate::resolve::ResolveCtx;
 use crate::section::{HfKind, hf_reference_r_id, hf_reference_tags, hf_reference_type};
 use crate::watermark::{read_picture_watermark, read_watermark_text};
+use crate::xml_tag::remove_segments;
 use crate::xml_text::plain_text;
 
 /// What `hfContentFromXml` returns, with the module-level weak maps the
@@ -53,7 +54,7 @@ pub fn hf_content_from_xml(
     kind: HfKind,
     zip: &Package,
     resolver: &Rc<ResolveCtx>,
-    table_media: Option<&JsMap<String>>,
+    table_media: Option<&JsMap<SharedStr>>,
     compatibility_mode: f64,
     media: &MediaEnv<'_>,
 ) -> Result<HfContent, Thrown> {
@@ -70,8 +71,7 @@ pub fn hf_content_from_xml(
     // mc:AlternateContent carries the same textbox twice (DrawingML Choice + VML
     // Fallback); keeping both prints the content twice (e.g. duplicated "— PAGE —"
     // page numbers), so only the Choice branch feeds text/paragraph extraction
-    let mut cleaned = js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-        .replace_all(xml, |_| String::new());
+    let mut cleaned = remove_segments(xml, "mc:Fallback").into_owned();
     // rewrite the complex fields by nesting depth: a child's end must not close
     // its parent (genoffice#2458: the lazy begin-to-end span stopped at the
     // nested end and took the child's separate/cache for the parent's)
@@ -86,10 +86,7 @@ pub fn hf_content_from_xml(
                 continue;
             }
             out.push_str(&cleaned[pos..field.start]);
-            out.push_str(
-                &render_field(&cleaned, field, &tree, &mut page)
-                    .map_err(|limit| limit.to_string())?,
-            );
+            out.push_str(&render_field(&cleaned, field, &tree, &mut page, 0)?);
             pos = field.end as usize;
         }
         out.push_str(&cleaned[pos..]);
@@ -229,10 +226,10 @@ pub fn read_header_footer_part(
     let Some(path) = resolve_relationship_target_path(source_path, target) else {
         return Ok(None);
     };
-    let Some(text) = part_text(zip, &path)? else {
+    let Some(text) = canonical_part_text(zip, &path)? else {
         return Ok(None);
     };
-    let xml = strip_hf_deletions(text).map_err(|limit| limit.to_string())?;
+    let xml = strip_hf_deletions(&text).map_err(|limit| limit.to_string())?;
     let table_media = hf_table_media(zip, &path, &xml, media)?;
     let content = hf_content_from_xml(
         &xml,
@@ -276,10 +273,10 @@ pub fn parse_all_hf_parts(
         let Some(path) = resolve_relationship_target_path(source_path, &rel.target) else {
             continue;
         };
-        let Some(text) = part_text(zip, &path)? else {
+        let Some(text) = canonical_part_text(zip, &path)? else {
             continue;
         };
-        let xml = strip_hf_deletions(text).map_err(|limit| limit.to_string())?;
+        let xml = strip_hf_deletions(&text).map_err(|limit| limit.to_string())?;
         let table_media = hf_table_media(zip, &path, &xml, media)?;
         let content = hf_content_from_xml(
             &xml,

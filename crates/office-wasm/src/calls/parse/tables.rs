@@ -12,8 +12,8 @@ use std::rc::Rc;
 
 use docx_engine::inline_opaque as opaque;
 use docx_engine::model::{
-    HfImage, HfPartInfo, InlineWrap, ParaFormat, Run, SectionSettings, TableBorders, TableCell,
-    TableModel,
+    HfImage, HfPartInfo, InlineWrap, ParaFormat, Run, SectionSettings, SharedStr, TableBorders,
+    TableCell, TableModel,
 };
 use docx_engine::numbering::parse_numbering;
 use docx_engine::package::{parse_rels, part_text};
@@ -31,7 +31,7 @@ use docx_engine::parse::text::{BuildContext, SectionIndex};
 use docx_engine::resolve::{ResolveCtx, TableCond};
 use docx_engine::section::HfKind;
 use jscompat::{JsMap, JsNum};
-use ooxml_xml::{XNode, parse_ordered, serialize};
+use ooxml_xml::{Utf16Map, XNode, parse_ordered, serialize};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
@@ -129,16 +129,12 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?))
         },
         "sameInlineWrapChain" => same_inline_wrap_chain,
-        "inlineWrapContentLocked" => |_, args| {
-            value(opaque::inline_wrap_content_locked(&required::<InlineWrap>(
-                args, "wrap",
-            )?))
-        },
-        "inlineWrapWritesOnce" => |_, args| {
-            value(opaque::inline_wrap_writes_once(&required::<InlineWrap>(
-                args, "wrap",
-            )?))
-        },
+        "inlineWrapContentLocked" => {
+            |_, args| value(opaque::inline_wrap_content_locked(&open_only_wrap(args)?))
+        }
+        "inlineWrapWritesOnce" => {
+            |_, args| value(opaque::inline_wrap_writes_once(&open_only_wrap(args)?))
+        }
         "sdtFollowsItsText" => |text, _| value(opaque::sdt_follows_its_text(text)),
         "inlineWrapTextOf" => inline_wrap_text_of,
         "sdtOpenForChangedText" => |text, _| {
@@ -160,7 +156,7 @@ fn with_node<T>(
 ) -> Result<T, String> {
     let nodes =
         parse_ordered(text, DEEP_XML_PARSER_MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
-    call(nodes.iter().find(|node| node.name().is_some()))
+    call(nodes.iter().find(|node| matches!(node, XNode::Element(_))))
 }
 
 /// `nodeOf(text) ?? {}`
@@ -517,7 +513,7 @@ fn hf_v_span_of(_text: &str, args: &Value) -> Returned {
     )))
 }
 
-fn map_entries(map: Option<JsMap<String>>) -> Returned {
+fn map_entries(map: Option<JsMap<SharedStr>>) -> Returned {
     optional(map.map(|map| {
         map.iter()
             .map(|(k, v)| (k.to_owned(), v.clone()))
@@ -533,8 +529,8 @@ fn hf_table_media_call(text: &str, args: &Value) -> Returned {
 }
 
 /// `args.tableMedia`: `[rId, url]` pairs.
-fn table_media_arg(args: &Value) -> Result<Option<JsMap<String>>, String> {
-    let entries: Option<Vec<(String, String)>> = arg(args, "tableMedia")?;
+fn table_media_arg(args: &Value) -> Result<Option<JsMap<SharedStr>>, String> {
+    let entries: Option<Vec<(String, SharedStr)>> = arg(args, "tableMedia")?;
     Ok(entries.map(|entries| entries.into_iter().collect()))
 }
 
@@ -585,6 +581,45 @@ fn hf_table_row_paragraphs(text: &str, args: &Value) -> Returned {
     })
 }
 
+/// Header and footer text boxes take their `id` from a counter of the process
+/// (`++hfTextBoxSeq`), which the two sides do not advance alike across the
+/// calls of the gate: the ids are numbered from 1 in order of appearance, in
+/// the answers of both sides (`renumberedBoxIds` of calls-parse-tables.ts).
+fn renumber_box_ids(answer: &mut Value, seen: &mut Vec<Value>) {
+    match answer {
+        Value::Array(items) => {
+            for item in items {
+                renumber_box_ids(item, seen);
+            }
+        }
+        Value::Object(map) => {
+            let id = map
+                .get_mut("box")
+                .and_then(|text_box| text_box.get_mut("id"))
+                .filter(|id| id.is_number());
+            if let Some(id) = id {
+                let at = seen
+                    .iter()
+                    .position(|known| known == id)
+                    .unwrap_or_else(|| {
+                        seen.push(id.clone());
+                        seen.len() - 1
+                    });
+                *id = Value::from(at + 1);
+            }
+            for child in map.values_mut() {
+                renumber_box_ids(child, seen);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn renumbered(mut answer: Value) -> Value {
+    renumber_box_ids(&mut answer, &mut Vec::new());
+    answer
+}
+
 fn hf_paragraphs(text: &str, args: &Value) -> Returned {
     let package = package(args)?;
     let compat_mode: f64 = number(args, "compatibilityMode")?;
@@ -600,11 +635,11 @@ fn hf_paragraphs(text: &str, args: &Value) -> Returned {
         )?;
         let mut run_image_ids: Vec<&String> = list.run_image_ids.iter().collect();
         run_image_ids.sort();
-        value(json!({
+        value(renumbered(json!({
             "paras": list.paras,
             "rowAnchorIds": list.row_anchor_ids,
             "runImageIds": run_image_ids,
-        }))
+        })))
     })
 }
 
@@ -632,13 +667,13 @@ fn hf_content(text: &str, args: &Value) -> Returned {
             compat_mode,
             ctx.media,
         )?;
-        value(json!({
+        value(renumbered(json!({
             "text": content.text,
             "hasPageNumber": content.has_page_number,
             "watermark": content.watermark,
             "watermarkPicture": content.watermark_picture,
             "paras": content.paras,
-        }))
+        })))
     })
 }
 
@@ -661,7 +696,7 @@ fn read_hf_part(text: &str, args: &Value) -> Returned {
             &source_path,
             ctx.media,
         )?;
-        optional(part.map(|part| {
+        value(part.map(|part| {
             let mut out = Map::new();
             out.insert("text".to_owned(), json!(part.text));
             out.insert("hasPageNumber".to_owned(), json!(part.has_page_number));
@@ -708,7 +743,7 @@ fn hf_group_pictures_call(text: &str, args: &Value) -> Returned {
     let source_path: String = required(args, "sourcePath")?;
     let rels = parse_rels(&package, "word/_rels/document.xml.rels")?;
     let env = MediaEnv::new(&NoHost);
-    optional(hf_group_pictures(
+    value(hf_group_pictures(
         &package,
         &rels,
         text,
@@ -719,21 +754,30 @@ fn hf_group_pictures_call(text: &str, args: &Value) -> Returned {
 
 fn parse_field_tree(text: &str, _args: &Value) -> Returned {
     let tree = hf_fields::parse_field_tree(text);
-    fn frame(tree: &hf_fields::FieldTree, index: usize) -> Value {
+    let units = Utf16Map::new(text);
+    // the offsets are bytes inside the engine; -1 stays -1 (not closed / none)
+    let at = |byte: isize| -> i64 {
+        if byte < 0 {
+            byte as i64
+        } else {
+            i64::from(units.to_utf16(byte as usize))
+        }
+    };
+    fn frame(tree: &hf_fields::FieldTree, index: usize, at: &dyn Fn(isize) -> i64) -> Value {
         let f = &tree.frames[index];
         json!({
-            "start": f.start,
-            "end": f.end,
+            "start": at(f.start as isize),
+            "end": at(f.end),
             "instr": f.instr,
-            "separateStart": f.separate_start,
-            "separateEnd": f.separate_end,
-            "children": f.children.iter().map(|&child| frame(tree, child)).collect::<Vec<_>>(),
+            "separateStart": at(f.separate_start),
+            "separateEnd": at(f.separate_end),
+            "children": f.children.iter().map(|&child| frame(tree, child, at)).collect::<Vec<_>>(),
         })
     }
     value(
         tree.roots
             .iter()
-            .map(|&root| frame(&tree, root))
+            .map(|&root| frame(&tree, root, &at))
             .collect::<Vec<_>>(),
     )
 }
@@ -752,42 +796,103 @@ fn namespaces_arg(args: &Value) -> Result<Option<JsMap<String>>, String> {
     Ok(entries.map(|entries| entries.into_iter().collect()))
 }
 
+/// `isInlineWrapShape`: the wrap when it has the fields of an InlineWrap,
+/// each of its type; `None` where the TypeScript guard refuses it.
+fn shaped_wrap(args: &Value) -> Result<Option<InlineWrap>, String> {
+    let Some(Value::Object(fields)) = args.get("wrap") else {
+        return Ok(None);
+    };
+    let finite_seq = fields
+        .get("seq")
+        .and_then(Value::as_f64)
+        .is_some_and(f64::is_finite);
+    let inside_ok = match fields.get("inside") {
+        None => true,
+        Some(Value::String(inside)) => inside == "revision" || inside == "link",
+        Some(_) => false,
+    };
+    let text_ok = matches!(fields.get("text"), None | Some(Value::String(_)));
+    if !(finite_seq
+        && fields.get("open").is_some_and(Value::is_string)
+        && fields.get("close").is_some_and(Value::is_string)
+        && inside_ok
+        && text_ok)
+    {
+        return Ok(None);
+    }
+    serde_json::from_value(Value::Object(fields.clone()))
+        .map(Some)
+        .map_err(|error| format!("the wrap argument: {error}"))
+}
+
+/// A wrap of which only `open` is read (`isContentControl`): `wrap.open` as
+/// a string, whatever the value is, and a TypeError where `wrap` is nullish.
+fn open_only_wrap(args: &Value) -> Result<InlineWrap, String> {
+    let open = match args.get("wrap") {
+        None | Some(Value::Null) => {
+            return Err(
+                "TypeError: Cannot read properties of undefined (reading 'open')".to_owned(),
+            );
+        }
+        Some(Value::Object(fields)) => match fields.get("open") {
+            None => "undefined".to_owned(),
+            Some(Value::String(open)) => open.clone(),
+            Some(Value::Null) => "null".to_owned(),
+            Some(Value::Bool(flag)) => flag.to_string(),
+            Some(Value::Number(number)) => number.to_string(),
+            Some(Value::Array(_)) => String::new(),
+            Some(Value::Object(_)) => "[object Object]".to_owned(),
+        },
+        Some(_) => "undefined".to_owned(),
+    };
+    Ok(InlineWrap {
+        seq: JsNum(0.0),
+        open,
+        close: String::new(),
+        inside: None,
+        text: None,
+    })
+}
+
 fn inline_wrap_prefixes(_text: &str, args: &Value) -> Returned {
-    let wrap: InlineWrap = required(args, "wrap")?;
-    optional(opaque::inline_wrap_prefixes(&wrap).map(|prefixes| {
-        let mut sorted: Vec<String> = prefixes.into_iter().collect();
-        sorted.sort();
-        sorted
-    }))
+    let prefixes = shaped_wrap(args)?
+        .and_then(|wrap| opaque::inline_wrap_prefixes(&wrap))
+        .map(|prefixes| {
+            let mut sorted: Vec<String> = prefixes.into_iter().collect();
+            sorted.sort();
+            sorted
+        });
+    value(prefixes)
 }
 
 fn valid_inline_wrap(_text: &str, args: &Value) -> Returned {
-    let wrap: InlineWrap = required(args, "wrap")?;
-    value(opaque::valid_inline_wrap(
-        &wrap,
-        namespaces_arg(args)?.as_ref(),
-    ))
+    let valid = match shaped_wrap(args)? {
+        Some(wrap) => opaque::valid_inline_wrap(&wrap, namespaces_arg(args)?.as_ref()),
+        None => false,
+    };
+    value(valid)
 }
 
 fn raw_elements(text: &str, args: &Value) -> Returned {
     let skip: Option<bool> = arg(args, "skipNonElements")?;
     let tree = opaque::raw_elements(text, skip == Some(true)).map_err(|limit| limit.to_string())?;
-    fn element(tree: &opaque::RawTree, index: usize) -> Value {
+    let units = Utf16Map::new(text);
+    fn element(tree: &opaque::RawTree, index: usize, units: &Utf16Map<'_>) -> Value {
         let el = tree.get(index);
         json!({
             "name": el.name,
-            "start": el.start,
-            "openEnd": el.open_end,
-            "closeStart": el.close_start,
-            "end": el.end,
+            "start": units.to_utf16(el.start),
+            "openEnd": units.to_utf16(el.open_end),
+            "closeStart": units.to_utf16(el.close_start),
+            "end": units.to_utf16(el.end),
             "selfClosing": el.self_closing,
-            "children": el.children.iter().map(|&child| element(tree, child)).collect::<Vec<_>>(),
+            "children": el.children.iter().map(|&child| element(tree, child, units)).collect::<Vec<_>>(),
         })
     }
     value(
         tree.roots
             .iter()
-            .map(|&root| element(&tree, root))
+            .map(|&root| element(&tree, root, &units))
             .collect::<Vec<_>>(),
     )
 }
@@ -796,9 +901,15 @@ fn inline_wrapper_shell(text: &str, args: &Value) -> Returned {
     let with_source: Option<bool> = arg(args, "withSource")?;
     let nodes =
         parse_ordered(text, DEEP_XML_PARSER_MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
-    let Some(node) = nodes.iter().find(|node| node.name().is_some()) else {
-        return Err("TypeError: no node".to_owned());
-    };
+    // `nodeOf(text) ?? {}`: a node with no name gives null
+    let empty = XNode::empty();
+    let node = nodes
+        .iter()
+        .find(|node| matches!(node, XNode::Element(_)))
+        .unwrap_or(&empty);
+    if node.name().is_none() {
+        return value(Value::Null);
+    }
     let source = opaque::inline_raw_source(text, node);
     let shell = opaque::inline_wrapper_shell(node, (with_source == Some(true)).then_some(&source))
         .map_err(|limit| limit.to_string())?;
@@ -825,10 +936,28 @@ fn same_inline_wrap_chain(_text: &str, args: &Value) -> Returned {
 
 fn inline_wrap_text_of(_text: &str, args: &Value) -> Returned {
     let runs: Vec<Run> = required(args, "runs")?;
-    let from: Option<usize> = arg(args, "from")?;
-    let to: Option<usize> = arg(args, "to")?;
-    let (from, to) = (from.unwrap_or(0), to.unwrap_or(runs.len()).min(runs.len()));
-    value(opaque::inline_wrap_text_of(&runs, from.min(to), to))
+    let from: Option<f64> = arg(args, "from")?;
+    let to: Option<f64> = arg(args, "to")?;
+    let from = from.unwrap_or(0.0);
+    let to = to.unwrap_or(runs.len() as f64);
+    // `for (let i = from; i < to; i++) runs[i].del`: an index outside the
+    // list reads `undefined`, which throws
+    if from < to
+        && (from.fract() != 0.0
+            || from < 0.0
+            || from >= runs.len() as f64
+            || to > runs.len() as f64)
+    {
+        return Err("TypeError: Cannot read properties of undefined (reading 'del')".to_owned());
+    }
+    if from >= to {
+        return value("");
+    }
+    value(opaque::inline_wrap_text_of(
+        &runs,
+        from as usize,
+        to.ceil() as usize,
+    ))
 }
 
 /// The grouping key the spec passes for `revKeyOf`: the revision record of the run, as JSON.

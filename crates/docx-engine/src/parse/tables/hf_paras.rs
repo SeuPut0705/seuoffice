@@ -20,7 +20,7 @@ use crate::model::{
     CellBorder, CellBorders, CellMargins, HfCellParaProps, HfParagraph, HfParagraphFrameXAlign,
     HfParagraphPtabAlignsItem, HfTableCell, HfTableCellVAlign, HfTableRow, HfTableRowAlign,
     HfTableRowHeightRule, HfTableRowSource, HfTableRowTabOverflow, ParaAlign, ParaFormat,
-    ParaFormatLineRule, Run, TableBorders, True,
+    ParaFormatLineRule, Run, SharedStr, TableBorders, True,
 };
 use crate::package::Thrown;
 use crate::parse::drawings::host::MediaEnv;
@@ -132,7 +132,7 @@ pub fn hf_empty_mark_font(
             ea.filter(|ea| !ea.is_empty() && fonts.ascii.as_deref() == Some(ea.as_str()))
         });
     }
-    let ea_lang = is_east_asian_lang_tag(mark.east_asia_lang.as_deref(), false);
+    let ea_lang = is_east_asian_lang_tag(mark.east_asia_lang.as_deref(), true);
     Ok(if ea_lang { ea } else { None }.or_else(|| fonts.ascii.clone()))
 }
 
@@ -427,11 +427,11 @@ pub fn hf_cell_content(
             None
         });
         if let Some(rule) = line.line_rule.as_deref() {
-            props.line_rule = Some(match rule {
-                "atLeast" => ParaFormatLineRule::AtLeast,
-                "exact" => ParaFormatLineRule::Exact,
-                _ => ParaFormatLineRule::Auto,
-            });
+            // the TypeScript stores whatever the attribute holds; the model type refuses what is none of the three
+            props.line_rule = Some(
+                serde_json::from_value::<ParaFormatLineRule>(serde_json::Value::from(rule))
+                    .map_err(|error| error.to_string())?,
+            );
             any = true;
         }
         if let Some(raw) = line.line_raw_twips {
@@ -454,7 +454,7 @@ pub fn hf_cell_content(
             props.word_wrap = Some(false);
             any = true;
         }
-        let props_align = props.align;
+        let props_align = props.align.clone();
         para_props.push(any.then_some(props));
         if align.is_none() {
             align = props_align;
@@ -770,7 +770,7 @@ pub fn hf_paragraphs(
     part_xml: &str,
     zip: &Package,
     resolver: &Rc<ResolveCtx>,
-    table_media: Option<&JsMap<String>>,
+    table_media: Option<&JsMap<SharedStr>>,
     compatibility_mode: f64,
     media: &MediaEnv<'_>,
 ) -> Result<HfParaList, Thrown> {
@@ -1025,7 +1025,7 @@ pub fn hf_paragraphs(
 }
 
 /// A copy of a map of strings.
-fn clone_map(map: &JsMap<String>) -> JsMap<String> {
+fn clone_map(map: &JsMap<SharedStr>) -> JsMap<SharedStr> {
     map.iter()
         .map(|(key, value)| (key.to_owned(), value.clone()))
         .collect()

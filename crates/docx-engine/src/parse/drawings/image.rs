@@ -4,6 +4,7 @@
 use std::ops::{Deref, DerefMut};
 
 use jscompat::{JsMatch, JsNum, Radix, js_regex, math_round, parse_int, to_number, try_js_regex};
+use ooxml_pkg::canonical_xml_syntax;
 use serde::Serialize;
 
 use super::EMU_PER_PX;
@@ -16,6 +17,7 @@ use crate::model::{
 };
 use crate::package::Thrown;
 use crate::parse::text::{BuildContext, emu_to_px};
+use crate::props::raw_ppr_of;
 use crate::resolve::{
     PropSource, ResolveParaOptions, resolve_paragraph_props_xml, resolve_run_props,
 };
@@ -153,7 +155,8 @@ fn number_or_nan(found: Option<&str>) -> f64 {
 /// `imageMeta`: size, alignment, wrap, anchor and recolor of a picture
 /// paragraph. With a context it also carries the host paragraph's indents,
 /// spacing and mark font, which a wrapper with no data-style cannot bring.
-pub fn image_meta(xml: &str, ctx: Option<&BuildContext<'_>>) -> Result<ImageMeta, Thrown> {
+pub fn image_meta(source: &str, ctx: Option<&BuildContext<'_>>) -> Result<ImageMeta, Thrown> {
+    let xml = &*canonical_xml_syntax(source);
     let mut meta = ImageMeta::default();
     let drawing_at = js_regex!(r"<w:(?:drawing|pict)[\s>]")
         .exec(xml)
@@ -315,8 +318,7 @@ fn host_paragraph_geometry(
 ) -> Result<(), Thrown> {
     let rctx = &*ctx.resolver;
     // the host pPr only: a text box's own paragraphs carry their own properties
-    let host_p_pr =
-        capture(js_regex!(r"^<w:p\b[^>]*>\s*(<w:pPr>[\s\S]*?<\/w:pPr>)").exec(xml)).unwrap_or("");
+    let host_p_pr = raw_ppr_of(xml).unwrap_or("");
     let eff = resolve_paragraph_props_xml(host_p_pr, rctx, ResolveParaOptions::default())?;
     let g = direct_para_geometry(&eff);
     let floating = js_regex!(r"<wp:anchor[\s>]").test(xml);
@@ -643,33 +645,38 @@ pub struct RunPictureAnchor {
 /// `runPictureAnchorOf`: wrap kind and anchor offsets of a run-level
 /// `<w:drawing>` (empty for an in-line picture). The save diffs the editor's
 /// geometry against this, so a picture nobody moved keeps its bytes.
-pub fn run_picture_anchor_of(drawing_xml: &str) -> Result<RunPictureAnchor, Thrown> {
+pub fn run_picture_anchor_of(source: &str) -> Result<RunPictureAnchor, Thrown> {
+    let drawing_xml = &*canonical_xml_syntax(source);
     let mut anchor = RunPictureAnchor::default();
     if !js_regex!(r"<wp:anchor[\s>]").test(drawing_xml) {
         return Ok(anchor);
     }
     let meta = image_meta(drawing_xml, None)?;
-    anchor.wrap = *meta.image_wrap;
+    anchor.wrap = (*meta.image_wrap).clone();
     anchor.offset_x_emu = *meta.image_offset_x_emu;
     anchor.offset_y_emu = *meta.image_offset_y_emu;
-    anchor.rel_v = meta.image_rel_v.map(|rel| match rel {
+    anchor.rel_v = (*meta.image_rel_v).clone().map(|rel| match rel {
         BlockImageRelV::Page => RunImageRelV::Page,
         BlockImageRelV::Margin => RunImageRelV::Margin,
         BlockImageRelV::Line => RunImageRelV::Line,
+        BlockImageRelV::Unlisted(text) => RunImageRelV::Unlisted(text),
     });
-    anchor.rel_h = meta.image_rel_h.map(|rel| match rel {
+    anchor.rel_h = (*meta.image_rel_h).clone().map(|rel| match rel {
         BlockImageRelH::Page => RunImageRelH::Page,
         BlockImageRelH::Margin => RunImageRelH::Margin,
+        BlockImageRelH::Unlisted(text) => RunImageRelH::Unlisted(text),
     });
-    anchor.pos_h = meta.image_pos_h.map(|pos| match pos {
+    anchor.pos_h = (*meta.image_pos_h).clone().map(|pos| match pos {
         BlockImagePosH::Left => RunImagePosH::Left,
         BlockImagePosH::Center => RunImagePosH::Center,
         BlockImagePosH::Right => RunImagePosH::Right,
+        BlockImagePosH::Unlisted(text) => RunImagePosH::Unlisted(text),
     });
-    anchor.pos_v = meta.image_pos_v.map(|pos| match pos {
+    anchor.pos_v = (*meta.image_pos_v).clone().map(|pos| match pos {
         BlockImagePosV::Top => RunImagePosV::Top,
         BlockImagePosV::Center => RunImagePosV::Center,
         BlockImagePosV::Bottom => RunImagePosV::Bottom,
+        BlockImagePosV::Unlisted(text) => RunImagePosV::Unlisted(text),
     });
     anchor.wrap_dist_top_emu = *meta.image_wrap_dist_top_emu;
     anchor.wrap_dist_bottom_emu = *meta.image_wrap_dist_bottom_emu;

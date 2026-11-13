@@ -17,7 +17,7 @@ use super::thrown;
 use crate::generate::props::PPR_CHILD_ORDER;
 use crate::generate::rpr::RPR_CHILD_ORDER;
 use crate::generate::{escape_xml_attr, split_xml_children};
-use crate::model::{TabStop, TabStopLeader, TabStopVal};
+use crate::model::{TabStop, TabStopLeader};
 
 /// A key that is absent, `null` or a value.
 fn nullable<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
@@ -59,7 +59,7 @@ pub struct StyleRunProps {
     pub highlight: Option<Option<String>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub size_half_points: Option<Option<f64>>,
@@ -83,6 +83,9 @@ pub struct StyleRunProps {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StyleParaProps {
+    /// declared first: builtInHeadingStyleUpsert builds `keepNext` before the spacing keys
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keep_next: Option<bool>,
     /// left, center, right or justify
     #[serde(
         default,
@@ -92,44 +95,42 @@ pub struct StyleParaProps {
     pub align: Option<Option<String>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub space_before_twips: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub space_after_twips: Option<Option<f64>>,
     /// line spacing as a multiple (auto)
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub line_spacing: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub indent_left_twips: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub indent_right_twips: Option<Option<f64>>,
     /// positive = first-line indent, negative = hanging indent
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub first_line_twips: Option<Option<f64>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub keep_next: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_lines: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -137,7 +138,7 @@ pub struct StyleParaProps {
     /// 1-9 (`w:outlineLvl` val + 1)
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub outline_level: Option<Option<f64>>,
@@ -214,9 +215,9 @@ pub struct StyleUpsert {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub built_in: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub r_pr: Option<StyleRunProps>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub p_pr: Option<StyleParaProps>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r_pr: Option<StyleRunProps>,
 }
 
 /// `DefaultFonts`: only the default font slots to patch.
@@ -637,27 +638,17 @@ fn patch_run(children: &mut Children, rp: &StyleRunProps) -> Result<(), String> 
 
 /// `tabXml`
 fn tab_xml(ts: &TabStop) -> Result<String, String> {
-    let val = match ts.val {
-        TabStopVal::Left => "left",
-        TabStopVal::Center => "center",
-        TabStopVal::Right => "right",
-        TabStopVal::Decimal => "decimal",
-        TabStopVal::Bar => "bar",
-        TabStopVal::Clear => "clear",
-    };
+    let val = ts.val.as_str();
     let mut xml = format!(
         "<w:tab w:val=\"{}\" w:pos=\"{}\"",
         escape_xml_attr(val),
         num(ts.pos.0)?
     );
-    let leader = match ts.leader {
-        None | Some(TabStopLeader::None) => None,
-        Some(TabStopLeader::Dot) => Some("dot"),
-        Some(TabStopLeader::Hyphen) => Some("hyphen"),
-        Some(TabStopLeader::Underscore) => Some("underscore"),
-        Some(TabStopLeader::Heavy) => Some("heavy"),
-        Some(TabStopLeader::MiddleDot) => Some("middleDot"),
-    };
+    let leader = ts
+        .leader
+        .as_ref()
+        .filter(|leader| **leader != TabStopLeader::None)
+        .map(TabStopLeader::as_str);
     if let Some(leader) = leader {
         xml.push_str(&format!(" w:leader=\"{}\"", escape_xml_attr(leader)));
     }

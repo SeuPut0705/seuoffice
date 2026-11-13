@@ -260,8 +260,8 @@ pub fn parse_chart_part_xml(
         hole_pct: Slot::maybe((hole_pct > 0.0).then_some(JsNum(hole_pct))),
         explosion_pct: Slot::maybe(explosion_pct.map(JsNum)),
         data_labels: Slot::maybe(data_labels),
-        legend_pos: Slot::maybe(legend_pos),
         no_legend: Slot::maybe(legend_pos.is_none().then_some(true)),
+        legend_pos: Slot::maybe(legend_pos),
         legend_font_pt: Slot::maybe(legend_font_pt.map(JsNum)),
         frame_line: Slot::maybe(frame_line.filter(|line| !line.is_empty())),
         ..ChartDisplay::default()

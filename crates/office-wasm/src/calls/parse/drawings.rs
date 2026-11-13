@@ -5,7 +5,7 @@
 //! after the call.
 
 use docx_engine::model::{
-    Block, HfImage, HfTextBox, SectionSettings, TextboxDisplay, TextboxParaDisplay,
+    Block, HfImage, HfTextBox, SectionSettings, SharedStr, TextboxDisplay, TextboxParaDisplay,
 };
 use docx_engine::numbering::parse_numbering;
 use docx_engine::package::RelInfo;
@@ -107,7 +107,7 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?)
         },
         "pictureColumnGeom" => |text, args| {
-            optional(picture::picture_column_geom(
+            value(picture::picture_column_geom(
                 &meta_of(args)?,
                 text,
                 section_arg(args)?.as_ref(),
@@ -141,18 +141,16 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         },
         "blipEffectsOf" => |text, _| optional(image::blip_effects_of(text)?),
         "extractDiagramText" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_text(text, ctx)?)
-            })
+            with_build_ctx(args, |ctx| value(diagram::extract_diagram_text(text, ctx)?))
         },
         "extractLockedCanvas" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_locked_canvas(text, ctx)?)
+                value(diagram::extract_locked_canvas(text, ctx)?)
             })
         },
         "extractDiagramDrawing" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_drawing(text, ctx)?)
+                value(diagram::extract_diagram_drawing(text, ctx)?)
             })
         },
         "imageMeta" => |text, args| {
@@ -207,11 +205,9 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "hasResolvablePicture" => |text, args| {
             with_build_ctx_media(args, |ctx| value(media::has_resolvable_picture(text, ctx)?))
         },
-        "paragraphStrayBox" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                optional(textbox::paragraph_stray_box(text, ctx)?)
-            })
-        },
+        "paragraphStrayBox" => {
+            |text, args| with_build_ctx(args, |ctx| value(textbox::paragraph_stray_box(text, ctx)?))
+        }
         "textboxParagraphs" => |text, args| {
             with_build_ctx(args, |ctx| {
                 renumbered(value(textbox::textbox_paragraphs(&node_of(text)?, ctx)?))
@@ -226,11 +222,8 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "txbxContentParas" => |text, args| {
             let doc_offset: Option<usize> = arg(args, "docOffset")?;
             with_build_ctx(args, |ctx| {
-                value(textbox::txbx_content_paras(
-                    &node_of(text)?,
-                    ctx,
-                    doc_offset,
-                )?)
+                let paras = textbox::txbx_content_paras(&node_of(text)?, ctx, doc_offset)?;
+                value(paras)
             })
         },
         "extractTextboxes" => extract_textboxes,
@@ -245,7 +238,11 @@ fn node_of(text: &str) -> Result<XNode, String> {
         parse_ordered(text, XML_PARSER_MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
     Ok(nodes
         .into_iter()
-        .find(|node| node.name().is_some())
+        // `nameOf(node) !== undefined`: an element named "" (a tag that starts
+        // with white space) counts, though `XNode::name` reads it as nameless
+        .find(|node| {
+            matches!(node, XNode::Element(element) if !matches!(&*element.name, ":@" | "#text"))
+        })
         .unwrap_or_else(XNode::empty))
 }
 
@@ -346,7 +343,7 @@ fn read_body_pr(text: &str, args: &Value) -> Returned {
 }
 
 fn group_picture_layers(text: &str, args: &Value) -> Returned {
-    let media_by_rid = map_of::<String>(args, "mediaByRid")?;
+    let media_by_rid = map_of::<SharedStr>(args, "mediaByRid")?;
     value(picture::group_picture_layers(
         &node_of(text)?,
         &media_by_rid,
@@ -533,7 +530,7 @@ fn with_build_ctx(args: &Value, call: impl FnOnce(&BuildContext<'_>) -> Returned
             ctx.chart_parts = RefCell::new(chart_parts);
         }
         if args.get("mediaByRid").is_some_and(|media| !media.is_null()) {
-            ctx.media_by_rid = Some(RefCell::new(map_of::<String>(args, "mediaByRid")?));
+            ctx.media_by_rid = Some(RefCell::new(map_of::<SharedStr>(args, "mediaByRid")?));
         }
         if args
             .get("externalTxbxByRid")
@@ -583,7 +580,7 @@ fn with_build_ctx_media(
         #[serde(skip_serializing_if = "Option::is_none")]
         value: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        media_by_rid: Option<JsMap<String>>,
+        media_by_rid: Option<JsMap<SharedStr>>,
     }
     with_build_ctx(args, |ctx| {
         let answered = call(ctx)?;

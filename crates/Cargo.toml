@@ -56,7 +56,7 @@ main-core = { path = "main-core" }
 serde = { version = "1", features = ["derive"] }
 # preserve_order: a value keeps its keys in the order they were written, as a
 # JavaScript object does; without it serde_json::Value sorts them
-serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
 # SHA-512 of the document protection hash
 sha2 = "0.10"
 # SHA-1 of crypto.createHash('sha1') in the central process (jscompat::sha1_hex)
@@ -87,3 +87,11 @@ panic = "unwind"
 [profile.node-faults]
 inherits = "dev"
 panic = "unwind"
+# The fault probes of tools/pptx-diff: the release semantics (no overflow
+# checks, panic = abort) with builds that take seconds after one edit
+[profile.probe]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
+incremental = true

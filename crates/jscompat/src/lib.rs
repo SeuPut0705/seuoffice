@@ -36,7 +36,10 @@ pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;
 pub use date_iso::to_iso_string;
 pub use date_parse::date_parse;
-pub use json::{JsNum, json_to_string};
+pub use json::{
+    JsNum, js_f64, js_f64_nullable, js_f64_opt, json_to_string, lenient, reading_leniently,
+    writing_for_host,
+};
 pub use json_print::{
     json_quote, json_stringify, json_stringify_pretty, json_value_from_serde, json_value_to_serde,
 };
@@ -64,7 +67,8 @@ pub use replace::{
     get_substitution, replace_first, replace_first_string, slice_utf16, string_less_than,
 };
 pub use search::{
-    index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with, try_replace_first_with,
+    index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with,
+    try_replace_first_with, units_pattern,
 };
 pub use sha1::sha1_hex;
 pub use sort::sort_by_number;

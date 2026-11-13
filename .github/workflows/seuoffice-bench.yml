@@ -1,0 +1,76 @@
+name: seuoffice bench
+
+# The render benchmark of the docx engine's switch to the wasm binding (batch
+# B4, crates/docx-engine/B4-PLAN.md): the web Docs app opens and lays out the
+# five largest .docx of the repository in Chromium, built once with the wasm
+# binding and once with the frozen TypeScript engine, three runs of each in
+# turn. Started by hand once the file is on main:
+#   gh workflow run "seuoffice bench" --ref <branch>
+# and, before that, by pushing the commit to measure as bench/<name>.
+
+on:
+  push:
+    branches: ['bench/**']
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: Opens of each document per run, after one that warms up
+        required: false
+        default: '5'
+
+concurrency:
+  group: seuoffice-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - run: npm ci --ignore-scripts
+      - run: npm run build:wasm
+      - run: npx playwright install --with-deps chromium
+
+      - name: Build the web bundle twice (wasm binding, TypeScript engine)
+        run: |
+          set -euo pipefail
+          npm run build -w @seuoffice/web
+          cp -r apps/web/dist apps/web/dist-wasm
+          SEUOFFICE_DOCX_ENGINE=ts npx vite build --config apps/docs/vite.web.config.ts
+          cp -r apps/web/dist apps/web/dist-ts
+
+      - name: Run each build three times, in turn
+        env:
+          SEUOFFICE_BENCH_ROUNDS: ${{ inputs.rounds || '5' }}
+        run: |
+          set -euo pipefail
+          for n in 1 2 3; do
+            for engine in wasm ts; do
+              rm -rf apps/web/dist && cp -r "apps/web/dist-$engine" apps/web/dist
+              # the results of one run outlive the next: playwright empties its output folder
+              SEUOFFICE_BENCH="$engine-$n" npx playwright test --config apps/web/playwright.config.ts bench-docx
+              mkdir -p bench-out && cp apps/web/test-results/bench-*.json bench-out/
+            done
+          done
+          mkdir -p apps/web/test-results && cp bench-out/*.json apps/web/test-results/
+
+      - name: Compare
+        run: node tools/docx-diff/render-bench/compare.mjs
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-bench
+          path: bench-out/
+          if-no-files-found: ignore

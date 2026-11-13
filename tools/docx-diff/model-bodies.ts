@@ -3,7 +3,10 @@
 // include the orders those paths write. Each one names the producer in
 // tools/docx-diff/reference it reaches. The capture (model-inputs.ts) and the
 // gate (model-run.ts) parse every one with the same buildDocx call.
-import { buildDocx, type BuildDocxOptions } from '../../packages/docx-engine/tests/helpers/build-docx'
+import {
+  buildDocx,
+  type BuildDocxOptions,
+} from '../../packages/docx-engine/tests/helpers/build-docx'
 
 export interface ModelBody extends BuildDocxOptions {
   name: string
@@ -17,7 +20,8 @@ export function buildModelBody(options: BuildDocxOptions): Promise<Uint8Array> {
 const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
 const R = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
-const VML = 'xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"'
+const VML =
+  'xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"'
 const DRAWING =
   'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
   'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
@@ -25,13 +29,15 @@ const DRAWING =
 const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 const AT = 'w:author="Alice" w:date="2026-01-01T00:00:00Z"'
 
-const p = (pPr: string, runs: string): string => `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ''}${runs}</w:p>`
+const p = (pPr: string, runs: string): string =>
+  `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ''}${runs}</w:p>`
 const r = (text: string, rPr = ''): string =>
   `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ''}<w:t xml:space="preserve">${text}</w:t></w:r>`
 
 const FRAME_BOX =
   '<w:framePr w:w="2000" w:h="400" w:hRule="exact" w:wrap="around" w:vAnchor="text" w:hAnchor="margin" w:x="100" w:y="600"/>'
-const DROP_CAP = '<w:framePr w:dropCap="drop" w:lines="2" w:wrap="around" w:vAnchor="text" w:hAnchor="text"/>'
+const DROP_CAP =
+  '<w:framePr w:dropCap="drop" w:lines="2" w:wrap="around" w:vAnchor="text" w:hAnchor="text"/>'
 const SHADED = '<w:shd w:val="pct25" w:color="FF0000" w:fill="FFFFFF"/>'
 const CLEARED = '<w:shd w:val="clear" w:color="auto" w:fill="auto"/>'
 
@@ -77,7 +83,10 @@ const WORDART_BESIDE_TEXT_BOX = p(
       r('Inherited direction'),
     ) +
     p('<w:shd w:val="clear" w:color="auto" w:fill="auto"/>', r('Cleared shading')) +
-    p('<w:framePr w:dropCap="drop" w:lines="2" w:wrap="around" w:vAnchor="text" w:hAnchor="text"/>', r('D')) +
+    p(
+      '<w:framePr w:dropCap="drop" w:lines="2" w:wrap="around" w:vAnchor="text" w:hAnchor="text"/>',
+      r('D'),
+    ) +
     p(
       '<w:framePr w:w="2000" w:h="400" w:hRule="exact" w:hSpace="120" w:wrap="around" w:vAnchor="text" w:hAnchor="margin" w:x="100" w:y="100"/>',
       r('Framed in a box'),
@@ -85,7 +94,10 @@ const WORDART_BESIDE_TEXT_BOX = p(
     // extractParaFormat writes every key it reads in one order, bidi (or bidiInherited) first
     p(everyParaProperty('', FRAME_BOX, SHADED, '<w:bidi/>'), r('Boxed')) +
     p(everyParaProperty('', DROP_CAP, CLEARED, '<w:bidi/>'), r('R')) +
-    p(everyParaProperty('<w:pStyle w:val="RtlPara"/>', FRAME_BOX, SHADED, ''), r('Boxed, direction inherited')) +
+    p(
+      everyParaProperty('<w:pStyle w:val="RtlPara"/>', FRAME_BOX, SHADED, ''),
+      r('Boxed, direction inherited'),
+    ) +
     p(everyParaProperty('<w:pStyle w:val="RtlPara"/>', DROP_CAP, CLEARED, ''), r('I')) +
     '<w:tbl><w:tblPr><w:tblW w:w="3000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/></w:tblGrid>' +
     `<w:tr><w:tc>${p('', r('Box cell A'))}</w:tc><w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CCCCCC"/></w:tcPr>${p('', r('Box cell B'))}</w:tc></w:tr></w:tbl>` +
@@ -167,8 +179,14 @@ const PARAGRAPH_PROPERTY_CHANGES =
     r('Was a heading'),
   ) +
   // extractParaFormat writes every key it reads in one order, bidi first
-  p(`<w:pPrChange w:id="44" ${AT}><w:pPr>${everyParaProperty('', FRAME_BOX, SHADED, '<w:bidi/>')}</w:pPr></w:pPrChange>`, r('Was boxed')) +
-  p(`<w:pPrChange w:id="45" ${AT}><w:pPr>${everyParaProperty('', DROP_CAP, CLEARED, '<w:bidi/>')}</w:pPr></w:pPrChange>`, r('Was a drop cap'))
+  p(
+    `<w:pPrChange w:id="44" ${AT}><w:pPr>${everyParaProperty('', FRAME_BOX, SHADED, '<w:bidi/>')}</w:pPr></w:pPrChange>`,
+    r('Was boxed'),
+  ) +
+  p(
+    `<w:pPrChange w:id="45" ${AT}><w:pPr>${everyParaProperty('', DROP_CAP, CLEARED, '<w:bidi/>')}</w:pPr></w:pPrChange>`,
+    r('Was a drop cap'),
+  )
 
 /**
  * sdtMeta (parse-sdt.ts) writes alias, tag, controlType, lock, id: a block
@@ -197,7 +215,10 @@ const TOC_LINES =
   p(
     '<w:pStyle w:val="TOC1"/><w:tabs><w:tab w:val="left" w:pos="440"/><w:tab w:val="right" w:leader="dot" w:pos="9350"/></w:tabs><w:ind w:left="440" w:hanging="440"/>',
     '<w:hyperlink w:anchor="_Toc1">' +
-      r('1.1', '<w:rStyle w:val="Hyperlink"/><w:rFonts w:ascii="Arial" w:eastAsia="SimSun"/><w:b/><w:sz w:val="24"/>') +
+      r(
+        '1.1',
+        '<w:rStyle w:val="Hyperlink"/><w:rFonts w:ascii="Arial" w:eastAsia="SimSun"/><w:b/><w:sz w:val="24"/>',
+      ) +
       '<w:r><w:tab/></w:r>' +
       r('Introduction 中文', '<w:rFonts w:ascii="Arial" w:eastAsia="SimSun"/><w:sz w:val="24"/>') +
       '<w:r><w:tab/></w:r>' +
@@ -418,7 +439,95 @@ const COMMENTS_EXTENDED_XML =
   '<w15:commentEx w15:paraId="1A2B3C4D" w15:done="1"/><w15:commentEx w15:paraId="2B3C4D5E" w15:paraIdParent="1A2B3C4D" w15:done="0"/>' +
   '</w15:commentsEx>'
 
+/** A chart part with a mark of the hidden-from-AI kind somewhere inside it, in the spelling `mark`. */
+const markedChart = (mark: string): string =>
+  CHART_XML.replace('</c:chart>', `<c:extLst>${mark}</c:extLst></c:chart>`)
+
+const GO_NS = 'xmlns:go="https://github.com/SeuPut0705/seuoffice/redaction/2026"'
+
+const CHART_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml'
+
+const FIELD_MARK = '<w:rPr><go:redact w:label="acct"/></w:rPr>'
+const fieldRun = (instr: string, rPr: string, result: string): string =>
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r>' +
+  `<w:r>${rPr}<w:instrText xml:space="preserve">${instr}</w:instrText></w:r>` +
+  `<w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r>`
+const MARKED_RESULT = r('hidden result', '<w:rPr><go:redact w:label="acct"/></w:rPr>')
+
 export const MODEL_BODIES: ModelBody[] = [
+  {
+    // the mark on a field's instruction hides its result, whatever the field and however many runs it has
+    name: 'fields and text boxes with the hidden-from-AI mark',
+    docRootExtraAttrs: `${VML} ${GO_NS}`,
+    bodyXml:
+      p('', fieldRun(' HYPERLINK "https://x" ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', FIELD_MARK, r('ACCT') + r('-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', '', MARKED_RESULT + r('ACCT-1234'))) +
+      p('', fieldRun(' HYPERLINK "https://x" ', '', r('ACCT-1234') + MARKED_RESULT)) +
+      p('', fieldRun(' REF bm \\h ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' FILLIN "who" ', '', MARKED_RESULT)) +
+      p('', fieldRun(' FILLIN "who" ', FIELD_MARK, r('ACCT-1234'))) +
+      p('', fieldRun(' PAGEREF bm ', FIELD_MARK, r('7'))) +
+      p('', r('plain ') + fieldRun(' AUTHOR ', FIELD_MARK, r('ACCT-1234')) + r(' tail')) +
+      p(
+        '',
+        fieldRun(
+          ' IF ',
+          '',
+          fieldRun(' MERGEFIELD acct ', FIELD_MARK, r('ACCT-1234')) + r('outer'),
+        ),
+      ) +
+      '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="5000"/></w:tblGrid>' +
+      `<w:tr><w:tc><w:tcPr><w:tcW w:w="5000" w:type="dxa"/></w:tcPr>${p('', fieldRun(' MERGEFIELD acct ', FIELD_MARK, r('ACCT-1234')))}</w:tc></w:tr></w:tbl>` +
+      // a text box, a picture and an object in a marked run: the block holds the mark
+      p(
+        '',
+        '<w:r><w:rPr><go:redact w:label="memo"/></w:rPr><w:pict>' +
+          '<v:shape id="textBox9" type="#_x0000_t202" style="position:absolute;width:100pt;height:40pt">' +
+          `<v:textbox><w:txbxContent>${p('', r('salary 9000'))}</w:txbxContent></v:textbox></v:shape></w:pict></w:r>`,
+      ) +
+      p(
+        '',
+        '<w:r><w:rPr><go:redact w:label="memo"/></w:rPr><w:drawing><wp:inline><wp:extent cx="914400" cy="914400"/><wp:docPr id="31" name="Box" descr="salary 9000"/>' +
+          '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          `<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:txbx><w:txbxContent>${p('', r('salary 9000'))}</w:txbxContent></wps:txbx></wps:wsp>` +
+          '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',
+      ) +
+      p('', '<w:r><w:object/></w:r>'),
+  },
+  {
+    // a chart part carrying the mark hides the chart whole; a chart in a marked run does too
+    name: 'charts with the hidden-from-AI mark',
+    docRootExtraAttrs: `${VML} ${GO_NS}`,
+    bodyXml:
+      chartParagraph('rId51', 21) +
+      chartParagraph('rId52', 22) +
+      chartParagraph('rId53', 23) +
+      chartParagraph('rId54', 24) +
+      chartParagraph('rId55', 25) +
+      chartParagraph('rId56', 26).replace(
+        '<w:r><w:drawing>',
+        '<w:r><w:rPr><go:redact w:label="run chart"/></w:rPr><w:drawing>',
+      ),
+    extraRels: [51, 52, 53, 54, 55, 56]
+      .map((n) => `<Relationship Id="rId${n}" Type="${REL}/chart" Target="charts/chart${n}.xml"/>`)
+      .join(''),
+    extraParts: [
+      markedChart('<go:redact w:label="chart title"/>'),
+      markedChart('<redact label=\'single &amp; quoted\' xmlns="urn:own"/>'),
+      markedChart('<!-- <go:redact w:label="faked"/> -->'),
+      markedChart('<go:redact/>'),
+      CHART_XML,
+    ]
+      .map((xml, i) => ({
+        path: `word/charts/chart${51 + i}.xml`,
+        xml,
+        contentType: CHART_CONTENT_TYPE,
+      }))
+      .concat([
+        { path: 'word/charts/chart56.xml', xml: CHART_XML, contentType: CHART_CONTENT_TYPE },
+      ]),
+  },
   {
     name: 'vml shapes and text boxes',
     docRootExtraAttrs: VML,
@@ -505,8 +614,39 @@ export const MODEL_BODIES: ModelBody[] = [
       {
         path: 'word/commentsExtended.xml',
         xml: COMMENTS_EXTENDED_XML,
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml',
+        contentType:
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml',
       },
     ],
+  },
+  {
+    // firstPageBreakAt (parse.ts parseDocx): the first sectPr ends the first page, so cover art after it
+    // is not pinned to the page; the closing sectPr of the body is a later boundary and must not be taken
+    name: 'page-pinned cover art after a section break',
+    docRootExtraAttrs: DRAWING,
+    bodyXml:
+      p(
+        '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>',
+        r('First section'),
+      ) +
+      p(
+        '',
+        '<w:r><w:drawing><wp:anchor behindDoc="1" distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="3" locked="0" layoutInCell="1" allowOverlap="1">' +
+          '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>' +
+          '<wp:positionV relativeFrom="page"><wp:posOffset>1371600</wp:posOffset></wp:positionV>' +
+          '<wp:extent cx="2540000" cy="762000"/><wp:wrapNone/><wp:docPr id="24" name="Cover banner"/>' +
+          '<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          '<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2540000" cy="762000"/></a:xfrm>' +
+          '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill></wps:spPr>' +
+          `<wps:txbx><w:txbxContent>${p('', r('Cover banner'))}</w:txbxContent></wps:txbx>` +
+          '<wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>',
+      ) +
+      p('', r('Second section')),
+  },
+  {
+    // ParsedDoc.internal (parse.ts parseDocx): the body offsets count UTF-16 code units, which
+    // text of two- and three-byte UTF-8 characters and a surrogate pair sets apart from bytes
+    name: 'text outside ASCII before the end of the body',
+    bodyXml: p('', r('\u00e9t\u00e9 \ud55c\uae00 \u{1f600}')) + p('', r('\u00a7 end')),
   },
 ]

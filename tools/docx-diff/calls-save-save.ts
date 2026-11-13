@@ -3,7 +3,8 @@
 // them), run-picture.ts, and the write halves of section.ts, notes.ts and
 // xml-number.ts. `saveDocx` itself is compared whole by model-save.ts, comparison
 // (i), over the corpus and edited models.
-import { buildNotesXml } from './reference/notes'
+import { buildNotesXml, parseNotesXml } from './reference/notes'
+import { editsOf, NOTE_PARTS } from './withheld-inputs'
 import { missingHeadingLevels, nextFreeRelId, type SaveBlock } from './reference/patch'
 import { patchHfPicturesXml, patchRunPictureXml } from './reference/run-picture'
 import {
@@ -80,7 +81,26 @@ const NOTES_LISTS: Array<Array<Record<string, unknown>>> = [
   [{ id: '3', text: 'new\nnote' }],
   [{ id: '4', text: '', richParas: [[{ text: 'rich', bold: true, italic: true, underline: true, strike: true, color: 'ff0000', sizeHalfPoints: 30, fontAscii: 'Arial', font: 'MS Gothic' }, { text: 'ins', ins: { author: 'A', date: '2024-01-01T00:00:00Z', id: '7001' } }, { text: 'del', del: { author: 'B' } }], [{ text: 'second' }]] }],
   [{ id: '5', text: 'a & b < c', richParas: [] }, { id: '6', text: '' }],
+  [{ id: '7', text: '', richParas: [[{ text: 'a & b < c' }, { text: 'x < y & z', del: { author: 'B' } }], [{ text: '<w:t>&amp;</w:t>', bold: true }]] }],
 ]
+
+/** Notes parts that hold hidden text, each with the edits a person can make to a note: unchanged, across words, a paragraph more or fewer. */
+const HIDDEN_NOTES: Input[] = NOTE_PARTS.flatMap((text) =>
+  parseNotesXml(text, 'footnote')
+    .slice(0, 2)
+    .flatMap((note) =>
+      editsOf(note.text).flatMap((edited) =>
+        (['footnote', 'endnote'] as const).map((kind) => ({
+          text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
+          args: {
+            kind,
+            notes: [{ id: note.id, text: edited }, { id: '99', text: 'a new note' }],
+            hasOriginal: true,
+          },
+        })),
+      ),
+    ),
+)
 
 const PICTURE_PART = `<w:hdr ${W}><w:p><w:r><w:drawing><wp:anchor simplePos="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="margin"><wp:posOffset>1</wp:posOffset></wp:positionH><wp:positionV relativeFrom="margin"><wp:posOffset>2</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="952500"/><wp:wrapNone/><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId1"/></pic:blipFill><pic:spPr><a:xfrm><a:ext cx="952500" cy="952500"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p><w:p><w:r><w:drawing><wp:inline><wp:extent cx="1" cy="1"/></wp:inline></w:drawing></w:r></w:p><w:p><w:r><w:drawing><wp:anchor><wp:extent cx="2" cy="2"/><a:blip r:embed="rId2"/><pic:pic/></wp:anchor></w:drawing></w:r></w:p></w:hdr>`
 const HF_EDITS: Array<Record<string, unknown>> = [
@@ -171,7 +191,7 @@ const IMAGES: Array<Record<string, unknown>> = [
   { base64: 'AAAA', mime: 'image/png', widthPx: 10, heightPx: 20 },
   { base64: '', mime: 'image/jpeg', widthPx: 0, heightPx: 5, rotDeg: 1e300, zOrder: 1e300 },
   { base64: 'AA', mime: 'image/gif', widthPx: -3, heightPx: 4, rotDeg: 45, zOrder: 2, posOffsetEmu: { x: 1e300, y: 0 } },
-  { base64: 'AA', mime: 'image/png', widthPx: 1e300, heightPx: 3, posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' }, paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'auto' } },
+  { base64: 'AA', mime: 'image/png', widthPx: 1e300, heightPx: 3, posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' }, paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'exact' } },
   { base64: 'AA', mime: 'image/png', widthPx: 8, heightPx: 3, paraSpacing: {} },
 ]
 
@@ -217,13 +237,13 @@ export const SAVE_SAVE: CallSpec[] = [
     fn: 'save.buildNotesXml',
     call: (text, args) =>
       buildNotesXml(args.kind as 'footnote' | 'endnote', args.notes as Parameters<typeof buildNotesXml>[1], args.hasOriginal ? text : null),
-    built: NOTES_LISTS.flatMap((notes) =>
-      (['footnote', 'endnote'] as const).flatMap((kind) => [
+    built: NOTES_LISTS.flatMap((notes): Input[] =>
+      (['footnote', 'endnote'] as const).flatMap((kind): Input[] => [
         { text: NOTE_ORIGINAL, args: { kind, notes, hasOriginal: true } },
         { text: NOTE_ORIGINAL.replaceAll('w:footnote', 'w:endnote'), args: { kind, notes, hasOriginal: true } },
         { text: '', args: { kind, notes } },
       ]),
-    ),
+    ).concat(HIDDEN_NOTES),
     argMutation: true,
   },
   {
@@ -403,7 +423,7 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.hasOrphanMoveRanges',
     call: (_text, args) => internals.hasOrphanMoveRanges!(zipOf(args.parts), args.documentPath),
-    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
+    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4), STORY_PARTS.slice(2, 5)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
     mutation: 'none',
   },
   {

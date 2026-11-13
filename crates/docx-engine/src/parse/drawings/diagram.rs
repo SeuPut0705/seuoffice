@@ -3,8 +3,9 @@
 //! canvas of the paragraph itself.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
-use jscompat::{JsMap, JsNum, Radix, js_regex, math_max, math_round, parse_int, trim};
+use jscompat::{JsMap, JsNum, Radix, Slot, js_regex, math_max, math_round, parse_int, trim};
 use ooxml_xml::{XNode, parse_ordered, serialize};
 
 use super::EMU_PER_PX;
@@ -12,31 +13,16 @@ use super::media::{image_part_mime, media_part_src, rel_part_path_of};
 use super::picture::rect_frac;
 use crate::drawing_geometry::fill::{color_node_hex, grad_fill_approx_hex};
 use crate::image_kinds::is_metafile_mime;
-use crate::model::{DiagramDisplay, DiagramShape, DiagramShapeFillRect};
-use crate::package::{Thrown, parse_rels, part_text, resolve_relationship_target_path};
+use crate::model::{DiagramDisplay, DiagramShape, DiagramShapeFillRect, SharedStr};
+use crate::package::{Thrown, canonical_part_text, parse_rels, resolve_relationship_target_path};
 use crate::parse::text::{BuildContext, emu_to_px};
 use crate::props::{XML_PARSER_MAX_NESTED_TAGS, collect_nodes};
 use crate::theme::ThemeColors;
 use crate::xml_text::{decode_entities, decode_numeric_char_refs};
 
-/// A shape with its position and size zero and every optional key absent.
-fn blank_shape() -> DiagramShape {
-    DiagramShape {
-        x_px: JsNum(0.0),
-        y_px: JsNum(0.0),
-        w_px: JsNum(0.0),
-        h_px: JsNum(0.0),
-        ln_hex: None,
-        ln_w_px: None,
-        fill_rect: None,
-        rot_deg: None,
-        prst: None,
-        fill_hex: None,
-        image_data_url: None,
-        texts: None,
-        font_size_pt: None,
-        text_color_hex: None,
-    }
+/// A shape's numeric key; every shape built here has its four extents.
+fn px(slot: &Slot<JsNum>) -> f64 {
+    slot.map_or(f64::NAN, |value| value.0)
 }
 
 /// A display with no size, shapes or optional key.
@@ -123,12 +109,13 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     );
     let Some(data_xml) = path
         .as_deref()
-        .map(|path| part_text(ctx.zip, path))
+        .map(|path| canonical_part_text(ctx.zip, path))
         .transpose()?
         .flatten()
     else {
         return Ok(None);
     };
+    let data_xml = &*data_xml;
     // node texts by modelId (pres/transition points carry no content text)
     let mut pt_texts: JsMap<String> = JsMap::new();
     for found in
@@ -149,7 +136,7 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     // parent-child edges: cxns without an explicit type (default parOf); typed
     // cxns (presOf/presParOf...) are layout wiring, not the content tree
     let mut children: JsMap<Vec<(f64, String)>> = JsMap::new();
-    let mut has_parent: Vec<String> = Vec::new();
+    let mut has_parent: HashSet<String> = HashSet::new();
     for found in js_regex!(r"<dgm:cxn [^>]*\/?>").find_iter(data_xml) {
         let tag = found.as_str();
         if js_regex!(r#"type="(?!parOf")"#).test(tag) {
@@ -177,21 +164,20 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
         if let Some(list) = children.get_mut(src) {
             list.push((ord, dst.to_owned()));
         }
-        has_parent.push(dst.to_owned());
+        has_parent.insert(dst.to_owned());
     }
     let mut texts: Vec<String> = Vec::new();
-    let mut seen: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
     for root in children.keys() {
-        if has_parent.iter().any(|id| id == root) {
+        if has_parent.contains(root) {
             continue;
         }
         // `visit(id)`, depth first, children in srcOrd order
         let mut stack = vec![root.to_owned()];
         while let Some(id) = stack.pop() {
-            if seen.contains(&id) {
+            if !seen.insert(id.clone()) {
                 continue;
             }
-            seen.push(id.clone());
             if let Some(text) = pt_texts.get(&id) {
                 texts.push(text.clone());
             }
@@ -204,7 +190,7 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     }
     // isolated points (no tree info) keep file order
     for (id, text) in pt_texts.iter() {
-        if !seen.iter().any(|known| known == id) {
+        if !seen.contains(id) {
             texts.push(text.clone());
         }
     }
@@ -329,24 +315,32 @@ pub fn extract_locked_canvas(
             continue;
         };
         let mut shape = DiagramShape {
-            x_px: rounded(((emu_attr(Some(off), "x", 0.0) - ch_off_x) * scale_x) / EMU_PER_PX),
-            y_px: rounded(((emu_attr(Some(off), "y", 0.0) - ch_off_y) * scale_y) / EMU_PER_PX),
-            w_px: rounded((emu_attr(Some(ext), "cx", 0.0) * scale_x) / EMU_PER_PX),
-            h_px: rounded((emu_attr(Some(ext), "cy", 0.0) * scale_y) / EMU_PER_PX),
-            ..blank_shape()
+            x_px: Slot::of(rounded(
+                ((emu_attr(Some(off), "x", 0.0) - ch_off_x) * scale_x) / EMU_PER_PX,
+            )),
+            y_px: Slot::of(rounded(
+                ((emu_attr(Some(off), "y", 0.0) - ch_off_y) * scale_y) / EMU_PER_PX,
+            )),
+            w_px: Slot::of(rounded(
+                (emu_attr(Some(ext), "cx", 0.0) * scale_x) / EMU_PER_PX,
+            )),
+            h_px: Slot::of(rounded(
+                (emu_attr(Some(ext), "cy", 0.0) * scale_y) / EMU_PER_PX,
+            )),
+            ..DiagramShape::default()
         };
-        if shape.w_px.0 <= 0.0 || shape.h_px.0 <= 0.0 {
+        if px(&shape.w_px) <= 0.0 || px(&shape.h_px) <= 0.0 {
             continue;
         }
         let rot = int_attr(xfrm, "rot");
         if rot.is_finite() && rot != 0.0 {
-            shape.rot_deg = Some(rounded(rot / 60000.0));
+            shape.rot_deg.set(rounded(rot / 60000.0));
         }
         let prst = sp_pr
             .and_then(|sp_pr| sp_pr.find_child("a:prstGeom"))
             .and_then(|geom| geom.attr("prst"));
         if let Some(prst) = prst.filter(|prst| !prst.is_empty() && *prst != "rect") {
-            shape.prst = Some(prst.to_owned());
+            shape.prst.set(prst.to_owned());
         }
         if name == Some("a:pic") {
             let r_id = child
@@ -359,7 +353,7 @@ pub fn extract_locked_canvas(
                     .and_then(|media| media.borrow().get(r_id).cloned())
             });
             if let Some(data_url) = data_url.filter(|url| !url.is_empty()) {
-                shape.image_data_url = Some(data_url);
+                shape.image_data_url.set(data_url);
             }
         } else if let Some(sp_pr) = sp_pr
             && sp_pr.find_child("a:noFill").is_none()
@@ -367,7 +361,7 @@ pub fn extract_locked_canvas(
             let fill = color_node_hex(sp_pr.find_child("a:solidFill"), theme)
                 .or_else(|| grad_fill_approx_hex(sp_pr, theme));
             if let Some(fill) = fill.filter(|fill| !fill.is_empty()) {
-                shape.fill_hex = Some(fill);
+                shape.fill_hex.set(fill);
             }
         }
         let body = child
@@ -379,12 +373,12 @@ pub fn extract_locked_canvas(
                     .filter(|color| !color.is_empty())
             });
             if !text.texts.is_empty() {
-                shape.texts = Some(text.texts);
+                shape.texts.set(text.texts);
                 if let Some(size) = truthy(text.size_pt) {
-                    shape.font_size_pt = Some(JsNum(size));
+                    shape.font_size_pt.set(JsNum(size));
                 }
                 if let Some(color) = text.color {
-                    shape.text_color_hex = Some(color);
+                    shape.text_color_hex.set(color);
                 }
             }
         }
@@ -400,7 +394,7 @@ pub fn extract_locked_canvas(
     // that stacking keeps the glyph reading order identical to LO's render.
     let col_geom = |s: &DiagramShape| -> (f64, f64) {
         let font_px = (s.font_size_pt.map_or(f64::NAN, |pt| pt.0) * 96.0) / 72.0;
-        let chars_per_line = math_max(1.0, (s.w_px.0 / (font_px * 0.72)).floor());
+        let chars_per_line = math_max(1.0, (px(&s.w_px) / (font_px * 0.72)).floor());
         let chars = s
             .texts
             .as_ref()
@@ -418,18 +412,18 @@ pub fn extract_locked_canvas(
         .into_iter()
         .filter(|&at| {
             let (lines, pitch) = col_geom(&shapes[at]);
-            lines * pitch > 2.0 * shapes[at].h_px.0
+            lines * pitch > 2.0 * px(&shapes[at].h_px)
         })
         .collect();
     if !overflowing.is_empty() {
         // the first overflowing column anchors at the canvas top (LO ignores the
         // scaled box offset once the text no longer fits the box)
-        shapes[overflowing[0]].y_px = JsNum(0.0);
+        shapes[overflowing[0]].y_px.set(JsNum(0.0));
         for i in 1..overflowing.len() {
             let prev = overflowing[i - 1];
             let (lines, pitch) = col_geom(&shapes[prev]);
-            shapes[overflowing[i]].y_px =
-                rounded(shapes[prev].y_px.0 + (lines / 2.0).ceil() * pitch - 23.0);
+            let y = rounded(px(&shapes[prev].y_px) + (lines / 2.0).ceil() * pitch - 23.0);
+            shapes[overflowing[i]].y_px.set(y);
         }
         // single-letter-per-line columns explode into per-letter shapes ordered
         // top-down: the exported PDF then emits glyphs in painter order like LO,
@@ -438,7 +432,7 @@ pub fn extract_locked_canvas(
         let mut pool: Vec<Option<DiagramShape>> = shapes.into_iter().map(Some).collect();
         let mut letter_shapes: Vec<DiagramShape> = Vec::new();
         for &id in &overflowing {
-            let s = pool[id].clone().unwrap_or_else(blank_shape);
+            let s = pool[id].clone().unwrap_or_default();
             let (lines, pitch) = col_geom(&s);
             let chars: Vec<String> = s.texts.as_ref().map_or_else(Vec::new, |texts| {
                 texts.concat().chars().map(String::from).collect()
@@ -456,18 +450,18 @@ pub fn extract_locked_canvas(
                 .enumerate()
                 .map(|(i, ch)| {
                     let mut letter = DiagramShape {
-                        x_px: s.x_px,
-                        y_px: rounded(s.y_px.0 + i as f64 * pitch),
-                        w_px: s.w_px,
-                        h_px: JsNum(pitch.ceil()),
-                        texts: Some(vec![ch.clone()]),
-                        ..blank_shape()
+                        x_px: Slot::maybe(*s.x_px),
+                        y_px: Slot::of(rounded(px(&s.y_px) + i as f64 * pitch)),
+                        w_px: Slot::maybe(*s.w_px),
+                        h_px: Slot::of(JsNum(pitch.ceil())),
+                        texts: Slot::of(vec![ch.clone()]),
+                        ..DiagramShape::default()
                     };
                     if truthy(s.font_size_pt.map(|pt| pt.0)).is_some() {
-                        letter.font_size_pt = s.font_size_pt;
+                        letter.font_size_pt.assign(*s.font_size_pt);
                     }
                     if s.text_color_hex.as_ref().is_some_and(|c| !c.is_empty()) {
-                        letter.text_color_hex = s.text_color_hex.clone();
+                        letter.text_color_hex.assign((*s.text_color_hex).clone());
                     }
                     letter_shapes.push(letter);
                     first_letter + i
@@ -479,7 +473,11 @@ pub fn extract_locked_canvas(
         all.extend(letter_shapes.into_iter().map(Some));
         let mut ordered: Vec<DiagramShape> =
             order.into_iter().filter_map(|at| all[at].take()).collect();
-        ordered.sort_by(|a, b| a.y_px.0.partial_cmp(&b.y_px.0).unwrap_or(Ordering::Equal));
+        ordered.sort_by(|a, b| {
+            px(&a.y_px)
+                .partial_cmp(&px(&b.y_px))
+                .unwrap_or(Ordering::Equal)
+        });
         return Ok(Some(DiagramDisplay {
             width_px: JsNum(emu_to_px(ext_cx)),
             height_px: JsNum(emu_to_px(ext_cy)),
@@ -548,7 +546,7 @@ pub fn extract_diagram_drawing(
         format!("_rels/{}.rels", found.get(1).unwrap_or(""))
     });
     let rels = parse_rels(ctx.zip, &rels_path)?;
-    let media_of = |r_id: &str| -> Result<Option<String>, Thrown> {
+    let media_of = |r_id: &str| -> Result<Option<SharedStr>, Thrown> {
         let Some(rel) = rels.get(r_id) else {
             return Ok(None);
         };
@@ -566,9 +564,13 @@ pub fn extract_diagram_drawing(
         };
         if is_metafile_mime(Some(&mime)) {
             let bytes = f.bytes().map_err(|error| error.to_string())?;
-            return Ok(ctx.media.host.metafile_to_data_url(bytes, &mime));
+            return Ok(ctx
+                .media
+                .host
+                .metafile_to_data_url(bytes, &mime)
+                .map(SharedStr::from));
         }
-        media_part_src(f, &path, &mime, ctx.media).map(Some)
+        media_part_src(f, &path, &mime, ctx.media).map(|src| Some(SharedStr::from(src)))
     };
     let theme = ctx.resolver.theme_colors.as_ref();
     let mut sps: Vec<&XNode> = Vec::new();
@@ -587,37 +589,37 @@ pub fn extract_diagram_drawing(
         let attr_or_zero =
             |node: &XNode, name: &str| parse_int(node.attr(name).unwrap_or("0"), Radix::Ten);
         let mut shape = DiagramShape {
-            x_px: rounded(attr_or_zero(off, "x") / EMU_PER_PX),
-            y_px: rounded(attr_or_zero(off, "y") / EMU_PER_PX),
-            w_px: rounded(attr_or_zero(ext, "cx") / EMU_PER_PX),
-            h_px: rounded(attr_or_zero(ext, "cy") / EMU_PER_PX),
-            ..blank_shape()
+            x_px: Slot::of(rounded(attr_or_zero(off, "x") / EMU_PER_PX)),
+            y_px: Slot::of(rounded(attr_or_zero(off, "y") / EMU_PER_PX)),
+            w_px: Slot::of(rounded(attr_or_zero(ext, "cx") / EMU_PER_PX)),
+            h_px: Slot::of(rounded(attr_or_zero(ext, "cy") / EMU_PER_PX)),
+            ..DiagramShape::default()
         };
         let prst = sp_pr
             .find_child("a:prstGeom")
             .and_then(|geom| geom.attr("prst"))
             .filter(|prst| !prst.is_empty());
         if let Some(prst) = prst {
-            shape.prst = Some(prst.to_owned());
+            shape.prst.set(prst.to_owned());
         }
         // connectors carry cy="0"/cx="0"; only they may be zero-extent
         let is_line = prst.is_some_and(|prst| prst == "line" || prst.contains("Connector"));
-        let (w, h) = (shape.w_px.0, shape.h_px.0);
+        let (w, h) = (px(&shape.w_px), px(&shape.h_px));
         if (w <= 0.0 || h <= 0.0) && !(is_line && (w > 0.0 || h > 0.0)) {
             continue;
         }
         let rot = int_attr(xfrm, "rot");
         if rot.is_finite() && rot != 0.0 {
-            shape.rot_deg = Some(rounded(rot / 60000.0));
+            shape.rot_deg.set(rounded(rot / 60000.0));
         }
         if let Some(ln) = sp_pr.find_child("a:ln")
             && ln.find_child("a:noFill").is_none()
             && let Some(ln_hex) =
                 color_node_hex(ln.find_child("a:solidFill"), theme).filter(|hex| !hex.is_empty())
         {
-            shape.ln_hex = Some(ln_hex);
+            shape.ln_hex.set(ln_hex);
             let w = int_attr(Some(ln), "w");
-            shape.ln_w_px = Some(if w.is_finite() && w > 0.0 {
+            shape.ln_w_px.set(if w.is_finite() && w > 0.0 {
                 JsNum(math_max(1.0, math_round(w / EMU_PER_PX)))
             } else {
                 JsNum(1.0)
@@ -633,7 +635,7 @@ pub fn extract_diagram_drawing(
                 None => None,
             };
             if let Some(data_url) = data_url.filter(|url| !url.is_empty()) {
-                shape.image_data_url = Some(data_url);
+                shape.image_data_url.set(data_url);
                 let fill = serialize(blip_fill);
                 if let Some(fr) = js_regex!(r"<a:fillRect\s[^>]*\/>")
                     .exec(&fill)
@@ -645,7 +647,7 @@ pub fn extract_diagram_drawing(
                     let b = rect_frac(fr, "b").map_err(|e| e.to_string())?;
                     let on = |v: f64| v != 0.0 && !v.is_nan();
                     if on(l) || on(t) || on(r) || on(b) {
-                        shape.fill_rect = Some(DiagramShapeFillRect {
+                        shape.fill_rect.set(DiagramShapeFillRect {
                             l: JsNum(l),
                             t: JsNum(t),
                             r: JsNum(r),
@@ -664,9 +666,9 @@ pub fn extract_diagram_drawing(
             };
             let (srgb, scheme) = (color_val("a:srgbClr"), color_val("a:schemeClr"));
             if let Some(srgb) = srgb {
-                shape.fill_hex = Some(srgb.to_owned());
+                shape.fill_hex.set(srgb.to_owned());
             } else if let Some(scheme) = scheme {
-                shape.fill_hex = Some(
+                shape.fill_hex.set(
                     theme
                         .and_then(|theme| theme_slot(theme, scheme))
                         .filter(|hex| !hex.is_empty())
@@ -684,12 +686,12 @@ pub fn extract_diagram_drawing(
                     .map(str::to_owned)
             });
             if !text.texts.is_empty() {
-                shape.texts = Some(text.texts);
+                shape.texts.set(text.texts);
                 if let Some(size) = truthy(text.size_pt) {
-                    shape.font_size_pt = Some(JsNum(size));
+                    shape.font_size_pt.set(JsNum(size));
                 }
                 if let Some(color) = text.color {
-                    shape.text_color_hex = Some(color);
+                    shape.text_color_hex.set(color);
                 }
             }
         }

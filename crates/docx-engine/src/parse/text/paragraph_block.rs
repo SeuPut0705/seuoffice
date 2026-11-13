@@ -345,7 +345,6 @@ pub fn build_text_paragraph(
         }
     }
     let mut map = base.map();
-    let run_values: Vec<Value> = runs.iter().map(json).collect();
     let common = |map: &mut Map<String, Value>, format: &Map<String, Value>| {
         if let Some(id) = style_id {
             map.insert("styleId".to_owned(), Value::from(id));
@@ -366,7 +365,16 @@ pub fn build_text_paragraph(
         if let Some(ends) = &comments.comment_ends {
             map.insert("commentEnds".to_owned(), json(ends));
         }
-        map.insert("runs".to_owned(), Value::Array(run_values.clone()));
+        // the runs go in by value below
+        map.insert("runs".to_owned(), Value::Array(Vec::new()));
+    };
+    // A JSON value would copy the data URL of every picture among the runs.
+    let finish = |map: Map<String, Value>| -> Result<Block, Thrown> {
+        let mut block = block_of(map)?;
+        if let Some(slot) = block.runs.as_mut() {
+            *slot = runs;
+        }
+        Ok(block)
     };
     if let Some(list_ref) = &list_ref {
         let kind = list_kind_of(&ctx.style_ctx(), &list_ref.num_id, list_ref.ilvl.0)?;
@@ -389,7 +397,7 @@ pub fn build_text_paragraph(
         for (key, value) in rev_extras {
             map.insert(key, value);
         }
-        return block_of(map);
+        return finish(map);
     }
 
     // heading?
@@ -404,7 +412,7 @@ pub fn build_text_paragraph(
         for (key, value) in rev_extras {
             map.insert(key, value);
         }
-        return block_of(map);
+        return finish(map);
     }
 
     map.insert("type".to_owned(), Value::from("paragraph"));
@@ -412,7 +420,7 @@ pub fn build_text_paragraph(
     for (key, value) in rev_extras {
         map.insert(key, value);
     }
-    block_of(map)
+    finish(map)
 }
 
 /// Where an `allowOverlap="0"` float collides with a sibling anchor, Word
@@ -425,7 +433,7 @@ fn displace_overlapping_floats(runs: &mut [Run]) {
         .filter(|(_, run)| {
             run.image
                 .as_ref()
-                .is_some_and(|image| matches!(image.wrap, Some(w) if w != ImageWrap::Front && w != ImageWrap::Behind))
+                .is_some_and(|image| matches!(&image.wrap, Some(w) if *w != ImageWrap::Front && *w != ImageWrap::Behind))
         })
         .map(|(index, _)| index)
         .collect();

@@ -51,7 +51,7 @@ struct CtxArg {
 
 /// An `XNode` as fast-xml-parser builds it with `preserveOrder`, its
 /// attributes as `[name, value]` pairs so their order is compared.
-fn node_json(node: &XNode) -> Value {
+pub(super) fn node_json(node: &XNode) -> Value {
     let mut object = Map::new();
     match node {
         XNode::Text(text) => {

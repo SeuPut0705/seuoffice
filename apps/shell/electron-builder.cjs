@@ -130,6 +130,7 @@ function assertExtraResourceSources() {
     '../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm',
     '../../packages/ui/template-fonts/README.md',
     '../../node_modules/@rhwp/core/rhwp_bg.wasm',
+    '../../crates/target/wasm32-wasip1/release/office_wasm.wasm',
     'resources/builtin-skills/builtin-skills.json',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
@@ -378,10 +379,30 @@ function ensureCliBundleCarriesAppVersion() {
 const NOTICE_PATH = join(__dirname, 'build/THIRD-PARTY-NOTICES.txt')
 const PDFIUM_NOTICE_TERMS = ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']
 // tools/gen-third-party-notices.mjs writes this header after the repo NOTICE,
-// and one crate-count line per Rust component (xlsx-sidecar, rhwp_bg.wasm)
+// one crate-count line per native Rust component (xlsx-sidecar, rhwp_bg.wasm)
+// and one for the crates compiled into office_wasm.wasm
 const NOTICE_HEADER = `${PRODUCT_NAME} — Third-Party Software Notices`
 const RUST_COMPONENTS = 2
 const CRATE_COUNT_LINE = /^[1-9]\d* crates, all under permissive terms:$/gm
+const OFFICE_WASM_COUNT_LINE = /^(\d+) crates compiled into office_wasm\.wasm:$/m
+
+/**
+ * How many crates `cargo` puts into office_wasm.wasm that the notice has to
+ * list (tools/office-wasm-crates.mjs), or null when cargo cannot say.
+ */
+function officeWasmCrateCount() {
+  try {
+    const listed = execFileSync(
+      process.execPath,
+      [join(__dirname, '../../tools/office-wasm-crates.mjs')],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    const { count } = JSON.parse(String(listed))
+    return Number.isInteger(count) ? count : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * What keeps a generated notice from shipping, or [] when it may ship. A stale
@@ -406,15 +427,28 @@ function thirdPartyNoticeProblems() {
   if (rustSections < RUST_COMPONENTS) {
     problems.push(`${rustSections} of ${RUST_COMPONENTS} Rust crate sections are listed`)
   }
+  const officeListed = OFFICE_WASM_COUNT_LINE.exec(text)
+  if (officeListed === null) {
+    problems.push('the crates compiled into office_wasm.wasm are not listed')
+  } else {
+    const expected = officeWasmCrateCount()
+    if (expected === null) {
+      problems.push('cargo cannot list the crates compiled into office_wasm.wasm')
+    } else if (Number(officeListed[1]) < expected) {
+      problems.push(
+        `${officeListed[1]} of the ${expected} crates compiled into office_wasm.wasm are listed`,
+      )
+    }
+  }
   return problems
 }
 
 function ensureThirdPartyNotices() {
   if (thirdPartyNoticeProblems().length > 0) {
-    // IEUM_RELEASE makes the generator fail on a gap instead of degrading
+    // SEUOFFICE_RELEASE makes the generator fail on a gap instead of degrading
     execFileSync(process.execPath, [join(__dirname, '../../tools/gen-third-party-notices.mjs')], {
       stdio: 'inherit',
-      env: { ...process.env, IEUM_RELEASE: '1' },
+      env: { ...process.env, SEUOFFICE_RELEASE: '1' },
     })
   }
   const problems = thirdPartyNoticeProblems()
@@ -806,6 +840,13 @@ const config = {
     {
       from: '../../node_modules/@rhwp/core/rhwp_bg.wasm',
       to: 'wasm/rhwp_bg.wasm',
+    },
+    // the Rust document engine behind @seuoffice/docx-engine for the command line
+    // (packages/cli/src/resources.ts engineWasmPath); the app's own mains and pages
+    // carry their copy in the bundle (?asset / ?url)
+    {
+      from: '../../crates/target/wasm32-wasip1/release/office_wasm.wasm',
+      to: 'wasm/office_wasm.wasm',
     },
     // platform system-OCR helpers for scanned-page recovery (each exists only
     // on its own build platform; electron-builder skips absent sources and the

@@ -51,9 +51,23 @@ const UNRAWABLE = new Set(['self', 'Self', 'super', 'crate'])
 const TAKEN = new Set(
   (
     'Bytes Deserialize Deserializer False FieldKey Fields JsNum JsObject Key MapAccess MapEntries NumberRecord ' +
-    'Option Result Seen Serialize SerializeMap Serializer String True Vec Visitor'
+    'Option Result Seen Serialize SerializeMap Serializer SharedStr String True Vec Visitor'
   ).split(' '),
 )
+
+/**
+ * The fields that hold the data URL of a media part. The TypeScript holds one
+ * string per part however many images refer to it; these fields hold a
+ * `SharedStr` for the same reason.
+ */
+const SHARED_STRING_FIELDS = new Set([
+  'Block.imageDataUrl',
+  'RunImage.dataUrl',
+  'RunImageLayersItem.dataUrl',
+  'HfImage.dataUrl',
+  'DiagramShape.imageDataUrl',
+  'TextboxDisplay.fillImageDataUrl',
+])
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 
@@ -91,7 +105,8 @@ function fieldName(key: string): string {
     .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
     .toLowerCase()
   const snake = macroKey(usual) === key ? usual : key.replace(/([A-Z])/g, '_$1').toLowerCase()
-  if (macroKey(snake) !== key) throw new Error(`the key ${key} has no snake case that gives it back`)
+  if (macroKey(snake) !== key)
+    throw new Error(`the key ${key} has no snake case that gives it back`)
   if (UNRAWABLE.has(snake)) throw new Error(`the key ${key} is reserved`)
   return RUST_KEYWORDS.has(snake) ? `r#${snake}` : snake
 }
@@ -132,7 +147,9 @@ function rustType(node: SchemaNode): string {
     case 'undefinable':
       return `Option<${rustType(node.inner)}>`
     case 'record':
-      return node.key === 'number' ? `NumberRecord<${rustType(node.value)}>` : `JsObject<${rustType(node.value)}>`
+      return node.key === 'number'
+        ? `NumberRecord<${rustType(node.value)}>`
+        : `JsObject<${rustType(node.value)}>`
     case 'map':
       return `MapEntries<${node.key === 'string' ? 'String' : 'JsNum'}, ${rustType(node.value)}>`
     case 'bytes':
@@ -169,7 +186,7 @@ interface Level {
 
 function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable): Level[] {
   const levels: Level[] = []
-  for (let at: ObjectDef | undefined = definition; at !== undefined; ) {
+  for (let at: ObjectDef | undefined = definition; at !== undefined;) {
     const name = typeName(at.name)
     levels.push({
       definition: at,
@@ -182,7 +199,8 @@ function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable
     })
     if (at.base === undefined) break
     const base = schema.types.get(at.base)
-    if (base?.kind !== 'object') throw new Error(`${at.name}: the base ${at.base} is no object type`)
+    if (base?.kind !== 'object')
+      throw new Error(`${at.name}: the base ${at.base} is no object type`)
     if (base.fields.some((field, i) => at!.fields[i]?.name !== field.name)) {
       throw new Error(`${at.name}: the fields of ${at.base} do not lead its own`)
     }
@@ -208,7 +226,10 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     const rust = fieldName(field.name)
     const holders = levels.slice(1).filter((level) => at < level.count)
     const holder = holders.at(-1) ?? levels[0]!
-    const plain = rustType(field.type)
+    const shared = SHARED_STRING_FIELDS.has(`${typeName(definition.name)}.${field.name}`)
+    if (shared && field.type.kind !== 'string')
+      throw new Error(`${definition.name}.${field.name} is no string`)
+    const plain = shared ? 'SharedStr' : rustType(field.type)
     return {
       ...field,
       rust,
@@ -262,7 +283,9 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
   } else {
     // a plain struct declares its own fields in the order it writes them
     const written = order === 'input' ? [] : order.map((field) => byName.get(field)!)
-    const ownFields = written.filter((field) => definition.fields.findIndex((other) => other.name === field.name) >= own)
+    const ownFields = written.filter(
+      (field) => definition.fields.findIndex((other) => other.name === field.name) >= own,
+    )
     // a type whose required keys are all strings or arrays has an empty value:
     // `{}`, or `{ text: "" }` for a Run. Its base passes the same test, its
     // fields leading these
@@ -387,29 +410,60 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
       : levels
           .filter((level) => level.input)
           .map((level) => `                let mut ${level.local} = ${level.name}::default();`)),
-    ...fields.filter((field) => !field.slot).map((field) => `                let mut ${field.local} = None;`),
+    ...fields
+      .filter((field) => !field.slot)
+      .map((field) => `                let mut ${field.local} = None;`),
     `                while let Some(Key(key)) = map.next_key::<Key<${key}>>()? {`,
+    '                    let Some(key) = key else {',
+    '                        map.next_value::<serde::de::IgnoredAny>()?;',
+    '                        continue;',
+    '                    };',
     '                    if !seen.insert(key.index()) {',
     '                        return Err(A::Error::duplicate_field(key.name()));',
     '                    }',
     '                    match key {',
-    ...fields.map((field) =>
-      field.slot
-        ? `                        ${key}::${field.variant} => ${slotOf(field)}.set(map.next_value()?),`
-        : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`,
-    ),
+    ...fields.map((field) => {
+      // a value the TypeScript holds as undefined: null where the type has no null
+      const plain =
+        field.optional && !field.slot ? field.type.slice('Option<'.length, -1) : field.type
+      const absentable = !/^Option</.test(plain) && plain !== 'JsNum'
+      if (field.slot)
+        return absentable
+          ? `                        ${key}::${field.variant} => if let Some(value) = map.next_value::<wire::OrAbsent<${plain}>>()?.0 { ${slotOf(field)}.set(value) },`
+          : `                        ${key}::${field.variant} => ${slotOf(field)}.set(map.next_value()?),`
+      return absentable
+        ? `                        ${key}::${field.variant} => ${field.local} = map.next_value::<wire::OrAbsent<${plain}>>()?.0,`
+        : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`
+    }),
     '                    }',
     '                }',
   )
   for (const field of fields.filter((candidate) => candidate.slot && !candidate.optional)) {
     lines.push(
-      `                if !${slotOf(field)}.has_key() {`,
+      // read leniently, an absent key is the TypeScript's undefined: the slot stays unset
+      `                if !${slotOf(field)}.has_key() && !jscompat::lenient() {`,
       `                    return Err(A::Error::missing_field(${field.key}));`,
       '                }',
     )
   }
-  const value = (field: (typeof fields)[number]): string =>
-    field.optional ? field.local : `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
+  // the TypeScript's undefined where a type has a value that reads as it: NaN, '', false, []
+  const standIn = (type: string): string | null =>
+    type === 'JsNum'
+      ? 'JsNum(f64::NAN)'
+      : type === 'String' || type === 'bool' || /^Vec</.test(type)
+        ? 'Default::default()'
+        : null
+  const value = (field: (typeof fields)[number]): string => {
+    if (field.optional) return field.local
+    // a key whose value may be undefined (`payload: string | undefined`): a
+    // caller's object may leave it out, read leniently; the parse writes it
+    if (/^Option</.test(field.type))
+      return `${field.local}.map_or_else(|| wire::absent(${field.key}).map(|()| None), Ok)?`
+    const stand = standIn(field.type)
+    return stand === null
+      ? `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
+      : `${field.local}.map_or_else(|| wire::absent(${field.key}).map(|()| ${stand}), Ok)?`
+  }
   /** a level as an expression: the local of a `js_object!`, else a struct expression with its bases nested */
   const expression = (at: number): string => {
     const level = levels[at]!
@@ -417,7 +471,9 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     const inner = levels[at + 1]
     const entries = [
       ...(inner ? [`${inner.field}: ${expression(at + 1)}`] : []),
-      ...fields.slice(inner?.count ?? 0, level.count).map((field) => `${field.rust}: ${value(field)}`),
+      ...fields
+        .slice(inner?.count ?? 0, level.count)
+        .map((field) => `${field.rust}: ${value(field)}`),
     ]
     return `${level.name} { ${entries.join(', ')} }`
   }
@@ -434,30 +490,44 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
 
 function enumCode(definition: Extract<TypeDef, { kind: 'enum' }>): string {
   const name = typeName(definition.name)
-  const variants = definition.values.map((value) => ({ value: rustString(value), variant: pascal(value) }))
+  const variants = definition.values.map((value) => ({
+    value: rustString(value),
+    variant: pascal(value),
+  }))
   unique(
     variants.map((variant) => variant.variant),
     `${definition.name} variants`,
   )
   return [
-    `/// \`${definition.name}\``,
-    '#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]',
+    `/// \`${definition.name}\`. \`Unlisted\` is a string the type does not name: the`,
+    '/// TypeScript keeps whatever an attribute held, so a reading in',
+    '/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.',
+    '#[derive(Debug, Clone, PartialEq, Eq, Hash)]',
     `pub enum ${name} {`,
-    ...variants.flatMap(({ value, variant }) => [`    #[serde(rename = ${value})]`, `    ${variant},`]),
+    ...variants.map(({ variant }) => `    ${variant},`),
+    // a thin pointer: the enum stays one word beside the variants without data
+    '    Unlisted(std::sync::Arc<String>),',
     '}',
     '',
     `impl ${name} {`,
     '    /// The string the TypeScript holds.',
-    "    pub fn as_str(self) -> &'static str {",
+    '    pub fn as_str(&self) -> &str {',
     '        match self {',
     ...variants.map(({ value, variant }) => `            Self::${variant} => ${value},`),
+    '            Self::Unlisted(text) => text,',
     '        }',
+    '    }',
+    '}',
+    '',
+    `impl Serialize for ${name} {`,
+    '    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {',
+    '        serializer.serialize_str(self.as_str())',
     '    }',
     '}',
     '',
     `impl<'de> Deserialize<'de> for ${name} {`,
     "    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {",
-    `        wire::string_enum(deserializer, ${rustString(definition.name)}, |text| match text {`,
+    `        wire::string_enum(deserializer, ${rustString(definition.name)}, Self::Unlisted, |text| match text {`,
     ...variants.map(({ value, variant }) => `            ${value} => Some(Self::${variant}),`),
     '            _ => None,',
     '        })',
@@ -509,7 +579,9 @@ function variantOf(node: SchemaNode): Variant {
 function aliasCode(definition: Extract<TypeDef, { kind: 'alias' }>): string {
   const name = typeName(definition.name)
   if (definition.type.kind !== 'union') {
-    return [`/// \`${definition.name}\``, `pub type ${name} = ${rustType(definition.type)};`].join('\n')
+    return [`/// \`${definition.name}\``, `pub type ${name} = ${rustType(definition.type)};`].join(
+      '\n',
+    )
   }
   const variants = definition.type.variants.map(variantOf)
   unique(
@@ -562,8 +634,18 @@ export function generate(schema: ModelSchema, orders: OrderTable): string {
         return aliasCode(definition)
     }
   })
-  const used = new Set(blocks.join('\n').match(/\b(?:Bytes|False|JsObject|MapEntries|NumberRecord|True)\b/g))
-  const wire = ['self', 'FieldKey', 'Key', 'Seen', ...['Bytes', 'False', 'MapEntries', 'NumberRecord', 'True'].filter((name) => used.has(name))]
+  const used = new Set(
+    blocks.join('\n').match(/\b(?:Bytes|False|JsObject|MapEntries|NumberRecord|SharedStr|True)\b/g),
+  )
+  const wire = [
+    'self',
+    'FieldKey',
+    'Key',
+    'Seen',
+    ...['Bytes', 'False', 'MapEntries', 'NumberRecord', 'SharedStr', 'True'].filter((name) =>
+      used.has(name),
+    ),
+  ]
   const jscompat = ['JsNum', ...(used.has('JsObject') ? ['JsObject'] : [])]
   const dispatch = definitions.map(
     (definition) =>
@@ -649,7 +731,11 @@ function formatOrders(orders: OrderTable): string {
     if (order === 'input') return `${head}"input"${comma}`
     const flat = `${head}[${order.map((field) => JSON.stringify(field)).join(', ')}]${comma}`
     if (flat.length <= PRINT_WIDTH) return flat
-    return [`${head}[`, ...order.map((field, i) => `    ${JSON.stringify(field)}${i < order.length - 1 ? ',' : ''}`), `  ]${comma}`].join('\n')
+    return [
+      `${head}[`,
+      ...order.map((field, i) => `    ${JSON.stringify(field)}${i < order.length - 1 ? ',' : ''}`),
+      `  ]${comma}`,
+    ].join('\n')
   })
   return ['{', ...lines, '}', ''].join('\n')
 }
@@ -683,7 +769,9 @@ class Sequences {
 
   of(type: string, sources: readonly Source[]): string[][] {
     const sets = this.seen.get(type)
-    return sources.flatMap((source) => [...(sets?.[source] ?? [])].map((keys) => JSON.parse(keys) as string[]))
+    return sources.flatMap((source) =>
+      [...(sets?.[source] ?? [])].map((keys) => JSON.parse(keys) as string[]),
+    )
   }
 }
 
@@ -692,7 +780,10 @@ class Sequences {
  * declaration order deciding where they show none; undefined where the pairs
  * form a cycle. Also the pairs met both ways.
  */
-function mergeOrder(fields: readonly string[], sequences: readonly string[][]): {
+function mergeOrder(
+  fields: readonly string[],
+  sequences: readonly string[][],
+): {
   order: string[] | undefined
   conflicts: string[][]
 } {
@@ -703,12 +794,17 @@ function mergeOrder(fields: readonly string[], sequences: readonly string[][]): 
     })
   }
   const conflicts = fields.flatMap((field, at) =>
-    fields.slice(at + 1).filter((other) => before.get(field)!.has(other) && before.get(other)!.has(field)).map((other) => [field, other]),
+    fields
+      .slice(at + 1)
+      .filter((other) => before.get(field)!.has(other) && before.get(other)!.has(field))
+      .map((other) => [field, other]),
   )
   const left = new Set(fields)
   const order: string[] = []
   while (left.size > 0) {
-    const next = [...left].find((field) => ![...before.get(field)!].some((earlier) => left.has(earlier)))
+    const next = [...left].find(
+      (field) => ![...before.get(field)!].some((earlier) => left.has(earlier)),
+    )
     if (next === undefined) return { order: undefined, conflicts }
     order.push(next)
     left.delete(next)
@@ -724,10 +820,16 @@ function mergeOrder(fields: readonly string[], sequences: readonly string[][]): 
  * the report as field coverage only: they are built by the gate, not by the
  * TypeScript, so their key order proves nothing about it.
  */
-async function observeOrders(schema: ModelSchema, paths: readonly string[]): Promise<{ orders: OrderTable; report: object }> {
+async function observeOrders(
+  schema: ModelSchema,
+  paths: readonly string[],
+): Promise<{ orders: OrderTable; report: object }> {
   const sequences = new Sequences(schema)
   for (const path of paths) {
-    for await (const line of createInterface({ input: createReadStream(path), crlfDelay: Infinity })) {
+    for await (const line of createInterface({
+      input: createReadStream(path),
+      crlfDelay: Infinity,
+    })) {
       if (line) sequences.add(JSON.parse(line) as ModelInput, 'parser')
     }
   }
@@ -755,7 +857,11 @@ async function observeOrders(schema: ModelSchema, paths: readonly string[]): Pro
     const unobserved = fields.filter((field) => !inParser.has(field) && !inBuilt.has(field))
     orders[definition.name] = merged.order ?? 'input'
     const producerOrder =
-      merged.order === undefined ? 'input' : parser.length === 0 ? 'declaration-unverified' : 'parser'
+      merged.order === undefined
+        ? 'input'
+        : parser.length === 0
+          ? 'declaration-unverified'
+          : 'parser'
     totals.types++
     totals.fields += fields.length
     totals.parserFields += inParser.size
@@ -801,10 +907,12 @@ async function main(): Promise<void> {
     const known = ['--check', '--sync-orders', '--observe-orders', '--out', ...observed]
     if (!known.includes(arg) && arg !== argv[outAt + 1]) throw new Error(`unknown option ${arg}`)
   }
-  if (observeAt >= 0 && observed.length === 0) throw new Error('--observe-orders takes the model input files')
+  if (observeAt >= 0 && observed.length === 0)
+    throw new Error('--observe-orders takes the model input files')
   const args = new Set(argv)
   const check = args.has('--check')
-  if (check && (observeAt >= 0 || outAt >= 0)) throw new Error('--check writes nothing: leave out --observe-orders and --out')
+  if (check && (observeAt >= 0 || outAt >= 0))
+    throw new Error('--check writes nothing: leave out --observe-orders and --out')
   const schema = extractModelSchema()
   const stale: string[] = []
 
@@ -823,7 +931,9 @@ async function main(): Promise<void> {
   }
   const problems = orderProblems(schema, orders)
   if (problems.length > 0) {
-    throw new Error(`model-orders.json is out of line with the schema (run --sync-orders):\n${problems.join('\n')}`)
+    throw new Error(
+      `model-orders.json is out of line with the schema (run --sync-orders):\n${problems.join('\n')}`,
+    )
   }
 
   const source = generate(schema, orders)
@@ -840,9 +950,13 @@ async function main(): Promise<void> {
     console.error(stale.join('\n'))
     process.exit(1)
   }
-  const objects = [...schema.types.values()].filter((definition) => definition.kind === 'object').length
+  const objects = [...schema.types.values()].filter(
+    (definition) => definition.kind === 'object',
+  ).length
   console.log(`declarations of ${MODEL_SOURCE.ref} at ${MODEL_SOURCE.commit}`)
-  console.log(`${schema.types.size} model types (${objects} objects): ${check ? 'up to date' : 'written'}`)
+  console.log(
+    `${schema.types.size} model types (${objects} objects): ${check ? 'up to date' : 'written'}`,
+  )
 }
 
 await main()

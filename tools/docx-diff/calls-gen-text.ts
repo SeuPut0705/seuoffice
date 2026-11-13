@@ -6,13 +6,14 @@ import {
   patchMathTokens,
   patchTableCellTexts,
   patchTextboxParas,
-  xmlSegments,
   type CellTextsPatch,
   type FieldTextPatch,
   type TextboxParasPatchSet,
 } from './reference/generate'
+import { xmlSegments } from './reference/xml-tag'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
+import { SEGMENT_CASES, hiddenIn } from './calls-markup'
 
 // ---------------------------------------------------------------- the corpus
 
@@ -245,6 +246,54 @@ const BOX_PARAS: string[] = [
   BOX_P(SHAPE('10', '<w:txbxContent></w:txbxContent>')),
 ]
 
+/**
+ * A paragraph of a text box with its fallback twin, with a spelling a literal
+ * search for the tags reads wrongly: markup hidden in a comment, CDATA or an
+ * instruction, a spaced end tag, a `>` in an attribute value, attributes on
+ * the fallback.
+ */
+const markupBox = (hazard: {
+  before?: string
+  between?: string
+  text?: string
+  txbxOpen?: string
+  txbxClose?: string
+  pClose?: string
+  fallbackOpen?: string
+  fallbackClose?: string
+  inFallback?: string
+}): string => {
+  const txbxOpen = hazard.txbxOpen ?? '<w:txbxContent>'
+  const txbxClose = hazard.txbxClose ?? '</w:txbxContent>'
+  const pClose = hazard.pClose ?? '</w:p>'
+  const para = (text: string): string => `<w:p><w:r><w:t>${text}</w:t></w:r>${pClose}`
+  const paras = `${para(hazard.text ?? 'one')}${hazard.between ?? ''}${para('two')}`
+  return (
+    `<w:p><w:r>${hazard.before ?? ''}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><a:graphic><a:graphicData>` +
+    SHAPE('1', `<wps:txbx>${txbxOpen}${paras}${txbxClose}</wps:txbx><wps:bodyPr/>`) +
+    `</a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>` +
+    `${hazard.fallbackOpen ?? '<mc:Fallback>'}${hazard.inFallback ?? ''}<w:pict><v:shape><v:textbox>${txbxOpen}${paras}${txbxClose}</v:textbox></v:shape></w:pict>${hazard.fallbackClose ?? '</mc:Fallback>'}` +
+    `</mc:AlternateContent></w:r></w:p>`
+  )
+}
+
+const MARKUP_BOX_PARAS: string[] = [
+  markupBox({}),
+  ...hiddenIn('<w:txbxContent>').map((before) => markupBox({ before })),
+  ...hiddenIn('</w:txbxContent>').map((between) => markupBox({ between })),
+  ...hiddenIn('</w:p>').map((text) => markupBox({ text })),
+  ...hiddenIn('<w:p>').map((between) => markupBox({ between })),
+  ...hiddenIn('<mc:Fallback>').map((before) => markupBox({ before })),
+  ...hiddenIn('</mc:Fallback>').map((inFallback) => markupBox({ inFallback })),
+  markupBox({ txbxClose: '</w:txbxContent >', fallbackClose: '</mc:Fallback\n>' }),
+  markupBox({ pClose: '</w:p\t>', txbxClose: '</w:txbxContent\n>' }),
+  markupBox({ txbxOpen: '<w:txbxContent a=">">' }),
+  markupBox({ txbxOpen: "<w:txbxContent a='>' b=\"'>\">" }),
+  markupBox({ fallbackOpen: '<mc:Fallback xmlns:x="urn:x">' }),
+  markupBox({ fallbackOpen: '<mc:Fallback a=">">' }),
+  markupBox({ before: '<w:txbxContent/>' }),
+]
+
 const BOX_PATCHES: TextboxParasPatchSet[] = [
   {},
   { byIndex: [null] },
@@ -267,9 +316,18 @@ export const GEN_TEXT: CallSpec[] = [
       const { bodies, tables, boxParas } = collect(parts)
       return [...bodies.slice(0, 1), ...tables.slice(0, 3), ...boxParas.slice(0, 3)].flatMap(segmentInputs)
     },
-    built: [...TABLES, ...BOX_PARAS, ...FIELD_PARAS, '<w:p/><w:p>\u{1F600}</w:p><w:pPr/>', '</w:p><w:p>'].flatMap(
-      segmentInputs,
-    ),
+    built: [
+      ...[...TABLES, ...BOX_PARAS, ...FIELD_PARAS, '<w:p/><w:p>\u{1F600}</w:p><w:pPr/>', '</w:p><w:p>'].flatMap(
+        segmentInputs,
+      ),
+      ...[...SEGMENT_CASES, ...MARKUP_BOX_PARAS.map((text) => ({ text, tag: 'w:txbxContent' }))].flatMap(
+        ({ text, tag }) => [
+          { text, args: { tag, from: 0, to: text.length } },
+          { text, args: { tag, from: Math.floor(text.length / 3), to: text.length } },
+          { text, args: { tag: 'w:p', from: 0, to: Math.floor(text.length / 2) } },
+        ],
+      ),
+    ],
   },
   {
     fn: 'genText.patchFieldParagraphXml',
@@ -301,6 +359,8 @@ export const GEN_TEXT: CallSpec[] = [
     call: (text, args) => patchTextboxParas(text, args.patches as TextboxParasPatchSet),
     fromDocument: (parts) =>
       collect(parts).boxParas.flatMap((text) => boxPatchesFor(text).map((patches) => ({ text, args: { patches } }))),
-    built: BOX_PARAS.flatMap((text) => [...BOX_PATCHES, ...boxPatchesFor(text)].map((patches) => ({ text, args: { patches } }))),
+    built: [...BOX_PARAS, ...MARKUP_BOX_PARAS].flatMap((text) =>
+      [...BOX_PATCHES, ...boxPatchesFor(text)].map((patches) => ({ text, args: { patches } })),
+    ),
   },
 ]

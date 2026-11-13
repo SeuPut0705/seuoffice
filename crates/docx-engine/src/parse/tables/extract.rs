@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use jscompat::{JsNum, js_regex, math_max, math_round, parse_float, to_number, try_js_regex};
-use ooxml_xml::{XNode, parse_ordered, serialize};
+use ooxml_xml::{XNode, mask_opaque, parse_ordered, serialize};
 
 use super::{
     DEEP_XML_PARSER_MAX_NESTED_TAGS, children_through_sdt, flattened_table_model, is_uniform_grid,
@@ -39,6 +39,7 @@ use crate::props::{
 };
 use crate::resolve::{ResolveParaOptions, TableCond, resolve_paragraph_props};
 use crate::styles::TableCondFormat;
+use crate::xml_tag::{TagName, element_inner, find_start_tag, remove_segments};
 use crate::xml_text::{bool_prop, color_from};
 
 /// `MAX_TABLE_NEST_DEPTH`: real documents rarely nest past 3-4 levels; below
@@ -419,23 +420,15 @@ pub fn apply_table_style_display(
 pub fn attach_raw_table_pr(
     xml: &str,
     model: &mut TableModel,
-    raw_tr_prs: &mut [Option<String>],
+    raw_tr_prs: &mut Vec<Option<String>>,
 ) -> Result<(), Thrown> {
-    let Some(open) = js_regex!(r"<w:tbl[\s>]").exec(xml) else {
-        return Ok(());
-    };
-    // `xml.indexOf('>', open.index) + 1`
-    let Some(inner_start) = xml[open.start()..]
-        .find('>')
-        .map(|at| open.start() + at + 1)
+    let Some(open) =
+        find_start_tag(&mask_opaque(xml), TagName::Exact("w:tbl"), 0).map(|tag| tag.start)
     else {
         return Ok(());
     };
-    let Some(inner_end) = xml.rfind("</w:tbl>") else {
-        return Ok(());
-    };
-    let inner = xml.get(inner_start..inner_end).unwrap_or("");
-    let tbl_kids = split_xml_children(inner).map_err(|limit| limit.to_string())?;
+    let tbl_kids =
+        split_xml_children(element_inner(&xml[open..])).map_err(|limit| limit.to_string())?;
     let find = |kids: &[(String, String)], name: &str| -> Option<String> {
         kids.iter()
             .find(|(kid, _)| kid == name)
@@ -464,11 +457,13 @@ pub fn attach_raw_table_pr(
     let mut raw_tbl_pr_exs: Vec<Option<String>> = vec![None; row_count];
     let mut row_tbl_pr_ex_changes: Vec<Option<PropChangeInfo>> = vec![None; row_count];
     for (ri, tr) in trs.iter().enumerate() {
-        let tr_open_end = tr.find('>').map_or(0, |at| at + 1);
-        let tr_inner = js_slice_from(tr, tr_open_end, tr.rfind("</w:tr>"));
-        let kids = split_xml_children(tr_inner).map_err(|limit| limit.to_string())?;
+        let kids = split_xml_children(element_inner(tr)).map_err(|limit| limit.to_string())?;
         if let Some(tr_pr) = find(&kids, "w:trPr") {
             row_pr_changes[ri] = prop_change_info(&tr_pr, "w:trPrChange");
+            // a JavaScript array grows on assignment past its end
+            if raw_tr_prs.len() <= ri {
+                raw_tr_prs.resize(ri + 1, None);
+            }
             raw_tr_prs[ri] = Some(tr_pr);
         }
         if let Some(tbl_pr_ex) = find(&kids, "w:tblPrEx") {
@@ -490,9 +485,8 @@ pub fn attach_raw_table_pr(
             continue;
         }
         for (ci, tc) in tcs.iter().enumerate() {
-            let tc_open_end = tc.find('>').map_or(0, |at| at + 1);
-            let tc_inner = js_slice_from(tc, tc_open_end, tc.rfind("</w:tc>"));
-            let tc_kids = split_xml_children(tc_inner).map_err(|limit| limit.to_string())?;
+            let tc_kids =
+                split_xml_children(element_inner(tc)).map_err(|limit| limit.to_string())?;
             let Some(tc_pr) = find(&tc_kids, "w:tcPr") else {
                 continue;
             };
@@ -518,14 +512,31 @@ pub fn attach_raw_table_pr(
     Ok(())
 }
 
-/// `text.slice(from, to)` where `to` may be `lastIndexOf`'s -1 (no match):
-/// `slice(from, -1)` stops one unit short of the end.
-fn js_slice_from(text: &str, from: usize, to: Option<usize>) -> &str {
-    let end = match to {
-        Some(to) => to,
-        None => text.char_indices().next_back().map_or(0, |(at, _)| at),
-    };
-    text.get(from..end).unwrap_or("")
+/// The depth of content `extract_table` follows. The deep parser admits
+/// 100 000 levels, and the model extraction recurses once per level of a
+/// paragraph's content (runs inside revisions, fields, links). Measured on
+/// the wasm build, a 1 MiB stack runs out at about 700 levels of the
+/// heaviest; real content nests under a dozen. The structure of tables
+/// (`w:tbl`, `w:tr`, `w:tc`) does not count: nested tables are flattened past
+/// `MAX_TABLE_NEST_DEPTH` without recursion.
+const MAX_TABLE_READ_DEPTH: usize = 256;
+
+/// Whether the tree holds content nested more than `limit` levels, counted
+/// without recursion (the tree itself may be 100 000 levels deep).
+fn nests_deeper_than(nodes: &[XNode], limit: usize) -> bool {
+    let mut pending: Vec<(&XNode, usize)> = nodes.iter().map(|node| (node, 0)).collect();
+    while let Some((node, depth)) = pending.pop() {
+        let XNode::Element(element) = node else {
+            continue;
+        };
+        let depth =
+            depth + usize::from(!matches!(element.name.as_str(), "w:tbl" | "w:tr" | "w:tc"));
+        if depth > limit {
+            return true;
+        }
+        pending.extend(element.children.iter().map(|child| (child, depth)));
+    }
+    false
 }
 
 /// `extractTable`: display-only table structure. Nested tables render as
@@ -535,9 +546,13 @@ fn js_slice_from(text: &str, from: usize, to: Option<usize>) -> &str {
 /// `doc_offset` is the table's document.xml offset: cell paragraphs resolve
 /// their character-unit indents under that section's document grid.
 ///
-/// The TypeScript wraps the whole read in a `try`, so a table it cannot
-/// build (hostile depth inside a cell paragraph) degrades to `None`, not a
-/// failed document: so does every refusal here.
+/// The TypeScript wraps the whole read in a `try`: a table it cannot build
+/// degrades to `undefined`, a protected block, not a failed document. Hostile
+/// depth inside a cell paragraph overflows its run-extraction recursion (a
+/// RangeError, caught there). The wasm stack overflows the Rust recursion at
+/// a depth of its own, so the Rust bounds it at a fixed one instead: past
+/// `MAX_TABLE_READ_DEPTH` the table is `None` before any model is extracted,
+/// as the caught RangeError gives.
 pub fn extract_table(
     xml: &str,
     ctx: &BuildContext<'_>,
@@ -546,6 +561,9 @@ pub fn extract_table(
     let Ok(parsed) = parse_ordered(xml, DEEP_XML_PARSER_MAX_NESTED_TAGS) else {
         return Ok(None);
     };
+    if nests_deeper_than(&parsed, MAX_TABLE_READ_DEPTH) {
+        return Ok(None);
+    }
     let parsed = Rc::new(parsed);
     let Some(tbl_at) = parsed.iter().position(|node| node.name() == Some("w:tbl")) else {
         return Ok(None);
@@ -841,7 +859,7 @@ pub fn extract_table_model(
         };
         // a keyword Y with no vertAnchor aligns to the margin box in Word (cover
         // page gallery tables sit at the bottom margin); a numeric Y stays text-relative
-        let vert_anchor = match attr("w:vertAnchor").or(y_spec.map(|_| "margin")) {
+        let vert_anchor = match attr("w:vertAnchor").or(y_spec.as_ref().map(|_| "margin")) {
             Some("page") => Some(TableModelFloatPosVertAnchor::Page),
             Some("margin") => Some(TableModelFloatPosVertAnchor::Margin),
             Some("text") => Some(TableModelFloatPosVertAnchor::Text),
@@ -1250,8 +1268,7 @@ pub fn extract_cell(
             // fallback like buildBlock's detect, or each shape extracts twice
             let raw_p_xml = serialize(block);
             let p_xml = if raw_p_xml.contains("<mc:Fallback") {
-                js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-                    .replace_all(&raw_p_xml, |_| String::new())
+                remove_segments(&raw_p_xml, "mc:Fallback").into_owned()
             } else {
                 raw_p_xml
             };

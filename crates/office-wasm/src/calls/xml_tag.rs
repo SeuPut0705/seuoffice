@@ -3,8 +3,15 @@
 //! `/^(?:[A-Za-z0-9._-]+:)?settings$/`, or absent for any element) and
 //! `args.from` in UTF-16 units, and answers its offsets in UTF-16 units;
 //! `removeElements` takes `args.name` and `args.limit` (absent: no limit).
+//! `elementInner`, `removeSegments` and `canonicalXmlSyntax` take the text;
+//! `removeSegments` also `args.tag`. `replaceSegments` takes `args.tag` and
+//! `args.mode`, which names the replacing function the specification builds:
+//! `drop` (the empty string), `wrap` (`<<` + element + `>>`) or `length` (the
+//! element's UTF-16 length as text).
 
-use docx_engine::xml_tag::{TagName, find_start_tag, remove_elements};
+use docx_engine::xml_tag::{
+    TagName, element_inner, find_start_tag, remove_elements, remove_segments, replace_segments,
+};
 use jscompat::js_regex;
 use ooxml_xml::Utf16Map;
 use serde::Deserialize;
@@ -43,6 +50,20 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             &required::<String>(args, "name")?,
             arg::<usize>(args, "limit")?,
         )),
+        "elementInner" => value(element_inner(text)),
+        "removeSegments" => value(remove_segments(text, &required::<String>(args, "tag")?)),
+        "replaceSegments" => {
+            let tag: String = required(args, "tag")?;
+            let mode: String = required(args, "mode")?;
+            let replace: fn(&str) -> String = match mode.as_str() {
+                "drop" => |_| String::new(),
+                "wrap" => |element| format!("<<{element}>>"),
+                "length" => |element| element.encode_utf16().count().to_string(),
+                _ => return Err(format!("no mode {mode}")),
+            };
+            value(replace_segments(text, &tag, replace))
+        }
+        "canonicalXmlSyntax" => value(ooxml_pkg::canonical_xml_syntax(text)),
         _ => Err(format!("no function {function}")),
     }
 }

@@ -117,10 +117,14 @@ fn set_anchor_position(xml: &str, axis: char, px: Option<f64>) -> Result<String,
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunPictureGeometry {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub width_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub height_px: Option<f64>,
     pub wrap: Option<ImageWrap>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub offset_x_emu: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub offset_y_emu: Option<f64>,
     pub rel_h: Option<String>,
     pub rel_v: Option<String>,
@@ -133,7 +137,7 @@ fn position_offset(emu: Option<f64>) -> Option<f64> {
     text.parse::<f64>().ok()
 }
 
-fn wrap_kind(wrap: Option<ImageWrap>) -> Option<String> {
+fn wrap_kind(wrap: Option<&ImageWrap>) -> Option<String> {
     wrap.map(|wrap| {
         let text = wrap.as_str();
         text.strip_suffix("-left")
@@ -143,7 +147,7 @@ fn wrap_kind(wrap: Option<ImageWrap>) -> Option<String> {
     })
 }
 
-fn wrap_side(wrap: Option<ImageWrap>) -> Option<&'static str> {
+fn wrap_side(wrap: Option<&ImageWrap>) -> Option<&'static str> {
     let text = wrap?.as_str();
     if text.ends_with("-left") {
         Some("left")
@@ -178,12 +182,12 @@ pub fn patch_run_picture_xml(xml: &str, next: &RunPictureGeometry) -> Result<Str
         return Ok(xml.to_owned());
     }
     let cur = run_picture_anchor_of(xml)?;
-    let wrap = next.wrap;
+    let wrap = next.wrap.as_ref();
     // an offset with no wp:posOffset text is no move
     let x = position_offset(next.offset_x_emu);
     let y = position_offset(next.offset_y_emu);
     let mut out = xml.to_owned();
-    let cur_wrap = cur.wrap;
+    let cur_wrap = cur.wrap.as_ref();
     if wrap != cur_wrap {
         let anchored = jscompat::js_regex!(r"<wp:anchor[\s>]").test(&out);
         if wrap.is_none() || !anchored {
@@ -194,12 +198,12 @@ pub fn patch_run_picture_xml(xml: &str, next: &RunPictureGeometry) -> Result<Str
                 y: y.unwrap_or(0.0),
                 relative_to: None,
             };
-            out = apply_image_wrap(&out, wrap, placed.then_some(&pos), None, None);
+            out = apply_image_wrap(&out, wrap.cloned(), placed.then_some(&pos), None, None);
             return Ok(resize(&out, next));
         }
         // the side of a square/tight/through float is read off its position
         if wrap_kind(wrap) != wrap_kind(cur_wrap) {
-            out = swap_anchor_wrap(&out, wrap.unwrap_or(ImageWrap::Front), None);
+            out = swap_anchor_wrap(&out, wrap.cloned().unwrap_or(ImageWrap::Front), None);
         }
         let side = wrap_side(wrap);
         if x.is_none()

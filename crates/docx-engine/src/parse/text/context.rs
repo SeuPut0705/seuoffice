@@ -24,7 +24,7 @@ use ooxml_pkg::Package;
 
 use super::lists::StyleCtx;
 use crate::inline_opaque::InlineRawSource;
-use crate::model;
+use crate::model::{self, SharedStr};
 use crate::package::RelInfo;
 use crate::parse::drawings::host::MediaEnv;
 use crate::resolve::ResolveCtx;
@@ -136,7 +136,7 @@ pub struct BuildContext<'a> {
     /// `noteNumbers`: "footnote:<id>" / "endnote:<id>" to display number
     pub note_numbers: JsMap<JsNum>,
     /// `mediaByRid`: a:blip rId to data/external URL for pictures inside w:tbl
-    pub media_by_rid: Option<RefCell<JsMap<String>>>,
+    pub media_by_rid: Option<RefCell<JsMap<SharedStr>>>,
     /// `externalTxbxByRid`: r:txbx rId to the content of the external textbox part
     pub external_txbx_by_rid: Option<JsMap<String>>,
     /// `referenceOnlyComments`
@@ -206,8 +206,27 @@ impl<'a> BuildContext<'a> {
             styles: Some(&self.resolver.styles),
             numbering: self.has_numbering.then_some(&self.resolver.numbering),
             num_formats: self.num_formats.as_ref(),
-            default_para_style: self.resolver.default_para_style(),
-            doc_defaults: self.resolver.doc_defaults.as_ref(),
+            default_para_style: self.default_para_style(),
+            doc_defaults: self.doc_defaults(),
+        }
+    }
+
+    /// `ctx.docDefaults`: only a body context carries it (a notes or header
+    /// context has the resolver's, which is not the same member).
+    pub fn doc_defaults(&self) -> Option<&crate::styles::DocDefaults> {
+        if self.has_numbering {
+            self.resolver.doc_defaults.as_ref()
+        } else {
+            None
+        }
+    }
+
+    /// `ctx.defaultParaStyle`: carried by a body context only, as `docDefaults`.
+    pub fn default_para_style(&self) -> Option<&crate::styles::StyleInfo> {
+        if self.has_numbering {
+            self.resolver.default_para_style()
+        } else {
+            None
         }
     }
 }

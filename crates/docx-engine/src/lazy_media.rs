@@ -41,16 +41,29 @@ pub fn lazy_media_url(hash: &str, part_path: &str) -> String {
     format!("{LAZY_MEDIA_SCHEME}://{hash}/{}", path.join("/"))
 }
 
-/// `lazyMediaPlaceholder`: the bytes of the placeholder part naming `hash`;
-/// a hash that is no sha256 in lower-case hex is an error.
-pub fn lazy_media_placeholder(hash: &str) -> Result<Vec<u8>, String> {
+/// `lazyMediaUrl` as exported: a hash that is no sha256 in lower-case hex is an error.
+pub fn lazy_media_url_checked(hash: &str, part_path: &str) -> Result<String, String> {
+    sha256_hex(hash)?;
+    Ok(lazy_media_url(hash, part_path))
+}
+
+/// `HASH_RE` of lazy-media.ts.
+fn sha256_hex(hash: &str) -> Result<(), String> {
     let is_hash = hash.len() == 64
         && hash
             .bytes()
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
-    if !is_hash {
-        return Err(format!("lazy media: not a sha256 hex: {hash}"));
+    if is_hash {
+        Ok(())
+    } else {
+        Err(format!("lazy media: not a sha256 hex: {hash}"))
     }
+}
+
+/// `lazyMediaPlaceholder`: the bytes of the placeholder part naming `hash`;
+/// a hash that is no sha256 in lower-case hex is an error.
+pub fn lazy_media_placeholder(hash: &str) -> Result<Vec<u8>, String> {
+    sha256_hex(hash)?;
     let mut out = Vec::with_capacity(LAZY_MEDIA_PLACEHOLDER_BYTES);
     out.extend_from_slice(MAGIC);
     out.extend_from_slice(hash.as_bytes());

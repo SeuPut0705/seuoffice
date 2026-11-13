@@ -1,6 +1,7 @@
 //! The write half of notes.ts: `buildNotesXml` and the constants the save
 //! reads for the footnotes and endnotes parts.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 use jscompat::{number_to_string, try_js_regex};
@@ -8,8 +9,9 @@ use jscompat::{number_to_string, try_js_regex};
 use super::js::limit;
 use crate::generate::{escape_xml_attr as attr, escape_xml_text as text};
 use crate::model::{NoteInfo, NoteRun};
-use crate::notes::{NoteKind, note_entries_of, note_entry_plain_text, root_attributes};
+use crate::notes::{NoteKind, entry_text, note_entries_of, note_slices_of, root_attributes};
 use crate::save::parts::text_patch::patch_paragraph_texts;
+use crate::withheld::{first_mark_label, has_withheld_trace, over_withheld, with_redact_root};
 
 /// `NOTE_PART_PATH`
 pub fn note_part_path(kind: NoteKind) -> &'static str {
@@ -255,6 +257,37 @@ fn note_entry_xml(kind: NoteKind, note: &NoteInfo, attrs: &mut NoteRevAttrs) -> 
     )
 }
 
+/// `pictureRunsOf`: the runs of a note's own XML that hold a picture, a drawing
+/// or an object, each as a run of its own without the run's properties.
+fn picture_runs_of(entry_xml: &str) -> Result<Vec<String>, String> {
+    let mut runs = Vec::new();
+    for found in try_js_regex!(
+        r"<w:(drawing|pict|object)(?:\s[^>]*)?>[\s\S]*?<\/w:\1>",
+        "g"
+    )
+    .try_find_iter(entry_xml)
+    {
+        runs.push(format!("<w:r>{}</w:r>", found.map_err(limit)?.as_str()));
+    }
+    Ok(runs)
+}
+
+/// `withPictureRuns`: `entry_xml` with the pictures of the entry it replaces at
+/// the end of its last paragraph, as comments keep theirs.
+fn with_picture_runs(entry_xml: &str, original_entry_xml: &str) -> Result<String, String> {
+    let runs = picture_runs_of(original_entry_xml)?.concat();
+    if runs.is_empty() {
+        return Ok(entry_xml.to_owned());
+    }
+    let last = try_js_regex!(r"<\/w:p>(?![\s\S]*<\/w:p>)");
+    // a string replacement: `$&` and friends in a picture's XML are patterns
+    let replacement = format!("{runs}</w:p>");
+    jscompat::try_replace_first_with(last, entry_xml, |found| {
+        jscompat::get_substitution(found.as_str(), entry_xml, found.start(), &[], &replacement)
+    })
+    .map_err(limit)
+}
+
 /// `buildNotesXml`: the notes part regenerated from the full desired list.
 /// Structural entries of the original are kept byte-identical; a note whose
 /// text is unchanged keeps its original bytes; a changed one is patched at the
@@ -267,22 +300,14 @@ pub fn build_notes_xml(
     let mut structural = String::new();
     let mut originals: Vec<(String, String, String)> = Vec::new();
     if let Some(original) = original_xml.filter(|xml| !xml.is_empty()) {
-        let re = match kind {
-            NoteKind::Footnote => try_js_regex!(
-                r#"<w:footnote\s[^>]*w:type=(?:"[^"]*"|'[^']*')[^>]*>[\s\S]*?</w:footnote>"#,
-                "g"
-            ),
-            NoteKind::Endnote => try_js_regex!(
-                r#"<w:endnote\s[^>]*w:type=(?:"[^"]*"|'[^']*')[^>]*>[\s\S]*?</w:endnote>"#,
-                "g"
-            ),
-        };
-        for found in re.try_find_iter(original) {
-            structural.push_str(found.map_err(limit)?.as_str());
+        for slice in note_slices_of(original, kind).map_err(limit)? {
+            if slice.typed {
+                structural.push_str(slice.xml);
+            }
         }
-        for e in note_entries_of(original, kind) {
+        for e in note_entries_of(original, kind).map_err(limit)? {
             // a Map keeps the first position and the last value of an id
-            let item = (e.id.to_owned(), e.text.clone(), e.xml.to_owned());
+            let item = (e.id, e.text, e.xml.to_owned());
             match originals.iter_mut().find(|have| have.0 == item.0) {
                 Some(have) => *have = item,
                 None => originals.push(item),
@@ -310,30 +335,35 @@ pub fn build_notes_xml(
             let xml =
                 crate::revision_xml::apply_revision_resolutions(&orig_xml, Some(&resolutions))?
                     .into_owned();
-            let inner_re = match kind {
-                NoteKind::Footnote => try_js_regex!(r"^<w:footnote[^>]*>([\s\S]*)</w:footnote>$"),
-                NoteKind::Endnote => try_js_regex!(r"^<w:endnote[^>]*>([\s\S]*)</w:endnote>$"),
-            };
-            let inner = inner_re
-                .try_exec(&xml)
-                .map_err(limit)?
-                .and_then(|found| found.get(1).map(str::to_owned))
-                .unwrap_or_default();
-            orig_text = note_entry_plain_text(&inner);
+            orig_text = entry_text(&xml);
             orig_xml = xml;
         }
         if orig_text == n.text {
             body.push_str(&orig_xml);
             continue;
         }
-        match patch_paragraph_texts(&orig_xml, &n.text, true) {
-            Some(patched) => body.push_str(&patched),
-            None => body.push_str(&note_entry_xml(kind, n, &mut rev_attrs)),
+        if let Some(patched) = patch_paragraph_texts(&orig_xml, &n.text, true).map_err(limit)? {
+            body.push_str(&patched);
+            continue;
         }
+        // an edit that cannot be patched around hidden runs: written anew, every
+        // word of the note is hidden under the first label it carried
+        // The note's pictures ride into the new entry: a picture is no text, and
+        // one that sat in a hidden run is hidden with the rest of the note.
+        let entry = with_picture_runs(&note_entry_xml(kind, n, &mut rev_attrs), &orig_xml)?;
+        body.push_str(&if has_withheld_trace(&orig_xml) {
+            over_withheld(&entry, &first_mark_label(&orig_xml))
+        } else {
+            entry
+        });
     }
     let root = root_of(kind);
     let attrs = root_attributes(original_xml, root, NOTE_NS, &[]).map_err(|e| e.to_string())?;
-    Ok(format!(
+    let mut xml = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<{root} {attrs}>{structural}{body}</{root}>"
-    ))
+    );
+    if let Cow::Owned(marked) = with_redact_root(&xml) {
+        xml = marked;
+    }
+    Ok(xml)
 }

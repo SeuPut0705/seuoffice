@@ -12,7 +12,13 @@ import type { RelInfo } from './reference/parse-xml-text'
 import { parseStyles } from './reference/parse-styles'
 import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
 import { sectionSettingsFromXml } from './reference/section'
-import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
+import type {
+  DocDefaults,
+  NumberingDef,
+  StyleInfo,
+  ThemeColors,
+  ThemeFonts,
+} from './reference/types'
 import {
   inlineRawSource,
   inlineWrapContentLocked,
@@ -33,6 +39,8 @@ import {
   validInlineWrap,
 } from './reference/inline-opaque'
 import { deepXmlParser, nameOf, serializeXNode, type XNode } from './reference/xml-utils'
+import { lineRuleOutsideItsType } from './listed'
+import { hiddenIn } from './calls-markup'
 
 const internals = await parseInternals()
 /** The module-level WeakMaps bindHfImageAnchors reads, exported by the copy. */
@@ -59,7 +67,10 @@ const tbl = (rows: string, tblPr = ''): string => `<w:tbl>${tblPr}${rows}</w:tbl
 /** The parser refuses it on both sides. */
 const REFUSED = '<w:tbl><__proto__/></w:tbl>'
 
-const cell = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({ paras: [], ...extra })
+const cell = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+  paras: [],
+  ...extra,
+})
 
 const sect = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
   pageWidth: 12240,
@@ -74,8 +85,20 @@ const sect = (extra: Record<string, unknown> = {}): Record<string, unknown> => (
   ...extra,
 })
 
-const LOOK_ALL = { firstRowOn: true, lastRowOn: true, firstColOn: true, lastColOn: true, hBandOn: true }
-const LOOK_DEFAULT = { firstRowOn: true, lastRowOn: false, firstColOn: true, lastColOn: false, hBandOn: true }
+const LOOK_ALL = {
+  firstRowOn: true,
+  lastRowOn: true,
+  firstColOn: true,
+  lastColOn: true,
+  hBandOn: true,
+}
+const LOOK_DEFAULT = {
+  firstRowOn: true,
+  lastRowOn: false,
+  firstColOn: true,
+  lastColOn: false,
+  hBandOn: true,
+}
 
 const anchorDrawing = (inner: string): string =>
   `<w:drawing><wp:anchor><wp:docPr id="1"/><a:graphic><a:graphicData>${inner}</a:graphicData></a:graphic></wp:anchor></w:drawing>`
@@ -89,13 +112,44 @@ const image = (extra: Record<string, unknown> = {}): Record<string, unknown> => 
 })
 
 const hfPart = (tblPr: string, rows: string): string => `<w:hdr>${tbl(rows, tblPr)}</w:hdr>`
-const GRID = '<w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="3000"/><w:gridCol w:w="450"/></w:tblGrid>'
+const GRID =
+  '<w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="3000"/><w:gridCol w:w="450"/></w:tblGrid>'
+
+/**
+ * Header and footer text boxes take their `id` from a counter of the process
+ * (`++hfTextBoxSeq`), which the two sides do not advance alike across the calls
+ * of the gate (a call that throws, a mutated text one side refuses): the ids are
+ * renumbered from 1, in order of appearance, in the answers of both sides.
+ */
+function renumberedBoxIds<T>(value: T, seen = new Map<unknown, number>()): T {
+  if (Array.isArray(value)) {
+    for (const item of value) renumberedBoxIds(item, seen)
+  } else if (value !== null && typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    const box = object.box as { id?: unknown } | undefined
+    if (box !== null && typeof box === 'object' && typeof box.id === 'number') {
+      if (!seen.has(box.id)) seen.set(box.id, seen.size + 1)
+      box.id = seen.get(box.id)
+    }
+    for (const child of Object.values(object)) renumberedBoxIds(child, seen)
+  }
+  return value
+}
+
+/** A cell paragraph with a drawn text box and its VML twin: `hidden` before the drawing, `inTwin` inside the twin. */
+const cellBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+  tc(
+    `<w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="476250"/><wp:docPr id="1"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent>${P('box')}</w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent>${P('box')}</w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`,
+  )
 
 const WAVE0: CallSpec[] = [
   {
     fn: 'parse.tableSummary',
     call: (text) => internals.tableSummary!(text),
-    fromParse: { fn: 'tableSummary', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'tableSummary',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: [
       tbl(tr(tc(P('a')) + tc(P('b'))) + tr(tc())),
       tbl(tr(tc(tbl(tr(tc(P('in')) + tc() + tc()))) + tc(P('out')))),
@@ -105,6 +159,17 @@ const WAVE0: CallSpec[] = [
       `<w:tbl><w:tr\u3000a="1"><w:tc\u00a0b="2">${P('&amp;x&lt;')}</w:tc></w:tr></w:tbl>`,
       tbl(tr(tc(P('y'.repeat(150))))),
       tbl(tr(tc(P('a')) + tc(P('b'))) + tr(tc(P('c')))),
+      // spaced end tags, markup hidden in a comment, CDATA or an instruction, single quotes
+      tbl(tr(tc(P('a')) + tc(P('b'))) + tr(tc())).replaceAll('</w:tr>', '</w:tr >'),
+      tbl(tr(tc(P('a')) + tc(P('b')))).replaceAll('</w:tc>', '</w:tc\n>'),
+      tbl(tr(tc(P('a')) + tc(P('b')))).replace('<w:tr>', `<w:tr a='>' b = "<>">`),
+      ...hiddenIn('<w:tr><w:tc>x</w:tc><w:tc>y</w:tc><w:tc>z</w:tc></w:tr>').map((hidden) =>
+        tbl(hidden + tr(tc(P('a')) + tc(P('b')))),
+      ),
+      ...hiddenIn('</w:tr>').map((hidden) => tbl(tr(tc(P('a')) + hidden + tc(P('b'))) + tr(tc()))),
+      ...hiddenIn('<w:t>x</w:t>').map((hidden) => tbl(tr(tc(P('a') + hidden)))),
+      tbl(tr(tc(`<w:p><w:r><w:t xml:space = 'preserve'>a &amp; b</w:t ></w:r></w:p>`))),
+      tbl(tr(tc(`<w:p><w:r><w:t><![CDATA[a<b]]></w:t></w:r></w:p>`))),
     ].map((text) => ({ text })),
   },
   {
@@ -114,7 +179,9 @@ const WAVE0: CallSpec[] = [
     built: [
       tbl(tr(tc(P('a'), '<w:tcPr><w:tcW w:w="100"/></w:tcPr>'))),
       tbl(tr(tc(P('a'), '<w:tcPr><w:vAlign w:val="top"/></w:tcPr>'))),
-      tbl(`<w:sdt><w:sdtContent>${tr(`<w:sdt><w:sdtContent>${tc(P('a'), '<w:tcPr><w:tcW/></w:tcPr>')}</w:sdtContent></w:sdt>`)}</w:sdtContent></w:sdt>`),
+      tbl(
+        `<w:sdt><w:sdtContent>${tr(`<w:sdt><w:sdtContent>${tc(P('a'), '<w:tcPr><w:tcW/></w:tcPr>')}</w:sdtContent></w:sdt>`)}</w:sdtContent></w:sdt>`,
+      ),
       tbl(`<w:sdt>${tr(tc(P('a'), '<w:tcPr><w:tcW/></w:tcPr>'))}</w:sdt>`),
       tbl(tr(tc(tbl(tr(tc(P('a'), '<w:tcPr><w:tcW/></w:tcPr>')))))),
       tbl(tr(tc(P('a'), '<w:tcW w:w="1"/>'))),
@@ -129,10 +196,22 @@ const WAVE0: CallSpec[] = [
     built: [
       tr(tc()),
       tr(tc(), '<w:trPr/>'),
-      tr(tc(), '<w:trPr><w:gridBefore w:val="2"/><w:gridAfter w:val="1.7"/><w:wBefore w:w="300" w:type="dxa"/><w:wAfter w:w="20" w:type="pct"/></w:trPr>'),
-      tr(tc(), '<w:trPr><w:gridBefore w:val="-1"/><w:gridAfter w:val="abc"/><w:wBefore w:w="0"/><w:wAfter w:w=" 12 " w:type=""/></w:trPr>'),
-      tr(tc(), '<w:trPr><w:gridBefore w:val="0x10"/><w:gridAfter w:val="1e2"/><w:wBefore w:w="1e3"/><w:wAfter/></w:trPr>'),
-      tr(tc(), '<w:trPr><w:gridBefore/><w:gridAfter w:val=""/><w:wBefore w:type="dxa"/><w:wAfter w:w="-5"/></w:trPr>'),
+      tr(
+        tc(),
+        '<w:trPr><w:gridBefore w:val="2"/><w:gridAfter w:val="1.7"/><w:wBefore w:w="300" w:type="dxa"/><w:wAfter w:w="20" w:type="pct"/></w:trPr>',
+      ),
+      tr(
+        tc(),
+        '<w:trPr><w:gridBefore w:val="-1"/><w:gridAfter w:val="abc"/><w:wBefore w:w="0"/><w:wAfter w:w=" 12 " w:type=""/></w:trPr>',
+      ),
+      tr(
+        tc(),
+        '<w:trPr><w:gridBefore w:val="0x10"/><w:gridAfter w:val="1e2"/><w:wBefore w:w="1e3"/><w:wAfter/></w:trPr>',
+      ),
+      tr(
+        tc(),
+        '<w:trPr><w:gridBefore/><w:gridAfter w:val=""/><w:wBefore w:type="dxa"/><w:wAfter w:w="-5"/></w:trPr>',
+      ),
       REFUSED,
     ].map((text) => ({ text })),
   },
@@ -141,7 +220,9 @@ const WAVE0: CallSpec[] = [
     call: (_text, args) => {
       const rows = structuredClone(args.rows)
       const rowTcws = Array.isArray(args.rowTcws)
-        ? args.rowTcws.map((row: unknown) => (Array.isArray(row) ? row.map((w) => w ?? undefined) : row))
+        ? args.rowTcws.map((row: unknown) =>
+            Array.isArray(row) ? row.map((w) => w ?? undefined) : row,
+          )
         : args.rowTcws
       const gridCols = Array.isArray(args.gridCols) ? args.gridCols.map(num) : args.gridCols
       const result = internals.reconcileGridColumns!(rows, rowTcws, gridCols)
@@ -154,22 +235,92 @@ const WAVE0: CallSpec[] = [
       }),
     },
     built: [
-      { rows: [[cell(), cell()], [cell({ colSpan: 2 })]], rowTcws: [[100, 100], [200]], gridCols: [100, 100] },
-      { rows: [[cell(), cell(), cell()], [cell(), cell()]], rowTcws: [[1000, 1000, 1000], [1500, 1500]], gridCols: [1000, 1000, 1000] },
-      { rows: [[cell(), cell(), cell()], [cell(), cell()]], rowTcws: [[1000, 1000, 1000], [1500, 1500]] },
+      {
+        rows: [[cell(), cell()], [cell({ colSpan: 2 })]],
+        rowTcws: [[100, 100], [200]],
+        gridCols: [100, 100],
+      },
+      {
+        rows: [
+          [cell(), cell(), cell()],
+          [cell(), cell()],
+        ],
+        rowTcws: [
+          [1000, 1000, 1000],
+          [1500, 1500],
+        ],
+        gridCols: [1000, 1000, 1000],
+      },
+      {
+        rows: [
+          [cell(), cell(), cell()],
+          [cell(), cell()],
+        ],
+        rowTcws: [
+          [1000, 1000, 1000],
+          [1500, 1500],
+        ],
+      },
       { rows: [[cell(), cell()], [cell()]], rowTcws: [[null, 400], [null]], gridCols: [300, 400] },
       { rows: [[cell(), cell()], [cell()]], rowTcws: [[null, 400], [null]] },
-      { rows: [[cell(), cell(), cell()], [cell({ colSpan: 2 })]], rowTcws: [[1000, 1015, 990], [2000]], gridCols: [1000, 1000, 1000] },
+      {
+        rows: [[cell(), cell(), cell()], [cell({ colSpan: 2 })]],
+        rowTcws: [[1000, 1015, 990], [2000]],
+        gridCols: [1000, 1000, 1000],
+      },
       // boundaries exactly GRID_SNAP_TOL apart fuse
-      { rows: [[cell(), cell()], [cell(), cell()]], rowTcws: [[1000, 1000], [1020, 980]], gridCols: [1000, 1000, 1000] },
-      { rows: [[cell(), cell(), cell()], [cell()]], rowTcws: [[1000, 10, 2000], [3010]], gridCols: [1000, 1000, 1000] },
-      { rows: [[cell({ colSpan: 3 })], [cell(), cell()]], rowTcws: [[3000], [1000, 2000]], gridCols: [1000, 1000, 1000] },
-      { rows: [[cell({ colSpan: 1.5 }), cell()], [cell()]], rowTcws: [[null, 500], [null]], gridCols: [200, 300, 400] },
-      { rows: [[cell({ colSpan: -1 }), cell()], [cell()]], rowTcws: [[null, 500], [null]], gridCols: [200, 300, 400] },
-      { rows: [[cell(), cell()], [cell()], []], rowTcws: [[100, 200], [300]], gridCols: [100, 100, 100] },
+      {
+        rows: [
+          [cell(), cell()],
+          [cell(), cell()],
+        ],
+        rowTcws: [
+          [1000, 1000],
+          [1020, 980],
+        ],
+        gridCols: [1000, 1000, 1000],
+      },
+      {
+        rows: [[cell(), cell(), cell()], [cell()]],
+        rowTcws: [[1000, 10, 2000], [3010]],
+        gridCols: [1000, 1000, 1000],
+      },
+      {
+        rows: [[cell({ colSpan: 3 })], [cell(), cell()]],
+        rowTcws: [[3000], [1000, 2000]],
+        gridCols: [1000, 1000, 1000],
+      },
+      {
+        rows: [[cell({ colSpan: 1.5 }), cell()], [cell()]],
+        rowTcws: [[null, 500], [null]],
+        gridCols: [200, 300, 400],
+      },
+      {
+        rows: [[cell({ colSpan: -1 }), cell()], [cell()]],
+        rowTcws: [[null, 500], [null]],
+        gridCols: [200, 300, 400],
+      },
+      {
+        rows: [[cell(), cell()], [cell()], []],
+        rowTcws: [[100, 200], [300]],
+        gridCols: [100, 100, 100],
+      },
       { rows: [[cell(), cell()], [cell()]], rowTcws: [[100, 200]], gridCols: [100, 100, 100] },
-      { rows: [Array.from({ length: 98 }, () => cell()), [cell()]], rowTcws: [Array.from({ length: 98 }, () => 100), [9800]] },
-      { rows: [[cell(), cell()], [cell({ colSpan: 2, fill: 'FF0000' }), cell()]], rowTcws: [[500, 600], [700, 400]], gridCols: [500, 600] },
+      {
+        rows: [Array.from({ length: 98 }, () => cell()), [cell()]],
+        rowTcws: [Array.from({ length: 98 }, () => 100), [9800]],
+      },
+      {
+        rows: [
+          [cell(), cell()],
+          [cell({ colSpan: 2, fill: 'FF0000' }), cell()],
+        ],
+        rowTcws: [
+          [500, 600],
+          [700, 400],
+        ],
+        gridCols: [500, 600],
+      },
       { rows: [[cell(), cell()], [cell()]], rowTcws: [[100, 200], [300]], gridCols: [] },
       { rows: [], rowTcws: [], gridCols: [100] },
       { rows: [[cell(), cell()], [cell()]], rowTcws: [[100, 200], [300]], gridCols: [null, 100] },
@@ -183,7 +334,13 @@ const WAVE0: CallSpec[] = [
     fromParse: { fn: 'flattenedTableModel', input: ([node]) => nodeInput(node) },
     built: [
       tbl(tr(tc(P('a') + '<w:p/>' + P('b')) + tc(tbl(tr(tc(P('deep'))))))),
-      tbl(tr(tc('<w:p><w:r><w:t>out</w:t></w:r><w:r><w:pict><w:txbxContent><w:p><w:r><w:t>in</w:t></w:r></w:p></w:txbxContent></w:pict></w:r></w:p>'))),
+      tbl(
+        tr(
+          tc(
+            '<w:p><w:r><w:t>out</w:t></w:r><w:r><w:pict><w:txbxContent><w:p><w:r><w:t>in</w:t></w:r></w:p></w:txbxContent></w:pict></w:r></w:p>',
+          ),
+        ),
+      ),
       tbl(tr(tc('loose<w:x>text</w:x>'))),
       '<w:p>one<w:r>two</w:r></w:p>',
       '<w:p/>',
@@ -223,7 +380,8 @@ const WAVE0: CallSpec[] = [
   },
   {
     fn: 'parse.isUniformGrid',
-    call: (_text, args) => internals.isUniformGrid!(Array.isArray(args.widths) ? args.widths.map(num) : args.widths),
+    call: (_text, args) =>
+      internals.isUniformGrid!(Array.isArray(args.widths) ? args.widths.map(num) : args.widths),
     fromParse: {
       fn: 'isUniformGrid',
       input: ([widths]) => ({ args: widths === undefined ? {} : json({ widths }) }),
@@ -260,7 +418,10 @@ const WAVE0: CallSpec[] = [
     fn: 'parse.tblLookFlags',
     call: (text) => internals.tblLookFlags!(nodeOf(text)),
     // undefined is no element at all
-    fromParse: { fn: 'tblLookFlags', input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)) },
+    fromParse: {
+      fn: 'tblLookFlags',
+      input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)),
+    },
     built: [
       '',
       '<w:tblPr/>',
@@ -277,17 +438,33 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.cellConds',
     call: (_text, args) =>
-      internals.cellConds!(args.look, num(args.r), num(args.rowCount), num(args.col), num(args.span), num(args.totalCols)),
+      internals.cellConds!(
+        args.look,
+        num(args.r),
+        num(args.rowCount),
+        num(args.col),
+        num(args.span),
+        num(args.totalCols),
+      ),
     fromParse: {
       fn: 'cellConds',
-      input: ([look, r, rowCount, col, span, totalCols]) => ({ args: json({ look, r, rowCount, col, span, totalCols }) }),
+      input: ([look, r, rowCount, col, span, totalCols]) => ({
+        args: json({ look, r, rowCount, col, span, totalCols }),
+      }),
     },
     built: [
       { look: LOOK_ALL, r: 0, rowCount: 1, col: 0, span: 1, totalCols: 1 },
       { look: LOOK_ALL, r: 2, rowCount: 3, col: 1, span: 2, totalCols: 3 },
       { look: LOOK_DEFAULT, r: 2, rowCount: 3, col: 1, span: 2, totalCols: 3 },
       { look: LOOK_DEFAULT, r: 0, rowCount: 3, col: 0, span: 1, totalCols: 3 },
-      { look: { ...LOOK_ALL, firstRowOn: false, firstColOn: false }, r: 0, rowCount: 1, col: 0, span: 1, totalCols: 1 },
+      {
+        look: { ...LOOK_ALL, firstRowOn: false, firstColOn: false },
+        r: 0,
+        rowCount: 1,
+        col: 0,
+        span: 1,
+        totalCols: 1,
+      },
       { look: LOOK_ALL, r: 1, rowCount: 3, col: 1, span: 1, totalCols: 3 },
       { look: LOOK_ALL, r: 0, rowCount: 0, col: 0.5, span: 0.5, totalCols: 1 },
     ].map((args) => ({ args })),
@@ -297,7 +474,10 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.hfMovablePictureFrag',
     call: (text) => internals.hfMovablePictureFrag!(text),
-    fromParse: { fn: 'hfMovablePictureFrag', input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined) },
+    fromParse: {
+      fn: 'hfMovablePictureFrag',
+      input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined),
+    },
     built: [
       anchorDrawing(PIC),
       anchorDrawing(PIC + PIC),
@@ -315,8 +495,16 @@ const WAVE0: CallSpec[] = [
     call: (text) => internals.anchorDocPrIds!(elementOf(text)),
     fromParse: { fn: 'anchorDocPrIds', input: ([node]) => nodeInput(node) },
     built: [
-      tr(tc(`<w:p><w:r>${anchorDrawing(PIC)}</w:r><w:r><w:drawing><wp:anchor><wp:docPr id="7"/><wp:anchor><wp:docPr id=""/></wp:anchor></wp:anchor></w:drawing></w:r></w:p>`)),
-      tr(tc('<w:p><w:r><w:drawing><wp:anchor><wp:docPr name="x"/></wp:anchor><wp:inline><wp:docPr id="9"/></wp:inline></w:drawing></w:r></w:p>')),
+      tr(
+        tc(
+          `<w:p><w:r>${anchorDrawing(PIC)}</w:r><w:r><w:drawing><wp:anchor><wp:docPr id="7"/><wp:anchor><wp:docPr id=""/></wp:anchor></wp:anchor></w:drawing></w:r></w:p>`,
+        ),
+      ),
+      tr(
+        tc(
+          '<w:p><w:r><w:drawing><wp:anchor><wp:docPr name="x"/></wp:anchor><wp:inline><wp:docPr id="9"/></wp:inline></w:drawing></w:r></w:p>',
+        ),
+      ),
       '<wp:anchor><wp:docPr id="5"/></wp:anchor>',
       '',
       REFUSED,
@@ -334,15 +522,28 @@ const WAVE0: CallSpec[] = [
       fn: 'hasDeepChildOutside',
       input: ([node, names, skip]) => {
         const input = nodeInput(node)
-        if (!input || !(names instanceof Set) || !(skip === undefined || skip instanceof Set)) return undefined
+        if (!input || !(names instanceof Set) || !(skip === undefined || skip instanceof Set))
+          return undefined
         return { ...input, args: { names: [...names], ...(skip ? { skip: [...skip] } : {}) } }
       },
     },
     built: [
-      { text: '<w:p><w:r><w:pict><w:txbxContent><wp:inline/></w:txbxContent></w:pict></w:r></w:p>', args: { names: ['wp:inline'], skip: ['w:txbxContent'] } },
-      { text: '<w:p><w:r><w:pict><w:txbxContent><wp:inline/></w:txbxContent></w:pict></w:r></w:p>', args: { names: ['wp:inline'] } },
-      { text: '<w:p><w:r><w:drawing><wp:inline/></w:drawing></w:r></w:p>', args: { names: ['wp:inline'], skip: ['w:txbxContent'] } },
-      { text: '<w:p><w:txbxContent/></w:p>', args: { names: ['w:txbxContent'], skip: ['w:txbxContent'] } },
+      {
+        text: '<w:p><w:r><w:pict><w:txbxContent><wp:inline/></w:txbxContent></w:pict></w:r></w:p>',
+        args: { names: ['wp:inline'], skip: ['w:txbxContent'] },
+      },
+      {
+        text: '<w:p><w:r><w:pict><w:txbxContent><wp:inline/></w:txbxContent></w:pict></w:r></w:p>',
+        args: { names: ['wp:inline'] },
+      },
+      {
+        text: '<w:p><w:r><w:drawing><wp:inline/></w:drawing></w:r></w:p>',
+        args: { names: ['wp:inline'], skip: ['w:txbxContent'] },
+      },
+      {
+        text: '<w:p><w:txbxContent/></w:p>',
+        args: { names: ['w:txbxContent'], skip: ['w:txbxContent'] },
+      },
       { text: '<w:p>text</w:p>', args: { names: ['w:r'] } },
       { text: '<wp:inline/>', args: { names: ['wp:inline'] } },
       { text: REFUSED, args: { names: ['w:tr'] } },
@@ -357,14 +558,25 @@ const WAVE0: CallSpec[] = [
         if (part === null) return { args: { part: null } }
         if (!isObject(part)) return undefined
         const { text, hasPageNumber, paras, images } = part
-        return { args: json({ part: { text, hasPageNumber, paras, ...(images !== undefined ? { images } : {}) } }) }
+        return {
+          args: json({
+            part: { text, hasPageNumber, paras, ...(images !== undefined ? { images } : {}) },
+          }),
+        }
       },
     },
     built: [
       { part: null },
       { part: { text: 'Page 1', hasPageNumber: true, paras: [{ runs: [{ text: 'Page 1' }] }] } },
       { part: { text: '', hasPageNumber: false, paras: [], images: [] } },
-      { part: { text: 'logo', hasPageNumber: false, paras: [{ runs: [] }], images: [image({ floating: true })] } },
+      {
+        part: {
+          text: 'logo',
+          hasPageNumber: false,
+          paras: [{ runs: [] }],
+          images: [image({ floating: true })],
+        },
+      },
     ].map((args) => ({ args })),
     mutation: 'none',
     argMutation: true,
@@ -391,17 +603,29 @@ const WAVE0: CallSpec[] = [
           ? {
               args: json({
                 images,
-                imageAnchorIds: images.map((image: object) => weakMaps.hfImageAnchorId!.get(image) ?? null),
-                rowAnchorIds: paras.map((para: object) => weakMaps.hfRowAnchorIds!.get(para) ?? null),
+                imageAnchorIds: images.map(
+                  (image: object) => weakMaps.hfImageAnchorId!.get(image) ?? null,
+                ),
+                rowAnchorIds: paras.map(
+                  (para: object) => weakMaps.hfRowAnchorIds!.get(para) ?? null,
+                ),
               }),
             }
           : undefined,
     },
     built: [
       { images: [], imageAnchorIds: [], rowAnchorIds: [] },
-      { images: [image(), image({ anchorPara: 0 })], imageAnchorIds: ['5', '6'], rowAnchorIds: [null, ['4', '6'], ['5']] },
+      {
+        images: [image(), image({ anchorPara: 0 })],
+        imageAnchorIds: ['5', '6'],
+        rowAnchorIds: [null, ['4', '6'], ['5']],
+      },
       { images: [image(), image()], imageAnchorIds: ['', null], rowAnchorIds: [[''], ['x']] },
-      { images: [image({ drawing: 1 }), image()], imageAnchorIds: ['9'], rowAnchorIds: [['8'], ['9'], ['9']] },
+      {
+        images: [image({ drawing: 1 }), image()],
+        imageAnchorIds: ['9'],
+        rowAnchorIds: [['8'], ['9'], ['9']],
+      },
       { images: [image()], imageAnchorIds: ['1'], rowAnchorIds: [['2']] },
     ].map((args) => ({ args })),
     mutation: 'none',
@@ -410,7 +634,10 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.stripHfDeletions',
     call: (text) => internals.stripHfDeletions!(text),
-    fromParse: { fn: 'stripHfDeletions', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'stripHfDeletions',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: [
       '<w:p><w:del w:id="1" w:author="a"><w:r><w:drawing/></w:r></w:del><w:del w:id="2"><w:r><w:delText>x</w:delText></w:r></w:del></w:p>',
       '<w:p><w:moveFrom w:id="1"><w:r><w:pict>v</w:pict></w:r></w:moveFrom><w:moveFromRangeStart/></w:p>',
@@ -426,7 +653,10 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.hfTblRanges',
     call: (text) => internals.hfTblRanges!(text),
-    fromParse: { fn: 'hfTblRanges', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'hfTblRanges',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: [
       `<w:hdr>${tbl(tr(tc()))}<w:p/>${tbl(tr(tc(tbl(tr(tc())))))}</w:hdr>`,
       `<w:hdr>\u{1F600}${tbl(tr(tc(P('\u{1F600}'))))}</w:hdr>`,
@@ -440,14 +670,27 @@ const WAVE0: CallSpec[] = [
     call: (text, args) => internals.hfCellColumnLeftPx!(text, num(args.at)),
     fromParse: {
       fn: 'hfCellColumnLeftPx',
-      input: ([xml, at]) => (typeof xml === 'string' && typeof at === 'number' ? { text: xml, args: { at } } : undefined),
+      input: ([xml, at]) =>
+        typeof xml === 'string' && typeof at === 'number' ? { text: xml, args: { at } } : undefined,
     },
     built: (() => {
-      const rows = tr(tc(P('a')) + tc(P('b'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>')) + tr(tc(P('c'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>') + tc(`${tbl(tr(tc() + tc()))}<w:p><w:r><w:drawing/></w:r></w:p>`))
+      const rows =
+        tr(tc(P('a')) + tc(P('b'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>')) +
+        tr(
+          tc(P('c'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>') +
+            tc(`${tbl(tr(tc() + tc()))}<w:p><w:r><w:drawing/></w:r></w:p>`),
+        )
       const part = hfPart(`<w:tblPr><w:tblInd w:w="-120" w:type="dxa"/></w:tblPr>${GRID}`, rows)
       const plain = hfPart(GRID, tr(tc(P('a')) + tc('\u{1F600}<w:p><w:r><w:drawing/></w:r></w:p>')))
       // a row starts at a UTF-16 offset below `at` whose byte offset is above it
-      const korean = hfPart(GRID, tr(tc(P('가'.repeat(200)))) + tr(tc(P('a'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>') + tc('<w:p><w:r><w:drawing/></w:r></w:p>')))
+      const korean = hfPart(
+        GRID,
+        tr(tc(P('가'.repeat(200)))) +
+          tr(
+            tc(P('a'), '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>') +
+              tc('<w:p><w:r><w:drawing/></w:r></w:p>'),
+          ),
+      )
       const drawingAt = (xml: string): number => xml.indexOf('<w:drawing')
       return [
         { text: part, args: { at: drawingAt(part) } },
@@ -460,7 +703,10 @@ const WAVE0: CallSpec[] = [
         { text: plain, args: { at: drawingAt(plain) } },
         { text: plain, args: { at: plain.indexOf('\u{1F600}') + 1 } },
         { text: korean, args: { at: drawingAt(korean) } },
-        { text: hfPart('<w:tblPr><w:tblInd w:w="-0"/></w:tblPr>', tr(tc() + tc(P('z')))), args: { at: 200 } },
+        {
+          text: hfPart('<w:tblPr><w:tblInd w:w="-0"/></w:tblPr>', tr(tc() + tc(P('z')))),
+          args: { at: 200 },
+        },
         { text: `<w:hdr>${tbl(tr(tc() + tc() + tc()))}</w:hdr>`, args: { at: 40 } },
         { text: '', args: { at: 0 } },
       ]
@@ -499,7 +745,10 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.hfTableFloatOf',
     call: (text) => internals.hfTableFloatOf!(nodeOf(text)),
-    fromParse: { fn: 'hfTableFloatOf', input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)) },
+    fromParse: {
+      fn: 'hfTableFloatOf',
+      input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)),
+    },
     built: [
       '',
       '<w:tblPr/>',
@@ -514,13 +763,34 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.withoutResolvedGeometry',
     call: (_text, args) => internals.withoutResolvedGeometry!(args.direct ?? undefined),
-    fromParse: { fn: 'withoutResolvedGeometry', input: ([direct]) => ({ args: direct === undefined ? {} : json({ direct }) }) },
+    fromParse: {
+      fn: 'withoutResolvedGeometry',
+      input: ([direct]) => ({ args: direct === undefined ? {} : json({ direct }) }),
+    },
     built: [
       {},
       { direct: {} },
       { direct: { align: 'center', keepNext: true, spaceBefore: 120, styleId: undefined } },
-      { direct: { keepLines: true, indentLeft: 720, indentRight: 0, indentFirstLine: -360, bidi: true, tabStops: [] } },
-      { direct: { lineSpacing: 1.5, lineRule: 'auto', lineRawTwips: 360, borders: 'x', borderReset: 'y', contextualSpacing: true } },
+      {
+        direct: {
+          keepLines: true,
+          indentLeft: 720,
+          indentRight: 0,
+          indentFirstLine: -360,
+          bidi: true,
+          tabStops: [],
+        },
+      },
+      {
+        direct: {
+          lineSpacing: 1.5,
+          lineRule: 'auto',
+          lineRawTwips: 360,
+          borders: 'x',
+          borderReset: 'y',
+          contextualSpacing: true,
+        },
+      },
       { direct: { spaceAfter: 0, shadingFill: 'FFFF00', widowControl: false } },
     ].map((args) => ({ args: json(args) })),
     mutation: 'none',
@@ -562,12 +832,25 @@ const docs = new WeakMap<object, Promise<Doc>>()
 
 async function readDoc(parts: Array<[string, string]>): Promise<Doc> {
   const zip = zipOf(parts)
-  const theme = (await internals.parseTheme!(zip)) as { fonts: ThemeFonts | null; colors: ThemeColors | null }
+  const theme = (await internals.parseTheme!(zip)) as {
+    fonts: ThemeFonts | null
+    colors: ThemeColors | null
+  }
   const { styles, docDefaults } = await parseStyles(zip, theme.colors, theme.fonts)
   const { defs, formats } = await parseNumbering(zip)
   const rels = await parseRels(zip, 'word/_rels/document.xml.rels')
   const documentXml = parts.find(([name]) => name === 'word/document.xml')?.[1] ?? ''
-  return { zip, styles, docDefaults, numbering: defs, numFormats: formats, themeFonts: theme.fonts, themeColors: theme.colors, rels, documentXml }
+  return {
+    zip,
+    styles,
+    docDefaults,
+    numbering: defs,
+    numFormats: formats,
+    themeFonts: theme.fonts,
+    themeColors: theme.colors,
+    rels,
+    documentXml,
+  }
 }
 
 function docOf(args: Record<string, unknown>): Promise<Doc> {
@@ -656,7 +939,8 @@ function ctxArgs(
 ): Record<string, unknown> | undefined {
   const kept = partsOf(parts)
   if (!kept || !isObject(ctx)) return undefined
-  const compat: Partial<ResolveCtx['compat']> = isObject(ctx.resolver) && isObject(ctx.resolver.compat) ? ctx.resolver.compat : {}
+  const compat: Partial<ResolveCtx['compat']> =
+    isObject(ctx.resolver) && isObject(ctx.resolver.compat) ? ctx.resolver.compat : {}
   return {
     parts: kept,
     compat: {
@@ -692,8 +976,10 @@ const MINI_STYLES =
   '</w:styles>'
 const MINI_NUMBERING = `<?xml version="1.0"?><w:numbering ${NS}><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="-"/></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`
 const MINI_SETTINGS = `<?xml version="1.0"?><w:settings ${NS}><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`
-const SECT = '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/><w:cols w:num="1"/></w:sectPr>'
-const MINI_DOCUMENT = (body = '') => `<?xml version="1.0"?><w:document ${NS}><w:body>${body}${SECT}</w:body></w:document>`
+const SECT =
+  '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/><w:cols w:num="1"/></w:sectPr>'
+const MINI_DOCUMENT = (body = '') =>
+  `<?xml version="1.0"?><w:document ${NS}><w:body>${body}${SECT}</w:body></w:document>`
 const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships'
 const RELS = (items: string[]) =>
   `<?xml version="1.0"?><Relationships xmlns="${REL_NS}">${items.join('')}</Relationships>`
@@ -718,60 +1004,144 @@ const miniParts = (extra: Array<[string, string]> = [], body = ''): Array<[strin
 const COMPAT15 = { compatibilityMode: 15 }
 const COMPAT14 = { compatibilityMode: 14 }
 
-const hfXml = (kind: 'hdr' | 'ftr', body: string): string => `<?xml version="1.0"?><w:${kind} ${NS}>${body}</w:${kind}>`
+const hfXml = (kind: 'hdr' | 'ftr', body: string): string =>
+  `<?xml version="1.0"?><w:${kind} ${NS}>${body}</w:${kind}>`
 
 // ---- tables of the document
 const TC = (text: string, tcPr = ''): string => tc(P(text), tcPr)
-const GRIDCOLS = (...w: number[]): string => `<w:tblGrid>${w.map((x) => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>`
+const GRIDCOLS = (...w: number[]): string =>
+  `<w:tblGrid>${w.map((x) => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>`
 const TABLES: string[] = [
-  tbl(tr(TC('a') + TC('b')) + tr(TC('c') + TC('d')), `<w:tblPr><w:tblStyle w:val="Banded"/><w:tblW w:w="5000" w:type="pct"/><w:tblLook w:val="04A0"/></w:tblPr>${GRIDCOLS(4000, 5000)}`),
   tbl(
-    tr(TC('h1', '<w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:shd w:val="clear" w:fill="FFFF00"/><w:vAlign w:val="center"/></w:tcPr>') + TC('h2', '<w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="8"/></w:tcBorders></w:tcPr>'), '<w:trPr><w:tblHeader/><w:trHeight w:val="400" w:hRule="exact"/></w:trPr>') +
+    tr(TC('a') + TC('b')) + tr(TC('c') + TC('d')),
+    `<w:tblPr><w:tblStyle w:val="Banded"/><w:tblW w:w="5000" w:type="pct"/><w:tblLook w:val="04A0"/></w:tblPr>${GRIDCOLS(4000, 5000)}`,
+  ),
+  tbl(
+    tr(
+      TC(
+        'h1',
+        '<w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:shd w:val="clear" w:fill="FFFF00"/><w:vAlign w:val="center"/></w:tcPr>',
+      ) +
+        TC(
+          'h2',
+          '<w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="8"/></w:tcBorders></w:tcPr>',
+        ),
+      '<w:trPr><w:tblHeader/><w:trHeight w:val="400" w:hRule="exact"/></w:trPr>',
+    ) +
       tr(TC('x', '<w:tcPr><w:gridSpan w:val="2"/></w:tcPr>')) +
-      tr(TC('m1', '<w:tcPr><w:vMerge w:val="restart"/></w:tcPr>') + TC('r'), '<w:trPr><w:cantSplit/><w:ins w:id="5" w:author="A" w:date="2024-01-01T00:00:00Z"/></w:trPr>') +
+      tr(
+        TC('m1', '<w:tcPr><w:vMerge w:val="restart"/></w:tcPr>') + TC('r'),
+        '<w:trPr><w:cantSplit/><w:ins w:id="5" w:author="A" w:date="2024-01-01T00:00:00Z"/></w:trPr>',
+      ) +
       tr(TC('m2', '<w:tcPr><w:vMerge/></w:tcPr>') + TC('r2')),
     `<w:tblPr><w:tblStyle w:val="Grid"/><w:tblW w:w="9000" w:type="dxa"/><w:tblInd w:w="100" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/><w:tblCaption w:val="cap"/></w:tblPr>${GRIDCOLS(3000, 6000)}`,
   ),
-  tbl(tr(TC('l') + TC('mid') + TC('r')), `<w:tblPr><w:tblpPr w:tblpX="6000" w:tblpY="200" w:horzAnchor="page" w:vertAnchor="text" w:leftFromText="100" w:topFromText="50"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>${GRIDCOLS(100, 100, 100)}`),
-  tbl(tr(`<w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr>${tbl(tr(TC('in1') + TC('in2')))}<w:p/></w:tc>${TC('side')}`)),
-  tbl('<w:tr><w:trPr><w:gridBefore w:val="1"/><w:wBefore w:w="500" w:type="dxa"/><w:gridAfter w:val="1"/></w:trPr>' + TC('lone') + '</w:tr>' + tr(TC('p') + TC('q') + TC('s'))),
-  tbl(tr(TC('a', '<w:tcPr><w:hMerge w:val="restart"/></w:tcPr>') + TC('', '<w:tcPr><w:hMerge/></w:tcPr>') + TC('b')) + tr('<w:tblPrEx><w:tblBorders><w:top w:val="dotted" w:sz="4"/><w:insideH w:val="dashed" w:sz="4"/></w:tblBorders><w:shd w:val="clear" w:fill="EEEEEE"/></w:tblPrEx>' + TC('e1') + TC('e2'))),
+  tbl(
+    tr(TC('l') + TC('mid') + TC('r')),
+    `<w:tblPr><w:tblpPr w:tblpX="6000" w:tblpY="200" w:horzAnchor="page" w:vertAnchor="text" w:leftFromText="100" w:topFromText="50"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>${GRIDCOLS(100, 100, 100)}`,
+  ),
+  tbl(
+    tr(
+      `<w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr>${tbl(tr(TC('in1') + TC('in2')))}<w:p/></w:tc>${TC('side')}`,
+    ),
+  ),
+  tbl(
+    '<w:tr><w:trPr><w:gridBefore w:val="1"/><w:wBefore w:w="500" w:type="dxa"/><w:gridAfter w:val="1"/></w:trPr>' +
+      TC('lone') +
+      '</w:tr>' +
+      tr(TC('p') + TC('q') + TC('s')),
+  ),
+  tbl(
+    tr(
+      TC('a', '<w:tcPr><w:hMerge w:val="restart"/></w:tcPr>') +
+        TC('', '<w:tcPr><w:hMerge/></w:tcPr>') +
+        TC('b'),
+    ) +
+      tr(
+        '<w:tblPrEx><w:tblBorders><w:top w:val="dotted" w:sz="4"/><w:insideH w:val="dashed" w:sz="4"/></w:tblBorders><w:shd w:val="clear" w:fill="EEEEEE"/></w:tblPrEx>' +
+          TC('e1') +
+          TC('e2'),
+      ),
+  ),
   `<w:tbl><w:tblPr><w:tblLook w:firstRow="1" w:lastColumn="1"/></w:tblPr>${tr(`<w:sdt><w:sdtContent>${TC('in sdt')}</w:sdtContent></w:sdt>${TC('after')}`)}</w:tbl>`,
-  tbl(tr(tc('<w:p><w:pPr><w:pStyle w:val="Footer"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FF0000"/></w:rPr><w:t>bold</w:t></w:r></w:p>') + tc(`<w:p><w:r><m:t xmlns:m="x">y</m:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>`))),
+  tbl(
+    tr(
+      tc(
+        '<w:p><w:pPr><w:pStyle w:val="Footer"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FF0000"/></w:rPr><w:t>bold</w:t></w:r></w:p>',
+      ) +
+        tc(
+          `<w:p><w:r><m:t xmlns:m="x">y</m:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>`,
+        ),
+    ),
+  ),
 ]
-const FLAT_TABLE = (n: number): string => `<w:tbl><w:tr><w:tc>${'<w:tbl><w:tr><w:tc>'.repeat(n)}${P('deep')}${'</w:tc></w:tr></w:tbl>'.repeat(n)}</w:tc></w:tr></w:tbl>`
+const FLAT_TABLE = (n: number): string =>
+  `<w:tbl><w:tr><w:tc>${'<w:tbl><w:tr><w:tc>'.repeat(n)}${P('deep')}${'</w:tc></w:tr></w:tbl>'.repeat(n)}</w:tc></w:tr></w:tbl>`
 
 const tableInputs = (extra: Record<string, unknown> = {}, tables = TABLES): Input[] =>
   tables.map((text, i) => ({
     text,
-    args: { parts: miniParts([], text), compat: i % 2 ? COMPAT14 : COMPAT15, sectionAt: true, docOffset: 60 + i, ...extra },
+    args: {
+      parts: miniParts([], text),
+      compat: i % 2 ? COMPAT14 : COMPAT15,
+      sectionAt: true,
+      docOffset: 60 + i,
+      ...extra,
+    },
   }))
 
-const fromRows = (rows: unknown): unknown => json(rows)
 const ctxNodeInput =
   (extra: (args: unknown[]) => Record<string, unknown>, nodeAt = 0, ctxAt = 1, offsetAt = -1) =>
   (args: unknown[], parts: ReadonlyMap<string, string>): Input | undefined => {
     const node = args[nodeAt]
     const common = ctxArgs(parts, args[ctxAt], offsetAt >= 0 ? withOffset(args[offsetAt]) : {})
     if (!common || !(node === undefined || isObject(node))) return undefined
-    return { text: node === undefined ? '' : serializeXNode(node), args: { ...common, ...extra(args) } }
+    return {
+      text: node === undefined ? '' : serializeXNode(node),
+      args: { ...common, ...extra(args) },
+    }
   }
 
 // ---- header / footer parts
-const hfParts = (header: string, footer = '', extraParts: Array<[string, string]> = []): Array<[string, string]> =>
+const hfParts = (
+  header: string,
+  footer = '',
+  extraParts: Array<[string, string]> = [],
+): Array<[string, string]> =>
   miniParts([
     ['word/header1.xml', header],
     ['word/footer1.xml', footer || hfXml('ftr', '<w:p/>')],
-    ['word/_rels/header1.xml.rels', RELS([`<Relationship Id="rId9" Type="${OFFICE}/image" Target="media/logo.png"/>`])],
+    [
+      'word/_rels/header1.xml.rels',
+      RELS([`<Relationship Id="rId9" Type="${OFFICE}/image" Target="media/logo.png"/>`]),
+    ],
     ...extraParts,
   ])
-const PAGE_FLD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
-const NUM_FLD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> NUMPAGES </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>3</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
-const DATE_FLD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> DATE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>today</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
-const NESTED_FLD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> IF </w:instrText></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>2</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>ok</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
-const UNCLOSED_FLD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> IF </w:instrText></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>r</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+const PAGE_FLD =
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+const NUM_FLD =
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> NUMPAGES </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>3</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+const DATE_FLD =
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> DATE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>today</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+const NESTED_FLD =
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> IF </w:instrText></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>2</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>ok</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+const UNCLOSED_FLD =
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> IF </w:instrText></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>r</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
 const DRAWING = (inner: string, anchor = true): string =>
   `<w:r><w:drawing>${anchor ? '<wp:anchor behindDoc="1" distL="9525" distT="19050"><wp:positionH relativeFrom="page"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>19050</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="476250"/><wp:wrapSquare wrapText="bothSides"/><wp:docPr id="7" name="logo"/>' : '<wp:inline><wp:extent cx="952500" cy="476250"/><wp:docPr id="8" name="in"/>'}<a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId9"/><a:srcRect l="10000" t="5000"/></pic:blipFill></pic:pic></a:graphicData></a:graphic>${anchor ? '</wp:anchor>' : '</wp:inline>'}</w:drawing></w:r>`
+/** A header paragraph with a drawn text box and its VML twin: `hidden` before it, `inTwin` inside the twin. */
+const hfBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+  `<w:p><w:r><w:t>left</w:t></w:r></w:p><w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="190500"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent><w:p><w:r><w:t>choice</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>twin</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`
+const MARKUP_HF_BODIES: string[] = [
+  hfBox(''),
+  ...hiddenIn('<mc:Fallback>').map((hidden) => hfBox(hidden)),
+  ...hiddenIn('</mc:Fallback>').map((hidden) => hfBox('', hidden)),
+  hfBox('', '', '<mc:Fallback a=">">'),
+  hfBox('', '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
+  `<w:p><w:r><w:t xml:space = 'preserve'>a</w:t ></w:r>${PAGE_FLD}</w:p>`,
+  `<w:p><w:r><w:t><![CDATA[x<y]]></w:t></w:r><!-- <w:t>no</w:t> --></w:p>`,
+]
+
 const HF_BODIES: string[] = [
   `<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>left</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>center</w:t></w:r><w:r><w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/></w:r>${PAGE_FLD}</w:p>`,
   `<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:t>Page </w:t></w:r>${PAGE_FLD}<w:r><w:t> / </w:t></w:r>${NUM_FLD}</w:p><w:p>${DATE_FLD}</w:p><w:p>${NESTED_FLD}</w:p>`,
@@ -781,20 +1151,40 @@ const HF_BODIES: string[] = [
   `<w:p><w:r><w:rPr><w:sz w:val="16"/></w:rPr></w:r></w:p><w:p/><w:p><w:pPr><w:rPr><w:rFonts w:hint="eastAsia" w:eastAsia="Malgun Gothic"/><w:sz w:val="40"/></w:rPr></w:pPr><w:r><w:t xml:space="preserve">  </w:t></w:r></w:p>`,
   `<w:p>${DRAWING(P(''), true)}</w:p><w:p><w:r><w:t>text</w:t></w:r>${DRAWING('', false)}</w:p>`,
   tbl(
-    tr(TC('left', '<w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:tcBorders><w:bottom w:val="single" w:sz="4"/></w:tcBorders></w:tcPr>') + TC('right', '<w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:vAlign w:val="bottom"/></w:tcPr>'), '<w:trPr><w:trHeight w:val="500"/></w:trPr>') +
-      tr(`<w:tc><w:tcPr><w:vMerge w:val="restart"/><w:shd w:val="clear" w:fill="auto"/></w:tcPr>${P('v')}</w:tc>${TC('w')}`) +
+    tr(
+      TC(
+        'left',
+        '<w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:tcBorders><w:bottom w:val="single" w:sz="4"/></w:tcBorders></w:tcPr>',
+      ) +
+        TC('right', '<w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:vAlign w:val="bottom"/></w:tcPr>'),
+      '<w:trPr><w:trHeight w:val="500"/></w:trPr>',
+    ) +
+      tr(
+        `<w:tc><w:tcPr><w:vMerge w:val="restart"/><w:shd w:val="clear" w:fill="auto"/></w:tcPr>${P('v')}</w:tc>${TC('w')}`,
+      ) +
       tr(`<w:tc><w:tcPr><w:vMerge/></w:tcPr>${P('')}</w:tc>${TC('z')}`),
     `<w:tblPr><w:tblStyle w:val="Grid"/><w:tblW w:w="9000" w:type="dxa"/><w:tblInd w:w="-108" w:type="dxa"/><w:jc w:val="right"/><w:bidiVisual/></w:tblPr>${GRIDCOLS(3000, 6000)}`,
   ) + '<w:p/>',
   `<w:tbl><w:tblPr><w:tblpPr w:tblpX="100" w:vertAnchor="page"/></w:tblPr><w:tr><w:tc>${tbl(tr(TC('n1') + TC('n2')))}${P('after')}</w:tc></w:tr></w:tbl><w:p><w:r><w:t>following</w:t></w:r></w:p>`,
   `<w:sdt><w:sdtContent><w:p><w:r><w:t>in sdt</w:t></w:r></w:p></w:sdtContent></w:sdt><w:p><w:r><w:pict><v:shape style="position:absolute;margin-left:10pt;margin-top:5pt;width:100pt;height:50pt;z-index:-1" type="#t"><v:imagedata r:id="rId9" gain="32768f"/></v:shape></w:pict></w:r></w:p>`,
   `<w:p><w:del w:id="1" w:author="x"><w:r><w:drawing><wp:inline><wp:docPr id="1"/></wp:inline></w:drawing></w:r></w:del><w:del w:id="2" w:author="x"><w:r><w:delText>gone</w:delText></w:r></w:del></w:p>`,
+  ...MARKUP_HF_BODIES,
 ]
 const HF_PARTS = (): string[] => HF_BODIES.map((body, i) => hfXml(i % 2 ? 'ftr' : 'hdr', body))
 
-const hfIn = (text: string, extra: Record<string, unknown> = {}, compat: CompatArgs = COMPAT15): Input => ({
+const hfIn = (
+  text: string,
+  extra: Record<string, unknown> = {},
+  compat: CompatArgs = COMPAT15,
+): Input => ({
   text,
-  args: { parts: hfParts(text), compat, hf: true, compatibilityMode: compat.compatibilityMode ?? 0, ...extra },
+  args: {
+    parts: hfParts(text),
+    compat,
+    hf: true,
+    compatibilityMode: compat.compatibilityMode ?? 0,
+    ...extra,
+  },
 })
 
 const mapEntries = (value: unknown): unknown => (value instanceof Map ? [...value] : value)
@@ -814,14 +1204,26 @@ const WRAPS: Array<Record<string, unknown>> = [
   wrap(),
   wrap({ inside: 'revision' }),
   wrap({ inside: 'link', text: 'x' }),
-  wrap({ open: '<w:smartTag w:uri="u"><w:smartTagPr><w:attr w:name="a"/></w:smartTagPr>', close: '</w:smartTag>' }),
+  wrap({
+    open: '<w:smartTag w:uri="u"><w:smartTagPr><w:attr w:name="a"/></w:smartTagPr>',
+    close: '</w:smartTag>',
+  }),
   wrap({ open: '<w:dir w:val="rtl">', close: '</w:dir>' }),
   wrap({ open: '<w:bdo w:val="ltr">', close: '</w:bdo>' }),
-  wrap({ open: `<w:customXml w:element="e" xmlns:w14="${W14}"><w:customXmlPr/>`, close: '</w:customXml>' }),
-  wrap({ open: `<w:sdt xmlns:w="${WNS}" xmlns:w14="${W14}"><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent>` }),
-  wrap({ open: '<w:sdt><w:sdtPr><w:showingPlcHdr/><w:dataBinding w:xpath="/a" w:storeItemID="{1}"/></w:sdtPr><w:sdtContent>' }),
+  wrap({
+    open: `<w:customXml w:element="e" xmlns:w14="${W14}"><w:customXmlPr/>`,
+    close: '</w:customXml>',
+  }),
+  wrap({
+    open: `<w:sdt xmlns:w="${WNS}" xmlns:w14="${W14}"><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent>`,
+  }),
+  wrap({
+    open: '<w:sdt><w:sdtPr><w:showingPlcHdr/><w:dataBinding w:xpath="/a" w:storeItemID="{1}"/></w:sdtPr><w:sdtContent>',
+  }),
   wrap({ open: '<w:sdt><w:sdtPr><w:lock w:val="sdtContentLocked"/></w:sdtPr><w:sdtContent>' }),
-  wrap({ open: '<w:sdt><w:sdtPr><w:lock w:val=\'contentLocked\'/><w15:dataBinding w15:x="1"/></w:sdtPr><w:sdtContent>' }),
+  wrap({
+    open: '<w:sdt><w:sdtPr><w:lock w:val=\'contentLocked\'/><w15:dataBinding w15:x="1"/></w:sdtPr><w:sdtContent>',
+  }),
   wrap({ open: '<w:sdt><w:sdtContent>text' }),
   wrap({ open: '<w:sdt><w:sdtPr><w:r/></w:sdtPr><w:sdtContent>' }),
   wrap({ open: '<w:sdt><w:sdtPr x:a="1"/><w:sdtContent>' }),
@@ -837,7 +1239,10 @@ const WRAPS: Array<Record<string, unknown>> = [
   wrap({ open: '<w:sdt><w:sdtContent>', close: '</w:sdtContent></w:sdt><w:sdt/>' }),
   wrap({ open: '<w:sdt><w:sdtContent><!-- c -->', close: '</w:sdtContent></w:sdt>' }),
   wrap({ open: '<w:sdt>', close: '</w:sdt>' }),
-  wrap({ open: `${'<w:sdt><w:sdtContent>'.repeat(40)}`, close: '</w:sdtContent></w:sdt>'.repeat(40) }),
+  wrap({
+    open: `${'<w:sdt><w:sdtContent>'.repeat(40)}`,
+    close: '</w:sdtContent></w:sdt>'.repeat(40),
+  }),
   wrap({ open: `<w:sdt><w:sdtPr><w:tag w:val="${'x'.repeat(70000)}"/></w:sdtPr><w:sdtContent>` }),
   wrap({ seq: 'one' }),
   wrap({ inside: 'sideways' }),
@@ -888,15 +1293,42 @@ const BATCH2: CallSpec[] = [
       fn: 'tcwColumnWidths',
       input: ([node, pct]) => {
         const input = nodeInput(node)
-        return input ? { ...input, args: pct === undefined ? {} : { pctTableTwips: pct } } : undefined
+        return input
+          ? { ...input, args: pct === undefined ? {} : { pctTableTwips: pct } }
+          : undefined
       },
     },
     built: [
       ...TABLES.map((text) => ({ text })),
-      { text: tbl(tr(TC('a', '<w:tcPr><w:tcW w:w="2500" w:type="pct"/></w:tcPr>'))), args: { pctTableTwips: 9000 } },
-      { text: tbl(tr(TC('a', '<w:tcPr><w:tcW w:w="1000"/></w:tcPr>') + TC('b', '<w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="800"/></w:tcPr>')) + tr(TC('c', '<w:tcPr><w:tcW w:w="1500"/></w:tcPr>') + TC('d', '<w:tcPr><w:tcW w:w="900"/></w:tcPr>'))) },
-      { text: tbl(`<w:tr><w:trPr><w:gridBefore w:val="2"/></w:trPr>${TC('a', '<w:tcPr><w:tcW w:w="100"/></w:tcPr>')}</w:tr>`) },
-      { text: tbl(tr(TC('a', '<w:tcPr><w:gridSpan w:val="1.5"/><w:tcW w:w="100"/></w:tcPr>') + TC('b', '<w:tcPr><w:tcW w:w="200"/></w:tcPr>'))) },
+      {
+        text: tbl(tr(TC('a', '<w:tcPr><w:tcW w:w="2500" w:type="pct"/></w:tcPr>'))),
+        args: { pctTableTwips: 9000 },
+      },
+      {
+        text: tbl(
+          tr(
+            TC('a', '<w:tcPr><w:tcW w:w="1000"/></w:tcPr>') +
+              TC('b', '<w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="800"/></w:tcPr>'),
+          ) +
+            tr(
+              TC('c', '<w:tcPr><w:tcW w:w="1500"/></w:tcPr>') +
+                TC('d', '<w:tcPr><w:tcW w:w="900"/></w:tcPr>'),
+            ),
+        ),
+      },
+      {
+        text: tbl(
+          `<w:tr><w:trPr><w:gridBefore w:val="2"/></w:trPr>${TC('a', '<w:tcPr><w:tcW w:w="100"/></w:tcPr>')}</w:tr>`,
+        ),
+      },
+      {
+        text: tbl(
+          tr(
+            TC('a', '<w:tcPr><w:gridSpan w:val="1.5"/><w:tcW w:w="100"/></w:tcPr>') +
+              TC('b', '<w:tcPr><w:tcW w:w="200"/></w:tcPr>'),
+          ),
+        ),
+      },
       { text: tbl(tr(TC('a', '<w:tcPr><w:tcW w:w="100"/><w:tcW w:w="300"/></w:tcPr>'))) },
       { text: '' },
     ],
@@ -904,7 +1336,10 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.tablePropExceptionsOf',
     call: (text) => internals.tablePropExceptionsOf!(nodeOf(text)),
-    fromParse: { fn: 'tablePropExceptionsOf', input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)) },
+    fromParse: {
+      fn: 'tablePropExceptionsOf',
+      input: ([node]) => (node === undefined ? { text: '' } : nodeInput(node)),
+    },
     built: [
       '',
       '<w:tblPrEx/>',
@@ -927,15 +1362,44 @@ const BATCH2: CallSpec[] = [
       input: ([rows, exceptions]) => ({ args: json({ rows, exceptions }) }),
     },
     built: (() => {
-      const border = (style = 'single'): Record<string, unknown> => ({ style, szEighths: 4, color: '000000' })
-      const tblBorders = { top: border(), bottom: border('double'), left: border(), right: border('dotted'), insideH: border('dashed'), insideV: border('dotted') }
-      const grid = (r: number, c: number): Array<Array<Record<string, unknown>>> => Array.from({ length: r }, () => Array.from({ length: c }, () => cell()))
+      const border = (style = 'single'): Record<string, unknown> => ({
+        style,
+        szEighths: 4,
+        color: '000000',
+      })
+      const tblBorders = {
+        top: border(),
+        bottom: border('double'),
+        left: border(),
+        right: border('dotted'),
+        insideH: border('dashed'),
+        insideV: border('dotted'),
+      }
+      const grid = (r: number, c: number): Array<Array<Record<string, unknown>>> =>
+        Array.from({ length: r }, () => Array.from({ length: c }, () => cell()))
       return [
         { rows: grid(3, 3), exceptions: [null, { borders: tblBorders }, null] },
-        { rows: grid(2, 2), exceptions: [{ borders: tblBorders, cellMarTwips: { left: 10, right: 20 }, fill: 'EEEEEE' }, { fill: 'AAAAAA' }] },
-        { rows: [[cell({ fill: 'FF0000', borders: { top: border('thick') }, cellMarTwips: { top: 5 } }), cell()]], exceptions: [{ borders: tblBorders, cellMarTwips: { left: 1 }, fill: 'EEEEEE' }] },
+        {
+          rows: grid(2, 2),
+          exceptions: [
+            { borders: tblBorders, cellMarTwips: { left: 10, right: 20 }, fill: 'EEEEEE' },
+            { fill: 'AAAAAA' },
+          ],
+        },
+        {
+          rows: [
+            [
+              cell({ fill: 'FF0000', borders: { top: border('thick') }, cellMarTwips: { top: 5 } }),
+              cell(),
+            ],
+          ],
+          exceptions: [{ borders: tblBorders, cellMarTwips: { left: 1 }, fill: 'EEEEEE' }],
+        },
         { rows: grid(1, 1), exceptions: [{ borders: { top: border() } }] },
-        { rows: grid(2, 1), exceptions: [{ borders: { insideH: border() } }, { borders: { insideH: border() } }] },
+        {
+          rows: grid(2, 1),
+          exceptions: [{ borders: { insideH: border() } }, { borders: { insideH: border() } }],
+        },
         { rows: grid(2, 2), exceptions: [null, null] },
         { rows: [], exceptions: [] },
       ].map((args) => ({ args }))
@@ -955,21 +1419,45 @@ const BATCH2: CallSpec[] = [
       input: ([rows, tblPr, ctx], parts) => {
         const common = ctxArgs(parts, ctx)
         if (!common || !(tblPr === undefined || isObject(tblPr))) return undefined
-        return { text: tblPr === undefined ? '' : serializeXNode(tblPr as XNode), args: { ...common, rows: json(rows) } }
+        return {
+          text: tblPr === undefined ? '' : serializeXNode(tblPr as XNode),
+          args: { ...common, rows: json(rows) },
+        }
       },
     },
     built: (() => {
-      const plain = (r: number, c: number): Array<Array<Record<string, unknown>>> => Array.from({ length: r }, () => Array.from({ length: c }, () => cell()))
-      const pr = (style: string, look = ''): string => `<w:tblPr><w:tblStyle w:val="${style}"/>${look}</w:tblPr>`
+      const plain = (r: number, c: number): Array<Array<Record<string, unknown>>> =>
+        Array.from({ length: r }, () => Array.from({ length: c }, () => cell()))
+      const pr = (style: string, look = ''): string =>
+        `<w:tblPr><w:tblStyle w:val="${style}"/>${look}</w:tblPr>`
       return [
         { text: pr('Banded', '<w:tblLook w:val="04A0"/>'), args: { rows: plain(4, 3) } },
-        { text: pr('Banded', '<w:tblLook w:firstRow="0" w:lastColumn="1" w:noHBand="1"/>'), args: { rows: plain(3, 2) } },
-        { text: pr('Banded', '<w:tblLook w:val="0000"/><w:tblStyleRowBandSize w:val="2"/>'), args: { rows: plain(5, 1) } },
-        { text: pr('Banded'), args: { rows: [[cell({ fill: 'FF0000', colSpan: 2, bold: false, color: '111111' }), cell({ borders: { left: { style: 'single' } }, cellMarTwips: { left: 3 } })]] } },
+        {
+          text: pr('Banded', '<w:tblLook w:firstRow="0" w:lastColumn="1" w:noHBand="1"/>'),
+          args: { rows: plain(3, 2) },
+        },
+        {
+          text: pr('Banded', '<w:tblLook w:val="0000"/><w:tblStyleRowBandSize w:val="2"/>'),
+          args: { rows: plain(5, 1) },
+        },
+        {
+          text: pr('Banded'),
+          args: {
+            rows: [
+              [
+                cell({ fill: 'FF0000', colSpan: 2, bold: false, color: '111111' }),
+                cell({ borders: { left: { style: 'single' } }, cellMarTwips: { left: 3 } }),
+              ],
+            ],
+          },
+        },
         { text: pr('Grid'), args: { rows: plain(2, 2) } },
         { text: pr('Missing'), args: { rows: plain(2, 2) } },
         { text: '', args: { rows: plain(1, 1) } },
-      ].map((input) => ({ ...input, args: { ...input.args, parts: miniParts(), compat: COMPAT15 } }))
+      ].map((input) => ({
+        ...input,
+        args: { ...input.args, parts: miniParts(), compat: COMPAT15 },
+      }))
     })(),
     argMutation: true,
   },
@@ -987,29 +1475,77 @@ const BATCH2: CallSpec[] = [
         typeof xml === 'string' ? { text: xml, args: json({ model, rawTrPrs }) } : undefined,
     },
     built: (() => {
-      const model = (rows: number, cols: number, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+      const model = (
+        rows: number,
+        cols: number,
+        extra: Record<string, unknown> = {},
+      ): Record<string, unknown> => ({
         rows: Array.from({ length: rows }, () => Array.from({ length: cols }, () => cell())),
         ...extra,
       })
-      const chg = (name: string, inner = ''): string => `<${name} w:id="3" w:author="A" w:date="2024-01-01T00:00:00Z">${inner}</${name}>`
-      const x1 = tbl(tr(TC('a', `<w:tcPr><w:tcW w:w="1"/>${chg('w:tcPrChange', '<w:tcPr/>')}<w:cellMerge w:id="4" w:author="B" w:vMerge="rest"/></w:tcPr>`) + TC('b'), `<w:trPr><w:cantSplit/>${chg('w:trPrChange', '<w:trPr/>')}</w:trPr>`) + tr(TC('c')), `<w:tblPr>${chg('w:tblPrChange', '<w:tblPr><w:tblW w:w="5"/></w:tblPr>')}</w:tblPr><w:tblGrid><w:gridCol w:w="1"/>${chg('w:tblGridChange', '<w:tblGrid/>')}</w:tblGrid>`)
-      const x2 = tbl('<w:tr><w:tblPrEx><w:shd w:fill="AA"/>' + chg('w:tblPrExChange', '<w:tblPrEx/>') + '</w:tblPrEx>' + TC('only') + '</w:tr>')
+      const chg = (name: string, inner = ''): string =>
+        `<${name} w:id="3" w:author="A" w:date="2024-01-01T00:00:00Z">${inner}</${name}>`
+      const x1 = tbl(
+        tr(
+          TC(
+            'a',
+            `<w:tcPr><w:tcW w:w="1"/>${chg('w:tcPrChange', '<w:tcPr/>')}<w:cellMerge w:id="4" w:author="B" w:vMerge="rest"/></w:tcPr>`,
+          ) + TC('b'),
+          `<w:trPr><w:cantSplit/>${chg('w:trPrChange', '<w:trPr/>')}</w:trPr>`,
+        ) + tr(TC('c')),
+        `<w:tblPr>${chg('w:tblPrChange', '<w:tblPr><w:tblW w:w="5"/></w:tblPr>')}</w:tblPr><w:tblGrid><w:gridCol w:w="1"/>${chg('w:tblGridChange', '<w:tblGrid/>')}</w:tblGrid>`,
+      )
+      const x2 = tbl(
+        '<w:tr><w:tblPrEx><w:shd w:fill="AA"/>' +
+          chg('w:tblPrExChange', '<w:tblPrEx/>') +
+          '</w:tblPrEx>' +
+          TC('only') +
+          '</w:tr>',
+      )
       return [
         { text: x1, args: { model: model(2, 2), rawTrPrs: [null, null] } },
         { text: x1, args: { model: model(1, 2), rawTrPrs: [null] } },
         { text: x1, args: { model: model(2, 1), rawTrPrs: [null, null] } },
         { text: x2, args: { model: model(1, 1), rawTrPrs: [null] } },
-        { text: x2, args: { model: model(1, 2, { rows: [[cell({ gridGap: true }), cell()]] }), rawTrPrs: [null] } },
-        { text: tbl(tr(tc(tbl(tr(TC('inner'))) + '<w:p/>', '<w:tcPr><w:vAlign w:val="top"/></w:tcPr>'))), args: { model: model(1, 1), rawTrPrs: [null] } },
+        {
+          text: x2,
+          args: {
+            model: model(1, 2, { rows: [[cell({ gridGap: true }), cell()]] }),
+            rawTrPrs: [null],
+          },
+        },
+        {
+          text: tbl(
+            tr(tc(tbl(tr(TC('inner'))) + '<w:p/>', '<w:tcPr><w:vAlign w:val="top"/></w:tcPr>')),
+          ),
+          args: { model: model(1, 1), rawTrPrs: [null] },
+        },
         { text: '<w:p/>', args: { model: model(1, 1), rawTrPrs: [null] } },
         { text: '<w:tbl>', args: { model: model(1, 1), rawTrPrs: [null] } },
         { text: '', args: { model: model(0, 0), rawTrPrs: [] } },
+        // the table in other valid spellings: spaced end tags, a `>` in an attribute value,
+        // markup hidden in a comment, CDATA or an instruction around and inside it
+        ...[
+          x1.replace('</w:tbl>', '</w:tbl >'),
+          x1.replaceAll('</w:tr>', '</w:tr >').replaceAll('</w:tc>', '</w:tc\n>'),
+          x1.replace('<w:tbl>', '<w:tbl a=">">'),
+          x1.replace('<w:tr>', '<w:tr a=">">').replace('<w:tc>', `<w:tc b='>'>`),
+          x1.replace('</w:trPr>', '</w:trPr >').replace('</w:tcPr>', '</w:tcPr >'),
+          ...hiddenIn('<w:tbl>').map((hidden) => hidden + x1),
+          ...hiddenIn('</w:tbl>').map((hidden) => x1 + hidden),
+          ...hiddenIn('</w:tr>').map((hidden) => x1.replace('<w:tr>', `<w:tr>${hidden}`)),
+          ...hiddenIn('<w:tc>x</w:tc>').map((hidden) => x1.replace('<w:tr>', `<w:tr>${hidden}`)),
+        ].flatMap((text) => [
+          { text, args: { model: model(2, 2), rawTrPrs: [null, null] } },
+          { text, args: { model: model(1, 2), rawTrPrs: [null] } },
+        ]),
       ].map((input) => ({ ...input }))
     })(),
     argMutation: true,
   },
   {
     fn: 'parse.extractTable',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.extractTable!(text, await buildCtx(args), args.docOffset),
     fromParse: {
       fn: 'extractTable',
@@ -1018,25 +1554,52 @@ const BATCH2: CallSpec[] = [
         return typeof xml === 'string' && common ? { text: xml, args: common } : undefined
       },
     },
-    built: [...tableInputs(), { text: FLAT_TABLE(10), args: { parts: miniParts(), compat: COMPAT15 } }, { text: '<w:p/>', args: { parts: miniParts(), compat: COMPAT15 } }, { text: REFUSED, args: { parts: miniParts(), compat: COMPAT15 } }],
+    built: [
+      ...tableInputs(),
+      { text: FLAT_TABLE(10), args: { parts: miniParts(), compat: COMPAT15 } },
+      { text: '<w:p/>', args: { parts: miniParts(), compat: COMPAT15 } },
+      { text: REFUSED, args: { parts: miniParts(), compat: COMPAT15 } },
+    ],
   },
   {
     fn: 'parse.extractTableModel',
-    call: async (text, args) => internals.extractTableModel!(elementOf(text), await buildCtx(args), args.depth, args.docOffset),
+    listed: lineRuleOutsideItsType,
+    call: async (text, args) =>
+      internals.extractTableModel!(
+        elementOf(text),
+        await buildCtx(args),
+        args.depth,
+        args.docOffset,
+      ),
     fromParse: {
       fn: 'extractTableModel',
       input: ([node, ctx, depth, docOffset], parts) => {
         const input = nodeInput(node)
-        const common = ctxArgs(parts, ctx, { ...withOffset(docOffset), ...(typeof depth === 'number' ? { depth } : {}) })
+        const common = ctxArgs(parts, ctx, {
+          ...withOffset(docOffset),
+          ...(typeof depth === 'number' ? { depth } : {}),
+        })
         return input && common ? { ...input, args: common } : undefined
       },
     },
-    built: [...tableInputs(), ...tableInputs({ depth: 8 }, [TABLES[3]!]), { text: '', args: { parts: miniParts(), compat: COMPAT15 } }],
+    built: [
+      ...tableInputs(),
+      ...tableInputs({ depth: 8 }, [TABLES[3]!]),
+      { text: '', args: { parts: miniParts(), compat: COMPAT15 } },
+    ],
   },
   {
     fn: 'parse.extractCell',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
-      internals.extractCell!(elementOf(text), await buildCtx(args), args.depth, args.docOffset, args.tableStyleId, args.conds),
+      internals.extractCell!(
+        elementOf(text),
+        await buildCtx(args),
+        args.depth,
+        args.docOffset,
+        args.tableStyleId,
+        args.conds,
+      ),
     fromParse: {
       fn: 'extractCell',
       input: ([node, ctx, depth, docOffset, tableStyleId, conds], parts) => {
@@ -1052,15 +1615,40 @@ const BATCH2: CallSpec[] = [
     },
     built: [
       tc(P('plain')),
-      tc('<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="00FF00"/></w:rPr><w:t>c</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="00FF00"/></w:rPr><w:t>d</w:t></w:r></w:p>', '<w:tcPr><w:gridSpan w:val="2"/><w:vMerge/><w:shd w:val="clear" w:fill="FFEEDD"/><w:vAlign w:val="bottom"/><w:tcMar><w:left w:w="40" w:type="dxa"/></w:tcMar><w:textDirection w:val="btLr"/><w:noWrap/><w:hideMark/><w:hMerge w:val="restart"/><w:tcBorders><w:top w:val="single" w:sz="4"/></w:tcBorders><w:cellIns w:id="3" w:author="A"/><w:cellDel w:author="B"/></w:tcPr>'),
+      tc(
+        '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="00FF00"/></w:rPr><w:t>c</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="00FF00"/></w:rPr><w:t>d</w:t></w:r></w:p>',
+        '<w:tcPr><w:gridSpan w:val="2"/><w:vMerge/><w:shd w:val="clear" w:fill="FFEEDD"/><w:vAlign w:val="bottom"/><w:tcMar><w:left w:w="40" w:type="dxa"/></w:tcMar><w:textDirection w:val="btLr"/><w:noWrap/><w:hideMark/><w:hMerge w:val="restart"/><w:tcBorders><w:top w:val="single" w:sz="4"/></w:tcBorders><w:cellIns w:id="3" w:author="A"/><w:cellDel w:author="B"/></w:tcPr>',
+      ),
       tc(`${P('before')}${tbl(tr(TC('n')))}${P('after')}`),
-      tc('<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>li</w:t></w:r></w:p><w:p/>'),
-      tc('<w:p><w:r><w:drawing><wp:anchor><wp:extent cx="9525" cy="9525"/><wp:docPr id="1"/><a:graphic><a:graphicData><pic:pic><a:blip r:embed="rId4"/></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing><w:t>pic</w:t></w:r></w:p>'),
+      tc(
+        '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>li</w:t></w:r></w:p><w:p/>',
+      ),
+      tc(
+        '<w:p><w:r><w:drawing><wp:anchor><wp:extent cx="9525" cy="9525"/><wp:docPr id="1"/><a:graphic><a:graphicData><pic:pic><a:blip r:embed="rId4"/></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing><w:t>pic</w:t></w:r></w:p>',
+      ),
       tc('<w:sdt><w:sdtContent><w:p><w:r><w:t>s</w:t></w:r></w:p></w:sdtContent></w:sdt>'),
       tc(''),
+      // a drawing and its fallback twin in spellings a literal search for the tags reads wrongly
+      cellBox(''),
+      ...hiddenIn('<mc:Fallback>').map((hidden) => cellBox(hidden)),
+      ...hiddenIn('</mc:Fallback>').map((hidden) => cellBox('', hidden)),
+      cellBox('', '', '<mc:Fallback a=">">'),
+      cellBox('', '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
     ].flatMap((text) => [
-      { text, args: { parts: miniParts(), compat: COMPAT15, depth: 1, tableStyleId: 'Banded', conds: ['firstRow', 'lastCol'] } },
-      { text, args: { parts: miniParts(), compat: COMPAT14, depth: 8, sectionAt: true, docOffset: 5 } },
+      {
+        text,
+        args: {
+          parts: miniParts(),
+          compat: COMPAT15,
+          depth: 1,
+          tableStyleId: 'Banded',
+          conds: ['firstRow', 'lastCol'],
+        },
+      },
+      {
+        text,
+        args: { parts: miniParts(), compat: COMPAT14, depth: 8, sectionAt: true, docOffset: 5 },
+      },
     ]),
   },
   // ------------------------------------------------- header/footer helpers
@@ -1080,13 +1668,17 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfParaStyleLayers',
-    call: async (text, args) => internals.hfParaStyleLayers!(elementOf(text), (await buildCtx(args)).styles),
+    listed: lineRuleOutsideItsType,
+    call: async (text, args) =>
+      internals.hfParaStyleLayers!(elementOf(text), (await buildCtx(args)).styles),
     fromParse: {
       fn: 'hfParaStyleLayers',
       input: ([node, styles], parts) => {
         const input = nodeInput(node)
         const kept = partsOf(parts)
-        return input && kept && styles instanceof Map ? { ...input, args: { parts: kept, compat: COMPAT15 } } : undefined
+        return input && kept && styles instanceof Map
+          ? { ...input, args: { parts: kept, compat: COMPAT15 } }
+          : undefined
       },
     },
     built: [
@@ -1099,7 +1691,9 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfStyledParaFormat',
-    call: async (text, args) => internals.hfStyledParaFormat!(elementOf(text), await buildCtx(args)),
+    listed: lineRuleOutsideItsType,
+    call: async (text, args) =>
+      internals.hfStyledParaFormat!(elementOf(text), await buildCtx(args)),
     fromParse: { fn: 'hfStyledParaFormat', input: ctxNodeInput(() => ({})) },
     built: [
       '<w:p/>',
@@ -1114,8 +1708,16 @@ const BATCH2: CallSpec[] = [
     call: (_text, args) => internals.hfCellBorders!(args.rows, args.r, args.c, args.tbl),
     fromParse: { fn: 'hfCellBorders', input: () => undefined },
     built: (() => {
-      const b = (style: string, sz = 4): Record<string, unknown> => ({ style, szEighths: sz, color: '000000' })
-      const raw = (gridStart: number, span = 1, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+      const b = (style: string, sz = 4): Record<string, unknown> => ({
+        style,
+        szEighths: sz,
+        color: '000000',
+      })
+      const raw = (
+        gridStart: number,
+        span = 1,
+        extra: Record<string, unknown> = {},
+      ): Record<string, unknown> => ({
         gridStart,
         span,
         widthTwips: 1000,
@@ -1123,10 +1725,35 @@ const BATCH2: CallSpec[] = [
         vMergeContinue: false,
         ...extra,
       })
-      const tblB = { top: b('single'), left: b('single'), bottom: b('single'), right: b('single'), insideH: b('dashed'), insideV: b('dotted') }
-      const rows = [[raw(0, 1, { borders: { bottom: b('double'), right: b('thick', 8) } }), raw(1, 2)], [raw(0, 2, { borders: { top: b('wave') } }), raw(2, 1, { vMergeContinue: true })], [raw(0), raw(1), raw(2, 1, { borders: { left: b('none') } })]]
-      const at = (r: number, c: number, tbl?: unknown): Input => ({ args: json({ rows, r, c, ...(tbl ? { tbl } : {}) }) })
-      return [at(0, 0, tblB), at(0, 1, tblB), at(1, 0, tblB), at(1, 1, tblB), at(2, 0, tblB), at(2, 2, tblB), at(0, 0), at(1, 1), at(2, 1), at(5, 0), at(0, 5)]
+      const tblB = {
+        top: b('single'),
+        left: b('single'),
+        bottom: b('single'),
+        right: b('single'),
+        insideH: b('dashed'),
+        insideV: b('dotted'),
+      }
+      const rows = [
+        [raw(0, 1, { borders: { bottom: b('double'), right: b('thick', 8) } }), raw(1, 2)],
+        [raw(0, 2, { borders: { top: b('wave') } }), raw(2, 1, { vMergeContinue: true })],
+        [raw(0), raw(1), raw(2, 1, { borders: { left: b('none') } })],
+      ]
+      const at = (r: number, c: number, tbl?: unknown): Input => ({
+        args: json({ rows, r, c, ...(tbl ? { tbl } : {}) }),
+      })
+      return [
+        at(0, 0, tblB),
+        at(0, 1, tblB),
+        at(1, 0, tblB),
+        at(1, 1, tblB),
+        at(2, 0, tblB),
+        at(2, 2, tblB),
+        at(0, 0),
+        at(1, 1),
+        at(2, 1),
+        at(5, 0),
+        at(0, 5),
+      ]
     })(),
     mutation: 'none',
     argMutation: true,
@@ -1136,74 +1763,175 @@ const BATCH2: CallSpec[] = [
     call: (_text, args) => internals.hfVSpanOf!(args.rows, args.r, num(args.col)),
     fromParse: { fn: 'hfVSpanOf', input: () => undefined },
     built: (() => {
-      const raw = (gridStart: number, span: number, vMergeContinue: boolean): Record<string, unknown> => ({ gridStart, span, widthTwips: 1, widthIsPct: false, vMergeContinue })
-      const rows = [[raw(0, 1, false), raw(1, 2, false)], [raw(0, 1, true), raw(1, 2, true)], [raw(0, 2, true), raw(2, 1, false)], [raw(0, 1, false)]]
-      return [[0, 0], [0, 1], [0, 2], [1, 0], [2, 0], [3, 0], [0, 1.5], [0, 9], [9, 0]].map(([r, col]) => ({ args: { rows, r, col } }))
+      const raw = (
+        gridStart: number,
+        span: number,
+        vMergeContinue: boolean,
+      ): Record<string, unknown> => ({
+        gridStart,
+        span,
+        widthTwips: 1,
+        widthIsPct: false,
+        vMergeContinue,
+      })
+      const rows = [
+        [raw(0, 1, false), raw(1, 2, false)],
+        [raw(0, 1, true), raw(1, 2, true)],
+        [raw(0, 2, true), raw(2, 1, false)],
+        [raw(0, 1, false)],
+      ]
+      return [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [2, 0],
+        [3, 0],
+        [0, 1.5],
+        [0, 9],
+        [9, 0],
+      ].map(([r, col]) => ({ args: { rows, r, col } }))
     })(),
     mutation: 'none',
     argMutation: true,
   },
   {
     fn: 'parse.hfTableMedia',
-    call: async (text, args) => mapEntries(await internals.hfTableMedia!(zipOf(args.parts), args.partPath, text)),
+    call: async (text, args) =>
+      mapEntries(await internals.hfTableMedia!(zipOf(args.parts), args.partPath, text)),
     fromParse: {
       fn: 'hfTableMedia',
       input: ([, partPath, partXml], parts) => {
         const kept = partsOf(parts)
-        return typeof partPath === 'string' && typeof partXml === 'string' && kept ? { text: partXml, args: { parts: kept, partPath } } : undefined
+        return typeof partPath === 'string' && typeof partXml === 'string' && kept
+          ? { text: partXml, args: { parts: kept, partPath } }
+          : undefined
       },
     },
     built: [
-      ...HF_PARTS().map((text) => ({ text, args: { parts: hfParts(text), partPath: 'word/header1.xml' } })),
-      { text: hfXml('hdr', `<w:p>${DRAWING('', false)}</w:p><w:p><w:r><w:pict><v:shape><v:imagedata r:id="rId9"/><v:imagedata r:id="rId404"/></v:shape></w:pict></w:r></w:p>`), args: { parts: hfParts(hfXml('hdr', ''), '', [['word/_rels/header9.xml.rels', RELS([`<Relationship Id="rId9" Type="${OFFICE}/image" Target="http://example.com/a.png" TargetMode="External"/>`, `<Relationship Id="rId10" Type="${OFFICE}/image" Target="HTTPS://x/y.png"/>`])]]), partPath: 'word/header9.xml' } },
+      ...HF_PARTS().map((text) => ({
+        text,
+        args: { parts: hfParts(text), partPath: 'word/header1.xml' },
+      })),
+      {
+        text: hfXml(
+          'hdr',
+          `<w:p>${DRAWING('', false)}</w:p><w:p><w:r><w:pict><v:shape><v:imagedata r:id="rId9"/><v:imagedata r:id="rId404"/></v:shape></w:pict></w:r></w:p>`,
+        ),
+        args: {
+          parts: hfParts(hfXml('hdr', ''), '', [
+            [
+              'word/_rels/header9.xml.rels',
+              RELS([
+                `<Relationship Id="rId9" Type="${OFFICE}/image" Target="http://example.com/a.png" TargetMode="External"/>`,
+                `<Relationship Id="rId10" Type="${OFFICE}/image" Target="HTTPS://x/y.png"/>`,
+              ]),
+            ],
+          ]),
+          partPath: 'word/header9.xml',
+        },
+      },
       { text: '<w:hdr/>', args: { parts: miniParts(), partPath: 'word/header1.xml' } },
     ],
   },
   {
     fn: 'parse.hfCellContent',
-    call: async (text, args) => internals.hfCellContent!(elementOf(text), await buildCtx(args), args.tableStyleId),
+    listed: lineRuleOutsideItsType,
+    call: async (text, args) =>
+      internals.hfCellContent!(elementOf(text), await buildCtx(args), args.tableStyleId),
     fromParse: {
       fn: 'hfCellContent',
       input: (args, parts) => {
         const node = args[0]
-        const common = ctxArgs(parts, args[1], args[2] === undefined ? {} : { tableStyleId: args[2] })
+        const common = ctxArgs(
+          parts,
+          args[1],
+          args[2] === undefined ? {} : { tableStyleId: args[2] },
+        )
         return isObject(node) && common ? { text: serializeXNode(node), args: common } : undefined
       },
     },
     built: [
       tc(P('plain')),
-      tc('<w:p><w:pPr><w:pStyle w:val="Footer"/><w:ind w:left="200" w:firstLine="100"/><w:spacing w:before="20" w:after="40" w:line="300" w:lineRule="exact"/><w:tabs><w:tab w:val="right" w:pos="5000"/></w:tabs><w:wordWrap w:val="0"/></w:pPr><w:r><w:t>styled</w:t></w:r></w:p>'),
-      tc('<w:tcPr><w:shd w:val="clear" w:fill="#AABBCC"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>c</w:t></w:r></w:p>'),
+      tc(
+        '<w:p><w:pPr><w:pStyle w:val="Footer"/><w:ind w:left="200" w:firstLine="100"/><w:spacing w:before="20" w:after="40" w:line="300" w:lineRule="exact"/><w:tabs><w:tab w:val="right" w:pos="5000"/></w:tabs><w:wordWrap w:val="0"/></w:pPr><w:r><w:t>styled</w:t></w:r></w:p>',
+      ),
+      tc(
+        '<w:tcPr><w:shd w:val="clear" w:fill="#AABBCC"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>c</w:t></w:r></w:p>',
+      ),
       tc('<w:tcPr><w:shd w:val="clear" w:fill="auto"/></w:tcPr><w:p/>'),
-      tc(`<w:p><w:r><w:t>out</w:t></w:r></w:p>${tbl(tr(TC('n1', '<w:tcPr><w:shd w:fill="DDDDDD"/></w:tcPr>') + TC('n2')), '<w:tblPr><w:tblStyle w:val="Grid"/></w:tblPr>')}<w:p/><w:p/>`),
-      tc(`<w:p>${DRAWING('', true)}<w:r><w:t>kept text</w:t></w:r></w:p><w:p>${DRAWING('', false)}</w:p>`),
+      tc(
+        `<w:p><w:r><w:t>out</w:t></w:r></w:p>${tbl(tr(TC('n1', '<w:tcPr><w:shd w:fill="DDDDDD"/></w:tcPr>') + TC('n2')), '<w:tblPr><w:tblStyle w:val="Grid"/></w:tblPr>')}<w:p/><w:p/>`,
+      ),
+      tc(
+        `<w:p>${DRAWING('', true)}<w:r><w:t>kept text</w:t></w:r></w:p><w:p>${DRAWING('', false)}</w:p>`,
+      ),
       tc('<w:sdt><w:sdtContent><w:p><w:r><w:t>s</w:t></w:r></w:p></w:sdtContent></w:sdt>'),
     ].flatMap((text) => [
       { text, args: { parts: hfParts(hfXml('hdr', '')), compat: COMPAT15, hf: true } },
-      { text, args: { parts: hfParts(hfXml('hdr', '')), compat: COMPAT14, hf: true, tableStyleId: 'Grid' } },
+      {
+        text,
+        args: {
+          parts: hfParts(hfXml('hdr', '')),
+          compat: COMPAT14,
+          hf: true,
+          tableStyleId: 'Grid',
+        },
+      },
     ]),
   },
   {
     fn: 'parse.hfTableRowParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
-      const paras = internals.hfTableRowParagraphs!(elementOf(text), await buildCtx(args), args.compatibilityMode, args.tblIndex) as object[]
+      const paras = internals.hfTableRowParagraphs!(
+        elementOf(text),
+        await buildCtx(args),
+        args.compatibilityMode,
+        args.tblIndex,
+      ) as object[]
       return { paras, rowAnchorIds: paras.map((p) => weakMaps.hfRowAnchorIds!.get(p) ?? null) }
     },
     fromParse: {
       fn: 'hfTableRowParagraphs',
       input: ([tblNode, ctx, compatibilityMode, tblIndex], parts) => {
         const input = nodeInput(tblNode)
-        const common = ctxArgs(parts, ctx, { compatibilityMode, ...(tblIndex === undefined ? {} : { tblIndex }) })
-        return input && common && typeof compatibilityMode === 'number' ? { ...input, args: common } : undefined
+        const common = ctxArgs(parts, ctx, {
+          compatibilityMode,
+          ...(tblIndex === undefined ? {} : { tblIndex }),
+        })
+        return input && common && typeof compatibilityMode === 'number'
+          ? { ...input, args: common }
+          : undefined
       },
     },
-    built: HF_BODIES.flatMap((body) => [...body.matchAll(/<w:tbl>[\s\S]*?<\/w:tbl>/g)].map((m) => m[0])).flatMap((text) => [
-      { text, args: { parts: hfParts(hfXml('hdr', text)), compat: COMPAT15, hf: true, compatibilityMode: 15, tblIndex: 0 } },
-      { text, args: { parts: hfParts(hfXml('hdr', text)), compat: COMPAT14, hf: true, compatibilityMode: 14 } },
+    built: HF_BODIES.flatMap((body) =>
+      [...body.matchAll(/<w:tbl>[\s\S]*?<\/w:tbl>/g)].map((m) => m[0]),
+    ).flatMap((text) => [
+      {
+        text,
+        args: {
+          parts: hfParts(hfXml('hdr', text)),
+          compat: COMPAT15,
+          hf: true,
+          compatibilityMode: 15,
+          tblIndex: 0,
+        },
+      },
+      {
+        text,
+        args: {
+          parts: hfParts(hfXml('hdr', text)),
+          compat: COMPAT14,
+          hf: true,
+          compatibilityMode: 14,
+        },
+      },
     ]),
   },
   {
     fn: 'parse.hfParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       const paras = internals.hfParagraphs!(
@@ -1215,18 +1943,28 @@ const BATCH2: CallSpec[] = [
         doc.themeFonts,
         resolverOf(doc, args),
       ) as object[]
-      return {
+      return renumberedBoxIds({
         paras,
         rowAnchorIds: paras.map((p) => weakMaps.hfRowAnchorIds!.get(p) ?? null),
-        runImageIds: [...((weakMaps.hfRunImageIds!.get(paras) as Set<string> | undefined) ?? [])].sort(),
-      }
+        runImageIds: [
+          ...((weakMaps.hfRunImageIds!.get(paras) as Set<string> | undefined) ?? []),
+        ].sort(),
+      })
     },
     fromParse: {
       fn: 'hfParagraphs',
       input: ([partXml, , , tableMedia, compatibilityMode], parts) => {
         const kept = partsOf(parts)
         return typeof partXml === 'string' && kept
-          ? { text: partXml, args: { parts: kept, compat: { compatibilityMode }, compatibilityMode: compatibilityMode ?? 0, ...(tableMedia instanceof Map ? { tableMedia: [...tableMedia] } : {}) } }
+          ? {
+              text: partXml,
+              args: {
+                parts: kept,
+                compat: { compatibilityMode },
+                compatibilityMode: compatibilityMode ?? 0,
+                ...(tableMedia instanceof Map ? { tableMedia: [...tableMedia] } : {}),
+              },
+            }
           : undefined
       },
     },
@@ -1237,17 +1975,20 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfContentFromXml',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
-      return internals.hfContentFromXml!(
-        text,
-        args.kind,
-        doc.themeColors,
-        doc.styles,
-        entriesOf(args.tableMedia),
-        args.compatibilityMode,
-        doc.themeFonts,
-        resolverOf(doc, args),
+      return renumberedBoxIds(
+        internals.hfContentFromXml!(
+          text,
+          args.kind,
+          doc.themeColors,
+          doc.styles,
+          entriesOf(args.tableMedia),
+          args.compatibilityMode,
+          doc.themeFonts,
+          resolverOf(doc, args),
+        ),
       )
     },
     fromParse: {
@@ -1255,18 +1996,34 @@ const BATCH2: CallSpec[] = [
       input: ([xml, kind, , , tableMedia, compatibilityMode], parts) => {
         const kept = partsOf(parts)
         return typeof xml === 'string' && kept
-          ? { text: xml, args: { parts: kept, kind, compat: { compatibilityMode }, compatibilityMode: compatibilityMode ?? 0, ...(tableMedia instanceof Map ? { tableMedia: [...tableMedia] } : {}) } }
+          ? {
+              text: xml,
+              args: {
+                parts: kept,
+                kind,
+                compat: { compatibilityMode },
+                compatibilityMode: compatibilityMode ?? 0,
+                ...(tableMedia instanceof Map ? { tableMedia: [...tableMedia] } : {}),
+              },
+            }
           : undefined
       },
     },
     built: HF_PARTS().flatMap((text, i) => [
       hfIn(text, { kind: i % 2 ? 'footer' : 'header' }),
       hfIn(text, { kind: 'header' }, COMPAT14),
-      hfIn(hfXml('hdr', `<w:p><w:r><v:shape type="#t"><v:textpath string="DRAFT"/></v:shape></w:r></w:p>${text}`), { kind: 'header' }),
+      hfIn(
+        hfXml(
+          'hdr',
+          `<w:p><w:r><v:shape type="#t"><v:textpath string="DRAFT"/></v:shape></w:r></w:p>${text}`,
+        ),
+        { kind: 'header' },
+      ),
     ]),
   },
   {
     fn: 'parse.readHeaderFooterPart',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       return internals.readHeaderFooterPart!(
@@ -1288,7 +2045,17 @@ const BATCH2: CallSpec[] = [
       input: ([, documentXml, , kind, hfType, , , compatibilityMode, , , sourcePath], parts) => {
         const kept = partsOf(parts)
         return typeof documentXml === 'string' && kept
-          ? { text: documentXml, args: { parts: kept, kind, hfType, compat: { compatibilityMode }, compatibilityMode: compatibilityMode ?? 0, sourcePath: sourcePath ?? 'word/document.xml' } }
+          ? {
+              text: documentXml,
+              args: {
+                parts: kept,
+                kind,
+                hfType,
+                compat: { compatibilityMode },
+                compatibilityMode: compatibilityMode ?? 0,
+                sourcePath: sourcePath ?? 'word/document.xml',
+              },
+            }
           : undefined
       },
     },
@@ -1296,8 +2063,14 @@ const BATCH2: CallSpec[] = [
       const sectRefs = (types: Array<[string, string, string?]>): string =>
         `<w:sectPr>${types.map(([kind, id, type]) => `<w:${kind}Reference r:id="${id}"${type ? ` w:type="${type}"` : ''}/>`).join('')}</w:sectPr>`
       const docs = [
-        sectRefs([['header', 'rId1', 'default'], ['footer', 'rId2']]),
-        sectRefs([['header', 'rId3', 'even'], ['header', 'rId1', 'odd']]),
+        sectRefs([
+          ['header', 'rId1', 'default'],
+          ['footer', 'rId2'],
+        ]),
+        sectRefs([
+          ['header', 'rId3', 'even'],
+          ['header', 'rId1', 'odd'],
+        ]),
         sectRefs([['header', 'rId1']]),
         sectRefs([['header', 'rId404', 'default']]),
         sectRefs([]),
@@ -1308,7 +2081,9 @@ const BATCH2: CallSpec[] = [
           (['default', 'first', 'even'] as const).map((hfType) => ({
             text: MINI_DOCUMENT(sectPr),
             args: {
-              parts: hfParts(body, hfXml('ftr', HF_BODIES[1]!), [['word/header2.xml', hfXml('hdr', HF_BODIES[2]!)]]),
+              parts: hfParts(body, hfXml('ftr', HF_BODIES[1]!), [
+                ['word/header2.xml', hfXml('hdr', HF_BODIES[2]!)],
+              ]),
               compat: COMPAT15,
               compatibilityMode: 15,
               kind,
@@ -1322,21 +2097,42 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.parseAllHfParts',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) => {
       const doc = await docOf(args)
-      return internals.parseAllHfParts!(doc.zip, doc.rels, doc.styles, doc.themeColors, args.compatibilityMode, doc.themeFonts, resolverOf(doc, args), args.sourcePath)
+      return internals.parseAllHfParts!(
+        doc.zip,
+        doc.rels,
+        doc.styles,
+        doc.themeColors,
+        args.compatibilityMode,
+        doc.themeFonts,
+        resolverOf(doc, args),
+        args.sourcePath,
+      )
     },
     fromParse: {
       fn: 'parseAllHfParts',
       input: ([, , , , compatibilityMode, , , sourcePath], parts) => {
         const kept = partsOf(parts)
-        return kept ? { args: { parts: kept, compat: { compatibilityMode }, compatibilityMode: compatibilityMode ?? 0, sourcePath: sourcePath ?? 'word/document.xml' } } : undefined
+        return kept
+          ? {
+              args: {
+                parts: kept,
+                compat: { compatibilityMode },
+                compatibilityMode: compatibilityMode ?? 0,
+                sourcePath: sourcePath ?? 'word/document.xml',
+              },
+            }
+          : undefined
       },
     },
     built: [COMPAT15, COMPAT14].flatMap((compat) =>
       [0, 3, 6, 7].map((i) => ({
         args: {
-          parts: hfParts(hfXml('hdr', HF_BODIES[i]!), hfXml('ftr', HF_BODIES[i + 1] ?? ''), [['word/header2.xml', hfXml('hdr', HF_BODIES[9]!)]]),
+          parts: hfParts(hfXml('hdr', HF_BODIES[i]!), hfXml('ftr', HF_BODIES[i + 1] ?? ''), [
+            ['word/header2.xml', hfXml('hdr', HF_BODIES[9]!)],
+          ]),
           compat,
           compatibilityMode: compat.compatibilityMode,
           sourcePath: 'word/document.xml',
@@ -1350,21 +2146,39 @@ const BATCH2: CallSpec[] = [
     call: async (text, args) => {
       const doc = await docOf(args)
       const paras: unknown[] = []
-      if (Array.isArray(args.runImageIds)) weakMaps.hfRunImageIds!.set(paras, new Set(args.runImageIds as string[]))
-      const images = (await internals.hfImages!(doc.zip, args.partPath, text, Array.isArray(args.runImageIds) ? paras : undefined)) as object[]
-      return { images, anchorIds: images.map((image) => weakMaps.hfImageAnchorId!.get(image) ?? null) }
+      if (Array.isArray(args.runImageIds))
+        weakMaps.hfRunImageIds!.set(paras, new Set(args.runImageIds as string[]))
+      const images = (await internals.hfImages!(
+        doc.zip,
+        args.partPath,
+        text,
+        Array.isArray(args.runImageIds) ? paras : undefined,
+      )) as object[]
+      return {
+        images,
+        anchorIds: images.map((image) => weakMaps.hfImageAnchorId!.get(image) ?? null),
+      }
     },
     fromParse: {
       fn: 'hfImages',
       input: ([, partPath, partXml, paras], parts) => {
         const kept = partsOf(parts)
-        const ids = Array.isArray(paras) ? [...((weakMaps.hfRunImageIds!.get(paras) as Set<string> | undefined) ?? [])] : undefined
+        const ids = Array.isArray(paras)
+          ? [...((weakMaps.hfRunImageIds!.get(paras) as Set<string> | undefined) ?? [])]
+          : undefined
         return typeof partPath === 'string' && typeof partXml === 'string' && kept
           ? { text: partXml, args: { parts: kept, partPath, ...(ids ? { runImageIds: ids } : {}) } }
           : undefined
       },
     },
-    built: HF_PARTS().map((text) => ({ text, args: { parts: hfParts(text), partPath: 'word/header1.xml', runImageIds: ['8'] } })),
+    built: HF_PARTS().map((text) => ({
+      text,
+      args: {
+        parts: hfParts(text, '', [['word/media/logo.png', 'logo bytes']]),
+        partPath: 'word/header1.xml',
+        runImageIds: ['8'],
+      },
+    })),
   },
   {
     fn: 'parse.hfGroupPictures',
@@ -1376,33 +2190,85 @@ const BATCH2: CallSpec[] = [
       fn: 'hfGroupPictures',
       input: ([, rels, frag, sourcePath], parts) => {
         const kept = partsOf(parts)
-        return typeof frag === 'string' && kept && rels instanceof Map ? { text: frag, args: { parts: kept, sourcePath: sourcePath ?? 'word/document.xml' } } : undefined
+        return typeof frag === 'string' && kept && rels instanceof Map
+          ? { text: frag, args: { parts: kept, sourcePath: sourcePath ?? 'word/document.xml' } }
+          : undefined
       },
     },
     built: (() => {
-      const pic = (off: string, ext: string, extra = ''): string => `<pic:pic><pic:blipFill><a:blip r:embed="rId4"/>${extra}</pic:blipFill><pic:spPr><a:xfrm><a:off ${off}/><a:ext ${ext}/></a:xfrm></pic:spPr></pic:pic>`
-      const grp = (inner: string, anchor = '<wp:positionH relativeFrom="page"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="margin"><wp:posOffset>190500</wp:posOffset></wp:positionV>', xfrm = '<a:off x="0" y="0"/><a:ext cx="2000000" cy="1000000"/><a:chOff x="0" y="0"/><a:chExt cx="1000000" cy="500000"/>'): string =>
+      const pic = (off: string, ext: string, extra = ''): string =>
+        `<pic:pic><pic:blipFill><a:blip r:embed="rId4"/>${extra}</pic:blipFill><pic:spPr><a:xfrm><a:off ${off}/><a:ext ${ext}/></a:xfrm></pic:spPr></pic:pic>`
+      const grp = (
+        inner: string,
+        anchor = '<wp:positionH relativeFrom="page"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="margin"><wp:posOffset>190500</wp:posOffset></wp:positionV>',
+        xfrm = '<a:off x="0" y="0"/><a:ext cx="2000000" cy="1000000"/><a:chOff x="0" y="0"/><a:chExt cx="1000000" cy="500000"/>',
+      ): string =>
         `<w:drawing><wp:anchor behindDoc="1">${anchor}<wp:wrapNone/><wpg:wgp><wpg:grpSpPr><a:xfrm>${xfrm}</a:xfrm></wpg:grpSpPr>${inner}</wpg:wgp></wp:anchor></w:drawing>`
+      const base = grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'))
+      const twin = (
+        drawing: string,
+        hidden = '',
+        fbOpen = '<mc:Fallback>',
+        fbClose = '</mc:Fallback>',
+      ): string =>
+        `${hidden}<mc:AlternateContent><mc:Choice Requires="wpg">${drawing}</mc:Choice>${fbOpen}<w:pict><v:group><wp:positionH relativeFrom="page"><wp:posOffset>1</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>2</wp:posOffset></wp:positionV></v:group></w:pict>${fbClose}</mc:AlternateContent>`
       return [
-        grp(pic('x="0" y="0"', 'cx="500000" cy="250000"') + pic('x="500000" y="250000"', 'cx="500000" cy="250000"', '<a:srcRect l="25000"/>')),
+        grp(
+          pic('x="0" y="0"', 'cx="500000" cy="250000"') +
+            pic('x="500000" y="250000"', 'cx="500000" cy="250000"', '<a:srcRect l="25000"/>'),
+        ),
         grp(pic('x="0" y="0"', 'cx="500000" cy="250000"')),
         grp(pic('x="0" y="0"', 'cx="0" cy="250000"')),
-        grp(`<pic:pic><pic:blipFill><a:blip r:embed="rId4"/></pic:blipFill><pic:spPr><a:xfrm rot="5400000"><a:off x="0" y="0"/><a:ext cx="5" cy="5"/></a:xfrm></pic:spPr></pic:pic>`),
-        grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'), '<wp:positionH relativeFrom="page"><wp:align>left</wp:align></wp:positionH>'),
+        grp(
+          `<pic:pic><pic:blipFill><a:blip r:embed="rId4"/></pic:blipFill><pic:spPr><a:xfrm rot="5400000"><a:off x="0" y="0"/><a:ext cx="5" cy="5"/></a:xfrm></pic:spPr></pic:pic>`,
+        ),
+        grp(
+          pic('x="0" y="0"', 'cx="500000" cy="250000"'),
+          '<wp:positionH relativeFrom="page"><wp:align>left</wp:align></wp:positionH>',
+        ),
         grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'), undefined, '<a:off x="5" y="5"/>'),
         grp('<pic:pic><pic:blipFill><a:blip r:embed="rId404"/></pic:blipFill></pic:pic>'),
         grp(''),
-      ].map((text) => ({ text, args: { parts: miniParts(), sourcePath: 'word/document.xml' } }))
+        // the drawing with its fallback twin (whose own anchor must not be read) in
+        // spellings a literal search for the tags reads wrongly
+        twin(base),
+        ...hiddenIn('<mc:Fallback>').map((hidden) => twin(base, hidden)),
+        ...hiddenIn('</mc:Fallback>').map((hidden) => twin(base, '', `<mc:Fallback>${hidden}`)),
+        twin(base, '', '<mc:Fallback a=">">'),
+        twin(base, '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
+      ].map((text) => ({
+        text,
+        args: {
+          parts: miniParts([['word/media/image1.png', 'picture bytes']]),
+          sourcePath: 'word/document.xml',
+        },
+      }))
     })(),
   },
   {
     fn: 'parse.parseFieldTree',
     call: (text) => {
-      const frame = (f: Record<string, unknown>): unknown => ({ ...f, children: (f.children as Array<Record<string, unknown>>).map(frame) })
+      const frame = (f: Record<string, unknown>): unknown => ({
+        ...f,
+        children: (f.children as Array<Record<string, unknown>>).map(frame),
+      })
       return (internals.parseFieldTree!(text) as Array<Record<string, unknown>>).map(frame)
     },
-    fromParse: { fn: 'parseFieldTree', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
-    built: [PAGE_FLD, NUM_FLD, NESTED_FLD, UNCLOSED_FLD, DATE_FLD + PAGE_FLD, '<w:r><w:fldChar w:fldCharType="end"/></w:r>', '<w:r><w:fldChar w:fldCharType=\'begin\'></w:fldChar></w:r>', '<w:r><w:instrText>stray</w:instrText></w:r>', ''].map((text) => ({ text })),
+    fromParse: {
+      fn: 'parseFieldTree',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
+    built: [
+      PAGE_FLD,
+      NUM_FLD,
+      NESTED_FLD,
+      UNCLOSED_FLD,
+      DATE_FLD + PAGE_FLD,
+      '<w:r><w:fldChar w:fldCharType="end"/></w:r>',
+      "<w:r><w:fldChar w:fldCharType='begin'></w:fldChar></w:r>",
+      '<w:r><w:instrText>stray</w:instrText></w:r>',
+      '',
+    ].map((text) => ({ text })),
   },
   // ------------------------------------------------------- inline-opaque.ts
   {
@@ -1411,7 +2277,7 @@ const BATCH2: CallSpec[] = [
     built: [
       `<?xml version="1.0"?><w:document xmlns:w="${WNS}" xmlns:w14="${W14}" xml:space="preserve">`,
       `<!-- c --><?pi x?><!DOCTYPE d><w:hdr xmlns:w="${WNS}" a="xmlns:fake:x"/>`,
-      '  <w:hdr xmlns:w=\'a&amp;b\' xmlns:w=\'c\' xmlns:v=""/>',
+      "  <w:hdr xmlns:w='a&amp;b' xmlns:w='c' xmlns:v=\"\"/>",
       '<w:hdr xmlns:a="1" xmlns:b="2"',
       '<?xml version="1.0"?>',
       '\uFEFF<w:hdr xmlns:x="u"/>',
@@ -1422,7 +2288,18 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.isInlineWrapper',
     call: (_text, args) => isInlineWrapper(args.name as string),
-    built: ['w:sdt', 'w:smartTag', 'w:customXml', 'w:dir', 'w:bdo', 'w:r', 'constructor', '__proto__', 'toString', ''].map((name) => ({ args: { name } })),
+    built: [
+      'w:sdt',
+      'w:smartTag',
+      'w:customXml',
+      'w:dir',
+      'w:bdo',
+      'w:r',
+      'constructor',
+      '__proto__',
+      'toString',
+      '',
+    ].map((name) => ({ args: { name } })),
     mutation: 'none',
   },
   {
@@ -1440,7 +2317,15 @@ const BATCH2: CallSpec[] = [
     call: (_text, args) => validInlineWrap(args.wrap, entriesOf(args.namespaces)),
     built: WRAPS.flatMap((w) => [
       { args: { wrap: w } },
-      { args: { wrap: w, namespaces: [['w', WNS], ['w14', W14]] } },
+      {
+        args: {
+          wrap: w,
+          namespaces: [
+            ['w', WNS],
+            ['w14', W14],
+          ],
+        },
+      },
       { args: { wrap: w, namespaces: [['w', WNS]] } },
     ]),
     mutation: 'none',
@@ -1449,8 +2334,15 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.rawElements',
     call: (text, args) => {
-      const flat = (e: Record<string, unknown>): unknown => ({ ...e, children: (e.children as Array<Record<string, unknown>>).map(flat) })
-      return (rawElements(text, args.skipNonElements === true) as unknown as Array<Record<string, unknown>>).map(flat)
+      const flat = (e: Record<string, unknown>): unknown => ({
+        ...e,
+        children: (e.children as Array<Record<string, unknown>>).map(flat),
+      })
+      return (
+        rawElements(text, args.skipNonElements === true) as unknown as Array<
+          Record<string, unknown>
+        >
+      ).map(flat)
     },
     built: [
       '<w:a><w:b x="1>2"/><w:c>t</w:c></w:a>',
@@ -1469,15 +2361,32 @@ const BATCH2: CallSpec[] = [
     fn: 'parse.inlineWrapperShell',
     call: (text, args) => {
       const node = elementOf(text)
-      const shell = inlineWrapperShell(node, args.withSource === true ? inlineRawSource(text, node) : undefined)
-      return shell && { open: shell.open, close: shell.close, content: shell.content.map(serializeXNode) }
+      const shell = inlineWrapperShell(
+        node,
+        args.withSource === true ? inlineRawSource(text, node) : undefined,
+      )
+      return (
+        shell && {
+          open: shell.open,
+          close: shell.close,
+          content: shell.content.map(serializeXNode),
+        }
+      )
     },
     built: SHELL_XMLS.flatMap((text) => [{ text }, { text, args: { withSource: true } }]),
   },
   {
     fn: 'parse.sameInlineWrap',
     call: (_text, args) => sameInlineWrap(args.a as never, args.b as never),
-    built: [[undefined, undefined], [WRAPS[0], undefined], [WRAPS[0], WRAPS[0]], [WRAPS[0], WRAPS[1]], [WRAPS[0], { ...WRAPS[0], seq: 2 }], [WRAPS[0], { ...WRAPS[0], open: 'x' }], [WRAPS[0], { ...WRAPS[0], close: 'x' }]].map(([a, b]) => ({ args: json({ ...(a ? { a } : {}), ...(b ? { b } : {}) }) })),
+    built: [
+      [undefined, undefined],
+      [WRAPS[0], undefined],
+      [WRAPS[0], WRAPS[0]],
+      [WRAPS[0], WRAPS[1]],
+      [WRAPS[0], { ...WRAPS[0], seq: 2 }],
+      [WRAPS[0], { ...WRAPS[0], open: 'x' }],
+      [WRAPS[0], { ...WRAPS[0], close: 'x' }],
+    ].map(([a, b]) => ({ args: json({ ...(a ? { a } : {}), ...(b ? { b } : {}) }) })),
     mutation: 'none',
     argMutation: true,
   },
@@ -1491,7 +2400,17 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.sameInlineWrapChain',
     call: (_text, args) => sameInlineWrapChain(args.a as never, args.b as never),
-    built: [[undefined, undefined], [[], undefined], [[WRAPS[0]], [WRAPS[0]]], [[WRAPS[0], WRAPS[4]], [WRAPS[0], WRAPS[4]]], [[WRAPS[0]], [WRAPS[1]]], [[WRAPS[0]], [WRAPS[0], WRAPS[4]]]].map(([a, b]) => ({ args: json({ ...(a ? { a } : {}), ...(b ? { b } : {}) }) })),
+    built: [
+      [undefined, undefined],
+      [[], undefined],
+      [[WRAPS[0]], [WRAPS[0]]],
+      [
+        [WRAPS[0], WRAPS[4]],
+        [WRAPS[0], WRAPS[4]],
+      ],
+      [[WRAPS[0]], [WRAPS[1]]],
+      [[WRAPS[0]], [WRAPS[0], WRAPS[4]]],
+    ].map(([a, b]) => ({ args: json({ ...(a ? { a } : {}), ...(b ? { b } : {}) }) })),
     mutation: 'none',
     argMutation: true,
   },
@@ -1512,12 +2431,30 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.sdtFollowsItsText',
     call: (text) => sdtFollowsItsText(text),
-    built: WRAPS.map((w) => ({ text: String(w.open) })).concat(['<w:sdt><w:sdtPr><w:dataBinding/></w:sdtPr>', '<w:sdtX><w:showingPlcHdr/>', '<w:sdt>', ''].map((text) => ({ text }))),
+    built: WRAPS.map((w) => ({ text: String(w.open) })).concat(
+      [
+        '<w:sdt><w:sdtPr><w:dataBinding/></w:sdtPr>',
+        '<w:sdtX><w:showingPlcHdr/>',
+        '<w:sdt>',
+        '',
+      ].map((text) => ({ text })),
+    ),
   },
   {
     fn: 'parse.inlineWrapTextOf',
-    call: (_text, args) => inlineWrapTextOf(args.runs as never, args.from as number | undefined, args.to as number | undefined),
-    built: [{ runs: runsIn(0, 1, 2, 3) }, { runs: runsIn(0, 1, 2, 3), from: 1 }, { runs: runsIn(0, 1, 2, 3), from: 1, to: 3 }, { runs: [] }, { runs: runsIn(0), from: 5 }].map((args) => ({ args })),
+    call: (_text, args) =>
+      inlineWrapTextOf(
+        args.runs as never,
+        args.from as number | undefined,
+        args.to as number | undefined,
+      ),
+    built: [
+      { runs: runsIn(0, 1, 2, 3) },
+      { runs: runsIn(0, 1, 2, 3), from: 1 },
+      { runs: runsIn(0, 1, 2, 3), from: 1, to: 3 },
+      { runs: [] },
+      { runs: runsIn(0), from: 5 },
+    ].map((args) => ({ args })),
     mutation: 'none',
     argMutation: true,
   },
@@ -1554,7 +2491,18 @@ const BATCH2: CallSpec[] = [
   {
     fn: 'parse.runCopiedElsewhere',
     call: (_text, args) => runCopiedElsewhere(args.run as never),
-    built: RUNS.map((run) => ({ args: { run } })).concat([{ args: { run: { text: 'k', wrap: [wrap(), wrap({ open: '<w:dir w:val="rtl">', close: '</w:dir>' })], ins: { author: 'a' } } } }, { args: { run: { text: 'z', wrap: [wrap()], link: { href: 'h' } } } }]),
+    built: RUNS.map((run) => ({ args: { run } })).concat([
+      {
+        args: {
+          run: {
+            text: 'k',
+            wrap: [wrap(), wrap({ open: '<w:dir w:val="rtl">', close: '</w:dir>' })],
+            ins: { author: 'a' },
+          },
+        },
+      },
+      { args: { run: { text: 'z', wrap: [wrap()], link: { href: 'h' } } } },
+    ]),
     mutation: 'none',
     argMutation: true,
   },

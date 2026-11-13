@@ -5,7 +5,6 @@ import {
   cleanMoveRangeMarkers,
   resolvePropChangeXml,
 } from './revision-xml'
-import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 import {
   applyImageWrap,
   generateParagraphXml,
@@ -31,7 +30,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
-import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
+import { hfKeptRoot, hfRootOpen, hfWrapNamespaces } from './hf-root'
 import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import {
@@ -115,7 +114,16 @@ import {
   watermarkParagraphXml,
   type Watermark,
 } from './watermark'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { escapeXmlAttr, escapeXmlText, findChildren } from './xml-utils'
+import { commentEntries } from './comment-slices'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withRedactRoot,
+} from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -1569,9 +1577,7 @@ export async function saveDocx(
     if (originalCommentsXml) {
       const origRelsFile = zip.file('word/_rels/comments.xml.rels')
       const origRels = origRelsFile ? await origRelsFile.async('string') : null
-      for (const m of originalCommentsXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-        const id = /w:id="([^"]+)"/.exec(m)?.[1]
-        if (!id) continue
+      for (const { id, xml: m } of commentEntries(originalCommentsXml)) {
         const blipRel = /r:embed="([^"]+)"/.exec(m)?.[1]
         const rel =
           blipRel && origRels
@@ -2107,61 +2113,10 @@ export async function saveDocx(
   // The same for the "withheld from the model" marker. An undeclared prefix is
   // not a warning, it is a parse error: Word and LibreOffice both offer to
   // repair the file and drop the run that carried it, which loses the reader's
-  // mark and hands the span back to the model on the next open.
-  //
-  // `mc:Ignorable` is the mechanism OOXML provides for exactly this — an
-  // element in a namespace the consumer does not know is skipped rather than
-  // treated as a schema violation, so the label rides along without the
-  // border's run failing a strict validator.
-  //
-  // A root that already declares `xmlns:mc` (every Word-saved file does) must
-  // not get a second one: a duplicate attribute is the same parse error this
-  // block exists to prevent. Its existing Ignorable list is extended instead.
-  const docRoot = findStartTag(newDocumentXml, 'w:document')
-  if (
-    newDocumentXml.includes(`<${REDACT_EL}`) &&
-    docRoot &&
-    !docRoot.text.includes(`xmlns:${REDACT_PREFIX}=`)
-  ) {
-    let next = docRoot.text
-    if (!/xmlns:mc=/.test(next)) {
-      next = next.replace(
-        '<w:document',
-        '<w:document xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"',
-      )
-    }
-    next = next.replace('<w:document', `<w:document xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
-    const ignorable = /mc:Ignorable="([^"]*)"/.exec(next)
-    if (ignorable) {
-      if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
-        const existing = (ignorable[1] ?? '').trim()
-        next = next.replace(
-          /mc:Ignorable="[^"]*"/,
-          `mc:Ignorable="${existing ? `${existing} ${REDACT_PREFIX}` : REDACT_PREFIX}"`,
-        )
-      }
-    } else {
-      next = next.replace('<w:document', `<w:document mc:Ignorable="${REDACT_PREFIX}"`)
-    }
-    // a Word re-save drops every element whose namespace it does not process
-    // unless the root asks for it to be preserved verbatim — and a root that
-    // already preserves other elements needs ours added to that list, the
-    // same way the Ignorable list above is extended
-    const preserve = /mc:PreserveElements="([^"]*)"/.exec(next)
-    if (preserve) {
-      if (!new RegExp(`\\b${REDACT_EL}\\b`).test(preserve[1] ?? '')) {
-        const existing = (preserve[1] ?? '').trim()
-        next = next.replace(
-          /mc:PreserveElements="[^"]*"/,
-          `mc:PreserveElements="${existing ? `${existing} ${REDACT_EL}` : REDACT_EL}"`,
-        )
-      }
-    } else {
-      next = next.replace('<w:document', `<w:document mc:PreserveElements="${REDACT_EL}"`)
-    }
-    newDocumentXml =
-      newDocumentXml.slice(0, docRoot.start) + next + newDocumentXml.slice(docRoot.end)
-  }
+  // mark and hands the span back to the model on the next open. The root also
+  // lists the mark as ignorable and preserved (withRedactRoot), as every other
+  // story part written here does.
+  newDocumentXml = withRedactRoot(newDocumentXml)
 
   if (newDocumentXml.includes(' w16du:dateUtc=')) {
     const root = findStartTag(newDocumentXml, 'w:document')
@@ -2358,7 +2313,7 @@ export async function saveDocx(
     if (name === docPath) {
       out.file(name, newDocumentXml, { date: entry.date })
     } else if (hfPart) {
-      out.file(name, hfPart.xml, { date: entry.date })
+      out.file(name, withRedactRoot(hfPart.xml), { date: entry.date })
     } else if (hfRelsOut.has(name)) {
       out.file(name, hfRelsOut.get(name)!, { date: entry.date })
     } else if (name === relsPath && relsChanged && relsXml) {
@@ -2392,9 +2347,16 @@ export async function saveDocx(
     } else if (name === CORE_PROPS_PATH && coreXmlOut !== null) {
       out.file(name, coreXmlOut, { date: entry.date })
     } else if (options.partXml && ownValue(options.partXml, name) !== undefined) {
-      out.file(name, options.partXml[name], { date: entry.date })
+      out.file(name, withRedactRoot(options.partXml[name]!), { date: entry.date })
     } else if (options.partBinary && ownValue(options.partBinary, name) !== undefined) {
       out.file(name, options.partBinary[name], { base64: true, date: entry.date })
+    } else if (/^word\/[^/]+\.xml$/.test(name)) {
+      // a story part kept as it was still carries its marks into the copy:
+      // its root says so (withRedactRoot), as the parts written anew do
+      const xml = await entry.async('string')
+      const marked = withRedactRoot(xml)
+      if (marked === xml) out.file(name, await entry.async('uint8array'), { date: entry.date })
+      else out.file(name, marked, { date: entry.date })
     } else {
       out.file(name, await entry.async('uint8array'), { date: entry.date })
     }
@@ -2403,7 +2365,7 @@ export async function saveDocx(
     out.file(media.path, media.base64, { base64: true })
   }
   for (const part of hfParts) {
-    if (!zip.file(part.path)) out.file(part.path, part.xml)
+    if (!zip.file(part.path)) out.file(part.path, withRedactRoot(part.xml))
   }
   for (const [path, xml] of hfRelsOut) {
     if (!zip.file(path)) out.file(path, xml)
@@ -2598,7 +2560,7 @@ function withWatermarkNs(openTag: string): string {
     'xmlns:o="urn:schemas-microsoft-com:office:office"',
     'xmlns:w10="urn:schemas-microsoft-com:office:word"',
   ]) {
-    if (!out.includes(ns.split('=')[0] + '=')) out = out.replace(/>$/, ` ${ns}>`)
+    if (!new RegExp(`\\s${ns.split('=')[0]}\\s*=`).test(out)) out = out.replace(/>$/, ` ${ns}>`)
   }
   return out
 }
@@ -2857,7 +2819,7 @@ function headerFooterPartXml(
   }
   return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
+      `${hfRootOpen(root, originalXml)}${body}</${root}>`,
   )
 }
 
@@ -2882,9 +2844,8 @@ function buildCommentsXml(
 ): string {
   const originals = new Map<string, { text: string; xml: string }>()
   if (originalXml) {
-    for (const m of originalXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-      const id = /w:id="([^"]+)"/.exec(m)?.[1]
-      if (id) originals.set(id, { text: commentPlainText(m), xml: m })
+    for (const { id, xml: m } of commentEntries(originalXml)) {
+      originals.set(id, { text: commentPlainText(m), xml: m })
     }
   }
   const body = comments
@@ -2899,6 +2860,9 @@ function buildCommentsXml(
         const patched = patchParagraphTexts(orig.xml, c.text)
         if (patched !== null) return patched
       }
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the comment is hidden under the first label it carried
+      const hiddenLabel = orig && hasWithheldTrace(orig.xml) ? firstMarkLabel(orig.xml) : null
       const attrs =
         `w:id="${escapeXmlAttr(c.id)}" w:author="${escapeXmlAttr(c.author)}"` +
         (c.initials ? ` w:initials="${escapeXmlAttr(c.initials)}"` : '') +
@@ -2916,7 +2880,8 @@ function buildCommentsXml(
       if (run && paras.length > 0) {
         paras[paras.length - 1] = paras[paras.length - 1]!.replace(/<\/w:p>$/, `${run}</w:p>`)
       }
-      return `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      const entry = `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      return hiddenLabel === null ? entry : overWithheld(entry, hiddenLabel)
     })
     .join('')
   // Rebuilt comments always emit w14:paraId (ensured above), so w14 must be bound even
@@ -2931,7 +2896,9 @@ function buildCommentsXml(
         }
       : {}),
   })
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`
+  return withRedactRoot(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`,
+  )
 }
 
 /** word/commentsExtended.xml: one commentEx per comment (reply parent-child + resolved flag) */
@@ -2956,28 +2923,10 @@ function buildCommentsExtendedXml(comments: CommentInfo[]): string {
   )
 }
 
-/** Aligned with parseComments' textOf: each w:p's w:t text, '\n' between paragraphs */
+/** A comment's text as parseComments reads it, so an unchanged comment keeps its bytes */
 function commentPlainText(commentXml: string): string {
-  const paras: string[] = []
-  // the self-closing form first: the open-to-close alternative would swallow it
-  const pRe = /<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>/g
-  let p: RegExpExecArray | null
-  while ((p = pRe.exec(commentXml)) !== null) {
-    const texts: string[] = []
-    const tRe = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g
-    let t: RegExpExecArray | null
-    while ((t = tRe.exec(p[0])) !== null) texts.push(t[1])
-    paras.push(
-      texts
-        .join('')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&amp;/g, '&'),
-    )
-  }
-  return paras.join('\n')
+  const node = parseEntry(commentXml)
+  return node ? findChildren(node, 'w:p').map(runsText).join('\n') : ''
 }
 
 /** set or remove <w:documentProtection> at its CT_Settings position */

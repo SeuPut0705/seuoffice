@@ -195,11 +195,22 @@ pub enum DocPrId {
     Number(f64),
 }
 
+/// A `docPrId` that is NaN or an infinity crosses as its spelling: it is that number, not a text.
+fn doc_pr_id<'de, D: Deserializer<'de>>(d: D) -> Result<DocPrId, D::Error> {
+    Ok(match DocPrId::deserialize(d)? {
+        DocPrId::Text(text) if matches!(text.as_str(), "NaN" | "Infinity" | "-Infinity") => {
+            DocPrId::Number(to_number(&text))
+        }
+        other => other,
+    })
+}
+
 /// `InlinePictureXmlOptions`
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InlinePictureXmlOptions {
     pub r_id: String,
+    #[serde(deserialize_with = "doc_pr_id")]
     pub doc_pr_id: DocPrId,
     #[serde(deserialize_with = "wire")]
     pub width_px: f64,

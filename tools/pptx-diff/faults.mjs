@@ -2066,7 +2066,7 @@ const faults = [
     'parse-fill-attr-quote-unescaped',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/fill.rs',
-    "        .replace('\"', \"&quot;\")",
+    '        .replace(\'"\', "&quot;")',
     '',
   ],
   [
@@ -2187,7 +2187,7 @@ const faults = [
     'anim-tag-matches-self-closing',
     'pptxAnim.animation.readSlideTimingXml',
     leaf + 'animation/incremental.rs',
-    'self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b\'/\',',
+    "self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b'/',",
     'self_closing: false,',
   ],
   [
@@ -2205,7 +2205,7 @@ const env = {
   ...process.env,
   CARGO_BUILD_JOBS: '4',
   CARGO_TARGET_DIR: target,
-  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/debug/office_wasm.wasm'),
+  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/probe/office_wasm.wasm'),
 }
 if (process.argv.includes('--inventory')) {
   let stale = 0
@@ -2246,6 +2246,8 @@ const args = [
   resolve(workspace, 'crates/Cargo.toml'),
   '-p',
   'office-wasm',
+  '--profile',
+  'probe',
   '-j4',
 ]
 mkdirSync(out, { recursive: true })
@@ -2262,11 +2264,24 @@ const compareArgs = [
   '--calls-only',
   '--by-function',
 ]
+/** The calls group of a fault's function: `pptxParse.text.x` is `parse`. */
+const groupOf = (fn) => fn.split('.')[0].slice('pptx'.length).toLowerCase()
 const baselineBuild = run('cargo', args)
 if (baselineBuild.status !== 0) throw new Error(baselineBuild.stderr || String(baselineBuild.error))
-const baseline = run(process.execPath, compareArgs, { PPTX_DIFF_OUT: resolve(out, 'baseline') })
-writeFileSync(resolve(out, 'baseline.log'), (baseline.stdout ?? '') + (baseline.stderr ?? ''))
-if (baseline.status !== 0) throw new Error('fault baseline failed: out/faults/baseline.log')
+// The groups the selected faults are in, unfaulted: each must pass on its own
+// (every other group is the gate's), so a difference a probe finds is its fault's.
+for (const group of new Set(selected.map(([, fn]) => groupOf(fn)))) {
+  const baseline = run(process.execPath, [...compareArgs, '--group', group], {
+    PPTX_DIFF_OUT: resolve(out, `baseline-${group}`),
+  })
+  writeFileSync(
+    resolve(out, `baseline-${group}.log`),
+    (baseline.stdout ?? '') + (baseline.stderr ?? ''),
+  )
+  if (baseline.status !== 0)
+    throw new Error(`fault baseline failed: out/faults/baseline-${group}.log`)
+  console.log(`baseline ${group}: passed`)
+}
 const results = []
 for (const [id, fn, file, before, after, occurrences = 1] of selected) {
   const path = resolve(workspace, file)
@@ -2283,9 +2298,8 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
     )
     const build = run('cargo', args)
     if (build.status !== 0) throw new Error(build.stderr || String(build.error))
-    // Only the group of the faulted function: the baseline above compared them all.
-    const group = fn.split('.')[0].slice('pptx'.length).toLowerCase()
-    const compared = run(process.execPath, [...compareArgs, '--group', group], {
+    // Only the group of the faulted function: its baseline above passed.
+    const compared = run(process.execPath, [...compareArgs, '--group', groupOf(fn)], {
       PPTX_DIFF_OUT: resolve(out, id),
     })
     writeFileSync(resolve(out, `${id}.log`), (compared.stdout ?? '') + (compared.stderr ?? ''))

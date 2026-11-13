@@ -549,9 +549,9 @@ Input: the export list itself, read with the TS checker (`tools/docx-diff/bindin
 
 | const | Rust | binding |
 |---|---|---|
-| REDACT_EL | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
-| REDACT_NS | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
-| REDACT_PREFIX | docx-engine/src/save/save/body.rs | TS literal kept; generated parity check |
+| REDACT_EL | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
+| REDACT_NS | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
+| REDACT_PREFIX | docx-engine/src/withheld.rs | TS literal kept; generated parity check |
 | CONTENT_CONTROL_LOCKS | docx-engine/src/save/features/content_control.rs | TS literal kept; generated parity check |
 | DOCX_ZIP_LIMITS | NONE | TS literal kept; generated parity check |
 | LAZY_MEDIA_SCHEME | docx-engine/src/lazy_media.rs | TS literal kept; generated parity check |
@@ -584,3 +584,47 @@ Input: the export list itself, read with the TS checker (`tools/docx-diff/bindin
 | TOTAL_PAGES_MARK | docx-engine/src/parse/tables/hf_fields.rs | TS literal kept; generated parity check |
 | PAGE_MARK | docx-engine/src/parse/tables/hf_fields.rs | TS literal kept; generated parity check |
 | SECTION_PAGES_MARK | docx-engine/src/parse/tables/hf_fields.rs | TS literal kept; generated parity check |
+## Result of the render benchmark (main's decision 1)
+
+`.github/workflows/seuoffice-bench.yml`: the web Docs app opens and lays out
+the five largest tracked .docx in Chromium, built once with the wasm binding
+and once with the frozen TypeScript engine (`SEUOFFICE_DOCX_ENGINE=ts`),
+three alternating runs of five timed opens each; `compare.mjs` fails over 5%.
+
+| head | binding | total change | run |
+|---|---|---:|---|
+| 811947eba | every export through wasm | +13.2% | 43271681210 |
+| 308f88e16 | char-class predicates TypeScript only | +7.4% | 43326457815 |
+| 197759de0 | and `tocLevelOf` sends only the style it names | +3.0% | 43333168620 |
+
+Per document at 197759de0 (medians of 15 opens, ms):
+
+| document | TypeScript | wasm | change |
+|---|---:|---:|---:|
+| e2e/assets/cover-photo-with-textboxes.docx | 977 | 975 | -0.2% |
+| packages/docx2hwp/tests/fixtures/notice.docx | 947 | 994 | +5.0% |
+| packages/docx2hwp/tests/fixtures/nested.docx | 930 | 992 | +6.7% |
+| packages/docx2hwp/tests/fixtures/deep.docx | 991 | 976 | -1.5% |
+| packages/docx2hwp/tests/fixtures/tabs.docx | 930 | 980 | +5.4% |
+| total | 4775 | 4917 | +3.0% |
+
+What the profile found (per-function call counts and time in the page, run
+43330322662, and a 256 KiB collab edit in apps/docs tests):
+
+- `isEastAsianChar`, `isHangulChar`, `isCjkLetterChar` and the other
+  char-class predicates are called per character by the layout (12.6
+  million `isEastAsianChar` calls in one test, about 4 us each through the
+  binding). They stay TypeScript only (`HOT_PER_CHARACTER` in
+  `tools/docx-diff/binding/overrides.ts`): charClass, isHangulChar,
+  isEastAsianChar, isDoubleByteChar, isCjkLetterChar, isLatinAlnumChar,
+  textHasEastAsian, textHasHangulChars, isEastAsianLangTag. The Rust
+  copies without a Rust caller are deleted with their gate specs
+  (is_hangul_char, is_cjk_letter_char, is_latin_alnum_char,
+  text_has_east_asian, text_has_hangul_chars; is_east_asian_char is private
+  now). `char_class`, `is_double_byte_char` and `is_east_asian_lang_tag`
+  stay in Rust because the engine itself calls them (block_passes.rs,
+  hf_paras.rs); their exports are TypeScript, so each is implemented once
+  per side of the boundary, and the gate keeps comparing the two.
+- `tocLevelOf` took 560-600 ms per document: docStyleCss asks once per
+  paragraph style and each call carried the whole style map. The binding
+  now sends only the style it names; the export stays in Rust.

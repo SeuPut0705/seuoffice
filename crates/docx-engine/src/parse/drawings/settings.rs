@@ -6,20 +6,21 @@ use ooxml_pkg::Package;
 use serde::Serialize;
 
 use crate::model::{NoteProps, NotePropsNumRestart, NotePropsPos};
-use crate::package::{Thrown, part_text};
+use crate::package::{Thrown, canonical_part_text};
 use crate::section::{self, NotePrTag, note_props_from_xml, xml_flag_on};
 use crate::sources::{SourceInfo, find_sources_part, parse_sources_xml};
+use crate::xml_tag::remove_elements;
 
 const SETTINGS_PATH: &str = "word/settings.xml";
 
 /// `parseCompatibilityMode`: the compatSetting compatibilityMode of
 /// settings.xml, 0 when absent (legacy layout).
 pub fn parse_compatibility_mode(zip: &Package) -> Result<f64, Thrown> {
-    let Some(xml) = part_text(zip, SETTINGS_PATH)? else {
+    let Some(xml) = canonical_part_text(zip, SETTINGS_PATH)? else {
         return Ok(0.0);
     };
     // attribute order is generator-specific (w:val may precede w:name)
-    for tag in js_regex!(r"<w:compatSetting\b[^>]*>").find_iter(xml) {
+    for tag in js_regex!(r"<w:compatSetting\b[^>]*>").find_iter(&xml) {
         let tag = tag.as_str();
         if !js_regex!(r#"\sw:name="compatibilityMode""#).test(tag) {
             continue;
@@ -71,9 +72,10 @@ pub fn flag(xml: &str, tag: &str) -> Result<Option<bool>, Thrown> {
 /// Word's 720 twips) and the compatibility flags of settings.xml the layout
 /// reads.
 pub fn parse_layout_settings(zip: &Package) -> Result<LayoutSettings, Thrown> {
-    let Some(xml) = part_text(zip, SETTINGS_PATH)? else {
+    let Some(xml) = canonical_part_text(zip, SETTINGS_PATH)? else {
         return Ok(LayoutSettings::default());
     };
+    let xml = &*xml;
     let tab = js_regex!(r#"<w:defaultTabStop[^>]*w:val="(-?\d+)""#)
         .exec(xml)
         .and_then(|found| found.get(1));
@@ -130,10 +132,10 @@ pub fn model_note_props(read: section::NoteProps) -> NoteProps {
 /// `parseNoteProps`: the document-wide footnotePr / endnotePr, settings.xml
 /// overlaid by the final body sectPr (`{ ...base, ...own }`).
 pub fn parse_note_props(zip: &Package, document_xml: &str) -> Result<DocNoteProps, Thrown> {
-    let settings_xml = part_text(zip, SETTINGS_PATH)?.unwrap_or("");
+    let settings_xml = canonical_part_text(zip, SETTINGS_PATH)?.unwrap_or_default();
+    let settings_xml = &*settings_xml;
     // a tracked w:sectPrChange embeds the previous sectPr after the live one
-    let body_xml = js_regex!(r"<w:sectPrChange\b[\s\S]*?<\/w:sectPrChange>")
-        .replace_all(document_xml, |_| String::new());
+    let body_xml = remove_elements(document_xml, "w:sectPrChange", None);
     let last_sect_pr = body_xml.rfind("<w:sectPr").map_or("", |at| &body_xml[at..]);
     let merged = |tag: NotePrTag| {
         let base = note_props_from_xml(settings_xml, tag).map(model_note_props);
@@ -157,8 +159,8 @@ pub fn parse_note_props(zip: &Package, document_xml: &str) -> Result<DocNoteProp
 /// `<w:evenAndOddHeaders/>` (w:val="0|false" is off). `tag` goes into a
 /// pattern unescaped, as in the original.
 pub fn parse_settings_flag(zip: &Package, tag: &str) -> Result<bool, Thrown> {
-    match part_text(zip, SETTINGS_PATH)? {
-        Some(xml) => xml_flag_on(xml, tag).map_err(|error| error.to_string()),
+    match canonical_part_text(zip, SETTINGS_PATH)? {
+        Some(xml) => xml_flag_on(&xml, tag).map_err(|error| error.to_string()),
         None => Ok(false),
     }
 }
@@ -168,8 +170,8 @@ pub fn parse_sources(zip: &Package) -> Result<Vec<SourceInfo>, Thrown> {
     let Some(path) = find_sources_part(zip).map_err(|error| error.to_string())? else {
         return Ok(Vec::new());
     };
-    let xml = part_text(zip, &path)?.ok_or("the sources part is gone")?;
-    Ok(parse_sources_xml(xml))
+    let xml = canonical_part_text(zip, &path)?.ok_or("the sources part is gone")?;
+    Ok(parse_sources_xml(&xml))
 }
 
 /// What `readThemeFontLang` returns.
@@ -184,10 +186,10 @@ pub struct ThemeFontLang {
 
 /// `readThemeFontLang`: w:themeFontLang w:eastAsia / w:bidi of settings.xml.
 pub fn read_theme_font_lang(zip: &Package) -> Result<ThemeFontLang, Thrown> {
-    let Some(xml) = part_text(zip, SETTINGS_PATH)? else {
+    let Some(xml) = canonical_part_text(zip, SETTINGS_PATH)? else {
         return Ok(ThemeFontLang::default());
     };
-    let Some(tag) = js_regex!(r"<w:themeFontLang\b[^>]*>").exec(xml) else {
+    let Some(tag) = js_regex!(r"<w:themeFontLang\b[^>]*>").exec(&xml) else {
         return Ok(ThemeFontLang::default());
     };
     let tag = tag.as_str();

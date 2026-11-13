@@ -1,6 +1,11 @@
 import { fileURLToPath } from 'node:url'
 import { defaultClientConditions } from 'vite'
 import { defineConfig } from 'vitest/config'
+import {
+  ENGINE_NODE_SETUP,
+  engineWasmAsset,
+  engineWasmEnv,
+} from '../../packages/engine-wasm/src/vitest'
 
 // resolve sibling source packages by path (not via node_modules), so a git
 // worktree whose node_modules is linked to another checkout still tests
@@ -8,11 +13,15 @@ import { defineConfig } from 'vitest/config'
 const local = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 
 export default defineConfig({
+  // the engine behind @seuoffice/docx-engine: the mains start it from a ?asset path
+  plugins: [engineWasmAsset()],
   resolve: {
     conditions: ['seuoffice-source', ...defaultClientConditions],
     alias: {
       '@seuoffice/docx-engine/lazy-media': local('../../packages/docx-engine/src/lazy-media.ts'),
       '@seuoffice/docx-engine/zip-splice': local('../../packages/docx-engine/src/zip-splice.ts'),
+      '@seuoffice/docx-engine/init': local('../../packages/docx-engine/src/engine-init.ts'),
+      '@seuoffice/docx-engine/engine-url': local('../../packages/docx-engine/src/engine-url.ts'),
       '@seuoffice/docx-engine': local('../../packages/docx-engine/src/index.ts'),
       '@seuoffice/odt-engine': local('../../packages/odt-engine/src/index.ts'),
       '@seuoffice/docx2hwp': local('../../packages/docx2hwp/src/index.ts'),
@@ -96,8 +105,13 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    env: engineWasmEnv(),
     // the engine's display-only `effective` keys stay out of saved-model toEqual
-    setupFiles: [local('../../packages/docx-engine/tests/setup-equality.ts')],
+    setupFiles: [
+      // the alias skips the package's `node` entry: start the engine here
+      ENGINE_NODE_SETUP,
+      local('../../packages/docx-engine/tests/setup-equality.ts'),
+    ],
     environment: 'jsdom',
     testTimeout: 20000,
   },

@@ -83,13 +83,8 @@ pub fn char_class(cp: u32) -> CharClass {
     }
 }
 
-/// `isHangulChar`: hangul syllables, jamo and compatibility jamo
-pub fn is_hangul_char(cp: u32) -> bool {
-    char_class(cp) == CharClass::Hangul
-}
-
 /// `isEastAsianChar`: the scripts, their punctuation, symbols and width forms
-pub fn is_east_asian_char(cp: u32) -> bool {
+fn is_east_asian_char(cp: u32) -> bool {
     use CharClass::*;
     matches!(
         char_class(cp),
@@ -107,27 +102,6 @@ pub fn is_east_asian_char(cp: u32) -> bool {
 /// `isDoubleByteChar`: an East Asian character of full-width advance
 pub fn is_double_byte_char(cp: u32) -> bool {
     is_east_asian_char(cp) && char_class(cp) != CharClass::HalfwidthEa
-}
-
-/// `isCjkLetterChar`: the East Asian side of an autoSpaceDE/DN gap
-pub fn is_cjk_letter_char(cp: u32) -> bool {
-    use CharClass::*;
-    matches!(char_class(cp), Han | Kana | Hangul | Bopomofo)
-}
-
-/// `isLatinAlnumChar`: the other side of an autospace gap
-pub fn is_latin_alnum_char(cp: u32) -> bool {
-    matches!(char_class(cp), CharClass::LatinLetter | CharClass::Digit)
-}
-
-/// `textHasEastAsian`: by code point, a lone surrogate being one
-pub fn text_has_east_asian(text: &str) -> bool {
-    text.chars().any(|c| is_east_asian_char(u32::from(c)))
-}
-
-/// `textHasHangulChars`
-pub fn text_has_hangul_chars(text: &str) -> bool {
-    text.chars().any(|c| is_hangul_char(u32::from(c)))
 }
 
 /// `isEastAsianLangTag`: zh / ja / ko, or ja / zh only without `korean`

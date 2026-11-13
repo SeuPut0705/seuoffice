@@ -1,6 +1,6 @@
 // Group `section`: the readers of section.ts, watermark.ts and notes.ts, and
 // the parse-vml.ts helpers the watermark readers stand on.
-import { nextNoteId, parseNotesXml, rootAttributes } from './reference/notes'
+import { nextNoteId, noteModelText, parseNotesXml, rootAttributes } from './reference/notes'
 import {
   anchorRelH,
   anchorRelV,
@@ -25,12 +25,7 @@ import {
   sectionSettingsFromXml,
   xmlFlagOn,
 } from './reference/section'
-import type {
-  HfImage,
-  ParsedDoc,
-  SectionInfo,
-  SectionSettings,
-} from './reference/types'
+import type { HfImage, ParsedDoc } from './reference/types'
 import {
   isPictureWatermark,
   isPictureWatermarkShape,
@@ -50,6 +45,7 @@ import {
 } from './reference/watermark'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
+import { NOTE_PARTS } from './withheld-inputs'
 
 type NoteKind = 'footnote' | 'endnote'
 type NotePrTag = 'w:footnotePr' | 'w:endnotePr'
@@ -142,6 +138,11 @@ const SECT_PRS: string[] = [
   sectPr('<w:pgMar w:top="1440" w:left="1440" w:gutter="720"/>'),
   sectPr('<w:pgMar w:top="-1440" w:left="1440" w:gutter="567.5"/>'),
   sectPr('<w:pgMar w:gutter="-360"/>'),
+  // margins as another producer may spell them: single quotes, white space
+  // around `=`, a spaced `/>`; read, and rewritten in place, not added twice
+  sectPr(`<w:pgMar w:top = '1440' w:right="1800" w:bottom ='720' w:left= "1440" w:header='851'/>`),
+  sectPr(`<w:pgMar w:top='-1440' w:left='1440' w:gutter = '360' />`),
+  sectPr(`<w:pgMar w:top = "1440" w:footer=	'992'/>`),
   // columns, equal and unequal
   sectPr('<w:cols w:space="720" w:num="2"/>'),
   sectPr(
@@ -709,7 +710,32 @@ const NOTES_TEXTS: Array<[NoteKind, string]> = [
   ['footnote', NOTES_PART('footnote', '<w:footnote w:id="-3"><w:p/></w:footnote>')],
 ]
 
-const NOTE_INPUTS: Input[] = NOTES_TEXTS.map(([kind, text]) => ({ text, args: { kind } }))
+const NOTE_INPUTS: Input[] = [
+  ...NOTES_TEXTS.map(([kind, text]) => ({ text, args: { kind } })),
+  // hidden from AI: every spelling of the mark, every tag mutation, entries no run accounts for
+  ...NOTE_PARTS.flatMap((text) =>
+    (['footnote', 'endnote'] as const).map((kind) => ({
+      text: kind === 'endnote' ? text.replaceAll('w:footnote', 'w:endnote') : text,
+      args: { kind },
+    })),
+  ),
+]
+
+const DELETED = { author: 'Ann', date: '2026-01-01T00:00:00Z' }
+/** Display runs of notes, some hidden from AI under a label. */
+const RICH_PARAS: Array<Array<Array<Record<string, unknown>>>> = [
+  [],
+  [[]],
+  [[{ text: 'plain' }]],
+  [[{ text: 'a' }, { text: '1', redact: 'phone' }, { text: '2', redact: 'phone' }, { text: 'b' }, { text: 'x', redact: 'name' }, { text: 'y', redact: 'phone' }]],
+  [[{ text: 'a', redact: 'p' }], [{ text: 'b' }], [{ text: 'c', redact: 'q' }, { text: 'd', redact: 'q' }]],
+  [[{ text: 'gone', redact: 'p', del: DELETED }, { text: 'kept' }]],
+  [[{ text: 'a', redact: 'p', del: DELETED }, { text: 'b', redact: 'p' }, { text: 'c', del: DELETED }]],
+  [[{ text: 'a', redact: '' }, { text: 'b', redact: '{braces} <x> "q"' }, { text: 'c', redact: 'a'.repeat(50) }]],
+  [[{ text: 'a', redact: 'p', ins: { author: 'Bob' } }], [{ text: '', redact: 'p' }]],
+  [[{ text: 'a', redact: 'p' }, { text: 'b', del: DELETED, redact: 'q' }, { text: 'c', redact: 'p' }]],
+  [[{ text: '\u{1F600}', redact: '\u{1F600}'.repeat(25) }, { text: 'e', redact: 'e\u0301' }]],
+]
 
 const notePartsOf = (parts: ReadonlyMap<string, string>): Input[] =>
   (['footnote', 'endnote'] as const).flatMap((kind) => {
@@ -742,32 +768,11 @@ const ROOT_INPUTS: Input[] = ROOTS.flatMap((text) =>
   ),
 )
 
-/**
- * Page border sides and header/footer references are objects filled in file
- * order, which JSON compares without: they cross as their entries.
- */
-function orderedSettings(settings: SectionSettings): unknown {
-  const props = settings.pageBorderProps
-  if (!props) return settings
-  return { ...settings, pageBorderProps: { ...props, sides: Object.entries(props.sides ?? {}) } }
-}
-
-function orderedSection(section: SectionInfo): unknown {
-  return {
-    ...section,
-    settings: orderedSettings(section.settings),
-    headerRefs: Object.entries(section.headerRefs),
-    footerRefs: Object.entries(section.footerRefs),
-  }
-}
-
 export const SECTION: CallSpec[] = [
   {
     fn: 'section.sectionSettingsFromXml',
     call: (text, args) =>
-      orderedSettings(
-        sectionSettingsFromXml(text, { gutterAtTop: args.gutterAtTop as boolean | undefined }),
-      ),
+      sectionSettingsFromXml(text, { gutterAtTop: args.gutterAtTop as boolean | undefined }),
     fromDocument: (parts) =>
       sectPrsOf(parts).map((text) => ({ text, args: { gutterAtTop: gutterAtTopOf(parts) } })),
     built: SECT_PRS.flatMap((text) => [{ text }, { text, args: { gutterAtTop: true } }]),
@@ -791,7 +796,7 @@ export const SECTION: CallSpec[] = [
   },
   {
     fn: 'section.readSectionSettings',
-    call: (_text, args) => orderedSettings(readSectionSettings(parsedOf(args))),
+    call: (_text, args) => readSectionSettings(parsedOf(args)),
     fromDocument: (parts) => [
       { args: { blocks: blocksOf(documentOf(parts)), gutterAtTop: gutterAtTopOf(parts) } },
     ],
@@ -849,13 +854,11 @@ export const SECTION: CallSpec[] = [
   {
     fn: 'section.sectionFromSectPr',
     call: (text, args) =>
-      orderedSection(
-        sectionFromSectPr(
-          text,
-          args.first as number,
-          args.last as number,
-          args.gutterAtTop as boolean | undefined,
-        ),
+      sectionFromSectPr(
+        text,
+        args.first as number,
+        args.last as number,
+        args.gutterAtTop as boolean | undefined,
       ),
     fromDocument: (parts) =>
       sectPrsOf(parts).map((text, i) => ({
@@ -869,7 +872,7 @@ export const SECTION: CallSpec[] = [
   },
   {
     fn: 'section.readSections',
-    call: (_text, args) => readSections(parsedOf(args)).map(orderedSection),
+    call: (_text, args) => readSections(parsedOf(args)),
     fromDocument: (parts) => [
       { args: { blocks: blocksOf(documentOf(parts)), gutterAtTop: gutterAtTopOf(parts) } },
     ],
@@ -1100,6 +1103,13 @@ export const SECTION: CallSpec[] = [
     call: (text, args) => parseNotesXml(text, args.kind as NoteKind),
     fromDocument: notePartsOf,
     built: NOTE_INPUTS,
+  },
+  {
+    fn: 'section.noteModelText',
+    call: (_text, args) => noteModelText(args.richParas as Parameters<typeof noteModelText>[0]),
+    built: RICH_PARAS.map((richParas) => ({ args: { richParas } })),
+    mutation: 'none',
+    argMutation: true,
   },
   {
     fn: 'section.nextNoteId',

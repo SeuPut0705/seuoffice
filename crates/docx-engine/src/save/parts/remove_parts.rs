@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use jscompat::{js_regex, try_js_regex};
-use ooxml_pkg::{Package, load_docx_package};
+use ooxml_pkg::{Package, PartName, load_docx_package};
 use serde::{Deserialize, Serialize};
 
 use super::rels::{
@@ -171,7 +171,7 @@ fn wanted_parts(zip: &Package, options: &RemovePartsOptions) -> Result<Wanted, S
         };
         for part in zip.parts() {
             if !part.is_dir && part.name.starts_with(prefix) {
-                paths.add(part.name.clone());
+                paths.add(part.name.to_string());
             }
         }
     }
@@ -262,7 +262,7 @@ fn story_parts_of(zip: &Package) -> Result<Vec<String>, String> {
     }
     for part in zip.parts() {
         if !part.is_dir && js_regex!(r"^word\/(?:header|footer)[^/]*\.xml$", "i").test(&part.name) {
-            paths.add(part.name.clone());
+            paths.add(part.name.to_string());
         }
     }
     let mut out: Vec<String> = paths
@@ -434,7 +434,7 @@ fn drop_dangling_relationships(zip: &mut Package, removed: &PathSet) -> Result<(
         .parts()
         .iter()
         .filter(|part| !part.is_dir && part.name.ends_with(".rels"))
-        .map(|part| part.name.clone())
+        .map(|part| part.name.to_string())
         .collect();
     for path in names {
         let Some(source) = relationship_source_path(&path) else {
@@ -542,26 +542,29 @@ fn clean_content_types(zip: &mut Package, removed: &PathSet) -> Result<(), Strin
 /// `removeEmptyFolders`: drop explicit folder entries no remaining part sits under.
 fn remove_empty_folders(zip: &mut Package) {
     // snapshot first: removing a folder also drops its entries
-    let entries: Vec<(String, bool)> = zip
+    let entries: Vec<(PartName, bool)> = zip
         .parts()
         .iter()
         .map(|part| (part.name.clone(), part.is_dir))
         .collect();
-    let files: Vec<&str> = entries
+    let mut files: Vec<&str> = entries
         .iter()
         .filter(|(_, is_dir)| !is_dir)
         .map(|(name, _)| name.as_str())
         .collect();
-    let empty: Vec<String> = entries
+    // the names that start with a folder's name are one run of the sorted
+    // files, beginning at the first name not below it: one search per folder
+    files.sort_unstable();
+    let holds_a_file = |folder: &str| {
+        let at = files.partition_point(|file| *file < folder);
+        files.get(at).is_some_and(|file| file.starts_with(folder))
+    };
+    let empty: Vec<PartName> = entries
         .iter()
-        .filter(|(name, is_dir)| {
-            *is_dir && !files.iter().any(|file| file.starts_with(name.as_str()))
-        })
+        .filter(|(name, is_dir)| *is_dir && !holds_a_file(name.as_str()))
         .map(|(name, _)| name.clone())
         .collect();
-    for name in empty {
-        zip.remove(&name);
-    }
+    zip.remove_all(empty.iter().map(|name| name.as_str()));
 }
 
 /// `removePartsFromZip`
@@ -570,9 +573,7 @@ fn remove_parts_from_zip(zip: &mut Package, removed_paths: &[String]) -> Result<
     for path in removed_paths {
         removed.add(path.clone());
     }
-    for path in &removed.0 {
-        zip.remove(path);
-    }
+    zip.remove_all(&removed.0);
     drop_dangling_relationships(zip, &removed)?;
     clean_content_types(zip, &removed)?;
     remove_empty_folders(zip);

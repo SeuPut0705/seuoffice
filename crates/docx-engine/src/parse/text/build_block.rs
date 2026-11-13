@@ -1,8 +1,11 @@
 //! `buildBlock` of parse.ts: one body element as a block.
 
+use crate::xml_tag::remove_segments;
 use jscompat::{JsNum, js_regex, trim, try_js_regex};
+use ooxml_pkg::canonical_xml_syntax;
 use serde::Serialize;
 use serde_json::{Map, Value};
+use std::borrow::Cow;
 
 use super::context::BuildContext;
 use super::convert::{into_map, json, model_of, num};
@@ -18,7 +21,9 @@ use crate::fields::{
 };
 use crate::generate::split_xml_children;
 use crate::ink::strip_ink_runs;
-use crate::model::{Block, SectionSettings};
+use crate::model::{
+    Block, BlockType, DiagramDisplay, Run, SectionSettings, SharedStr, TableModel, TextboxDisplay,
+};
 use crate::package::{Thrown, parse_part};
 use crate::parse::drawings::diagram::{
     extract_diagram_drawing, extract_diagram_text, extract_locked_canvas,
@@ -45,6 +50,7 @@ use crate::resolve::{ResolveParaOptions, resolve_paragraph_props_xml};
 use crate::scan::BodyElement;
 use crate::sdt::{parse_sdt_block, sdt_table_xml};
 use crate::vml::shape::VML_PICT_RID_RE;
+use crate::withheld::withheld_block_label;
 use crate::xml_text::{decode_entities, math_tokens, plain_text};
 use omml::{omml_fragments_of, omml_to_latex, omml_to_mathml};
 
@@ -67,34 +73,119 @@ const INVISIBLE_BODY_MARKERS: [&str; 15] = [
     "w:customXmlDelRangeEnd",
 ];
 
+/// A key of a block set from a value that holds a picture.
+type SetOnBlock = Box<dyn FnOnce(&mut Block)>;
+
 /// An object literal built key by key, as the TypeScript writes them.
-struct Obj(Map<String, Value>);
+///
+/// The keys that can hold a picture stand empty in the map and are set on the
+/// block `done` reads from it, in the place the map gave them: a JSON value
+/// would copy the data URL of every picture in them, where the model holds
+/// one string per media part.
+struct Obj {
+    map: Map<String, Value>,
+    by_value: Vec<SetOnBlock>,
+}
 
 impl Obj {
     fn of(base: &BlockBase) -> Self {
-        Obj(base.map())
+        Obj {
+            map: base.map(),
+            by_value: Vec::new(),
+        }
     }
 
     fn set(mut self, key: &str, value: impl Into<Value>) -> Self {
-        self.0.insert(key.to_owned(), value.into());
+        self.map.insert(key.to_owned(), value.into());
+        self
+    }
+
+    /// `imageDataUrl: url`
+    fn image_url(mut self, url: &SharedStr) -> Self {
+        let url = url.clone();
+        self.map.insert("imageDataUrl".to_owned(), Value::from(""));
+        self.by_value.push(Box::new(move |block| {
+            if let Some(slot) = block.image_data_url.as_mut() {
+                *slot = url;
+            }
+        }));
+        self
+    }
+
+    /// `table`
+    fn table(mut self, table: TableModel) -> Self {
+        self.map
+            .insert("table".to_owned(), serde_json::json!({ "rows": [] }));
+        self.by_value.push(Box::new(move |block| {
+            if let Some(slot) = block.table.as_mut() {
+                *slot = table;
+            }
+        }));
+        self
+    }
+
+    /// `textboxes`
+    fn textboxes(mut self, boxes: &[TextboxDisplay]) -> Self {
+        let boxes = boxes.to_vec();
+        self.map
+            .insert("textboxes".to_owned(), Value::Array(Vec::new()));
+        self.by_value.push(Box::new(move |block| {
+            if let Some(slot) = block.textboxes.as_mut() {
+                *slot = boxes;
+            }
+        }));
+        self
+    }
+
+    /// `strayRuns`
+    fn stray_runs(mut self, runs: &[Run]) -> Self {
+        let runs = runs.to_vec();
+        self.map
+            .insert("strayRuns".to_owned(), Value::Array(Vec::new()));
+        self.by_value.push(Box::new(move |block| {
+            if let Some(slot) = block.stray_runs.as_mut() {
+                *slot = runs;
+            }
+        }));
+        self
+    }
+
+    /// `diagramDisplay`
+    fn diagram(mut self, display: &DiagramDisplay) -> Self {
+        let display = display.clone();
+        let mut bare = Map::new();
+        bare.insert("widthPx".to_owned(), json(&display.width_px));
+        bare.insert("heightPx".to_owned(), json(&display.height_px));
+        bare.insert("shapes".to_owned(), Value::Array(Vec::new()));
+        self.map
+            .insert("diagramDisplay".to_owned(), Value::Object(bare));
+        self.by_value.push(Box::new(move |block| {
+            if let Some(slot) = block.diagram_display.as_mut() {
+                *slot = display;
+            }
+        }));
         self
     }
 
     fn json<T: Serialize>(mut self, key: &str, value: &T) -> Self {
-        self.0.insert(key.to_owned(), json(value));
+        self.map.insert(key.to_owned(), json(value));
         self
     }
 
     /// `...spread`: a model value's own keys, in order.
     fn spread<T: Serialize>(mut self, value: &T) -> Self {
         for (key, value) in into_map(json(value)) {
-            self.0.insert(key, value);
+            self.map.insert(key, value);
         }
         self
     }
 
     fn done(self) -> Result<Block, Thrown> {
-        model_of(Value::Object(self.0))
+        let mut block: Block = model_of(Value::Object(self.map))?;
+        for put in self.by_value {
+            put(&mut block);
+        }
+        Ok(block)
     }
 }
 
@@ -112,6 +203,7 @@ fn box_para_texts(textbox: &crate::model::TextboxDisplay) -> Vec<String> {
         .map(|p| {
             p.runs
                 .iter()
+                .flatten()
                 .map(|r| r.text.as_deref().unwrap_or(""))
                 .collect::<String>()
         })
@@ -124,8 +216,38 @@ fn rich_drawing(detect: &str) -> bool {
         .test(detect)
 }
 
-/// `buildBlock`
+/// `buildBlock`: a block shown as a whole unit (a picture, a drawing) whose
+/// picture sits in a run marked hidden from AI carries the mark's label: the
+/// unit has no run for the mark to sit on, and its image, preview text and
+/// description are the run's content. A chart whose rich text holds a mark is
+/// hidden whole too.
 pub fn build_block(
+    el: &BodyElement<'_>,
+    index: usize,
+    xml: &str,
+    ctx: &BuildContext<'_>,
+    zotero_field: Option<&ZoteroFieldParagraph>,
+) -> Result<Block, Thrown> {
+    let mut block = build_block_of(el, index, xml, ctx, zotero_field)?;
+    if !matches!(
+        *block.r#type,
+        Some(BlockType::Image | BlockType::Passthrough)
+    ) {
+        return Ok(block);
+    }
+    let redact = withheld_block_label(xml).or_else(|| {
+        (*block.chart_display)
+            .as_ref()
+            .and_then(|chart| (*chart.redact).clone())
+    });
+    if let Some(redact) = redact {
+        block.redact.set(redact);
+    }
+    Ok(block)
+}
+
+/// `buildBlockOf`
+fn build_block_of(
     el: &BodyElement<'_>,
     index: usize,
     xml: &str,
@@ -223,8 +345,8 @@ pub fn build_block(
         let mut obj = Obj::of(&base)
             .set("type", "table")
             .spread(&table_summary(xml));
-        if let Some(table) = &table {
-            obj = obj.json("table", table);
+        if let Some(table) = table {
+            obj = obj.table(table);
         }
         return obj.done();
     }
@@ -237,8 +359,8 @@ pub fn build_block(
             let mut obj = Obj::of(&base)
                 .set("type", "table")
                 .spread(&table_summary(&tbl_xml));
-            if let Some(table) = &table {
-                obj = obj.json("table", table);
+            if let Some(table) = table {
+                obj = obj.table(table);
             }
             return obj.done();
         }
@@ -271,8 +393,7 @@ pub fn build_block(
                 })
                 .collect();
             inner.sdt_shells.set(model_of(Value::Array(chain))?);
-            super::controls::attach_inline_content_controls(&mut inner, &sdt.p_xml)
-                .map_err(|limit| limit.to_string())?;
+            super::controls::attach_inline_content_controls(&mut inner, &sdt.p_xml);
             // label the block with the alias for UI affordance
             if !inner.label.as_deref().is_some_and(|l| !l.is_empty()) {
                 let meta = &sdt.shell.meta;
@@ -339,12 +460,11 @@ pub fn build_block(
 
     // Feature-detect on XML with mc:Fallback stripped
     let without_fallback = if xml.contains("<mc:Fallback") {
-        js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-            .replace_all(xml, |_| String::new())
+        remove_segments(xml, "mc:Fallback")
     } else {
-        xml.to_owned()
+        Cow::Borrowed(xml)
     };
-    let detect_owned = strip_ink_runs(&without_fallback);
+    let detect_owned = canonical_xml_syntax(&strip_ink_runs(&without_fallback)).into_owned();
     let detect: &str = &detect_owned;
 
     // Only a content-less section-break paragraph is protected
@@ -403,7 +523,7 @@ pub fn build_block(
                 let mut obj = Obj::of(&base)
                     .set("type", "image")
                     .set("label", "Image")
-                    .set("imageDataUrl", image)
+                    .image_url(&image)
                     .spread(&image_meta(detect, Some(ctx))?.block);
                 if caption_is_text && let Some(caption) = &caption {
                     obj = obj.json("fieldDisplay", caption);
@@ -639,7 +759,7 @@ fn pict_branch(
             }
             obj = obj
                 .set("previewText", preview.join("\n"))
-                .json("textboxes", &textboxes);
+                .textboxes(&textboxes);
             if host_page_break(detect) {
                 let mut display = Map::new();
                 display.insert("kind".to_owned(), Value::from("pageBreak"));
@@ -651,7 +771,7 @@ fn pict_branch(
                 _ => {}
             }
             if let Some(stray) = list_stray {
-                obj = obj.json("strayRuns", &stray.runs);
+                obj = obj.stray_runs(&stray.runs);
                 if let Some(style) = stray.style_id.as_deref().filter(|s| !s.is_empty()) {
                     obj = obj.set("strayStyleId", style);
                 }
@@ -692,7 +812,7 @@ fn pict_branch(
             return Obj::of(base)
                 .set("type", "image")
                 .set("label", "Image")
-                .set("imageDataUrl", image)
+                .image_url(&image)
                 .spread(&vml_image_meta(detect))
                 .done();
         }
@@ -783,7 +903,7 @@ fn drawing_branch(
                 Obj::of(base)
                     .set("type", "image")
                     .set("label", "Image")
-                    .set("imageDataUrl", fb_image)
+                    .image_url(&fb_image)
                     .spread(&image_meta(xml, Some(ctx))?.block)
                     .done()?,
             ));
@@ -857,10 +977,10 @@ fn drawing_branch(
             obj = obj.set("previewText", text);
         }
         if let Some(diagram) = &diagram_display {
-            obj = obj.json("diagramDisplay", diagram);
+            obj = obj.diagram(diagram);
         }
         if !sibling_boxes.is_empty() {
-            obj = obj.json("textboxes", &sibling_boxes);
+            obj = obj.textboxes(&sibling_boxes);
         }
         return Ok(Some(obj.done()?));
     }
@@ -882,13 +1002,13 @@ fn drawing_branch(
             let preview: Vec<String> = canvas
                 .shapes
                 .iter()
-                .flat_map(|s| s.texts.clone().unwrap_or_default())
+                .flat_map(|s| (*s.texts).clone().unwrap_or_default())
                 .collect();
             return Ok(Some(
                 Obj::of(base)
                     .set("type", "passthrough")
                     .set("label", "Drawing object")
-                    .json("diagramDisplay", &canvas)
+                    .diagram(&canvas)
                     .set("previewText", preview.join("\n"))
                     .done()?,
             ));
@@ -905,7 +1025,7 @@ fn drawing_branch(
                 .iter()
                 .any(|t| {
                     t.paras.iter().flatten().any(|p| {
-                        p.runs.iter().any(run_has_text)
+                        p.runs.iter().flatten().any(run_has_text)
                             || p.cells.as_ref().is_some_and(|cells| {
                                 cells
                                     .iter()
@@ -994,6 +1114,7 @@ fn drawing_branch(
                 let wrap = meta
                     .block
                     .image_wrap
+                    .as_ref()
                     .map(|w| w.as_str().to_owned())
                     .unwrap_or_default();
                 let side_wrapped =
@@ -1003,7 +1124,7 @@ fn drawing_branch(
                 let mut obj = Obj::of(base)
                     .set("type", "image")
                     .set("label", "Image")
-                    .set("imageDataUrl", image_url.as_str())
+                    .image_url(image_url)
                     .spread(&meta.block);
                 if ((side_wrapped && !meta.block.image_band.unwrap_or(false)) || overlay)
                     && let Some(line) = anchor_line_of(xml, ctx)?
@@ -1070,6 +1191,7 @@ fn drawing_branch(
         let wrap = meta
             .block
             .image_wrap
+            .as_ref()
             .map(|w| w.as_str().to_owned())
             .unwrap_or_default();
         let anchor_line = if stray.as_ref().is_some_and(|s| !s.runs.is_empty())
@@ -1088,7 +1210,7 @@ fn drawing_branch(
             .set("type", "passthrough")
             .set("label", "Text box")
             .set("previewText", preview.join("\n"))
-            .json("textboxes", &textboxes);
+            .textboxes(&textboxes);
         if try_js_regex!(r#"^<w:p\b[^>]*>\s*<w:pPr>(?:(?!<\/w:pPr>)[\s\S])*?<w:snapToGrid w:val="(?:0|false)"\s*\/>"#)
             .try_test(xml)
             .map_err(|limit| limit.to_string())?
@@ -1104,7 +1226,7 @@ fn drawing_branch(
             obj = obj.json("anchorLine", line);
         }
         if let Some(stray) = stray.filter(|s| !s.runs.is_empty()) {
-            obj = obj.json("strayRuns", &stray.runs);
+            obj = obj.stray_runs(&stray.runs);
             if let Some(style) = stray.style_id.as_deref().filter(|s| !s.is_empty()) {
                 obj = obj.set("strayStyleId", style);
             }
@@ -1126,7 +1248,7 @@ fn drawing_branch(
             Obj::of(base)
                 .set("type", "image")
                 .set("label", "Image")
-                .set("imageDataUrl", image.as_str())
+                .image_url(image)
                 .spread(&image_meta(detect, Some(ctx))?.block)
                 .done()?,
         ));

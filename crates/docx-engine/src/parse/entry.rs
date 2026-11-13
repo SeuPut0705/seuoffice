@@ -36,7 +36,9 @@ use crate::inline_opaque::part_namespaces;
 use crate::model::{Block, Bytes, ParsedDoc, ParsedDocFull};
 use crate::notes::NoteKind;
 use crate::numbering::{NumberingDef, parse_numbering};
-use crate::package::{Thrown, parse_rels, rels_path_of, resolve_main_document_path};
+use crate::package::{
+    Thrown, canonical_part_text, parse_rels, rels_path_of, resolve_main_document_path,
+};
 use crate::props::part_xml_space_preserve;
 use crate::resolve::{ResolveDoc, resolve_ctx_of};
 use crate::scan::{BodyElement, scan_body};
@@ -72,21 +74,23 @@ impl Default for ParseOptions {
 struct Parsed {
     doc: ParsedDocFull,
     styles: Vec<(String, StyleInfo)>,
-    numbering: JsMap<NumberingDef>,
+    numbering: Rc<JsMap<NumberingDef>>,
 }
 
 /// `parseDocx(bytes)` with its `extras`: `Err` is what the TypeScript throws.
 pub fn parse_docx_full(bytes: &[u8], host: &dyn MediaHost) -> Result<ParsedDocFull, String> {
-    parse_docx_with(bytes, host, ParseOptions::default()).map(|parsed| parsed.doc)
+    parse_docx_full_with(bytes, host, ParseOptions::default())
 }
 
-/// `parseDocx(bytes, options)` with its `extras`.
+/// `parseDocx(bytes, options)` with its `extras`. The model holds what the
+/// document wrote as the TypeScript does, an attribute value no type names
+/// included.
 pub fn parse_docx_full_with(
     bytes: &[u8],
     host: &dyn MediaHost,
     options: ParseOptions,
 ) -> Result<ParsedDocFull, String> {
-    parse_docx_with(bytes, host, options).map(|parsed| parsed.doc)
+    jscompat::reading_leniently(|| parse_docx_with(bytes, host, options)).map(|parsed| parsed.doc)
 }
 
 /// `parseDocx(bytes)` without its `extras`: the `ParsedDoc` of the model.
@@ -96,7 +100,7 @@ pub fn parse_docx(bytes: &[u8], host: &dyn MediaHost) -> Result<ParsedDoc, Strin
     if let Some(object) = value.as_object_mut() {
         object.shift_remove("extras");
     }
-    model_of(value)
+    jscompat::reading_leniently(|| model_of(value))
 }
 
 fn entries<T: serde::Serialize>(items: impl Iterator<Item = (String, T)>) -> Value {
@@ -172,8 +176,8 @@ fn parse_docx_with(
             Value::Object(empty)
         }
     };
-    let font_table = match zip.text(FONT_TABLE_PART_PATH).map_err(|e| e.to_string())? {
-        Some(text) => parse_font_table(text),
+    let font_table = match canonical_part_text(&zip, FONT_TABLE_PART_PATH)? {
+        Some(text) => parse_font_table(&text),
         None => Vec::new(),
     };
     let embedded_fonts = read_embedded_fonts(&zip, &font_table)?;
@@ -361,8 +365,7 @@ fn parse_docx_with(
                 block.sdt_shell.set(model_of(Value::Object(shell))?);
                 block.sdt_shells.set(model_of(Value::Array(chain))?);
                 if part.name == "w:p" {
-                    super::text::attach_inline_content_controls(&mut block, child_xml)
-                        .map_err(|limit| limit.to_string())?;
+                    super::text::attach_inline_content_controls(&mut block, child_xml);
                 }
                 if !block.label.as_deref().is_some_and(|l| !l.is_empty()) {
                     let label = if !meta.alias.is_empty() {
@@ -410,14 +413,10 @@ fn parse_docx_with(
         }
         let i = elements.len();
         elements.push((el.name.to_owned(), el.start, el.end));
-        let zotero: Option<&ZoteroFieldParagraph> = zotero_field_paragraphs
-            .iter()
-            .find(|(start, _)| *start == el.start)
-            .map(|(_, field)| field);
+        let zotero: Option<&ZoteroFieldParagraph> = zotero_field_paragraphs.get(el.start);
         let mut block = build_block(el, i, xml, &ctx, zotero)?;
         if el.name == "w:p" {
-            super::text::attach_inline_content_controls(&mut block, xml)
-                .map_err(|limit| limit.to_string())?;
+            super::text::attach_inline_content_controls(&mut block, xml);
         }
         let span = ctx
             .section_at
@@ -531,7 +530,7 @@ fn parse_docx_with(
             };
             ink.insert(
                 "dataUrl".to_owned(),
-                data_url.map_or(Value::Null, Value::from),
+                data_url.map_or(Value::Null, |url| Value::from(url.as_str())),
             );
             if let Some(payload) = &run.payload {
                 ink.insert("payload".to_owned(), Value::from(payload.as_str()));
@@ -541,32 +540,37 @@ fn parse_docx_with(
     }
 
     let units = Utf16Map::new(&document_xml);
-    let hf_info = |part: Option<HfPart>| -> Value {
-        let info = part.and_then(|part| {
+    let hf_info = |part: Option<HfPart>| -> Option<crate::model::HfPartInfo> {
+        part.and_then(|part| {
             hf_part_info(Some(crate::model::HfPartInfo {
                 text: part.text,
                 has_page_number: part.has_page_number,
                 paras: part.paras,
                 images: part.images,
             }))
-        });
-        info.map_or(Value::Null, |info| json(&info))
+        })
     };
 
+    // The fields that hold pictures stand empty in this object and are set on
+    // the model below: a JSON value would copy each picture's data URL once per
+    // reference, where the model holds one string per media part.
     let mut doc = Map::new();
-    doc.insert("blocks".to_owned(), json(&blocks));
+    doc.insert("blocks".to_owned(), Value::Array(Vec::new()));
     doc.insert(
         "zoteroDocumentData".to_owned(),
         Value::from(zotero_document_data),
     );
     doc.insert("properties".to_owned(), properties);
     doc.insert("comments".to_owned(), json(&comments));
-    if let Some(protection) = &protection {
-        doc.insert("protection".to_owned(), json(protection));
-    }
-    if let Some(write_protection) = &write_protection {
-        doc.insert("writeProtection".to_owned(), json(write_protection));
-    }
+    // `protection: DocProtection | null`: the key is always there, null when none
+    doc.insert(
+        "protection".to_owned(),
+        protection.as_ref().map_or(Value::Null, json),
+    );
+    doc.insert(
+        "writeProtection".to_owned(),
+        write_protection.as_ref().map_or(Value::Null, json),
+    );
     doc.insert(
         "removePersonalInfo".to_owned(),
         Value::Bool(remove_personal_info),
@@ -632,26 +636,10 @@ fn parse_docx_with(
         "headerText".to_owned(),
         header_ref.map_or(Value::Null, |h| Value::from(h.text.as_str())),
     );
-    doc.insert(
-        "headerParas".to_owned(),
-        header_ref.map_or(Value::Null, |h| json(&h.paras)),
-    );
-    doc.insert(
-        "footerParas".to_owned(),
-        footer_ref.map_or(Value::Null, |f| json(&f.paras)),
-    );
-    doc.insert(
-        "headerImages".to_owned(),
-        header_ref
-            .and_then(|h| h.images.as_ref())
-            .map_or(Value::Null, json),
-    );
-    doc.insert(
-        "footerImages".to_owned(),
-        footer_ref
-            .and_then(|f| f.images.as_ref())
-            .map_or(Value::Null, json),
-    );
+    doc.insert("headerParas".to_owned(), Value::Null);
+    doc.insert("footerParas".to_owned(), Value::Null);
+    doc.insert("headerImages".to_owned(), Value::Null);
+    doc.insert("footerImages".to_owned(), Value::Null);
     doc.insert(
         "footerText".to_owned(),
         footer_ref.map_or(Value::Null, |f| Value::from(f.text.as_str())),
@@ -682,11 +670,11 @@ fn parse_docx_with(
     for (key, value) in super::text::into_map(json(&layout_settings)) {
         doc.insert(key, value);
     }
-    doc.insert("headerFirst".to_owned(), hf_info(header_first));
-    doc.insert("footerFirst".to_owned(), hf_info(footer_first));
-    doc.insert("headerEven".to_owned(), hf_info(header_even));
-    doc.insert("footerEven".to_owned(), hf_info(footer_even));
-    doc.insert("hfParts".to_owned(), json(&hf_parts));
+    doc.insert("headerFirst".to_owned(), Value::Null);
+    doc.insert("footerFirst".to_owned(), Value::Null);
+    doc.insert("headerEven".to_owned(), Value::Null);
+    doc.insert("footerEven".to_owned(), Value::Null);
+    doc.insert("hfParts".to_owned(), Value::Object(Map::new()));
     doc.insert(
         "styles".to_owned(),
         entries(
@@ -798,8 +786,19 @@ fn parse_docx_with(
         .map(|(k, v)| (k.to_owned(), v.clone()))
         .collect();
     let numbering_out = ctx.resolver.numbering.clone();
+    let mut parsed: ParsedDocFull = model_of(Value::Object(doc))?;
+    parsed.blocks = blocks;
+    parsed.header_paras = Some(header.as_mut().map(|part| std::mem::take(&mut part.paras)));
+    parsed.footer_paras = Some(footer.as_mut().map(|part| std::mem::take(&mut part.paras)));
+    parsed.header_images = Some(header.as_mut().and_then(|part| part.images.take()));
+    parsed.footer_images = Some(footer.as_mut().and_then(|part| part.images.take()));
+    parsed.header_first = Some(hf_info(header_first));
+    parsed.footer_first = Some(hf_info(footer_first));
+    parsed.header_even = Some(hf_info(header_even));
+    parsed.footer_even = Some(hf_info(footer_even));
+    parsed.hf_parts = Some(hf_parts);
     Ok(Parsed {
-        doc: model_of(Value::Object(doc))?,
+        doc: parsed,
         styles: styles_out,
         numbering: numbering_out,
     })
@@ -930,13 +929,15 @@ fn expand_alt_chunk_inner(
         },
     )?;
     let resolver = Rc::make_mut(&mut ctx.resolver);
+    let styles = Rc::make_mut(&mut resolver.styles);
     for (id, info) in &sub.styles {
-        if !resolver.styles.has(id) {
-            resolver.styles.set(id.clone(), info.clone());
+        if !styles.has(id) {
+            styles.set(id.clone(), info.clone());
         }
     }
+    let numbering = Rc::make_mut(&mut resolver.numbering);
     let mut next_num_id = 1.0_f64;
-    for id in resolver.numbering.keys() {
+    for id in numbering.keys() {
         let n = to_number(id);
         next_num_id = next_num_id.max(if n == 0.0 || n.is_nan() { 0.0 } else { n } + 1.0);
     }
@@ -957,7 +958,7 @@ fn expand_alt_chunk_inner(
                     let mut def = def.clone();
                     def.num_id = mapped.clone();
                     def.abstract_num_id = format!("{abstract_prefix}{}", def.abstract_num_id);
-                    resolver.numbering.set(mapped.clone(), def);
+                    numbering.set(mapped.clone(), def);
                 }
                 num_id_map.push((old.clone(), mapped.clone()));
                 mapped

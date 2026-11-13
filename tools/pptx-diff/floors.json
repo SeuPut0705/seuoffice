@@ -106,9 +106,9 @@
   "callsDeckslidesFunctions": 24,
   "callsDecktablesFunctions": 9,
   "callsDecktextFunctions": 10,
-  "callsGenerateFunctions": 32,
+  "callsGenerateFunctions": 31,
   "callsInsertFunctions": 17,
-  "callsLayoutsFunctions": 17,
+  "callsLayoutsFunctions": 16,
   "callsMediaFunctions": 20,
   "callsPackagepartsFunctions": 22,
   "callsGenerateArgMutated": 3000

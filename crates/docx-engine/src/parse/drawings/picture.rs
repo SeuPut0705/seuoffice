@@ -14,13 +14,14 @@ use super::{EMU_PER_PT, EMU_PER_PX, EMU_PER_TWIP};
 use crate::drawing_geometry::anchor::{IDENTITY_CTM, MIN_WRAP_SLIVER_EMU, compose_group_ctm};
 use crate::model::{
     Block, HfImage, HfImagePosH, HfImagePosHRel, HfImagePosV, HfImagePosVRel, HfTextBox,
-    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings,
+    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings, SharedStr,
     TextboxParaDisplay,
 };
 use crate::parse::text::FloatTableAhead;
 use crate::props::collect_nodes;
 use crate::vml::shape::encode_uri_component;
 use crate::vml::{anchor_rel_h, anchor_rel_v};
+use crate::xml_tag::remove_segments;
 
 /// `alignedPictureXEmu`: the column-relative X (EMU) of a `wp:align`
 /// positioned anchor (no posOffset): left/center/right (inside/outside read as
@@ -182,7 +183,7 @@ pub fn picture_overhangs_column(meta: &Block, xml: &str, sect: Option<&SectionSe
 
 /// `txbxParaVisible`: a paragraph the box shows, text runs or a table row.
 pub fn txbx_para_visible(p: &TextboxParaDisplay) -> bool {
-    !p.runs.is_empty() || p.cells.as_ref().map_or(0, Vec::len) > 0
+    p.runs.as_ref().is_some_and(|runs| !runs.is_empty()) || p.cells.as_ref().map_or(0, Vec::len) > 0
 }
 
 js_object! {
@@ -399,7 +400,7 @@ fn first_node<'a>(root: &'a XNode, name: &str) -> Option<&'a XNode> {
 /// first. `None` (null) for a group with shapes, nesting or turned pictures.
 pub fn group_picture_layers(
     drawing: &XNode,
-    media_by_rid: &JsMap<String>,
+    media_by_rid: &JsMap<SharedStr>,
 ) -> Option<Vec<RunImageLayersItem>> {
     let group = first_node(drawing, "wpg:wgp")?;
     let mut pics = Vec::new();
@@ -568,8 +569,7 @@ pub fn hf_shape_drawing_svg(frag: &str) -> Result<Option<String>, RegexLimit> {
         return Ok(None);
     }
     // Word pairs DrawingML shapes with a VML twin in mc:Fallback
-    let body = js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>")
-        .replace_all(frag, |_| String::new());
+    let body = remove_segments(frag, "mc:Fallback");
     let whole = |pattern: &JsRegex, text: &str| {
         pattern
             .exec(text)

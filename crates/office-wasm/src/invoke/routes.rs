@@ -30,7 +30,7 @@ pub type Out = Result<Option<Value>, String>;
 fn opt<T: serde::de::DeserializeOwned>(args: &[Value], index: usize) -> Result<Option<T>, String> {
     match args.get(index) {
         None | Some(Value::Null) => Ok(None),
-        Some(value) => serde_json::from_value(value.clone())
+        Some(value) => T::deserialize(value)
             .map(Some)
             .map_err(|error| format!("TypeError: argument {index}: {error}")),
     }
@@ -40,8 +40,9 @@ fn req<T: serde::de::DeserializeOwned>(args: &[Value], index: usize) -> Result<T
     opt(args, index)?.ok_or_else(|| format!("TypeError: argument {index} is missing"))
 }
 
+/// The answer as JSON, a non-finite number as the host revives it.
 fn some(value: impl Serialize) -> Out {
-    serde_json::to_value(value)
+    jscompat::writing_for_host(|| serde_json::to_value(value))
         .map(Some)
         .map_err(|error| error.to_string())
 }
@@ -75,8 +76,8 @@ pub fn parse_font_table(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 /// `[name, text | {"$blob"}]`: a part of the zip the function reads.
 pub(super) fn package_of(env: &InvokeEnv<'_>, value: &Value) -> Result<Package, String> {
-    let parts: Vec<(String, Value)> = serde_json::from_value(value.clone())
-        .map_err(|error| format!("TypeError: parts: {error}"))?;
+    let parts: Vec<(String, Value)> =
+        Vec::deserialize(value).map_err(|error| format!("TypeError: parts: {error}"))?;
     let mut package = Package::default();
     for (name, content) in parts {
         let bytes = match &content {
@@ -122,7 +123,8 @@ pub fn read_embedded_fonts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
         if let Some(metrics) = font.line_metrics {
             object.insert(
                 "lineMetrics".to_owned(),
-                serde_json::to_value(metrics).map_err(|error| error.to_string())?,
+                jscompat::writing_for_host(|| serde_json::to_value(metrics))
+                    .map_err(|error| error.to_string())?,
             );
         }
         out.push(Value::Object(object));
@@ -204,7 +206,7 @@ pub fn is_lazy_media_part(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 pub fn lazy_media_url(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let hash: String = req(args, 0)?;
     let path: String = req(args, 1)?;
-    some(lazy_media::lazy_media_url(&hash, &path))
+    some(lazy_media::lazy_media_url_checked(&hash, &path)?)
 }
 
 /// `newDocumentAppPropertiesXml(opts?)`
@@ -264,14 +266,14 @@ fn engine_def_of(def: &model::NumberingDef) -> NumberingDef {
         if let Some(v) = &level.custom_format {
             out.custom_format.set(v.clone());
         }
-        if let Some(v) = level.suff {
+        if let Some(v) = &level.suff {
             out.suff.set(v.as_str().to_owned());
         }
         if let Some(v) = level.is_lgl {
             out.is_lgl.set(v);
         }
-        if let Some(v) = level.lvl_jc {
-            out.lvl_jc.set(v.as_str());
+        if let Some(v) = &level.lvl_jc {
+            out.lvl_jc.set(v.as_str().to_owned());
         }
         if let Some(v) = &level.p_style {
             out.p_style.set(v.clone());
@@ -375,7 +377,8 @@ pub fn preview_font_settings(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
         .map(|(id, info)| {
             Ok(json!([
                 id,
-                serde_json::to_value(info).map_err(|e: serde_json::Error| e.to_string())?
+                jscompat::writing_for_host(|| serde_json::to_value(info))
+                    .map_err(|e: serde_json::Error| e.to_string())?
             ]))
         })
         .collect::<Result<_, String>>()?;
@@ -384,7 +387,8 @@ pub fn preview_font_settings(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     if let Some(defaults) = &preview.doc_defaults {
         object.insert(
             "docDefaults".to_owned(),
-            serde_json::to_value(defaults).map_err(|error| error.to_string())?,
+            jscompat::writing_for_host(|| serde_json::to_value(defaults))
+                .map_err(|error| error.to_string())?,
         );
     }
     Ok(Some(Value::Object(object)))

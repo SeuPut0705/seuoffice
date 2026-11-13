@@ -17,10 +17,11 @@ import {
   type ShapeStylePatch,
   swapAnchorWrap,
   type TextboxSizePatch,
-  xmlSegments,
 } from './reference/generate'
+import { xmlSegments } from './reference/xml-tag'
 import type { ImageWrap } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
+import { hiddenIn } from './calls-markup'
 
 const n = (v: unknown): number => (typeof v === 'string' ? Number(v) : (v as number))
 /** undefined stays undefined, null stays null */
@@ -123,6 +124,29 @@ const SHAPE_PARAS = [
   para(ALT(BOX_A, FALLBACK('position:absolute;width:150pt;height:75pt')) + ALT(BOX_B, FALLBACK('width:200px;height: 100.5px', 'b'))),
   para(ALT(BOX_EMPTY, FALLBACK('width:1pt;height:1pt', '')) + ALT(LINE, FALLBACK('width:3pt;height:4pt'))),
   `<w:p><w:r>${BOX_A}</w:r><w:r><w:t>text <w:tab/></w:t></w:r></w:p>`,
+]
+
+/**
+ * Boxes with their fallback twins in spellings a literal search for the tags
+ * reads wrongly: markup hidden in a comment, CDATA or an instruction before a
+ * drawing and inside a fallback, a spaced end tag, a `>` in an attribute value
+ * of the start tag, attributes on the fallback.
+ */
+const TWIN_STYLE = 'position:absolute;width:150pt;height:75pt'
+const MARKUP_SHAPE_PARAS = [
+  ...hiddenIn('<mc:Fallback>').map((hidden) => para(hidden + ALT(BOX_A, FALLBACK(TWIN_STYLE)))),
+  ...hiddenIn('</mc:Fallback>').map((hidden) =>
+    para(ALT(BOX_A, FALLBACK(TWIN_STYLE).replace('<w:pict>', `${hidden}<w:pict>`))),
+  ),
+  ...hiddenIn('<w:drawing>').map((hidden) => para(hidden + BOX_A + BOX_B)),
+  ...hiddenIn('</w:drawing>').map((hidden) => para(BOX_A + hidden + BOX_B)),
+  para(ALT(BOX_A, FALLBACK(TWIN_STYLE).replace('<mc:Fallback>', '<mc:Fallback xmlns:x="urn:x">'))),
+  para(ALT(BOX_A, FALLBACK(TWIN_STYLE).replace('<mc:Fallback>', '<mc:Fallback a=">">'))),
+  para(ALT(BOX_A, FALLBACK(TWIN_STYLE).replace('</mc:Fallback>', '</mc:Fallback >'))),
+  para(ALT(BOX_A, FALLBACK(TWIN_STYLE).replace('</mc:Fallback>', '</mc:Fallback\n>'))),
+  para(ALT(BOX_A.replace('</w:drawing>', '</w:drawing >'), FALLBACK(TWIN_STYLE))),
+  para(ALT(BOX_A.replace('<w:drawing>', '<w:drawing a=">">'), FALLBACK(TWIN_STYLE))),
+  para(ALT(BOX_A, FALLBACK(TWIN_STYLE)) + ALT(BOX_B, FALLBACK('width:200px;height: 100.5px', 'b'))),
 ]
 
 const PIC_PARAS = [
@@ -382,6 +406,7 @@ export const GEN_DRAWING: CallSpec[] = [
     fromDocument: fromParas(HEIGHTS.slice(2, 4)),
     built: [
       ...cross(SHAPE_PARAS, HEIGHTS),
+      ...cross(MARKUP_SHAPE_PARAS, HEIGHTS),
       // valid TypeScript output: -Infinity clamps to 1 EMU, NaN is skipped
       ...cross(NO_FALLBACK_PARAS, [{ heightsPx: ['-Infinity'] }, { heightsPx: [10, '-Infinity'] }, { heightsPx: ['NaN', 30] }]),
     ],
@@ -399,6 +424,7 @@ export const GEN_DRAWING: CallSpec[] = [
     fromDocument: fromParas(SIZES.slice(2, 4)),
     built: [
       ...cross(SHAPE_PARAS, SIZES),
+      ...cross(MARKUP_SHAPE_PARAS, SIZES),
       // valid TypeScript output: -Infinity clamps to 1 EMU
       ...cross(NO_FALLBACK_PARAS, [{ sizes: [{ wPx: '-Infinity' }, { hPx: '-Infinity', wPx: 12 }] }]),
       // a non-finite width, then a finite height: the TypeScript's own cx="NaN"

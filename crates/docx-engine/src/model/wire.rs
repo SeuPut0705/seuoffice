@@ -4,6 +4,7 @@
 
 use std::fmt;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use jscompat::JsObject;
 use serde::de::{DeserializeOwned, Error as _, MapAccess, Unexpected, Visitor};
@@ -26,8 +27,9 @@ pub trait FieldKey: Copy + 'static {
     }
 }
 
-/// A key of an object being read: a key the type does not have is refused.
-pub(super) struct Key<K>(pub(super) K);
+/// A key of an object being read: a key the type does not have is refused,
+/// or skipped (`None`) inside `jscompat::reading_leniently`.
+pub(super) struct Key<K>(pub(super) Option<K>);
 
 impl<'de, K: FieldKey> Deserialize<'de> for Key<K> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -40,9 +42,11 @@ impl<'de, K: FieldKey> Deserialize<'de> for Key<K> {
             }
 
             fn visit_str<E: serde::de::Error>(self, name: &str) -> Result<Key<K>, E> {
-                K::from_name(name)
-                    .map(Key)
-                    .ok_or_else(|| E::unknown_field(name, K::NAMES))
+                match K::from_name(name) {
+                    Some(key) => Ok(Key(Some(key))),
+                    None if jscompat::lenient() => Ok(Key(None)),
+                    None => Err(E::unknown_field(name, K::NAMES)),
+                }
             }
         }
         deserializer.deserialize_identifier(Name(PhantomData))
@@ -86,13 +90,19 @@ pub(super) fn one_of<T, E: serde::de::Error, const N: usize>(
 
 /// Reads an enum of strings from a JSON string and nothing else. The reader
 /// serde derives also takes `{"value": null}`, which `JSON.stringify` never
-/// writes for a string.
+/// writes for a string. A string the enum does not name is refused, or held
+/// as `unlisted` inside `jscompat::reading_leniently`.
 pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
     deserializer: D,
     name: &'static str,
+    unlisted: fn(std::sync::Arc<String>) -> T,
     parse: fn(&str) -> Option<T>,
 ) -> Result<T, D::Error> {
-    struct Text<T>(&'static str, fn(&str) -> Option<T>);
+    struct Text<T>(
+        &'static str,
+        fn(std::sync::Arc<String>) -> T,
+        fn(&str) -> Option<T>,
+    );
     impl<T> Visitor<'_> for Text<T> {
         type Value = T;
 
@@ -101,10 +111,40 @@ pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
         }
 
         fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<T, E> {
-            (self.1)(text).ok_or_else(|| E::invalid_value(Unexpected::Str(text), &self))
+            match (self.2)(text) {
+                Some(value) => Ok(value),
+                None if jscompat::lenient() => Ok((self.1)(std::sync::Arc::new(text.to_owned()))),
+                None => Err(E::invalid_value(Unexpected::Str(text), &self)),
+            }
         }
     }
-    deserializer.deserialize_str(Text(name, parse))
+    deserializer.deserialize_str(Text(name, unlisted, parse))
+}
+
+/// A value of a field whose type has no null: `None` where the JSON holds
+/// `null`, read inside `jscompat::reading_leniently` as the TypeScript holds
+/// it (a caller's object may carry null where the type says a string);
+/// outside it null is refused as the type's own reader refuses it.
+pub(super) struct OrAbsent<T>(pub Option<T>);
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for OrAbsent<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        if jscompat::lenient() {
+            Option::<T>::deserialize(deserializer).map(OrAbsent)
+        } else {
+            T::deserialize(deserializer).map(|value| OrAbsent(Some(value)))
+        }
+    }
+}
+
+/// A required field the object lacks: read leniently it is the TypeScript's
+/// undefined, which the caller stands in for; strictly it is refused.
+pub(super) fn absent<E: serde::de::Error>(key: &'static str) -> Result<(), E> {
+    if jscompat::lenient() {
+        Ok(())
+    } else {
+        Err(E::missing_field(key))
+    }
 }
 
 /// A `Record<number, V>`: a [`JsObject`] every key of which is a number as
@@ -166,6 +206,107 @@ pub struct MapEntries<K, V>(pub Vec<(K, V)>);
 impl<K, V> Default for MapEntries<K, V> {
     fn default() -> Self {
         Self(Vec::new())
+    }
+}
+
+/// A string held once however many values refer to it: the data URL of a media
+/// part. The TypeScript has one string per part and every image points at
+/// it; cloning this clones the pointer, and the JSON it writes and reads is the
+/// plain string.
+#[derive(Clone, Default, PartialEq, Eq, Hash)]
+pub struct SharedStr(Arc<str>);
+
+impl SharedStr {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Whether both values are the one allocation.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+
+    /// How many values hold this allocation.
+    pub fn holders(&self) -> usize {
+        Arc::strong_count(&self.0)
+    }
+}
+
+impl std::ops::Deref for SharedStr {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for SharedStr {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for SharedStr {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&*self.0, formatter)
+    }
+}
+
+impl fmt::Display for SharedStr {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&*self.0, formatter)
+    }
+}
+
+impl From<String> for SharedStr {
+    fn from(text: String) -> Self {
+        Self(Arc::from(text))
+    }
+}
+
+impl From<&str> for SharedStr {
+    fn from(text: &str) -> Self {
+        Self(Arc::from(text))
+    }
+}
+
+impl PartialEq<str> for SharedStr {
+    fn eq(&self, other: &str) -> bool {
+        &*self.0 == other
+    }
+}
+
+impl PartialEq<&str> for SharedStr {
+    fn eq(&self, other: &&str) -> bool {
+        &*self.0 == *other
+    }
+}
+
+impl Serialize for SharedStr {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for SharedStr {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Text;
+        impl Visitor<'_> for Text {
+            type Value = SharedStr;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<SharedStr, E> {
+                Ok(SharedStr::from(text))
+            }
+
+            fn visit_string<E: serde::de::Error>(self, text: String) -> Result<SharedStr, E> {
+                Ok(SharedStr::from(text))
+            }
+        }
+        deserializer.deserialize_str(Text)
     }
 }
 

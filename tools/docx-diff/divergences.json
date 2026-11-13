@@ -68,17 +68,196 @@
     "reason": "latexToOmml recurses once per group and the TypeScript runs until the JavaScript stack overflows, somewhere past a thousand levels depending on the host. A stack overflow in wasm ends the instance, so Rust counts the depth and refuses past 256 levels of its reader (128 nested groups). No formula a person writes is that deep; the limit is listed because the two sides answer differently between the two limits."
   },
   {
-    "id": "custgeom-inherited-guide",
+    "id": "merge-file-name-cuts-a-surrogate-pair",
     "comparison": "call",
-    "fn": "parse.hfShapeDrawingSvg",
-    "text": "<w:drawing><wp:anchor><wp:extent cx=\"952500\" cy=\"476250\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"100\"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst><a:gd name=\"g1\" fmla=\"val toString\"/><a:gd name=\"__proto__\" fmla=\"val 5\"/></a:gdLst><a:pathLst><a:path w=\"10\" h=\"10\"><a:moveTo><a:pt x=\"g1\" y=\"__proto__\"/></a:moveTo><a:lnTo><a:pt x=\"valueOf\" y=\"hasOwnProperty\"/></a:lnTo><a:arcTo wR=\"__proto__\" hR=\"5\" stAng=\"0\" swAng=\"5400000\"/><a:lnTo><a:pt x=\"toString\" y=\"5\"/></a:lnTo></a:path></a:pathLst></a:custGeom><a:solidFill><a:srgbClr val=\"1f497d\"/></a:solidFill></wps:spPr></wps:wsp></wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing>",
-    "args": {},
+    "fn": "save.mergeOutputFileName",
+    "text": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00",
+    "args": {
+      "record": {},
+      "fields": []
+    },
     "typescript": {
-      "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%20NaN%20NaN%20L%20NaN%20NaN%20L%20NaN%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d"
     },
     "rust": {
-      "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200%200.01%20L%200%200%20C%200%200%200%200.01%200%200.01%20L%200%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ufffd"
     },
-    "reason": "TypeScript defect, the class of the same id in tools/pptx-diff/divergences.json (reported 2026-11-12, fix pending on main). parseCustGeom of pptx-engine/src/custgeom.ts reads guide values from a plain object by a document name (lines 86 and 283) and assigns them by name (line 150): a name every object inherits (constructor, toString, valueOf, __proto__...) answers with a function or the prototype, NaN in the path, a guide named __proto__ is lost, and an arc whose radius is NaN draws nothing. The Rust (pptx_engine::custgeom::parse_cust_geom) reads own guides only: an unknown name is 0 like any undefined guide, and a __proto__ guide is stored. Class predicate: custgeomInheritedGuide of listed.ts."
+    "reason": "mergeOutputFileName ends with slice(0, 120), which counts UTF-16 units, so a name whose 120th unit is the first half of a character outside the BMP keeps that half alone in the result. A Rust string cannot hold a lone surrogate, so the Rust cut writes U+FFFD in its place (the class of cdata-opener-cuts-a-surrogate-pair). A file name with a lone surrogate is no name on most file systems, so no caller is helped by matching it. Class predicate: mergeFileNameLongAstral of listed.ts."
+  },
+  {
+    "id": "compare-char-granularity-cuts-a-surrogate-pair",
+    "comparison": "call",
+    "fn": "save.compareBlocks",
+    "text": "",
+    "args": {
+      "original": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude00 text"
+            }
+          ]
+        }
+      ],
+      "revised": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude01 text"
+            }
+          ]
+        }
+      ],
+      "documentXml": "",
+      "options": {
+        "date": "2024-05-06T07:08:09Z",
+        "granularity": "char"
+      }
+    },
+    "typescript": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ud83d"
+                },
+                {
+                  "text": "\ude00",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ude01",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "rust": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ufffd"
+                },
+                {
+                  "text": "\ufffd",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ufffd",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "reason": "With granularity 'char' compareBlocks of the TypeScript diffs UTF-16 units, so two characters outside the BMP that share their first half are split into a common lone high surrogate and two lone low surrogates, and runs of the result hold them. A Rust string cannot hold a lone surrogate, so the Rust writes U+FFFD for each (the class of cdata-opener-cuts-a-surrogate-pair). Word granularity, the default, is not affected. Class predicate: compareCharAstral of listed.ts."
+  },
+  {
+    "id": "line-rule-outside-its-type",
+    "comparison": "call",
+    "fn": "parse.hfParaStyleLayers",
+    "text": "<w:p><w:pPr><w:spacing w:line=\"200\" w:lineRule=\"exact=\"/></w:pPr><w:r><w:t>Exact ten point line</w:t></w:r></w:p>",
+    "args": {
+      "parts": [
+        [
+          "word/styles.xml",
+          "<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii=\"Calibri\" w:eastAsia=\"Malgun Gothic\"/><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after=\"160\" w:line=\"259\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/></w:style><w:style w:type=\"paragraph\" w:styleId=\"Header\"><w:name w:val=\"header\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:tabs><w:tab w:val=\"center\" w:pos=\"4680\"/><w:tab w:val=\"right\" w:pos=\"9360\"/></w:tabs><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Footer\"><w:name w:val=\"footer\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:rPr><w:sz w:val=\"18\"/></w:rPr></w:style><w:style w:type=\"table\" w:styleId=\"Grid\"><w:name w:val=\"Table Grid\"/><w:tblPr><w:tblBorders><w:top w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:left w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"000000\"/></w:tblBorders><w:tblCellMar><w:left w:w=\"80\" w:type=\"dxa\"/><w:right w:w=\"80\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr></w:style><w:style w:type=\"table\" w:styleId=\"Banded\"><w:name w:val=\"Banded\"/><w:basedOn w:val=\"Grid\"/><w:tblPr><w:tblStyleRowBandSize w:val=\"1\"/></w:tblPr><w:tblStylePr w:type=\"firstRow\"><w:rPr><w:b/><w:color w:val=\"FFFFFF\"/></w:rPr><w:tcPr><w:shd w:val=\"clear\" w:fill=\"4472C4\"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type=\"band1Horz\"><w:tcPr><w:shd w:val=\"clear\" w:fill=\"D9E2F3\"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type=\"lastCol\"><w:rPr><w:b/></w:rPr><w:tcPr><w:tcBorders><w:left w:val=\"double\" w:sz=\"6\" w:color=\"FF0000\"/></w:tcBorders></w:tcPr></w:tblStylePr></w:style></w:styles>"
+        ],
+        [
+          "word/numbering.xml",
+          "<?xml version=\"1.0\"?><w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:abstractNum w:abstractNumId=\"0\"><w:lvl w:ilvl=\"0\"><w:start w:val=\"1\"/><w:numFmt w:val=\"bullet\"/><w:lvlText w:val=\"-\"/></w:lvl></w:abstractNum><w:num w:numId=\"1\"><w:abstractNumId w:val=\"0\"/></w:num></w:numbering>"
+        ],
+        [
+          "word/settings.xml",
+          "<?xml version=\"1.0\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:compat><w:compatSetting w:name=\"compatibilityMode\" w:uri=\"http://schemas.microsoft.com/office/word\" w:val=\"15\"/></w:compat></w:settings>"
+        ],
+        [
+          "word/document.xml",
+          "<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:body><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:header=\"720\" w:footer=\"720\" w:gutter=\"0\"/><w:cols w:num=\"1\"/></w:sectPr></w:body></w:document>"
+        ],
+        [
+          "word/_rels/document.xml.rels",
+          "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header2.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image1.png\"/></Relationships>"
+        ]
+      ],
+      "compat": {
+        "compatibilityMode": 15
+      },
+      "hf": true
+    },
+    "typescript": {
+      "value": {
+        "direct": {
+          "lineRawTwips": 200,
+          "lineRule": "exact="
+        }
+      }
+    },
+    "rust": {
+      "error": "invalid value: string \"exact=\", expected a string of ParaFormat.lineRule"
+    },
+    "reason": "TypeScript defect: the readers of w:spacing copy the text of w:lineRule into ParaFormat.lineRule without checking it against its declared type (auto | atLeast | exact), so a value such as \"exact=\" or \" auto\" travels on as a string. The generated Rust model keeps the type and refuses that string (invalid value, expected a string of ParaFormat.lineRule); widening the model to accept any string would let the type lie. Only a mutated or hand-broken document holds such a value; Word writes the three names. Inputs: extractTableModel, hfParaStyleLayers and hfCellContent over a w:lineRule outside the three. Class predicate: lineRuleOutsideItsType of listed.ts."
   }
 ]

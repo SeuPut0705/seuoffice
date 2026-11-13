@@ -14,6 +14,8 @@ import { describe, expect, it } from 'vitest'
  */
 
 const ALT_CHUNK = resolve(__dirname, '../src/alt-chunk.ts')
+// what the package's `node` entries import first: the engine, started from the build
+const ENGINE_NODE = resolve(__dirname, '../../engine-wasm/src/node.ts')
 const TSX = createRequire(__filename).resolve('tsx/cjs')
 
 describe('a legacy multi-byte chunk read by the engine running as CommonJS', () => {
@@ -23,7 +25,8 @@ describe('a legacy multi-byte chunk read by the engine running as CommonJS', () 
       const script = join(dir, 'decode.cts')
       writeFileSync(
         script,
-        `const { decodeHtmlBytes } = require(${JSON.stringify(ALT_CHUNK)})\n` +
+        `require(${JSON.stringify(ENGINE_NODE)})\n` +
+          `const { decodeHtmlBytes } = require(${JSON.stringify(ALT_CHUNK)})\n` +
           'const ascii = (s) => Array.from(s, (c) => c.charCodeAt(0))\n' +
           'const html = ascii(\'<html><head><meta charset="euc-kr"></head><body><p>\')\n' +
           "const bytes = Uint8Array.from([...html, 0x8c, 0x63, ...ascii('</p></body></html>')])\n" +

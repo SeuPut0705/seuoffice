@@ -211,7 +211,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
                 (absent != Some(true)).then_some(text),
             )?)
         },
-        "buildSourcesItemPropsXml" => |_, _| value(sources_write::build_sources_item_props_xml()),
+        "constants" => |_, args| match required::<String>(args, "name")?.as_str() {
+            "buildSourcesItemPropsXml" => value(sources_write::build_sources_item_props_xml()),
+            name => Err(format!("no constant {name}")),
+        },
         "applyThemeFonts" => |text, args| {
             value(theme_write::apply_theme_fonts(
                 text,
@@ -301,7 +304,7 @@ fn compare_blocks(_text: &str, args: &Value) -> Returned {
         &options,
         // every input of the comparison names its date
         "1970-01-01T00:00:00.000Z",
-    ))
+    )?)
 }
 
 /// The entries of a package, in order: `[name, text]`, `null` for a folder.
@@ -315,7 +318,7 @@ fn parts_of(package: &Package) -> Result<Vec<(String, Option<String>)>, String> 
             } else {
                 Some(part.text().map_err(|error| error.to_string())?.to_owned())
             };
-            Ok((part.name.clone(), text))
+            Ok((part.name.to_string(), text))
         })
         .collect()
 }
