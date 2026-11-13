@@ -2305,6 +2305,13 @@ const args = [
   'office-wasm',
   '--profile',
   'probe',
+  // docx-engine and odt-engine depend on pptx-engine, so every fault rebuilds
+  // them (about half of the 49 s rebuild); the slides comparisons never run
+  // their code. Only the opt-level differs: probe's checks and panic stay.
+  '--config',
+  'profile.probe.package.docx-engine.opt-level=0',
+  '--config',
+  'profile.probe.package.odt-engine.opt-level=0',
   '-j4',
 ]
 mkdirSync(out, { recursive: true })
