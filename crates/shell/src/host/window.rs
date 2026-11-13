@@ -27,7 +27,7 @@ use tauri_runtime_cef::{
     ConsoleMessage, FrameEvent, FrameEventKind, WebviewBuilderCefExt, WebviewWindowBuilderCefExt,
 };
 
-use super::HostContext;
+use super::{HostContext, window_open};
 use crate::app_scheme;
 use crate::preload;
 use crate::trace::{self, trace};
@@ -203,10 +203,15 @@ impl Windows {
         if let Some(script) = spec.view.bridge.script() {
             builder = builder
                 .initialization_script(script)
-                // a page with a bridge stays on the shell's own pages, and opens no window of its own
-                .on_navigation(app_scheme::is_own_page)
-                .on_new_window(|_, _| NewWindowResponse::Deny);
+                // a page with a bridge stays on the shell's own pages
+                .on_navigation(app_scheme::is_own_page);
         }
+        // CEF opens no window; what the page asked for goes to the OS as its app's policy allows
+        let asked_by = spec.view.bridge.surface();
+        builder = builder.on_new_window(move |url, _| {
+            window_open::requested(asked_by, url.as_str());
+            NewWindowResponse::Deny
+        });
         // known before the page can run: its first message must find its sender
         self.views.add_window(window, label.clone());
         if let Some(surface) = spec.view.bridge.surface() {
@@ -269,9 +274,13 @@ impl Windows {
         if let Some(script) = spec.bridge.script() {
             builder = builder
                 .initialization_script(script)
-                .on_navigation(app_scheme::is_own_page)
-                .on_new_window(|_, _| NewWindowResponse::Deny);
+                .on_navigation(app_scheme::is_own_page);
         }
+        let asked_by = spec.bridge.surface();
+        builder = builder.on_new_window(move |url, _| {
+            window_open::requested(asked_by, url.as_str());
+            NewWindowResponse::Deny
+        });
         if let Some(surface) = spec.bridge.surface() {
             self.views.add_view(
                 Sender {
@@ -287,6 +296,20 @@ impl Windows {
             Err(error) => {
                 self.views.remove_view(view);
                 Err(format!("adding a view: {error}"))
+            }
+        }
+    }
+
+    /// `webContents.reload()`; `false` when the view is gone or the reload was refused
+    pub fn reload(&self, view: ViewId) -> bool {
+        let Some(webview) = self.webview(view) else {
+            return false;
+        };
+        match webview.reload() {
+            Ok(()) => true,
+            Err(error) => {
+                eprintln!("shell: reload view {}: {error}", view.0);
+                false
             }
         }
     }
@@ -349,7 +372,16 @@ impl MainWindow for ShellMain {
     }
 }
 
+/// The windows of the process, for the seams that start where no `HostContext`
+/// is at hand (`shell_tabs`: the crash prompt reloads a view)
+static WINDOWS: std::sync::OnceLock<Arc<Windows>> = std::sync::OnceLock::new();
+
+pub(crate) fn windows() -> Option<Arc<Windows>> {
+    WINDOWS.get().cloned()
+}
+
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
+    let _ = WINDOWS.set(cx.windows.clone());
     install_main_window(hosts, &cx.views);
 }
 

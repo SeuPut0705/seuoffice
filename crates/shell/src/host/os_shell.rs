@@ -18,9 +18,14 @@ pub fn install(hosts: &mut Hosts, _cx: &HostContext) {
     hosts.insert(os);
 }
 
+/// `shell.openExternal(url)`: the host's call and a page's `window.open` share it
+pub(crate) fn open_external(url: &str) -> Result<(), String> {
+    open::that_detached(url).map_err(|e| e.to_string())
+}
+
 impl OsShell for ShellOs {
     fn open_external(&self, url: &str) -> Result<(), String> {
-        open::that_detached(url).map_err(|e| e.to_string())
+        open_external(url)
     }
 
     /// Electron's `openPath` resolves with an error message, or `""` when it opened
