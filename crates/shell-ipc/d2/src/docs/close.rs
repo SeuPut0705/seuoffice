@@ -287,7 +287,7 @@ impl Docs {
         let left = Rc::new(Cell::new(targets.len()));
         let then = Rc::new(RefCell::new(Some(then)));
         for view in targets {
-            let token = jscompat::random_uuid();
+            let token = self.shell.random_uuid();
             let (l, t) = (left.clone(), then.clone());
             let one_done = move || {
                 l.set(l.get() - 1);

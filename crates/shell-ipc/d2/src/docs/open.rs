@@ -254,7 +254,7 @@ impl Docs {
                 .replace_all(&basename(source), |_| ".docx".to_owned()),
         ]);
         loop {
-            let result = self.save_dialog(
+            let result = self.save_dialog_in_default_dir(
                 view,
                 js_obj(vec![
                     ("title", js_str(self.tm("dlgSaveAs"))),

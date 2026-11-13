@@ -20,27 +20,26 @@ use main_core::packages::electron_utils::recovery_store::{
 };
 use shell_contract::ViewId;
 
+use super::hosts::DocsShellHost;
+
 pub(crate) type SharedRecovery = Arc<Mutex<SharedRecoveryState>>;
 
-fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_secs_f64() * 1000.0)
-}
-
-/// `createRecoveryStore({ userDataDir })` for one use
+/// `createRecoveryStore({ userDataDir })` for one use; the clock and the
+/// random ids are the shell's (`Date.now()`, `crypto.randomUUID()`)
 pub(crate) fn with_store<R>(
     shared: &SharedRecovery,
     user_data: &str,
+    shell: &DocsShellHost,
     f: impl FnOnce(&RecoveryStore) -> R,
 ) -> R {
     let state = shared.lock().unwrap_or_else(|e| e.into_inner());
     let dir = || user_data.to_owned();
-    let uuid = jscompat::random_uuid;
+    let now = || shell.now_ms();
+    let uuid = || shell.random_uuid();
     let store = create_recovery_store(
         RecoveryStoreOptions {
             user_data_dir: &dir,
-            now_ms: &now_ms,
+            now_ms: &now,
             random_uuid: &uuid,
         },
         &state,
@@ -94,6 +93,7 @@ impl RecoveryBook {
         store: &RecoveryStore,
         tab: ViewId,
         ext: &str,
+        uuid: &dyn Fn() -> String,
     ) -> RecoveryUntitledIdentity {
         if let Some(current) = self.untitled_by_tab.get(&tab) {
             if current.ext == ext {
@@ -107,7 +107,7 @@ impl RecoveryBook {
         }
         let next = RecoveryUntitledIdentity {
             kind: "docs".into(),
-            untitled_id: new_untitled_recovery_id(&jscompat::random_uuid),
+            untitled_id: new_untitled_recovery_id(uuid),
             ext: ext.to_owned(),
         };
         self.untitled_by_tab.insert(tab, next.clone());
@@ -144,11 +144,12 @@ impl RecoveryBook {
         store: &RecoveryStore,
         tab: ViewId,
         target: &CopyTarget,
+        uuid: &dyn Fn() -> String,
     ) -> Result<PendingCopy, NodeError> {
         let identity = match target {
             CopyTarget::File(path) => file_identity(path),
             CopyTarget::Untitled(ext) => {
-                RecoveryIdentity::Untitled(self.untitled_for(store, tab, ext))
+                RecoveryIdentity::Untitled(self.untitled_for(store, tab, ext, uuid))
             }
         };
         let ticket = store.begin_write(&identity)?;
@@ -340,6 +341,7 @@ pub(crate) enum CopyResult {
 pub(crate) fn write_copy(
     shared: &SharedRecovery,
     user_data: &str,
+    shell: &DocsShellHost,
     pending: &PendingCopy,
     bytes: Option<Vec<u8>>,
     title: String,
@@ -348,7 +350,7 @@ pub(crate) fn write_copy(
     let Some(bytes) = bytes else {
         return Ok(CopyResult::Skipped);
     };
-    let result = with_store(shared, user_data, |store| {
+    let result = with_store(shared, user_data, shell, |store| {
         store.write_copy(
             &pending.identity,
             &bytes,

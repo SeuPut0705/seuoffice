@@ -358,7 +358,7 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                 let dir = dirname(&path);
                 let pdf_path = join(&[
                     &d.temp_dir(),
-                    &format!("seuoffice-docs-images-{}.pdf", jscompat::random_uuid()),
+                    &format!("seuoffice-docs-images-{}.pdf", d.shell.random_uuid()),
                 ]);
                 d.add_image_export(view, &pdf_path, &dir);
                 picked.set("dir", dir).set("pdfPath", pdf_path).done()
@@ -690,14 +690,17 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                 (_, DocFormat::Odt) => CopyTarget::Untitled(".odt"),
                 _ => CopyTarget::Untitled(".docx"),
             };
-            let pending =
-                match d.with_store(|store| d.book.borrow_mut().begin_copy(store, view, &target)) {
-                    Ok(p) => p,
-                    Err(_) => {
-                        return responder
-                            .reply(Ok(Obj::new().set("ok", false).set("failed", true).done()));
-                    }
-                };
+            let pending = match d.with_store(|store| {
+                d.book
+                    .borrow_mut()
+                    .begin_copy(store, view, &target, &|| d.shell.random_uuid())
+            }) {
+                Ok(p) => p,
+                Err(_) => {
+                    return responder
+                        .reply(Ok(Obj::new().set("ok", false).set("failed", true).done()));
+                }
+            };
             // the copy follows the disk's password, never the desired next one: an
             // encrypted file without its password, or a new document waiting for
             // its first password save, skips the tick
@@ -725,6 +728,7 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
             let data = args.take(1);
             let engine = d.engine.clone();
             let shared = d.recovery_shared.clone();
+            let shell = d.shell.clone();
             let user_data = d.user_data(&[]);
             let original = original_path.clone();
             let d2 = d.clone();
@@ -744,9 +748,11 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
                         },
                     )
                     .map_err(|_| ())?;
-                    write_copy(&shared, &user_data, &pending, bytes, copy_title, original)
-                        .map(|r| (r, pending))
-                        .map_err(|_| ())
+                    write_copy(
+                        &shared, &user_data, &shell, &pending, bytes, copy_title, original,
+                    )
+                    .map(|r| (r, pending))
+                    .map_err(|_| ())
                 },
                 move |result| {
                     responder.reply(Ok(match result {
