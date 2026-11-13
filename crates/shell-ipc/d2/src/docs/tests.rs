@@ -38,19 +38,6 @@ fn obj(entries: &[(&str, IpcValue)]) -> IpcValue {
     )
 }
 
-/// the marked-content box's channel and arguments for `format`: the
-/// renamed channel once the table lists it
-fn marked(format: &str) -> (&'static str, Vec<IpcValue>) {
-    if shell_contract::CHANNELS
-        .iter()
-        .any(|c| c.name == "docs:confirm-marked-export")
-    {
-        ("docs:confirm-marked-export", vec![s(format)])
-    } else {
-        ("docs:confirm-marked-odt", vec![])
-    }
-}
-
 struct T {
     rt: Rt,
     fake: Fake,
@@ -798,10 +785,7 @@ fn a_torn_down_tab_loses_its_writes() {
         IpcValue::Null
     );
     assert_eq!(
-        {
-            let (ch, args) = marked("odt");
-            t.call(ch, args)
-        },
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
         s("cancel")
     );
 }
@@ -1202,18 +1186,12 @@ fn marked_odt_answers_the_button_pressed() {
     let mut t = T::new(json!({}));
     t.rt.script().message.push_back(1);
     assert_eq!(
-        {
-            let (ch, args) = marked("odt");
-            t.call(ch, args)
-        },
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
         s("clear")
     );
     t.rt.script().message.push_back(0);
     assert_eq!(
-        {
-            let (ch, args) = marked("odt");
-            t.call(ch, args)
-        },
+        t.call("docs:confirm-marked-export", vec![s("odt")]),
         s("docx")
     );
 }
