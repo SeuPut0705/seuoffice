@@ -28,7 +28,17 @@ function numbersOf(opts: unknown, keys: readonly string[]): Opts {
 }
 const BOX_KEYS = ['widthEmu', 'heightEmu', 'id']
 const PICTURE_KEYS = ['widthPx', 'heightPx', 'rotDeg']
-const ANCHORED_KEYS = ['xEmu', 'yEmu', 'widthEmu', 'heightEmu', 'id', 'cornerRadiusEmu', 'zOrder', 'holderLineTwips', 'holderSpacingBeforeTwips']
+const ANCHORED_KEYS = [
+  'xEmu',
+  'yEmu',
+  'widthEmu',
+  'heightEmu',
+  'id',
+  'cornerRadiusEmu',
+  'zOrder',
+  'holderLineTwips',
+  'holderSpacingBeforeTwips',
+]
 
 const PART = /^word\/(document|header\d*|footer\d*)\.xml$/
 const CAP = 12
@@ -50,9 +60,12 @@ function geometryOf(parts: ReadonlyMap<string, string>): Geometry {
     if (!PART.test(name)) continue
     for (const m of xml.matchAll(/<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/g))
       if (extents.size < CAP) extents.set(`${m[1]},${m[2]}`, [Number(m[1]), Number(m[2])])
-    for (const m of xml.matchAll(/<a:prstGeom\b[^>]*\bprst="([^"]*)"/g)) if (prsts.size < CAP) prsts.add(m[1])
-    for (const m of xml.matchAll(/<a:srgbClr\b[^>]*\bval="([^"]*)"/g)) if (colors.size < CAP) colors.add(m[1])
-    for (const m of xml.matchAll(/<wp:docPr\b[^>]*\bid="(\d+)"/g)) if (ids.size < CAP) ids.add(Number(m[1]))
+    for (const m of xml.matchAll(/<a:prstGeom\b[^>]*\bprst="([^"]*)"/g))
+      if (prsts.size < CAP) prsts.add(m[1])
+    for (const m of xml.matchAll(/<a:srgbClr\b[^>]*\bval="([^"]*)"/g))
+      if (colors.size < CAP) colors.add(m[1])
+    for (const m of xml.matchAll(/<wp:docPr\b[^>]*\bid="(\d+)"/g))
+      if (ids.size < CAP) ids.add(Number(m[1]))
   }
   return { extents: [...extents.values()], prsts: [...prsts], colors: [...colors], ids: [...ids] }
 }
@@ -74,7 +87,8 @@ const fromGeometry =
     const g = geometry(parts)
     return g.extents.map(([cx, cy], i) => ({ args: { opts: make(g, cx, cy, i) } }))
   }
-const pick = <T>(list: T[], i: number): T | undefined => (list.length ? list[i % list.length] : undefined)
+const pick = <T>(list: T[], i: number): T | undefined =>
+  list.length ? list[i % list.length] : undefined
 
 const SIZES: Array<[number | undefined, number | undefined]> = [
   [undefined, undefined],
@@ -88,14 +102,20 @@ const IDS = [undefined, 0, 7, 1.5, -2]
 const HEXES = [undefined, 'FF0000', 'abc', '', 'A&"<>']
 
 const built = (sets: Opts[]): Input[] => sets.map((opts) => ({ args: { opts } }))
-const def = (o: Opts): Opts => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
+const def = (o: Opts): Opts =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
 
 const RUNS = [
   [{ text: 'Card title', bold: true }],
   [{ text: 'a & b < c' }, { text: ' tail', italic: true, color: 'FF0000' }],
   [],
 ]
-const FORMATS = [undefined, { align: 'center' }, { spaceBefore: 120, spaceAfter: 0, indentLeft: 360 }, { lineSpacing: 1.5, lineRule: 'auto', align: 'right' }]
+const FORMATS = [
+  undefined,
+  { align: 'center' },
+  { spaceBefore: 120, spaceAfter: 0, indentLeft: 360 },
+  { lineSpacing: 1.5, lineRule: 'auto', align: 'right' },
+]
 
 const ANCHORED: Opts[] = [
   { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 1800000, heightEmu: 900000, paragraphs: [] },
@@ -124,7 +144,10 @@ const ANCHORED: Opts[] = [
     yEmu: 2,
     widthEmu: 100,
     heightEmu: 50,
-    paragraphs: [{ runs: RUNS[0], format: FORMATS[3] }, { runs: RUNS[1], format: FORMATS[2] }],
+    paragraphs: [
+      { runs: RUNS[0], format: FORMATS[3] },
+      { runs: RUNS[1], format: FORMATS[2] },
+    ],
     cornerRadiusEmu: 1e9,
     fillHex: '',
     borderHex: 'x"y',
@@ -144,33 +167,108 @@ const ANCHORED: Opts[] = [
     behindDoc: false,
     holderSpacingBeforeTwips: null,
   },
-  { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 10, heightEmu: 10, paragraphs: [], cornerRadiusEmu: 3, holderSpacingBeforeTwips: 99.5 },
+  {
+    anchor: 'paragraph',
+    xEmu: 0,
+    yEmu: 0,
+    widthEmu: 10,
+    heightEmu: 10,
+    paragraphs: [],
+    cornerRadiusEmu: 3,
+    holderSpacingBeforeTwips: 99.5,
+  },
   // non-finite options whose TypeScript output is valid: roundRect val 50000 / 0, spacing without w:before
-  { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 200, heightEmu: 100, paragraphs: [], cornerRadiusEmu: 'Infinity' },
-  { anchor: 'page', xEmu: 5, yEmu: 5, widthEmu: 200, heightEmu: 100, paragraphs: [], cornerRadiusEmu: '-Infinity', fillHex: 'FFEEDD' },
-  { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 200, heightEmu: 100, paragraphs: [], holderSpacingBeforeTwips: 'NaN' },
-  { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 200, heightEmu: 100, paragraphs: [], holderSpacingBeforeTwips: 'NaN', holderLineTwips: 240 },
+  {
+    anchor: 'paragraph',
+    xEmu: 0,
+    yEmu: 0,
+    widthEmu: 200,
+    heightEmu: 100,
+    paragraphs: [],
+    cornerRadiusEmu: 'Infinity',
+  },
+  {
+    anchor: 'page',
+    xEmu: 5,
+    yEmu: 5,
+    widthEmu: 200,
+    heightEmu: 100,
+    paragraphs: [],
+    cornerRadiusEmu: '-Infinity',
+    fillHex: 'FFEEDD',
+  },
+  {
+    anchor: 'paragraph',
+    xEmu: 0,
+    yEmu: 0,
+    widthEmu: 200,
+    heightEmu: 100,
+    paragraphs: [],
+    holderSpacingBeforeTwips: 'NaN',
+  },
+  {
+    anchor: 'paragraph',
+    xEmu: 0,
+    yEmu: 0,
+    widthEmu: 200,
+    heightEmu: 100,
+    paragraphs: [],
+    holderSpacingBeforeTwips: 'NaN',
+    holderLineTwips: 240,
+  },
 ]
 
 export const GEN_DRAWING_BUILD: CallSpec[] = [
   {
     fn: 'genDrawingBuild.LINE_KINDS',
     call: (text) => ownValue(LINE_KINDS, text),
-    built: ['line', 'lineArrow', 'lineArrowDouble', 'lineBent', 'lineCurved', 'nope', 'constructor', '__proto__', ''].map(
-      (text) => ({ text }),
-    ),
+    built: [
+      'line',
+      'lineArrow',
+      'lineArrowDouble',
+      'lineBent',
+      'lineCurved',
+      'nope',
+      'constructor',
+      '__proto__',
+      '',
+    ].map((text) => ({ text })),
   },
   {
     fn: 'genDrawingBuild.buildLineParagraphXml',
     argMutation: true,
     call: (_text, args) =>
-      buildLineParagraphXml(numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildLineParagraphXml>[0]),
+      buildLineParagraphXml(
+        numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildLineParagraphXml>[0],
+      ),
     fromDocument: fromGeometry((g, cx, cy, i) =>
-      def({ kind: Object.keys(LINE_KINDS)[i % 5], widthEmu: cx, heightEmu: cy, id: pick(g.ids, i), colorHex: pick(g.colors, i) }),
+      def({
+        kind: Object.keys(LINE_KINDS)[i % 5],
+        widthEmu: cx,
+        heightEmu: cy,
+        id: pick(g.ids, i),
+        colorHex: pick(g.colors, i),
+      }),
     ),
     built: built(
-      ['line', 'lineArrow', 'lineArrowDouble', 'lineBent', 'lineCurved', 'other', 'toString'].flatMap((kind, k) =>
-        SIZES.map(([widthEmu, heightEmu], i) => def({ kind, widthEmu, heightEmu, id: IDS[(i + k) % IDS.length], colorHex: HEXES[(i + k) % HEXES.length] })),
+      [
+        'line',
+        'lineArrow',
+        'lineArrowDouble',
+        'lineBent',
+        'lineCurved',
+        'other',
+        'toString',
+      ].flatMap((kind, k) =>
+        SIZES.map(([widthEmu, heightEmu], i) =>
+          def({
+            kind,
+            widthEmu,
+            heightEmu,
+            id: IDS[(i + k) % IDS.length],
+            colorHex: HEXES[(i + k) % HEXES.length],
+          }),
+        ),
       ),
     ),
     mutation: 'none',
@@ -178,9 +276,18 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
   {
     fn: 'genDrawingBuild.inlinePictureDrawingXml',
     argMutation: true,
-    call: (_text, args) => inlinePictureDrawingXml(numbersOf(args.opts, PICTURE_KEYS) as unknown as InlinePictureXmlOptions),
+    call: (_text, args) =>
+      inlinePictureDrawingXml(
+        numbersOf(args.opts, PICTURE_KEYS) as unknown as InlinePictureXmlOptions,
+      ),
     fromDocument: fromGeometry((g, cx, cy, i) =>
-      def({ rId: `rId${i}`, docPrId: pick(g.ids, i) ?? 1, widthPx: cx / 9525, heightPx: cy / 9525, rotDeg: [undefined, 90, 30][i % 3] }),
+      def({
+        rId: `rId${i}`,
+        docPrId: pick(g.ids, i) ?? 1,
+        widthPx: cx / 9525,
+        heightPx: cy / 9525,
+        rotDeg: [undefined, 90, 30][i % 3],
+      }),
     ),
     built: built(
       [
@@ -211,14 +318,32 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
     fn: 'genDrawingBuild.buildTextboxParagraphXml',
     argMutation: true,
     call: (_text, args) =>
-      buildTextboxParagraphXml(numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildTextboxParagraphXml>[0]),
+      buildTextboxParagraphXml(
+        numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildTextboxParagraphXml>[0],
+      ),
     fromDocument: fromGeometry((g, cx, cy, i) =>
-      def({ widthEmu: cx, heightEmu: cy, id: pick(g.ids, i), fillHex: pick(g.colors, i), borderHex: pick(g.colors, i + 1) }),
+      def({
+        widthEmu: cx,
+        heightEmu: cy,
+        id: pick(g.ids, i),
+        fillHex: pick(g.colors, i),
+        borderHex: pick(g.colors, i + 1),
+      }),
     ),
     built: [
       {},
       { args: { opts: null } },
-      ...built(SIZES.map(([widthEmu, heightEmu], i) => def({ widthEmu, heightEmu, id: IDS[i % IDS.length], fillHex: HEXES[i % HEXES.length], borderHex: HEXES[(i + 2) % HEXES.length] }))),
+      ...built(
+        SIZES.map(([widthEmu, heightEmu], i) =>
+          def({
+            widthEmu,
+            heightEmu,
+            id: IDS[i % IDS.length],
+            fillHex: HEXES[i % HEXES.length],
+            borderHex: HEXES[(i + 2) % HEXES.length],
+          }),
+        ),
+      ),
     ],
     mutation: 'none',
   },
@@ -226,7 +351,9 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
     fn: 'genDrawingBuild.buildAnchoredTextboxParagraphXml',
     argMutation: true,
     call: (_text, args) =>
-      buildAnchoredTextboxParagraphXml(numbersOf(args.opts, ANCHORED_KEYS) as unknown as AnchoredTextboxOptions),
+      buildAnchoredTextboxParagraphXml(
+        numbersOf(args.opts, ANCHORED_KEYS) as unknown as AnchoredTextboxOptions,
+      ),
     fromDocument: fromGeometry((g, cx, cy, i) =>
       def({
         anchor: i % 2 ? 'page' : 'paragraph',
@@ -246,14 +373,31 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
     fn: 'genDrawingBuild.buildShapeParagraphXml',
     argMutation: true,
     call: (_text, args) =>
-      buildShapeParagraphXml(numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildShapeParagraphXml>[0]),
+      buildShapeParagraphXml(
+        numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildShapeParagraphXml>[0],
+      ),
     fromDocument: fromGeometry((g, cx, cy, i) =>
-      def({ prst: pick(g.prsts, i) ?? 'rect', widthEmu: cx, heightEmu: cy, id: pick(g.ids, i), fillHex: pick(g.colors, i), withTextbox: i % 2 === 0 }),
+      def({
+        prst: pick(g.prsts, i) ?? 'rect',
+        widthEmu: cx,
+        heightEmu: cy,
+        id: pick(g.ids, i),
+        fillHex: pick(g.colors, i),
+        withTextbox: i % 2 === 0,
+      }),
     ),
     built: built(
       ['rect', 'ellipse', 'roundRect', 'rightArrow', '', 'a"b'].flatMap((prst, k) =>
         SIZES.map(([widthEmu, heightEmu], i) =>
-          def({ prst, widthEmu, heightEmu, id: IDS[(i + k) % IDS.length], fillHex: HEXES[i % HEXES.length], borderHex: HEXES[k % HEXES.length], withTextbox: [undefined, true, false][(i + k) % 3] }),
+          def({
+            prst,
+            widthEmu,
+            heightEmu,
+            id: IDS[(i + k) % IDS.length],
+            fillHex: HEXES[i % HEXES.length],
+            borderHex: HEXES[k % HEXES.length],
+            withTextbox: [undefined, true, false][(i + k) % 3],
+          }),
         ),
       ),
     ),
@@ -263,13 +407,31 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
     fn: 'genDrawingBuild.buildWordArtParagraphXml',
     argMutation: true,
     call: (_text, args) =>
-      buildWordArtParagraphXml(numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildWordArtParagraphXml>[0]),
-    fromDocument: fromGeometry((g, cx, cy, i) => def({ widthEmu: cx, heightEmu: cy, id: pick(g.ids, i), colorHex: pick(g.colors, i), italic: i % 2 === 1 })),
+      buildWordArtParagraphXml(
+        numbersOf(args.opts, BOX_KEYS) as Parameters<typeof buildWordArtParagraphXml>[0],
+      ),
+    fromDocument: fromGeometry((g, cx, cy, i) =>
+      def({
+        widthEmu: cx,
+        heightEmu: cy,
+        id: pick(g.ids, i),
+        colorHex: pick(g.colors, i),
+        italic: i % 2 === 1,
+      }),
+    ),
     built: built(
-      [undefined, '', 'WordArt', 'A & B <c> "d"', '\u0001ctl\u000b', '한글 텍스트'].flatMap((text, k) =>
-        SIZES.map(([widthEmu, heightEmu], i) =>
-          def({ text, colorHex: HEXES[(i + k) % HEXES.length], italic: [undefined, true, false][i % 3], widthEmu, heightEmu, id: IDS[k % IDS.length] }),
-        ),
+      [undefined, '', 'WordArt', 'A & B <c> "d"', '\u0001ctl\u000b', '한글 텍스트'].flatMap(
+        (text, k) =>
+          SIZES.map(([widthEmu, heightEmu], i) =>
+            def({
+              text,
+              colorHex: HEXES[(i + k) % HEXES.length],
+              italic: [undefined, true, false][i % 3],
+              widthEmu,
+              heightEmu,
+              id: IDS[k % IDS.length],
+            }),
+          ),
       ),
     ),
     mutation: 'none',
@@ -277,13 +439,28 @@ export const GEN_DRAWING_BUILD: CallSpec[] = [
 ]
 
 const nf = (fn: string, base: Opts, patches: Opts[]) =>
-  patches.map((patch) => ({ fn: `genDrawingBuild.${fn}`, text: '', args: { opts: { ...base, ...patch } } }))
-const ANCHORED_BASE: Opts = { anchor: 'paragraph', xEmu: 0, yEmu: 0, widthEmu: 100, heightEmu: 50, paragraphs: [] }
+  patches.map((patch) => ({
+    fn: `genDrawingBuild.${fn}`,
+    text: '',
+    args: { opts: { ...base, ...patch } },
+  }))
+const ANCHORED_BASE: Opts = {
+  anchor: 'paragraph',
+  xEmu: 0,
+  yEmu: 0,
+  widthEmu: 100,
+  heightEmu: 50,
+  paragraphs: [],
+}
 const ZERO_INSETS = { l: 0, t: 0, r: 0, b: 0 }
 const BOX_NF: Opts[] = [{ widthEmu: 'NaN' }, { heightEmu: 'Infinity' }, { id: 'NaN' }]
 
 /** One input per numeric option where the TypeScript writes NaN or Infinity into the XML and the Rust ignores the value. */
-export const NON_FINITE_DRAWING_BUILD: Array<{ fn: string; text: string; args: Record<string, unknown> }> = [
+export const NON_FINITE_DRAWING_BUILD: Array<{
+  fn: string
+  text: string
+  args: Record<string, unknown>
+}> = [
   ...nf('buildLineParagraphXml', { kind: 'line' }, BOX_NF),
   ...nf('inlinePictureDrawingXml', { rId: 'rId1', docPrId: 1, widthPx: 100, heightPx: 50 }, [
     { widthPx: 'NaN' },

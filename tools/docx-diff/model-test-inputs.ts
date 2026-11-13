@@ -15,13 +15,18 @@ interface Captured {
 export async function readTestInputs(
   directory: string,
 ): Promise<{ inputs: ModelInput[]; calls: number; refused: Captured[]; files: number }> {
-  const names = readdirSync(directory).filter((name) => /^parse-\d+-\d+\.ndjson$/.test(name)).sort()
+  const names = readdirSync(directory)
+    .filter((name) => /^parse-\d+-\d+\.ndjson$/.test(name))
+    .sort()
   const inputs: ModelInput[] = []
   const seen = new Set<string>()
   const refused: Captured[] = []
   let calls = 0
   for (const name of names) {
-    for await (const line of createInterface({ input: createReadStream(resolve(directory, name)), crlfDelay: Infinity })) {
+    for await (const line of createInterface({
+      input: createReadStream(resolve(directory, name)),
+      crlfDelay: Infinity,
+    })) {
       if (!line) continue
       const record = JSON.parse(line) as Captured
       calls++

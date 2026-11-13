@@ -7,12 +7,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "c:ser",
-            "c:pt",
-            "c:lvl",
-            "c:dPt"
-          ],
+          "arrayNames": ["c:ser", "c:pt", "c:lvl", "c:dPt"],
           "trimValues": false,
           "parseTagValue": false
         },
@@ -29,13 +24,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "cx:data",
-            "cx:lvl",
-            "cx:pt",
-            "cx:series",
-            "cx:dataPt"
-          ],
+          "arrayNames": ["cx:data", "cx:lvl", "cx:pt", "cx:series", "cx:dataPt"],
           "trimValues": false,
           "parseTagValue": false
         },
@@ -52,9 +41,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "p:embeddedFont"
-          ]
+          "arrayNames": ["p:embeddedFont"]
         },
         "typescript": {
           "value": {
@@ -99,11 +86,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "p:sp",
-            "p:graphicFrame",
-            "p:pic"
-          ]
+          "arrayNames": ["p:sp", "p:graphicFrame", "p:pic"]
         },
         "typescript": {
           "value": {
@@ -118,9 +101,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "a:tblStyle"
-          ]
+          "arrayNames": ["a:tblStyle"]
         },
         "typescript": {
           "value": {
@@ -150,11 +131,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "Relationship",
-            "sldId",
-            "Override"
-          ]
+          "arrayNames": ["Relationship", "sldId", "Override"]
         },
         "typescript": {
           "value": {
@@ -201,23 +178,11 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "a",
-            "b",
-            "r",
-            "1",
-            "@_b",
-            "?xml",
-            "#text",
-            ":@",
-            "isPrototypeOf"
-          ]
+          "arrayNames": ["a", "b", "r", "1", "@_b", "?xml", "#text", ":@", "isPrototypeOf"]
         },
         "typescript": {
           "value": {
-            "a": [
-              ""
-            ]
+            "a": [""]
           }
         },
         "rust": {
@@ -230,17 +195,11 @@
         "args": {
           "trimValues": false,
           "parseTagValue": false,
-          "arrayNames": [
-            "a",
-            "@_b",
-            "1"
-          ]
+          "arrayNames": ["a", "@_b", "1"]
         },
         "typescript": {
           "value": {
-            "a": [
-              ""
-            ]
+            "a": [""]
           }
         },
         "rust": {
@@ -251,10 +210,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<!DOCTYPE a><a/>",
         "args": {
-          "arrayNames": [
-            "p:sldId",
-            "sldId"
-          ]
+          "arrayNames": ["p:sldId", "sldId"]
         },
         "typescript": {
           "value": {
@@ -275,12 +231,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "c:ser",
-            "c:pt",
-            "c:lvl",
-            "c:dPt"
-          ],
+          "arrayNames": ["c:ser", "c:pt", "c:lvl", "c:dPt"],
           "trimValues": false,
           "parseTagValue": false
         },
@@ -297,13 +248,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "cx:data",
-            "cx:lvl",
-            "cx:pt",
-            "cx:series",
-            "cx:dataPt"
-          ],
+          "arrayNames": ["cx:data", "cx:lvl", "cx:pt", "cx:series", "cx:dataPt"],
           "trimValues": false,
           "parseTagValue": false
         },
@@ -320,9 +265,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "p:embeddedFont"
-          ]
+          "arrayNames": ["p:embeddedFont"]
         },
         "typescript": {
           "value": {
@@ -367,11 +310,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "p:sp",
-            "p:graphicFrame",
-            "p:pic"
-          ]
+          "arrayNames": ["p:sp", "p:graphicFrame", "p:pic"]
         },
         "typescript": {
           "value": {
@@ -386,9 +325,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "a:tblStyle"
-          ]
+          "arrayNames": ["a:tblStyle"]
         },
         "typescript": {
           "value": {
@@ -418,11 +355,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "Relationship",
-            "sldId",
-            "Override"
-          ]
+          "arrayNames": ["Relationship", "sldId", "Override"]
         },
         "typescript": {
           "value": {
@@ -469,23 +402,11 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "a",
-            "b",
-            "r",
-            "1",
-            "@_b",
-            "?xml",
-            "#text",
-            ":@",
-            "isPrototypeOf"
-          ]
+          "arrayNames": ["a", "b", "r", "1", "@_b", "?xml", "#text", ":@", "isPrototypeOf"]
         },
         "typescript": {
           "value": {
-            "a": [
-              "\ude00"
-            ]
+            "a": ["\ude00"]
           }
         },
         "rust": {
@@ -498,17 +419,11 @@
         "args": {
           "trimValues": false,
           "parseTagValue": false,
-          "arrayNames": [
-            "a",
-            "@_b",
-            "1"
-          ]
+          "arrayNames": ["a", "@_b", "1"]
         },
         "typescript": {
           "value": {
-            "a": [
-              "\ude00"
-            ]
+            "a": ["\ude00"]
           }
         },
         "rust": {
@@ -519,10 +434,7 @@
         "fn": "pptxXml.parseObject",
         "text": "<a><![CDATA😀]]></a>",
         "args": {
-          "arrayNames": [
-            "p:sldId",
-            "sldId"
-          ]
+          "arrayNames": ["p:sldId", "sldId"]
         },
         "typescript": {
           "value": {

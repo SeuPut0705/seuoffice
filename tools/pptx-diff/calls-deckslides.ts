@@ -69,7 +69,7 @@ const loadZip = (name: string): Promise<JSZip> =>
   JSZip.loadAsync(Buffer.from(deckNamed(name), 'base64'))
 
 async function textOf(name: string, path: string): Promise<string> {
-  return (await (await loadZip(name)).file(path)!.async('string'))
+  return await (await loadZip(name)).file(path)!.async('string')
 }
 
 /** The deck `name` with `edit` applied to its zip, as `args.deck`. */
@@ -176,13 +176,10 @@ const ODD_LIST = await (async () => {
       PRES,
       pres.replace(
         /<p:sldIdLst>[\s\S]*?<\/p:sldIdLst>/,
-        "<p:sldIdLst><p:sldId id='2147483647' r:id='rId2'/><p:sldId id=\"256\" r:id=\"rId3\"/></p:sldIdLst>",
+        '<p:sldIdLst><p:sldId id=\'2147483647\' r:id=\'rId2\'/><p:sldId id="256" r:id="rId3"/></p:sldIdLst>',
       ),
     )
-    zip.file(
-      PRES_RELS,
-      rels.replace(/Id="rId2"/, "Id='rId2'").replace(/Id="rId3"/, "Id='rId3'"),
-    )
+    zip.file(PRES_RELS, rels.replace(/Id="rId2"/, "Id='rId2'").replace(/Id="rId3"/, "Id='rId3'"))
   })
 })()
 
@@ -205,7 +202,10 @@ const EXT_LIST = await (async () => {
   return custom(GEN, (zip) => {
     zip.file(
       PRES,
-      pres.replace(/<p:sldId\b([^>]*?)\/>/g, '<p:sldId$1><p:extLst><p:ext uri="x"><x:y xmlns:x="z"/></p:ext></p:extLst></p:sldId>'),
+      pres.replace(
+        /<p:sldId\b([^>]*?)\/>/g,
+        '<p:sldId$1><p:extLst><p:ext uri="x"><x:y xmlns:x="z"/></p:ext></p:extLst></p:sldId>',
+      ),
     )
   })
 })()
@@ -213,14 +213,20 @@ const SPELLED_LIST = await (async () => {
   const pres = await textOf(GEN, PRES)
   const rels = await textOf(GEN, PRES_RELS)
   return custom(GEN, (zip) => {
-    zip.file(PRES, pres.replace(/ r:id="rId2"/, ' r:id = "rId&#50;"').replace(/ id="(\d+)"/, ' id = "$1"'))
-    zip.file(PRES_RELS, rels.replace(/ Id="rId2"/, ' Id = \'rId&#50;\''))
+    zip.file(
+      PRES,
+      pres.replace(/ r:id="rId2"/, ' r:id = "rId&#50;"').replace(/ id="(\d+)"/, ' id = "$1"'),
+    )
+    zip.file(PRES_RELS, rels.replace(/ Id="rId2"/, " Id = 'rId&#50;'"))
   })
 })()
 const LIST_FORMS = [ATTR_LIST, DEFAULT_NS_LIST, EXT_LIST, SPELLED_LIST]
 
 const DUPLICATE: Input[] = [
-  ...LIST_FORMS.flatMap((deck) => [over(deck, { slide: 0 }), over(deck, { slide: 1, clearText: true })]),
+  ...LIST_FORMS.flatMap((deck) => [
+    over(deck, { slide: 0 }),
+    over(deck, { slide: 1, clearText: true }),
+  ]),
   ...SLIDE_DECKS.flatMap((name) => [
     deckInput(name, { slide: 0 }),
     deckInput(name, { slide: 1, clearText: true }),
@@ -287,8 +293,7 @@ const BLANK_INSERT: Input[] = [
     { slide: 0 },
     {
       part: 'ppt/slides/_rels/slide1.xml.rels',
-      text:
-        '<Relationships><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/a&amp;b&quot;.xml"/></Relationships>',
+      text: '<Relationships><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/a&amp;b&quot;.xml"/></Relationships>',
     },
   ),
 ]
@@ -347,7 +352,7 @@ const SWAP_SOURCE = await (async () => {
       slideXml(
         '<p:pic><p:nvPicPr><p:cNvPr id="2" name="P"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>' +
           '<p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr/></p:pic>' +
-          "<p:pic><p:nvPicPr><p:cNvPr id=\"3\" name=\"Q\"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed = 'rId1' r:link = \"rId&#50;\"/></p:blipFill><p:spPr/></p:pic>" +
+          '<p:pic><p:nvPicPr><p:cNvPr id="3" name="Q"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed = \'rId1\' r:link = "rId&#50;"/></p:blipFill><p:spPr/></p:pic>' +
           '<p:pic><p:nvPicPr><p:cNvPr id="4" name="R"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId3"/></p:blipFill><p:spPr/></p:pic>',
       ),
     )
@@ -409,9 +414,13 @@ const LAYOUTS = [
 ]
 
 const INSERT_LAYOUT: Input[] = [
-  ...LIST_FORMS.map((deck) => over(deck, { slide: 0, layout: 'ppt/slideLayouts/slideLayout1.xml' })),
+  ...LIST_FORMS.map((deck) =>
+    over(deck, { slide: 0, layout: 'ppt/slideLayouts/slideLayout1.xml' }),
+  ),
   ...[BLANK, GEN, BIZ, UNICODE, GAPS].flatMap((name) =>
-    LAYOUTS.flatMap((layout, i) => (i % 2 === 0 || name === GEN ? [deckInput(name, { slide: 0, layout })] : [])),
+    LAYOUTS.flatMap((layout, i) =>
+      i % 2 === 0 || name === GEN ? [deckInput(name, { slide: 0, layout })] : [],
+    ),
   ),
   deckInput(GEN, { slide: 1, layout: LAYOUTS[0] }),
   deckInput(GEN, { slide: 5, layout: LAYOUTS[0] }),
@@ -442,11 +451,7 @@ const DELETE: Input[] = [
       text: '<p:presentation xmlns:p="x" xmlns:r="y"><p:sldIdLst><p:sldId id="256" r:id="rIdX"/></p:sldIdLst></p:presentation>',
     },
   ),
-  deckInput(
-    GEN,
-    { slide: 1 },
-    { part: PRES_RELS, text: '<Relationships/>' },
-  ),
+  deckInput(GEN, { slide: 1 }, { part: PRES_RELS, text: '<Relationships/>' }),
 ]
 
 const REORDER: Input[] = [0, 1, 2, 3, 9, -1].flatMap((element) =>
@@ -457,24 +462,14 @@ const REORDER: Input[] = [0, 1, 2, 3, 9, -1].flatMap((element) =>
 const REORDER_ALL: Input[] = [
   ...REORDER,
   ...[BIZ, UNICODE].flatMap((name) =>
-    ['front', 'back', 'forward', 'backward'].map((dir) => deckInput(name, { slide: 0, element: 1, dir })),
+    ['front', 'back', 'forward', 'backward'].map((dir) =>
+      deckInput(name, { slide: 0, element: 1, dir }),
+    ),
   ),
   deckInput(GEN, { slide: 99, element: 0, dir: 'front' }),
-  deckInput(
-    BLANK,
-    { slide: 0, element: 0, dir: 'front' },
-    { part: SLIDE1, text: CONNECTED },
-  ),
-  deckInput(
-    BLANK,
-    { slide: 0, element: 5, dir: 'backward' },
-    { part: SLIDE1, text: CONNECTED },
-  ),
-  deckInput(
-    BLANK,
-    { slide: 0, element: 2, dir: 'forward' },
-    { part: SLIDE1, text: CONNECTED },
-  ),
+  deckInput(BLANK, { slide: 0, element: 0, dir: 'front' }, { part: SLIDE1, text: CONNECTED }),
+  deckInput(BLANK, { slide: 0, element: 5, dir: 'backward' }, { part: SLIDE1, text: CONNECTED }),
+  deckInput(BLANK, { slide: 0, element: 2, dir: 'forward' }, { part: SLIDE1, text: CONNECTED }),
 ]
 
 // ── layout and size ────────────────────────────────────────────────────
@@ -482,7 +477,15 @@ const REORDER_ALL: Input[] = [
 const PLACEHOLDERS = slideXml(
   sp(2, 'Title', [100, 200, 300, 400], 'rect', '', '<p:ph type="title"/>', textBody('Title')) +
     sp(3, 'Body', [100, 200, 300, 400], 'rect', '', '<p:ph idx="1"/>', textBody('Body')) +
-    sp(4, 'Footer', [100, 200, 300, 400], 'rect', '', '<p:ph type="ftr" idx="11"/>', textBody('f')) +
+    sp(
+      4,
+      'Footer',
+      [100, 200, 300, 400],
+      'rect',
+      '',
+      '<p:ph type="ftr" idx="11"/>',
+      textBody('f'),
+    ) +
     sp(5, 'Sub', [0, 0, 0, 0], 'rect', '', '<p:ph type="subTitle" idx="1"/>') +
     sp(6, 'Center', [100, 200, 300, 400], 'rect', '', '<p:ph type="ctrTitle"/>') +
     sp(9, 'Number', [100, 200, 300, 400], 'rect', '', '<p:ph type="sldNum" idx="12"/>') +
@@ -498,7 +501,11 @@ const DOLLAR_LAYOUT = await custom(BLANK, async (zip) => {
 
 const SET_LAYOUT: Input[] = [
   over(DOLLAR_LAYOUT, { slide: 0, layout: 'ppt/slideLayouts/a$&b&c.xml' }),
-  over(DOLLAR_LAYOUT, { slide: 0, layout: 'ppt/slideLayouts/a$&b&c.xml' }, { part: 'ppt/slides/_rels/slide1.xml.rels', text: '<Relationships/>' }),
+  over(
+    DOLLAR_LAYOUT,
+    { slide: 0, layout: 'ppt/slideLayouts/a$&b&c.xml' },
+    { part: 'ppt/slides/_rels/slide1.xml.rels', text: '<Relationships/>' },
+  ),
   ...[BLANK, GEN, BIZ, UNICODE, GAPS].flatMap((name) =>
     LAYOUTS.map((layout) => deckInput(name, { slide: 0, layout })),
   ),
@@ -519,8 +526,7 @@ const SET_LAYOUT: Input[] = [
     { slide: 0, layout: LAYOUTS[0] },
     {
       part: 'ppt/slides/_rels/slide1.xml.rels',
-      text:
-        '<Relationships><Relationship Id="rId1" Type="x/slideLayout" Target="a&amp;b.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout9.xml"/></Relationships>',
+      text: '<Relationships><Relationship Id="rId1" Type="x/slideLayout" Target="a&amp;b.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout9.xml"/></Relationships>',
     },
   ),
   deckInput(
@@ -583,14 +589,38 @@ const SET_SIZE: Input[] = await (async () => {
     ...SIZES.map(([cx, cy]) => deckInput(GEN, { cx, cy })),
     deckInput(BLANK, { cx: 9144000, cy: 5143500 }, { part: SLIDE1, text: CONNECTED }),
     deckInput(BLANK, { cx: 4572000, cy: 3429000 }, { part: SLIDE1, text: PLACEHOLDERS }),
-    deckInput(BLANK, { cx: 12192000, cy: 6858000 }, { part: PRES, text: withSz("<p:sldSz cx='9144000' cy='6858000' type='screen4x3'/>") }),
-    deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('<p:sldSz cx="9144000"/>') }),
-    deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('<p:sldSz cy="6858000"/>') }),
+    deckInput(
+      BLANK,
+      { cx: 12192000, cy: 6858000 },
+      { part: PRES, text: withSz("<p:sldSz cx='9144000' cy='6858000' type='screen4x3'/>") },
+    ),
+    deckInput(
+      BLANK,
+      { cx: 1000, cy: 2000 },
+      { part: PRES, text: withSz('<p:sldSz cx="9144000"/>') },
+    ),
+    deckInput(
+      BLANK,
+      { cx: 1000, cy: 2000 },
+      { part: PRES, text: withSz('<p:sldSz cy="6858000"/>') },
+    ),
     deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('<p:sldSz/>') }),
     deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('') }),
-    deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('<p:sldSz cx="1.5E6" cy="0x10"/>') }),
-    deckInput(BLANK, { cx: 9144000, cy: 6858000 }, { part: PRES, text: withSz('<p:sldSz cx="9144000" cy="6858000"></p:sldSz>') }),
-    deckInput(BLANK, { cx: 1000, cy: 2000 }, { part: PRES, text: withSz('<p:sldSz cx="" cy="6858000" cx="3"/>') }),
+    deckInput(
+      BLANK,
+      { cx: 1000, cy: 2000 },
+      { part: PRES, text: withSz('<p:sldSz cx="1.5E6" cy="0x10"/>') },
+    ),
+    deckInput(
+      BLANK,
+      { cx: 9144000, cy: 6858000 },
+      { part: PRES, text: withSz('<p:sldSz cx="9144000" cy="6858000"></p:sldSz>') },
+    ),
+    deckInput(
+      BLANK,
+      { cx: 1000, cy: 2000 },
+      { part: PRES, text: withSz('<p:sldSz cx="" cy="6858000" cx="3"/>') },
+    ),
   ]
   return out
 })()
@@ -626,9 +656,7 @@ const SITE_FOR_SIDE: Input[] = [
 const MOVES: number[][] = [[0], [1], [2], [0, 1, 2], [3], [4], [5], [9], [], [0, 0], [1, 7]]
 
 const UPDATE_CONNECTORS: Input[] = [
-  ...MOVES.map((moved) =>
-    deckInput(BLANK, { slide: 0, moved }, { part: SLIDE1, text: CONNECTED }),
-  ),
+  ...MOVES.map((moved) => deckInput(BLANK, { slide: 0, moved }, { part: SLIDE1, text: CONNECTED })),
   // a connector that is itself the target of an earlier one
   deckInput(
     BLANK,
@@ -673,21 +701,35 @@ const CONNECTION_PATCHES: Array<[unknown, unknown]> = [
   [undefined, undefined],
   [{ id: 4, idx: 2 }, undefined],
   [undefined, { id: 4, idx: 0 }],
-  [{ id: 3, idx: 1 }, { id: 2, idx: 3 }],
+  [
+    { id: 3, idx: 1 },
+    { id: 2, idx: 3 },
+  ],
   [null, undefined],
   [undefined, null],
   [null, null],
-  [{ id: 2.5, idx: 1e21 }, { id: -1, idx: 0 }],
+  [
+    { id: 2.5, idx: 1e21 },
+    { id: -1, idx: 0 },
+  ],
 ]
 
 const SET_CONNECTION: Input[] = [
   ...[0, 3, 4, 5, 6, 7, 9].flatMap((element) =>
     CONNECTION_PATCHES.slice(0, 5).map(([start, end]) =>
-      deckInput(BLANK, { slide: 0, element, ...patch(start, end) }, { part: SLIDE1, text: CONNECTED }),
+      deckInput(
+        BLANK,
+        { slide: 0, element, ...patch(start, end) },
+        { part: SLIDE1, text: CONNECTED },
+      ),
     ),
   ),
   ...CONNECTION_PATCHES.map(([start, end]) =>
-    deckInput(BLANK, { slide: 0, element: 3, ...patch(start, end) }, { part: SLIDE1, text: CONNECTED }),
+    deckInput(
+      BLANK,
+      { slide: 0, element: 3, ...patch(start, end) },
+      { part: SLIDE1, text: CONNECTED },
+    ),
   ),
   deckInput(GEN, { slide: 0, element: 0, start: { id: 2, idx: 1 } }),
   deckInput(GEN, { slide: 0, element: 99, start: { id: 2, idx: 1 } }),
@@ -748,7 +790,9 @@ const u32le = (v: number): Bytes => u32(v).reverse()
 const tag = (t: string): Bytes => [...t].map((c) => c.charCodeAt(0))
 
 /** cmap format 4 over segments; `glyphs` give a segment its own glyph id array. */
-function format4(segs: Array<{ start: number; end: number; delta?: number; glyphs?: number[] }>): Bytes {
+function format4(
+  segs: Array<{ start: number; end: number; delta?: number; glyphs?: number[] }>,
+): Bytes {
   const n = segs.length
   const ends = segs.flatMap((s) => u16(s.end))
   const starts = segs.flatMap((s) => u16(s.start))
@@ -763,13 +807,29 @@ function format4(segs: Array<{ start: number; end: number; delta?: number; glyph
   const rangeOffsets = offsets.flatMap((o) => u16(o))
   const glyphs = segs.flatMap((s) => (s.glyphs ?? []).flatMap((g) => u16(g)))
   const body = [...ends, ...u16(0), ...starts, ...deltas, ...rangeOffsets, ...glyphs]
-  return [...u16(4), ...u16(14 + body.length - 2 + 2), ...u16(0), ...u16(n * 2), ...u16(0), ...u16(0), ...u16(0), ...body]
+  return [
+    ...u16(4),
+    ...u16(14 + body.length - 2 + 2),
+    ...u16(0),
+    ...u16(n * 2),
+    ...u16(0),
+    ...u16(0),
+    ...u16(0),
+    ...body,
+  ]
 }
 
 /** cmap format 12 over groups. */
 function format12(groups: Array<[number, number, number]>): Bytes {
   const body = groups.flatMap(([a, b, g]) => [...u32(a), ...u32(b), ...u32(g)])
-  return [...u16(12), ...u16(0), ...u32(16 + body.length), ...u32(0), ...u32(groups.length), ...body]
+  return [
+    ...u16(12),
+    ...u16(0),
+    ...u32(16 + body.length),
+    ...u32(0),
+    ...u32(groups.length),
+    ...body,
+  ]
 }
 
 /** A cmap table of subtables, each in a (platform 3, encoding 1) record. */
@@ -790,7 +850,12 @@ function cmapTable(subtables: Bytes[], tamper?: (bytes: Bytes) => void): Bytes {
 function sfnt(cmap: Bytes, options: { ttc?: boolean; tableTag?: string } = {}): Bytes {
   const base = options.ttc ? 16 : 0
   const dir = [...u32(0x00010000), ...u16(1), ...u16(16), ...u16(0), ...u16(0)]
-  const record = [...tag(options.tableTag ?? 'cmap'), ...u32(0), ...u32(base + 12 + 16), ...u32(cmap.length)]
+  const record = [
+    ...tag(options.tableTag ?? 'cmap'),
+    ...u32(0),
+    ...u32(base + 12 + 16),
+    ...u32(cmap.length),
+  ]
   const header = options.ttc ? [...tag('ttcf'), ...u32(0x00010000), ...u32(1), ...u32(16)] : []
   return [...header, ...dir, ...record, ...cmap]
 }
@@ -809,11 +874,27 @@ function eot(payload: Bytes, flags = 0, declared?: { size?: number; data?: numbe
   ]
 }
 
-const CAPITALS = cmapTable([format4([{ start: 0x41, end: 0x5a }, { start: 0x100, end: 0x102, glyphs: [5, 0, 7] }])])
-const ABC_12 = cmapTable([format12([[0x41, 0x43, 1], [0x1f600, 0x1f602, 30], [0x61, 0x61, 0]])])
-const BOTH = cmapTable([format4([{ start: 0x30, end: 0x39, delta: 0xffff }]), format12([[0x4e00, 0x4e10, 9]])])
+const CAPITALS = cmapTable([
+  format4([
+    { start: 0x41, end: 0x5a },
+    { start: 0x100, end: 0x102, glyphs: [5, 0, 7] },
+  ]),
+])
+const ABC_12 = cmapTable([
+  format12([
+    [0x41, 0x43, 1],
+    [0x1f600, 0x1f602, 30],
+    [0x61, 0x61, 0],
+  ]),
+])
+const BOTH = cmapTable([
+  format4([{ start: 0x30, end: 0x39, delta: 0xffff }]),
+  format12([[0x4e00, 0x4e10, 9]]),
+])
 const GAP_TABLE = cmapTable([format4([{ start: 0x41, end: 0x41, delta: 0x10000 - 0x41 }])])
-const OTHER_FORMAT = cmapTable([[...u16(6), ...u16(10), ...u16(0), ...u16(0x41), ...u16(1), ...u16(3)]])
+const OTHER_FORMAT = cmapTable([
+  [...u16(6), ...u16(10), ...u16(0), ...u16(0x41), ...u16(1), ...u16(3)],
+])
 
 const sfntBytes: Record<string, Bytes> = {
   capitals: sfnt(CAPITALS),
@@ -825,7 +906,10 @@ const sfntBytes: Record<string, Bytes> = {
   other: sfnt(OTHER_FORMAT),
 }
 
-const PROBES = [0x20, 0x30, 0x39, 0x41, 0x43, 0x5a, 0x61, 0x100, 0x101, 0x102, 0x103, 0x4e00, 0x4e10, 0x4e11, 0xffff, 0x1f600, 0x1f602, 0x1f603, 0x10ffff]
+const PROBES = [
+  0x20, 0x30, 0x39, 0x41, 0x43, 0x5a, 0x61, 0x100, 0x101, 0x102, 0x103, 0x4e00, 0x4e10, 0x4e11,
+  0xffff, 0x1f600, 0x1f602, 0x1f603, 0x10ffff,
+]
 
 const damage = (bytes: Bytes, at: number, value: number): Bytes => {
   const out = [...bytes]
@@ -907,7 +991,13 @@ async function fontDeck(
       )
       .join('') +
     '</p:embeddedFontLst>'
-  const flagged = options.root === false ? pres : pres.replace('<p:presentation ', '<p:presentation embedTrueTypeFonts="1" saveSubsetFonts="1" ')
+  const flagged =
+    options.root === false
+      ? pres
+      : pres.replace(
+          '<p:presentation ',
+          '<p:presentation embedTrueTypeFonts="1" saveSubsetFonts="1" ',
+        )
   const next = flagged.includes('<p:defaultTextStyle')
     ? flagged.replace('<p:defaultTextStyle', `${list}<p:defaultTextStyle`)
     : flagged.replace('</p:presentation>', `${list}</p:presentation>`)
@@ -922,12 +1012,15 @@ async function fontDeck(
     zip.file(PRES_RELS, rels.replace('</Relationships>', `${relEntries}</Relationships>`))
     if (!options.noCt) {
       const overrides = Object.keys(files)
-        .map(
-          (path) =>
-            `<Override PartName="/${path}" ContentType="application/x-fontdata"/>`,
-        )
+        .map((path) => `<Override PartName="/${path}" ContentType="application/x-fontdata"/>`)
         .join('')
-      zip.file(CT, ct.replace('</Types>', `<Default Extension="fntdata" ContentType="application/x-fontdata"/>${overrides}</Types>`))
+      zip.file(
+        CT,
+        ct.replace(
+          '</Types>',
+          `<Default Extension="fntdata" ContentType="application/x-fontdata"/>${overrides}</Types>`,
+        ),
+      )
     }
     for (const [path, bytes] of Object.entries(files)) zip.file(path, new Uint8Array(bytes))
   })
@@ -951,12 +1044,31 @@ const FONT_RELS = {
 
 const FONTS_MANY = await fontDeck(
   [
-    { typeface: 'Face A', parts: [['regular', 'rIdF1'], ['bold', 'rIdF2'], ['boldItalic', 'rIdF3']] },
+    {
+      typeface: 'Face A',
+      parts: [
+        ['regular', 'rIdF1'],
+        ['bold', 'rIdF2'],
+        ['boldItalic', 'rIdF3'],
+      ],
+    },
     { typeface: 'Face B', parts: [['regular', 'rIdF4']] },
-    { typeface: 'Face C', parts: [['regular', 'rIdF6'], ['italic', 'rIdF5']] },
+    {
+      typeface: 'Face C',
+      parts: [
+        ['regular', 'rIdF6'],
+        ['italic', 'rIdF5'],
+      ],
+    },
     { typeface: 'Face D', parts: [] },
     { typeface: 'Face E', parts: [['regular', 'rIdNone']] },
-    { typeface: 'Face F', parts: [['italic', 'rIdF3'], ['italic', 'rIdF1']] },
+    {
+      typeface: 'Face F',
+      parts: [
+        ['italic', 'rIdF3'],
+        ['italic', 'rIdF1'],
+      ],
+    },
   ],
   FONT_FILES,
   { rels: FONT_RELS },
@@ -1008,7 +1120,15 @@ const latinOf = (face: string): string => `<a:latin typeface="${face}"/>`
 const eaOf = (face: string): string => `<a:ea typeface="${face}"/>`
 const para = (...runs: string[]): string => `<a:p>${runs.join('')}</a:p>`
 const shapeWithText = (id: number, ...paragraphs: string[]): string =>
-  sp(id, `Text ${id}`, [0, 0, 100, 100], 'rect', '', '', `<p:txBody><a:bodyPr/><a:lstStyle/>${paragraphs.join('')}</p:txBody>`)
+  sp(
+    id,
+    `Text ${id}`,
+    [0, 0, 100, 100],
+    'rect',
+    '',
+    '',
+    `<p:txBody><a:bodyPr/><a:lstStyle/>${paragraphs.join('')}</p:txBody>`,
+  )
 
 const DEMAND_SLIDE = slideXml(
   shapeWithText(
@@ -1078,7 +1198,10 @@ const STALE: Input[] = [
   over(
     FONTS_ONE,
     { demand: demandOf({ 'only|regular': [0x41] }) },
-    { part: PRES, text: '<p:presentation xmlns:p="x" xmlns:r="y"><p:embeddedFontLst><p:embeddedFont></p:embeddedFont></p:embeddedFontLst></p:presentation>' },
+    {
+      part: PRES,
+      text: '<p:presentation xmlns:p="x" xmlns:r="y"><p:embeddedFontLst><p:embeddedFont></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
   ),
 ]
 
@@ -1095,29 +1218,51 @@ const TYPEFACE_SETS: Array<string[] | undefined> = [
 ]
 
 const STRIP: Input[] = [
-  ...FONT_DECKS.flatMap(([, deck]) => TYPEFACE_SETS.map((typefaces) => over(deck, typefaces ? { typefaces } : {}))),
+  ...FONT_DECKS.flatMap(([, deck]) =>
+    TYPEFACE_SETS.map((typefaces) => over(deck, typefaces ? { typefaces } : {})),
+  ),
   ...TYPEFACE_SETS.slice(0, 2).map((typefaces) => deckInput(BLANK, typefaces ? { typefaces } : {})),
   over(FONTS_SHORT, {}),
   // the font list written in its other forms
-  over(FONTS_ONE, {}, {
-    part: PRES,
-    text: '<p:presentation xmlns:p="x" xmlns:r="y" embedTrueTypeFonts="1"><p:embeddedFontLst/></p:presentation>',
-  }),
-  over(FONTS_ONE, {}, {
-    part: PRES,
-    text: '<p:presentation xmlns:p="x" xmlns:r="y" embedTrueTypeFonts="1" saveSubsetFonts="0"><p:embeddedFontLst><p:embeddedFont><p:font typeface="Only"/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
-  }),
-  over(FONTS_ONE, { typefaces: ['Only'] }, {
-    part: PRES_RELS,
-    text:
-      '<Relationships><Relationship Id=\'rIdF1\' Type=\'http://x/font\' Target=\'fonts/font1.fntdata\'/><Relationship Id="rIdF9" Type="http://x/image" Target="media/x.png"/><Relationship Id="rIdF8" Type="http://x/font" Target="%66onts/font1.fntdata"/><Relationship Id="rIdF7" Type="http://x/font"/></Relationships>',
-  }),
-  over(FONTS_ONE, {}, { part: CT, text: '<Types><Default Extension="fntdata" ContentType="x"/><Override PartName="ppt/fonts/font1.fntdata" ContentType="y"/><Override PartName="/ppt/fonts/font1.fntdata" ContentType="y"/></Types>' }),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation xmlns:p="x" xmlns:r="y" embedTrueTypeFonts="1"><p:embeddedFontLst/></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation xmlns:p="x" xmlns:r="y" embedTrueTypeFonts="1" saveSubsetFonts="0"><p:embeddedFontLst><p:embeddedFont><p:font typeface="Only"/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    { typefaces: ['Only'] },
+    {
+      part: PRES_RELS,
+      text: '<Relationships><Relationship Id=\'rIdF1\' Type=\'http://x/font\' Target=\'fonts/font1.fntdata\'/><Relationship Id="rIdF9" Type="http://x/image" Target="media/x.png"/><Relationship Id="rIdF8" Type="http://x/font" Target="%66onts/font1.fntdata"/><Relationship Id="rIdF7" Type="http://x/font"/></Relationships>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: CT,
+      text: '<Types><Default Extension="fntdata" ContentType="x"/><Override PartName="ppt/fonts/font1.fntdata" ContentType="y"/><Override PartName="/ppt/fonts/font1.fntdata" ContentType="y"/></Types>',
+    },
+  ),
 ]
 
 const STALE_STRIP: Input[] = [
   ...FONT_DECKS.flatMap(([, deck]) =>
-    DIRTY_MODES.map((mode) => over(deck, { slide: 0, ...mode }, { part: SLIDE1, text: DEMAND_SLIDE })),
+    DIRTY_MODES.map((mode) =>
+      over(deck, { slide: 0, ...mode }, { part: SLIDE1, text: DEMAND_SLIDE }),
+    ),
   ),
   ...DIRTY_MODES.map((mode) => over(FONTS_MANY, { slide: 0, ...mode })),
   over(FONTS_SHORT, { slide: 0, dirty: 'slide' }, { part: SLIDE1, text: DEMAND_SLIDE }),
@@ -1130,16 +1275,62 @@ const LIST: Input[] = [
   over(FONTS_SHORT),
   deckInput(BLANK),
   deckInput(GEN),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface=""/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="A"/><p:regular/><p:bold r:id="rIdF1"/><p:italic r:id=""/></p:embeddedFont><p:embeddedFont><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="Single"/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst/></p:presentation>' }),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface=""/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="A"/><p:regular/><p:bold r:id="rIdF1"/><p:italic r:id=""/></p:embeddedFont><p:embeddedFont><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="Single"/><p:regular r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    { part: PRES, text: '<p:presentation><p:embeddedFontLst/></p:presentation>' },
+  ),
   over(FONTS_ONE, {}, { part: PRES, text: 'embeddedFont <p:presentation>' }),
   over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFont' }),
   over(FONTS_ONE, {}, { part: PRES, text: '<root embeddedFont/>' }),
-  over(FONTS_ONE, {}, { part: PRES, text: "<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface = 'Single'/><p:regular r:id = 'rIdF1'/></p:embeddedFont></p:embeddedFontLst></p:presentation>" }),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="Si&#110;gle"/><p:regular r:id="rId&#70;1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
-  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font note="a>b" typeface="Single"/><p:regular note="x>y" r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: "<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface = 'Single'/><p:regular r:id = 'rIdF1'/></p:embeddedFont></p:embeddedFontLst></p:presentation>",
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="Si&#110;gle"/><p:regular r:id="rId&#70;1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
+  over(
+    FONTS_ONE,
+    {},
+    {
+      part: PRES,
+      text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font note="a>b" typeface="Single"/><p:regular note="x>y" r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>',
+    },
+  ),
 ]
 
 // ── the specs ──────────────────────────────────────────────────────────
@@ -1148,7 +1339,9 @@ const LIST: Input[] = [
 const s = (args: Args): number => args.slide as number
 
 const placeOpts = (args: Args) =>
-  args.keepSourceFormatting === undefined ? undefined : { keepSourceFormatting: args.keepSourceFormatting as boolean }
+  args.keepSourceFormatting === undefined
+    ? undefined
+    : { keepSourceFormatting: args.keepSourceFormatting as boolean }
 
 /** A value with every byte array a list, as the Rust side gives it. */
 function toLists(value: unknown): unknown {
@@ -1169,7 +1362,8 @@ const demandMap = (demand: unknown): Map<string, Set<number>> =>
   new Map((demand as Array<[string, number[]]>).map(([k, v]) => [k, new Set(v)]))
 
 const mergeOptions = (opened: Parameters<typeof copySlide>[0], args: Args) => {
-  const from = args.layoutFrom === undefined ? undefined : opened.deck.slides[args.layoutFrom as number]
+  const from =
+    args.layoutFrom === undefined ? undefined : opened.deck.slides[args.layoutFrom as number]
   return from ? { layoutFrom: from } : {}
 }
 
@@ -1178,21 +1372,36 @@ export const DECKSLIDES: CallSpec[] = [
     fn: 'pptxDeckslides.index.duplicateSlide',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        duplicateSlide(opened, s(args), args.clearText === undefined ? undefined : { clearText: args.clearText as boolean }),
+        duplicateSlide(
+          opened,
+          s(args),
+          args.clearText === undefined ? undefined : { clearText: args.clearText as boolean },
+        ),
       ),
     built: DUPLICATE,
   },
   {
     fn: 'pptxDeckslides.index.copySlide',
     call: (text, args) => deckOp(text, args, (opened) => copySlide(opened, s(args))),
-    built: [...SLIDE_DECKS.flatMap((name) => [deckInput(name, { slide: 0 }), deckInput(name, { slide: 1 })]), deckInput(GEN, { slide: 9 }), deckInput(GEN, { slide: -1 }), over(NO_PRES_RELS, { slide: 0 }), over(MEDIA_SOURCE, { slide: 0 })],
+    built: [
+      ...SLIDE_DECKS.flatMap((name) => [
+        deckInput(name, { slide: 0 }),
+        deckInput(name, { slide: 1 }),
+      ]),
+      deckInput(GEN, { slide: 9 }),
+      deckInput(GEN, { slide: -1 }),
+      over(NO_PRES_RELS, { slide: 0 }),
+      over(MEDIA_SOURCE, { slide: 0 }),
+    ],
     mutation: 'none',
   },
   {
     fn: 'pptxDeckslides.index.pasteSlide',
     call: async (text, args) => {
       // the source deck opens before the target: its ids come first on both sides
-      const other = args.other ? await openPptx(Buffer.from(args.other as string, 'base64')) : undefined
+      const other = args.other
+        ? await openPptx(Buffer.from(args.other as string, 'base64'))
+        : undefined
       return deckOp(text, args, async (opened) => {
         const source = other ?? opened
         const bundle = copySlide(source, args.from as number)
@@ -1212,13 +1421,18 @@ export const DECKSLIDES: CallSpec[] = [
     fn: 'pptxDeckslides.index.mergeSlideFromPptx',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        mergeSlideFromPptx(opened, Buffer.from(args.other as string, 'base64'), mergeOptions(opened, args)),
+        mergeSlideFromPptx(
+          opened,
+          Buffer.from(args.other as string, 'base64'),
+          mergeOptions(opened, args),
+        ),
       ),
     built: MERGE,
   },
   {
     fn: 'pptxDeckslides.index.extractMergeSlideSource',
-    call: async (_text, args) => toLists(await extractMergeSlideSource(Buffer.from(args.other as string, 'base64'))),
+    call: async (_text, args) =>
+      toLists(await extractMergeSlideSource(Buffer.from(args.other as string, 'base64'))),
     built: [
       { args: { other: b64(BLANK) } },
       { args: { other: b64(GEN) } },
@@ -1258,7 +1472,11 @@ export const DECKSLIDES: CallSpec[] = [
     fn: 'pptxDeckslides.index.reorderElement',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
-        reorderElement(at.slide(s(args)), at.element(s(args), args.element as number), args.dir as never),
+        reorderElement(
+          at.slide(s(args)),
+          at.element(s(args), args.element as number),
+          args.dir as never,
+        ),
       ),
     built: REORDER_ALL,
   },
@@ -1307,10 +1525,17 @@ export const DECKSLIDES: CallSpec[] = [
           const el = opened.deck.slides[s(args)]?.elements[args.element as number]
           if (el) el.dirtyTransform = true
         }
-        const patchArg: { start?: { id: number; idx: number } | null; end?: { id: number; idx: number } | null } = {}
+        const patchArg: {
+          start?: { id: number; idx: number } | null
+          end?: { id: number; idx: number } | null
+        } = {}
         if ('start' in args) patchArg.start = args.start as never
         if ('end' in args) patchArg.end = args.end as never
-        return setElementConnection(at.slide(s(args)), at.element(s(args), args.element as number), patchArg)
+        return setElementConnection(
+          at.slide(s(args)),
+          at.element(s(args), args.element as number),
+          patchArg,
+        )
       }),
     built: SET_CONNECTION,
   },
@@ -1350,7 +1575,9 @@ export const DECKSLIDES: CallSpec[] = [
   {
     fn: 'pptxDeckslides.embeddedFonts.staleEmbeddedTypefaces',
     call: (text, args) =>
-      deckOp(text, args, (opened) => staleEmbeddedTypefaces(opened.archive, demandMap(args.demand))),
+      deckOp(text, args, (opened) =>
+        staleEmbeddedTypefaces(opened.archive, demandMap(args.demand)),
+      ),
     built: STALE,
     mutation: 'none',
   },
@@ -1358,7 +1585,10 @@ export const DECKSLIDES: CallSpec[] = [
     fn: 'pptxDeckslides.embeddedFonts.stripEmbeddedFonts',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        stripEmbeddedFonts(opened.archive, args.typefaces ? new Set(args.typefaces as string[]) : undefined),
+        stripEmbeddedFonts(
+          opened.archive,
+          args.typefaces ? new Set(args.typefaces as string[]) : undefined,
+        ),
       ),
     built: STRIP,
   },

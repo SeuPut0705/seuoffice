@@ -24,13 +24,12 @@ export function requireModelNode(): void {
 
 export function corpusDocuments(): string[] {
   return execFileSync('git', ['ls-files', '-z', '*.docx'], { cwd: root, encoding: 'utf8' })
-    .split('\0').filter(Boolean)
+    .split('\0')
+    .filter(Boolean)
 }
 
 /** Actual parser results only. Refusals are counted separately, never silently skipped. */
-export async function* parsedModels(
-  refused: ModelRefusal[],
-): AsyncGenerator<ModelInput> {
+export async function* parsedModels(refused: ModelRefusal[]): AsyncGenerator<ModelInput> {
   requireModelNode()
   const parse = async (
     where: string,
@@ -52,9 +51,15 @@ export async function* parsedModels(
   // absent from the tracked documents. Here they cross the full parser, not only readers.
   for (const [group, texts] of Object.entries(PROPS_TEXTS)) {
     for (const [index, bodyXml] of texts.entries()) {
-      const input = await parse(`props ${group} ${index}`, 'built', await buildDocx({
-        bodyXml, withNumbering: true, withImage: true,
-      }))
+      const input = await parse(
+        `props ${group} ${index}`,
+        'built',
+        await buildDocx({
+          bodyXml,
+          withNumbering: true,
+          withImage: true,
+        }),
+      )
       if (input) yield input
     }
   }

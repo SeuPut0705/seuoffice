@@ -44,9 +44,17 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
       specs,
       corpus: new Comparison(`(f) ${name} on the corpus, checks`, `calls${titled(name)}Corpus`),
       built: new Comparison(`(f) ${name} on built inputs, checks`, `calls${titled(name)}Built`),
-      mutated: new Comparison(`(f+) ${name} on mutated texts, checks`, `calls${titled(name)}Mutated`),
+      mutated: new Comparison(
+        `(f+) ${name} on mutated texts, checks`,
+        `calls${titled(name)}Mutated`,
+      ),
       ...(specs.some((spec) => spec.argMutation)
-        ? { argMutated: new Comparison(`(f+) ${name} on mutated arguments, checks`, `calls${titled(name)}ArgMutated`) }
+        ? {
+            argMutated: new Comparison(
+              `(f+) ${name} on mutated arguments, checks`,
+              `calls${titled(name)}ArgMutated`,
+            ),
+          }
         : {}),
       argRefused: 0,
     }))
@@ -57,7 +65,11 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
   /** Every input of an `argMutation` function feeds its pool; every built one and some of the corpus stay as seeds. */
   function keepArguments(spec: CallSpec, where: string, input: Input, built = false): void {
     if (!spec.argMutation || input.args === undefined) return
-    const seen = argSeeds.get(spec.fn) ?? { pool: new ArgPool(), kept: [], from: new Map<string, number>() }
+    const seen = argSeeds.get(spec.fn) ?? {
+      pool: new ArgPool(),
+      kept: [],
+      from: new Map<string, number>(),
+    }
     argSeeds.set(spec.fn, seen)
     seen.pool.add(input.args)
     const taken = seen.from.get(where) ?? 0
@@ -153,7 +165,12 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
   }
 
   /** One corpus input: compared, and kept as a seed of both mutations. */
-  async function corpusInput(group: Group, where: string, spec: CallSpec, input: Input): Promise<void> {
+  async function corpusInput(
+    group: Group,
+    where: string,
+    spec: CallSpec,
+    input: Input,
+  ): Promise<void> {
     const kept = seeds.get(spec.fn) ?? new Map<string, Input>()
     seeds.set(spec.fn, kept)
     await check(group.corpus, where, spec, input)
@@ -165,13 +182,11 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
   }
 
   /** The functions over what one corpus document holds. */
-  async function callsOnDocument(
-    where: string,
-    parts: ReadonlyMap<string, string>,
-  ): Promise<void> {
+  async function callsOnDocument(where: string, parts: ReadonlyMap<string, string>): Promise<void> {
     for (const group of groups) {
       for (const spec of group.specs) {
-        for (const input of spec.fromDocument?.(parts) ?? []) await corpusInput(group, where, spec, input)
+        for (const input of spec.fromDocument?.(parts) ?? [])
+          await corpusInput(group, where, spec, input)
       }
     }
   }
@@ -194,7 +209,8 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
     const byFn = new Map<string, Array<{ group: Group; spec: CallSpec }>>()
     for (const group of groups) {
       for (const spec of group.specs) {
-        if (spec.fromParse) byFn.set(spec.fromParse.fn, [...(byFn.get(spec.fromParse.fn) ?? []), { group, spec }])
+        if (spec.fromParse)
+          byFn.set(spec.fromParse.fn, [...(byFn.get(spec.fromParse.fn) ?? []), { group, spec }])
       }
     }
     if (byFn.size === 0) return
@@ -218,7 +234,8 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
       },
       () => Promise.resolve(internals.parseDocx!(bytes)).catch(() => null),
     )
-    for (const { group, spec, input } of taken) await corpusInput(group, `${where} parse`, spec, input)
+    for (const { group, spec, input } of taken)
+      await corpusInput(group, `${where} parse`, spec, input)
   }
 
   /** Save builders receive the same values parseDocx actually produced. */
@@ -247,11 +264,12 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
       Array.isArray(parts) &&
       parts.some(
         (part) =>
-          Array.isArray(part) && typeof part[0] === 'string' && Buffer.byteLength(part[0]) > ZIP_NAME_LIMIT,
+          Array.isArray(part) &&
+          typeof part[0] === 'string' &&
+          Buffer.byteLength(part[0]) > ZIP_NAME_LIMIT,
       )
     )
   }
-
 
   /** The built inputs and the mutations: run once the corpus has been read. */
   async function callsAfterCorpus(random: () => number): Promise<void> {
@@ -339,15 +357,32 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
         name,
         argRefused,
         populations: Object.fromEntries(
-          [['corpus', corpus], ['built', built], ['mutated', mutated], ...(argMutated ? [['argMutated', argMutated]] : [])].map(([name, comparison]) => {
+          [
+            ['corpus', corpus],
+            ['built', built],
+            ['mutated', mutated],
+            ...(argMutated ? [['argMutated', argMutated]] : []),
+          ].map(([name, comparison]) => {
             const value = comparison as Comparison
-            return [name, { compared: value.compared, differences: value.differences, keyOrderOnly: value.keyOrderOnly }]
+            return [
+              name,
+              {
+                compared: value.compared,
+                differences: value.differences,
+                keyOrderOnly: value.keyOrderOnly,
+              },
+            ]
           }),
         ),
         functions: specs.map(({ fn }) => {
           const tally = byFunction.get(fn)
-          return { fn, checks: tally?.checks ?? 0, differences: tally?.differences ?? 0,
-            distinctResults: tally?.outcomes.size ?? 0, typescriptThrew: tally?.threw ?? 0 }
+          return {
+            fn,
+            checks: tally?.checks ?? 0,
+            differences: tally?.differences ?? 0,
+            distinctResults: tally?.outcomes.size ?? 0,
+            typescriptThrew: tally?.threw ?? 0,
+          }
         }),
       })),
     }

@@ -95,7 +95,11 @@ function gridsFor(table: string): CellTextsPatch[][][] {
 function boxPatchesFor(p: string): TextboxParasPatchSet[] {
   const ids = [...p.matchAll(/<wps:cNvPr\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]!)
   return [
-    { byIndex: [[{ runs: [{ text: 'Box ' }, { text: 'new', italic: true }], align: 'center' }, null]] },
+    {
+      byIndex: [
+        [{ runs: [{ text: 'Box ' }, { text: 'new', italic: true }], align: 'center' }, null],
+      ],
+    },
     {
       byIndex: [
         null,
@@ -104,7 +108,12 @@ function boxPatchesFor(p: string): TextboxParasPatchSet[] {
     },
     { byIndex: [[null, null, { runs: [{ text: 'added' }], align: null, numPr: null }]] },
     ...ids.slice(0, 2).map((shapeId) => ({
-      inject: [{ shapeId, paras: [{ runs: [{ text: 'typed' }], align: 'right' as const, indentLeft: 240 }] }],
+      inject: [
+        {
+          shapeId,
+          paras: [{ runs: [{ text: 'typed' }], align: 'right' as const, indentLeft: 240 }],
+        },
+      ],
     })),
   ]
 }
@@ -153,12 +162,25 @@ const FIELD_PARAS: string[] = [
   p(r('<w:t/>'), TAB, r('<w:t/>')),
   p(t('\u{1F600}ab'), t('cd'), TAB, t('9')),
   p(r('<w:tab w:val="left"/>'), t('only stop')),
-  p('<w:ins w:id="1" w:author="a">', t('inserted'), '</w:ins>', TAB, '<w:del w:id="2" w:author="a">', r('<w:delText>old</w:delText>'), '</w:del>', t('4')),
+  p(
+    '<w:ins w:id="1" w:author="a">',
+    t('inserted'),
+    '</w:ins>',
+    TAB,
+    '<w:del w:id="2" w:author="a">',
+    r('<w:delText>old</w:delText>'),
+    '</w:del>',
+    t('4'),
+  ),
   p(r('<w:drawing/>')),
   // a first segment before two tabs is the outline number when it is 1..15 UTF-16 units without white space
-  ...['a'.repeat(14), 'a'.repeat(15), 'a'.repeat(16), '\u{1F600}' + 'a'.repeat(13), '\u{1F600}' + 'a'.repeat(14)].map((first) =>
-    p(t(first), TAB, t('Title'), TAB, t('7')),
-  ),
+  ...[
+    'a'.repeat(14),
+    'a'.repeat(15),
+    'a'.repeat(16),
+    '\u{1F600}' + 'a'.repeat(13),
+    '\u{1F600}' + 'a'.repeat(14),
+  ].map((first) => p(t(first), TAB, t('Title'), TAB, t('7'))),
 ]
 
 const MATHS: string[] = [
@@ -179,25 +201,67 @@ const TWIN = (id: string): string =>
 const TABLES: string[] = [
   tbl(
     tr(
-      tc('<w:tcPr><w:shd w:val="clear" w:fill="1F3864"/></w:tcPr>', p('<w:pPr><w:jc w:val="center"/></w:pPr>', r('<w:rPr><w:b/></w:rPr><w:t>甲</w:t>'))),
+      tc(
+        '<w:tcPr><w:shd w:val="clear" w:fill="1F3864"/></w:tcPr>',
+        p('<w:pPr><w:jc w:val="center"/></w:pPr>', r('<w:rPr><w:b/></w:rPr><w:t>甲</w:t>')),
+      ),
       tc(p(t('乙')), p(t('second'))),
     ),
-    tr(tc('<w:tcPr><w:vMerge w:val="restart"/></w:tcPr>', p(t('m'))), tc('<w:tcPr><w:vMerge/></w:tcPr>', '<w:p/>')),
+    tr(
+      tc('<w:tcPr><w:vMerge w:val="restart"/></w:tcPr>', p(t('m'))),
+      tc('<w:tcPr><w:vMerge/></w:tcPr>', '<w:p/>'),
+    ),
   ),
   tbl(tr(tc(p(r(BLIP('rId10')), t('caption'))), tc(p(t('notes'))))),
   tbl(tr(tc(p(r(ANCHOR_BOX('ghost')), t('label'))), tc(p(r(TWIN('rId5')), t('twin'))))),
-  tbl(tr(tc(p(r('<w:pict><v:shape><v:textbox><w:txbxContent>' + p(t('vml')) + '</w:txbxContent></v:textbox></v:shape></w:pict>')), p(r('<w:object/>'))))),
   tbl(
     tr(
-      tc(p(t('outer')), tbl(tr(tc(p(t('InnerA'))), tc(p(t('InnerB')))), tr(tc(tbl(tr(tc(p(t('deep'))))), '<w:p/>'))), '<w:p/>'),
+      tc(
+        p(
+          r(
+            '<w:pict><v:shape><v:textbox><w:txbxContent>' +
+              p(t('vml')) +
+              '</w:txbxContent></v:textbox></v:shape></w:pict>',
+          ),
+        ),
+        p(r('<w:object/>')),
+      ),
+    ),
+  ),
+  tbl(
+    tr(
+      tc(
+        p(t('outer')),
+        tbl(
+          tr(tc(p(t('InnerA'))), tc(p(t('InnerB')))),
+          tr(tc(tbl(tr(tc(p(t('deep'))))), '<w:p/>')),
+        ),
+        '<w:p/>',
+      ),
       tc(p(t('right'))),
     ),
   ),
   tbl(
-    tr(tc(p('<w:ins w:id="3" w:author="a">', t('ins'), '</w:ins>', '<w:del w:id="4" w:author="a">', r('<w:delText>gone</w:delText>'), '</w:del>'))),
+    tr(
+      tc(
+        p(
+          '<w:ins w:id="3" w:author="a">',
+          t('ins'),
+          '</w:ins>',
+          '<w:del w:id="4" w:author="a">',
+          r('<w:delText>gone</w:delText>'),
+          '</w:del>',
+        ),
+      ),
+    ),
     '<w:trPr><w:trHeight w:val="1"/></w:trPr>',
   ),
-  tbl(tr('<w:tc w:id="x">' + p('<w:pPr/>', t('a')) + '</w:tc>', tc('<w:tcPr/>', p(r('<w:rPr><w:i/></w:rPr><w:t>x</w:t>'))))),
+  tbl(
+    tr(
+      '<w:tc w:id="x">' + p('<w:pPr/>', t('a')) + '</w:tc>',
+      tc('<w:tcPr/>', p(r('<w:rPr><w:i/></w:rPr><w:t>x</w:t>'))),
+    ),
+  ),
   '<w:tbl><w:tr><w:tc/></w:tr></w:tbl>',
 ]
 
@@ -210,17 +274,34 @@ const NESTED_PATCHES: unknown[] = [
 const TABLE_INPUTS: Input[] = [
   ...TABLES.flatMap((text) => gridsFor(text).map((texts) => ({ text, args: { texts } }))),
   ...NESTED_PATCHES.map((texts) => ({ text: TABLES[4]!, args: { texts } })),
-  { text: TABLES[2]!, args: { texts: [[[{ runs: [{ text: 'labelX' }, { text: 'ghost' }] }], [{ runs: [] }]]] } },
-  { text: TABLES[1]!, args: { texts: [[[{ runs: [{ text: 'new' }] }, { runs: [{ text: 'two' }] }]]] } },
+  {
+    text: TABLES[2]!,
+    args: { texts: [[[{ runs: [{ text: 'labelX' }, { text: 'ghost' }] }], [{ runs: [] }]]] },
+  },
+  {
+    text: TABLES[1]!,
+    args: { texts: [[[{ runs: [{ text: 'new' }] }, { runs: [{ text: 'two' }] }]]] },
+  },
   { text: TABLES[0]!, args: { texts: [null, [['A<B', '&C'], ['\u{1F600}']]] } },
-  { text: TABLES[0]!, args: { texts: [[[{ runs: [{ text: 'f' }], format: { align: 'right' }, original: { align: 'center' } }]]] } },
+  {
+    text: TABLES[0]!,
+    args: {
+      texts: [
+        [[{ runs: [{ text: 'f' }], format: { align: 'right' }, original: { align: 'center' } }]],
+      ],
+    },
+  },
   { text: TABLES[0]!, args: { texts: [[['constructor'], ['__proto__']]] } },
 ]
 
 const SHAPE = (id: string, inner: string): string =>
   `<wps:wsp><wps:cNvPr id="${id}" name="s"/><wps:spPr/>${inner}</wps:wsp>`
 const BOX_P = (inner: string): string =>
-  p(r(`<w:drawing><wp:anchor><a:graphic><a:graphicData>${inner}</a:graphicData></a:graphic></wp:anchor></w:drawing>`))
+  p(
+    r(
+      `<w:drawing><wp:anchor><a:graphic><a:graphicData>${inner}</a:graphicData></a:graphic></wp:anchor></w:drawing>`,
+    ),
+  )
 const TXBX = (...paras: string[]): string =>
   `<wps:txbx><w:txbxContent>${paras.join('')}</w:txbxContent></wps:txbx>`
 
@@ -231,14 +312,20 @@ const BOX_PARAS: string[] = [
   )}</a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:shape><v:textbox><w:txbxContent>${p(
     t('one'),
   )}${p('<w:pPr><w:jc w:val="center"/></w:pPr>', t('two'))}</w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>`,
-  BOX_P(SHAPE('5', '<wps:bodyPr rot="0"/>') + SHAPE('6', TXBX(p(t('Hello'))) + '<wps:bodyPr anchor="t"/>')),
+  BOX_P(
+    SHAPE('5', '<wps:bodyPr rot="0"/>') +
+      SHAPE('6', TXBX(p(t('Hello'))) + '<wps:bodyPr anchor="t"/>'),
+  ),
   BOX_P(SHAPE('7', '')),
   BOX_P(
     SHAPE('8', TXBX('<w:p/>')) +
       SHAPE(
         '9',
         TXBX(
-          p('<w:pPr><w:pStyle w:val="List"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr><w:ind w:leftChars="200" w:left="420" w:hanging="360"/><w:rPr><w:b/></w:rPr></w:pPr>', t('item')),
+          p(
+            '<w:pPr><w:pStyle w:val="List"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr><w:ind w:leftChars="200" w:left="420" w:hanging="360"/><w:rPr><w:b/></w:rPr></w:pPr>',
+            t('item'),
+          ),
           p('<w:pPr/>', '<w:ins w:id="9" w:author="a">', t('rev'), '</w:ins>'),
         ),
       ),
@@ -299,10 +386,20 @@ const BOX_PATCHES: TextboxParasPatchSet[] = [
   { byIndex: [null] },
   { byIndex: [[{ runs: [{ text: 'a < b & c\tD\nE' }] }]] },
   { byIndex: [[{ runs: [], align: 'left', indentLeft: 1440, numPr: { numId: '7', ilvl: 0 } }]] },
-  { byIndex: [null, [{ runs: [{ text: 'x' }], align: 'distribute', indentLeft: null, numPr: null }, null]] },
+  {
+    byIndex: [
+      null,
+      [{ runs: [{ text: 'x' }], align: 'distribute', indentLeft: null, numPr: null }, null],
+    ],
+  },
   { inject: [{ shapeId: '5', paras: [{ runs: [{ text: 'typed' }], align: 'center' }] }] },
   { inject: [{ shapeId: '6', paras: [{ runs: [{ text: 'replaced' }] }, { runs: [] }] }] },
-  { inject: [{ shapeId: '7', paras: [{ runs: [{ text: 'x' }], indentLeft: 360 }] }, { shapeId: 'none', paras: [] }] },
+  {
+    inject: [
+      { shapeId: '7', paras: [{ runs: [{ text: 'x' }], indentLeft: 360 }] },
+      { shapeId: 'none', paras: [] },
+    ],
+  },
 ]
 
 // ---------------------------------------------------------------- the specs
@@ -314,19 +411,26 @@ export const GEN_TEXT: CallSpec[] = [
       xmlSegments(text, args.tag as string, args.from as number, args.to as number),
     fromDocument: (parts) => {
       const { bodies, tables, boxParas } = collect(parts)
-      return [...bodies.slice(0, 1), ...tables.slice(0, 3), ...boxParas.slice(0, 3)].flatMap(segmentInputs)
+      return [...bodies.slice(0, 1), ...tables.slice(0, 3), ...boxParas.slice(0, 3)].flatMap(
+        segmentInputs,
+      )
     },
     built: [
-      ...[...TABLES, ...BOX_PARAS, ...FIELD_PARAS, '<w:p/><w:p>\u{1F600}</w:p><w:pPr/>', '</w:p><w:p>'].flatMap(
-        segmentInputs,
-      ),
-      ...[...SEGMENT_CASES, ...MARKUP_BOX_PARAS.map((text) => ({ text, tag: 'w:txbxContent' }))].flatMap(
-        ({ text, tag }) => [
-          { text, args: { tag, from: 0, to: text.length } },
-          { text, args: { tag, from: Math.floor(text.length / 3), to: text.length } },
-          { text, args: { tag: 'w:p', from: 0, to: Math.floor(text.length / 2) } },
-        ],
-      ),
+      ...[
+        ...TABLES,
+        ...BOX_PARAS,
+        ...FIELD_PARAS,
+        '<w:p/><w:p>\u{1F600}</w:p><w:pPr/>',
+        '</w:p><w:p>',
+      ].flatMap(segmentInputs),
+      ...[
+        ...SEGMENT_CASES,
+        ...MARKUP_BOX_PARAS.map((text) => ({ text, tag: 'w:txbxContent' })),
+      ].flatMap(({ text, tag }) => [
+        { text, args: { tag, from: 0, to: text.length } },
+        { text, args: { tag, from: Math.floor(text.length / 3), to: text.length } },
+        { text, args: { tag: 'w:p', from: 0, to: Math.floor(text.length / 2) } },
+      ]),
     ],
   },
   {
@@ -334,7 +438,9 @@ export const GEN_TEXT: CallSpec[] = [
     argMutation: true,
     call: (text, args) => patchFieldParagraphXml(text, args.patch as FieldTextPatch),
     fromDocument: (parts) =>
-      collect(parts).tabParas.flatMap((text) => FIELD_PATCHES.slice(0, 3).map((patch) => ({ text, args: { patch } }))),
+      collect(parts).tabParas.flatMap((text) =>
+        FIELD_PATCHES.slice(0, 3).map((patch) => ({ text, args: { patch } })),
+      ),
     built: FIELD_PARAS.flatMap((text) => FIELD_PATCHES.map((patch) => ({ text, args: { patch } }))),
   },
   {
@@ -342,7 +448,9 @@ export const GEN_TEXT: CallSpec[] = [
     argMutation: true,
     call: (text, args) => patchMathTokens(text, args.tokens as string[]),
     fromDocument: (parts) =>
-      collect(parts).maths.flatMap((text) => tokensFor(text).map((tokens) => ({ text, args: { tokens } }))),
+      collect(parts).maths.flatMap((text) =>
+        tokensFor(text).map((tokens) => ({ text, args: { tokens } })),
+      ),
     built: MATHS.flatMap((text) => tokensFor(text).map((tokens) => ({ text, args: { tokens } }))),
   },
   {
@@ -350,7 +458,9 @@ export const GEN_TEXT: CallSpec[] = [
     argMutation: true,
     call: (text, args) => patchTableCellTexts(text, args.texts as never),
     fromDocument: (parts) =>
-      collect(parts).tables.flatMap((text) => gridsFor(text).map((texts) => ({ text, args: { texts } }))),
+      collect(parts).tables.flatMap((text) =>
+        gridsFor(text).map((texts) => ({ text, args: { texts } })),
+      ),
     built: TABLE_INPUTS,
   },
   {
@@ -358,7 +468,9 @@ export const GEN_TEXT: CallSpec[] = [
     argMutation: true,
     call: (text, args) => patchTextboxParas(text, args.patches as TextboxParasPatchSet),
     fromDocument: (parts) =>
-      collect(parts).boxParas.flatMap((text) => boxPatchesFor(text).map((patches) => ({ text, args: { patches } }))),
+      collect(parts).boxParas.flatMap((text) =>
+        boxPatchesFor(text).map((patches) => ({ text, args: { patches } })),
+      ),
     built: [...BOX_PARAS, ...MARKUP_BOX_PARAS].flatMap((text) =>
       [...BOX_PATCHES, ...boxPatchesFor(text)].map((patches) => ({ text, args: { patches } })),
     ),

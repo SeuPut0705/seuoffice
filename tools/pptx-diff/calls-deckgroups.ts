@@ -140,7 +140,11 @@ const TREE =
   cxn(6, 3000000, 3000000) +
   frame(7, 4000000, 3000000)
 
-const slideXml = (root = '', tail = '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>', tree = TREE) =>
+const slideXml = (
+  root = '',
+  tail = '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>',
+  tree = TREE,
+) =>
   `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:sld ${NS}${root}><p:cSld><p:spTree>` +
   `<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${tree}</p:spTree></p:cSld>${tail}</p:sld>`
 
@@ -170,7 +174,9 @@ const groupId = (at: At, a: Args): string =>
   typeof a.groupId === 'string' ? a.groupId : at.element(a.slide as number, a.element as number)
 
 const childId = (opened: Opened, a: Args): string =>
-  typeof a.childId === 'string' ? a.childId : (groupOf(opened, a)?.children?.[a.child as number]?.id ?? '')
+  typeof a.childId === 'string'
+    ? a.childId
+    : (groupOf(opened, a)?.children?.[a.child as number]?.id ?? '')
 
 const spec = (
   fn: string,
@@ -178,7 +184,8 @@ const spec = (
   built: Input[],
 ): CallSpec => ({
   fn: `pptxDeckgroups.index.${fn}`,
-  call: (text, args) => deckOp(text, args, (opened, at) => withUuid(UUID, () => run(opened, at, args))),
+  call: (text, args) =>
+    deckOp(text, args, (opened, at) => withUuid(UUID, () => run(opened, at, args))),
   built,
 })
 
@@ -225,7 +232,9 @@ const ITEM_GROUP: ElementClipboardItem = {
 const ITEM_SWAP: ElementClipboardItem = {
   xml:
     pic(10, 'First', 1, 2).replace('rId77', 'rId3') +
-    pic(11, 'Second', 3, 4).replace('rId77', "rId2").replace('<a:blip r:embed="rId2"/>', '<a:blip r:embed = \'rId2\' r:link="rId&#51;"/>'),
+    pic(11, 'Second', 3, 4)
+      .replace('rId77', 'rId2')
+      .replace('<a:blip r:embed="rId2"/>', '<a:blip r:embed = \'rId2\' r:link="rId&#51;"/>'),
   rels: [
     { rid: 'rId3', type: IMAGE, target: 'ppt/media/s1.png' },
     { rid: 'rId2', type: IMAGE, target: 'ppt/media/s2.png' },
@@ -238,7 +247,9 @@ const ITEM_PROTO: ElementClipboardItem = {
   xml: textSp(12, 'Proto', 1, 2, 'p'),
   rels: [],
   parts: JSON.parse('{"ppt/media/p.bin":"AAEC","__proto__":"AwQF"}') as Record<string, string>,
-  contentTypes: JSON.parse('{"bin":"application/x-p","__proto__":"x/y","constructor":"c/d"}') as Record<string, string>,
+  contentTypes: JSON.parse(
+    '{"bin":"application/x-p","__proto__":"x/y","constructor":"c/d"}',
+  ) as Record<string, string>,
 }
 const ITEM_MISSING: ElementClipboardItem = {
   xml: '<p:sp><p:nvSpPr><p:cNvPr id=\'9\' name="x"/></p:nvSpPr><a:off x="1" y="2"/><a:off x="3" y="4"/></p:sp>',
@@ -255,7 +266,14 @@ const GRADIENT = {
   ],
   angle: 5400000,
 }
-const STROKE = { color: '#112233', widthEmu: 25400, dash: 'dash', cap: 'rnd', join: 'round', compound: 'dbl' }
+const STROKE = {
+  color: '#112233',
+  widthEmu: 25400,
+  dash: 'dash',
+  cap: 'rnd',
+  join: 'round',
+  compound: 'dbl',
+}
 
 export const DECKGROUPS: CallSpec[] = [
   spec(
@@ -269,11 +287,22 @@ export const DECKGROUPS: CallSpec[] = [
       // the ids a slide may spell: other quotes, spaced `=`, a reference, ids of any shape
       input(
         { slide: 0, element: 0 },
-        slideXml('', undefined, textSp(2, 'Spelled', 1, 2, 'x', 'rId1').replace('r:id="rId1"', "r:id = 'rId&#49;'")),
+        slideXml(
+          '',
+          undefined,
+          textSp(2, 'Spelled', 1, 2, 'x', 'rId1').replace('r:id="rId1"', "r:id = 'rId&#49;'"),
+        ),
       ),
       input(
         { slide: 0, element: 0 },
-        slideXml('', undefined, textSp(2, 'Other id', 1, 2, 'x', 'Rx7').replace('</p:sp>', '<a:ext r:embed="rId1" r:link=\'rId1\'/></p:sp>')),
+        slideXml(
+          '',
+          undefined,
+          textSp(2, 'Other id', 1, 2, 'x', 'Rx7').replace(
+            '</p:sp>',
+            '<a:ext r:embed="rId1" r:link=\'rId1\'/></p:sp>',
+          ),
+        ),
       ),
     ],
   ),
@@ -338,7 +367,9 @@ export const DECKGROUPS: CallSpec[] = [
       setSlideHidden(opened.deck.slides[a.slide as number]!, a.hidden as boolean)
       return null
     },
-    [true, false].flatMap((hidden) => [BASE, TIMED].map((text) => input({ slide: 0, hidden }, text))),
+    [true, false].flatMap((hidden) =>
+      [BASE, TIMED].map((text) => input({ slide: 0, hidden }, text)),
+    ),
   ),
   spec(
     'getSlideHidden',
@@ -388,8 +419,28 @@ export const DECKGROUPS: CallSpec[] = [
       ...[0, 4, 5, 6, 7, 40].map((element) => input({ slide: 0, element })),
       input({ slide: 0, sourceId: 'nope' }),
       input({ slide: 9, element: 4 }),
-      input({ slide: 0, element: 4 }, slideXml('', undefined, group(10, 'G', [0, 0, 100, 100], [0, 0, 0, 0], textSp(11, 'T', 1, 1, 't')))),
-      input({ slide: 0, element: 0 }, slideXml('', undefined, group(10, 'G', [5, 5, 100, 100], [0, 0, 50, 50], textSp(11, 'T', 1, 1, 't') + group(12, 'N', [1, 1, 10, 10], null, '')))),
+      input(
+        { slide: 0, element: 4 },
+        slideXml(
+          '',
+          undefined,
+          group(10, 'G', [0, 0, 100, 100], [0, 0, 0, 0], textSp(11, 'T', 1, 1, 't')),
+        ),
+      ),
+      input(
+        { slide: 0, element: 0 },
+        slideXml(
+          '',
+          undefined,
+          group(
+            10,
+            'G',
+            [5, 5, 100, 100],
+            [0, 0, 50, 50],
+            textSp(11, 'T', 1, 1, 't') + group(12, 'N', [1, 1, 10, 10], null, ''),
+          ),
+        ),
+      ),
     ],
   ),
   // ── in-group editing ──
@@ -398,13 +449,29 @@ export const DECKGROUPS: CallSpec[] = [
     call: (text) => groupChildSlices(text),
     built: [
       { text: NESTED },
-      { text: group(10, 'G', [0, 0, 1, 1], [0, 0, 1, 1], textSp(11, 'A', 1, 1, '\u{1F600} \uD55C\uAE00') + NESTED + compat(30) + bareSp(3)) },
-      { text: '<p:grpSp><p:nvGrpSpPr/><p:grpSpPr/><p:sp id="1"/><p:sp><p:sp></p:sp></p:sp></p:grpSp>' },
-      { text: '<p:grpSp><p:grpSpPr></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="4" name="x"/></p:nvSpPr>' },
+      {
+        text: group(
+          10,
+          'G',
+          [0, 0, 1, 1],
+          [0, 0, 1, 1],
+          textSp(11, 'A', 1, 1, '\u{1F600} \uD55C\uAE00') + NESTED + compat(30) + bareSp(3),
+        ),
+      },
+      {
+        text: '<p:grpSp><p:nvGrpSpPr/><p:grpSpPr/><p:sp id="1"/><p:sp><p:sp></p:sp></p:sp></p:grpSp>',
+      },
+      {
+        text: '<p:grpSp><p:grpSpPr></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="4" name="x"/></p:nvSpPr>',
+      },
       { text: '<p:sp><p:cNvPr id="1"/></p:sp><p:pic><p:cNvPr name="n" id="9"/></p:pic><p:spx/>' },
-      { text: '<p:grpSp><p:grpSpPr/><mc:AlternateContent><mc:Choice><p:sp><p:cNvPr id="1"/></p:sp></mc:Choice></mc:AlternateContent><p:cxnSp><p:cNvPr id="2"/></p:cxnSp><p:graphicFrame/></p:grpSp>' },
+      {
+        text: '<p:grpSp><p:grpSpPr/><mc:AlternateContent><mc:Choice><p:sp><p:cNvPr id="1"/></p:sp></mc:Choice></mc:AlternateContent><p:cxnSp><p:cNvPr id="2"/></p:cxnSp><p:graphicFrame/></p:grpSp>',
+      },
       // the id as the parser reads it: decoded, quoted either way, spaced, after other attributes
-      { text: '<p:grpSp><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id = \'k&amp;1\' name="x"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr note="a>b" id="&#53;"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr id=""/></p:nvSpPr></p:sp></p:grpSp>' },
+      {
+        text: '<p:grpSp><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id = \'k&amp;1\' name="x"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr note="a>b" id="&#53;"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr id=""/></p:nvSpPr></p:sp></p:grpSp>',
+      },
       { text: '' },
     ],
   },
@@ -420,7 +487,11 @@ export const DECKGROUPS: CallSpec[] = [
   spec(
     'findGroupChild',
     (opened, at, a) => {
-      const r = findGroupChild(opened.deck.slides[a.slide as number]!, groupId(at, a), childId(opened, a))
+      const r = findGroupChild(
+        opened.deck.slides[a.slide as number]!,
+        groupId(at, a),
+        childId(opened, a),
+      )
       return r ? [r.grp.id, r.child.id] : null
     },
     [
@@ -442,9 +513,27 @@ export const DECKGROUPS: CallSpec[] = [
       ),
     [
       ...everyChild({ offset: { x: 5, y: 6, cx: 700, cy: 800 }, rotationDeg: 15.5 }),
-      input({ slide: 0, element: 4, child: 0, offset: { x: -5, y: 0, cx: 1e12, cy: 0 }, rotationDeg: -90 }),
-      input({ slide: 0, element: 4, child: 1, offset: { x: 1, y: 1, cx: 1, cy: 1 }, rotationDeg: 0 }),
-      input({ slide: 0, element: 4, childId: 'nope', offset: { x: 1, y: 1, cx: 1, cy: 1 }, rotationDeg: 1 }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 0,
+        offset: { x: -5, y: 0, cx: 1e12, cy: 0 },
+        rotationDeg: -90,
+      }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        offset: { x: 1, y: 1, cx: 1, cy: 1 },
+        rotationDeg: 0,
+      }),
+      input({
+        slide: 0,
+        element: 4,
+        childId: 'nope',
+        offset: { x: 1, y: 1, cx: 1, cy: 1 },
+        rotationDeg: 1,
+      }),
     ],
   ),
   spec(
@@ -475,14 +564,26 @@ export const DECKGROUPS: CallSpec[] = [
         groupId(at, a),
         childId(opened, a),
         a.patch as never,
-        typeof a.grow === 'number' ? (pt: number | undefined) => (pt ?? 18) + (a.grow as number) : undefined,
+        typeof a.grow === 'number'
+          ? (pt: number | undefined) => (pt ?? 18) + (a.grow as number)
+          : undefined,
       ),
     [
       ...everyChild({ patch: { fontFamily: 'Arial', bold: true, color: '#FF0000' } }),
       input({ slide: 0, element: 4, child: 0, patch: {}, grow: 6 }),
-      input({ slide: 0, element: 4, child: 1, patch: { fontSizePt: 24, italic: true, underline: true, strike: true } }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        patch: { fontSizePt: 24, italic: true, underline: true, strike: true },
+      }),
       input({ slide: 0, element: 4, child: 0, patch: { highlight: null, letterSpacingPt: 2 } }),
-      input({ slide: 0, element: 4, child: 0, patch: { highlight: '#FFFF00', letterSpacingPt: null } }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 0,
+        patch: { highlight: '#FFFF00', letterSpacingPt: null },
+      }),
     ],
   ),
   spec(
@@ -495,7 +596,16 @@ export const DECKGROUPS: CallSpec[] = [
         a.fill as never,
       ),
     [
-      ...[ 'none', '#00FF00', '#00FF0080', GRADIENT, { ...GRADIENT, radial: true }, { ...GRADIENT, path: 'rect', fillTo: { l: 0.2, t: 0.2, r: 0.8, b: 0.8 } }, { ...GRADIENT, radial: true, fillTo: { l: 0.5, t: 0.5, r: 0.5, b: 0.5 } }, { stops: [{ pos: 0, color: '#000000' }] }].flatMap((fill) =>
+      ...[
+        'none',
+        '#00FF00',
+        '#00FF0080',
+        GRADIENT,
+        { ...GRADIENT, radial: true },
+        { ...GRADIENT, path: 'rect', fillTo: { l: 0.2, t: 0.2, r: 0.8, b: 0.8 } },
+        { ...GRADIENT, radial: true, fillTo: { l: 0.5, t: 0.5, r: 0.5, b: 0.5 } },
+        { stops: [{ pos: 0, color: '#000000' }] },
+      ].flatMap((fill) =>
         [0, 1, 2, 3].map((child) => input({ slide: 0, element: 4, child, fill })),
       ),
       input({ slide: 0, element: 4, childId: 'nope', fill: '#00FF00' }),
@@ -511,7 +621,13 @@ export const DECKGROUPS: CallSpec[] = [
         a.stroke as never,
       ),
     [
-      ...[null, STROKE, { ...STROKE, dash: 'solid', compound: 'sng', cap: 'flat', join: 'miter' }, { color: '#000000', widthEmu: 0 }, { ...STROKE, cap: 'sq', join: 'bevel', compound: 'tri', gradient: GRADIENT }].flatMap((stroke) =>
+      ...[
+        null,
+        STROKE,
+        { ...STROKE, dash: 'solid', compound: 'sng', cap: 'flat', join: 'miter' },
+        { color: '#000000', widthEmu: 0 },
+        { ...STROKE, cap: 'sq', join: 'bevel', compound: 'tri', gradient: GRADIENT },
+      ].flatMap((stroke) =>
         [0, 1, 2, 3, 4].map((child) => input({ slide: 0, element: 4, child, stroke })),
       ),
       input({ slide: 0, element: 4, childId: 'nope', stroke: null }),
@@ -524,9 +640,24 @@ export const DECKGROUPS: CallSpec[] = [
       { stroke: STROKE },
       { stroke: { color: '#000000', widthEmu: 12700 } },
       { stroke: { ...STROKE, dash: 'solid', compound: 'sng' } },
-      { stroke: { ...STROKE, gradient: { stops: [{ pos: 0, color: '#FFFFFF' }], angle: 5400000.6 } } },
-      { stroke: { color: '#000000', widthEmu: 1, cap: 'flat', join: 'miter', compound: 'thinThick' } },
-      { stroke: { color: '#000000', widthEmu: 1, cap: 'sq', join: 'bevel', compound: 'thickThin' } },
+      {
+        stroke: {
+          ...STROKE,
+          gradient: { stops: [{ pos: 0, color: '#FFFFFF' }], angle: 5400000.6 },
+        },
+      },
+      {
+        stroke: {
+          color: '#000000',
+          widthEmu: 1,
+          cap: 'flat',
+          join: 'miter',
+          compound: 'thinThick',
+        },
+      },
+      {
+        stroke: { color: '#000000', widthEmu: 1, cap: 'sq', join: 'bevel', compound: 'thickThin' },
+      },
     ].map((args) => ({ args })),
   },
   spec(
@@ -575,13 +706,49 @@ export const DECKGROUPS: CallSpec[] = [
       ),
     [
       ...everyChild({
-        geom: { w: 100, h: 100, cmds: [{ op: 'M', pts: [0, 0] }, { op: 'L', pts: [100, 0] }, { op: 'C', pts: [1, 2, 3, 4, 5, 6] }, { op: 'Z', pts: [] }] },
+        geom: {
+          w: 100,
+          h: 100,
+          cmds: [
+            { op: 'M', pts: [0, 0] },
+            { op: 'L', pts: [100, 0] },
+            { op: 'C', pts: [1, 2, 3, 4, 5, 6] },
+            { op: 'Z', pts: [] },
+          ],
+        },
       }),
-      input({ slide: 0, element: 4, child: 1, geom: { w: 0, h: 100, cmds: [{ op: 'M', pts: [0, 0] }] } }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        geom: { w: 0, h: 100, cmds: [{ op: 'M', pts: [0, 0] }] },
+      }),
       input({ slide: 0, element: 4, child: 1, geom: { w: 10, h: 10, cmds: [] } }),
-      input({ slide: 0, element: 4, child: 1, geom: { w: 10, h: 10, cmds: [{ op: 'L', pts: [1, 1] }] } }),
-      input({ slide: 0, element: 4, child: 1, geom: { w: 10, h: 10, cmds: [{ op: 'M', pts: [1] }] } }),
-      input({ slide: 0, element: 4, child: 1, geom: { w: 10, h: 10, cmds: [{ op: 'M', pts: [0.5, 1.5] }, { op: 'Q', pts: [1, 2, 3, 4] }] } }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        geom: { w: 10, h: 10, cmds: [{ op: 'L', pts: [1, 1] }] },
+      }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        geom: { w: 10, h: 10, cmds: [{ op: 'M', pts: [1] }] },
+      }),
+      input({
+        slide: 0,
+        element: 4,
+        child: 1,
+        geom: {
+          w: 10,
+          h: 10,
+          cmds: [
+            { op: 'M', pts: [0.5, 1.5] },
+            { op: 'Q', pts: [1, 2, 3, 4] },
+          ],
+        },
+      }),
     ],
   ),
 ]

@@ -72,7 +72,8 @@ export class ArgPool {
       return earlier === this.before.has(`${context}\0${key}\0${other}`) ? undefined : earlier
     })
     const at = sides.lastIndexOf(true) + 1
-    if (sides.includes(undefined) || sides.indexOf(false, 0) !== (at < sides.length ? at : -1)) return
+    if (sides.includes(undefined) || sides.indexOf(false, 0) !== (at < sides.length ? at : -1))
+      return
     for (const [other] of entries) delete object[other]
     entries.splice(at, 0, [key, value])
     for (const [other, kept] of entries) object[other] = kept
@@ -124,7 +125,8 @@ export class ArgPool {
       if (this.values.has(of)) {
         out.push((random) => {
           const element = this.pick(of, random)
-          if (element !== undefined) value.splice(Math.floor(random() * (value.length + 1)), 0, element)
+          if (element !== undefined)
+            value.splice(Math.floor(random() * (value.length + 1)), 0, element)
         })
       }
       for (const element of value) out.push(...this.edits(element, of))

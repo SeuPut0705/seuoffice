@@ -32,7 +32,9 @@ const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const slim = <T>(value: T): T =>
   JSON.parse(
     JSON.stringify(value, (_key, item: unknown) =>
-      typeof item === 'string' && item.startsWith('data:') && item.length > 256 ? item.slice(0, 64) : item,
+      typeof item === 'string' && item.startsWith('data:') && item.length > 256
+        ? item.slice(0, 64)
+        : item,
     ),
   ) as T
 
@@ -67,7 +69,9 @@ const HOST_XMLS = [
   p(pPr('<w:pageBreakBefore w:val="false"/>') + DRAWING),
   p(`\n  ${pPr('<w:pageBreakBefore/>')}${DRAWING}`),
   // a tracked change's previous pPr is not the live one
-  p(pPr('<w:jc/><w:pPrChange w:id="1"><w:pPr><w:pageBreakBefore/></w:pPr></w:pPrChange>') + DRAWING),
+  p(
+    pPr('<w:jc/><w:pPrChange w:id="1"><w:pPr><w:pageBreakBefore/></w:pPr></w:pPrChange>') + DRAWING,
+  ),
   p(pPr('<w:pPrChange w:id="1"><w:pPr/></w:pPrChange><w:pageBreakBefore/>') + DRAWING),
   p(pPr('<w:pPrChange>x</w:pPrChange><w:pageBreakBefore/>') + DRAWING),
   // the pPr must open the paragraph
@@ -118,7 +122,10 @@ const BOX_WITH_PPR_CHANGE =
  */
 const SELF_CLOSING_PPR_CHANGE: Block[][] = [
   p(pPr('<w:pPrChange w:id="1" w:author="A"/><w:pageBreakBefore/>') + BOX_WITH_PPR_CHANGE),
-  p(pPr('<w:pPrChange w:id="1" w:author="A" w:date="2026-01-01T00:00:00Z"/><w:pageBreakBefore/>') + DRAWING),
+  p(
+    pPr('<w:pPrChange w:id="1" w:author="A" w:date="2026-01-01T00:00:00Z"/><w:pageBreakBefore/>') +
+      DRAWING,
+  ),
   p(pPr('<w:pPrChange/><w:pageBreakBefore/>') + DRAWING),
   p(pPr('<w:pPrChange/><w:pageBreakBefore/>') + BOX_WITH_PPR_CHANGE),
 ].flatMap((originalXml, i) =>
@@ -135,10 +142,20 @@ const LEADING_BLOCKS: Block[][] = [
   [block('paragraph', { originalXml: HOST_XMLS[0]! })],
   [block('table', { originalXml: RUN_XMLS[0]! })],
   // an existing format: pageBreakBefore keeps its place, or goes last
-  [block('image', { format: { align: 'left', pageBreakBefore: false, keepNext: true }, originalXml: HOST_XMLS[0]! })],
+  [
+    block('image', {
+      format: { align: 'left', pageBreakBefore: false, keepNext: true },
+      originalXml: HOST_XMLS[0]!,
+    }),
+  ],
   [block('image', { format: { keepNext: true }, originalXml: RUN_XMLS[0]! })],
   [block('passthrough', { format: { align: 'center' }, originalXml: HOST_XMLS[1]! })],
-  [block('image', { format: { pageBreakBefore: true, align: 'right' }, originalXml: RUN_XMLS[0]! })],
+  [
+    block('image', {
+      format: { pageBreakBefore: true, align: 'right' },
+      originalXml: RUN_XMLS[0]!,
+    }),
+  ],
   [block('image', { format: {}, originalXml: RUN_XMLS[18]! })],
   [block('image', { originalXml: '' })],
   [block('passthrough', { originalXml: null })],
@@ -176,9 +193,10 @@ const EFFECTIVE = (eastAsia?: string): EffectiveRPr => ({
 
 /** One character at each edge of the ranges the fraction counts. */
 const EDGE_CHARACTERS = [
-  0x10ff, 0x1100, 0x11ff, 0x1200, 0x2e7f, 0x2e80, 0x303f, 0x3040, 0x30ff, 0x3100, 0x312f, 0x3130, 0x318f, 0x3190,
-  0x31ef, 0x31f0, 0x31ff, 0x3200, 0x9fff, 0xa000, 0xabff, 0xac00, 0xd7af, 0xd7b0, 0xf8ff, 0xf900, 0xfaff, 0xfb00,
-  0xfeff, 0xff00, 0xff60, 0xff61, 0x1f600, 0x1ffff, 0x20000, 0x2a6d6,
+  0x10ff, 0x1100, 0x11ff, 0x1200, 0x2e7f, 0x2e80, 0x303f, 0x3040, 0x30ff, 0x3100, 0x312f, 0x3130,
+  0x318f, 0x3190, 0x31ef, 0x31f0, 0x31ff, 0x3200, 0x9fff, 0xa000, 0xabff, 0xac00, 0xd7af, 0xd7b0,
+  0xf8ff, 0xf900, 0xfaff, 0xfb00, 0xfeff, 0xff00, 0xff60, 0xff61, 0x1f600, 0x1ffff, 0x20000,
+  0x2a6d6,
 ].map((cp) => String.fromCodePoint(cp))
 
 /** Faces that keep hangul and kana single, written as documents write them, and some that do not. */
@@ -228,13 +246,29 @@ const DBCS_GROUPS: Array<Array<Run[] | null>> = [
   [EDGE_CHARACTERS.map((ch) => run(ch, { charSpacingTwips: 20 }))],
   [EDGE_CHARACTERS.map((ch) => run(ch, { charSpacingTwips: 20, eastAsiaFont: 'Malgun Gothic' }))],
   [FONTS.map((font) => run('\ud55c\u304b\u6f22a', { charSpacingTwips: 20, eastAsiaFont: font }))],
-  [FONTS.map((font) => run('\ud55c\u304b\u6f22a', { charSpacingTwips: 20, effective: EFFECTIVE(font) }))],
+  [
+    FONTS.map((font) =>
+      run('\ud55c\u304b\u6f22a', { charSpacingTwips: 20, effective: EFFECTIVE(font) }),
+    ),
+  ],
   [
     [
       run('\ud55c', { charSpacingTwips: 20, effective: EFFECTIVE() }),
-      run('\ud55c', { charSpacingTwips: 20, eastAsiaFont: '', effective: EFFECTIVE('Malgun Gothic') }),
-      run('\ud55c', { charSpacingTwips: 20, eastAsiaFont: 'Batang', effective: EFFECTIVE('Malgun Gothic') }),
-      run('\ud55c', { charSpacingTwips: 20, eastAsiaFont: 'Malgun Gothic', effective: EFFECTIVE('Batang') }),
+      run('\ud55c', {
+        charSpacingTwips: 20,
+        eastAsiaFont: '',
+        effective: EFFECTIVE('Malgun Gothic'),
+      }),
+      run('\ud55c', {
+        charSpacingTwips: 20,
+        eastAsiaFont: 'Batang',
+        effective: EFFECTIVE('Malgun Gothic'),
+      }),
+      run('\ud55c', {
+        charSpacingTwips: 20,
+        eastAsiaFont: 'Malgun Gothic',
+        effective: EFFECTIVE('Batang'),
+      }),
       run('\ud55c', { charSpacingTwips: 20, effective: EFFECTIVE('') }),
     ],
   ],
@@ -247,7 +281,14 @@ const DEFAULT_FONTS: Array<string | undefined> = [undefined, 'Malgun Gothic', 'B
 const cell = (extra: Partial<TableCell> = {}): TableCell => ({ paras: [], ...extra })
 
 const NESTED: TableModel = {
-  rows: [[cell({ richParas: [{ runs: [run('nested')] }], nestedTables: [{ rows: [[cell({ richParas: [{ runs: [run('deep')] }] })]] }] })]],
+  rows: [
+    [
+      cell({
+        richParas: [{ runs: [run('nested')] }],
+        nestedTables: [{ rows: [[cell({ richParas: [{ runs: [run('deep')] }] })]] }],
+      }),
+    ],
+  ],
 }
 
 const GROUP_BLOCKS: Block[][] = [
@@ -273,7 +314,11 @@ const GROUP_BLOCKS: Block[][] = [
     }),
     block('paragraph', {
       runs: [run('anchor')],
-      textboxes: [box({ paras: [{ runs: [run('box')] }] }), box(), box({ paras: [{ runs: [run('second')] }] })],
+      textboxes: [
+        box({ paras: [{ runs: [run('box')] }] }),
+        box(),
+        box({ paras: [{ runs: [run('second')] }] }),
+      ],
     }),
     block('table', { table: { rows: [] } }),
   ],
@@ -336,7 +381,10 @@ const SECTIONS: SectionSettings[] = [
   },
 ]
 
-const floatTable = (floatPos: TableModel['floatPos'], colWidthsTwips: number[] | undefined = [2000, 3000.5]): TableModel => ({
+const floatTable = (
+  floatPos: TableModel['floatPos'],
+  colWidthsTwips: number[] | undefined = [2000, 3000.5],
+): TableModel => ({
   rows: [],
   ...(colWidthsTwips !== undefined ? { colWidthsTwips } : {}),
   ...(floatPos !== undefined ? { floatPos } : {}),
@@ -361,10 +409,22 @@ const SPAN_BLOCKS: Block[] = [
   block('table', { table: floatTable(POSITIONS[0], [0]) }),
   ...POSITIONS.map((pos) => block('table', { table: floatTable(pos) })),
   ...POSITIONS.map((pos) => block('table', { table: floatTable(pos, [1440]) })),
-  block('table', { table: floatTable(POSITIONS[2]), originalXml: '<w:tbl><w:tblPr><w:tblpPr w:tblpXSpec="center"/></w:tblPr></w:tbl>' }),
-  block('table', { table: floatTable(POSITIONS[2]), originalXml: '<w:tbl><w:tblPr><w:tblpPr w:tblpX="10"/></w:tblPr></w:tbl>' }),
-  block('table', { table: floatTable(POSITIONS[2]), originalXml: '<w:tbl xw:tblpXSpec="center"/>' }),
-  block('table', { table: floatTable(POSITIONS[2]), originalXml: '<w:tbl \u212aw:tblpXSpec="center"/>' }),
+  block('table', {
+    table: floatTable(POSITIONS[2]),
+    originalXml: '<w:tbl><w:tblPr><w:tblpPr w:tblpXSpec="center"/></w:tblPr></w:tbl>',
+  }),
+  block('table', {
+    table: floatTable(POSITIONS[2]),
+    originalXml: '<w:tbl><w:tblPr><w:tblpPr w:tblpX="10"/></w:tblPr></w:tbl>',
+  }),
+  block('table', {
+    table: floatTable(POSITIONS[2]),
+    originalXml: '<w:tbl xw:tblpXSpec="center"/>',
+  }),
+  block('table', {
+    table: floatTable(POSITIONS[2]),
+    originalXml: '<w:tbl \u212aw:tblpXSpec="center"/>',
+  }),
 ]
 
 // ---- bandWrappedBoxesBeforeTables
@@ -380,7 +440,11 @@ const BAND_BLOCKS: Block[][] = [
   [block('paragraph', { textboxes: [wrapped()] }), table()],
   [block('paragraph', { textboxes: [wrapped()] })],
   [block('paragraph', { textboxes: [wrapped(), wrapped({ floating: false })] }), table()],
-  [block('paragraph', { textboxes: [wrapped()] }), block('paragraph', { runs: [run('text')] }), table()],
+  [
+    block('paragraph', { textboxes: [wrapped()] }),
+    block('paragraph', { runs: [run('text')] }),
+    table(),
+  ],
   [
     block('paragraph', { textboxes: [wrapped()] }),
     block('paragraph'),
@@ -388,8 +452,16 @@ const BAND_BLOCKS: Block[][] = [
     block('paragraph', { runs: [run(''), run(' \u3000\ufeff\t')] }),
     table(),
   ],
-  [block('paragraph', { textboxes: [wrapped()] }), block('paragraph', { runs: [run('\u0085')] }), table()],
-  [block('paragraph', { textboxes: [wrapped()] }), block('paragraph', { runs: [run('', { image: { dataUrl: '', xml: '<w:drawing/>' } })] }), table()],
+  [
+    block('paragraph', { textboxes: [wrapped()] }),
+    block('paragraph', { runs: [run('\u0085')] }),
+    table(),
+  ],
+  [
+    block('paragraph', { textboxes: [wrapped()] }),
+    block('paragraph', { runs: [run('', { image: { dataUrl: '', xml: '<w:drawing/>' } })] }),
+    table(),
+  ],
   [block('paragraph', { textboxes: [wrapped()] }), block('heading', { runs: [] }), table()],
   [block('image', { textboxes: [wrapped()] }), block('paragraph', { runs: [] })],
   [
@@ -423,7 +495,10 @@ const BAND_BLOCKS: Block[][] = [
 
 /** Blocks whose fields a pass reads, each as a list of its own. */
 function eachBlockOf(doc: ParsedDoc, wanted: (b: Block) => boolean, limit = 40): Input[] {
-  return doc.blocks.filter(wanted).slice(0, limit).map((b) => ({ args: { blocks: [slim(b)] } }))
+  return doc.blocks
+    .filter(wanted)
+    .slice(0, limit)
+    .map((b) => ({ args: { blocks: [slim(b)] } }))
 }
 
 /** Blocks with a textbox, each with the empty paragraphs after it and the block that ends them. */
@@ -432,7 +507,12 @@ function bandWindowsOf(doc: ParsedDoc): Input[] {
   doc.blocks.forEach((b, i) => {
     if (!b.textboxes?.length || inputs.length >= 40) return
     let j = i + 1
-    while (j < doc.blocks.length && doc.blocks[j]!.type === 'paragraph' && !(doc.blocks[j]!.runs ?? []).some((r) => r.text.trim() !== '' || r.image)) j++
+    while (
+      j < doc.blocks.length &&
+      doc.blocks[j]!.type === 'paragraph' &&
+      !(doc.blocks[j]!.runs ?? []).some((r) => r.text.trim() !== '' || r.image)
+    )
+      j++
     inputs.push({ args: { blocks: slim(doc.blocks.slice(i, j + 1)) } })
   })
   return inputs
@@ -464,7 +544,9 @@ export const BLOCKPASSES: CallSpec[] = [
       return runGroups
     },
     fromModel: (doc) => {
-      const runGroups = blockRunGroups(slim(doc.blocks)).filter((runs) => runs?.some((r) => r.charSpacingTwips))
+      const runGroups = blockRunGroups(slim(doc.blocks)).filter((runs) =>
+        runs?.some((r) => r.charSpacingTwips),
+      )
       if (runGroups.length === 0 || runGroups.flat().length > 2000) return []
       const defaultFont = doc.docDefaults?.eastAsiaFont
       return [{ args: { runGroups, ...(defaultFont !== undefined ? { defaultFont } : {}) } }]
@@ -481,7 +563,12 @@ export const BLOCKPASSES: CallSpec[] = [
     argMutation: true,
     call: (_text, args) => blockRunGroups(wire(args.blocks as Block[])),
     fromModel: (doc) =>
-      eachBlockOf(doc, (b) => b.type === 'table' || (b.textboxes?.length ?? 0) > 0 || (b.strayRuns?.length ?? 0) > 0, 20),
+      eachBlockOf(
+        doc,
+        (b) =>
+          b.type === 'table' || (b.textboxes?.length ?? 0) > 0 || (b.strayRuns?.length ?? 0) > 0,
+        20,
+      ),
     built: GROUP_BLOCKS.map((blocks) => ({ args: { blocks } })),
     mutation: 'none',
   },
@@ -490,7 +577,9 @@ export const BLOCKPASSES: CallSpec[] = [
     argMutation: true,
     call: call(normalizeImageZOrders),
     fromModel: (doc) => {
-      const blocks = doc.blocks.filter((b) => b.imageZOrder !== undefined || b.textboxes?.some((t) => t.z !== undefined))
+      const blocks = doc.blocks.filter(
+        (b) => b.imageZOrder !== undefined || b.textboxes?.some((t) => t.z !== undefined),
+      )
       return blocks.length === 0 || blocks.length > 200 ? [] : [{ args: { blocks: slim(blocks) } }]
     },
     built: Z_BLOCKS.map((blocks) => ({ args: { blocks } })),

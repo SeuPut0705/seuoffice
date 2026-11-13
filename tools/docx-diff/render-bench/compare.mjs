@@ -43,7 +43,9 @@ const pct = (n) => `${n >= 0 ? '+' : ''}${(n * 100).toFixed(1)}%`
 const lines = [
   `| document | TS ms | wasm ms | change |`,
   `|---|---:|---:|---:|`,
-  ...documents.map((d) => `| ${d.path} | ${f(d.tsMs)} | ${f(d.wasmMs)} | ${pct(d.wasmMs / d.tsMs - 1)} |`),
+  ...documents.map(
+    (d) => `| ${d.path} | ${f(d.tsMs)} | ${f(d.wasmMs)} | ${pct(d.wasmMs / d.tsMs - 1)} |`,
+  ),
   `| **total** (medians of ${documents[0].samples} opens each) | ${f(tsTotal)} | ${f(wasmTotal)} | ${pct(change)} |`,
 ]
 const verdict =
@@ -52,6 +54,10 @@ const verdict =
     : `The wasm route is within the 5% limit (${pct(change)}).`
 const text = `${lines.join('\n')}\n\n${verdict}\n`
 console.log(text)
-writeFileSync(`${DIR}bench.json`, JSON.stringify({ tsTotal, wasmTotal, change, documents }, null, 1) + '\n')
-if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Render benchmark\n\n${text}`)
+writeFileSync(
+  `${DIR}bench.json`,
+  JSON.stringify({ tsTotal, wasmTotal, change, documents }, null, 1) + '\n',
+)
+if (process.env.GITHUB_STEP_SUMMARY)
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Render benchmark\n\n${text}`)
 if (change > LIMIT) process.exitCode = 1

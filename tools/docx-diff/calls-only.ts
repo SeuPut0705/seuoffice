@@ -9,7 +9,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { parseDocx } from './reference/parse'
 import { loadDocxZip } from './reference/zip-load'
-import { callsAfterCorpus, callsOnDocument, callsOnModel, callsOnParse, callsReport, reportCalls } from './calls-run'
+import {
+  callsAfterCorpus,
+  callsOnDocument,
+  callsOnModel,
+  callsOnParse,
+  callsReport,
+  reportCalls,
+} from './calls-run'
 import { gateHasFailed, option, repoRoot, reportComparisons } from './harness'
 import { mulberry32 } from './synthetic'
 
@@ -43,6 +50,8 @@ const reportAt = process.argv.indexOf('--report')
 if (reportAt >= 0) {
   const path = resolve(process.argv[reportAt + 1]!)
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, JSON.stringify(callsReport(), null, 2) + '\n', { flag: process.argv.includes('--first') ? 'wx' : 'w' })
+  writeFileSync(path, JSON.stringify(callsReport(), null, 2) + '\n', {
+    flag: process.argv.includes('--first') ? 'wx' : 'w',
+  })
 }
 process.exitCode = gateHasFailed() ? 1 : 0

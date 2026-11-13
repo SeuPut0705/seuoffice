@@ -5,14 +5,26 @@
 // an object, a key twice, base64 with padding bits set, and one text that is
 // no JSON.
 import { builtModelInputs } from './model-built'
-import { extractModelSchema, type ModelSchema, type SchemaNode, walkWire, WireError } from './model-schema'
+import {
+  extractModelSchema,
+  type ModelSchema,
+  type SchemaNode,
+  walkWire,
+  WireError,
+} from './model-schema'
 import type { ModelInput } from './model-wire'
 
 const UNKNOWN = '__modelUnknown'
 /** One value of every JSON kind: whichever the schema refuses for a field, the Rust must refuse. */
 const OTHER_KINDS: Array<[string, unknown]> = [
-  ['number', 0], ['string', ''], ['true', true], ['false', false], ['array', []], ['object', {}],
-  ['array of string', ['']], ['object of null', { [UNKNOWN]: null }],
+  ['number', 0],
+  ['string', ''],
+  ['true', true],
+  ['false', false],
+  ['array', []],
+  ['object', {}],
+  ['array of string', ['']],
+  ['object of null', { [UNKNOWN]: null }],
 ]
 
 export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): ModelInput[] {
@@ -24,17 +36,24 @@ export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): 
 
   const takesNull = (node: SchemaNode): boolean => {
     switch (node.kind) {
-      case 'number': case 'nullable': case 'undefinable': case 'opaque': return true
-      case 'union': return node.variants.some(takesNull)
+      case 'number':
+      case 'nullable':
+      case 'undefinable':
+      case 'opaque':
+        return true
+      case 'union':
+        return node.variants.some(takesNull)
       case 'ref': {
         const type = schema.types.get(node.name)
         return type?.kind === 'alias' ? takesNull(type.type) : false
       }
-      default: return false
+      default:
+        return false
     }
   }
   const bytesField = (node: SchemaNode): boolean =>
-    node.kind === 'bytes' || ((node.kind === 'nullable' || node.kind === 'undefinable') && bytesField(node.inner))
+    node.kind === 'bytes' ||
+    ((node.kind === 'nullable' || node.kind === 'undefinable') && bytesField(node.inner))
   const schemaRefuses = (type: string, value: unknown): boolean => {
     try {
       walkWire(schema, type, value, () => {})
@@ -59,8 +78,11 @@ export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): 
     const base = JSON.parse(minimal) as Record<string, unknown>
 
     // spliced into the text so every other byte of the valid value stays
-    refuse(`${name} unknown key`, name,
-      minimal === '{}' ? `{"${UNKNOWN}":1}` : `${minimal.slice(0, -1)},"${UNKNOWN}":1}`)
+    refuse(
+      `${name} unknown key`,
+      name,
+      minimal === '{}' ? `{"${UNKNOWN}":1}` : `${minimal.slice(0, -1)},"${UNKNOWN}":1}`,
+    )
 
     for (const field of type.fields) {
       if (!field.optional && field.name in base) {
@@ -71,7 +93,11 @@ export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): 
       if (present === undefined) continue
       const withField = JSON.parse(present) as Record<string, unknown>
       if (field.type.kind !== 'opaque' && !takesNull(field.type)) {
-        refuse(`${name}.${field.name} null`, name, JSON.stringify({ ...withField, [field.name]: null }))
+        refuse(
+          `${name}.${field.name} null`,
+          name,
+          JSON.stringify({ ...withField, [field.name]: null }),
+        )
       }
       for (const [kind, other] of OTHER_KINDS) {
         const candidate = { ...withField, [field.name]: other }
@@ -82,19 +108,29 @@ export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): 
       if (bytesField(field.type)) {
         // padding bits set, which Buffer never writes: each of the four bits '==' leaves unused, each of the two of '='
         for (const base64 of ['AP8BgB==', 'AP8BgC==', 'AP8BgE==', 'AP8BgI==', 'YWJ=', 'YWK=']) {
-          refuse(`${name}.${field.name} bytes padding ${base64}`, name,
-            JSON.stringify({ ...withField, [field.name]: { $bytes: base64 } }))
+          refuse(
+            `${name}.${field.name} bytes padding ${base64}`,
+            name,
+            JSON.stringify({ ...withField, [field.name]: { $bytes: base64 } }),
+          )
         }
       }
     }
 
     // a key twice in one object of a type read directly (a union takes the last one, as JSON.parse does)
-    const keyed = Object.keys(base).length > 0
-      ? minimal
-      : type.fields.map((field) => built.get(`built ${name}.${field.name} present`)).find((json) => json !== undefined)
+    const keyed =
+      Object.keys(base).length > 0
+        ? minimal
+        : type.fields
+            .map((field) => built.get(`built ${name}.${field.name} present`))
+            .find((json) => json !== undefined)
     if (keyed !== undefined && keyed !== '{}') {
       const [key, value] = Object.entries(JSON.parse(keyed) as Record<string, unknown>)[0]!
-      refuse(`${name} duplicate ${key}`, name, `{${JSON.stringify(key)}:${JSON.stringify(value)},${keyed.slice(1)}`)
+      refuse(
+        `${name} duplicate ${key}`,
+        name,
+        `{${JSON.stringify(key)}:${JSON.stringify(value)},${keyed.slice(1)}`,
+      )
     }
   }
 

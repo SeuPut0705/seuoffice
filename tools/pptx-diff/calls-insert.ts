@@ -77,11 +77,35 @@ const para = (text: string) => ({ runs: [{ text }] })
 
 const ELEMENT_OPTS: NewElementOptions[] = [
   { kind: 'textbox', offset: OFFSET },
-  { kind: 'textbox', offset: OFFSET, paragraphs: [para('A & <B> \u{1F600}')], bodyPr: { wrap: 'none', anchor: 'ctr', insetsEmu: { l: 1.5, t: 2.5, r: 3.5, b: 4.5 }, autoFit: 'shrink' } },
+  {
+    kind: 'textbox',
+    offset: OFFSET,
+    paragraphs: [para('A & <B> \u{1F600}')],
+    bodyPr: {
+      wrap: 'none',
+      anchor: 'ctr',
+      insetsEmu: { l: 1.5, t: 2.5, r: 3.5, b: 4.5 },
+      autoFit: 'shrink',
+    },
+  },
   { kind: 'rect', offset: OFFSET, fillColor: '#336699' },
-  { kind: 'roundRect', offset: OFFSET, fillColor: '#33669980', stroke: { color: '#ff0000ff', widthEmu: 12700.6 }, adjustments: { adj: 25000.4, 'a"b': 1 }, flipH: true, flipV: true, bodyPr: { autoFit: 'resize', anchor: 'b', wrap: 'square' } },
+  {
+    kind: 'roundRect',
+    offset: OFFSET,
+    fillColor: '#33669980',
+    stroke: { color: '#ff0000ff', widthEmu: 12700.6 },
+    adjustments: { adj: 25000.4, 'a"b': 1 },
+    flipH: true,
+    flipV: true,
+    bodyPr: { autoFit: 'resize', anchor: 'b', wrap: 'square' },
+  },
   { kind: 'ellipse', offset: OFFSET, fillColor: '#12', paragraphs: [] },
-  { kind: 'a"<b', offset: OFFSET, fillColor: '#11223344', stroke: { color: '#abcdef', widthEmu: 0 } },
+  {
+    kind: 'a"<b',
+    offset: OFFSET,
+    fillColor: '#11223344',
+    stroke: { color: '#abcdef', widthEmu: 0 },
+  },
   { kind: 'line', offset: OFFSET },
   { kind: 'lineArrow', offset: OFFSET, stroke: { color: '#00ff00', widthEmu: 9525.5 } },
   { kind: 'lineArrowDouble', offset: OFFSET, flipH: true, flipV: true, adjustments: { adj1: 5 } },
@@ -107,15 +131,35 @@ const TABLE_OPTS: NewTableOptions[] = [
 ]
 
 const GRID_OPTS: NewTableGridOptions[] = [
-  { offset: OFFSET, colWidthsEmu: [100, 200], rowHeightsEmu: [50, 60], cells: [[{}, {}], [{}, {}]] },
+  {
+    offset: OFFSET,
+    colWidthsEmu: [100, 200],
+    rowHeightsEmu: [50, 60],
+    cells: [
+      [{}, {}],
+      [{}, {}],
+    ],
+  },
   {
     offset: OFFSET,
     colWidthsEmu: [1e30, 0],
     rowHeightsEmu: [50],
     border: { color: '#aabbccdd', widthEmu: 0.2 },
     cells: [
-      [{ paragraphs: [para('x')], gridSpan: 9, fillColor: '#ff0000', anchor: 'ctr', marginsEmu: { l: 1, t: 2, r: 3, b: 4 } }, { hMerge: true }],
-      [{ rowSpan: Infinity, vMerge: true, anchor: 'b', paragraphs: [] }, { fillColor: '#00ff0080', anchor: 't' }],
+      [
+        {
+          paragraphs: [para('x')],
+          gridSpan: 9,
+          fillColor: '#ff0000',
+          anchor: 'ctr',
+          marginsEmu: { l: 1, t: 2, r: 3, b: 4 },
+        },
+        { hMerge: true },
+      ],
+      [
+        { rowSpan: Infinity, vMerge: true, anchor: 'b', paragraphs: [] },
+        { fillColor: '#00ff0080', anchor: 't' },
+      ],
       [{}],
     ],
   },
@@ -144,13 +188,20 @@ const PICTURES: NewPictureOptions[] = [
 const pictureArgs = (o: NewPictureOptions) => ({ ...o, bytes: [...o.bytes] })
 const toBytes = (a: unknown) => new Uint8Array(a as number[])
 
-const SMART: NewSmartArtOptions[] = ['list', 'process', 'cycle', 'hierarchy', 'pyramid', 'matrix', 'venn', 'other'].map(
-  (layout, i) => ({
-    layout: layout as NewSmartArtOptions['layout'],
-    items: ['A', 'B & <C>', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].slice(0, [1, 2, 3, 4, 5, 6, 8, 9][i]),
-    offset: OFFSET,
-  }),
-)
+const SMART: NewSmartArtOptions[] = [
+  'list',
+  'process',
+  'cycle',
+  'hierarchy',
+  'pyramid',
+  'matrix',
+  'venn',
+  'other',
+].map((layout, i) => ({
+  layout: layout as NewSmartArtOptions['layout'],
+  items: ['A', 'B & <C>', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].slice(0, [1, 2, 3, 4, 5, 6, 8, 9][i]),
+  offset: OFFSET,
+}))
 
 const withTwoGroups = `${rect(2, 0, 0, 100, 100)}${rect(3, 50, 50, 100, 100)}`
 
@@ -159,8 +210,20 @@ export const INSERT: CallSpec[] = [
     fn: 'pptxInsert.insert.isLineKind',
     call: (text) => isLineKind(text),
     built: [
-      'line', 'lineArrow', 'lineArrowDouble', 'lineBent', 'lineCurved', 'textbox', 'rect', '', 'Line',
-      'constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf',
+      'line',
+      'lineArrow',
+      'lineArrowDouble',
+      'lineBent',
+      'lineCurved',
+      'textbox',
+      'rect',
+      '',
+      'Line',
+      'constructor',
+      'toString',
+      '__proto__',
+      'hasOwnProperty',
+      'valueOf',
     ].map((text) => ({ text })),
   },
   {
@@ -169,8 +232,14 @@ export const INSERT: CallSpec[] = [
     built: [
       deckInput(BLANK, { slide: 0 }),
       deckInput(GEN, { slide: 0 }),
-      withSlide(`<p:sp><p:nvSpPr><p:cNvPr id='41' name="q"/></p:nvSpPr></p:sp>${rect(7, 0, 0, 1, 1)}`, {}),
-      withSlide(`<p:sp><p:nvSpPr><p:cNvPr id="99999999999999999999" name="q"/></p:nvSpPr></p:sp>`, {}),
+      withSlide(
+        `<p:sp><p:nvSpPr><p:cNvPr id='41' name="q"/></p:nvSpPr></p:sp>${rect(7, 0, 0, 1, 1)}`,
+        {},
+      ),
+      withSlide(
+        `<p:sp><p:nvSpPr><p:cNvPr id="99999999999999999999" name="q"/></p:nvSpPr></p:sp>`,
+        {},
+      ),
     ],
   },
   {
@@ -181,7 +250,10 @@ export const INSERT: CallSpec[] = [
       ),
     built: [
       ...ELEMENT_OPTS.map((opts) => deckInput(GEN, { slide: 0, opts })),
-      deckInput(BLANK, { slide: 0, opts: { kind: 'textbox', offset: { x: 1e30, y: NaN, cx: -5, cy: 1e30 } } }),
+      deckInput(BLANK, {
+        slide: 0,
+        opts: { kind: 'textbox', offset: { x: 1e30, y: NaN, cx: -5, cy: 1e30 } },
+      }),
     ],
   },
   {
@@ -225,7 +297,10 @@ export const INSERT: CallSpec[] = [
       deckOp(text, args, (opened, at) =>
         fixed(args, () => {
           const o = args.opts as Record<string, unknown>
-          return addPicture(opened, at.slide(0), { ...o, bytes: toBytes(o.bytes) } as NewPictureOptions)
+          return addPicture(opened, at.slide(0), {
+            ...o,
+            bytes: toBytes(o.bytes),
+          } as NewPictureOptions)
         }),
       ),
     built: PICTURES.map((o) => deckInput(GEN, { slide: 0, opts: pictureArgs(o) })),
@@ -245,8 +320,7 @@ export const INSERT: CallSpec[] = [
   },
   {
     fn: 'pptxInsert.insert.calcBoundingBox',
-    call: (text, args) =>
-      deckOp(text, args, (opened, at) => calcBoundingBox(at.slide(0).elements)),
+    call: (text, args) => deckOp(text, args, (opened, at) => calcBoundingBox(at.slide(0).elements)),
     built: [
       deckInput(GEN, { slide: 0 }),
       deckInput(BLANK, { slide: 0 }),
@@ -257,7 +331,9 @@ export const INSERT: CallSpec[] = [
     fn: 'pptxInsert.insert.buildGrpSpXml',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
-        fixed(args, () => buildGrpSpXml(at.slide(0), args.bbox as never, args.childrenXml as string)),
+        fixed(args, () =>
+          buildGrpSpXml(at.slide(0), args.bbox as never, args.childrenXml as string),
+        ),
       ),
     built: [
       deckInput(GEN, { slide: 0, bbox: { x: 1, y: 2, cx: 3, cy: 4 }, childrenXml: '<p:sp/>' }),
@@ -267,32 +343,127 @@ export const INSERT: CallSpec[] = [
   {
     fn: 'pptxInsert.background-promote.promoteSlideBackground',
     call: (text, args) =>
-      deckOp(text, args, (opened, at) =>
-        promoteSlideBackground(at.slide(0), opened.deck.size),
-      ),
+      deckOp(text, args, (opened, at) => promoteSlideBackground(at.slide(0), opened.deck.size)),
     built: [
       withSlide(rect(2, 0, 0, ...FULL, solid('112233')) + rect(3, 10, 10, 100, 100), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')) + rect(3, 0, 0, ...FULL, solid('445566FF')), {}),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')) + rect(3, 0, 0, ...FULL, solid('445566FF')),
+        {},
+      ),
       withSlide(rect(2, 0, 0, ...FULL, solid('112233')), {}),
       withSlide(rect(2, 0, 0, ...FULL, solid('11223380')), {}),
       withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:ln><a:noFill/></a:ln>`), {}),
-      withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:ln w="0"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`), {}),
-      withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="00000000"/></a:solidFill></a:ln>`), {}),
-      withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`), {}),
-      withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:effectLst><a:outerShdw blurRad="1"/></a:effectLst>`), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:p/>', '<a:p><a:r><a:t>hi</a:t></a:r></a:p>'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:p/>', '<a:p><a:r><a:t>  </a:t></a:r></a:p>'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm rot="60000">'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm flipH="1">'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm flipV="1">'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('prst="rect"', 'prst="ellipse"'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<p:nvPr/>', '<p:nvPr><p:ph type="title"/></p:nvPr>'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill>'), {}),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          `${solid('112233')}<a:ln w="0"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`,
+        ),
+        {},
+      ),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="00000000"/></a:solidFill></a:ln>`,
+        ),
+        {},
+      ),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`,
+        ),
+        {},
+      ),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          `${solid('112233')}<a:effectLst><a:outerShdw blurRad="1"/></a:effectLst>`,
+        ),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<a:p/>',
+          '<a:p><a:r><a:t>hi</a:t></a:r></a:p>',
+        ),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<a:p/>',
+          '<a:p><a:r><a:t>  </a:t></a:r></a:p>',
+        ),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm rot="60000">'),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm flipH="1">'),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm flipV="1">'),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace('prst="rect"', 'prst="ellipse"'),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<p:nvPr/>',
+          '<p:nvPr><p:ph type="title"/></p:nvPr>',
+        ),
+        {},
+      ),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill>',
+        ),
+        {},
+      ),
       withSlide(rect(2, 0, 0, 100, 100, solid('112233')), {}),
       withSlide(rect(2, 0, 0, 12192000 * 1.2, 6858000 * 1.2, solid('112233')), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')) + rect(3, 0, 0, ...FULL, solid('445566')), {}),
-      deckInput(BLANK, { slide: 0 }, { part: SLIDE_PART, text: slideXml(rect(2, 0, 0, ...FULL, solid('112233'))).replace('</p:cSld>', '</p:cSld><p:timing><p:tnLst><p:par><p:cTn><p:childTnLst><p:set><p:cBhvr><p:tgtEl><p:spTgt spid="2"/></p:tgtEl></p:cBhvr></p:set></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>') }),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<p:cNvPr id="2" name="S2"/>', '<p:cNvPr name="S2"/>'), {}),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')) + rect(3, 0, 0, ...FULL, solid('445566')),
+        {},
+      ),
+      deckInput(
+        BLANK,
+        { slide: 0 },
+        {
+          part: SLIDE_PART,
+          text: slideXml(rect(2, 0, 0, ...FULL, solid('112233'))).replace(
+            '</p:cSld>',
+            '</p:cSld><p:timing><p:tnLst><p:par><p:cTn><p:childTnLst><p:set><p:cBhvr><p:tgtEl><p:spTgt spid="2"/></p:tgtEl></p:cBhvr></p:set></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>',
+          ),
+        },
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<p:cNvPr id="2" name="S2"/>',
+          '<p:cNvPr name="S2"/>',
+        ),
+        {},
+      ),
     ],
   },
   {
@@ -304,14 +475,47 @@ export const INSERT: CallSpec[] = [
     built: [
       deckInput(GEN, { slide: 0 }),
       withSlide(rect(2, 0, 0, ...FULL, solid('112233')), {}),
-      withSlide(rect(2, 0, 0, ...FULL, '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill>'), {}),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill>',
+        ),
+        {},
+      ),
       withSlide(rect(2, 0, 0, ...FULL), {}),
-      withSlide(rect(2, 0, 0, ...FULL, `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`), {}),
+      withSlide(
+        rect(
+          2,
+          0,
+          0,
+          ...FULL,
+          `${solid('112233')}<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>`,
+        ),
+        {},
+      ),
       withSlide(rect(2, 0, 0, 12192000 * 1.4, 6858000 * 1.4, solid('112233')), {}),
       withSlide(rect(2, 0, 0, 12192000 * 1.6, 6858000 * 1.6, solid('112233')), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm rot="60000">'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:p/>', '<a:p><a:r><a:t>x</a:t></a:r></a:p>'), {}),
-      withSlide(rect(2, 0, 0, ...FULL, solid('112233')).replace('<p:nvPr/>', '<p:nvPr><p:ph type="title"/></p:nvPr>'), {}),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace('<a:xfrm>', '<a:xfrm rot="60000">'),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<a:p/>',
+          '<a:p><a:r><a:t>x</a:t></a:r></a:p>',
+        ),
+        {},
+      ),
+      withSlide(
+        rect(2, 0, 0, ...FULL, solid('112233')).replace(
+          '<p:nvPr/>',
+          '<p:nvPr><p:ph type="title"/></p:nvPr>',
+        ),
+        {},
+      ),
       withSlide(
         `<p:pic><p:nvPicPr><p:cNvPr id="2" name="P"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId9"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${FULL[0]}" cy="${FULL[1]}"/></a:xfrm></p:spPr></p:pic>`,
         {},
@@ -333,7 +537,9 @@ export const INSERT: CallSpec[] = [
         ),
       ),
     built: [
-      deckInput(GEN, { opts: { footer: 'Foot & <er>', slideNum: true, date: '2026-11-12', dateAuto: true } }),
+      deckInput(GEN, {
+        opts: { footer: 'Foot & <er>', slideNum: true, date: '2026-11-12', dateAuto: true },
+      }),
       deckInput(GEN, { opts: { footer: 'Foot', date: 'x' } }),
       deckInput(GEN, { opts: { slideNum: true }, indexes: [1] }),
       deckInput(GEN, { opts: {}, indexes: [0] }),

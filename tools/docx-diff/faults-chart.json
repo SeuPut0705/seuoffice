@@ -1,144 +1,144 @@
 {
- "faults": [
-  {
-   "name": "porter: serialDateText switches to the later day zero at serial 61, not after 60 (<=)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "let base: i64 = if n < 61.0 { -25_568 } else { -25_569 };",
-   "new": "let base: i64 = if n <= 61.0 { -25_568 } else { -25_569 };"
-  },
-  {
-   "name": "porter: shadeHex scales the green channel into blue",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "rgb_hex(r * factor, g * factor, b * factor)",
-   "new": "rgb_hex(r * factor, g * factor, g * factor)"
-  },
-  {
-   "name": "porter: tintHex adds the white share with the wrong sign",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "255.0 * (1.0 - factor)",
-   "new": "255.0 * (1.0 + factor)"
-  },
-  {
-   "name": "porter: lumHex no longer clamps the luminance at 0",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "let l = math_max(0.0, math_min(1.0, l0 * r#mod + off));",
-   "new": "let l = math_min(1.0, l0 * r#mod + off);"
-  },
-  {
-   "name": "porter: DEFAULT_FRAME_LINE off by one digit",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "pub const DEFAULT_FRAME_LINE: &str = \"868686\";",
-   "new": "pub const DEFAULT_FRAME_LINE: &str = \"868687\";"
-  },
-  {
-   "name": "independent: legend_pos_of: a top-right legend (tr) reads as top",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "Some(\"tr\") => ChartDisplayLegendPos::Tr,",
-   "new": "Some(\"tr\") => ChartDisplayLegendPos::T,"
-  },
-  {
-   "name": "independent: axes_of: date and series axes (c:dateAx, c:serAx) are skipped",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "if !matches!(name, Some(\"c:catAx\" | \"c:valAx\" | \"c:dateAx\" | \"c:serAx\")) {",
-   "new": "if !matches!(name, Some(\"c:catAx\" | \"c:valAx\")) {"
-  },
-  {
-   "name": "independent: data_labels_of: per-point labels must outnumber the points (> instead of >=)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "if points > 0 && per_point.len() >= points {",
-   "new": "if points > 0 && per_point.len() > points {"
-  },
-  {
-   "name": "independent: data_point_colors: a c:dPt idx equal to the point budget is kept (> instead of >=)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "if !idx.is_finite() || idx < 0.0 || idx >= max_points {\n            continue;\n        }\n        let Some(color) =",
-   "new": "if !idx.is_finite() || idx < 0.0 || idx > max_points {\n            continue;\n        }\n        let Some(color) ="
-  },
-  {
-   "name": "independent: series_name: takes the first cached point that is set, not the point at idx 0",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "        .into_iter()\n        .next()\n        .flatten()",
-   "new": "        .into_iter()\n        .flatten()\n        .next()"
-  },
-  {
-   "name": "independent: cat_format_code: a c:numLit format code is ignored, only a c:numRef cache formats dates",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "None => container.find_child(\"c:numLit\"),",
-   "new": "None => None,"
-  },
-  {
-   "name": "independent: parse_chart_part_xml: a doughnut without c:holeSize loses the 50% default hole",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "        } else {\n            50.0\n        }",
-   "new": "        } else {\n            0.0\n        }"
-  },
-  {
-   "name": "independent: bool_flag: a CT_Boolean without val reads false (the true default dropped)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "matches!(node.attr(\"val\"), None | Some(\"1\" | \"true\"))",
-   "new": "matches!(node.attr(\"val\"), Some(\"1\" | \"true\"))"
-  },
-  {
-   "name": "independent: parse_chart_part_xml: x categories rounded half away from zero (f64::round, not Math.round)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "number_to_string(math_round(n * 10000.0) / 10000.0)",
-   "new": "number_to_string((n * 10000.0).round() / 10000.0)"
-  },
-  {
-   "name": "independent: parse_chartex_part_xml: categories read from cx:numDim and values from cx:strDim",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "Some(\"cx:strDim\") => {\n                    entry.cats = chartex_points(dim)\n                        .into_iter()\n                        .map(Option::unwrap_or_default)\n                        .collect();\n                }\n                Some(\"cx:numDim\") => {",
-   "new": "Some(\"cx:numDim\") => {\n                    entry.cats = chartex_points(dim)\n                        .into_iter()\n                        .map(Option::unwrap_or_default)\n                        .collect();\n                }\n                Some(\"cx:strDim\") => {"
-  },
-  {
-   "name": "independent: parse_chart_part_xml: the date format test on categories is case-sensitive (no i flag)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "js_regex!(r\"[yd]\", \"i\")",
-   "new": "js_regex!(r\"[yd]\", \"\")"
-  },
-  {
-   "name": "independent: chart_palette: the style column counted from 0 (v % 8 instead of (v - 1) % 8)",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "((v - 1.0) % 8.0) + 1.0",
-   "new": "(v % 8.0) + 1.0"
-  },
-  {
-   "name": "independent: text_props: a zero font size (sz=\"0\") is kept as 0 pt",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "(sz > 0.0).then(|| sz / 100.0),",
-   "new": "(sz >= 0.0).then(|| sz / 100.0),"
-  },
-  {
-   "name": "independent: parse_chart_part_xml: pie explosion read from every series, not only the first",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "if kind == ChartDisplayKind::Pie && series.is_empty() {",
-   "new": "if kind == ChartDisplayKind::Pie {"
-  },
-  {
-   "name": "independent: line_hex: an a:ln without a fill gives no line instead of the automatic colour",
-   "group": "chart",
-   "file": "crates/docx-engine/src/chart.rs",
-   "old": "Some(solid_fill_hex(Some(ln), theme).unwrap_or_else(|| auto.to_owned()))",
-   "new": "solid_fill_hex(Some(ln), theme)"
-  }
- ]
+  "faults": [
+    {
+      "name": "porter: serialDateText switches to the later day zero at serial 61, not after 60 (<=)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "let base: i64 = if n < 61.0 { -25_568 } else { -25_569 };",
+      "new": "let base: i64 = if n <= 61.0 { -25_568 } else { -25_569 };"
+    },
+    {
+      "name": "porter: shadeHex scales the green channel into blue",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "rgb_hex(r * factor, g * factor, b * factor)",
+      "new": "rgb_hex(r * factor, g * factor, g * factor)"
+    },
+    {
+      "name": "porter: tintHex adds the white share with the wrong sign",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "255.0 * (1.0 - factor)",
+      "new": "255.0 * (1.0 + factor)"
+    },
+    {
+      "name": "porter: lumHex no longer clamps the luminance at 0",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "let l = math_max(0.0, math_min(1.0, l0 * r#mod + off));",
+      "new": "let l = math_min(1.0, l0 * r#mod + off);"
+    },
+    {
+      "name": "porter: DEFAULT_FRAME_LINE off by one digit",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "pub const DEFAULT_FRAME_LINE: &str = \"868686\";",
+      "new": "pub const DEFAULT_FRAME_LINE: &str = \"868687\";"
+    },
+    {
+      "name": "independent: legend_pos_of: a top-right legend (tr) reads as top",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "Some(\"tr\") => ChartDisplayLegendPos::Tr,",
+      "new": "Some(\"tr\") => ChartDisplayLegendPos::T,"
+    },
+    {
+      "name": "independent: axes_of: date and series axes (c:dateAx, c:serAx) are skipped",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "if !matches!(name, Some(\"c:catAx\" | \"c:valAx\" | \"c:dateAx\" | \"c:serAx\")) {",
+      "new": "if !matches!(name, Some(\"c:catAx\" | \"c:valAx\")) {"
+    },
+    {
+      "name": "independent: data_labels_of: per-point labels must outnumber the points (> instead of >=)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "if points > 0 && per_point.len() >= points {",
+      "new": "if points > 0 && per_point.len() > points {"
+    },
+    {
+      "name": "independent: data_point_colors: a c:dPt idx equal to the point budget is kept (> instead of >=)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "if !idx.is_finite() || idx < 0.0 || idx >= max_points {\n            continue;\n        }\n        let Some(color) =",
+      "new": "if !idx.is_finite() || idx < 0.0 || idx > max_points {\n            continue;\n        }\n        let Some(color) ="
+    },
+    {
+      "name": "independent: series_name: takes the first cached point that is set, not the point at idx 0",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "        .into_iter()\n        .next()\n        .flatten()",
+      "new": "        .into_iter()\n        .flatten()\n        .next()"
+    },
+    {
+      "name": "independent: cat_format_code: a c:numLit format code is ignored, only a c:numRef cache formats dates",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "None => container.find_child(\"c:numLit\"),",
+      "new": "None => None,"
+    },
+    {
+      "name": "independent: parse_chart_part_xml: a doughnut without c:holeSize loses the 50% default hole",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "        } else {\n            50.0\n        }",
+      "new": "        } else {\n            0.0\n        }"
+    },
+    {
+      "name": "independent: bool_flag: a CT_Boolean without val reads false (the true default dropped)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "matches!(node.attr(\"val\"), None | Some(\"1\" | \"true\"))",
+      "new": "matches!(node.attr(\"val\"), Some(\"1\" | \"true\"))"
+    },
+    {
+      "name": "independent: parse_chart_part_xml: x categories rounded half away from zero (f64::round, not Math.round)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "number_to_string(math_round(n * 10000.0) / 10000.0)",
+      "new": "number_to_string((n * 10000.0).round() / 10000.0)"
+    },
+    {
+      "name": "independent: parse_chartex_part_xml: categories read from cx:numDim and values from cx:strDim",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "Some(\"cx:strDim\") => {\n                    entry.cats = chartex_points(dim)\n                        .into_iter()\n                        .map(Option::unwrap_or_default)\n                        .collect();\n                }\n                Some(\"cx:numDim\") => {",
+      "new": "Some(\"cx:numDim\") => {\n                    entry.cats = chartex_points(dim)\n                        .into_iter()\n                        .map(Option::unwrap_or_default)\n                        .collect();\n                }\n                Some(\"cx:strDim\") => {"
+    },
+    {
+      "name": "independent: parse_chart_part_xml: the date format test on categories is case-sensitive (no i flag)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "js_regex!(r\"[yd]\", \"i\")",
+      "new": "js_regex!(r\"[yd]\", \"\")"
+    },
+    {
+      "name": "independent: chart_palette: the style column counted from 0 (v % 8 instead of (v - 1) % 8)",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "((v - 1.0) % 8.0) + 1.0",
+      "new": "(v % 8.0) + 1.0"
+    },
+    {
+      "name": "independent: text_props: a zero font size (sz=\"0\") is kept as 0 pt",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "(sz > 0.0).then(|| sz / 100.0),",
+      "new": "(sz >= 0.0).then(|| sz / 100.0),"
+    },
+    {
+      "name": "independent: parse_chart_part_xml: pie explosion read from every series, not only the first",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "if kind == ChartDisplayKind::Pie && series.is_empty() {",
+      "new": "if kind == ChartDisplayKind::Pie {"
+    },
+    {
+      "name": "independent: line_hex: an a:ln without a fill gives no line instead of the automatic colour",
+      "group": "chart",
+      "file": "crates/docx-engine/src/chart.rs",
+      "old": "Some(solid_fill_hex(Some(ln), theme).unwrap_or_else(|| auto.to_owned()))",
+      "new": "solid_fill_hex(Some(ln), theme)"
+    }
+  ]
 }

@@ -40,3 +40,11 @@ docs/인계-2026-11-08.md
 
 # The model-checking tools write these files themselves (seuoffice).
 formal/
+
+# Rust engines: generated binding inventories, the frozen TypeScript the gates compare
+# against (byte-for-byte as it was frozen), recorded evidence and fixtures.
+tools/*-diff/binding/inventory/
+tools/*-diff/reference/
+crates/fixtures/
+crates/*/evidence/
+crates/vendor/

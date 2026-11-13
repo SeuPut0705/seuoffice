@@ -137,7 +137,12 @@ function renumberedBoxIds<T>(value: T, seen = new Map<unknown, number>()): T {
 }
 
 /** A cell paragraph with a drawn text box and its VML twin: `hidden` before the drawing, `inTwin` inside the twin. */
-const cellBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+const cellBox = (
+  hidden: string,
+  inTwin = '',
+  fbOpen = '<mc:Fallback>',
+  fbClose = '</mc:Fallback>',
+): string =>
   tc(
     `<w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="476250"/><wp:docPr id="1"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent>${P('box')}</w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent>${P('box')}</w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`,
   )
@@ -1130,7 +1135,12 @@ const UNCLOSED_FLD =
 const DRAWING = (inner: string, anchor = true): string =>
   `<w:r><w:drawing>${anchor ? '<wp:anchor behindDoc="1" distL="9525" distT="19050"><wp:positionH relativeFrom="page"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>19050</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="476250"/><wp:wrapSquare wrapText="bothSides"/><wp:docPr id="7" name="logo"/>' : '<wp:inline><wp:extent cx="952500" cy="476250"/><wp:docPr id="8" name="in"/>'}<a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId9"/><a:srcRect l="10000" t="5000"/></pic:blipFill></pic:pic></a:graphicData></a:graphic>${anchor ? '</wp:anchor>' : '</wp:inline>'}</w:drawing></w:r>`
 /** A header paragraph with a drawn text box and its VML twin: `hidden` before it, `inTwin` inside the twin. */
-const hfBox = (hidden: string, inTwin = '', fbOpen = '<mc:Fallback>', fbClose = '</mc:Fallback>'): string =>
+const hfBox = (
+  hidden: string,
+  inTwin = '',
+  fbOpen = '<mc:Fallback>',
+  fbClose = '</mc:Fallback>',
+): string =>
   `<w:p><w:r><w:t>left</w:t></w:r></w:p><w:p><w:r>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor><wp:extent cx="952500" cy="190500"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent><w:p><w:r><w:t>choice</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>${fbOpen}${inTwin}<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>twin</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>${fbClose}</mc:AlternateContent></w:r></w:p>`
 const MARKUP_HF_BODIES: string[] = [
   hfBox(''),
