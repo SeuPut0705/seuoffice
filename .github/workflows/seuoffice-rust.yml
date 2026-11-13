@@ -142,7 +142,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
+      # the model group reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Rust toolchain with the WASI target
         run: |
