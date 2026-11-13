@@ -205,8 +205,22 @@ try {
   if ($Fault -eq 'none' -and $Next) {
     Feed $Next $NextVersion
     StartApp @()
+    $t = [Diagnostics.Stopwatch]::StartNew()
     & node (Join-Path $here 'probe.mjs') update --port $Port --version $NextVersion
     if ($LASTEXITCODE -ne 0) { Fail 'the second update did not reach "downloaded"' }
+    $downloadSeconds = $t.Elapsed.TotalSeconds
+    # what the updater took from the feed: block-map ranges, or the whole file
+    $name = Split-Path -Leaf $Next
+    $log = @(Get-Content (Join-Path $Out "feed-$NextVersion.log") | Where-Object { $_ -match [regex]::Escape("/$name ") })
+    $ranges = @($log | Where-Object { $_ -match ' range ' })
+    $download = @{
+      seconds = $downloadSeconds; installerBytes = (Get-Item $Next).Length
+      rangeRequests = $ranges.Count
+      rangeBytes = ($ranges | ForEach-Object { [long]($_ -split ' ')[-1] } | Measure-Object -Sum).Sum
+      wholeFile = [bool]($log | Where-Object { $_ -notmatch ' range ' })
+      blockMap = Test-Path "$Next.blockmap"
+    }
+    Step 'second-update-download' $download
     for ($i = 0; $i -lt 180 -and (ExeVersion) -ne $NextVersion; $i++) { Start-Sleep 1 }
     # the installer starts the new app (--force-run): stop that one, not an earlier one
     for ($i = 0; $i -lt 90 -and -not (AppProcesses); $i++) { Start-Sleep 1 }

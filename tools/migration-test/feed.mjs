@@ -7,15 +7,26 @@
 //   node feed.mjs serve --dir <dir> --port <port>
 //   node feed.mjs point --resources <installed app's resources dir> --url <feed url>
 //
-// make: copies the file and writes the channel files electron-updater reads
-// (latest.yml and stable.yml for an .exe, latest-mac.yml and stable-mac.yml
-// for a .zip), so a build of either channel finds it.
+// make: copies the file (and its .blockmap, when one is beside it) and writes
+// the channel files electron-updater reads (latest.yml and stable.yml for an
+// .exe, latest-mac.yml and stable-mac.yml for a .zip), so a build of either
+// channel finds it.
+// serve: answers a single byte range with 206, so a block-map download takes
+// only the changed blocks; each line of its log is one request, a range with
+// its bytes.
 // point: rewrites resources/app-update.yml to the generic provider at <url>,
 // keeping the other keys (the channel, the cache folder name). On macOS the
 // bundle must be signed again afterwards (the scripts do it).
 
 import { createHash } from 'node:crypto'
-import { copyFileSync, createReadStream, readFileSync, statSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  createReadStream,
+  existsSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import { basename, join, normalize } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -44,6 +55,8 @@ if (command === 'make') {
   const out = need('out')
   const name = basename(file)
   copyFileSync(file, join(out, name))
+  if (existsSync(`${file}.blockmap`))
+    copyFileSync(`${file}.blockmap`, join(out, `${name}.blockmap`))
   const bytes = readFileSync(file)
   const sha512 = createHash('sha512').update(bytes).digest('base64')
   const yml = [
@@ -76,8 +89,22 @@ if (command === 'make') {
       console.log('404', req.url)
       return
     }
-    console.log(req.method, req.url)
-    res.writeHead(200, { 'content-length': size })
+    // one range only: several (electron-updater's generic provider asks for
+    // up to 1000 at once) get the whole file, which makes it download fully
+    const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? '')
+    if (range && Number(range[2]) < size && Number(range[1]) <= Number(range[2])) {
+      const [start, end] = [Number(range[1]), Number(range[2])]
+      console.log(req.method, req.url, 'range', start, end, 'bytes', end - start + 1)
+      res.writeHead(206, {
+        'content-length': end - start + 1,
+        'content-range': `bytes ${start}-${end}/${size}`,
+      })
+      if (req.method === 'HEAD') res.end()
+      else createReadStream(path, { start, end }).pipe(res)
+      return
+    }
+    console.log(req.method, req.url, 'bytes', size)
+    res.writeHead(200, { 'content-length': size, 'accept-ranges': 'bytes' })
     if (req.method === 'HEAD') res.end()
     else createReadStream(path).pipe(res)
   }).listen(port, '127.0.0.1', () => console.log(`feed ${dir} on http://127.0.0.1:${port}/`))
