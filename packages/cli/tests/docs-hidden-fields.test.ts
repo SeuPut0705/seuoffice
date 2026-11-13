@@ -84,6 +84,14 @@ describe('docs read --fields: a field and hidden words', () => {
       listed: true,
     },
     {
+      name: 'a field whose instruction repeats one short word of a hidden run',
+      body:
+        `<w:p>${plain('Name: ')}${hidden('환자 이름')}</w:p>` +
+        cellTable(field('MERGEFIELD 환자', plain('Phone'))) +
+        '<w:p/>',
+      listed: true,
+    },
+    {
       name: 'a paragraph field whose instruction itself is hidden',
       body: `<w:p>${field(`MERGEFIELD ${SECRET}`, plain('Phone'), true)}</w:p>`,
       listed: true,
@@ -118,5 +126,21 @@ describe('docs read --fields: a field and hidden words', () => {
     const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
     expect(applied.stdout + applied.stderr).toContain('ends inside a field')
     expect(applied.stdout + applied.stderr).not.toContain(SECRET)
+  })
+
+  it('an anchor that ends inside a field naming a short hidden word does not quote it', async () => {
+    const file = await docx(
+      `<w:p>${plain('Name: ')}${hidden('환자 이름')}</w:p>` +
+        cellTable(field('MERGEFIELD 환자', plain('Phone'))) +
+        '<w:p/>',
+    )
+    const ops = join(tempDir(), 'ops.json')
+    writeFileSync(
+      ops,
+      JSON.stringify([{ op: 'insert_footnote', blockIndex: 1, afterText: 'Pho', text: 'x' }]),
+    )
+    const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
+    expect(applied.stdout + applied.stderr).toContain('ends inside a field')
+    expect(applied.stdout + applied.stderr).not.toContain('환자')
   })
 })
