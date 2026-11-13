@@ -123,6 +123,13 @@ file manager) and the slides recent-files entry.
   editor draws for print, with their text, through the same print job as File
   › Export as PDF and Save As › PDF. A file that does not open is exit 3
   (`the input document did not open`).
+- **Content hidden from AI.** An input holding content a person marked
+  "hidden from AI" (a Word, Markdown or HTML document, a workbook, a deck) is
+  refused with exit 2 before any window opens: a PDF, a page or a picture
+  carries the hidden words with no mark left on them, and nobody is there to
+  agree to that. A Word document's `--to html` and `--to md` are written by the
+  bundled `seuoffice convert` instead, a placeholder standing in for each
+  hidden span (`apps/shell/src/main/headless-export.ts`).
 - **A recovery copy is not used.** Every hidden view reads the file as it is
   on disk. A copy the app kept of that file's unsaved changes is neither
   offered (there is no one to answer, and the prompt's Esc means restore) nor

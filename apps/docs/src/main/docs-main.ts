@@ -208,7 +208,7 @@ import { MARKDOWN_MEDIA_DIR_TOKEN } from '../shared/ipc'
 import { MERGE_DATA_SOURCE_EXTENSIONS, readMergeDataSource } from './merge-data-source'
 import { mergeOutputFileName, mergeOutputPath } from './merge-output'
 import { ClickClaims } from '../shared/context-menu-claims'
-import { findDocxPath, isWord97Path } from '../shared/open-file'
+import { findDocxPath, isWord97Path, type MarkedExportFormat } from '../shared/open-file'
 import {
   aiChatFailure,
   aiStreamErrorChunk,
@@ -319,12 +319,17 @@ const tMain = createI18n({
     docImportOriginalTarget:
       'The original document cannot be overwritten. Choose a different name.',
     dlgSaveAs: 'Save As',
-    markedOdtTitle: 'Content hidden from AI',
+    markedTitle: 'Content hidden from AI',
     markedOdtMessage: 'This document has content hidden from AI, and an ODT file cannot keep that.',
     markedOdtDetail:
       'Written as ODT, the hidden content would read as plain text to everyone, AI included. Save as Word (.docx) to keep it hidden, or clear the marks and save as ODT: the hidden content then becomes visible to AI in the new file. This document keeps its marks either way.',
-    markedOdtDocx: 'Save as Word (.docx)',
     markedOdtClear: 'Clear marks and save as ODT',
+    markedExportMessage:
+      'This document has content hidden from AI, and the exported file cannot keep that.',
+    markedExportDetail:
+      'The exported file has no hidden-from-AI marks: anything that reads it, an AI included, sees the hidden content. Save as Word (.docx) to keep the marks, or export without them. This document keeps its marks either way.',
+    markedExportClear: 'Export without the marks',
+    markedDocx: 'Save as Word (.docx)',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
     closeNoReplyMsg: 'The document is not responding and may have unsaved changes.',
@@ -469,12 +474,17 @@ const tMain = createI18n({
     docImportConvertBtn: '변환 후 열기',
     docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
-    markedOdtTitle: 'AI에게 숨긴 내용',
+    markedTitle: 'AI에게 숨긴 내용',
     markedOdtMessage: '이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.',
     markedOdtDetail:
       'ODT로 저장하면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 숨김을 유지하려면 Word(.docx)로 저장하거나, 표시를 지우고 ODT로 저장하세요. 표시를 지우면 새 파일에서 숨긴 내용이 AI에게 보입니다. 어느 쪽이든 현재 문서의 표시는 그대로 남습니다.',
-    markedOdtDocx: 'Word(.docx)로 저장',
     markedOdtClear: '표시 지우고 ODT로 저장',
+    markedExportMessage:
+      '이 문서에는 AI에게 숨긴 내용이 있는데, 내보낸 파일에는 이를 담을 수 없습니다.',
+    markedExportDetail:
+      '내보낸 파일에는 AI에게 숨긴 표시가 없습니다. 이 파일을 읽는 모든 것은 AI를 포함해 숨긴 내용을 그대로 봅니다. 표시를 유지하려면 Word(.docx)로 저장하거나, 표시 없이 내보내세요. 어느 쪽이든 현재 문서의 표시는 그대로 남습니다.',
+    markedExportClear: '표시 없이 내보내기',
+    markedDocx: 'Word(.docx)로 저장',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
     closeNoReplyMsg: '문서가 응답하지 않으며 저장하지 않은 변경 사항이 있을 수 있습니다.',
@@ -612,6 +622,16 @@ const tMain = createI18n({
 })
 const tm = (key: Parameters<typeof tMain>[1], params?: Parameters<typeof tMain>[2]) =>
   tMain(getUiLang(), key, params)
+
+/** the formats that ask before marked content is written (docs:confirm-marked-export) */
+const MARKED_EXPORT_FORMATS: Record<MarkedExportFormat, true> = {
+  odt: true,
+  pdf: true,
+  hwp: true,
+  html: true,
+  md: true,
+  png: true,
+}
 
 // ---- runtime configuration (paths differ when bundled into the shell) ----
 
@@ -3074,24 +3094,33 @@ export function registerDocsIpc(): void {
     },
   )
 
-  // A write of marked content as ODT: one message box with the two ways out
-  // (Word, or the marks cleared); the renderer carries the answer out.
-  ipcMain.handle('docs:confirm-marked-odt', async (event): Promise<MarkedOdtChoice> => {
-    if (tornDownWcIds.has(event.sender.id)) return 'cancel'
-    const parent = hostWindowFor(event.sender)
-    const options = markedOdtBox({
-      title: tm('markedOdtTitle'),
-      message: tm('markedOdtMessage'),
-      detail: tm('markedOdtDetail'),
-      saveDocx: tm('markedOdtDocx'),
-      clearMarks: tm('markedOdtClear'),
-      cancel: tm('btnCancel'),
-    })
-    const { response } = parent
-      ? await dialog.showMessageBox(parent, options)
-      : await dialog.showMessageBox(options)
-    return markedOdtChoice(response)
-  })
+  // A write of marked content into a format that cannot hold the mark (ODT, PDF,
+  // page images, HTML, Markdown, Hangul): one message box with the two ways out
+  // (Word, or the file written without the marks); the renderer carries the
+  // answer out. An unknown format is answered as a cancel.
+  ipcMain.handle(
+    'docs:confirm-marked-export',
+    async (event, format: unknown): Promise<MarkedOdtChoice> => {
+      if (tornDownWcIds.has(event.sender.id)) return 'cancel'
+      if (typeof format !== 'string' || !Object.hasOwn(MARKED_EXPORT_FORMATS, format)) {
+        return 'cancel'
+      }
+      const parent = hostWindowFor(event.sender)
+      const odt = format === 'odt'
+      const options = markedOdtBox({
+        title: tm('markedTitle'),
+        message: tm(odt ? 'markedOdtMessage' : 'markedExportMessage'),
+        detail: tm(odt ? 'markedOdtDetail' : 'markedExportDetail'),
+        saveDocx: tm('markedDocx'),
+        clearMarks: tm(odt ? 'markedOdtClear' : 'markedExportClear'),
+        cancel: tm('btnCancel'),
+      })
+      const { response } = parent
+        ? await dialog.showMessageBox(parent, options)
+        : await dialog.showMessageBox(options)
+      return markedOdtChoice(response)
+    },
+  )
 
   // docx → ODT Save As of a document with lazily served pictures: the
   // conversion needs the pictures themselves, not their placeholders

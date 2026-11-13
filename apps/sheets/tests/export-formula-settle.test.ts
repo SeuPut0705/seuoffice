@@ -100,6 +100,8 @@ function harness(pendingFormula = true) {
       ...refs,
       setPendingEdits: vi.fn(),
       requestVisualInstall: vi.fn(),
+      redactions: () => NO_REDACTIONS,
+      requestSaveAs: () => undefined,
       runOps: () => Promise.reject(new Error('not used')),
     } as PageLayoutContext,
     calculate,
