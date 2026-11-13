@@ -192,13 +192,11 @@ pub(crate) fn note_document_saved(view: ViewId, path: &str, may_be_open: bool) {
 }
 
 /// `documentLinkFileMoved(oldPath, newPath)`
-#[allow(dead_code)] // called by W's afterFileMoved and D2's PDF rename
 pub(crate) fn document_link_file_moved(old_path: &str, new_path: &str) {
     with_links(|links| links.document_link_file_moved(old_path, new_path));
 }
 
 /// `documentLinkPaths()`: empty before A attached
-#[allow(dead_code)] // called by W's HomeFiles
 pub(crate) fn document_link_paths() -> Vec<String> {
     with_links(|links| links.document_link_paths()).unwrap_or_default()
 }
@@ -210,7 +208,6 @@ pub(crate) fn make_from_document(view: ViewId) {
 }
 
 /// `once('destroyed')` of a view the records hold
-#[allow(dead_code)] // called by W where the view table drops a view
 pub(crate) fn document_view_destroyed(view: ViewId) {
     with_links(|links| {
         if let Some(records) = links.document_links() {
