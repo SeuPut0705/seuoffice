@@ -54,7 +54,9 @@ use crate::packages::project_store::{
     ProjectSearchResult,
 };
 use crate::shell::folder_tree::is_supported_tree_file;
-use crate::shell::knowledge_base::{KbReadPage, kb_read_max_bytes};
+/// the page a `read_page` answers; re-exported here, where project tools name it
+pub use crate::shell::knowledge_base::KbReadPage;
+use crate::shell::knowledge_base::kb_read_max_bytes;
 
 /// `PROJECT_SCOPE_UNKNOWN`: a call named no scope, a scope main does not hold,
 /// another window's, or a starred-only scope
