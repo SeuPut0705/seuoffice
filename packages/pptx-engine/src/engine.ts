@@ -194,6 +194,14 @@ function withHostRandomness<T>(run: () => T): T {
 
 /** One exported function of the package: the engine's answer, with the arguments it changed written back. */
 export function call(fn: string, args: readonly unknown[], options: CallOptions = {}): unknown {
+  try {
+    return callEngine(fn, args, options)
+  } finally {
+    returnLent()
+  }
+}
+
+function callEngine(fn: string, args: readonly unknown[], options: CallOptions): unknown {
   ensureEngine()
   const mut = options.mut ?? {}
   const wire = args.map((arg, i) =>
@@ -263,9 +271,27 @@ export function shared<T>(input: T, answer: T): T {
   return answer
 }
 
-/** The index of `slide` in the opened deck: the engine names a slide by its place. */
+// Slides lent to a deck for the length of one call (`slideIndex`).
+const lent: Array<{ slides: Slide[]; slide: Slide }> = []
+
+/** Takes the slides `slideIndex` lent back out of their decks. */
+function returnLent(): void {
+  for (const { slides, slide } of lent.splice(0)) {
+    const at = slides.lastIndexOf(slide)
+    if (at !== -1) slides.splice(at, 1)
+  }
+}
+
+/**
+ * The index of `slide` in the opened deck: the engine names a slide by its
+ * place. The TypeScript took any slide beside the deck, a master or a layout
+ * parsed on its own (pptx-ops edits chrome so): such a slide is lent to the
+ * deck at its end for the next call, which writes the engine's answer back
+ * into it (slides are matched by path) and takes it out again.
+ */
 export function slideIndex(opened: OpenedPptx, slide: Slide): number {
   const at = opened.deck.slides.indexOf(slide)
-  if (at === -1) throw new TypeError('the slide is not a slide of this deck')
-  return at
+  if (at !== -1) return at
+  lent.push({ slides: opened.deck.slides, slide })
+  return opened.deck.slides.push(slide) - 1
 }

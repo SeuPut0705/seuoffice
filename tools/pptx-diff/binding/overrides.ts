@@ -141,7 +141,7 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
     body: 'return $call(opened, slideIndex(opened, slide), elementId, source, opts)',
   },
   addPicture: {
-    body: 'const at = slideIndex(opened, slide)\n  return $call(opened, at, opts) === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)',
+    body: 'const at = slideIndex(opened, slide)\n  return $call(opened, at, opts) === null ? null : (slide.elements.at(-1) as PictureElement)',
   },
 
   // ---- a Rust value that is a function of two layers, an option or an iterator

@@ -167,7 +167,7 @@ export function addPicture(
   const at = slideIndex(opened, slide)
   return (call('addPicture', [opened, at, opts], { mut: { 0: 'opened' } }) as never) === null
     ? null
-    : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)
+    : (slide.elements.at(-1) as PictureElement)
 }
 /**
  * Delete by element id and collect relationships/resources no longer used by any
