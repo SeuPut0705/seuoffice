@@ -1195,7 +1195,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("pdf:sign-with-certificate", &[Invoke], D2, &[Pdf]),
     spec("pdf:split-pages", &[Invoke], D2, &[Pdf]),
     spec("pdf:split-pdf", &[Invoke], D2, &[Pdf]),
-    spec("pdf:store-ai-read-pages", &[Invoke], A, &[Pdf]),
+    spec("pdf:store-ai-read-pages", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-delete-counts", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-delete-document", &[Invoke], D2, &[Pdf]),
     spec("pdf:store-doc-hash", &[Invoke], D2, &[Pdf]),
