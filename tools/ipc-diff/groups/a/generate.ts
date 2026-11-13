@@ -21,6 +21,10 @@
  *   `["save", kind, "contents:<wcId>"]`
  * - the reader: `["parseFileToText", path]`
  *
+ * The reads of one batch start in an order the TypeScript side does not fix
+ * (`inspectMaterial` runs in `Promise.all` over real `stat` calls), so a run of
+ * `parseFileToText` lines is logged sorted by path, here and in the probe.
+ *
  * Two modules are stood in for by resolve hooks that forward to one object per
  * case (`globalThis[Symbol.for('ipc-diff.a.generate')]`): `@seuoffice/file-parse`
  * (`parseFileToText`, which the Rust port reaches through its `GenerateShell`
@@ -80,6 +84,16 @@ interface Setup {
 
 /** the object the stubs forward to: the current case's stand-in */
 const HOST = Symbol.for('ipc-diff.a.generate')
+
+/** logs one read, keeping the run of read lines at the log's end sorted by path */
+function pushRead(log: unknown[], path: string): void {
+  let start = log.length
+  while (start > 0 && (log[start - 1] as unknown[])[0] === 'parseFileToText') start -= 1
+  const run = log.splice(start) as [string, string][]
+  run.push(['parseFileToText', path])
+  run.sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0))
+  log.push(...run)
+}
 
 const FILE_PARSE = 'ipc-diff:file-parse'
 const STRINGS = 'ipc-diff:strings-generate'
@@ -463,7 +477,7 @@ export const group: Group = {
     globals[HOST] = {
       text: (key: string) => spec.texts?.[key] ?? key,
       parseFileToText(path: string) {
-        log.push(['parseFileToText', path])
+        pushRead(log, path)
         const named = spec.parse?.[basename(path)]
         if (typeof named === 'string') throw new Error('parse failed')
         if (named !== undefined) return { ...named }
@@ -497,6 +511,7 @@ export const group: Group = {
         const { parent, webPreferences, ...rest } = options as {
           parent?: { id: number }
           webPreferences: Record<string, unknown>
+          [key: string]: unknown
         }
         const shown: Record<string, unknown> = {}
         // the keys in the order of the literal; `preload` is the host's addition, `parent` its id
@@ -600,9 +615,9 @@ export const group: Group = {
       return saved
     }
     const saves: Record<string, Fn> = {
-      docs: toPath('docs'),
-      sheets: toPath('sheets'),
-      slides: toPath('slides'),
+      docs: toPath('docs') as Fn,
+      sheets: toPath('sheets') as Fn,
+      slides: toPath('slides') as Fn,
       markdown: ownSave('markdown') as Fn,
       html: ownSave('html') as Fn,
       mindmap: ownSave('mindmap') as Fn,
@@ -629,7 +644,7 @@ export const group: Group = {
         webContentsFor: (tabId) => {
           log.push(['webContentsFor', tabId])
           const c = spec.contents?.[tabId]
-          return c ? { id: c.id, isDestroyed: () => c.destroyed === true } : undefined
+          return c ? ({ id: c.id, isDestroyed: () => c.destroyed === true } as never) : undefined
         },
         reveal: (tabId) => {
           log.push(['reveal', tabId])
