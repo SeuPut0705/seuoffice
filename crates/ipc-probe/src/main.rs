@@ -477,6 +477,11 @@ fn drain(core: &CoreThread, ui: &CoreThread, tracked: &Tracked) -> bool {
     }
 }
 
+// The probe runs on the developers' machines and the runners: batch A's
+// safeStorage must never reach the person's login keychain or DPAPI key here
+// (`feature = "probe"` compiles its OS key store out)
+const _: () = assert!(!shell_ipc_a::secrets::OS_KEY_STORE);
+
 fn main() {
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout().lock();
