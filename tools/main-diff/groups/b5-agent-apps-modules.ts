@@ -880,7 +880,13 @@ async function runMedia(
     const call = s.generate ?? s.analyze!
     const sender = fakeSender(call.sender?.id ?? 1, call.sender?.destroyed ?? false)
     const channel = s.generate ? channels.aiGenerateImage : channels.analyzeMedia!
-    answers.push((await rec.handlers.get(channel)!({ sender }, call.op)) ?? null)
+    // a handler that rejects (a `String()` that throws) leaves the rest of
+    // the scenario to run
+    try {
+      answers.push((await rec.handlers.get(channel)!({ sender }, call.op)) ?? null)
+    } catch (error) {
+      answers.push({ thrown: String(error) })
+    }
   }
   return answers
 }
@@ -992,6 +998,20 @@ const hwpCases: Case[] = [
     ],
     note: 'a destroyed window, an odd requirement',
   },
+  {
+    args: [
+      mediaSpec({
+        steps: [
+          { generate: { op: { prompt: { toString: 0 } } } },
+          { generate: { op: { prompt: 'ok', aspectRatio: { toString: 0 } } } },
+          { analyze: { op: { mediaUrls: [IMG, { toString: 0 }] } } },
+          { analyze: { op: { mediaUrls: [IMG], requirements: { toString: 0 } } } },
+          { generate: { op: { prompt: 'after' }, answer: { url: 'file:///g/2.png' } } },
+        ],
+      }),
+    ],
+    note: 'a String() that throws rejects the handler; the next call still runs',
+  },
 ]
 
 const mindmapCases: Case[] = [
@@ -999,6 +1019,18 @@ const mindmapCases: Case[] = [
   ...mediaCases({ files: {}, pastedImageDir: '' }, [
     [{ generate: { op: { prompt: 'untitled' } } }],
   ]),
+  {
+    args: [
+      mediaSpec({
+        steps: [
+          { generate: { op: { prompt: { toString: 0 } } } },
+          { generate: { op: { prompt: 'ok', aspectRatio: { toString: 0 } } } },
+          { generate: { op: { prompt: 'after' }, answer: { url: 'file:///g/2.png' } } },
+        ],
+      }),
+    ],
+    note: 'a String() that throws rejects the handler; the next call still runs',
+  },
 ]
 
 const hwpFns: Group = {

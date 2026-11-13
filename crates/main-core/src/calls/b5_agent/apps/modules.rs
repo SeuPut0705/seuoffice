@@ -723,9 +723,45 @@ fn media_call(is_hwp: bool, args: &[Value], cx: &mut Context) -> Answer {
         let answer = if is_hwp {
             host.step = step.clone();
             if generating {
-                let start = begin_generate_image(&mut host, &mut calls, id, destroyed, op.as_ref());
+                begin_generate_image(&mut host, &mut calls, id, destroyed, op.as_ref()).map(
+                    |start| {
+                        let request = &start.request;
+                        let answer = host.log_generate(
+                            &calls,
+                            start.run.call,
+                            &request.settings_path,
+                            &request.op.prompt,
+                            request.op.aspect_ratio.as_deref(),
+                            &request.media_roots,
+                            &request.statuses,
+                        );
+                        finish_generate_image(&mut calls, start.run, answer)
+                    },
+                )
+            } else {
+                begin_analyze_media(&mut host, &mut calls, id, destroyed, op.as_ref()).map(
+                    |begun| match begun {
+                        AnalyzeMediaStep::Done(answer) => answer,
+                        AnalyzeMediaStep::Tool { run, request } => {
+                            let answer = host.log_analyze(&calls, run.call, &request);
+                            finish_analyze_media(&mut calls, run, answer)
+                        }
+                    },
+                )
+            }
+        } else {
+            mindmap.0.step = step.clone();
+            mindmap_begin_generate_image(
+                &mut mindmap,
+                &mut calls,
+                &pasted,
+                id,
+                destroyed,
+                op.as_ref(),
+            )
+            .map(|start| {
                 let request = &start.request;
-                let answer = host.log_generate(
+                let answer = mindmap.0.log_generate(
                     &calls,
                     start.run.call,
                     &request.settings_path,
@@ -734,40 +770,19 @@ fn media_call(is_hwp: bool, args: &[Value], cx: &mut Context) -> Answer {
                     &request.media_roots,
                     &request.statuses,
                 );
-                finish_generate_image(&mut calls, start.run, answer)
-            } else {
-                match begin_analyze_media(&mut host, &mut calls, id, destroyed, op.as_ref()) {
-                    AnalyzeMediaStep::Done(answer) => answer,
-                    AnalyzeMediaStep::Tool { run, request } => {
-                        let answer = host.log_analyze(&calls, run.call, &request);
-                        finish_analyze_media(&mut calls, run, answer)
-                    }
-                }
-            }
-        } else {
-            mindmap.0.step = step.clone();
-            let start = mindmap_begin_generate_image(
-                &mut mindmap,
-                &mut calls,
-                &pasted,
-                id,
-                destroyed,
-                op.as_ref(),
-            );
-            let request = &start.request;
-            let answer = mindmap.0.log_generate(
-                &calls,
-                start.run.call,
-                &request.settings_path,
-                &request.op.prompt,
-                request.op.aspect_ratio.as_deref(),
-                &request.media_roots,
-                &request.statuses,
-            );
-            mindmap_finish_generate_image(&mut calls, start.run, answer)
+                mindmap_finish_generate_image(&mut calls, start.run, answer)
+            })
         };
-        // `undefined` of a tool that answered nothing reads as `null`
-        answers.push(js(&answer));
+        answers.push(match answer {
+            // `undefined` of a tool that answered nothing reads as `null`
+            Ok(answer) => js(&answer),
+            // the handler rejects: `{ thrown: String(error) }` of the spec
+            Err(e) => {
+                let mut thrown = Map::new();
+                thrown.insert("thrown".into(), Value::from(e.to_string()));
+                Value::Object(thrown)
+            }
+        });
     }
     cx.logs
         .extend(if is_hwp { host.log } else { mindmap.0.log });
