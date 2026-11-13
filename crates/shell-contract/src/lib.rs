@@ -16,6 +16,7 @@ pub mod ids;
 pub mod ipc;
 pub mod provided;
 pub mod runtime;
+pub mod slides;
 pub mod value;
 
 pub use channels::{Batch, CHANNELS, ChannelSpec, PRELOADS, PreloadSpec, Surface};
