@@ -172,8 +172,10 @@ impl Editor {
         super::user_data_file(self, "pdf-signatures.json")
     }
 
-    /// `certMaterial(entry, password, storePassword)` on a worker, then
-    /// `then` on the core thread; a system identity is kept on the entry
+    /// `certMaterial(entry, password, storePassword)` then
+    /// `openMaterial(material)`, both on a worker; `then` gets the material
+    /// with the chain's `CertificateInfo[]` (or the `CertificateErrorCode`)
+    /// on the core thread. A system identity is kept on the entry.
     fn cert_material(
         self: &Rc<Self>,
         view: ViewId,
@@ -181,7 +183,7 @@ impl Editor {
         entry: CertEntry,
         password: String,
         store_password: Option<String>,
-        then: impl FnOnce(Result<CertMaterial, Thrown>) + 'static,
+        then: impl FnOnce(Result<(CertMaterial, Opened), Thrown>) + 'static,
     ) {
         let engine = self.engine.clone();
         let platform = self.shell.platform();
@@ -189,8 +191,8 @@ impl Editor {
         let ed = self.clone();
         kit::on_worker(
             &self.services,
-            move || -> Result<(CertMaterial, Option<SystemIdentity>), Thrown> {
-                match entry {
+            move || -> Result<(CertMaterial, Option<SystemIdentity>, Opened), Thrown> {
+                let (material, identity) = match entry {
                     CertEntry::File(path) => {
                         let p12 = read_certificate_file(&path).map_err(|m| {
                             Thrown::Node(main_core::node_fs::NodeError {
@@ -198,7 +200,7 @@ impl Editor {
                                 message: m,
                             })
                         })?;
-                        Ok((CertMaterial::P12 { p12, password }, None))
+                        (CertMaterial::P12 { p12, password }, None)
                     }
                     CertEntry::System {
                         reference,
@@ -206,7 +208,7 @@ impl Editor {
                     } => {
                         let identity = match identity {
                             Some(i) => i,
-                            None => with_env(engine, platform, home, |env| {
+                            None => with_env(engine.clone(), platform, home, |env| {
                                 open_system_signer(&reference, store_password.as_deref(), env)
                             })?,
                         };
@@ -217,12 +219,14 @@ impl Editor {
                             },
                             SystemIdentity::InPlace(s) => CertMaterial::InPlace(s.clone()),
                         };
-                        Ok((material, Some(identity)))
+                        (material, Some(identity))
                     }
-                }
+                };
+                let opened = engine.open_certificate(&material);
+                Ok((material, identity, opened))
             },
             move |result| {
-                then(result.map(|(material, identity)| {
+                then(result.map(|(material, identity, opened)| {
                     if let Some(identity) = identity {
                         ed.with_view(view, |v| {
                             if let Some(CertEntry::System { identity: slot, .. }) =
@@ -232,12 +236,15 @@ impl Editor {
                             }
                         });
                     }
-                    material
+                    (material, opened)
                 }))
             },
         );
     }
 }
+
+/// `openMaterial(material)`: the chain's `CertificateInfo[]`, or the `CertificateErrorCode`
+type Opened = Result<Vec<IpcValue>, String>;
 
 fn sign_failed(message: impl Into<String>) -> IpcValue {
     obj([
@@ -301,13 +308,13 @@ fn sign(e: &Rc<Editor>, view: ViewId, request: IpcValue, reply: shell_contract::
         password,
         store_password(field(&request, "storePassword")),
         move |material| {
-            let material = match material {
+            let (material, opened) = match material {
                 Ok(m) => m,
                 Err(Thrown::Store(err)) => return finish(sign_error(err.code)),
                 Err(err) => return finish(sign_failed(thrown_message(&err))),
             };
             // fail on a wrong password before asking where to save
-            if let Err(code) = ed.engine.open_certificate(&material) {
+            if let Err(code) = opened {
                 return finish(sign_error(code));
             }
             let picked = ed.dialogs.save(
@@ -514,7 +521,6 @@ pub(super) fn entries(ed: &Rc<Editor>) -> Vec<Entry> {
             else {
                 return reply.reply(Ok(sign_error("cert-invalid")));
             };
-            let ed = e.clone();
             e.cert_material(
                 view,
                 id,
@@ -524,7 +530,7 @@ pub(super) fn entries(ed: &Rc<Editor>) -> Vec<Entry> {
                 move |material| {
                     let answer = match material {
                         Err(err) => sign_error(store_code(&err, "cert-invalid")),
-                        Ok(material) => match ed.engine.open_certificate(&material) {
+                        Ok((_, opened)) => match opened {
                             Ok(info) => obj([
                                 ("ok", true.into_ipc()),
                                 (
