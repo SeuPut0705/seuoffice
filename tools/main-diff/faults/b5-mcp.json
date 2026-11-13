@@ -5701,5 +5701,12 @@
     "find": "            Work::Tool { .. } => CallKind::Tool,",
     "replace": "            Work::Tool { .. } => CallKind::Ensure,",
     "fn": ["local.scenario"]
+  },
+  {
+    "name": "extract a zip name given twice keeps both entries",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "        files.set(entry.name.clone(), entry);",
+    "replace": "        files.set(format!(\"{}#{}\", files.len(), entry.name), entry);",
+    "fn": ["runtime-archive.extractRuntimeArchive"]
   }
 ]
