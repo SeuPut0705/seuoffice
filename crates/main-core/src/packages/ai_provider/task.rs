@@ -592,6 +592,8 @@ struct BodyState {
     signal: Option<Id>,
     /// the fetch whose stream this body (or a clone of it) reads
     source: Id,
+    /// the `Cmd::Read` in flight, which a cancel of the body ends
+    read: Option<Id>,
 }
 
 /// The stream of one fetch, which `response.clone()` tees: it is cancelled
@@ -784,6 +786,7 @@ impl Rt {
                                 done: false,
                                 signal: signal.map(|s| s.id),
                                 source: id,
+                                read: None,
                             },
                         );
                         st.sources.insert(
@@ -997,7 +1000,24 @@ impl Rt {
             rt: self.clone(),
             id,
         });
-        match self.op(signal.as_ref(), |id| Cmd::Read { id, body }).await {
+        let op = self.op(signal.as_ref(), |id| Cmd::Read { id, body });
+        if let Some(b) = self.0.st.borrow_mut().bodies.get_mut(&body) {
+            b.read = Some(op.id);
+        }
+        let outcome = op.await;
+        // `reader.cancel()` took the read: it ends as `{ done: true }`, and
+        // the stream is not over for the body's other branches
+        let cancelled = self
+            .0
+            .st
+            .borrow_mut()
+            .bodies
+            .get_mut(&body)
+            .is_none_or(|b| b.read.take().is_none());
+        if cancelled {
+            return Ok(None);
+        }
+        match outcome {
             Ok(Answer::Chunk(bytes)) => Ok(Some(bytes)),
             Ok(_) => {
                 self.body_over(body);
@@ -1036,6 +1056,7 @@ impl Rt {
             return;
         }
         b.done = true;
+        let read = b.read.take();
         let source = b.source;
         if let Some(src) = st.sources.get_mut(&source) {
             src.live = src.live.saturating_sub(1);
@@ -1043,6 +1064,10 @@ impl Rt {
                 src.cancelled = true;
                 st.cmds.push(Cmd::Cancel { id: source });
             }
+        }
+        drop(st);
+        if let Some(read) = read {
+            self.settle(read, Ok(Answer::End));
         }
     }
 
@@ -1059,6 +1084,7 @@ impl Rt {
                 done,
                 signal,
                 source,
+                read: None,
             },
         );
         if !done && let Some(src) = st.sources.get_mut(&source) {
