@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "lib": ["ES2022", "DOM"],
     "paths": {
       "@seuoffice/pptx-engine": ["../pptx-engine/src/index.ts"],
       "@seuoffice/pptx-engine/table-grid": ["../pptx-engine/src/table-grid.ts"],
