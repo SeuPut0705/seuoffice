@@ -10,6 +10,7 @@
 //! - followed by `"logs":[[...],...]` when the function logged, one array of
 //!   arguments per call of its logger.
 
+mod b2_cli;
 mod b2_misc;
 mod b2_print;
 mod b2_recovery;
@@ -18,10 +19,12 @@ mod b3_session;
 mod b3_shell;
 mod b3_update;
 mod b4_docs;
+mod b4_fonts;
 mod b4_html;
 mod b4_hwp;
 mod b4_markdown;
 mod b4_pdf;
+mod b4_pdf_store;
 mod b4_sheets;
 mod b4_slides;
 mod b5_ai;
@@ -104,6 +107,9 @@ const GROUPS: &[Group] = &[
     b6_shell::call,
     b6_apps::call,
     b6_tabs::call,
+    b2_cli::call,
+    b4_fonts::call,
+    b4_pdf_store::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

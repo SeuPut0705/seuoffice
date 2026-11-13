@@ -3,8 +3,11 @@
 
 pub mod ai_provider;
 pub mod cli;
+pub mod cli_agent_skills;
+pub mod cli_install;
 pub mod compound_file;
 pub mod electron_utils;
+pub mod font_metrics;
 pub mod i18n;
 pub mod pdf_structure;
 pub mod project_store;
