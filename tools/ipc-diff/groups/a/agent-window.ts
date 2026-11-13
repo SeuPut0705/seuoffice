@@ -16,7 +16,7 @@
  * `currentTheme`. `mcpHub` is null: sessions get no relays.
  *
  * `os.homedir()` and `os.tmpdir()` are the case's `home` and `temp` folders
- * (HOME and TMPDIR); a case makes them with a file each, a session folder is
+ * (patched while the case's folder is there); a case makes them with a file each, a session folder is
  * made in `temp`. The ids `randomUUID()` makes in the manager are counted
  * (`00000000-0000-4000-8000-000000000001`, ...), as the Rust probe counts
  * them, so the session of a case has a known id.
@@ -49,6 +49,11 @@ import {
 import { normalizeAgentPrefs } from '../../../../apps/shell/src/shared/agent-api.ts'
 import type { Call, Case, Group, LoadContext, TriggerContext, View } from '../../types.ts'
 import { entryStatements } from './lib/entry-source.ts'
+import os from 'node:os'
+import { existsSync } from 'node:fs'
+
+const REAL_HOMEDIR = os.homedir
+const REAL_TMPDIR = os.tmpdir
 
 const MODULE = 'apps/shell/src/main/agent/agent-window.ts'
 type AgentWindowModule = typeof import('../../../../apps/shell/src/main/agent/agent-window.ts')
@@ -152,9 +157,14 @@ function browserWindowOf(cx: LoadContext, world: World): unknown {
 let loaded: { mod: AgentWindowModule; world: World; log: (line: unknown[]) => number } | undefined
 
 async function load(cx: LoadContext): Promise<void> {
-  // the folders `app.getPath` names: HOME and TMPDIR are what os.homedir() and os.tmpdir() read
-  process.env.HOME = join(cx.dir, 'home')
-  process.env.TMPDIR = join(cx.dir, 'temp')
+  // the folders `app.getPath` names, while the case's folder is there:
+  // outside a case (the harness makes its folders between cases, after the
+  // case's own is gone) the real ones answer (as groups/m/print/host.ts does)
+  const home = join(cx.dir, 'home')
+  const temp = join(cx.dir, 'temp')
+  os.homedir = () => (existsSync(home) ? home : REAL_HOMEDIR())
+  os.tmpdir = () => (existsSync(temp) ? temp : REAL_TMPDIR())
+  syncBuiltinESMExports()
   counted = 0
   const hostsA = (cx.case.hosts?.a ?? {}) as { agent?: World; lang?: string }
   const world = hostsA.agent ?? {}

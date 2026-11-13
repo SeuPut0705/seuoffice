@@ -752,20 +752,23 @@ mod tests {
     }
 
     /// A raw HTTP/1.1 server writing `answer` to every request, then closing
-    /// the connection after `linger`
+    /// the connection after `linger` (or when the client goes)
     fn serve(answer: &'static [u8], linger: Duration) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = format!("http://{}", listener.local_addr().unwrap());
         std::thread::spawn(move || {
+            // each connection on its own thread: one that lingers holds up no other
             for stream in listener.incoming() {
                 let Ok(mut stream) = stream else { continue };
-                let mut head = Vec::new();
-                let mut byte = [0u8; 1];
-                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
-                    head.push(byte[0]);
-                }
-                let _ = stream.write_all(answer);
-                std::thread::sleep(linger);
+                std::thread::spawn(move || {
+                    let mut head = Vec::new();
+                    let mut byte = [0u8; 1];
+                    while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                        head.push(byte[0]);
+                    }
+                    let _ = stream.write_all(answer);
+                    std::thread::sleep(linger);
+                });
             }
         });
         address

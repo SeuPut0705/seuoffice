@@ -33,11 +33,15 @@ export class Probe {
     })
   }
 
-  /** The Rust answer of one case, as the line ipc-probe wrote */
-  run(dir: string, c: Case): Promise<string> {
+  /**
+   * The Rust answer of one case, as the line ipc-probe wrote. `batch` is the
+   * group's: the probe keeps what that batch sends while it registers and
+   * drops what the others send, as the TypeScript side loads only its module.
+   */
+  run(dir: string, c: Case, batch: string): Promise<string> {
     return new Promise((resolve) => {
       this.waiting.push(resolve)
-      this.child.stdin.write(`${JSON.stringify({ dir, case: c })}\n`)
+      this.child.stdin.write(`${JSON.stringify({ dir, case: { ...c, batch } })}\n`)
     })
   }
 

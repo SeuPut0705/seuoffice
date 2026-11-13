@@ -53,6 +53,28 @@ fn home() -> PathBuf {
     dirs::home_dir().unwrap_or_else(std::env::temp_dir)
 }
 
+/// `process.resourcesPath`: the folder the bundle's resources sit in, as the
+/// Electron build laid it out (`modules/<app>/renderer`, the CLI, the wasm).
+/// Tauri's `resource_dir` is `Contents/Resources` on macOS, Electron's too,
+/// but the executable's folder on Windows, where Electron's is
+/// `<install>\resources`. None when Tauri cannot tell.
+pub fn resources_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<PathBuf> {
+    use tauri::Manager;
+    app.path()
+        .resource_dir()
+        .ok()
+        .map(|dir| resources_below(dir, cfg!(windows)))
+}
+
+/// The resources folder below Tauri's `resource_dir`
+fn resources_below(resource_dir: PathBuf, windows: bool) -> PathBuf {
+    if windows {
+        resource_dir.join("resources")
+    } else {
+        resource_dir
+    }
+}
+
 impl AppPaths for ShellPaths {
     fn path(&self, name: PathName) -> PathBuf {
         match name {
@@ -73,5 +95,21 @@ impl AppPaths for ShellPaths {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn windows_resources_sit_below_the_executables_folder() {
+        let exe_dir = PathBuf::from(r"C:\Program Files\SeuOffice");
+        assert_eq!(
+            resources_below(exe_dir.clone(), true),
+            exe_dir.join("resources")
+        );
+        let resources = PathBuf::from("/Applications/SeuOffice.app/Contents/Resources");
+        assert_eq!(resources_below(resources.clone(), false), resources);
     }
 }

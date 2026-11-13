@@ -279,7 +279,7 @@ async function runGroup(name: string): Promise<void> {
       })),
     )
     const rust = await side(c, async (cc, dir) => {
-      const line = JSON.parse(await probe.run(dir, cc)) as Record<string, unknown>
+      const line = JSON.parse(await probe.run(dir, cc, group.batch)) as Record<string, unknown>
       // the TypeScript's JSON.stringify writes numbers as JavaScript does
       return 'calls' in line ? { calls: line.calls, log: line.log } : line
     })
