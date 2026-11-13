@@ -27,6 +27,7 @@ import { loadSheets, sheetsTriggers } from '../../d1/sheets-host.ts'
 import {
   NOBODY,
   S1,
+  S2,
   SELECT,
   call,
   queued,
@@ -43,6 +44,9 @@ const A = queued([1, 'a.xlsx'])
 const NONCE1 = '11111111-0000-4000-8000-000000000001'
 const NONCE2 = '11111111-0000-4000-8000-000000000002'
 const CLOSE = 'd1/workbook:request-sheets-close'
+const SAVE_AS = 'd1/workbook:request-save-as'
+const saveIn = (session: string, mode: string) =>
+  call('workbook:save', [saveRequest(session, mode)])
 const FLUSH = 'd1/workbook:write-sheets-copies-now'
 const SHORT = 8_000
 const LONG = 120_000
@@ -112,6 +116,34 @@ const cases: Case[] = [
       trigger(CLOSE),
     ],
   ),
+
+  // ---- request_save(SaveAs) ----
+  sheetsCase(
+    "a Save As the shell asks for waits for the renderer's own Save As, even on a clean workbook",
+    { d1: A, saves: [null, '$DIR/copy.xlsx'] },
+    [
+      SELECT,
+      trigger(SAVE_AS, [], { defer: true }),
+      saveIn(S1, 'save'),
+      saveIn(S2, 'save-as'),
+      settled(1),
+      trigger(SAVE_AS, [], { defer: true }),
+      saveIn(S2, 'save-as'),
+      settled(5),
+    ],
+  ),
+  sheetsCase('a Save As that fails, is replaced or goes unanswered is not saved', { d1: A }, [
+    SELECT,
+    trigger(SAVE_AS, [], { defer: true }),
+    trigger(SAVE_AS, [], { defer: true }),
+    settled(1),
+    saveIn(NOBODY, 'save-as'),
+    settled(2),
+    trigger(SAVE_AS, [], { defer: true }),
+    trigger('d1/workbook:timeout-elapsed', [LONG]),
+    settled(6),
+    saveIn(S1, 'save-as'),
+  ]),
 
   // ---- writeSheetsCopiesNow ----
   sheetsCase(

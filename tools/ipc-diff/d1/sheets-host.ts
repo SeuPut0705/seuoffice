@@ -691,6 +691,7 @@ export async function loadSheets(cx: LoadContext): Promise<void> {
 // ---- triggers: what the shell does to the tabs outside any channel ----
 
 type Trigger = (cx: TriggerContext, view: number, args: unknown[]) => Promise<unknown> | unknown
+const saveAsWaiters = new WeakMap<object, Map<number, (saved: boolean) => void>>()
 const main = (): typeof SheetsMain => box.main as typeof SheetsMain
 
 /**
@@ -703,6 +704,49 @@ export const sheetsTriggers: Record<string, Trigger> = {
     const bw = cx.electron.BrowserWindow as unknown as { fromId(id: number): unknown }
     const parent = typeof args[0] === 'number' ? bw.fromId(args[0]) : null
     return main().requestSheetsClose(cx.contents(view) as never, parent as never)
+  },
+  /**
+   * `DocumentEditors::request_save(view, SaveAs)`. sheets-main.ts has no
+   * function for it: the menu's Save As is `sendSheetsMenuAction('save-as')`,
+   * and the renderer's `workbook:save` of mode `save-as` is what the shell
+   * waits for. So this sends the menu action to the tab and settles with the
+   * outcome of that tab's next such save: true when its answer says
+   * `canceled: false`, false when canceled or rejected, after the 120 s wait
+   * (held, see `timeout-elapsed`) or when a newer request replaced it.
+   */
+  'd1/workbook:request-save-as': (cx, view) => {
+    const invoke = cx.electron.handlers.invoke
+    // the handlers are the case's own: the watch goes on them once
+    let waiters = saveAsWaiters.get(invoke)
+    if (!waiters) {
+      const watching = (waiters = new Map<number, (saved: boolean) => void>())
+      saveAsWaiters.set(invoke, watching)
+      const real = invoke.get('workbook:save')
+      invoke.set('workbook:save', async (event: { sender: { id: number } }, input: unknown) => {
+        const asked = (input as { mode?: unknown } | null)?.mode === 'save-as'
+        let saved = false
+        try {
+          const answer = (await real!(event, input)) as { canceled?: unknown }
+          saved = answer?.canceled === false
+          return answer
+        } finally {
+          if (asked) watching.get(event.sender.id)?.(saved)
+        }
+      })
+    }
+    const held = waiters
+    return new Promise<boolean>((resolve) => {
+      held.get(view)?.(false)
+      const timer = setTimeout(() => settle(false), 120_000)
+      const settle = (saved: boolean) => {
+        clearTimeout(timer)
+        if (held.get(view) === settle) held.delete(view)
+        resolve(saved)
+      }
+      held.set(view, settle)
+      main().setActiveSheetsWebContents(cx.contents(view) as never)
+      main().sendSheetsMenuAction('save-as')
+    })
   },
   /** `writeSheetsCopiesNow()` */
   'd1/workbook:write-sheets-copies-now': async () => {

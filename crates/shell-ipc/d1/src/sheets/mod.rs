@@ -39,7 +39,7 @@ pub use self::editors::{SheetsViews, views};
 use self::engine::{ScreenCaptureHost, SheetsShellHost, WorkbookEngineHost};
 use crate::host::{LocaleHost, RecoveryStateHost, Shared, on_view_gone};
 use crate::route::{self, Route};
-use crate::value::{Args, thrown};
+use crate::value::{Args, field, thrown};
 
 type Reply = Result<IpcValue, IpcError>;
 
@@ -253,7 +253,19 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
         |env, view, mut args| save::update_password(env, view, args.take(0)),
     ));
     routes.push(worker(&env, "workbook:save", |env, view, mut args| {
-        save::save_workbook(env, view, args.take(0))
+        let input = args.take(0);
+        let save_as = matches!(field(&input, "mode"), IpcValue::String(mode) if mode == "save-as");
+        let reply = save::save_workbook(env, view, input);
+        if save_as {
+            // a Save As the shell asked for (`request_save`) ends with this one:
+            // saved when the answer says it was not canceled
+            let saved = matches!(
+                &reply,
+                Ok(answer) if matches!(field(answer, "canceled"), IpcValue::Bool(false))
+            );
+            env.post(move |core| core.save_as_finished(view, saved));
+        }
+        reply
     }));
     routes.push(worker(
         &env,
@@ -581,6 +593,15 @@ pub fn probe_trigger(
             Some(editor) => {
                 editor.request_close(view, parent, Box::new(move |r| then(r.map(IpcValue::Bool))));
             }
+            None => then(Err(crate::value::thrown("no sheets editor for the view"))),
+        },
+        // `request_save(view, SaveAs)`: see `request-save-as` of sheets-host.ts
+        "workbook:request-save-as" => match editor_for(provided, view) {
+            Some(editor) => editor.request_save(
+                view,
+                shell_contract::editors::SaveMode::SaveAs,
+                Box::new(move |r| then(r.map(IpcValue::Bool))),
+            ),
             None => then(Err(crate::value::thrown("no sheets editor for the view"))),
         },
         // `writeSheetsCopiesNow()`

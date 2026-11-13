@@ -634,6 +634,19 @@ impl FakeShell {
         }
     }
 
+    /// runs the earliest timer scheduled with this delay, and no other
+    #[cfg(test)]
+    pub fn fire_oldest(&self, ms: u64) {
+        let job = {
+            let mut timers = self.timers.lock().unwrap();
+            let at = timers.iter().position(|(at, _)| *at == ms);
+            at.map(|at| timers.remove(at).1)
+        };
+        if let Some(job) = job {
+            job();
+        }
+    }
+
     /// runs the timers scheduled with this delay
     pub fn fire(&self, ms: u64) {
         let due: Vec<_> = {

@@ -787,11 +787,153 @@ fn a_save_request_is_resumed_by_the_renderers_answer() {
     assert_eq!(done.borrow_mut().take(), Some(Ok(true)));
     // the renderer going away resolves a waiting save as not saved
     let (done, then) = outcome();
-    editors.request_save(one.view, SaveMode::SaveAs, then);
+    editors.request_save(one.view, SaveMode::Save, then);
     w.call(one, "workbook:pending-edits", vec![num(1.0)])
         .unwrap();
     w.kit.destroy(one.view);
     assert_eq!(done.borrow_mut().take(), Some(Ok(false)));
+}
+
+/// a workbook opened from a file, saved and clean: the session id
+fn clean_workbook(w: &World, one: Sender) -> String {
+    let a = w.file("a.xlsx", b"xlsx");
+    text(&w.open(one, &a), "sessionId")
+}
+
+#[test]
+fn a_save_as_the_shell_asks_for_always_asks_for_a_file() {
+    let w = world("sheets-request-save-as", Value::Null);
+    let one = w.tab(1);
+    let session = clean_workbook(&w, one);
+    let editors = editor_for(&w.registry.provided, one.view).unwrap();
+    w.kit.take_events();
+
+    // a clean, already saved workbook is no reason to answer at once
+    let (done, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    assert!(done.borrow().is_none());
+    assert_eq!(
+        w.kit.take_events(),
+        [(
+            Target::View(one.view),
+            "menu:action",
+            vec![string("save-as")]
+        )]
+    );
+    // the renderer's own plain Save is not the Save As (it swaps the session)
+    let plain = w
+        .call(one, "workbook:save", vec![save_request(&session, "save")])
+        .unwrap();
+    assert!(done.borrow().is_none());
+    let session = text(field(&plain, "file"), "sessionId");
+
+    // the person cancels the dialog: not saved
+    let cancelled = w
+        .call(
+            one,
+            "workbook:save",
+            vec![save_request(&session, "save-as")],
+        )
+        .unwrap();
+    assert_eq!(cancelled, obj([("canceled", IpcValue::Bool(true))]));
+    assert_eq!(done.borrow_mut().take(), Some(Ok(false)));
+
+    // a file is chosen and written: saved
+    let (done, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    let target = w.dir.join("copy.xlsx").to_string_lossy().into_owned();
+    w.kit
+        .dialogs
+        .saves
+        .lock()
+        .unwrap()
+        .push_back(Some(target.clone().into()));
+    let saved = w
+        .call(
+            one,
+            "workbook:save",
+            vec![save_request(&session, "save-as")],
+        )
+        .unwrap();
+    assert_eq!(field(&saved, "canceled"), &IpcValue::Bool(false));
+    assert_eq!(done.borrow_mut().take(), Some(Ok(true)));
+    // the answer is spent: a later Save As of the renderer (the session
+    // swapped to the new file) resumes nothing
+    let swapped = text(field(&saved, "file"), "sessionId");
+    w.call(
+        one,
+        "workbook:save",
+        vec![save_request(&swapped, "save-as")],
+    )
+    .unwrap();
+    assert!(done.borrow().is_none());
+}
+
+#[test]
+fn a_save_as_that_fails_or_goes_unanswered_is_not_saved() {
+    let w = world("sheets-request-save-as-ends", Value::Null);
+    let (one, two) = (w.tab(1), w.tab(2));
+    let session = clean_workbook(&w, one);
+    let editors = editor_for(&w.registry.provided, one.view).unwrap();
+
+    // a save that rejects (a request of a session that is not open)
+    let (done, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    let unknown = "00000000-0000-4000-8000-0000000000ff";
+    w.call(one, "workbook:save", vec![save_request(unknown, "save-as")])
+        .unwrap_err();
+    assert_eq!(done.borrow_mut().take(), Some(Ok(false)));
+
+    // another view's Save As does not resume this one
+    let (done, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    w.call(
+        two,
+        "workbook:save",
+        vec![save_request(&session, "save-as")],
+    )
+    .unwrap_err();
+    assert!(done.borrow().is_none());
+
+    // a newer request replaces the older, which is not saved
+    let (newer, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    assert_eq!(done.borrow_mut().take(), Some(Ok(false)));
+    assert!(newer.borrow().is_none());
+
+    // two minutes without a Save As: not saved, and the late save changes nothing
+    w.shell().fire(120_000);
+    assert_eq!(newer.borrow_mut().take(), Some(Ok(false)));
+    w.call(
+        one,
+        "workbook:save",
+        vec![save_request(&session, "save-as")],
+    )
+    .unwrap();
+    assert!(newer.borrow().is_none());
+
+    // the timer of an answered Save As does not end the view's next one
+    let (first, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    w.call(
+        one,
+        "workbook:save",
+        vec![save_request(&session, "save-as")],
+    )
+    .unwrap();
+    assert_eq!(first.borrow_mut().take(), Some(Ok(false)));
+    let (second, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    w.shell().fire_oldest(120_000);
+    assert!(second.borrow().is_none());
+    w.shell().fire_oldest(120_000);
+    assert_eq!(second.borrow_mut().take(), Some(Ok(false)));
+
+    // the view ending
+    let (third, then) = outcome();
+    editors.request_save(one.view, SaveMode::SaveAs, then);
+    w.kit.destroy(one.view);
+    assert_eq!(third.borrow_mut().take(), Some(Ok(false)));
 }
 
 #[test]

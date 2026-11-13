@@ -357,6 +357,34 @@
     "groups": ["d1/sheets-triggers"]
   },
   {
+    "name": "sheets: a Save As the shell asks for sends the close request instead of the menu action",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "self.send(view, \"menu:action\", vec![string(\"save-as\")]);",
+    "replace": "self.send(view, \"workbook:close-save-request\", Vec::new());",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a canceled Save As resumes the shell's request as saved",
+    "file": "shell-ipc/d1/src/sheets/mod.rs",
+    "find": "Ok(answer) if matches!(field(answer, \"canceled\"), IpcValue::Bool(false))",
+    "replace": "Ok(answer) if matches!(field(answer, \"canceled\"), IpcValue::Bool(true))",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a written Save As resumes the shell's request as not saved",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "(waiter.resume)(saved);",
+    "replace": "(waiter.resume)(false);",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
+    "name": "sheets: a newer Save As request resumes the older one as saved",
+    "file": "shell-ipc/d1/src/sheets/editors.rs",
+    "find": "(older.resume)(false);",
+    "replace": "(older.resume)(true);",
+    "groups": ["d1/sheets-triggers"]
+  },
+  {
     "name": "a mailto link is refused as a script link is",
     "file": "shell-ipc/d1/src/slides/reads.rs",
     "find": "\"mailto:\".into()]),",

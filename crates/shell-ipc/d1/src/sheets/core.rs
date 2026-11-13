@@ -150,6 +150,9 @@ pub struct AppState {
     pub pending_edit_counts: HashMap<ViewId, f64>,
     pub tracked_edit_senders: HashSet<ViewId>,
     pub close_waiters: HashMap<ViewId, CloseWaiter>,
+    /// the continuation of a `request_save(SaveAs)` by view: resumed by that
+    /// view's next `workbook:save` of mode `save-as`
+    pub save_as_waiters: HashMap<ViewId, CloseWaiter>,
     pub next_token: u64,
     pub shutdown: ShutdownLatch,
     pub tab_recovery: HashMap<ViewId, TabRecovery>,
@@ -179,6 +182,7 @@ impl AppState {
             pending_edit_counts: HashMap::new(),
             tracked_edit_senders: HashSet::new(),
             close_waiters: HashMap::new(),
+            save_as_waiters: HashMap::new(),
             next_token: 0,
             shutdown: ShutdownLatch::new(),
             tab_recovery: HashMap::new(),

@@ -157,6 +157,62 @@ impl Core {
         self.send(view, "workbook:close-save-request", Vec::new());
     }
 
+    /// A Save As the shell asked for: the renderer is told with `menu:action`
+    /// (`sendSheetsMenuAction('save-as')`) and runs its Save As, whose own
+    /// `workbook:save` of mode `save-as` resumes `then` ([`Core::save_as_finished`]).
+    /// A newer request replaces an older one (the older is not saved), and
+    /// two minutes without a request from the renderer end it as not saved.
+    pub fn await_save_as(&self, view: ViewId, then: Then<bool>) {
+        let (token, older) = {
+            let mut state = self.state.borrow_mut();
+            state.next_token += 1;
+            let token = state.next_token;
+            let older = state.save_as_waiters.insert(
+                view,
+                CloseWaiter {
+                    token,
+                    resume: Box::new(move |ok| then(Ok(ok))),
+                },
+            );
+            (token, older)
+        };
+        if let Some(older) = older {
+            (older.resume)(false);
+        }
+        let env = self.env.clone();
+        self.env.shell.after(
+            CLOSE_SAVE_TIMEOUT_MS,
+            Box::new(move || env.post(move |core| core.save_as_expired(view, token))),
+        );
+        self.send(view, "menu:action", vec![string("save-as")]);
+    }
+
+    /// The two minutes of Save As `token` are over; a Save As already
+    /// answered (or replaced, or ended with its view) has no timer left to
+    /// act, so only the waiter this timer was set for is dropped.
+    fn save_as_expired(&self, view: ViewId, token: u64) {
+        let expired = {
+            let mut state = self.state.borrow_mut();
+            match state.save_as_waiters.get(&view) {
+                Some(waiter) if waiter.token == token => state.save_as_waiters.remove(&view),
+                _ => None,
+            }
+        };
+        if let Some(waiter) = expired {
+            (waiter.resume)(false);
+        }
+    }
+
+    /// A `workbook:save` of mode `save-as` of `view` ended: `saved` when the
+    /// file was written (`canceled: false` in the answer), not when the
+    /// person canceled (`canceled: true`) or the save failed (it rejected)
+    pub fn save_as_finished(&self, view: ViewId, saved: bool) {
+        let waiter = self.state.borrow_mut().save_as_waiters.remove(&view);
+        if let Some(waiter) = waiter {
+            (waiter.resume)(saved);
+        }
+    }
+
     /// `writeSheetsCopiesNow`: every live tab's renderer writes its copy now;
     /// `done` runs once all answered or timed out
     pub fn write_copies_now(&self, done: Box<dyn FnOnce()>) {
@@ -333,6 +389,11 @@ impl Core {
             }
             state.queued_workbooks.remove(&view);
         }
+        // a Save As the shell asked for ends with its view
+        let save_as = self.state.borrow_mut().save_as_waiters.remove(&view);
+        if let Some(waiter) = save_as {
+            (waiter.resume)(false);
+        }
         // the pending-edits tracker's 'destroyed'
         let tracked = self.state.borrow_mut().tracked_edit_senders.remove(&view);
         if tracked {
@@ -376,11 +437,17 @@ impl DocumentEditors for SheetsEditors {
 
     /// The renderer runs its journal save and answers on `workbook:close-save-result`
     /// (the save half of `requestSheetsClose`, without the prompt)
-    fn request_save(&self, view: ViewId, _mode: SaveMode, then: Then<bool>) {
+    ///
+    /// `SaveMode::SaveAs` always asks for a file: the renderer is told to run
+    /// its Save As and the answer is that save's outcome
+    fn request_save(&self, view: ViewId, mode: SaveMode, then: Then<bool>) {
         if !self.core.env.alive(view) {
             return then(Ok(false));
         }
-        self.core.await_save(view, then);
+        match mode {
+            SaveMode::Save => self.core.await_save(view, then),
+            SaveMode::SaveAs => self.core.await_save_as(view, then),
+        }
     }
 
     fn request_close(&self, view: ViewId, parent: Option<WindowId>, then: Then<bool>) {
