@@ -305,7 +305,10 @@ impl World {
             Some(index) => self.servers.get(index as usize),
             None => self.servers.last(),
         };
-        server.filter(|(_, closed)| !closed).map(|(port, _)| *port)
+        let force = bool_field(step, "force");
+        server
+            .filter(|(_, closed)| force || !closed)
+            .map(|(port, _)| *port)
     }
 }
 

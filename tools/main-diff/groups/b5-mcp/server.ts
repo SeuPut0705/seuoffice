@@ -662,6 +662,8 @@ const routing = scenarios({
     get('/mcp'),
     get('/mcp', { headers: { 'mcp-session-id': 'nope', accept: 'text/event-stream' } }),
     request('DELETE', '/mcp', { 'mcp-session-id': 'nope' }),
+    get('/mcp', { headers: { 'mcp-session-id': '', accept: 'text/event-stream' } }),
+    request('DELETE', '/mcp', { 'mcp-session-id': '' }),
     request('POST', '/sse'),
     request('GET', '/messages'),
     get('//'),
