@@ -560,6 +560,7 @@ dependencies = [
  "jscompat",
  "libc",
  "markup5ever_rcdom",
+ "ooxml-pkg",
  "rust-mcp-schema",
  "serde",
  "serde_json",
