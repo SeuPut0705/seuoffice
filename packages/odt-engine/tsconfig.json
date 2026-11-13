@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    // WebAssembly and BufferSource of the engine loader
     "lib": ["ES2022", "DOM"]
   },
   "include": ["src", "tests"]
