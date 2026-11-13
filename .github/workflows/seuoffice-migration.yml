@@ -1,0 +1,143 @@
+name: seuoffice migration
+
+# The migration acceptance test of decision 0029 on runners
+# (docs/seuoffice/3단계-넘어가기-시험.md, scripts in tools/migration-test):
+# an installed Electron build updates itself, through its own dialog, to a
+# candidate build and then to the next one, and the data it kept is still
+# what the app shows. On Windows the forced failures run too.
+#
+# Without a candidate it updates Electron releases to Electron releases: the
+# check of the harness itself, and the baseline the CEF build must equal.
+#   gh workflow run "seuoffice migration" --ref <branch>
+#   gh workflow run "seuoffice migration" --ref <branch> -f to_run=<run id of the CEF build> [-f next_run=<id>]
+# By hand only: it downloads releases and installs the app on the runner. A
+# dispatch needs the file on main; before that, a push to a migration-test/*
+# branch runs it with the defaults.
+
+on:
+  push:
+    branches: ['migration-test/**']
+  workflow_dispatch:
+    inputs:
+      from:
+        description: Electron releases to start from, comma separated tags; "oldest" and "previous" are resolved
+        required: false
+        default: oldest,previous
+      to_run:
+        description: Run id whose artifacts hold the candidate (SeuOffice-Setup-<v>.exe, SeuOffice-<v>-arm64-mac.zip); empty updates to the second latest release
+        required: false
+        default: ''
+      next_run:
+        description: Run id of the build the candidate updates to next; empty uses the latest release when to_run is empty, else skips
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: SeuPut0705/seuoffice
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      from: ${{ steps.r.outputs.from }}
+      to: ${{ steps.r.outputs.to }}
+      next: ${{ steps.r.outputs.next }}
+    steps:
+      - id: r
+        name: Releases to start from and to update to
+        run: |
+          # stable releases, newest first
+          mapfile -t stable < <(gh release list --limit 200 --exclude-pre-releases --json tagName -q '.[].tagName')
+          has_installer() { gh release view "$1" --json assets -q '.assets[].name' | grep -q '^SeuOffice-Setup-.*\.exe$'; }
+          oldest=''
+          for ((i = ${#stable[@]} - 1; i >= 0; i--)); do
+            if has_installer "${stable[$i]}"; then oldest=${stable[$i]}; break; fi
+          done
+          if [ -z "${{ inputs.to_run }}" ]; then to=${stable[1]} next=${stable[0]} previous=${stable[2]}
+          else to='' next='' previous=${stable[0]}; fi
+          from=$(echo "${{ inputs.from || 'oldest,previous' }}" | tr ',' '\n' | sed "s/^oldest$/$oldest/; s/^previous$/$previous/" | sort -u | jq -R . | jq -cs .)
+          echo "from=$from" >> "$GITHUB_OUTPUT"
+          echo "to=$to" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "from $from, to ${to:-run ${{ inputs.to_run }}}, next ${next:-run ${{ inputs.next_run }}}"
+
+  windows:
+    needs: resolve
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        from: ${{ fromJSON(needs.resolve.outputs.from) }}
+        fault: [none, kill-installer, block-start]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Candidate and next builds
+        id: builds
+        shell: bash
+        run: |
+          get() { # <dir> <run id> <release tag>
+            mkdir -p "$1"
+            if [ -n "$2" ]; then gh run download "$2" --dir "$1"
+            elif [ -n "$3" ]; then gh release download "$3" --dir "$1" --pattern 'SeuOffice-Setup-*.exe'; fi
+            find "$1" -name 'SeuOffice-Setup-*.exe' ! -name '*stable*' | head -1
+          }
+          to=$(get "$RUNNER_TEMP/to" "${{ inputs.to_run }}" "${{ needs.resolve.outputs.to }}")
+          next=$(get "$RUNNER_TEMP/next" "${{ inputs.next_run }}" "${{ needs.resolve.outputs.next }}")
+          ver() { basename "$1" | sed -E 's/^SeuOffice-Setup-(.+)\.exe$/\1/'; }
+          echo "to=$(cygpath -w "$to")" >> "$GITHUB_OUTPUT"
+          echo "to_version=$(ver "$to")" >> "$GITHUB_OUTPUT"
+          if [ -n "$next" ]; then
+            echo "next=$(cygpath -w "$next")" >> "$GITHUB_OUTPUT"
+            echo "next_version=$(ver "$next")" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update from ${{ matrix.from }} (${{ matrix.fault }})
+        shell: pwsh
+        run: |
+          $next = @{}
+          if ('${{ steps.builds.outputs.next }}') { $next = @{ Next = '${{ steps.builds.outputs.next }}'; NextVersion = '${{ steps.builds.outputs.next_version }}' } }
+          ./tools/migration-test/win-desktop.ps1 -From '${{ matrix.from }}' -To '${{ steps.builds.outputs.to }}' `
+            -ToVersion '${{ steps.builds.outputs.to_version }}' -Fault '${{ matrix.fault }}' `
+            -Out "$env:RUNNER_TEMP\migration" @next
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-windows-${{ matrix.from }}-${{ matrix.fault }}
+          path: ${{ runner.temp }}/migration
+          if-no-files-found: ignore
+
+  mac:
+    needs: resolve
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        from: ${{ fromJSON(needs.resolve.outputs.from) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update from ${{ matrix.from }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/to"
+          if [ -n "${{ inputs.to_run }}" ]; then gh run download "${{ inputs.to_run }}" --dir "$RUNNER_TEMP/to"
+          else gh release download "${{ needs.resolve.outputs.to }}" --dir "$RUNNER_TEMP/to" --pattern 'SeuOffice-*-arm64-mac.zip'; fi
+          zip=$(find "$RUNNER_TEMP/to" -name 'SeuOffice-*-arm64-mac.zip' ! -name '*stable*' | head -1)
+          version=$(basename "$zip" | sed -E 's/^SeuOffice-(.+)-arm64-mac\.zip$/\1/')
+          tools/migration-test/mac-runner.sh "${{ matrix.from }}" "$zip" "$version" "$RUNNER_TEMP/migration"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-mac-${{ matrix.from }}
+          path: ${{ runner.temp }}/migration
+          if-no-files-found: ignore
