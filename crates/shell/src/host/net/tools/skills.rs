@@ -41,14 +41,13 @@ use shell_ipc_a::user_skills::{
     OpenedCopy, SkillImporter, SkillImporterHost, SkillsShell, SkillsShellHost, TemplateCopyTabs,
     TemplateCopyTabsHost,
 };
-use tauri::Manager;
 
 use super::{NOT_BUILT, Unbuilt, now_ms, unbuilt};
 use crate::host::HostContext;
 
 pub(super) fn install(hosts: &mut Hosts, cx: &HostContext) {
     let layout = Layout {
-        resources: cx.app.path().resource_dir().ok(),
+        resources: crate::paths::resources_path(&cx.app),
         repo: repo_root(),
     };
     let agent_skills: AgentSkillsHost = Arc::new(ShellAgentSkills {
