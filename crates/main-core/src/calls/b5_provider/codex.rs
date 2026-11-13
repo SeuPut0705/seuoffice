@@ -5,6 +5,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use jscompat::node_path::host;
 use jscompat::{JsonValue, json_value_from_serde, json_value_to_serde};
 use serde_json::{Map, Value, json};
 
@@ -27,7 +28,7 @@ use crate::packages::ai_provider::subscription_locate::{
 };
 use crate::packages::ai_provider::subscription_process::SharedChildRegistry;
 use crate::packages::ai_provider::subscription_temp_dirs::SubscriptionTempState;
-use crate::packages::ai_provider::task::{JsError, LocalBoxFuture, Rt, Signal};
+use crate::packages::ai_provider::task::{FsAnswer, FsOp, JsError, LocalBoxFuture, Rt, Signal};
 
 const ENTRY: &str = "/opt/codex/bin/codex";
 
@@ -356,6 +357,30 @@ async fn run_step(rt: &Rt, app: &CodexApp, signal: &Signal, sink: &Sink, step: &
             None
         }
     };
+    if step.get("forget").is_some() {
+        // the session folders are gone (the person cleaned the temp folder)
+        let root = rt.tmpdir();
+        if let Ok(FsAnswer::Entries(entries)) = rt
+            .fs(FsOp::Readdir {
+                path: root.clone(),
+                with_types: false,
+            })
+            .await
+        {
+            for entry in entries {
+                if entry.name.starts_with("seuoffice-codex-app-server-") {
+                    let _ = rt
+                        .fs(FsOp::Rm {
+                            path: host::join(&[&root, &entry.name]),
+                            recursive: true,
+                            force: true,
+                        })
+                        .await;
+                }
+            }
+        }
+        return Value::Null;
+    }
     if let Some(Value::Array(steps)) = step.get("all") {
         // started together, as `Promise.all` starts them
         let futures: Vec<LocalBoxFuture<Value>> = steps

@@ -687,6 +687,9 @@ async fn inspect(
             locate_subscription_program(rt, &locate_state, provider, &locate_options).await
         }
     };
+    // `await locate(...)` costs a microtask turn even where the promise is settled: other
+    // work (the next provider's detect) goes on before the check does
+    tick(rt).await;
     let program = match located {
         Ok(Some(program)) => program,
         Ok(None) => return SubscriptionDetection::new(provider, "not-installed"),

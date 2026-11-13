@@ -15,7 +15,8 @@
  * sessionId } }`, `{ chat: { config, system, user } }`, `{ account: { cliPath,
  * signal, aborted } }`, `{ models: { cliPath } }`, `{ subModels: { cliPath,
  * signal, aborted } }` (`signal`: the world's caller signal; `aborted`: a
- * signal that is aborted already), `{ all: [steps] }` (the steps start together,
+ * signal that is aborted already), `{ forget: true }` (the session folders in the
+ * temp folder are removed), `{ all: [steps] }` (the steps start together,
  * as `Promise.all` starts them), `{ login: true }` (the app ran Codex's own
  * login), `{ off: boolean }` (Codex turned off or on), `{ sleep: ms }`,
  * `{ shutdown: true }`. Every step answers `{ ok: true }`, `{ result }` or
@@ -32,6 +33,9 @@
  * folders are made with a counter for a name (`mkdtemp` is the world's).
  */
 import '../../electron-fake.ts'
+import fsp from 'node:fs/promises'
+import os from 'node:os'
+import { join } from 'node:path'
 import type { Case, Group, TsContext } from '../../types.ts'
 import { inWorld, type Chunk, type World } from './world.ts'
 
@@ -188,6 +192,7 @@ type Step =
   | { models: { cliPath?: string } }
   | { subModels: { cliPath?: string; signal?: boolean; aborted?: boolean } }
   | { all: Step[] }
+  | { forget: true }
   | { login: true }
   | { off: boolean }
   | { sleep: number }
@@ -243,6 +248,14 @@ function callbacks(cx: TsContext, signal: AbortSignal, sessionId?: string): Any 
 
 async function runStep(step: Step, cx: TsContext, signal: AbortSignal): Promise<unknown> {
   try {
+    if ('forget' in step) {
+      // the session folders are gone (the person cleaned the temp folder)
+      const root = os.tmpdir()
+      for (const name of await fsp.readdir(root))
+        if (name.startsWith('seuoffice-codex-app-server-'))
+          await fsp.rm(join(root, name), { recursive: true, force: true })
+      return null
+    }
     if ('all' in step) {
       // started together, as `Promise.all` does
       return await Promise.all(step.all.map((one) => runStep(one, cx, signal)))
@@ -1562,7 +1575,11 @@ const streams: Group = {
             .turn(done('second', [], 'turn-2', 'thread-2'), 'turn-2')
             .spec(),
         ]),
-        steps(stream({ sessionId: 'same' }), stream({ sessionId: 'same', system: 'another' })),
+        steps(
+          stream({ sessionId: 'same' }),
+          { forget: true },
+          stream({ sessionId: 'same', system: 'another' }),
+        ),
       ),
       // fewer messages than the session has seen: new thread as well
       c(
@@ -1584,6 +1601,7 @@ const streams: Group = {
             sessionId: 'same',
             messages: [USER, { role: 'assistant', text: 'a' }, { role: 'user', text: 'b' }],
           }),
+          { forget: true },
           stream({ sessionId: 'same', messages: [USER] }),
         ),
       ),
@@ -1681,20 +1699,11 @@ const started = note('turn/started', { threadId: 'thread-1', turn: { id: 'turn-1
 const moreStreamCases: Case[] = [
   // a byte order mark at the start of stdout is part of the first line
   c(w([ok('bom').spec({ stdout: [{ hex: 'efbbbf' }] })]), steps(stream())),
-  // two runs started together share one process; the second is signed out, so that only
-  // one of them makes a folder (two made together would race on the real file system)
+  // two runs started together share one process. Both are signed out: a run that goes on makes a
+  // folder, and a real file system call is slower than the answers of a scripted child, so the
+  // order of two runs that go on would depend on the file system
   c(
-    w([
-      new Kid()
-        .start()
-        .req(CHATGPT)
-        .req(SIGNED_OUT)
-        .req({ config: { mcp_servers: {} } })
-        .req(thread('thread-1'))
-        .req({ data: [] })
-        .turn(done('one', [], 'turn-1', 'thread-1'), 'turn-1')
-        .spec(),
-    ]),
+    w([new Kid().start().req(SIGNED_OUT).req(SIGNED_OUT).spec()]),
     steps({ all: [stream({ sessionId: 'a' }), stream({ sessionId: 'b' })] }),
   ),
   c(
