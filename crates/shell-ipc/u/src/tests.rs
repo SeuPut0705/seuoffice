@@ -53,6 +53,10 @@ impl Registry for Table {
         }
         Ok(())
     }
+
+    fn provided(&self) -> Rc<shell_contract::Provided> {
+        Rc::default()
+    }
 }
 
 struct Inline;
