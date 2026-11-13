@@ -828,7 +828,7 @@
   {
     "name": "chat-store: the guide adapter makes a fresh install id where the settings file refuses one",
     "file": "main-core/src/shell/projects/project_guide.rs",
-    "find": "ProjectGuide::install_id(self.guide())\n                    .map_err(|error| ChatStoreError(error.message()))",
+    "find": "ProjectGuide::install_id(self.guide()).map_err(chat_error)",
     "replace": "let guide = self.guide();\n                ProjectGuide::install_id(guide).or_else(|_| Ok(guide.new_id()))",
     "fn": ["project-guide.scenario"]
   },
@@ -844,6 +844,13 @@
     "file": "main-core/src/shell/projects/chat_store.rs",
     "find": "let origin = self.guide.install_id()?;",
     "replace": "let origin = self.guide.install_id().unwrap_or_default();",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "chat-store: the guide's error reaches the store without its code",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "        code: error.code(),",
+    "replace": "        code: None,",
     "fn": ["project-guide.scenario"]
   }
 ]
