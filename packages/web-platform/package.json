@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/web-platform",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Browser stand-ins for the desktop apps: web bridges, Node and Electron shims, the embed channel and Vite wiring",

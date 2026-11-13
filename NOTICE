@@ -49,7 +49,8 @@ Contributors. The `circle` icon is derived from the Feather project and is
 distributed under the MIT License, Copyright (c) 2013-present Cole Bemis. Both
 licenses permit use, modification and redistribution provided their copyright
 and permission notices are kept; the full texts are at
-https://github.com/lucide-icons/lucide/blob/main/LICENSE.
+https://github.com/lucide-icons/lucide/blob/main/LICENSE and in section 9 of
+THIRD-PARTY-NOTICES.txt.
 
 The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
 Google Inc., licensed under the Apache License, Version 2.0, and converted to
@@ -282,3 +283,22 @@ GenOffice Enterprise License.
 seuoffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
 or the IeumOffice contributors. The names GenOffice and IeumOffice
 (이음오피스) identify the original works only.
+
+Licence of seuoffice from v0.12.41
+
+The seuoffice source as of v0.12.41 (tag v0.12.41, commit
+7b2ac300de5284a1e81b694552afca38733d2a1e) and every later change are
+Copyright 2026 SeuPut (최진서) and licensed by SeuPut under the Functional
+Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2), in
+LICENSE (shipped as LICENSE.txt). From commit <FSL_SWITCH_COMMIT> on, every
+distribution of that code, source or binary, is under FSL-1.1-ALv2. The first
+release under FSL-1.1-ALv2 is 0.12.42. The v0.12.41 release files already
+published are not rebuilt or replaced.
+
+Copies received under the Apache License, Version 2.0, before the switch
+(any version up to and including the published v0.12.41 release files) keep
+the rights that licence granted; they cannot be revoked.
+
+The Apache License 2.0 that the notices above refer to, and that still
+governs the parts of GenOffice, IeumOffice and the third-party components
+they name, is in LICENSE-APACHE (shipped as LICENSE-APACHE.txt).

@@ -127,7 +127,7 @@ describe('Settings → About', () => {
     )
     expect(text).toContain('rhwp')
     expect(text).toContain('SeuOffice는 Microsoft, 한글과컴퓨터')
-    expect(text).toContain('SeuOffice는 Apache License 2.0에 따라 있는 그대로 제공되며')
+    expect(text).toContain('SeuOffice는 Functional Source License 1.1(')
   })
 
   it('has every notice in every UI language, each naming the product by token', () => {
@@ -143,7 +143,7 @@ describe('Settings → About', () => {
       for (const key of keys) expect(strings[lang][key], `${lang}.${key}`).not.toBe('')
       expect(strings[lang].setTrademarks, lang).toContain('SeuOffice')
       expect(strings[lang].setHwpNotice, lang).toContain('rhwp')
-      expect(strings[lang].setDisclaimer, lang).toContain('Apache License 2.0')
+      expect(strings[lang].setDisclaimer, lang).toContain('FSL-1.1-ALv2')
       if (lang !== 'en')
         expect(strings[lang].setTrademarks, lang).not.toBe(strings.en.setTrademarks)
     }

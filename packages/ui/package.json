@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/ui",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Shared renderer UI components for the office apps (AI panel composer, icons); styling stays per-app via the shared class names",
