@@ -2066,6 +2066,35 @@ extractCases.push(
     archiveFile(await duplicateNameZipHex()),
   ),
 )
+extractCases.push(
+  c(
+    ['$DIR/archive.bin', 'tar.gz', R, '$DIR/out'],
+    'a global pax header preserves the pending local path for the next file',
+    archiveFile(
+      gz(
+        tarBytes([
+          pax({ path: `${R}/kept.txt` }),
+          { name: 'GlobalHeader', type: 'g', data: paxBody({ comment: 'global metadata' }) },
+          { name: `${R}/short.txt`, data: 'kept content' },
+        ]),
+      ),
+    ),
+  ),
+)
+extractCases.push(
+  c(
+    ['$DIR/archive.bin', 'tar.gz', R, '$DIR/out'],
+    'a global pax header name is ignored before validating extracted file paths',
+    archiveFile(
+      gz(
+        tarBytes([
+          { name: '../ignored-global', type: 'g', data: paxBody({ comment: 'global metadata' }) },
+          { name: `${R}/after-global.txt`, data: 'kept after global metadata' },
+        ]),
+      ),
+    ),
+  ),
+)
 
 // ---------------------------------------------------------------------------
 // local launch
