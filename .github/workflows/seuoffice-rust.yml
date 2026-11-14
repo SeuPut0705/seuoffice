@@ -49,6 +49,11 @@ on:
         required: false
         type: string
         default: ''
+      main_sensitivity_product_sha:
+        description: Exact product commit for the isolated original MCP mutation 203 proof only
+        required: false
+        type: string
+        default: ''
       faults:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
@@ -73,7 +78,7 @@ on:
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
-  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' && inputs.main_baseline_product_sha == '' }}
+  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' && inputs.main_baseline_product_sha == '' && inputs.main_sensitivity_product_sha == '' }}
 
 permissions:
   contents: read
@@ -81,7 +86,7 @@ permissions:
 
 jobs:
   quick:
-    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run && !inputs.main_baseline_product_sha }}
+    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -663,7 +668,7 @@ jobs:
           if-no-files-found: ignore
 
   main-faults-only-prepare:
-    if: ${{ (inputs.main_faults_product_sha || inputs.main_faults_gate_run) && !inputs.main_baseline_product_sha }}
+    if: ${{ (inputs.main_faults_product_sha || inputs.main_faults_gate_run) && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha }}
     runs-on: ubuntu-latest
     outputs:
       catalogs: ${{ steps.plan.outputs.catalogs }}
@@ -785,7 +790,7 @@ jobs:
 
   # Explicit baseline evidence is not a green product-head gate for faults-only.
   main-baseline-only:
-    if: ${{ inputs.main_baseline_product_sha != '' }}
+    if: ${{ inputs.main_baseline_product_sha != '' && !inputs.main_sensitivity_product_sha }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -915,4 +920,130 @@ jobs:
           path: |
             baseline-plan.json
             product/tools/main-diff/out
+          if-no-files-found: error
+
+  main-targeted-sensitivity:
+    if: ${{ inputs.main_sensitivity_product_sha != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PRODUCT_DIR: ${{ github.workspace }}/product
+      DRIVER_DIR: ${{ github.workspace }}/driver
+      PLAN_PATH: ${{ github.workspace }}/sensitivity-plan.json
+      PRODUCT_SHA: ${{ inputs.main_sensitivity_product_sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      MODE: targeted-sensitivity-only
+      MAIN_DIFF_PROFILE: node-faults
+      DOCX_FAULTS: ${{ inputs.faults }}
+      ODT_FAULTS: ${{ inputs.odt_faults }}
+      MAIN_FAULTS: ${{ inputs.main_faults }}
+      FAULT_PRODUCT_SHA: ${{ inputs.main_faults_product_sha }}
+      GATE_RUN_ID: ${{ inputs.main_faults_gate_run }}
+      BASELINE_PRODUCT_SHA: ${{ inputs.main_baseline_product_sha }}
+      ALL_FAULTS: ${{ inputs.all_faults }}
+      FAULT_SHARDS: ${{ inputs.fault_shards }}
+      SEUOFFICE_WASM: ${{ github.workspace }}/product/crates/target/wasm32-wasip1/release/office_wasm.wasm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          sparse-checkout: |
+            tools/main-diff/targeted-sensitivity.mjs
+            tools/main-diff/baseline-only.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate targeted sensitivity mode
+        id: plan
+        run: node driver/tools/main-diff/targeted-sensitivity.mjs prepare
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.plan.outputs.product_sha }}
+          path: product
+          persist-credentials: false
+
+      - name: Verify both immutable checkouts
+        run: node driver/tools/main-diff/targeted-sensitivity.mjs check
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: product/crates
+
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: product/crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('product/vendor/rhwp-core/**', 'product/tools/build-rhwp-core.mjs') }}
+
+      - name: Product rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        working-directory: product
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      - name: Install product dependencies
+        working-directory: product
+        run: npm ci
+
+      - name: Build exact product WASM
+        working-directory: product
+        run: npm run build:wasm
+
+      - name: Typecheck central comparison
+        working-directory: product
+        run: npm --prefix tools/main-diff run typecheck
+
+      - name: Inventory original selectors and targeted cases
+        id: inventory
+        run: node product/node_modules/tsx/dist/cli.mjs driver/tools/main-diff/targeted-sensitivity.mjs inventory
+
+      - name: Normal targeted baseline
+        working-directory: product
+        shell: bash
+        env:
+          MAIN_DIFF_OUT: ${{ github.workspace }}/product/tools/main-diff/out/targeted-sensitivity/baseline
+          MAIN_DIFF_ADDON: ${{ github.workspace }}/product/tools/main-diff/out/targeted-sensitivity/baseline.node
+        run: |
+          mkdir -p tools/main-diff/out/targeted-sensitivity/baseline
+          node tools/main-diff/build.mjs
+          node node_modules/tsx/dist/cli.mjs tools/main-diff/main.ts --group b5-mcp --fn zod.toJsonSchema --fn runtime-archive.extractRuntimeArchive --show 40 2>&1 | tee tools/main-diff/out/targeted-sensitivity/baseline/gate.txt
+
+      - name: Audit normal targeted baseline
+        run: node driver/tools/main-diff/targeted-sensitivity.mjs audit-baseline
+
+      - name: Original positive control and mutation 203
+        working-directory: product
+        shell: bash
+        env:
+          MAIN_DIFF_OUT: ${{ github.workspace }}/product/tools/main-diff/out/targeted-sensitivity/mutants
+          MAIN_DIFF_ADDON: ${{ github.workspace }}/product/tools/main-diff/out/targeted-sensitivity/mutants.node
+          FAULT_SHARD: ${{ steps.inventory.outputs.fault_shard }}
+        run: |
+          mkdir -p tools/main-diff/out/targeted-sensitivity/mutants
+          node tools/main-diff/faults.mjs tools/main-diff/faults/b5-mcp.json 2>&1 | tee tools/main-diff/out/targeted-sensitivity/faults.txt
+
+      - name: Audit original control and target
+        if: ${{ !cancelled() }}
+        run: node driver/tools/main-diff/targeted-sensitivity.mjs audit
+
+      - name: Keep targeted sensitivity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-targeted-sensitivity
+          path: |
+            sensitivity-plan.json
+            product/tools/main-diff/out/faults.json
+            product/tools/main-diff/out/targeted-sensitivity
+            !product/tools/main-diff/out/targeted-sensitivity/*.node
           if-no-files-found: error
