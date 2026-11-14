@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      main_baseline_product_sha:
+        description: Exact product commit for Linux full central comparison and Windows baseline only
+        required: false
+        type: string
+        default: ''
       faults:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
@@ -68,7 +73,7 @@ on:
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
-  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' }}
+  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' && inputs.main_baseline_product_sha == '' }}
 
 permissions:
   contents: read
@@ -76,7 +81,7 @@ permissions:
 
 jobs:
   quick:
-    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run }}
+    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run && !inputs.main_baseline_product_sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -658,7 +663,7 @@ jobs:
           if-no-files-found: ignore
 
   main-faults-only-prepare:
-    if: ${{ inputs.main_faults_product_sha || inputs.main_faults_gate_run }}
+    if: ${{ (inputs.main_faults_product_sha || inputs.main_faults_gate_run) && !inputs.main_baseline_product_sha }}
     runs-on: ubuntu-latest
     outputs:
       catalogs: ${{ steps.plan.outputs.catalogs }}
@@ -777,3 +782,137 @@ jobs:
           name: main-faults-only-${{ matrix.catalog.label }}-${{ matrix.shard }}
           path: product/tools/main-diff/out
           if-no-files-found: ignore
+
+  # Explicit baseline evidence is not a green product-head gate for faults-only.
+  main-baseline-only:
+    if: ${{ inputs.main_baseline_product_sha != '' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: ubuntu-latest
+            profile: linux
+          - os: windows-latest
+            profile: windows
+    env:
+      PRODUCT_DIR: ${{ github.workspace }}/product
+      DRIVER_DIR: ${{ github.workspace }}/driver
+      PLAN_PATH: ${{ github.workspace }}/baseline-plan.json
+      PRODUCT_SHA: ${{ inputs.main_baseline_product_sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      PROFILE: ${{ matrix.profile }}
+      DOCX_FAULTS: ${{ inputs.faults }}
+      ODT_FAULTS: ${{ inputs.odt_faults }}
+      MAIN_FAULTS: ${{ inputs.main_faults }}
+      FAULT_PRODUCT_SHA: ${{ inputs.main_faults_product_sha }}
+      GATE_RUN_ID: ${{ inputs.main_faults_gate_run }}
+      ALL_FAULTS: ${{ inputs.all_faults }}
+      FAULT_SHARDS: ${{ inputs.fault_shards }}
+      SEUOFFICE_WASM: ${{ github.workspace }}/product/crates/target/wasm32-wasip1/release/office_wasm.wasm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          sparse-checkout: tools/main-diff/baseline-only.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate explicit baseline mode
+        id: plan
+        run: node driver/tools/main-diff/baseline-only.mjs prepare
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.plan.outputs.product_sha }}
+          path: product
+          persist-credentials: false
+
+      - name: Verify both immutable checkouts
+        run: node driver/tools/main-diff/baseline-only.mjs check
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: product/crates
+
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: product/crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('product/vendor/rhwp-core/**', 'product/tools/build-rhwp-core.mjs') }}
+
+      - name: Product rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        working-directory: product
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      - name: Install product dependencies
+        working-directory: product
+        run: npm ci
+
+      - name: Build exact product WASM
+        working-directory: product
+        run: npm run build:wasm
+
+      - name: Typecheck central comparison
+        working-directory: product
+        run: npm --prefix tools/main-diff run typecheck
+
+      - name: Inventory every selected product case
+        shell: bash
+        run: node product/node_modules/tsx/dist/cli.mjs driver/tools/main-diff/baseline-only.mjs inventory
+
+      - name: Full central process comparison
+        if: matrix.profile == 'linux'
+        working-directory: product
+        shell: bash
+        env:
+          MAIN_DIFF_OUT: ${{ github.workspace }}/product/tools/main-diff/out/linux
+          MAIN_DIFF_TRACE: ${{ github.workspace }}/product/tools/main-diff/out/linux/trace.txt
+        run: |
+          mkdir -p tools/main-diff/out/linux
+          npm --prefix tools/main-diff run gate -- --show 40 2>&1 | tee tools/main-diff/out/linux/gate.txt
+
+      - name: Windows error table against libuv
+        if: matrix.profile == 'windows'
+        working-directory: product/crates
+        run: cargo test -p main-core --lib libuv_table
+
+      - name: Windows central process comparison
+        if: matrix.profile == 'windows'
+        working-directory: product
+        shell: bash
+        run: |
+          set +e
+          status=0
+          mkdir -p tools/main-diff/out/windows-filtered tools/main-diff/out/windows-node-fs
+          MAIN_DIFF_OUT="$PRODUCT_DIR/tools/main-diff/out/windows-filtered" npm --prefix tools/main-diff run gate -- --fn rename-validation.isSameFile --fn rename-validation.pdfSaveAsTarget --fn folder-files.plainFileIn.hardLinks --fn write-guard.appendData.hardLinks --show 40 2>&1 | tee tools/main-diff/out/windows-filtered/gate.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          MAIN_DIFF_OUT="$PRODUCT_DIR/tools/main-diff/out/windows-node-fs" npm --prefix tools/main-diff run gate -- --group node-fs --show 40 2>&1 | tee tools/main-diff/out/windows-node-fs/gate.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          exit $status
+
+      - name: Audit function and case completeness
+        run: node driver/tools/main-diff/baseline-only.mjs audit
+
+      - name: Keep baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-baseline-only-${{ matrix.profile }}
+          path: |
+            baseline-plan.json
+            product/tools/main-diff/out
+          if-no-files-found: error
