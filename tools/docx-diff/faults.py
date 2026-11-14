@@ -33,8 +33,8 @@ throwaway branch that holds the faults file:
 The result is written to tools/docx-diff/out/faults.txt, which the job keeps,
 and the seconds each fault took to tools/docx-diff/out/faults.json, which
 `node tools/fault-shards.mjs refresh tools/docx-diff/fault-costs.json ...`
-reads. Exits 1 when a fault does not apply or does not build: such a fault
-says nothing.
+reads. Exits 1 when a fault is missed, set aside by a listed difference,
+does not apply, or does not build.
 
 FAULT_SHARD=i/n runs one of n runners' share of the file: the faults
 tools/fault-shards.mjs gives shard i by the seconds in fault-costs.json (the
@@ -110,12 +110,12 @@ def main() -> int:
     shard = os.environ.get("FAULT_SHARD", "0/1")
     planned = subprocess.run(
         ["node", str(ROOT / "tools/fault-shards.mjs"), "pick", str(COSTS), shard],
-        input="".join(fault["name"] + "\n" for fault in faults),
+        input=json.dumps([fault["name"] for fault in faults]),
         capture_output=True, text=True)
     if planned.returncode != 0:
         print(f"FAULT_SHARD {shard}: {planned.stderr.strip()}")
         return 1
-    mine = set(planned.stdout.splitlines())
+    mine = set(json.loads(planned.stdout))
     faults = [fault for fault in faults if fault["name"] in mine]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     broken = 0
@@ -175,7 +175,7 @@ def main() -> int:
         )
         print(summary)
         out.write(summary + "\n")
-    return 1 if broken else 0
+    return 1 if broken or counts["MISSED"] or counts["SET ASIDE"] else 0
 
 
 if __name__ == "__main__":

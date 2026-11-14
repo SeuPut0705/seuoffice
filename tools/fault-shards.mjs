@@ -11,7 +11,7 @@
  *   node tools/fault-shards.mjs plan <fault-costs.json> <count> [id ...]
  *       prints the plan for the ids (all of the cost file when none are given)
  *   node tools/fault-shards.mjs pick <fault-costs.json> <index>/<count> < ids
- *       prints the ids of one shard, one per line, from the ids read on stdin
+ *       reads and prints a JSON array of fault ids, preserving every string
  *   node tools/fault-shards.mjs refresh <fault-costs.json> <report.json> ...
  *       writes the seconds of every fault the reports measured into the file
  *
@@ -98,8 +98,10 @@ function main([command, costsPath, ...rest]) {
     )
   } else if (command === 'pick') {
     const { index, count } = parseShard(rest[0])
-    const ids = readFileSync(0, 'utf8').split('\n').filter(Boolean)
-    for (const id of planShards(ids, costs, count).shards[index]) console.log(id)
+    const ids = JSON.parse(readFileSync(0, 'utf8'))
+    if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string'))
+      throw new Error('fault ids must be a JSON array of strings')
+    console.log(JSON.stringify(planShards(ids, costs, count).shards[index]))
   } else if (command === 'refresh') {
     const reports = rest.map((path) => JSON.parse(readFileSync(path, 'utf8')))
     writeFileSync(costsPath, JSON.stringify(refreshCosts(costs, reports), null, 2) + '\n')

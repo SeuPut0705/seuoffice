@@ -64,6 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
+      docx_files: ${{ steps.reach.outputs.docx_files }}
       pptx_faults: ${{ steps.reach.outputs.pptx }}
       odt_faults: ${{ steps.reach.outputs.odt }}
     steps:
@@ -126,15 +127,23 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx eslint tools/docx-diff tools/pptx-diff tools/odt-diff
 
+      - name: Fault planning regressions
+        if: ${{ !cancelled() }}
+        run: |
+          node --test tools/fault-planning.test.mjs
+          python3 -m unittest discover -s tools/docx-diff -p test_faults.py
+
       # which engines' fault probes this run reaches: all on main and when asked
       - name: Fault probes this run reaches
         id: reach
         if: ${{ !cancelled() }}
         env:
           ALL: ${{ github.ref == 'refs/heads/main' || inputs.all_faults }}
+          DOCX_FAULTS: ${{ inputs.faults }}
+          ODT_FAULTS: ${{ inputs.odt_faults }}
         run: |
           if [ "$ALL" = true ]; then
-            printf 'docx=true\npptx=true\nodt=true\n' >> "$GITHUB_OUTPUT"
+            node tools/fault-reach.mjs --all --github-output
           else
             node tools/fault-reach.mjs "$(git merge-base origin/main HEAD)" --github-output
           fi
@@ -211,12 +220,13 @@ jobs:
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:
     needs: quick
-    if: ${{ inputs.faults }}
+    if: ${{ !inputs.odt_faults && needs.quick.outputs.docx_files != '' && needs.quick.outputs.docx_files != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
+        catalog: ${{ fromJSON(needs.quick.outputs.docx_files) }}
         # the shard indices of the fault_shards choice; a matrix cannot count to n itself
         shard: ${{ fromJSON('{"1":[0],"2":[0,1],"4":[0,1,2,3],"8":[0,1,2,3,4,5,6,7]}')[inputs.fault_shards || '1'] }}
     steps:
@@ -250,7 +260,7 @@ jobs:
 
       - name: Faults
         env:
-          FAULTS: ${{ inputs.faults }}
+          FAULTS: ${{ matrix.catalog }}
           FAULT_SHARD: ${{ matrix.shard }}/${{ inputs.fault_shards || '1' }}
         run: python3 tools/docx-diff/faults.py "$FAULTS"
 
@@ -258,8 +268,8 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          # one shard keeps the name the trail and crates/README.md cite
-          name: docx-diff-faults${{ inputs.fault_shards != '1' && inputs.fault_shards && format('-{0}', matrix.shard) || '' }}
+          # a targeted single-catalog, single-shard run keeps its historical artifact name
+          name: ${{ inputs.faults && (inputs.fault_shards == '1' || !inputs.fault_shards) && 'docx-diff-faults' || format('docx-diff-faults-{0}', strategy.job-index) }}
           path: tools/docx-diff/out
           if-no-files-found: ignore
 

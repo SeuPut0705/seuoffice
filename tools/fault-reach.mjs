@@ -23,11 +23,9 @@
  *     path that code names as a string literal, reaches it;
  *   - the corpus: a document of a type the code lists with
  *     `git ls-files '*.<ext>'` reaches it, wherever it lies.
- * Of what is left, Rust, TypeScript and Markdown files, docs/, and a
- * workspace package's package.json reach none; anything else (a workflow, a
- * lock file, a root manifest, a script) reaches all. The rule is only as sound
- * as those three ways are complete: code that reads a path it builds at run
- * time from parts escapes it. main and an `all_faults` run never use it.
+ * Files not covered by those dependency rules conservatively reach every
+ * engine. Only unmatched documentation under docs/ is excluded. main and an
+ * `all_faults` run select every engine and every DOCX fault catalog.
  */
 import { execFileSync } from 'node:child_process'
 import {
@@ -35,6 +33,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -62,6 +61,17 @@ export const ENGINES = {
     runner: 'tools/odt-diff/faults.mjs',
     entries: ['tools/odt-diff/main.ts'],
   },
+}
+
+/** The DOCX catalogs a run must execute, or a deliberately targeted catalog. */
+export function docxFaultFiles({ requested = '', reached, files }) {
+  if (requested) return [requested]
+  if (!reached) return []
+  const catalogs = files
+    .filter((file) => /^tools\/docx-diff\/faults-[^/]+\.json$/.test(file))
+    .sort()
+  if (catalogs.length === 0) throw new Error('no DOCX fault catalogs found for a reached engine')
+  return catalogs
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -216,11 +226,7 @@ export function reach(changed, { engines, graph, programs, officeWasmText }) {
     }
     const hits = new Set([...byWasm, ...byPath])
     if (hits.size > 0 || file.startsWith('crates/')) return hits
-    if (/\.(ts|tsx|rs|md)$/.test(file) || file.startsWith('docs/')) return hits
-    // a workspace package's manifest is read only to resolve an import of that
-    // package, and those imports are the program's; a dependency it adds also
-    // changes package-lock.json, which reaches all
-    if (/^(packages|apps)\/[^/]+\/package\.json$/.test(file)) return hits
+    if (file.startsWith('docs/')) return hits
     return all
   }
 
@@ -229,36 +235,48 @@ export function reach(changed, { engines, graph, programs, officeWasmText }) {
   return result
 }
 
-function main([base, ...flags]) {
-  if (!base) {
-    console.error('usage: node tools/fault-reach.mjs <base-ref> [--github-output]')
+function main(args) {
+  const flags = args.filter((arg) => arg.startsWith('--'))
+  const base = args.find((arg) => !arg.startsWith('--'))
+  const all = flags.includes('--all')
+  if (!base && !all) {
+    console.error('usage: node tools/fault-reach.mjs <base-ref>|--all [--github-output]')
     process.exit(2)
   }
-  const changed = run('git', ['diff', '--name-only', '--no-renames', base, 'HEAD'])
-    .split('\n')
-    .filter(Boolean)
-  const metadata = JSON.parse(
-    run('cargo', [
-      'metadata',
-      '--format-version',
-      '1',
-      '--locked',
-      '--manifest-path',
-      'crates/Cargo.toml',
-    ]),
-  )
-  const officeWasmText = Object.fromEntries(
-    run('git', ['ls-files', 'crates/office-wasm/src'])
+  if (all && (process.env.DOCX_FAULTS || process.env.ODT_FAULTS))
+    throw new Error('all faults cannot be combined with a targeted fault selection')
+  let result
+  if (all) {
+    result = Object.fromEntries(
+      Object.keys(ENGINES).map((engine) => [engine, ['all faults requested']]),
+    )
+  } else {
+    const changed = run('git', ['diff', '--name-only', '--no-renames', base, 'HEAD'])
       .split('\n')
-      .filter((f) => f.endsWith('.rs') && existsSync(resolve(root, f)))
-      .map((f) => [f, readFileSync(resolve(root, f), 'utf8')]),
-  )
-  const result = reach(changed, {
-    engines: ENGINES,
-    graph: crateGraph(metadata),
-    programs: gatePrograms(ENGINES),
-    officeWasmText,
-  })
+      .filter(Boolean)
+    const metadata = JSON.parse(
+      run('cargo', [
+        'metadata',
+        '--format-version',
+        '1',
+        '--locked',
+        '--manifest-path',
+        'crates/Cargo.toml',
+      ]),
+    )
+    const officeWasmText = Object.fromEntries(
+      run('git', ['ls-files', 'crates/office-wasm/src'])
+        .split('\n')
+        .filter((f) => f.endsWith('.rs') && existsSync(resolve(root, f)))
+        .map((f) => [f, readFileSync(resolve(root, f), 'utf8')]),
+    )
+    result = reach(changed, {
+      engines: ENGINES,
+      graph: crateGraph(metadata),
+      programs: gatePrograms(ENGINES),
+      officeWasmText,
+    })
+  }
   for (const [engine, files] of Object.entries(result)) {
     const shown =
       files.slice(0, 5).join(', ') + (files.length > 5 ? ` and ${files.length - 5} more` : '')
@@ -268,6 +286,13 @@ function main([base, ...flags]) {
     if (flags.includes('--github-output'))
       appendFileSync(process.env.GITHUB_OUTPUT, `${engine}=${files.length > 0}\n`)
   }
+  const catalogs = docxFaultFiles({
+    requested: process.env.DOCX_FAULTS,
+    reached: result.docx.length > 0,
+    files: readdirSync(resolve(root, 'tools/docx-diff')).map((file) => `tools/docx-diff/${file}`),
+  })
+  if (flags.includes('--github-output'))
+    appendFileSync(process.env.GITHUB_OUTPUT, `docx_files=${JSON.stringify(catalogs)}\n`)
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main(process.argv.slice(2))
