@@ -658,6 +658,21 @@ fn take_pending_reads(st: &mut State, body: Id) -> Vec<Id> {
     pending
 }
 
+/// The host already answered a read of the stream `source` (any branch) with
+/// its end or its failure, which no task has taken yet: in JavaScript the
+/// stream closed or errored then, and a later abort leaves it as it is.
+fn ended_on_host(st: &State, source: Id) -> bool {
+    st.bodies
+        .values()
+        .filter(|b| b.source == source)
+        .flat_map(|b| &b.reads)
+        .any(|read| match st.ops.get(read) {
+            Some(Some(Ok(answer))) => !matches!(answer, Answer::Chunk(_)),
+            Some(Some(Err(_))) => true,
+            _ => false,
+        })
+}
+
 struct Inner {
     host: RefCell<HostInfo>,
     st: RefCell<State>,
@@ -994,8 +1009,10 @@ impl Rt {
                 if let Some(slot @ None) = st.ops.get_mut(&op) {
                     *slot = Some(Err(reason.clone()));
                     st.cmds.push(Cmd::Cancel { id: op });
-                } else if let Some(body) = st.bodies.get_mut(&op)
+                } else if let Some(body) = st.bodies.get(&op)
                     && !body.done
+                    && !ended_on_host(&st, body.source)
+                    && let Some(body) = st.bodies.get_mut(&op)
                 {
                     // the signal errors the stream itself, whatever its branches
                     body.done = true;
@@ -2615,5 +2632,39 @@ mod tests {
         runtime.poll();
         assert_eq!(a.take().expect("A ended").unwrap(), None);
         assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
+    }
+
+    #[test]
+    fn an_abort_after_the_host_ended_the_stream_in_the_same_batch_changes_nothing() {
+        let mut runtime = Runtime::new(host());
+        // the host's end or failure is in before the abort, though no task ran in between
+        let answers: [Result<Answer, JsError>; 2] =
+            [Ok(Answer::End), Err(JsError::type_error("terminated"))];
+        for answer in answers {
+            let (response, _, signal) = fetched_with_signal(&mut runtime);
+            let reader = response.clone();
+            let read = runtime.start(async move { reader.read().await });
+            let id = read_of(&runtime.poll());
+            let failed = answer.as_ref().err().map(|e| e.message.clone());
+            runtime.feed(match answer {
+                Ok(answer) => Event::Done { id, answer },
+                Err(error) => Event::Failed { id, error },
+            });
+            signal.abort(None);
+            // the stream ended on the host: nothing to cancel
+            assert!(runtime.poll().is_empty());
+            let first = read.take().expect("the read ended");
+            let later = read_now(&mut runtime, &response);
+            match failed {
+                None => {
+                    assert_eq!(first.unwrap(), None);
+                    assert_eq!(later.unwrap(), None);
+                }
+                Some(message) => {
+                    assert_eq!(first.unwrap_err().message, message);
+                    assert_eq!(later.unwrap_err().message, message);
+                }
+            }
+        }
     }
 }
