@@ -658,18 +658,16 @@ fn take_pending_reads(st: &mut State, body: Id) -> Vec<Id> {
     pending
 }
 
-/// The host already answered a read of the stream `source` (any branch) with
-/// its end or its failure, which no task has taken yet: in JavaScript the
-/// stream closed or errored then, and a later abort leaves it as it is.
-fn ended_on_host(st: &State, source: Id) -> bool {
+/// A terminal host answer for a read of `source` that no task has taken yet.
+/// Propagate it before abort settles other read operations in the same batch.
+fn terminal_on_host(st: &State, source: Id) -> Option<&Result<Answer, JsError>> {
     st.bodies
         .values()
         .filter(|b| b.source == source)
         .flat_map(|b| &b.reads)
-        .any(|read| match st.ops.get(read) {
-            Some(Some(Ok(answer))) => !matches!(answer, Answer::Chunk(_)),
-            Some(Some(Err(_))) => true,
-            _ => false,
+        .find_map(|read| match st.ops.get(read) {
+            Some(Some(outcome)) if !matches!(outcome, Ok(Answer::Chunk(_))) => Some(outcome),
+            _ => None,
         })
 }
 
@@ -1005,13 +1003,32 @@ impl Rt {
         };
         {
             let mut st = self.0.st.borrow_mut();
+            // A terminal host answer precedes this abort even if its read task
+            // has not run. Settle its other pending reads before abort can.
+            for body in &bound {
+                let terminal = st
+                    .bodies
+                    .get(body)
+                    .and_then(|b| terminal_on_host(&st, b.source))
+                    .cloned();
+                if let Some(terminal) = terminal {
+                    let State { bodies, ops, .. } = &mut *st;
+                    if let Some(b) = bodies.get(body) {
+                        for read in &b.reads {
+                            if let Some(slot @ None) = ops.get_mut(read) {
+                                *slot = Some(terminal.clone());
+                            }
+                        }
+                    }
+                }
+            }
             for op in bound {
                 if let Some(slot @ None) = st.ops.get_mut(&op) {
                     *slot = Some(Err(reason.clone()));
                     st.cmds.push(Cmd::Cancel { id: op });
                 } else if let Some(body) = st.bodies.get(&op)
                     && !body.done
-                    && !ended_on_host(&st, body.source)
+                    && terminal_on_host(&st, body.source).is_none()
                     && let Some(body) = st.bodies.get_mut(&op)
                 {
                     // the signal errors the stream itself, whatever its branches
@@ -2663,6 +2680,64 @@ mod tests {
                 Some(message) => {
                     assert_eq!(first.unwrap_err().message, message);
                     assert_eq!(later.unwrap_err().message, message);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_host_terminal_answer_wins_over_abort_for_all_pending_reads() {
+        for failed in [false, true] {
+            for answered in [0, 1] {
+                let mut runtime = Runtime::new(host());
+                let (response, _, signal) = fetched_with_signal(&mut runtime);
+                let reads: Vec<_> = (0..2)
+                    .map(|_| {
+                        let reader = response.clone();
+                        runtime.start(async move { reader.read().await })
+                    })
+                    .collect();
+                let ids: Vec<_> = runtime
+                    .poll()
+                    .into_iter()
+                    .filter_map(|cmd| match cmd {
+                        Cmd::Read { id, .. } => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(ids.len(), 2);
+                runtime.feed(if failed {
+                    Event::Failed {
+                        id: ids[answered],
+                        error: JsError::type_error("terminated"),
+                    }
+                } else {
+                    Event::Done {
+                        id: ids[answered],
+                        answer: Answer::End,
+                    }
+                });
+                // No poll between the host terminal answer and the abort.
+                signal.abort(Some(JsError::error("later abort")));
+                let commands = runtime.poll();
+                for read in reads {
+                    let outcome = read.take().expect("every pending read settled");
+                    if failed {
+                        let error = outcome.unwrap_err();
+                        assert_eq!(error.class, "TypeError");
+                        assert_eq!(error.message, "terminated");
+                    } else {
+                        assert_eq!(outcome.unwrap(), None);
+                    }
+                }
+                assert!(commands.is_empty(), "{commands:?}");
+                if failed {
+                    assert_eq!(
+                        read_now(&mut runtime, &response).unwrap_err().message,
+                        "terminated"
+                    );
+                } else {
+                    assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
                 }
             }
         }
