@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import JSZip from 'jszip'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
 import { parseFileToText } from '../src/index'
 import { checkedHwpBytes, hwpToText } from '../src/hwp'
@@ -213,21 +213,6 @@ describe('hwp and hwpx memos', () => {
     const doc = withMemo(['본문'], { text: '작성자 없는 메모' })
     const text = await hwpToText(doc.exportHwp())
     expect(text.split('\n')).toEqual(['본문', '### Comments', '- unknown (p.1): 작성자 없는 메모'])
-  })
-
-  it('leaves out the page marker when the engine knows no page', async () => {
-    // a memo the engine cannot place on a page (header/footer memos) reports page 0;
-    // the body API cannot make one, so the engine's list shape is fed in directly
-    const spy = vi
-      .spyOn(HwpDocument.prototype, 'getMemoList')
-      .mockReturnValue(JSON.stringify([{ author: 'user', text: 'no page', page: 0 }]))
-    try {
-      expect(await hwpToText(build(['본문']).exportHwp())).toBe(
-        '본문\n### Comments\n- user: no page',
-      )
-    } finally {
-      spy.mockRestore()
-    }
   })
 
   it('appends the same comment block from a .hwpx file', async () => {

@@ -83,15 +83,35 @@ impl fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
+/// Attribute configurations used by the document readers. Prefixes affect
+/// dangerous-name checks and enumeration order even though the tree stores
+/// attribute names without the synthetic `@_` prefix.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttributeMode {
+    Raw,
+    Prefixed,
+    Stripped,
+    Ignored,
+}
+
 /// Parses `xml` into the node list `xmlParser.parse(xml)` returns.
 ///
 /// `max_nested_tags` is the parser's `maxNestedTags`: 100 for `xmlParser`,
 /// 100 000 for `deepXmlParser`.
 pub fn parse_ordered(xml: &str, max_nested_tags: usize) -> Result<Vec<XNode>, ParseError> {
+    parse_ordered_with_attributes(xml, max_nested_tags, AttributeMode::Raw)
+}
+
+pub fn parse_ordered_with_attributes(
+    xml: &str,
+    max_nested_tags: usize,
+    attribute_mode: AttributeMode,
+) -> Result<Vec<XNode>, ParseError> {
     let source = normalize_newlines(xml);
     Parser {
         source: &source,
         max_nested_tags,
+        attribute_mode,
         root: Vec::new(),
         open: Vec::new(),
         detached: false,
@@ -121,6 +141,7 @@ pub(crate) fn normalize_newlines(xml: &str) -> Cow<'_, str> {
 struct Parser<'a> {
     source: &'a str,
     max_nested_tags: usize,
+    attribute_mode: AttributeMode,
     root: Vec<XNode>,
     open: Vec<XElement>,
     /// A closing tag arrived with no element open: the original loses its
@@ -205,7 +226,7 @@ impl Parser<'_> {
             tag_expression(self.source, at + 1, b"?>").ok_or(ParseError::PiNotClosed)?;
         let (name, attribute_text) = split_tag_expression(&expression);
         self.flush_text()?;
-        let attrs = self.attributes(attribute_text)?;
+        let attrs = self.attributes(attribute_text, true)?;
         if let Some(attrs) = &attrs {
             // `Number(version) || 1.0`, then anything but 1.1 means 1.0
             self.xml_1_1 = attrs
@@ -215,7 +236,7 @@ impl Parser<'_> {
         }
         let element = XElement {
             name: name.to_owned(),
-            attrs: if name == attribute_text {
+            attrs: if name == attribute_text || self.attribute_mode == AttributeMode::Ignored {
                 Vec::new()
             } else {
                 attrs.unwrap_or_default()
@@ -270,7 +291,7 @@ impl Parser<'_> {
             attributes_present = false;
         }
         let attrs = if attributes_present {
-            self.attributes(attribute_text)?.unwrap_or_default()
+            self.attributes(attribute_text, false)?.unwrap_or_default()
         } else {
             Vec::new()
         };
@@ -300,13 +321,35 @@ impl Parser<'_> {
     }
 
     /// `buildAttributesMap`: `None` when no attribute has a quoted value.
-    fn attributes(&self, text: &str) -> Result<Option<Vec<(String, String)>>, ParseError> {
+    fn attributes(
+        &self,
+        text: &str,
+        force: bool,
+    ) -> Result<Option<Vec<(String, String)>>, ParseError> {
+        if self.attribute_mode == AttributeMode::Ignored && !force {
+            return Ok(None);
+        }
         let mut map = AttributeMap::default();
         let mut position = 0;
         while let Some(token) = next_attribute(text, position) {
             position = token.end;
-            // a reserved name throws even when the token has no value
-            let name = sanitize_name(token.name)?;
+            let raw = token.name;
+            let name = match self.attribute_mode {
+                AttributeMode::Raw => sanitize_name(raw)?,
+                AttributeMode::Prefixed => Cow::Borrowed(raw),
+                AttributeMode::Stripped | AttributeMode::Ignored => {
+                    let mut pieces = raw.split(':');
+                    let prefix = pieces.next().unwrap_or_default();
+                    if prefix == "xmlns" {
+                        continue;
+                    }
+                    let name = match (pieces.next(), pieces.next()) {
+                        (Some(local), None) => local,
+                        _ => raw,
+                    };
+                    Cow::Borrowed(name)
+                }
+            };
             if let Some(value) = token.value {
                 map.set(
                     name.into_owned(),
@@ -314,7 +357,13 @@ impl Parser<'_> {
                 );
             }
         }
-        Ok(map.into_object_order())
+        Ok(if self.attribute_mode == AttributeMode::Raw {
+            map.into_object_order()
+        } else if map.entries.is_empty() {
+            None
+        } else {
+            Some(map.entries)
+        })
     }
 }
 

@@ -1,0 +1,385 @@
+{
+  "node": "v22.23.5",
+  "command": "epubCall",
+  "seed": 20261112,
+  "fuzz": 100,
+  "group": null,
+  "provenance": {
+    "wasm": {
+      "path": "C:\\Users\\admin\\Desktop\\github\\seuoffice-rust-d\\crates\\target\\wasm32-wasip1\\release\\office_wasm.wasm",
+      "sha256": "a541a6c19ba808eff31086778aa932e089d04f908f93e05a46649d5ce19964e2"
+    },
+    "crates": {
+      "root": "C:\\Users\\admin\\Desktop\\github\\seuoffice-rust-d\\crates",
+      "sha256": "46b528d86cbc505524620938f17760d78ad365dc3a36d3157701f9b4b65866e6",
+      "files": 132
+    },
+    "git": {
+      "head": "51ee124339ec50848275d7cde2d521dc4d47e000",
+      "dirty": true,
+      "statusSha256": "705a78d679ce87180566926ad583b30e9aa50468e7d2eb964a24c7dd12985b32"
+    }
+  },
+  "functions": {
+    "primitives": 13,
+    "ranges": 7,
+    "package": 5
+  },
+  "populations": {
+    "hasUrlScheme.corpus": 0,
+    "hasUrlScheme.built": 25,
+    "hasUrlScheme.mutated": 100,
+    "normalizeZipPath.corpus": 0,
+    "normalizeZipPath.built": 15,
+    "normalizeZipPath.mutated": 100,
+    "directoryOf.corpus": 0,
+    "directoryOf.built": 9,
+    "directoryOf.mutated": 100,
+    "fileNameOf.corpus": 0,
+    "fileNameOf.built": 9,
+    "fileNameOf.mutated": 100,
+    "resolveHref.corpus": 0,
+    "resolveHref.built": 150,
+    "resolveHref.mutated": 100,
+    "isFontObfuscationAlgorithm.corpus": 0,
+    "isFontObfuscationAlgorithm.built": 7,
+    "isFontObfuscationAlgorithm.mutated": 100,
+    "fontObfuscationKey.corpus": 0,
+    "fontObfuscationKey.built": 39,
+    "fontObfuscationKey.mutated": 100,
+    "obfuscateFontWithKey.corpus": 0,
+    "obfuscateFontWithKey.built": 120,
+    "obfuscateFont.corpus": 0,
+    "obfuscateFont.built": 72,
+    "deobfuscateFont.corpus": 0,
+    "deobfuscateFont.built": 72,
+    "sha1.corpus": 0,
+    "sha1.built": 11,
+    "decodeEntryText.corpus": 0,
+    "decodeEntryText.built": 30,
+    "encodeEntryText.corpus": 0,
+    "encodeEntryText.built": 40,
+    "sortReplacements.corpus": 0,
+    "sortReplacements.built": 199,
+    "validateReplacements.corpus": 0,
+    "validateReplacements.built": 193,
+    "applyReplacements.corpus": 0,
+    "applyReplacements.built": 214,
+    "mapOffset.corpus": 0,
+    "mapOffset.built": 208,
+    "composeReplacements.corpus": 0,
+    "composeReplacements.built": 329,
+    "isVerticalWritingMode.corpus": 0,
+    "isVerticalWritingMode.built": 22,
+    "cssDeclaresVerticalWriting.corpus": 0,
+    "cssDeclaresVerticalWriting.built": 45,
+    "cssDeclaresVerticalWriting.mutated": 100,
+    "packagePathFromContainer.corpus": 0,
+    "packagePathFromContainer.built": 30,
+    "scanEncryption.corpus": 0,
+    "scanEncryption.built": 27,
+    "parsePackage.corpus": 0,
+    "parsePackage.built": 61,
+    "navTocEntries.corpus": 0,
+    "navTocEntries.built": 23,
+    "ncxEntries.corpus": 0,
+    "ncxEntries.built": 20
+  },
+  "tallies": {
+    "hasUrlScheme": {
+      "compared": 125,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 2
+    },
+    "normalizeZipPath": {
+      "compared": 115,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 87
+    },
+    "directoryOf": {
+      "compared": 109,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 38
+    },
+    "fileNameOf": {
+      "compared": 109,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 63
+    },
+    "resolveHref": {
+      "compared": 250,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 148
+    },
+    "isFontObfuscationAlgorithm": {
+      "compared": 107,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 2
+    },
+    "fontObfuscationKey": {
+      "compared": 139,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 70
+    },
+    "obfuscateFontWithKey": {
+      "compared": 120,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 52
+    },
+    "obfuscateFont": {
+      "compared": 72,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 30
+    },
+    "deobfuscateFont": {
+      "compared": 72,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 30
+    },
+    "sha1": {
+      "compared": 11,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 11
+    },
+    "decodeEntryText": {
+      "compared": 30,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 25
+    },
+    "encodeEntryText": {
+      "compared": 40,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 21
+    },
+    "sortReplacements": {
+      "compared": 199,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 142
+    },
+    "validateReplacements": {
+      "compared": 193,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 48
+    },
+    "applyReplacements": {
+      "compared": 214,
+      "differences": 0,
+      "listed": 0,
+      "errors": 58,
+      "outcomes": 147
+    },
+    "mapOffset": {
+      "compared": 208,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 27
+    },
+    "composeReplacements": {
+      "compared": 329,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 295
+    },
+    "isVerticalWritingMode": {
+      "compared": 22,
+      "differences": 1,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 2
+    },
+    "cssDeclaresVerticalWriting": {
+      "compared": 145,
+      "differences": 1,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 2
+    },
+    "packagePathFromContainer": {
+      "compared": 30,
+      "differences": 0,
+      "listed": 0,
+      "errors": 11,
+      "outcomes": 19
+    },
+    "scanEncryption": {
+      "compared": 27,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 19
+    },
+    "parsePackage": {
+      "compared": 61,
+      "differences": 0,
+      "listed": 0,
+      "errors": 7,
+      "outcomes": 39
+    },
+    "navTocEntries": {
+      "compared": 23,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 17
+    },
+    "ncxEntries": {
+      "compared": 20,
+      "differences": 0,
+      "listed": 0,
+      "errors": 0,
+      "outcomes": 20
+    }
+  },
+  "differences": [
+    {
+      "fn": "isVerticalWritingMode",
+      "input": {
+        "label": "mode 13 \"vertıcal-rl\"",
+        "args": {
+          "value": "vertıcal-rl"
+        }
+      },
+      "typescript": {
+        "value": false
+      },
+      "rust": {
+        "value": true
+      },
+      "rustKeyOrders": [
+        {
+          "path": "/",
+          "keys": [
+            "value"
+          ]
+        }
+      ],
+      "order": null
+    },
+    {
+      "fn": "cssDeclaresVerticalWriting",
+      "input": {
+        "label": "\"writing-mode: vertıcal-rl\"",
+        "text": "writing-mode: vertıcal-rl"
+      },
+      "typescript": {
+        "value": false
+      },
+      "rust": {
+        "value": true
+      },
+      "rustKeyOrders": [
+        {
+          "path": "/",
+          "keys": [
+            "value"
+          ]
+        }
+      ],
+      "order": null
+    }
+  ],
+  "runtimeFailures": [],
+  "matchedPopulation": [],
+  "reproduced": [],
+  "ledgerOnly": [],
+  "stale": [],
+  "staleReasons": {},
+  "missingFloors": [
+    "hasUrlScheme.corpus",
+    "hasUrlScheme.built",
+    "hasUrlScheme.mutated",
+    "normalizeZipPath.corpus",
+    "normalizeZipPath.built",
+    "normalizeZipPath.mutated",
+    "directoryOf.corpus",
+    "directoryOf.built",
+    "directoryOf.mutated",
+    "fileNameOf.corpus",
+    "fileNameOf.built",
+    "fileNameOf.mutated",
+    "resolveHref.corpus",
+    "resolveHref.built",
+    "resolveHref.mutated",
+    "isFontObfuscationAlgorithm.corpus",
+    "isFontObfuscationAlgorithm.built",
+    "isFontObfuscationAlgorithm.mutated",
+    "fontObfuscationKey.corpus",
+    "fontObfuscationKey.built",
+    "fontObfuscationKey.mutated",
+    "obfuscateFontWithKey.corpus",
+    "obfuscateFontWithKey.built",
+    "obfuscateFont.corpus",
+    "obfuscateFont.built",
+    "deobfuscateFont.corpus",
+    "deobfuscateFont.built",
+    "sha1.corpus",
+    "sha1.built",
+    "decodeEntryText.corpus",
+    "decodeEntryText.built",
+    "encodeEntryText.corpus",
+    "encodeEntryText.built",
+    "sortReplacements.corpus",
+    "sortReplacements.built",
+    "validateReplacements.corpus",
+    "validateReplacements.built",
+    "applyReplacements.corpus",
+    "applyReplacements.built",
+    "mapOffset.corpus",
+    "mapOffset.built",
+    "composeReplacements.corpus",
+    "composeReplacements.built",
+    "isVerticalWritingMode.corpus",
+    "isVerticalWritingMode.built",
+    "cssDeclaresVerticalWriting.corpus",
+    "cssDeclaresVerticalWriting.built",
+    "cssDeclaresVerticalWriting.mutated",
+    "packagePathFromContainer.corpus",
+    "packagePathFromContainer.built",
+    "scanEncryption.corpus",
+    "scanEncryption.built",
+    "parsePackage.corpus",
+    "parsePackage.built",
+    "navTocEntries.corpus",
+    "navTocEntries.built",
+    "ncxEntries.corpus",
+    "ncxEntries.built",
+    "functions.primitives",
+    "functions.ranges",
+    "functions.package"
+  ],
+  "unknownFloors": [],
+  "duplicateFunctions": [],
+  "passed": false
+}

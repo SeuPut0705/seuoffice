@@ -8,11 +8,15 @@ members = [
   "pptx-engine",
   "mtx",
   "omml",
+  "file-parse",
+  "epub-engine",
   "office-wasm",
+  "saxes",
+  "seu-host",
   "spike-one-run-save",
 ]
 # third-party source carried with patches, outside fmt, clippy and the workspace tests
-exclude = ["vendor"]
+exclude = ["vendor", ".rhwp-source"]
 resolver = "3"
 
 [workspace.package]
@@ -31,6 +35,10 @@ pptx-engine = { path = "pptx-engine" }
 odt-engine = { path = "odt-engine" }
 mtx = { path = "mtx" }
 omml = { path = "omml" }
+file-parse = { path = "file-parse" }
+epub-engine = { path = "epub-engine" }
+saxes = { path = "saxes" }
+seu-host = { path = "seu-host" }
 # the decoders of the Encoding Standard, which TextDecoder follows
 encoding_rs = "0.8"
 # the inflater the zip crate already uses; entries are read without its CRC check

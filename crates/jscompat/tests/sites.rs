@@ -98,7 +98,7 @@ fn rust_files(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
             // build output, and third-party source that is not ported code
             if path
                 .file_name()
-                .is_some_and(|name| name != "target" && name != "vendor")
+                .is_some_and(|name| name != "target" && name != "vendor" && name != ".rhwp-source")
             {
                 rust_files(&path, found);
             }
@@ -128,6 +128,8 @@ const RESTARTS_THAT_MAY_READ_AHEAD: &[(&str, usize)] = &[
     // commentEntries: a search restarts only where a match began inside the
     // comment just read and ended past it
     ("docx-engine/src/withheld.rs", 1),
+    // one search per withheld span; `\r?\n[ \t]*\r?\n` reads nothing ahead
+    ("file-parse/src/markdown.rs", 1),
     // one pass over the attributes of one tag
     ("ooxml-pkg/src/normalize.rs", 1),
     // scanSlide: one pass over the shape tree, once per part it scans

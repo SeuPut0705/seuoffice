@@ -142,6 +142,49 @@ fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
     Ok(())
 }
 
+/// `loadDocxZip`: loads a docx resolving part names the way Word does. `Err`
+/// is the message of what the TypeScript throws.
+pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
+    let prepared = neutralize_unicode_path_fields(bytes);
+    let prepared = prepared.as_deref().unwrap_or(bytes);
+    let mut package = load_zip_package(prepared)?;
+    normalize_ooxml_parts(&mut package)?;
+    Ok(package)
+}
+
+/// Which of the three checks of a load refused the archive, with the message
+/// of the TypeScript: `openEpub` names the refusal by the stage.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoadFailure {
+    /// `assertZipInflatesWithinLimits`
+    Gate(String),
+    /// `JSZip.loadAsync`
+    Archive(String),
+    /// `assertDeclaredSizesWithinLimits` over the loaded entries
+    Declared(String),
+}
+
+impl LoadFailure {
+    pub fn into_message(self) -> String {
+        match self {
+            Self::Gate(message) | Self::Archive(message) | Self::Declared(message) => message,
+        }
+    }
+}
+
+/// The gate, JSZip's load and the declared-size gate, one after the other,
+/// each failure named. With `keep_raw` every part also keeps its record
+/// (`Part::raw`), which a save that copies entries through needs.
+pub fn load_zip_package_staged(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    keep_raw: bool,
+) -> Result<Package, LoadFailure> {
+    load_staged(bytes, limits, keep_raw, |parts| {
+        assert_declared_sizes_within_limits(parts, limits)
+    })
+}
+
 /// The metered gate, `JSZip.loadAsync` and the declared-size check that runs
 /// on the loaded zip. The engines word that check differently, so each passes
 /// its own. `Err` is the message of what the TypeScript throws.
@@ -150,9 +193,18 @@ pub fn load_package(
     limits: &ZipLimits,
     assert_declared: impl FnOnce(&[DeclaredPart<'_>]) -> Result<(), String>,
 ) -> Result<Package, String> {
+    load_staged(bytes, limits, false, assert_declared).map_err(LoadFailure::into_message)
+}
+
+fn load_staged(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    keep_raw: bool,
+    assert_declared: impl FnOnce(&[DeclaredPart<'_>]) -> Result<(), String>,
+) -> Result<Package, LoadFailure> {
     // metered inflation first: past this point no part is larger than a limit
-    assert_zip_inflates_within_limits(bytes, limits)?;
-    let entries = jszip::load(bytes)?;
+    assert_zip_inflates_within_limits(bytes, limits).map_err(LoadFailure::Gate)?;
+    let entries = jszip::load(bytes, keep_raw).map_err(LoadFailure::Archive)?;
     let mut package = Package::default();
     // what `assertZipWithinLimits` reads from the zip object: a later entry of
     // the same name replaces the earlier one
@@ -163,33 +215,33 @@ pub fn load_package(
         uncompressed_size,
         content,
         date,
+        raw,
     } in entries
     {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
-        package.set(Part::new(name, is_dir, content).with_date(Some(date)));
+        package.set(
+            Part::new(name, is_dir, content)
+                .with_date(Some(date))
+                .with_raw(raw),
+        );
     }
-    let parts: Vec<DeclaredPart<'_>> = package
-        .parts()
-        .iter()
-        .filter(|part| !part.is_dir)
-        .map(|part| DeclaredPart {
-            name: &part.name,
-            usize: declared[part.name.as_str()],
-        })
-        .collect();
-    assert_declared(&parts)?;
-    drop(parts);
+    {
+        let parts: Vec<DeclaredPart<'_>> = package
+            .parts()
+            .iter()
+            .filter(|part| !part.is_dir)
+            .map(|part| DeclaredPart {
+                name: &part.name,
+                usize: declared[part.name.as_str()],
+            })
+            .collect();
+        assert_declared(&parts).map_err(LoadFailure::Declared)?;
+    }
+
     Ok(package)
 }
 
-/// `loadDocxZip`: loads a docx resolving part names the way Word does. `Err`
-/// is the message of what the TypeScript throws.
-pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
-    let prepared = neutralize_unicode_path_fields(bytes);
-    let prepared = prepared.as_deref().unwrap_or(bytes);
-    let mut package = load_package(prepared, &DEFAULT_ZIP_LIMITS, |parts| {
-        assert_declared_sizes_within_limits(parts, &DEFAULT_ZIP_LIMITS)
-    })?;
-    normalize_ooxml_parts(&mut package)?;
-    Ok(package)
+/// Metered zip loading with JSZip's names and no Word-only normalization.
+pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
+    load_zip_package_staged(bytes, &DEFAULT_ZIP_LIMITS, false).map_err(LoadFailure::into_message)
 }

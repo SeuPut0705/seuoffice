@@ -13,6 +13,20 @@ const rustupBin = '/opt/homebrew/opt/rustup/bin'
 const env = { ...process.env }
 if (existsSync(rustupBin)) env.PATH = `${rustupBin}${delimiter}${env.PATH ?? ''}`
 
+// the hwp reader of file-parse compiles rhwp from its patched source (vendor/rhwp-core,
+// decision 0050), a path dependency cargo resolves before it builds anything
+if (!existsSync(resolve(here, '../.rhwp-source/v0.9.0/Cargo.toml'))) {
+  const source = spawnSync(
+    process.execPath,
+    [resolve(here, '../../tools/build-rhwp-core.mjs'), '--source-only'],
+    { env, stdio: 'inherit' },
+  )
+  if (source.status !== 0) {
+    console.error('office-wasm: preparing the rhwp source failed')
+    process.exit(source.status ?? 1)
+  }
+}
+
 const build = spawnSync(
   'cargo',
   [

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "primitives-adobe-prefix",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "const ADOBE_PREFIX_BYTES: usize = 1024;",
+    "to": "const ADOBE_PREFIX_BYTES: usize = 1040;"
+  },
+  {
+    "id": "primitives-idpf-prefix",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "const IDPF_PREFIX_BYTES: usize = 1040;",
+    "to": "const IDPF_PREFIX_BYTES: usize = 1041;"
+  },
+  {
+    "id": "primitives-uuid-prefix-case",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "prefix.eq_ignore_ascii_case(\"urn:uuid:\")",
+    "to": "prefix == \"urn:uuid:\""
+  },
+  {
+    "id": "primitives-utf16-endianness",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "let little_endian = encoding == \"utf-16le\";",
+    "to": "let little_endian = encoding.starts_with(\"utf-16\");"
+  },
+  {
+    "id": "primitives-sha1-padding",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "((data.len() + 8) / 64 + 1) * 64",
+    "to": "((data.len() + 9) / 64 + 1) * 64"
+  },
+  {
+    "id": "primitives-dot-dot-pop",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "            out.pop();\n",
+    "to": ""
+  },
+  {
+    "id": "integrator-primitives-empty-fragment",
+    "group": "primitives",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "(!raw_fragment.is_empty()).then(|| percent_decode(raw_fragment))",
+    "to": "Some(percent_decode(raw_fragment))"
+  },
+  {
+    "id": "ranges-map-end-inclusive",
+    "group": "ranges",
+    "file": "crates/epub-engine/src/ranges.rs",
+    "from": "offset < r.end {",
+    "to": "offset <= r.end {"
+  },
+  {
+    "id": "ranges-is-integer-infinite",
+    "group": "ranges",
+    "file": "crates/epub-engine/src/ranges.rs",
+    "from": "x.is_finite() && x.trunc() == x",
+    "to": "x.trunc() == x"
+  },
+  {
+    "id": "ranges-slice-rounds",
+    "group": "ranges",
+    "file": "crates/epub-engine/src/ranges.rs",
+    "from": "relative.trunc()",
+    "to": "relative.round()"
+  },
+  {
+    "id": "ranges-sort-one-run",
+    "group": "ranges",
+    "file": "crates/epub-engine/src/ranges.rs",
+    "from": "let min_run = min_run_length(remaining);",
+    "to": "let min_run = remaining;"
+  },
+  {
+    "id": "integrator-regex-folds-past-ascii-ranges",
+    "group": "ranges",
+    "file": "crates/jscompat/src/regex.rs",
+    "from": "let shadows = flags.contains('i') && without_u;",
+    "to": "let shadows = false;"
+  },
+  {
+    "id": "package-linear-untrimmed",
+    "group": "package",
+    "file": "crates/epub-engine/src/package.rs",
+    "from": "attr(reference, \"linear\", None).map(trim) != Some(\"no\")",
+    "to": "attr(reference, \"linear\", None) != Some(\"no\")"
+  },
+  {
+    "id": "package-empty-algorithm",
+    "group": "package",
+    "file": "crates/epub-engine/src/package.rs",
+    "from": "algorithm.unwrap_or(\"(none)\")",
+    "to": "algorithm.filter(|named| !named.is_empty()).unwrap_or(\"(none)\")"
+  },
+  {
+    "id": "package-version-parse",
+    "group": "package",
+    "file": "crates/epub-engine/src/package.rs",
+    "from": "let major = parse_int(package_version, Radix::Ten);",
+    "to": "let major = package_version.parse::<f64>().unwrap_or(f64::NAN);"
+  },
+  {
+    "id": "integrator-package-adobe-font-is-drm",
+    "group": "package",
+    "file": "crates/epub-engine/src/primitives.rs",
+    "from": "value == IDPF_FONT_OBFUSCATION || value == ADOBE_FONT_OBFUSCATION",
+    "to": "value == IDPF_FONT_OBFUSCATION"
+  },
+  {
+    "id": "saxes-surrogate-pair",
+    "group": "saxes",
+    "file": "crates/saxes/src/lib.rs",
+    "from": "out.push(0x10000 + ((unit - 0xD800) << 10)",
+    "to": "out.push(0x10001 + ((unit - 0xD800) << 10)"
+  },
+  {
+    "id": "notation-lone-low-surrogate",
+    "group": "pure",
+    "file": "crates/epub-engine/src/notation.rs",
+    "from": "(is_low(unit) && !(i > 0 && is_high(text[i - 1])))",
+    "to": "(is_low(unit) && false)"
+  },
+  {
+    "id": "blocks-h6-kind",
+    "group": "pure",
+    "file": "crates/epub-engine/src/blocks.rs",
+    "from": "Self::H6 => \"h6\",",
+    "to": "Self::H6 => \"h5\","
+  },
+  {
+    "id": "edits-trailing-blank-trim",
+    "group": "pure",
+    "file": "crates/epub-engine/src/edits.rs",
+    "from": "while i > 0 && is_ascii_blank(source[i - 1]) {",
+    "to": "while i > 1 && is_ascii_blank(source[i - 1]) {"
+  }
+]

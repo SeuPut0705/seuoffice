@@ -65,6 +65,16 @@ export const ENGINES = {
     runner: 'tools/odt-diff/faults.mjs',
     entries: ['tools/odt-diff/main.ts'],
   },
+  fileparse: {
+    crate: 'file-parse',
+    runner: 'tools/fileparse-diff/faults.ts',
+    entries: ['tools/fileparse-diff/main.ts'],
+  },
+  epub: {
+    crate: 'epub-engine',
+    runner: 'tools/fileparse-diff/faults.ts',
+    entries: ['tools/epub-diff/main.ts'],
+  },
 }
 
 /** The DOCX catalogs a run must execute, or a deliberately targeted catalog. */
