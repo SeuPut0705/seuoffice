@@ -22,8 +22,11 @@
  * block with ruby readings, without line breaks and without the content of
  * opaque elements (svg, math…).
  */
-import type { ChapterBlock, XmlElement, XmlNode } from '@seuoffice/epub-engine'
+import type { ChapterBlock } from '@seuoffice/epub-engine'
 import { OPAQUE_ELEMENTS, escapeNotationText } from './engine'
+
+type XmlElement = ChapterBlock['element']
+type XmlNode = XmlElement['children'][number]
 
 export type InlineRole =
   | { kind: 'br' }
