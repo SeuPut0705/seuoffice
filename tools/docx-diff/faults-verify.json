@@ -1,0 +1,32 @@
+{
+  "faults": [
+    {
+      "name": "porter: legacyDirectRunFormat clamps w:sz to 0 instead of one half-point",
+      "group": "parse",
+      "file": "crates/docx-engine/src/parse/text/runs.rs",
+      "old": "run.size_half_points.set(JsNum(math_max(1.0, sz)));",
+      "new": "run.size_half_points.set(JsNum(math_max(0.0, sz)));"
+    },
+    {
+      "name": "porter: tableSummary cuts the preview at 121 units, not 120",
+      "group": "parse",
+      "file": "crates/docx-engine/src/parse/tables.rs",
+      "old": "preview_text: js_slice(&plain_text(xml), 0, 120),",
+      "new": "preview_text: js_slice(&plain_text(xml), 0, 121),"
+    },
+    {
+      "name": "porter: parseDocx reports bodyInnerEnd as a byte offset, not a UTF-16 one",
+      "group": "model",
+      "file": "crates/docx-engine/src/parse/entry.rs",
+      "old": "internal.insert(\"bodyInnerEnd\".to_owned(), at(scan.inner_end));",
+      "new": "internal.insert(\"bodyInnerEnd\".to_owned(), num(scan.inner_end as f64));"
+    },
+    {
+      "name": "independent: parseDocx takes the first page break boundary from the last sectPr",
+      "group": "model",
+      "file": "crates/docx-engine/src/parse/entry.rs",
+      "old": "let sect = document_xml.find(\"</w:sectPr>\");",
+      "new": "let sect = document_xml.rfind(\"</w:sectPr>\");"
+    }
+  ]
+}

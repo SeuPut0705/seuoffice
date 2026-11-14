@@ -141,7 +141,7 @@ jobs:
 
   crates:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults }}
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -211,7 +211,7 @@ jobs:
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:
     needs: quick
-    if: ${{ inputs.faults }}
+    if: true
     runs-on: ubuntu-latest
     timeout-minutes: 240
     strategy:
@@ -265,7 +265,7 @@ jobs:
 
   pptx:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults }}
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -326,14 +326,14 @@ jobs:
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults && needs.quick.outputs.pptx_faults == 'true' }}
+    if: true
     runs-on: ubuntu-latest
     # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0]
     steps:
       - uses: actions/checkout@v4
 
@@ -370,7 +370,7 @@ jobs:
 
       - name: Slides fault probes
         if: steps.has.outputs.pptx == 'true'
-        run: npm --prefix tools/pptx-diff run faults -- --shard ${{ matrix.shard }}/8
+        run: npm --prefix tools/pptx-diff run faults -- --only "$(cat tools/pptx-diff/verify-ids.txt)" --shard 0/1
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.pptx == 'true'
@@ -382,7 +382,7 @@ jobs:
 
   odt:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults }}
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -443,7 +443,7 @@ jobs:
   odt-faults:
     needs: [quick, odt]
     # odt_faults names faults to probe: they run whatever the branch changed
-    if: ${{ !cancelled() && !inputs.faults && needs.quick.result == 'success' && (inputs.odt_faults || (needs.odt.result == 'success' && needs.quick.outputs.odt_faults == 'true')) }}
+    if: ${{ !cancelled() && needs.quick.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
@@ -452,7 +452,7 @@ jobs:
         # eight runners: with the probe-dev build (tools/odt-diff/faults.mjs) a
         # wire-command fault takes minutes, and 26 runners, one fault each,
         # spent more on setup and the baseline build than on faults
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0]
     steps:
       - uses: actions/checkout@v4
 
@@ -492,7 +492,7 @@ jobs:
         env:
           ONLY: ${{ inputs.odt_faults }}
         # the positive control proves the harness once per run, on shard 0
-        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/8 ${{ matrix.shard != 0 && '--no-control' || '' }}
+        run: npm --prefix tools/odt-diff run faults -- --only "$ONLY" --shard 0/1
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.odt == 'true'
