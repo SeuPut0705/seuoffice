@@ -419,7 +419,6 @@ group['user-skills-service.importPreviewOf'] = {
 
 const HOME = 'home'
 const APP = `${HOME}/.seuoffice/skills`
-const SETTINGS = 'settings.json'
 const BUILTIN = 'builtin'
 
 /** the files of a library of several sources */

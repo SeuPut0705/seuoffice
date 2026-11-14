@@ -1403,7 +1403,6 @@ const bridgeTs =
     })
 
 const stream = (events: unknown[], status = 200) => bridgeWorld([sse(events, status)])
-const ok = (events: unknown[]) => c(stream(events), { record: fresh() }, {})
 const streamCase = (world: World, o: BridgeOpts = {}, spec: Spec = { record: fresh() }): Case =>
   c(world, spec, o)
 

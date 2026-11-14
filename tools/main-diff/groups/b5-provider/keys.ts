@@ -1086,7 +1086,7 @@ const TAGS = jsonOf({
     'bad',
     null,
     { name: 'tiny', size: 0, details: 'x' },
-    { name: 'inf', size: 1e999 },
+    { name: 'inf', size: Number('1e999') },
   ],
 })
 const MODELS = jsonOf({
@@ -1341,7 +1341,6 @@ const CUT_TOOL = sse(
   false,
 )
 const GOOD = [TAGS, CHAT_OK, TOOL_STREAM]
-const GENERIC = [NO_ROUTE, MODELS, CHAT_OK, TOOL_STREAM]
 const MODELS_B = jsonOf({ data: [{ id: 'llama3:8b' }, { id: 'other' }] })
 
 interface TestOpts {

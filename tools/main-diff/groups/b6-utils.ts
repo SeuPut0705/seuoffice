@@ -578,7 +578,7 @@ async function runMenuScenario(o: MenuScenario, cx: TsContext): Promise<void> {
       appListeners[event] = listener
     },
   }
-  let template: { click?: () => unknown }[] = []
+  let template: { click?: () => unknown }[]
   const imageFakes = imageElectron(
     {
       parent: 'live',

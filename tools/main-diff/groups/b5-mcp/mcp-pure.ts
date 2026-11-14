@@ -23,7 +23,7 @@
  *   promises settle in does not show.
  */
 import { EventEmitter } from 'node:events'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
 import { basename, dirname } from 'node:path'
 import { useElectron } from '../../electron-fake.ts'
@@ -133,8 +133,6 @@ const errorMessageCases: Case[] = [
   [outcome({ code: -1 })],
   [outcome({ code: 137, json: { status: 'weird' } })],
 ].map((args) => ({ args }))
-
-const outHex = (text: string): string => Buffer.from(text).toString('hex')
 
 interface RunScenario {
   paths: { executable: string; entry: string; env?: [string, string | null][] }

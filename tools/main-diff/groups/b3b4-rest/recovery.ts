@@ -460,10 +460,8 @@ const tc = (
 ): Case => ({ args: [textWorld(steps, extra)], files, note })
 
 const HA = F('html', doc('a.html'))
-const HB = F('html', doc('b.html'))
 const HO = F('html', doc('old.html'))
 const HN = F('html', doc('new.html'))
-const MU = U('markdown', 'saved-id', '.md')
 const step = (op: string, view: string, extra: Record<string, unknown> = {}): Step => ({
   op,
   view,

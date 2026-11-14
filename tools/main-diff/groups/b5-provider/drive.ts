@@ -384,7 +384,6 @@ const upload = (location: [string, string][] = LOCATION) => [
   ok([], location),
   json({ ...FILE, id: 'new1' }),
 ]
-const bytes = (hex: string) => ({ bytes: hex })
 
 const account: Group = {
   'drive-api.DriveApi.account': {

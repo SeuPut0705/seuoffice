@@ -771,6 +771,9 @@ async function runWindow(world: World, cx: TsContext): Promise<unknown[]> {
     return p
   }
   let current: Any = null
+  const setCurrent = (window: Any): void => {
+    current = window
+  }
   let nextId = 5
   class FakeWindow {
     destroyed = false
@@ -790,7 +793,7 @@ async function runWindow(world: World, cx: TsContext): Promise<unknown[]> {
           this.openHandler = fn
         },
       }
-      current = this
+      setCurrent(this)
     }
     removeMenu(): void {
       log('removeMenu')

@@ -1022,7 +1022,6 @@ async function runSignIn(cfg: SignInCase): Promise<unknown> {
 
 /** the fetches of a sign-in that goes through: discovery, registration, the token exchange */
 const SIGN_IN_OK: FetchSpec[] = [json(RESOURCE), json(META), json(CLIENT), json(TOKENS)]
-const CODE = { op: 'loopback', target: '/callback?state=__STATE__&code=the-code' }
 
 /** the state the fixed walk makes: base64url of the first 24 bytes */
 const STATE = (() => {

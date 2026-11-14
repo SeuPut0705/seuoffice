@@ -111,7 +111,7 @@ const diagramTools = await import('../../../../apps/shell/src/main/mcp/tools/dia
 const diagramBridge = await import('../../../../apps/shell/src/main/mcp/diagram-bridge.ts')
 const openBridge = await import('../../../../apps/shell/src/main/mcp/open-documents-bridge.ts')
 const slidesBridge = await import('../../../../apps/shell/src/main/mcp/slides-bridge.ts')
-const appMcp = await import('../../../../apps/shell/src/main/mcp/app-mcp.ts')
+await import('../../../../apps/shell/src/main/mcp/app-mcp.ts')
 void formats
 
 // any: the cases describe fakes and answers of every shape

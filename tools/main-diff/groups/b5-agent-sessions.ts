@@ -30,7 +30,7 @@
  *   A session folder's random six letters read as `<rand>`.
  */
 import crypto, { createHash } from 'node:crypto'
-import fs, { readFileSync, readdirSync, renameSync, rmSync, symlinkSync } from 'node:fs'
+import fs, { readFileSync, readdirSync, renameSync, symlinkSync } from 'node:fs'
 import fsPromises from 'node:fs/promises'
 import childProcess from 'node:child_process'
 import { createRequire, syncBuiltinESMExports } from 'node:module'
@@ -236,7 +236,6 @@ const usableOf = (spec: J): ((name: string) => boolean) | undefined =>
 
 const FOLDER = '/main-diff/p1'
 const OTHER = '/main-diff/p2'
-const FINGERPRINT_A = 'a'.repeat(64)
 
 const skillSpec = (id: string, source = 'project') => ({
   id,
@@ -1140,7 +1139,6 @@ const gate = (): { promise: Promise<void>; open: () => void } => {
 
 async function runManager(o: J, cx: TsContext): Promise<unknown> {
   const log = (...line: unknown[]): void => cx.log(...line.map(maskDeep))
-  let counter = 0
   const state = { settings: o.settings, statuses: o.statuses, openDocuments: [...o.openDocuments] }
   const onEvents: ((event: unknown) => void)[] = []
   const asksBySession = new Map<string, (request: unknown, signal: unknown) => Promise<unknown>>()

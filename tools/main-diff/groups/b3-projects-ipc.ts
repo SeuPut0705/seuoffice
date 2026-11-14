@@ -609,14 +609,6 @@ const handlerFn = (name: string, cases: Case[]): FnSpec => ({
 })
 
 const P1 = { projectId: 'p1' }
-const BAD = 'invalid project folder request'
-const sent = (target: number, channel: string, payload: Json) => [
-  'host',
-  'send',
-  target,
-  channel,
-  payload,
-]
 
 // ---------------------------------------------------------------------------
 // handler cases

@@ -28,7 +28,7 @@ import { dirname, join } from 'node:path'
 import JSZip from 'jszip'
 import * as agent from '../../../packages/cli/src/agent-skills.ts'
 import * as install from '../../../packages/cli/src/install.ts'
-import type { Case, FnSpec, Group, TsContext } from '../types.ts'
+import type { Case, Group, TsContext } from '../types.ts'
 
 const HOME = '$DIR/home'
 const sha = (text: string): string => createHash('sha256').update(text).digest('hex')
@@ -645,11 +645,6 @@ const ZIPS: Bytes[] = [
 
 const BIN = '$DIR/bin'
 const LAUNCHER = '$DIR/app/cli/seuoffice'
-const PROBES = [
-  '/opt/homebrew/bin/brew',
-  '/usr/local/bin/brew',
-  '/home/linuxbrew/.linuxbrew/bin/brew',
-]
 
 interface LinkOptions {
   launcher: string

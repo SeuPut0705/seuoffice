@@ -1170,8 +1170,6 @@ function wayCases(build: (root: string, rel: string, dataDir?: string) => unknow
   ]
 }
 
-const writeDataArgs = (root: string, rel: string): unknown[] => [root, rel, 'text']
-
 const writeDataCases: Case[] = [
   {
     args: [fsCtx(), P, 'project.json', '{"id":"p1"}\n'],

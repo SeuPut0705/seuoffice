@@ -488,7 +488,7 @@ const freeAiFns: Group = {
       [{ used: 1, limit: '50', remaining: 49 }],
       [{ used: 1, limit: 50 }],
       [{ used: null, limit: 50, remaining: 49 }],
-      [{ used: 1, limit: 1e999, remaining: 49 }],
+      [{ used: 1, limit: Number('1e999'), remaining: 49 }],
       [{}],
       [null],
       [5],

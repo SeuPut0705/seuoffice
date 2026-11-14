@@ -1187,8 +1187,6 @@ async function diagramModule(): Promise<J> {
   return loadPatched('apps/diagram/src/main/diagram-session.ts', (src) => src)
 }
 
-const PRINT_TOKEN = '0123456789abcdef0123456789abcdef'
-
 interface DiagramSpec {
   paths: { rendererDir: string; drawioDir: string; bridgeFile: string; devOrigins: string[] }
   steps: J[]

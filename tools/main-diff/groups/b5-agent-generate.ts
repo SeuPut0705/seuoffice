@@ -38,6 +38,7 @@ import { mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'no
 import fsPromises from 'node:fs/promises'
 import { registerHooks, syncBuiltinESMExports } from 'node:module'
 import { dirname } from 'node:path'
+import type * as generateWindow from '../../../apps/shell/src/main/generate/generate-window.ts'
 import { useElectron } from '../electron-fake.ts'
 import type { Case, FnSpec, Group, TsContext } from '../types.ts'
 
@@ -175,7 +176,7 @@ const openMaterials = await import('../../../apps/shell/src/main/generate/open-m
 const convert = await import('../../../apps/shell/src/main/generate/convert.ts')
 const convertedTab = await import('../../../apps/shell/src/main/generate/converted-tab.ts')
 const sessionModule = await import('../../../apps/shell/src/main/generate/session.ts')
-const generateWindow = await import('../../../apps/shell/src/main/generate/generate-window.ts')
+await import('../../../apps/shell/src/main/generate/generate-window.ts')
 const handoff = await import('../../../packages/electron-utils/src/generate-handoff.ts')
 const unsaved = await import('../../../packages/electron-utils/src/unsaved-files.ts')
 const markdownSeed = await import('../../../apps/markdown/src/main/seed-main.ts')
@@ -188,7 +189,6 @@ const attachable = await import('../../../packages/file-parse/src/attachable.ts'
 // helpers
 // ---------------------------------------------------------------------------
 
-type Fn = (...args: never[]) => unknown
 type Json = Record<string, unknown>
 
 const each = (...sets: unknown[][]): Case[] => sets.map((args): Case => ({ args }))
