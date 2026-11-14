@@ -14,6 +14,7 @@
  * one that no longer reproduces, and on a function whose cases gave fewer
  * than two distinct answers (decision 0030, crates/README.md).
  */
+import '@seuoffice/engine-wasm/node'
 import { spawnSync } from 'node:child_process'
 import {
   appendFileSync,

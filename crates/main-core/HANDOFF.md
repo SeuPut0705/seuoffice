@@ -24,6 +24,8 @@ Node 22와 rustc 1.100.0을 쓴다. `npm ci`는 저장소 뿌리에서 돌린다
 
 ```sh
 export SCRATCH=/Users/seuput/.cache/ompdesk/scratch/1eca6d513db26eeccf9b7721ee043cf8
+# Source imports in each comparison subprocess use the same engine startup as app workers.
+npm run build:wasm
 export MAIN_DIFF_ADDON="$SCRATCH/addon/main_node.node" MAIN_DIFF_OUT="$SCRATCH/out"
 cd tools/main-diff
 node build.mjs
