@@ -102,7 +102,7 @@
     "file": "main-core/src/packages/project_store.rs",
     "find": "(\"setPinned\", \"projectFolder:setPinned\"),",
     "replace": "(\"setPinned\", \"projectFolder:setPin\"),",
-    "fn": ["folder-api.PROJECT_FOLDER_CHANNELS", "project-folder-bridge.projectFolderBridge"]
+    "fn": ["folder-api.PROJECT_FOLDER_CHANNELS"]
   },
   {
     "name": "retry-ms",

@@ -23,3 +23,15 @@ MISSED extract a global pax header is a file  (80 checks, 80 equal, 0 difference
 | 81      | 이름이 `../ignored-global`인 global PAX, 정상 파일             | 추출하지 않는 메타데이터의 이름은 무시하고 정상 파일을 푼다. |
 
 사례는 기존 `TarEntry[]`, checksum·padding·gzip 생성기와 실제 `extractRuntimeArchive`를 사용한다. 가짜 엔진이나 예외 억제를 추가하지 않는다. TS 오라클 확인과 Rust 정상 baseline·같은 원본 변이의 검출은 별개의 근거다. Rust 증명은 저장소 규칙에 따라 hosted 러너에서 수행하고 정확 제품·정의·실행을 함께 기록한다. 이 두 사례의 좁은 성공을 전체 6,121개 결함 성공으로 확대하지 않는다.
+
+## 폐기된 preload 비교 selector
+
+`tools/main-diff/faults/b2.json`의 원본 위치 `14`, `channel-key`는 같은 채널 문자열 변이를 유지한다. `name`, `file`, `find`, `replace`, 목록의 170개 항목과 유효한 `folder-api.PROJECT_FOLDER_CHANNELS` 한 사례는 바뀌지 않는다.
+
+`44d208ab30dde8b4137508688ae1be4e5be13fb4`가 preload bridge를 stage 3 소유로 옮기며 Rust 구현과 비교 등록을 함께 없앴지만 추가 selector `project-folder-bridge.projectFolderBridge`를 이 항목에 남겼다. 후속 metadata 수정은 그 미등록 selector만 뺀다. TS 공개 factory의 이름 변경이나 살아 있는 비교 사례 삭제가 아니다.
+
+- 원본 변이 객체 SHA256: `103b1b0860269e2de376d46d6eb19516d7a55053e90c078412fb45b33a1c1d2f`.
+- selector 정리 뒤 객체 SHA256: `2d59dfea3027e8fbbbf0015067de5b2fb9de158ea3ebf5d77ed7fef5a9009417`.
+- 해시는 위와 같이 `JSON.stringify`한 객체의 UTF-8 바이트에서 계산한다. 실제 변이의 위치·내용은 같고 선택 metadata만 다르다.
+
+고정 원본 제품과 실행의 catalog는 바꾸지 않는다. 원본 `channel-key`가 실제 `DIFF`로 잡혔는지는 해당 원본 산출물에서 별도로 감사한다. 새 검증 계획은 모든 selector가 정확 제품의 실제 함수 목록에 등록돼 있는지 검사하며 ghost selector를 예외로 허용하지 않는다.
