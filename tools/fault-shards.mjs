@@ -71,13 +71,15 @@ export function parseShard(text) {
 
 /**
  * The cost file with the measured seconds of `reports` written in. A report
- * is the runner's report.json (an array) or faults.json (docx): each entry
- * with an `id` and `seconds`. Faults no report measured keep their old cost.
+ * is an array of entries with an `id` and `seconds` (report.json of the slides
+ * and odt runners, faults.json of the docx one) or an object holding that
+ * array as `results` (summary.json of the fileparse runner). Faults no report
+ * measured keep their old cost.
  */
 export function refreshCosts(costs, reports) {
   const next = { ...costs }
   for (const report of reports)
-    for (const { id, seconds } of report)
+    for (const { id, seconds } of Array.isArray(report) ? report : (report.results ?? []))
       if (typeof id === 'string' && typeof seconds === 'number') next[id] = Math.round(seconds)
   return Object.fromEntries(Object.entries(next).sort(([a], [b]) => a.localeCompare(b)))
 }
