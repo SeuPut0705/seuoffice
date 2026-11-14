@@ -104,7 +104,7 @@ test('full provisional plan covers each original ID and preserves bounded shard 
   assert.equal('reusedIds' in plan, false)
   assert.equal(plan.requiredIds.length, 6121)
   assert.equal(plan.expandedIds.length, 6121)
-  assert.equal(plan.maxParallel, 4)
+  assert.equal(plan.maxParallel, 8)
   assert.equal(plan.timeoutMinutes, 120)
   assert.ok(plan.batches.every((batch) => batch.length <= 256))
   const counts = new Map()

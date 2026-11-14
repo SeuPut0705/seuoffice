@@ -33,6 +33,12 @@ job당 **control을 포함해 최대25 records**다. 각 noncontrol은 계획 �
 
 원본6개 job의 설치·첫 control 지연·후속 결과 간격은 manifest의 `costEvidence`에 원본 실행·제품·catalog·shard와 함께 남긴다. 이 간격에는 native 증분 빌드·TS 비교·출력이 섞여 있다. 초기 빌드만의 시간과 제품375의 변이 시간은 미측정이다. 개수 내림차순은 비용 대리값일 뿐 실제 시간 균형이라고 부르지 않는다.
 
+새 정의의8병렬 계산은 job 개수 기준으로 첫 배치 `ceil(256/8)=32`, 둘째 `ceil(85/8)=11`, 합계43개 이상적인 파도다. 이는 동일 비용을 가정한 개수 계산이지 실제 완료 시각의 하한이나 조직 runner 한도 측정이 아니다.
+
+보관된12:37:43UTC 원본 metadata에서 완료 mutation13개 job의 wall time 합계는77,758초이고 최장은7,225초인 MCP shard2 취소 job이다.13개 결론은 producer success6·cancelled6·failure1이다. success6개도 STALE 때문에 strict5개만 재사용 가능하므로 시간 합계를 합격 수로 읽지 않는다. 정상 완료6개 raw log의 결과 간격 합계는28,038.939491초이며 첫 control 이전 준비와 마지막 정상 빌드·업로드는 제외한다.
+
+새 계획 중 과거 record 비용 자료가 있는 것은 apps37·generate12·MCP36, 합계85 jobs/3 catalogs뿐이다. 이 세 catalog에 과거 job별 결과 간격 중앙값을 대입하면 noncontrol 본체만 약73,351–86,044 worker초, 이상적인8개 lane 배분은 약2시간33분–2시간59분이다. 이는 **관측 중앙값의 조건부 대입값**이며 새 제품의 실측값·신뢰구간·전체 실행시간 예측이 아니다. 나머지256 jobs/42 catalogs, 각 job의 npm·RHWP·WASM·첫 control·마지막 빌드, 네 typed 정상 비교, 감사·업로드·배치 경계·GitHub queue는 포함하지 않았다. 따라서 새 전체 실행의 유한한 시간 상한이나 완료 시각은 아직 제시할 수 없다.
+
 ## 마지막 변이의 typed 장부 반응
 
 원본 apps shard2의 `#382`, `#470`, `#526`, `#546`은 실제 독립 DIFF와 STALE 진단을 함께 냈다. 고정 정상 baseline의 장부 tuple이 변이 때문에 바뀌는 경계와 정상 baseline 자체의 STALE는 다르다. 원본 artifact에는 이 네 변이의 중간 전체 report가 없으므로 여전히 인수하지 않는다. 보존한 `recovery-stale-rows.json`도 성공 증거가 아니라 그 거부 회귀 자료다.
@@ -51,12 +57,12 @@ manifest의 `typedEvidenceRequirements`는 원본 index·변이 객체 해시·s
 
 `main_recovery_product_sha`로 정확 제품375를 고른다. 다른 모드 입력은 비우고 `all_faults=false`, `fault_shards=1`로 둔다. `main_recovery_batch=0`에는 이전 실행을 주지 않는다.
 
-1. 첫 배치를 한 번 enqueue한다. 최대4개 job, timeout120분을 유지한다.
+1. 첫 배치를 한 번 enqueue한다. mutation은 단일 matrix에서 동시 합계 최대8개 job, timeout120분을 유지한다.
 2. 첫 배치 실행의 실제 성공과 모든 job의 완결 artifact를 엄격히 감사한다.
 3. 그 뒤에만 두 번째 배치를 한 번 enqueue한다. `main_recovery_batch=1`, `main_recovery_previous_run`에 성공한 첫 배치 실행을 준다.
 4. 두 번째 준비 단계도 첫 배치의 성공 API metadata와 완결 artifact를 다시 감사한다. 둘을 합쳐 전체 ID 집합을 확인한다.
 
-두 배치를 동시에 enqueue하지 않는다. product별 concurrency와 `cancel-in-progress=false`는 실행 중인 배치의 취소를 막지만, GitHub의 기본 pending 교체 정책을 없애지 않는다. 모든 대기 배치를 보존하는 queue라고 주장하지 않는다. 자동 dispatch·retry·lease·공유 checkpoint 서비스는 없다. 원본 core·표적·CI 실행과는 다른 concurrency group이다.
+두 배치를 동시에 enqueue하지 않는다. 첫 배치 성공을 감사한 뒤 다음 배치만 고르므로 두 matrix의 동시 실행으로8개 상한을 넘기지 않는다. 이는 새 정의의 상한이지 조직의 실제 runner 설정 한도라는 주장이 아니다. product별 concurrency와 `cancel-in-progress=false`는 실행 중인 배치의 취소를 막지만, GitHub의 기본 pending 교체 정책을 없애지 않는다. 모든 대기 배치를 보존하는 queue라고 주장하지 않는다. 자동 dispatch·retry·lease·공유 checkpoint 서비스는 없다. 원본 core·표적·CI 실행과는 다른 concurrency group이다.
 
 ## job 인수 조건
 

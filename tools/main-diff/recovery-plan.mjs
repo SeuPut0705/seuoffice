@@ -315,7 +315,7 @@ export function createRecoveryPlan(
           },
         }),
     ...scheduleRecovery(manifest, catalogs, requiredIds),
-    maxParallel: 4,
+    maxParallel: 8,
     timeoutMinutes: 120,
     batchSize: 256,
   }

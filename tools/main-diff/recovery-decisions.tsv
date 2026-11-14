@@ -18,3 +18,5 @@ ts	phase	decision	why	evidence	result
 2026-11-14T13:44:00Z	scope	전역child-process관측hook을 배제하고 원본runner종료후 report보존으로 제한한다	승인된작은원본residue경로와 실행의미를 유지한다	keep-approved-residue-plan-no-process-monkeypatch	작성된hook2파일삭제, 실행0, 정상baseline추가도4job선택함수에만수행
 2026-11-14T13:44:00Z	plan	알려진4증거요구만 generic residue refinement로 마지막noncontrol에 둔다	원본index/hash/필요집합과최대25를 보존하고 미확인STALE는계속거부한다	20261114-134200-d23c	373재사용/5748필요/5703noncontrol/341jobs=[256,85], native실행0
 2026-11-14T13:44:00Z	regression	typed계획의prefix-only인수회귀를 먼저실패시킨뒤 원본report필수로 고친다	CAUGHT접두사만으로 새로운typed증거를 대체할수없다	20261114-133245-5466; 20261114-134134-0c95	red후35개회귀통과, hosted감도결과로확대하지않음
+2026-11-14T13:54:00Z	throughput	미발사새recovery정의만동시합계8로높이고배치는순차로유지한다	사용자새상한을반영하되원본7594실행과품질계약은바꾸지않는다	recovery-new-definition-max8-and-cost-finish-plan; 20261114-134936-1add	단일mutationmatrix8/timeout120/341jobs=[256,85]/최대25/typed4불변
+2026-11-14T13:54:00Z	cost	실측과개수파도및과거중앙값대입을구분한다	실패job시간과미측정42catalog를새제품완료예측으로숨기지않는다	recovery8-cost-evidence.json; 12:37:43UTC고정snapshot	완료13job77758초중6취소1실패; 최장7225초취소; 8병렬32+11파도는시간보장아님
