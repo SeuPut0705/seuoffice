@@ -157,3 +157,23 @@ test('empty and ambiguous catalogs are rejected', () => {
     createPlan(identity, plan.gate, [{ path, label: 'example', faults: [faults[0], faults[0]] }]),
   )
 })
+
+test('larger catalogs start first with deterministic ties and without mutating input order', () => {
+  const small = {
+    path: 'tools/main-diff/faults/small.json',
+    label: 'small',
+    faults: faults.slice(0, 2),
+  }
+  const largeZ = { path: 'tools/main-diff/faults/large-z.json', label: 'large-z', faults }
+  const largeA = { path: 'tools/main-diff/faults/large-a.json', label: 'large-a', faults }
+  const catalogs = [small, largeZ, largeA]
+  const scheduled = createPlan(identity, plan.gate, catalogs)
+  assert.deepEqual(
+    scheduled.catalogs.map((catalog) => catalog.label),
+    ['large-a', 'large-z', 'small'],
+  )
+  assert.deepEqual(
+    catalogs.map((catalog) => catalog.label),
+    ['small', 'large-z', 'large-a'],
+  )
+})

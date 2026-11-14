@@ -97,7 +97,11 @@ export function createPlan(identity, gate, catalogs) {
     productSha: identity.productSha,
     gate,
     shards: 4,
-    catalogs,
+    // Counts are only a cost proxy; product-catalog runtimes are unmeasured.
+    catalogs: catalogs.toSorted(
+      (a, b) =>
+        b.faults.length - a.faults.length || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
+    ),
   }
 }
 
@@ -210,9 +214,9 @@ async function main(command, env) {
     const plan = createPlan(identity, gate, catalogs)
     mkdirSync(dirname(planPath), { recursive: true })
     writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, { flag: 'wx' })
-    const matrix = catalogs.map(({ path, label }) => ({ path, label }))
+    const matrix = plan.catalogs.map(({ path, label }) => ({ path, label }))
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `catalogs=${JSON.stringify(matrix)}\n`)
-    const summary = `Definition SHA: ${plan.definitionSha}\nProduct SHA: ${plan.productSha}\nGate: ${gate.id} attempt ${gate.attempt}\nCatalogs: ${catalogs.length}\nFaults: ${catalogs.reduce((n, c) => n + c.faults.length, 0)}\n`
+    const summary = `Definition SHA: ${plan.definitionSha}\nProduct SHA: ${plan.productSha}\nGate: ${gate.id} attempt ${gate.attempt}\nCatalogs: ${catalogs.length}\nFaults: ${catalogs.reduce((n, c) => n + c.faults.length, 0)}\nScheduling: largest catalog first by fault-count proxy; product-catalog seconds unmeasured\n`
     console.log(summary)
     if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, summary)
   } else if (command === 'check' || command === 'audit') {
