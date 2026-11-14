@@ -157,16 +157,16 @@ jobs:
           node --test tools/fault-planning.test.mjs
           python3 -m unittest discover -s tools/docx-diff -p test_faults.py
 
-      # which engines' fault probes this run reaches: all on main and when asked
       - name: Fault probes this run reaches
         id: reach
         if: ${{ !cancelled() }}
         env:
-          ALL: ${{ github.ref == 'refs/heads/main' || inputs.all_faults }}
+          ALL_FAULTS: ${{ inputs.all_faults }}
           DOCX_FAULTS: ${{ inputs.faults }}
           ODT_FAULTS: ${{ inputs.odt_faults }}
         run: |
-          if [ "$ALL" = true ]; then
+          MODE="$(node tools/fault-reach.mjs --mode)"
+          if [ "$MODE" = all ]; then
             node tools/fault-reach.mjs --all --github-output
           else
             node tools/fault-reach.mjs "$(git merge-base origin/main HEAD)" --github-output
