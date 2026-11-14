@@ -2,6 +2,9 @@
  * Which engines' fault probes a branch can reach, from what it changed.
  *
  *   node tools/fault-reach.mjs <base-ref> [--github-output]
+ *   node tools/fault-reach.mjs --mode
+ *       prints all|affected from GITHUB_EVENT_NAME, GITHUB_REF, ALL_FAULTS,
+ *       DOCX_FAULTS and ODT_FAULTS before the workflow chooses --all or a base
  *
  * prints one line per engine, `run` or `skip` and why, and with
  * --github-output writes `<engine>=true|false` to $GITHUB_OUTPUT. The base is
@@ -24,8 +27,9 @@
  *   - the corpus: a document of a type the code lists with
  *     `git ls-files '*.<ext>'` reaches it, wherever it lies.
  * Files not covered by those dependency rules conservatively reach every
- * engine. Only unmatched documentation under docs/ is excluded. main and an
- * `all_faults` run select every engine and every DOCX fault catalog.
+ * engine. Only unmatched documentation under docs/ is excluded. A main push,
+ * an untargeted manual main run, and `all_faults` select every engine and
+ * every DOCX catalog. Explicit all plus a targeted selection is an error.
  */
 import { execFileSync } from 'node:child_process'
 import {
@@ -72,6 +76,19 @@ export function docxFaultFiles({ requested = '', reached, files }) {
     .sort()
   if (catalogs.length === 0) throw new Error('no DOCX fault catalogs found for a reached engine')
   return catalogs
+}
+
+export function faultMode({ eventName, ref, allFaults, docxFaults, odtFaults }) {
+  const targeted = Boolean(docxFaults || odtFaults)
+  if (allFaults && targeted)
+    throw new Error('all faults cannot be combined with a targeted fault selection')
+  if (allFaults) return 'all'
+  if (
+    ref === 'refs/heads/main' &&
+    (eventName === 'push' || (eventName === 'workflow_dispatch' && !targeted))
+  )
+    return 'all'
+  return 'affected'
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -237,6 +254,18 @@ export function reach(changed, { engines, graph, programs, officeWasmText }) {
 
 function main(args) {
   const flags = args.filter((arg) => arg.startsWith('--'))
+  if (flags.includes('--mode')) {
+    console.log(
+      faultMode({
+        eventName: process.env.GITHUB_EVENT_NAME,
+        ref: process.env.GITHUB_REF,
+        allFaults: process.env.ALL_FAULTS === 'true',
+        docxFaults: process.env.DOCX_FAULTS,
+        odtFaults: process.env.ODT_FAULTS,
+      }),
+    )
+    return
+  }
   const base = args.find((arg) => !arg.startsWith('--'))
   const all = flags.includes('--all')
   if (!base && !all) {

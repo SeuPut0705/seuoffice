@@ -110,3 +110,76 @@ test('a manual ODT selection on main uses affected mode, not all faults', () => 
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.stdout.trim(), 'affected')
 })
+
+for (const { name, event, ref, all = false, docx = '', odt = '', expected } of [
+  { name: 'main push', event: 'push', ref: 'refs/heads/main', expected: 'all' },
+  {
+    name: 'main manual DOCX selection',
+    event: 'workflow_dispatch',
+    ref: 'refs/heads/main',
+    docx: 'tools/docx-diff/faults-b4.json',
+    expected: 'affected',
+  },
+  {
+    name: 'main empty manual run',
+    event: 'workflow_dispatch',
+    ref: 'refs/heads/main',
+    expected: 'all',
+  },
+  {
+    name: 'branch default',
+    event: 'workflow_dispatch',
+    ref: 'refs/heads/feat/example',
+    expected: 'affected',
+  },
+  {
+    name: 'branch explicit all',
+    event: 'workflow_dispatch',
+    ref: 'refs/heads/feat/example',
+    all: true,
+    expected: 'all',
+  },
+]) {
+  test(`fault mode for ${name}`, () => {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL('./fault-reach.mjs', import.meta.url)), '--mode'],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GITHUB_EVENT_NAME: event,
+          GITHUB_REF: ref,
+          ALL_FAULTS: String(all),
+          DOCX_FAULTS: docx,
+          ODT_FAULTS: odt,
+        },
+      },
+    )
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.stdout.trim(), expected)
+  })
+}
+
+for (const selection of ['DOCX_FAULTS', 'ODT_FAULTS']) {
+  test(`explicit all faults rejects a targeted ${selection} selection`, () => {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL('./fault-reach.mjs', import.meta.url)), '--mode'],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GITHUB_EVENT_NAME: 'workflow_dispatch',
+          GITHUB_REF: 'refs/heads/main',
+          ALL_FAULTS: 'true',
+          DOCX_FAULTS: '',
+          ODT_FAULTS: '',
+          [selection]: 'target',
+        },
+      },
+    )
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /all faults cannot be combined with a targeted fault selection/)
+  })
+}
