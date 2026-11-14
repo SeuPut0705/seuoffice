@@ -2667,4 +2667,62 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn a_host_terminal_answer_wins_over_abort_for_all_pending_reads() {
+        for failed in [false, true] {
+            for answered in [0, 1] {
+                let mut runtime = Runtime::new(host());
+                let (response, _, signal) = fetched_with_signal(&mut runtime);
+                let reads: Vec<_> = (0..2)
+                    .map(|_| {
+                        let reader = response.clone();
+                        runtime.start(async move { reader.read().await })
+                    })
+                    .collect();
+                let ids: Vec<_> = runtime
+                    .poll()
+                    .into_iter()
+                    .filter_map(|cmd| match cmd {
+                        Cmd::Read { id, .. } => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(ids.len(), 2);
+                runtime.feed(if failed {
+                    Event::Failed {
+                        id: ids[answered],
+                        error: JsError::type_error("terminated"),
+                    }
+                } else {
+                    Event::Done {
+                        id: ids[answered],
+                        answer: Answer::End,
+                    }
+                });
+                // No poll between the host terminal answer and the abort.
+                signal.abort(Some(JsError::error("later abort")));
+                let commands = runtime.poll();
+                for read in reads {
+                    let outcome = read.take().expect("every pending read settled");
+                    if failed {
+                        let error = outcome.unwrap_err();
+                        assert_eq!(error.class, "TypeError");
+                        assert_eq!(error.message, "terminated");
+                    } else {
+                        assert_eq!(outcome.unwrap(), None);
+                    }
+                }
+                assert!(commands.is_empty(), "{commands:?}");
+                if failed {
+                    assert_eq!(
+                        read_now(&mut runtime, &response).unwrap_err().message,
+                        "terminated"
+                    );
+                } else {
+                    assert_eq!(read_now(&mut runtime, &response).unwrap(), None);
+                }
+            }
+        }
+    }
 }
