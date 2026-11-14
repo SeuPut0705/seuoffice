@@ -24,9 +24,13 @@ on:
         'tools/docx-diff/**',
         'tools/pptx-diff/**',
         'tools/odt-diff/**',
+        'tools/fileparse-diff/**',
+        'tools/epub-diff/**',
         'packages/docx-engine/src/**',
         'packages/pptx-engine/src/**',
         'packages/odt-engine/src/**',
+        'packages/file-parse/**',
+        'packages/epub-engine/src/**',
       ]
   workflow_dispatch:
     inputs:
@@ -50,6 +54,11 @@ on:
         type: boolean
         required: false
         default: false
+      # a branch run skips fault probes no changed file reaches; main runs all
+      all_faults:
+        description: Run every engine's fault probes, as before a merge
+        type: boolean
+        default: false
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -63,6 +72,12 @@ jobs:
     if: ${{ !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      docx_files: ${{ steps.reach.outputs.docx_files }}
+      pptx_faults: ${{ steps.reach.outputs.pptx }}
+      odt_faults: ${{ steps.reach.outputs.odt }}
+      fileparse_faults: ${{ steps.reach.outputs.fileparse }}
+      epub_faults: ${{ steps.reach.outputs.epub }}
     steps:
       # the gate harness's typecheck reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
@@ -135,6 +150,27 @@ jobs:
       - name: Gate harness lint
         if: ${{ !cancelled() }}
         run: npx eslint tools/docx-diff tools/pptx-diff tools/odt-diff tools/fileparse-diff tools/epub-diff
+
+      - name: Fault planning regressions
+        if: ${{ !cancelled() }}
+        run: |
+          node --test tools/fault-planning.test.mjs
+          python3 -m unittest discover -s tools/docx-diff -p test_faults.py
+
+      # which engines' fault probes this run reaches: all on main and when asked
+      - name: Fault probes this run reaches
+        id: reach
+        if: ${{ !cancelled() }}
+        env:
+          ALL: ${{ github.ref == 'refs/heads/main' || inputs.all_faults }}
+          DOCX_FAULTS: ${{ inputs.faults }}
+          ODT_FAULTS: ${{ inputs.odt_faults }}
+        run: |
+          if [ "$ALL" = true ]; then
+            node tools/fault-reach.mjs --all --github-output
+          else
+            node tools/fault-reach.mjs "$(git merge-base origin/main HEAD)" --github-output
+          fi
 
   crates:
     needs: quick
@@ -220,12 +256,13 @@ jobs:
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:
     needs: quick
-    if: ${{ inputs.faults }}
+    if: ${{ !inputs.odt_faults && needs.quick.outputs.docx_files != '' && needs.quick.outputs.docx_files != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
+        catalog: ${{ fromJSON(needs.quick.outputs.docx_files) }}
         # the shard indices of the fault_shards choice; a matrix cannot count to n itself
         shard: ${{ fromJSON('{"1":[0],"2":[0,1],"4":[0,1,2,3],"8":[0,1,2,3,4,5,6,7]}')[inputs.fault_shards || '1'] }}
     steps:
@@ -271,7 +308,7 @@ jobs:
 
       - name: Faults
         env:
-          FAULTS: ${{ inputs.faults }}
+          FAULTS: ${{ matrix.catalog }}
           FAULT_SHARD: ${{ matrix.shard }}/${{ inputs.fault_shards || '1' }}
         run: python3 tools/docx-diff/faults.py "$FAULTS"
 
@@ -279,8 +316,8 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          # one shard keeps the name the trail and crates/README.md cite
-          name: docx-diff-faults${{ inputs.fault_shards != '1' && inputs.fault_shards && format('-{0}', matrix.shard) || '' }}
+          # a targeted single-catalog, single-shard run keeps its historical artifact name
+          name: ${{ inputs.faults && (inputs.fault_shards == '1' || !inputs.fault_shards) && 'docx-diff-faults' || format('docx-diff-faults-{0}', strategy.job-index) }}
           path: tools/docx-diff/out
           if-no-files-found: ignore
 
@@ -359,7 +396,7 @@ jobs:
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core }}
+    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core && needs.quick.outputs.pptx_faults == 'true' }}
     runs-on: ubuntu-latest
     # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
     timeout-minutes: 120
@@ -499,41 +536,16 @@ jobs:
   # One Rust fault at a time through the odt gate: each must be caught.
   odt-faults:
     needs: [quick, odt]
-    if: ${{ !cancelled() && !inputs.faults && needs.quick.result == 'success' && !inputs.rhwp_core && (inputs.odt_faults || needs.odt.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.faults && !inputs.rhwp_core && needs.quick.result == 'success' && (inputs.odt_faults || (needs.odt.result == 'success' && needs.quick.outputs.odt_faults == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
-        shard:
-          [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-          ]
+        # eight runners: with the probe-dev build (tools/odt-diff/faults.mjs) a
+        # wire-command fault takes minutes, and 26 runners, one fault each,
+        # spent more on setup and the baseline build than on faults
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
 
@@ -585,7 +597,7 @@ jobs:
         env:
           ONLY: ${{ inputs.odt_faults }}
         # the positive control proves the harness once per run, on shard 0
-        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/26 ${{ matrix.shard != 0 && '--no-control' || '' }}
+        run: npm --prefix tools/odt-diff run faults -- ${ONLY:+--only "$ONLY"} --shard ${{ matrix.shard }}/8 ${{ matrix.shard != 0 && '--no-control' || '' }}
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.odt == 'true'
@@ -667,11 +679,9 @@ jobs:
 
   fileparse_faults:
     needs: [quick, fileparse]
-    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core }}
+    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core && needs.fileparse.result == 'success' && needs.quick.outputs.fileparse_faults == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    # every fault rebuilds the wasm: one job ran out of time at about 16 of
-    # them, so eight jobs each take every eighth fault
     strategy:
       fail-fast: false
       matrix:
@@ -717,9 +727,6 @@ jobs:
       - name: Install
         if: steps.has.outputs.gate == 'true'
         run: npm ci
-      - name: Build the clean attachment gate
-        if: steps.has.outputs.gate == 'true'
-        run: node crates/office-wasm/build.mjs
       - name: Attachment seeded faults
         if: steps.has.outputs.gate == 'true'
         run: npm --prefix tools/fileparse-diff run faults -- --shard ${{ matrix.shard }}/8
@@ -797,7 +804,7 @@ jobs:
   # eight shards keep every one well inside its limit
   epub_faults:
     needs: [quick, epub]
-    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core }}
+    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core && needs.epub.result == 'success' && needs.quick.outputs.epub_faults == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:

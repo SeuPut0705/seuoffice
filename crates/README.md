@@ -455,9 +455,18 @@ What is particular to these gates:
   runs the fault's group: DETECTED when the gate fails with a difference or a
   stale ledger entry, otherwise MISSED, INVALID, CRASHED or TIMEOUT. A source
   line that `cargo fmt` rewraps makes its fault INVALID, so check the file
-  after formatting. `--group a,b`, `--id a,b` and `--shard i/n` (every n-th
-  fault from the i-th) pick faults; CI runs eight shards, since each fault
-  rebuilds the wasm.
+  after formatting. `--group a,b` and `--id a,b` filter the catalog before
+  `--shard i/n` takes a cost-balanced subset using `tools/fault-shards.mjs`
+  and the gate's `fault-costs.json`. Unknown costs use the planner's median
+  fallback; an empty cost file records no measurements. CI runs eight shards.
+  Each fault builds `office-wasm` with the release-derived `probe` profile
+  (no LTO), then compares its group without changing the comparison.
+  Every result in `summary.json` records elapsed `seconds`, including rebuild
+  and compare when reached, also for INVALID, CRASHED and TIMEOUT results.
+  Refresh measured costs with
+  `node tools/fault-shards.mjs refresh <gate>/fault-costs.json <summary.json> ...`.
+  The fault jobs need both their baseline gate and quick's affected-engine
+  output; main and `all_faults=true` run every engine and every DOCX catalog.
 - **First runs** are kept in `evidence/`, untouched; those above 200 KB are
   gzip-compressed. `decisions.tsv` is the trail.
 - **CSV decoding** (`file_parse::csv`, `decodeCsvBuffer` of xlsx-gateway)

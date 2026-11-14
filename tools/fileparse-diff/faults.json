@@ -164,8 +164,8 @@
     "id": "compound-stream-name",
     "group": "compound",
     "file": "crates/file-parse/src/compound.rs",
-    "from": "out.push(Stream { name, bytes });",
-    "to": "out.push(Stream { name: format!(\"{name}!\"), bytes });"
+    "from": ".map(|(name, bytes)| Stream {\n                name,",
+    "to": ".map(|(name, bytes)| Stream {\n                name: format!(\"{name}!\"),"
   },
   {
     "id": "integrator-compound-mini-cutoff",
