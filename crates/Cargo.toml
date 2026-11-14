@@ -73,3 +73,9 @@ opt-level = 1
 lto = false
 codegen-units = 16
 incremental = true
+
+# The fault probes of tools/odt-diff: the dev semantics they were written
+# against (overflow checks, debug assertions, unwinding panics) at opt-level 1.
+[profile.probe-dev]
+inherits = "dev"
+opt-level = 1
