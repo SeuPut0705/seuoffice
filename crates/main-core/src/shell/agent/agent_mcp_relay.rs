@@ -47,7 +47,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use jscompat::{JsObject, JsonValue, json_stringify, slice_utf16, trim};
+use jscompat::{JsObject, JsonValue, json_quote_slice, trim};
 
 use super::agent_mcp::{AgentMcpHost, ServiceHost, session_token};
 use crate::packages::agent_core::user_mcp_names::{MCP_SERVER_NAME_MAX, is_valid_server_name};
@@ -216,9 +216,9 @@ pub fn agent_relay_plans(list: &[JsonValue]) -> Vec<AgentRelayPlan> {
     plans
 }
 
-/// `quoted(text)`
+/// `quoted(text)`: `JSON.stringify(text.slice(0, 80))`
 fn quoted(text: &str) -> String {
-    json_stringify(&JsonValue::String(slice_utf16(text, 0.0, Some(80.0))))
+    json_quote_slice(text, 0.0, Some(80.0))
 }
 
 /// `RELAY_TEXT`: the texts the program reads (English, no secret, no address)

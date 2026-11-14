@@ -41,7 +41,8 @@ pub use json::{
     writing_for_host,
 };
 pub use json_print::{
-    json_quote, json_stringify, json_stringify_pretty, json_value_from_serde, json_value_to_serde,
+    json_quote, json_quote_slice, json_stringify, json_stringify_pretty, json_value_from_serde,
+    json_value_to_serde,
 };
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,

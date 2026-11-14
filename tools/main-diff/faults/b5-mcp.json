@@ -5750,5 +5750,12 @@
     "find": "    fn notify(&mut self) {\n        self.notify_queued = true;\n    }",
     "replace": "    fn notify(&mut self) {\n        self.notify_queued = true;\n        self.flush();\n    }",
     "fn": ["hub.scenario"]
+  },
+  {
+    "name": "relay a cut pair is written as a replacement character",
+    "file": "jscompat/src/json_print.rs",
+    "find": "out.push_str(&format!(\"\\\\u{:04x}\", lone.unpaired_surrogate()));",
+    "replace": "out.push(char::REPLACEMENT_CHARACTER);",
+    "fn": ["agent-mcp-relay.RELAY_TEXT"]
   }
 ]
