@@ -45,6 +45,12 @@ on:
         type: choice
         options: ['1', '2', '4', '8']
         default: '1'
+      # a branch run skips the fault probes of an engine nothing it changed can
+      # reach (tools/fault-reach.mjs); main always runs them all
+      all_faults:
+        description: Run every engine's fault probes, as before a merge
+        type: boolean
+        default: false
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -57,6 +63,9 @@ jobs:
   quick:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      pptx_faults: ${{ steps.reach.outputs.pptx }}
+      odt_faults: ${{ steps.reach.outputs.odt }}
     steps:
       # the gate harness's typecheck reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
@@ -116,6 +125,19 @@ jobs:
       - name: Gate harness lint
         if: ${{ !cancelled() }}
         run: npx eslint tools/docx-diff tools/pptx-diff tools/odt-diff
+
+      # which engines' fault probes this run reaches: all on main and when asked
+      - name: Fault probes this run reaches
+        id: reach
+        if: ${{ !cancelled() }}
+        env:
+          ALL: ${{ github.ref == 'refs/heads/main' || inputs.all_faults }}
+        run: |
+          if [ "$ALL" = true ]; then
+            printf 'docx=true\npptx=true\nodt=true\n' >> "$GITHUB_OUTPUT"
+          else
+            node tools/fault-reach.mjs "$(git merge-base origin/main HEAD)" --github-output
+          fi
 
   crates:
     needs: quick
@@ -304,7 +326,7 @@ jobs:
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
     needs: quick
-    if: ${{ !inputs.faults && !inputs.odt_faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults && needs.quick.outputs.pptx_faults == 'true' }}
     runs-on: ubuntu-latest
     # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
     timeout-minutes: 120
@@ -420,7 +442,8 @@ jobs:
   # One Rust fault at a time through the odt gate: each must be caught.
   odt-faults:
     needs: [quick, odt]
-    if: ${{ !cancelled() && !inputs.faults && needs.quick.result == 'success' && (inputs.odt_faults || needs.odt.result == 'success') }}
+    # odt_faults names faults to probe: they run whatever the branch changed
+    if: ${{ !cancelled() && !inputs.faults && needs.quick.result == 'success' && (inputs.odt_faults || (needs.odt.result == 'success' && needs.quick.outputs.odt_faults == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
