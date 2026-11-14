@@ -34,6 +34,16 @@ on:
         description: A faults file for tools/main-diff/faults.mjs (the central process), run beside the gates
         required: false
         default: ''
+      main_faults_product_sha:
+        description: Exact product commit for the isolated central process fault run
+        required: false
+        type: string
+        default: ''
+      main_faults_gate_run:
+        description: Successful baseline workflow run ID for the product commit
+        required: false
+        type: string
+        default: ''
       faults:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
@@ -58,13 +68,15 @@ on:
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' }}
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   quick:
+    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -643,4 +655,125 @@ jobs:
         with:
           name: main-diff-faults-${{ matrix.shard }}
           path: tools/main-diff/out
+          if-no-files-found: ignore
+
+  main-faults-only-prepare:
+    if: ${{ inputs.main_faults_product_sha || inputs.main_faults_gate_run }}
+    runs-on: ubuntu-latest
+    outputs:
+      catalogs: ${{ steps.plan.outputs.catalogs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          sparse-checkout: tools/main-diff/faults-only.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.main_faults_product_sha }}
+          path: product
+          sparse-checkout: tools/main-diff/faults
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Plan isolated faults
+        id: plan
+        env:
+          PRODUCT_DIR: product
+          DRIVER_DIR: driver
+          PLAN_PATH: plan.json
+          PRODUCT_SHA: ${{ inputs.main_faults_product_sha }}
+          DEFINITION_SHA: ${{ github.sha }}
+          GATE_RUN_ID: ${{ inputs.main_faults_gate_run }}
+          FAULT_SHARDS: ${{ inputs.fault_shards }}
+          DOCX_FAULTS: ${{ inputs.faults }}
+          ODT_FAULTS: ${{ inputs.odt_faults }}
+          MAIN_FAULTS: ${{ inputs.main_faults }}
+          ALL_FAULTS: ${{ inputs.all_faults }}
+          GH_TOKEN: ${{ github.token }}
+        run: node driver/tools/main-diff/faults-only.mjs plan
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: main-faults-only-plan
+          path: plan.json
+          if-no-files-found: error
+
+  main-faults-only:
+    needs: main-faults-only-prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        catalog: ${{ fromJSON(needs.main-faults-only-prepare.outputs.catalogs) }}
+        shard: [0, 1, 2, 3]
+    env:
+      PRODUCT_DIR: product
+      DRIVER_DIR: driver
+      PLAN_PATH: plan/plan.json
+      CATALOG: ${{ matrix.catalog.path }}
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          sparse-checkout: tools/main-diff/faults-only.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.main_faults_product_sha }}
+          path: product
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: main-faults-only-plan
+          path: plan
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check plan identities
+        run: node driver/tools/main-diff/faults-only.mjs check
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Install
+        working-directory: product
+        run: npm ci
+
+      - name: Faults
+        working-directory: product
+        shell: bash
+        env:
+          FAULT_SHARD: ${{ matrix.shard }}/4
+        run: |
+          mkdir -p tools/main-diff/out
+          node tools/main-diff/faults.mjs "$CATALOG" 2>&1 | tee tools/main-diff/out/faults.txt
+
+      - name: Audit fault results
+        if: ${{ !cancelled() }}
+        run: node driver/tools/main-diff/faults-only.mjs audit
+
+      - name: Keep the result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-faults-only-${{ matrix.catalog.label }}-${{ matrix.shard }}
+          path: product/tools/main-diff/out
           if-no-files-found: ignore

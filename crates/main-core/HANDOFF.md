@@ -67,3 +67,21 @@ gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
 
 - `system-certificates`의 `CertificateReader`, PDFium, HarfBuzz 부분 집합, `zip-splice`(lazy-media)는 비교 틀의 가짜 구현으로만 맞댔다. 실제 뒷단이 오면 그 모듈을 다시 비교해야 한다.
 - Windows 러너에서 OCR 도우미를 도는 비교를 따로 둘지는 정하지 않았다.
+
+## 제품 후보를 고정한 결함 전용 실행
+
+`ci/stage2-main-faults-only`의 드라이버 정의와 제품 `30f303cde7b496bf640aadffcb0b70bf7fb2ad21`은 서로 다른 커밋이다. 드라이버는 `github.sha`를 `driver/`에, 제품은 입력의 전체 SHA를 `product/`에 따로 checkout한다.
+
+기존 제품 관문 43554838447이 성공한 뒤 아래 명령을 한 번만 실행한다. 계획 단계가 관문의 제품 SHA와 성공한 중심 프로세스 비교를 확인한다.
+
+```sh
+gh workflow run "seuoffice rust" --ref ci/stage2-main-faults-only \
+  -f main_faults_product_sha=30f303cde7b496bf640aadffcb0b70bf7fb2ad21 \
+  -f main_faults_gate_run=43554838447 -f fault_shards=4
+```
+
+이 명시 입력이 있으면 기존 `quick`과 그 뒤의 비교·엔진 행렬은 실행하지 않는다. 다른 결함 선택 입력이나 `all_faults=true`와 섞으면 실패한다. 일반 실행의 `faultMode`와 수동 선택 우선순위는 바꾸지 않는다.
+
+`tools/main-diff/faults-only.mjs`는 제품의 모든 결함 목록을 계획에 담는다. 목록마다 네 조각으로 나누되 전체 동시 job은 넷으로 제한한다. 각 목록의 첫 양성 대조군은 네 번, 나머지 결함은 각각 한 번 실행한다. 제품의 `faults.mjs`는 그대로 쓴다. 감사 단계가 예상 결과 전체와 `CAUGHT` 판정을 확인해 `MISSED`·`BUILD`·`BAD`, 누락·중복·다른 조각의 결과를 실패로 만든다.
+
+계획과 조각별 `identity.json`에는 정의 SHA, 제품 SHA, 기준 관문 ID와 attempt를 남긴다. 산출물 이름은 `main-faults-only-plan`과 `main-faults-only-<목록>-<조각>`이다. 전용 실행의 `cancel-in-progress`는 꺼지며, 별도 CI ref는 제품·D3 ref의 기존 실행을 취소하지 않는다.
