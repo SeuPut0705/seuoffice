@@ -54,6 +54,21 @@ on:
         required: false
         type: string
         default: ''
+      main_recovery_product_sha:
+        description: Exact product commit for bounded original-index central fault recovery
+        required: false
+        type: string
+        default: ''
+      main_recovery_batch:
+        description: Manifest batch; batch 1 requires audited batch 0 from a completed run
+        type: choice
+        options: ['0', '1']
+        default: '0'
+      main_recovery_previous_run:
+        description: Completed successful batch 0 run, only when selecting batch 1
+        required: false
+        type: string
+        default: ''
       faults:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
@@ -77,8 +92,8 @@ on:
         default: false
 
 concurrency:
-  group: seuoffice-rust-${{ github.ref }}
-  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' && inputs.main_baseline_product_sha == '' && inputs.main_sensitivity_product_sha == '' }}
+  group: ${{ (inputs.main_recovery_product_sha != '' || inputs.main_recovery_previous_run != '' || inputs.main_recovery_batch == '1') && format('seuoffice-main-recovery-{0}', inputs.main_recovery_product_sha || github.ref) || format('seuoffice-rust-{0}', github.ref) }}
+  cancel-in-progress: ${{ inputs.main_faults_product_sha == '' && inputs.main_faults_gate_run == '' && inputs.main_baseline_product_sha == '' && inputs.main_sensitivity_product_sha == '' && inputs.main_recovery_product_sha == '' && inputs.main_recovery_previous_run == '' && inputs.main_recovery_batch != '1' }}
 
 permissions:
   contents: read
@@ -86,7 +101,7 @@ permissions:
 
 jobs:
   quick:
-    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha }}
+    if: ${{ !inputs.main_faults_product_sha && !inputs.main_faults_gate_run && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha && !inputs.main_recovery_product_sha && !inputs.main_recovery_previous_run && inputs.main_recovery_batch != '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -668,7 +683,7 @@ jobs:
           if-no-files-found: ignore
 
   main-faults-only-prepare:
-    if: ${{ (inputs.main_faults_product_sha || inputs.main_faults_gate_run) && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha }}
+    if: ${{ (inputs.main_faults_product_sha || inputs.main_faults_gate_run) && !inputs.main_baseline_product_sha && !inputs.main_sensitivity_product_sha && !inputs.main_recovery_product_sha && !inputs.main_recovery_previous_run && inputs.main_recovery_batch != '1' }}
     runs-on: ubuntu-latest
     outputs:
       catalogs: ${{ steps.plan.outputs.catalogs }}
@@ -790,7 +805,7 @@ jobs:
 
   # Explicit baseline evidence is not a green product-head gate for faults-only.
   main-baseline-only:
-    if: ${{ inputs.main_baseline_product_sha != '' && !inputs.main_sensitivity_product_sha }}
+    if: ${{ inputs.main_baseline_product_sha != '' && !inputs.main_sensitivity_product_sha && !inputs.main_recovery_product_sha && !inputs.main_recovery_previous_run && inputs.main_recovery_batch != '1' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -923,7 +938,7 @@ jobs:
           if-no-files-found: error
 
   main-targeted-sensitivity:
-    if: ${{ inputs.main_sensitivity_product_sha != '' }}
+    if: ${{ inputs.main_sensitivity_product_sha != '' && !inputs.main_recovery_product_sha && !inputs.main_recovery_previous_run && inputs.main_recovery_batch != '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -1046,4 +1061,228 @@ jobs:
             product/tools/main-diff/out/faults.json
             product/tools/main-diff/out/targeted-sensitivity
             !product/tools/main-diff/out/targeted-sensitivity/*.node
+          if-no-files-found: error
+
+  main-recovery-prepare:
+    if: ${{ inputs.main_recovery_product_sha != '' || inputs.main_recovery_previous_run != '' || inputs.main_recovery_batch == '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      product_sha: ${{ steps.plan.outputs.product_sha }}
+    env:
+      MODE: main-fault-recovery
+      PRODUCT_DIR: ${{ github.workspace }}/product
+      DRIVER_DIR: ${{ github.workspace }}/driver
+      PRODUCT_SHA: ${{ inputs.main_recovery_product_sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      RECOVERY_BATCH: ${{ inputs.main_recovery_batch }}
+      PREVIOUS_RUN: ${{ inputs.main_recovery_previous_run }}
+      DOCX_FAULTS: ${{ inputs.faults }}
+      ODT_FAULTS: ${{ inputs.odt_faults }}
+      MAIN_FAULTS: ${{ inputs.main_faults }}
+      FAULT_PRODUCT_SHA: ${{ inputs.main_faults_product_sha }}
+      GATE_RUN_ID: ${{ inputs.main_faults_gate_run }}
+      BASELINE_PRODUCT_SHA: ${{ inputs.main_baseline_product_sha }}
+      SENSITIVITY_PRODUCT_SHA: ${{ inputs.main_sensitivity_product_sha }}
+      ALL_FAULTS: ${{ inputs.all_faults }}
+      FAULT_SHARDS: ${{ inputs.fault_shards }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate recovery mode and exact product
+        id: identity
+        run: node driver/tools/main-diff/recovery-driver.mjs validate
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.identity.outputs.product_sha }}
+          path: product
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43578414343
+          pattern: main-baseline-only-*
+          path: full-baseline
+      - uses: actions/download-artifact@v4
+        if: inputs.main_recovery_batch == '1'
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.main_recovery_previous_run }}
+          name: main-recovery-batch-0
+          path: previous-batch
+      - name: Audit baseline lineage and original-index plan
+        id: plan
+        run: node driver/tools/main-diff/recovery-driver.mjs prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: main-recovery-plan-${{ inputs.main_recovery_batch }}
+          path: |
+            recovery-plan.json
+            recovery-baseline-receipt.json
+            targeted-replay.zip
+            targeted-replay-receipt.json
+            targeted-original-run.json
+            targeted-original-jobs.json
+            targeted-original-artifact.json
+            targeted-original.log
+          if-no-files-found: error
+
+  main-recovery-job:
+    needs: main-recovery-prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.main-recovery-prepare.outputs.matrix) }}
+    env:
+      MODE: main-fault-recovery
+      PRODUCT_DIR: ${{ github.workspace }}/product
+      DRIVER_DIR: ${{ github.workspace }}/driver
+      PRODUCT_SHA: ${{ needs.main-recovery-prepare.outputs.product_sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      RECOVERY_BATCH: ${{ inputs.main_recovery_batch }}
+      PREVIOUS_RUN: ${{ inputs.main_recovery_previous_run }}
+      JOB_KEY: ${{ matrix.jobKey }}
+      JOB_OUT: ${{ github.workspace }}/job-out
+      MAIN_DIFF_PROFILE: node-faults
+      CARGO_INCREMENTAL: '1'
+      MAIN_DIFF_OUT: ${{ github.workspace }}/job-out/comparison
+      MAIN_DIFF_ADDON: ${{ github.workspace }}/job-out/main_node.node
+      SEUOFFICE_WASM: ${{ github.workspace }}/product/crates/target/wasm32-wasip1/release/office_wasm.wasm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.main-recovery-prepare.outputs.product_sha }}
+          path: product
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: main-recovery-plan-${{ inputs.main_recovery_batch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: product/crates
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: product/crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('product/vendor/rhwp-core/**', 'product/tools/build-rhwp-core.mjs') }}
+      - name: Product rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        working-directory: product
+        run: node tools/build-rhwp-core.mjs --source-only
+      - name: Install exact product dependencies
+        working-directory: product
+        run: npm ci
+      - name: Build exact product WASM
+        working-directory: product
+        run: npm run build:wasm
+      - name: Bind catalog selectors and committed source
+        env:
+          CARGO_INCREMENTAL: '1'
+        id: job
+        run: node driver/tools/main-diff/recovery-driver.mjs job-prepare
+      - name: Original bounded residue and positive control
+        id: mutations
+        working-directory: product
+        shell: bash
+        env:
+          CARGO_INCREMENTAL: '1'
+          FAULT_SHARD: ${{ steps.job.outputs.fault_shard }}
+          FAULT_CATALOG: ${{ steps.job.outputs.catalog }}
+        run: node tools/main-diff/faults.mjs "$FAULT_CATALOG" 2>&1 | tee "$JOB_OUT/faults.txt"
+      - name: Preserve raw fault rows even after a producer failure
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$JOB_OUT"
+          if [ -f product/tools/main-diff/out/faults.json ]; then
+            cp product/tools/main-diff/out/faults.json "$JOB_OUT/faults.json"
+          fi
+      - name: Audit complete job evidence and source restoration
+        if: ${{ success() }}
+        env:
+          CARGO_INCREMENTAL: '1'
+        run: node driver/tools/main-diff/recovery-driver.mjs audit-job
+      - name: Publish this completed job or incomplete raw evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-recovery-job-${{ inputs.main_recovery_batch }}-${{ matrix.slug }}-${{ matrix.residue }}-${{ matrix.modulus }}
+          path: |
+            job-out
+            !job-out/*.node
+          if-no-files-found: error
+
+  main-recovery-aggregate:
+    if: ${{ needs.main-recovery-prepare.result == 'success' && needs.main-recovery-job.result == 'success' }}
+    needs: [main-recovery-prepare, main-recovery-job]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MODE: main-fault-recovery
+      PRODUCT_DIR: ${{ github.workspace }}/product
+      DRIVER_DIR: ${{ github.workspace }}/driver
+      PRODUCT_SHA: ${{ needs.main-recovery-prepare.outputs.product_sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      RECOVERY_BATCH: ${{ inputs.main_recovery_batch }}
+      PREVIOUS_RUN: ${{ inputs.main_recovery_previous_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.main-recovery-prepare.outputs.product_sha }}
+          path: product
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: main-recovery-plan-${{ inputs.main_recovery_batch }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: main-recovery-job-${{ inputs.main_recovery_batch }}-*
+          path: completions
+      - uses: actions/download-artifact@v4
+        if: inputs.main_recovery_batch == '1'
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.main_recovery_previous_run }}
+          name: main-recovery-batch-0
+          path: previous-batch
+      - name: Audit exact batch and complete union only when all batches exist
+        run: node driver/tools/main-diff/recovery-driver.mjs aggregate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: main-recovery-batch-${{ inputs.main_recovery_batch }}
+          path: |
+            batch-completion.json
+            recovery-complete.json
           if-no-files-found: error

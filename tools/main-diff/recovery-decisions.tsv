@@ -1,0 +1,11 @@
+ts	phase	decision	why	evidence	result
+2026-11-14T11:54:00Z	frame	제품375와 별도 정의 가지를 고정한다	기존 제품30·정의7594·장기실행의 근거를 섞지 않는다	375b08bd0e1f7e8432e6514468cc9d25be01b100; core-recovery-driver-implementation-parallel-proof	구현 중, dispatch 보류
+2026-11-14T11:54:00Z	plan	원본6121을 잠정 요구하고 영향3834를 따로 기록한다	원본 최종감사 전에는 재사용 후보2287을 성공으로 가정할 수 없다	tools/main-diff/recovery-manifest.json	재사용 제외0
+2026-11-14T11:54:00Z	plan	양성 대조를 포함해 job당25 records로 제한한다	최신 상한을 보수적으로 적용하고 원본 residue 계보를 유지한다	core-recovery-driver-implementation-parallel-proof	정수계산348 jobs, 2개 배치; 시간 상한 증명 아님
+2026-11-14T11:54:00Z	state	각 job의 완결 artifact만 원본ID로 합친다	불완전 CAUGHT 접두사를 소급 checkpoint로 만들지 않는다	43568242384; tools/main-diff/recovery-audit.mjs	기존 MISSED·미완료 보존
+2026-11-14T11:54:00Z	baseline	f506 전체 baseline과375 표적 증거를 명시 계보로 결합한다	표적200사례를 전체 baseline으로 사칭하지 않는다	43578414343; 43591069529	표적 실행 결과 대기; 실행 준비는 성공 증거 없으면 실패
+2026-11-14T12:29:00Z	review	완결 표시는 producer와 전체 matrix의 실제 성공에 결속한다	마지막 정상 addon rebuild가 실패해도 앞선 CAUGHT 행만으로 성공할 수 없다	RecoveryWorkflowReview; .github/workflows/seuoffice-rust.yml	성공 조건 수정, Actions 실패 경로 회귀 통과
+2026-11-14T12:29:00Z	review	제품이 빠진 재개 입력도 별도 비취소 group으로 보낸다	입력 검증 전에 기존 ref 실행을 취소하지 않아야 한다	RecoveryWorkflowReview; verify-recovery-routing.mjs	잘못된 입력의 비취소·격리 회귀 통과
+2026-11-14T12:29:00Z	replay	원본 failure를 보존한 별도 receipt로 정확 artifact를 다시 감사한다	공개 오류 이름을 fatal로 오독한 감사기만 고치고 producer 결과를 다시 실행하지 않는다	39c5f72c282133d1dc183c96c1e3faa55d2b23a5; 14112519044	정상200·실제80/81 차이 재감사, 최종 WASM hash와 복구 raw파일 부재 명시
+2026-11-14T12:29:00Z	review	실제 함수 FLOOR 요약과 top-level JS 오류를 거부하고 JSON 값은 보존한다	실제 DIFF 뒤의 다른 오류를 CAUGHT로 숨기거나 정상 오류 값을 진단으로 오독하지 않는다	20261114-122608-f5fc; 20261114-122845-4b10	회귀 실패 후 최소 수정, 감사기11개 성공
+2026-11-14T12:29:00Z	build	재개 native step의 CARGO_INCREMENTAL을1로 명시하고 identity에 남긴다	rust-cache가 내보내는 기본0에 의존하지 않고 실제 설정으로 결과를 판정한다	30f303cde:crates/Cargo.toml; .github/workflows/seuoffice-rust.yml	제품 profile 불변, 속도 개선 실측 주장 없음
