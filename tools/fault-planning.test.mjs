@@ -91,3 +91,22 @@ test('the all-faults CLI emits every engine and all DOCX catalogs for the workfl
     rmSync(directory, { recursive: true, force: true })
   }
 })
+test('a manual ODT selection on main uses affected mode, not all faults', () => {
+  const result = spawnSync(
+    process.execPath,
+    [fileURLToPath(new URL('./fault-reach.mjs', import.meta.url)), '--mode'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GITHUB_EVENT_NAME: 'workflow_dispatch',
+        GITHUB_REF: 'refs/heads/main',
+        ALL_FAULTS: 'false',
+        DOCX_FAULTS: '',
+        ODT_FAULTS: 'wire-root',
+      },
+    },
+  )
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout.trim(), 'affected')
+})
