@@ -6,6 +6,80 @@
     "sha256": "373ce3f83e2dc340763c62c479be149f2fa89b22434998e35a9a427ba3161157",
     "capturedAt": "2026-11-14T12:37:43Z"
   },
+  "typedEvidenceRequirements": [
+    {
+      "catalog": "tools/main-diff/faults/b5-agent-apps.json",
+      "index": 382,
+      "mutationSha256": "95214f13f0d71d60e698b7074cd6edf7668ddca101e130800510513f8c9a9b18",
+      "name": "diagram attachments: the page text is cut at the size",
+      "selectors": [
+        "diagram/ai-attachments.readAttachmentPage",
+        "diagram/ai-attachments.registerDiagramAiIpc"
+      ],
+      "ledger": [
+        {
+          "id": "diagram-attachment-page-cuts-a-surrogate-pair-3",
+          "fn": "diagram/ai-attachments.readAttachmentPage",
+          "case": 3,
+          "tupleSha256": "0ca9f6ccfa57593a80ff8a225529974bf96bffa18e58d32bdb9f07f0b3e7669d"
+        }
+      ]
+    },
+    {
+      "catalog": "tools/main-diff/faults/b5-agent-apps.json",
+      "index": 470,
+      "mutationSha256": "7143647f8d132c216b25a6c6e549cc093d5b7eca812ea720ecb3d91b78e41620",
+      "name": "epub attachments: the page text is cut at the size",
+      "selectors": [
+        "epub/ai-attachments.readAttachmentPage",
+        "epub/ai-attachments.registerEpubAiIpc"
+      ],
+      "ledger": [
+        {
+          "id": "epub-attachment-page-cuts-a-surrogate-pair-3",
+          "fn": "epub/ai-attachments.readAttachmentPage",
+          "case": 3,
+          "tupleSha256": "0ca9f6ccfa57593a80ff8a225529974bf96bffa18e58d32bdb9f07f0b3e7669d"
+        }
+      ]
+    },
+    {
+      "catalog": "tools/main-diff/faults/b5-agent-apps.json",
+      "index": 526,
+      "mutationSha256": "44535ac1624710aabb19eaba3a680995930bb569368952d4cdfda7b79e2499f9",
+      "name": "mindmap attachments: a file with unsaved changes is read",
+      "selectors": [
+        "mindmap/ai-attachments.readAttachmentPage",
+        "mindmap/ai-attachments.registerMindmapAiIpc"
+      ],
+      "ledger": [
+        {
+          "id": "mindmap-attachment-page-cuts-a-surrogate-pair-3",
+          "fn": "mindmap/ai-attachments.readAttachmentPage",
+          "case": 3,
+          "tupleSha256": "0ca9f6ccfa57593a80ff8a225529974bf96bffa18e58d32bdb9f07f0b3e7669d"
+        }
+      ]
+    },
+    {
+      "catalog": "tools/main-diff/faults/b5-agent-apps.json",
+      "index": 546,
+      "mutationSha256": "7fdf35e07db85e5c122aea2093243274740edc2b2f9ab5f1ada561c25971edc8",
+      "name": "mindmap attachments: the page offset is not reported",
+      "selectors": [
+        "mindmap/ai-attachments.readAttachmentPage",
+        "mindmap/ai-attachments.registerMindmapAiIpc"
+      ],
+      "ledger": [
+        {
+          "id": "mindmap-attachment-page-cuts-a-surrogate-pair-3",
+          "fn": "mindmap/ai-attachments.readAttachmentPage",
+          "case": 3,
+          "tupleSha256": "0ca9f6ccfa57593a80ff8a225529974bf96bffa18e58d32bdb9f07f0b3e7669d"
+        }
+      ]
+    }
+  ],
   "original": {
     "productSha": "30f303cde7b496bf640aadffcb0b70bf7fb2ad21",
     "definitionSha": "7594c1243ef0c2965c202dead1fd983ad7ab77e9",

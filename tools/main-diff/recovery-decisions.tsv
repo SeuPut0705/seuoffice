@@ -14,3 +14,7 @@ ts	phase	decision	why	evidence	result
 2026-11-14T13:18:14Z	snapshot	완결·비영향373 ID만 차감하고5748개를 요구한다	원본 ZIP6개·완료log·119개 변이 소스의 정확 바이트를 결속했다	20261114-130844-489a	332 jobs=[256,76], 최대25, 영향3834 전부 유지
 2026-11-14T13:18:14Z	snapshot	manifest 결속은 JavaScript JSON.stringify 해시로 계산한다	초기 Python 숫자56.0 직렬화가 계약의56과 달라 binding 검사가 실패했다	20261114-125235-89c8; c74329b2f9ff6dfcf2a981d59fa5bc728b0eb7811a9b0f48fd69d966d2af6097	정확 canonical hash로 수정, raw 원본 artifact 불변
 2026-11-14T13:18:14Z	proposal	네 STALE는 정상 baseline 결함과 구분하고 다음 typed 계약을 별도 검토한다	변이가 기존 ledger tuple을 바꾸는 반응과 onlySTALE·다른 selector·fatal을 구분해야 한다	apps2-four-stale-classification.json; approve-generic-mutation-ledger-contract-with-typed-evidence	부모 조건부 구현 승인, 이 snapshot 커밋에서는 strict 판정 유지
+2026-11-14T13:44:00Z	typed	네 장부 반응은 마지막 원본report의 실제case3 typed차이와 장부밖독립DIFF를 모두 요구한다	집계나 differences부재로 새tuple/동등을 추정하지 않는다	typed-ledger-report-equality-evidence-boundary; recovery-mutation.test.mjs	원본4행은 중간typed자료가 없어 계속거부
+2026-11-14T13:44:00Z	scope	전역child-process관측hook을 배제하고 원본runner종료후 report보존으로 제한한다	승인된작은원본residue경로와 실행의미를 유지한다	keep-approved-residue-plan-no-process-monkeypatch	작성된hook2파일삭제, 실행0, 정상baseline추가도4job선택함수에만수행
+2026-11-14T13:44:00Z	plan	알려진4증거요구만 generic residue refinement로 마지막noncontrol에 둔다	원본index/hash/필요집합과최대25를 보존하고 미확인STALE는계속거부한다	20261114-134200-d23c	373재사용/5748필요/5703noncontrol/341jobs=[256,85], native실행0
+2026-11-14T13:44:00Z	regression	typed계획의prefix-only인수회귀를 먼저실패시킨뒤 원본report필수로 고친다	CAUGHT접두사만으로 새로운typed증거를 대체할수없다	20261114-133245-5466; 20261114-134134-0c95	red후35개회귀통과, hosted감도결과로확대하지않음

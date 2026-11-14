@@ -70,6 +70,18 @@ function fixture(lengths) {
 const productionFixture = () => fixture([...Array(45).fill(133), 136])
 const key = (path, index) => `${path}#${index}`
 
+function marker(catalog, index) {
+  const fault = catalog.faults[index]
+  return {
+    catalog: catalog.path,
+    index,
+    mutationSha256: hash(fault),
+    name: fault.name,
+    selectors: fault.fn,
+    ledger: [{ id: `ledger-${index}`, fn: fault.fn[0], case: 3, tupleSha256: 'a'.repeat(64) }],
+  }
+}
+
 test('hashes use JSON serialization and raw bytes respectively', () => {
   assert.equal(hash({ a: 1 }), hashBytes(Buffer.from('{"a":1}')))
   assert.equal(
@@ -83,6 +95,7 @@ test('full provisional plan covers each original ID and preserves bounded shard 
   const before = structuredClone({ manifest, catalogs })
   assert.equal(validateManifest(manifest, catalogs), true)
   const plan = createRecoveryPlan(manifest, catalogs, { definitionSha })
+  assert.equal(plan.mutationEvidenceContract, 'terminal-report-typed-evidence/v1')
   assert.deepEqual({ manifest, catalogs }, before)
   assert.deepEqual(plan, createRecoveryPlan(manifest, catalogs, { definitionSha }))
   assert.equal(plan.provisional, true)
@@ -291,6 +304,21 @@ test('fixed snapshot subtracts only proved unaffected IDs and is reaudited', () 
   assert.ok(plan.requiredIds.includes(key(path, 2)))
   assert.ok(!plan.requiredIds.includes(key(path, 4)))
   assert.equal(auditPlan(plan, manifest, catalogs, { snapshot, originalCatalogs }), true)
+  const markedManifest = structuredClone(manifest)
+  markedManifest.typedEvidenceRequirements = [marker(catalogs[29], 1)]
+  const markedPlan = createRecoveryPlan(markedManifest, catalogs, options)
+  assert.deepEqual(markedPlan.reusedIds, plan.reusedIds)
+  assert.equal(markedPlan.manifestSha256, hash(markedManifest))
+  assert.notEqual(markedPlan.manifestSha256, plan.manifestSha256)
+  assert.equal(
+    auditPlan(markedPlan, markedManifest, catalogs, { snapshot, originalCatalogs }),
+    true,
+  )
+  markedManifest.typedEvidenceRequirements = [marker(catalogs[29], 4)]
+  assert.throws(
+    () => createRecoveryPlan(markedManifest, catalogs, options),
+    /typed evidence requirement/,
+  )
   assert.throws(() => auditPlan(plan, manifest, catalogs))
   const altered = structuredClone(snapshot)
   altered.complete[0].rows[1].verdict = 'MISSED'
@@ -335,6 +363,69 @@ test('sparse residue expansion and control-only selection expose all extra IDs',
   assert.equal(control.jobs[0].residue, 0)
   assert.deepEqual(control.jobs[0].requiredIndices, [0])
   assert.throws(() => scheduleRecovery(manifest, catalogs, [key(path, 810)]), /Unknown required ID/)
+})
+
+test('typed evidence markers refine arbitrary positions without losing the selected union', () => {
+  const { manifest, catalogs } = fixture([810])
+  const catalog = catalogs[0]
+  const required = [1, 37, 73, 109, 2, 42, 809].map((index) => key(catalog.path, index))
+  const coarse = scheduleRecovery(manifest, catalogs, required)
+  manifest.typedEvidenceRequirements = [1, 37, 73, 42, 809].map((index) => marker(catalog, index))
+  const refined = scheduleRecovery(manifest, catalogs, required)
+  assert.deepEqual(refined.expandedIds, coarse.expandedIds)
+  assert.deepEqual(refined.requiredIds, coarse.requiredIds)
+  const counts = new Map()
+  for (const job of refined.jobs) {
+    assert.equal(job.indices[0], 0)
+    assert.ok(job.indices.length <= 25)
+    assert.equal(job.originalShard, job.residue % 4)
+    assert.ok(job.typedEvidenceRequirements.length <= 1)
+    if (job.typedEvidenceRequirements.length)
+      assert.equal(job.indices.at(-1), job.typedEvidenceRequirements[0].index)
+    for (const index of job.indices.slice(1)) {
+      assert.equal(index % job.modulus, job.residue)
+      assert.equal(index % 4, job.originalShard)
+      counts.set(index, (counts.get(index) ?? 0) + 1)
+    }
+    for (const entry of job.entryHashes) {
+      assert.equal(entry.originalSha256, manifest.catalogs[0].mutations[entry.index].originalSha256)
+      assert.equal(entry.productSha256, hash(catalog.faults[entry.index]))
+    }
+  }
+  assert.ok([...counts.values()].every((count) => count === 1))
+  assert.deepEqual(
+    refined.jobs.flatMap((job) => job.typedEvidenceRequirements).sort((a, b) => a.index - b.index),
+    [...manifest.typedEvidenceRequirements].sort((a, b) => a.index - b.index),
+  )
+  assert.deepEqual(
+    refined.batches.flat(),
+    refined.jobs.map((job) => job.jobKey),
+  )
+})
+
+test('typed evidence requirements reject mismatched identities and non-required markers', () => {
+  const { manifest, catalogs } = fixture([100])
+  const catalog = catalogs[0]
+  const required = [key(catalog.path, 13)]
+  const valid = marker(catalog, 13)
+  for (const invalid of [
+    { ...valid, catalog: 'tools/main-diff/faults/other.json' },
+    { ...valid, index: 14 },
+    { ...valid, mutationSha256: 'b'.repeat(64) },
+    { ...valid, name: 'other' },
+    { ...valid, selectors: ['other'] },
+    { ...valid, ledger: [] },
+  ]) {
+    manifest.typedEvidenceRequirements = [invalid]
+    assert.throws(
+      () => scheduleRecovery(manifest, catalogs, required),
+      /typed evidence requirement/,
+    )
+  }
+  manifest.typedEvidenceRequirements = [valid, valid]
+  assert.throws(() => scheduleRecovery(manifest, catalogs, required), /typed evidence requirement/)
+  manifest.typedEvidenceRequirements = [marker(catalog, 14)]
+  assert.throws(() => scheduleRecovery(manifest, catalogs, required), /typed evidence requirement/)
 })
 
 test('production validation rejects modified identity, index, linkage and mutation content', () => {

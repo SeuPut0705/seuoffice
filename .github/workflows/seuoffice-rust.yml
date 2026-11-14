@@ -1221,6 +1221,9 @@ jobs:
           if [ -f product/tools/main-diff/out/faults.json ]; then
             cp product/tools/main-diff/out/faults.json "$JOB_OUT/faults.json"
           fi
+          if [ -f product/tools/main-diff/out/report.json ]; then
+            cp product/tools/main-diff/out/report.json "$JOB_OUT/terminal-report-raw.json"
+          fi
       - name: Audit complete job evidence and source restoration
         if: ${{ success() }}
         env:

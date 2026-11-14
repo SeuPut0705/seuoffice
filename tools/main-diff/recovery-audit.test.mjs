@@ -6,6 +6,17 @@ import { auditJob, mergeCompletions } from './recovery-audit.mjs'
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const h = (char) => char.repeat(64)
 
+test('a typed recovery plan cannot accept prefix-only producer evidence', () => {
+  const f = fixture()
+  f.plan.mutationEvidenceContract = 'terminal-report-typed-evidence/v1'
+  f.plan.jobs[0].typedEvidenceRequirements = [{ index: 1 }]
+  f.evidence[0].identity.planSha256 = hash(f.plan)
+  assert.throws(
+    () => auditJob(f.plan, 'job0', f.catalog, f.evidence[0]),
+    /baseline|observation|typed/i,
+  )
+})
+
 function fixture() {
   const path = 'tools/main-diff/faults/example.json'
   const faults = [

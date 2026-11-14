@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
+import { auditNormalBaseline, auditTerminalMutation } from './recovery-mutation.mjs'
+import { originalMutatorSha256 } from './recovery-runner-model.mjs'
 
 const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const sha256 = (value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
@@ -79,7 +81,7 @@ function validateIdentity(plan, identity, jobKey) {
   )
 }
 
-function validateDetail(detail, selectors) {
+function validateDetail(detail, selectors, provedStaleIds = []) {
   requireValue(
     typeof detail === 'string' && Array.isArray(selectors) && selectors.length > 0,
     'Missing comparison detail',
@@ -102,6 +104,8 @@ function validateDetail(detail, selectors) {
   segments.push(detail.slice(start))
   let found = false
   for (const segment of segments) {
+    const stale = /^STALE ledger entry ([^:]+): it no longer reproduces$/.exec(segment)
+    if (stale && provedStaleIds.includes(stale[1])) continue
     requireValue(
       !/^(?:STALE ledger entry\b|no such group:|fatal(?::|\s+error\b)|(?:[A-Za-z_$][A-Za-z0-9_$]*Error|Error)(?:\s+\[[^\]]+\])?(?::|\s+))/i.test(
         segment,
@@ -162,6 +166,63 @@ export function auditJob(plan, jobKey, catalog, evidence) {
       summaries[0].slice(3).every((n) => Number(n) === 0),
     'Incomplete or failing summary',
   )
+  const typed = plan.mutationEvidenceContract === 'terminal-report-typed-evidence/v1'
+  const requirements = job.typedEvidenceRequirements ?? []
+  let terminalReceipt
+  if (typed) {
+    requireValue(Array.isArray(job.typedEvidenceRequirements), 'Missing typed requirements')
+    requireValue(requirements.length <= 1, 'Multiple terminal requirements')
+    if (requirements.length) {
+      requireValue(
+        evidence.baseline && evidence.terminal,
+        'Missing typed baseline or terminal report',
+      )
+      requireValue(
+        isDeepStrictEqual(evidence.baseline.identity, evidence.identity),
+        'Wrong baseline identity',
+      )
+      requireValue(
+        isDeepStrictEqual(evidence.terminal.identity, evidence.identity),
+        'Wrong terminal identity',
+      )
+      requireValue(
+        requirements[0].index === job.indices.at(-1) &&
+          evidence.terminal.detail === evidence.rows.at(-1).detail,
+        'Wrong terminal mutation or raw detail',
+      )
+      auditNormalBaseline(evidence.baseline)
+      terminalReceipt = auditTerminalMutation({
+        plan,
+        job,
+        catalog,
+        index: requirements[0].index,
+        baseline: evidence.baseline,
+        evidence: evidence.terminal,
+      })
+    } else {
+      requireValue(!evidence.baseline && !evidence.terminal, 'Unexpected typed evidence')
+    }
+    const model = evidence.runnerModel
+    requireValue(
+      model?.kind === 'pinned-original-runner-control-flow' &&
+        model.mutatorSha256 === originalMutatorSha256 &&
+        isDeepStrictEqual(model.before, evidence.sourceBefore) &&
+        Array.isArray(model.entries) &&
+        model.entries.length === job.indices.length,
+      'Missing pinned runner model',
+    )
+    for (const [position, index] of job.indices.entries()) {
+      const entry = model.entries[position]
+      requireValue(
+        entry.index === index &&
+          entry.path === `crates/${catalog.faults[index].file}` &&
+          entry.findCount === 1 &&
+          sha256(entry.derivedAppliedSourceSha256) &&
+          entry.derivedAppliedSourceSha256 !== model.before[entry.path],
+        'Invalid derived source model',
+      )
+    }
+  }
   const selected = []
   const records = job.indices.map((index, position) => {
     const fault = catalog.faults[index]
@@ -180,7 +241,12 @@ export function auditJob(plan, jobKey, catalog, evidence) {
         row.verdict === 'CAUGHT',
       `Invalid result ${index}`,
     )
-    validateDetail(row.detail, fault.fn)
+    const typedEvidence = terminalReceipt?.index === index ? terminalReceipt : undefined
+    validateDetail(
+      row.detail,
+      fault.fn,
+      typedEvidence?.ledgerReactions.map((reaction) => reaction.id) ?? [],
+    )
     selected.push(fault)
     return {
       id: idFor(job.catalog, index),
@@ -188,6 +254,7 @@ export function auditJob(plan, jobKey, catalog, evidence) {
       originalSha256: hashes.originalSha256,
       productSha256: hashes.productSha256,
       verdict: row.verdict,
+      ...(typedEvidence ? { typedEvidence } : {}),
     }
   })
   validateSources(evidence.sourceBefore, evidence.sourceAfter, selected)

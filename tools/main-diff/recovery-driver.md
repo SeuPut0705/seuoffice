@@ -29,9 +29,23 @@
 
 길이 `L`인 catalog에 `N=max(4,4*ceil((L-1)/96))`을 쓴다. job은 원본 control0과 `index % N == residue`인 나머지 원본 항목을 선택한다. `N`은4의 배수이므로 원본4조각 계보가 유지된다. catalog 복사·부분 배열·재번호화는 없다. 제품의 수정하지 않은 `faults.mjs`와 `MAIN_DIFF_PROFILE=node-faults`를 사용한다.
 
-job당 **control을 포함해 최대25 records**다. 각 noncontrol은 계획 전체에서 정확히 한 번 선택한다. control의 반복은 job별로 명시한다. 잠정 전체6,121개 선택은348 jobs였고, 고정 완료 snapshot의 비영향373개만 뺀 필요 집합은5,748개다. 새 선택은332 jobs이며256개·76개 두 배치로 나뉜다. 실제 catalog 비용이 아직 측정되지 않은 제품375의 시간 상한이나 성공 보장은 아니다.
+job당 **control을 포함해 최대25 records**다. 각 noncontrol은 계획 전체에서 정확히 한 번 선택한다. control의 반복은 job별로 명시한다. 잠정 전체6,121개 선택은348 jobs였고, 고정 완료 snapshot의 비영향373개만 뺀 필요 집합은5,748개다. 기본 선택332 jobs에서 아래 네 증거 요구를 정상 세분화한 최종 계획은341 jobs,256개·85개 두 배치다. 고유 필요 ID와 변이 본문은 늘거나 줄지 않으며 control만9번 더 실행한다. 실제 catalog 비용이 아직 측정되지 않은 제품375의 시간 상한이나 성공 보장은 아니다.
 
 원본6개 job의 설치·첫 control 지연·후속 결과 간격은 manifest의 `costEvidence`에 원본 실행·제품·catalog·shard와 함께 남긴다. 이 간격에는 native 증분 빌드·TS 비교·출력이 섞여 있다. 초기 빌드만의 시간과 제품375의 변이 시간은 미측정이다. 개수 내림차순은 비용 대리값일 뿐 실제 시간 균형이라고 부르지 않는다.
+
+## 마지막 변이의 typed 장부 반응
+
+원본 apps shard2의 `#382`, `#470`, `#526`, `#546`은 실제 독립 DIFF와 STALE 진단을 함께 냈다. 고정 정상 baseline의 장부 tuple이 변이 때문에 바뀌는 경계와 정상 baseline 자체의 STALE는 다르다. 원본 artifact에는 이 네 변이의 중간 전체 report가 없으므로 여전히 인수하지 않는다. 보존한 `recovery-stale-rows.json`도 성공 증거가 아니라 그 거부 회귀 자료다.
+
+manifest의 `typedEvidenceRequirements`는 원본 index·변이 객체 해시·selector·장부 ID·정확 tuple 해시를 기록한다. 판정 예외가 아니라 추가 증거 요구다. 일반 분할기는 요구가 있는 residue만 `r/N`에서 `r/(2N)`, `(r+N)/(2N)`으로 세분화해 요구 변이가 해당 job의 마지막 noncontrol이 되게 한다. 원본 index와 `%4` 계보, 전체 선택 합집합, 최대25 제한을 그대로 유지한다. 장부 함수를 고르는 다른 변이를 미리 모두 세분화하지 않는다.
+
+추가 정상 비교는 이 네 job의 요구 변이가 고른 함수·사례에만 수행한다. 정확 제품 registry의 사례 개수, 전체 함수 report, 장부의 정확 TS/Rust tuple 재현, unlisted0·STALE0·FLOOR0·정상 종료를 강제한다. 다른 job에는 같은 정상 baseline을 복제하지 않고 기존 전체 baseline 계보를 사용한다.
+
+원본 `faults.mjs`가 성공 종료한 뒤 남은 `report.json`을 마지막 index·변이 해시·단일 group·전체 선택 함수·기대 사례 수에 결속한다. 각 알려진 STALE ID는 장부 case3의 실제 typed DIFF를 가져야 한다. mutant TS는 고정 장부 TS와 같고 mutant Rust는 고정 장부 Rust와 다르며 실제 TS/Rust도 달라야 한다. 이와 별개로 모든 장부 사례 밖의 독립 unlisted DIFF가 최소 하나 있어야 한다. 다른 함수·범위 밖 사례·중복·누락·fatal·FLOOR·unknown STALE·onlySTALE는 거부한다.
+
+`report.json`은 모든 사례의 양쪽 출력이 아니라 차이와 집계만 보존한다. 따라서 장부 case가 differences에 없으면 새 tuple이나 TS 동등을 추정하지 않고 추가 증거 부족으로 거부한다. typed 감사가 입증한 정확 ID의 해당 행만 STALE 진단을 소비할 수 있다. 장부 삭제·ID별 verdict 우회·포괄 STALE 허용은 없다.
+
+소스 적용 근거는 정확 원본 runner 바이트 해시, committed 소스 해시, find1회와 파생 replace 해시, 정상 producer 종료와 `finally` 복구 및 실제 복구 해시의 결속이다. 실제 build 직전 소스를 직접 관측했다고 주장하지 않는다. 전역 preload·child-process hook·폴링은 쓰지 않고 제품 runner·catalog·profile은 바꾸지 않는다.
 
 ## 두 배치는 명시적으로 순서 실행
 
@@ -55,7 +69,7 @@ job의 `completion.json`은 다음이 모두 맞을 때만 생성한다.
 - 정확 정의·제품·run·attempt·manifest·plan·job identity.
 - 원본 순서와 개수에 맞는 모든 결과 행, 정확 변이 해시·파일·함수 목록.
 - 첫 행의 실제 control DIFF와 각 행의 해당 selector에 대한 실제 DIFF·CAUGHT.
-- 완전한 결과 JSON과 단 한 번의 전체 성공 summary. MISSED·BUILD·BAD·FLOOR·STALE·unknown selector·누락은 실패.
+- 완전한 결과 JSON과 단 한 번의 전체 성공 summary. MISSED·BUILD·BAD·FLOOR·unknown selector·누락은 실패다. STALE는 기본 거부하며, 위 계약의 실제 typed 증거를 모두 통과한 해당 마지막 행·정확 장부 ID만 별도 반응으로 인수한다.
 - 정확 원본 소스의 복구.
 
 job이 끝나면 고유 이름의 artifact를 즉시 업로드한다. 실패·중단 때 raw 파일을 남겨도 완결 표시는 없다. 합치는 쪽은 embedded evidence를 다시 감사하고 committed product 소스와 catalog에 다시 결속한다. `Error`가 함수명이나 JSON 값에 들어 있다는 이유로 정상 오류 비교를 거부하지는 않는다.

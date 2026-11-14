@@ -164,6 +164,39 @@ export function scheduleRecovery(manifest, catalogs, requiredIds) {
     'Unknown required ID',
   )
   const current = new Map(catalogs.map((catalog) => [catalog.path, catalog]))
+  const markers = manifest.typedEvidenceRequirements ?? []
+  requireValue(Array.isArray(markers), 'Invalid typed evidence requirements')
+  const markerIds = new Set()
+  for (const marker of markers) {
+    const catalog = current.get(marker?.catalog)
+    const fault = catalog?.faults[marker?.index]
+    const key = id(marker?.catalog, marker?.index)
+    requireValue(
+      Number.isInteger(marker?.index) &&
+        marker.index > 0 &&
+        fault &&
+        !markerIds.has(key) &&
+        required.has(key) &&
+        marker.mutationSha256 === hash(fault) &&
+        marker.name === fault.name &&
+        Array.isArray(marker.selectors) &&
+        isDeepStrictEqual(marker.selectors, fault.fn) &&
+        Array.isArray(marker.ledger) &&
+        marker.ledger.length > 0 &&
+        marker.ledger.every(
+          (entry) =>
+            typeof entry?.id === 'string' &&
+            entry.id.length > 0 &&
+            marker.selectors.includes(entry.fn) &&
+            Number.isInteger(entry.case) &&
+            entry.case >= 0 &&
+            sha256.test(entry.tupleSha256 ?? ''),
+        ) &&
+        new Set(marker.ledger.map((entry) => entry.id)).size === marker.ledger.length,
+      `Invalid typed evidence requirement: ${key}`,
+    )
+    markerIds.add(key)
+  }
   const jobs = []
   for (const catalog of manifest.catalogs) {
     const length = catalog.mutations.length
@@ -173,10 +206,23 @@ export function scheduleRecovery(manifest, catalogs, requiredIds) {
       if (required.has(id(catalog.path, index))) residues.add(index % modulus)
     }
     if (residues.size === 0 && required.has(id(catalog.path, 0))) residues.add(0)
-    for (const residue of [...residues].sort((a, b) => a - b)) {
-      const indices = [0]
-      for (let index = 1; index < length; index++)
-        if (index % modulus === residue) indices.push(index)
+    const addLeaf = (residue, modulus, indices) => {
+      const leafMarkers = markers.filter(
+        (marker) => marker.catalog === catalog.path && indices.includes(marker.index),
+      )
+      if (
+        leafMarkers.length > 1 ||
+        (leafMarkers.length === 1 && leafMarkers[0].index !== indices.at(-1))
+      ) {
+        const nextModulus = modulus * 2
+        for (const nextResidue of [residue, residue + modulus]) {
+          const nextIndices = indices.filter(
+            (index) => index !== 0 && index % nextModulus === nextResidue,
+          )
+          if (nextIndices.length) addLeaf(nextResidue, nextModulus, [0, ...nextIndices])
+        }
+        return
+      }
       const requiredIndices = indices.filter((index) => required.has(id(catalog.path, index)))
       const extraIndices = indices.filter((index) => !required.has(id(catalog.path, index)))
       jobs.push({
@@ -190,12 +236,19 @@ export function scheduleRecovery(manifest, catalogs, requiredIds) {
         indices,
         requiredIndices,
         extraIndices,
+        typedEvidenceRequirements: structuredClone(leafMarkers),
         entryHashes: indices.map((index) => ({
           index,
           originalSha256: catalog.mutations[index].originalSha256,
           productSha256: catalog.mutations[index].productSha256,
         })),
       })
+    }
+    for (const residue of [...residues].sort((a, b) => a - b)) {
+      const indices = [0]
+      for (let index = 1; index < length; index++)
+        if (index % modulus === residue) indices.push(index)
+      addLeaf(residue, modulus, indices)
     }
   }
   jobs.sort(
@@ -234,6 +287,7 @@ export function createRecoveryPlan(
       : receipt.requiredIds
   return {
     contract: 'main-fault-recovery/v1',
+    mutationEvidenceContract: 'terminal-report-typed-evidence/v1',
     definitionSha,
     productSha: manifest.productSha,
     manifestSha256: hash(manifest),

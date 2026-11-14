@@ -85,6 +85,7 @@ export function auditSnapshot(manifest, snapshot, catalogs) {
   )
   const base = { ...manifest }
   delete base.reuseSnapshot
+  delete base.typedEvidenceRequirements
   check(snapshot.manifestBaseSha256 === hash(base), 'Snapshot manifest binding mismatch')
   check(
     typeof snapshot.capturedAt === 'string' && Number.isFinite(Date.parse(snapshot.capturedAt)),

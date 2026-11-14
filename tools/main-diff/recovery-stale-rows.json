@@ -1,0 +1,337 @@
+{
+  "scope": "original-intermediate-reports-absent-not-accepted",
+  "runId": "43568242384",
+  "artifactId": "14110731236",
+  "productSha": "30f303cde7b496bf640aadffcb0b70bf7fb2ad21",
+  "rows": [
+    {
+      "index": 382,
+      "mutationSha256": "95214f13f0d71d60e698b7074cd6edf7668ddca101e130800510513f8c9a9b18",
+      "mutation": {
+        "name": "diagram attachments: the page text is cut at the size",
+        "file": "main-core/src/diagram/ai_attachments.rs",
+        "find": "text(slice_utf16(&page_text, start, Some(start + size))),",
+        "replace": "text(slice_utf16(&page_text, start, None)),",
+        "fn": [
+          "diagram/ai-attachments.readAttachmentPage",
+          "diagram/ai-attachments.registerDiagramAiIpc"
+        ]
+      },
+      "detail": "DIFF diagram/ai-attachments.readAttachmentPage case 0 (a page, the end, past the end) | DIFF diagram/ai-attachments.readAttachmentPage case 1 (offsets and sizes read as numbers) | DIFF diagram/ai-attachments.readAttachmentPage case 2 (one read hands back at most 48,000 characters) | STALE ledger entry diagram-attachment-page-cuts-a-surrogate-pair-3: it no longer reproduces",
+      "ledger": {
+        "id": "diagram-attachment-page-cuts-a-surrogate-pair-3",
+        "fn": "diagram/ai-attachments.readAttachmentPage",
+        "case": 3,
+        "typescript": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\\ude00a\\ud83d\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "rust": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\ufffda\ufffd\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "reason": "readAttachmentPage cuts the parsed text with String.slice at UTF-16 offsets (offset 1, length 4 of an emoji, `a`, an emoji, `b`), so each cut that falls inside a surrogate pair leaves a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the answer goes to the model as JSON text). The input is valid Unicode; only the slice makes it lone. Final."
+      }
+    },
+    {
+      "index": 470,
+      "mutationSha256": "7143647f8d132c216b25a6c6e549cc093d5b7eca812ea720ecb3d91b78e41620",
+      "mutation": {
+        "name": "epub attachments: the page text is cut at the size",
+        "file": "main-core/src/epub/ai_attachments.rs",
+        "find": "text(slice_utf16(&page_text, start, Some(start + size))),",
+        "replace": "text(slice_utf16(&page_text, start, None)),",
+        "fn": ["epub/ai-attachments.readAttachmentPage", "epub/ai-attachments.registerEpubAiIpc"]
+      },
+      "detail": "DIFF epub/ai-attachments.readAttachmentPage case 0 (a page, the end, past the end) | DIFF epub/ai-attachments.readAttachmentPage case 1 (offsets and sizes read as numbers) | DIFF epub/ai-attachments.readAttachmentPage case 2 (one read hands back at most 48,000 characters) | STALE ledger entry epub-attachment-page-cuts-a-surrogate-pair-3: it no longer reproduces",
+      "ledger": {
+        "id": "epub-attachment-page-cuts-a-surrogate-pair-3",
+        "fn": "epub/ai-attachments.readAttachmentPage",
+        "case": 3,
+        "typescript": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\\ude00a\\ud83d\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "rust": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\ufffda\ufffd\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "reason": "readAttachmentPage cuts the parsed text with String.slice at UTF-16 offsets (offset 1, length 4 of an emoji, `a`, an emoji, `b`), so each cut that falls inside a surrogate pair leaves a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the answer goes to the model as JSON text). The input is valid Unicode; only the slice makes it lone. Final."
+      }
+    },
+    {
+      "index": 526,
+      "mutationSha256": "44535ac1624710aabb19eaba3a680995930bb569368952d4cdfda7b79e2499f9",
+      "mutation": {
+        "name": "mindmap attachments: a file with unsaved changes is read",
+        "file": "main-core/src/mindmap/ai_attachments.rs",
+        "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
+        "replace": "",
+        "fn": [
+          "mindmap/ai-attachments.readAttachmentPage",
+          "mindmap/ai-attachments.registerMindmapAiIpc"
+        ]
+      },
+      "detail": "DIFF mindmap/ai-attachments.readAttachmentPage case 0 (a page, the end, past the end) | DIFF mindmap/ai-attachments.readAttachmentPage case 1 (offsets and sizes read as numbers) | DIFF mindmap/ai-attachments.readAttachmentPage case 2 (one read hands back at most 48,000 characters) | STALE ledger entry mindmap-attachment-page-cuts-a-surrogate-pair-3: it no longer reproduces",
+      "ledger": {
+        "id": "mindmap-attachment-page-cuts-a-surrogate-pair-3",
+        "fn": "mindmap/ai-attachments.readAttachmentPage",
+        "case": 3,
+        "typescript": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\\ude00a\\ud83d\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "rust": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\ufffda\ufffd\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "reason": "readAttachmentPage cuts the parsed text with String.slice at UTF-16 offsets (offset 1, length 4 of an emoji, `a`, an emoji, `b`), so each cut that falls inside a surrogate pair leaves a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the answer goes to the model as JSON text). The input is valid Unicode; only the slice makes it lone. Final."
+      }
+    },
+    {
+      "index": 546,
+      "mutationSha256": "7fdf35e07db85e5c122aea2093243274740edc2b2f9ab5f1ada561c25971edc8",
+      "mutation": {
+        "name": "mindmap attachments: the page offset is not reported",
+        "file": "main-core/src/mindmap/ai_attachments.rs",
+        "find": "(\"offset\", number(start)),",
+        "replace": "(\"offset\", number(0.0)),",
+        "fn": [
+          "mindmap/ai-attachments.readAttachmentPage",
+          "mindmap/ai-attachments.registerMindmapAiIpc"
+        ]
+      },
+      "detail": "DIFF mindmap/ai-attachments.readAttachmentPage case 0 (a page, the end, past the end) | DIFF mindmap/ai-attachments.readAttachmentPage case 1 (offsets and sizes read as numbers) | DIFF mindmap/ai-attachments.readAttachmentPage case 3 (UTF-16 offsets) | STALE ledger entry mindmap-attachment-page-cuts-a-surrogate-pair-3: it no longer reproduces",
+      "ledger": {
+        "id": "mindmap-attachment-page-cuts-a-surrogate-pair-3",
+        "fn": "mindmap/ai-attachments.readAttachmentPage",
+        "case": 3,
+        "typescript": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\\ude00a\\ud83d\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "rust": {
+          "answer": "{\"value\":[{\"ok\":true,\"name\":\"emoji.txt\",\"totalChars\":6,\"offset\":1,\"text\":\"\ufffda\ufffd\"}],\"logs\":[[\"diagramPictureExtOf\",\"$DIR/emoji.txt\"],[\"assertFileSaved\",\"$DIR/emoji.txt\"],[\"parseFileToText\",\"$DIR/emoji.txt\"]]}",
+          "files": {
+            "a.txt": "file 644 \"hello world\"",
+            "archive.zip": "file 644 \"zip\"",
+            "book.epub": "file 644 \"PK\\u0003\\u0004\"",
+            "cached.txt": "file 644 \"cached\"",
+            "chart.DRAWIO.PNG": "file 644 hex:89504e47",
+            "doc.docx": "file 644 \"PK\\u0003\\u0004\"",
+            "emoji.txt": "file 644 \"\ud83d\ude00a\ud83d\ude00b\"",
+            "flow.drawio": "file 644 \"<mxfile/>\"",
+            "folder.txt": "dir 755",
+            "huge.bin.txt": "file 644 \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+            "huge.md": "file 644 \"yyyyyyyyyyyyyyyyyyyy\"",
+            "long.txt": "file 644 \"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\"",
+            "map.drawio.svg": "file 644 \"<svg/>\"",
+            "noext": "file 644 \"no extension\"",
+            "notes.MD": "file 644 \"# notes\"",
+            "old.dio": "file 644 \"<mxfile/>\"",
+            "outline.xmind": "file 644 \"PK\\u0003\\u0004\"",
+            "pic.JPG": "file 644 hex:ffd8ffe0",
+            "pic.png": "file 644 hex:89504e470d0a1a0a",
+            "pic.webp": "file 644 \"RIFF\"",
+            "plain.drawio.png": "file 644 hex:89504e47",
+            "script.ts": "file 644 \"export {}\"",
+            "sheet.xlsx": "file 644 \"PK\\u0003\\u0004\"",
+            "trailing.": "file 644 \"trailing dot\"",
+            "weird.__proto__": "file 644 \"x\"",
+            "weird.constructor": "file 644 \"x\""
+          }
+        },
+        "reason": "readAttachmentPage cuts the parsed text with String.slice at UTF-16 offsets (offset 1, length 4 of an emoji, `a`, an emoji, `b`), so each cut that falls inside a surrogate pair leaves a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is what the TypeScript string becomes once it is sent as UTF-8 (the answer goes to the model as JSON text). The input is valid Unicode; only the slice makes it lone. Final."
+      }
+    }
+  ]
+}

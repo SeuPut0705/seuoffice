@@ -16,6 +16,8 @@ import { auditPlan, createRecoveryPlan, hash, hashBytes } from './recovery-plan.
 import { bindSnapshotEvidence } from './recovery-snapshot-host.mjs'
 import { auditJob, mergeCompletions } from './recovery-audit.mjs'
 import { replayArchive } from './sensitivity-replay.mjs'
+import { collectNormalBaseline, bindLedgerRequirements } from './recovery-normal-baseline.mjs'
+import { runnerModel } from './recovery-runner-model.mjs'
 
 const self = fileURLToPath(import.meta.url)
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'))
@@ -256,17 +258,69 @@ function snapshotOptions(driver, manifest, catalogs) {
   return { snapshot, originalCatalogs }
 }
 
-function bindCompletion(plan, completion, catalogs, product, receiptSha256) {
+function committedRunnerModel(product, catalog, job, before) {
+  return runnerModel({
+    job,
+    catalog,
+    sourceBefore: before,
+    sources: Object.fromEntries(
+      Object.keys(before).map((path) => [
+        path,
+        git(product, 'show', `HEAD:${path}`).toString('utf8'),
+      ]),
+    ),
+    mutator: git(product, 'show', 'HEAD:tools/main-diff/faults.mjs'),
+  })
+}
+
+function bindTerminal(product, job, catalog, evidence, wasmSha256) {
+  const marker = job.typedEvidenceRequirements?.[0]
+  if (!marker) return
+  const baseline = evidence.baseline
+  const terminal = evidence.terminal
+  assert.ok(baseline && terminal, 'Missing terminal typed evidence')
+  const names = catalog.faults[marker.index].fn
+  assert.deepEqual(baseline.functions.map((entry) => entry.name).sort(), [...names].sort())
+  const ledger = JSON.parse(git(product, 'show', 'HEAD:tools/main-diff/divergences.json')).filter(
+    (entry) => names.includes(entry.fn),
+  )
+  assert.deepEqual(baseline.ledger, ledger)
+  bindLedgerRequirements(job.typedEvidenceRequirements, ledger, catalog)
+  assert.deepEqual(baseline.sources, {
+    productMainSha256: hashBytes(git(product, 'show', 'HEAD:tools/main-diff/main.ts')),
+    ledgerFileSha256: hashBytes(git(product, 'show', 'HEAD:tools/main-diff/divergences.json')),
+    mutatorSha256: hashBytes(git(product, 'show', 'HEAD:tools/main-diff/faults.mjs')),
+    wasmSha256,
+  })
+  const derived = evidence.runnerModel.entries.find((entry) => entry.index === marker.index)
+  assert.deepEqual(terminal.sourceModel, {
+    kind: evidence.runnerModel.kind,
+    mutatorSha256: evidence.runnerModel.mutatorSha256,
+    before: evidence.sourceBefore,
+    after: evidence.sourceAfter,
+    findCount: derived.findCount,
+    derivedAppliedSourceSha256: derived.derivedAppliedSourceSha256,
+  })
+}
+
+function bindCompletion(plan, completion, catalogs, product, receipt) {
   const catalog = catalogs.find((c) => c.path === completion.catalog?.path)
   assert.ok(catalog)
   assert.deepEqual(completion.catalog, catalog)
   const paths = Object.keys(completion.evidence.sourceBefore)
   assert.deepEqual(completion.evidence.sourceBefore, sourceHashes(product, paths, true))
-  assert.equal(completion.identity.baselineReceiptSha256, receiptSha256)
+  assert.equal(completion.identity.baselineReceiptSha256, hash(receipt))
   assert.deepEqual(completion.identity.buildEnvironment, {
     profile: 'node-faults',
     cargoIncremental: '1',
   })
+  const job = plan.jobs.find((entry) => entry.jobKey === completion.identity.jobKey)
+  assert.ok(job)
+  assert.deepEqual(
+    completion.evidence.runnerModel,
+    committedRunnerModel(product, catalog, job, completion.evidence.sourceBefore),
+  )
+  bindTerminal(product, job, catalog, completion.evidence, receipt.lanes.linux.wasmSha256)
   assert.deepEqual(
     auditJob(plan, completion.identity.jobKey, catalog, completion.evidence),
     completion,
@@ -405,7 +459,7 @@ async function main(command, env) {
       assert.equal(previous.batch, current.batch - 1)
       assert.equal(previous.planSha256, hash(plan))
       for (const completion of previous.completions)
-        bindCompletion(plan, completion, catalogs, product, hash(receipt))
+        bindCompletion(plan, completion, catalogs, product, receipt)
       assert.deepEqual(
         previous,
         auditBatch(
@@ -456,7 +510,7 @@ async function main(command, env) {
     const root = resolve(env.COMPLETIONS_DIR ?? 'completions')
     const completions = readdirSync(root).map((name) => json(join(root, name, 'completion.json')))
     for (const completion of completions)
-      bindCompletion(plan, completion, catalogs, product, hash(receipt))
+      bindCompletion(plan, completion, catalogs, product, receipt)
     const batch = auditBatch(plan, current.batch, completions, current.runId, current.attempt)
     save(resolve(env.BATCH_PATH ?? 'batch-completion.json'), batch)
     if (current.batch === plan.batches.length - 1) {
@@ -466,7 +520,7 @@ async function main(command, env) {
               .completions
           : []
       for (const completion of previous)
-        bindCompletion(plan, completion, catalogs, product, hash(receipt))
+        bindCompletion(plan, completion, catalogs, product, receipt)
       save(
         resolve(env.COMPLETE_PATH ?? 'recovery-complete.json'),
         mergeCompletions(plan, [...previous, ...completions]),
@@ -485,6 +539,12 @@ async function main(command, env) {
   }
   if (command === 'job-prepare') {
     assert.equal(env.MAIN_DIFF_PROFILE, 'node-faults')
+    for (const path of [
+      'tools/main-diff/main.ts',
+      'tools/main-diff/faults.mjs',
+      'tools/main-diff/divergences.json',
+    ])
+      assert.deepEqual(readFileSync(join(product, path)), git(product, 'show', `HEAD:${path}`))
     assert.equal(hashBytes(readFileSync(env.SEUOFFICE_WASM)), receipt.lanes.linux.wasmSha256)
     const list = execFileSync(
       process.execPath,
@@ -507,14 +567,29 @@ async function main(command, env) {
     assert.deepEqual(before, sourceHashes(product, paths, true))
     mkdirSync(out, { recursive: true })
     save(join(out, 'source-before.json'), before)
-    save(join(out, 'job-identity.json'), {
+    const jobIdentity = {
       ...current,
       jobKey: job.jobKey,
       planSha256: hash(plan),
       manifestSha256: plan.manifestSha256,
       baselineReceiptSha256: hash(receipt),
       buildEnvironment,
-    })
+    }
+    save(join(out, 'job-identity.json'), jobIdentity)
+    const catalog = catalogs.find((entry) => entry.path === job.catalog)
+    save(join(out, 'runner-model.json'), committedRunnerModel(product, catalog, job, before))
+    if (job.typedEvidenceRequirements.length) {
+      const normal = collectNormalBaseline({
+        product,
+        out,
+        identity: jobIdentity,
+        job,
+        catalog,
+        list,
+        env,
+      })
+      assert.equal(Object.keys(normal.groups).length, 1, 'Terminal report requires one group')
+    }
     output(env, 'fault_shard', `${job.residue}/${job.modulus}`)
     output(env, 'catalog', job.catalog)
     return
@@ -529,7 +604,17 @@ async function main(command, env) {
     sourceBefore: before,
     sourceAfter: sourceHashes(product, Object.keys(before)),
     identity: json(join(out, 'job-identity.json')),
+    runnerModel: json(join(out, 'runner-model.json')),
   }
+  assert.deepEqual(
+    evidence.runnerModel,
+    committedRunnerModel(
+      product,
+      catalogs.find((entry) => entry.path === job.catalog),
+      job,
+      before,
+    ),
+  )
   assert.deepEqual(evidence.identity, {
     ...current,
     jobKey: job.jobKey,
@@ -538,6 +623,41 @@ async function main(command, env) {
     baselineReceiptSha256: hash(receipt),
     buildEnvironment,
   })
+  if (job.typedEvidenceRequirements.length) {
+    const baseline = json(join(out, 'normal-baseline.json'))
+    const marker = job.typedEvidenceRequirements[0]
+    const group = baseline.functions[0].group
+    assert.ok(baseline.functions.every((entry) => entry.group === group))
+    const rawReport = readFileSync(join(product, 'tools/main-diff/out/report.json'))
+    writeFileSync(join(out, 'terminal-report.json'), rawReport, { flag: 'wx' })
+    const derived = evidence.runnerModel.entries.find((entry) => entry.index === marker.index)
+    evidence.baseline = baseline
+    evidence.terminal = {
+      identity: evidence.identity,
+      index: marker.index,
+      mutationSha256: marker.mutationSha256,
+      group,
+      functions: baseline.functions.map((entry) => entry.name),
+      report: JSON.parse(rawReport),
+      reportSha256: hashBytes(rawReport),
+      detail: evidence.rows.at(-1).detail,
+      sourceModel: {
+        kind: evidence.runnerModel.kind,
+        mutatorSha256: evidence.runnerModel.mutatorSha256,
+        before: evidence.sourceBefore,
+        after: evidence.sourceAfter,
+        findCount: derived.findCount,
+        derivedAppliedSourceSha256: derived.derivedAppliedSourceSha256,
+      },
+    }
+    bindTerminal(
+      product,
+      job,
+      catalogs.find((entry) => entry.path === job.catalog),
+      evidence,
+      receipt.lanes.linux.wasmSha256,
+    )
+  }
   save(
     join(out, 'completion.json'),
     auditJob(
