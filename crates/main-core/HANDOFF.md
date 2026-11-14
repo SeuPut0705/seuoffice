@@ -5,15 +5,15 @@
 ## 지금 상태
 
 - `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다(엔진을 기다리는 모듈 제외; `shell/knowledge-base`는 검토 뒤 마저 옮김). 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
-- main b412c45e5의 검사 속도 수정과 결함 선택 규칙을 합쳤다. 이 가지의 `apps/`, `packages/`는 main과 같다.
+- main b412c45e5의 검사 속도 수정과 결함 선택 규칙, 1a4a391ff의 수동 선택 우선순위를 합쳤다. `faultMode`·`--mode`와 workflow의 `ALL_FAULTS`·`MODE` 대입은 main 그대로다. 이 가지의 `apps/`, `packages/`는 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
-- 합친 뒤 이 기계에서 본 것: `cargo check -p main-core --tests` 경고 없음, `cargo fmt --all --check`, `tools/main-diff`의 tsc·prettier, 결함 5,973개의 `find`가 모두 한 번.
+- 408290026을 합친 직후 로컬 컴파일·서식·형 검사와 결함 5,973개의 위치 검사를 통과했다. 아래 후속 수정까지 포함한 후보의 로컬 검사와 러너 결과는 별도로 확인한다.
 - 진단 실행 43529326459(cb4dfada1)는 비교, Windows, DOCX·PPTX·ODT 관문과 ODT 결함 조각을 통과했다. `main-faults`와 `pptx-faults`는 생략했으므로 최종 합격이 아니다. 이후 인수한 provider·MCP 수정의 검증 결과로도 쓰지 않는다.
 - 새 Actions 실행은 메인 세션의 신호까지 보류한다. `feat/rust-stage2-plan`으로의 푸시는 실행을 부르지 않는다.
 
 ## 다음 할 일
 
-1. 다음 후보에 provider 1562196d3·1eec4bf1a와 MCP c2cde66c4·51ca1af04를 인수했다. provider의 추가 회귀 766419d90과 수정 d402555c4도 인수한다. 스트림의 host 종료 응답이 뒤의 abort보다 우선하며 `Cmd`·`Event` 계약은 그대로다. MCP `RELAY_TEXT`는 잘린 UTF-16 쌍을 JSON escape로 정확히 쓰고, 해당 차이 장부 항목은 지웠다.
+1. 다음 후보에 provider 1562196d3·1eec4bf1a와 MCP c2cde66c4·51ca1af04를 인수했다. provider의 추가 회귀 766419d90과 수정 d402555c4도 인수했다. 스트림의 host 종료 응답이 뒤의 abort보다 우선하며 `Cmd`·`Event` 계약은 그대로다. MCP `RELAY_TEXT`는 잘린 UTF-16 쌍을 JSON escape로 정확히 쓰고, 해당 차이 장부 항목은 지웠다.
 2. 메인 세션이 실행을 허용하면 최신 후보에서 비교와 결함을 확인한다. `tools/fault-reach.mjs`가 실제 차이로 선택한 엔진 결함을 모두 포함한다. `jscompat`·`ooxml-pkg`가 엔진 의존이므로 PPTX도 포함된다. DOCX는 네 결함 목록을 선택하며, 미분류 소스는 모든 엔진을 선택한다. DOCX의 `MISSED`·`SET ASIDE`는 실패다.
 3. 이 가지 몫과 다섯 묶음의 중심 프로세스 결함도 확인한다. 다르게 나온 것과 놓친 결함을 고치고 새 케이스는 목록 끝에 붙인다. main의 수동 선택 우선순위는 D3가 소유하며 여기서 별도 모드를 만들지 않는다.
 4. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
