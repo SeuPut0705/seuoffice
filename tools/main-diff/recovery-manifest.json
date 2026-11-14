@@ -1,6 +1,11 @@
 {
   "contract": "main-recovery-manifest/v1",
   "productSha": "375b08bd0e1f7e8432e6514468cc9d25be01b100",
+  "reuseSnapshot": {
+    "path": "tools/main-diff/recovery-snapshot.json",
+    "sha256": "373ce3f83e2dc340763c62c479be149f2fa89b22434998e35a9a427ba3161157",
+    "capturedAt": "2026-11-14T12:37:43Z"
+  },
   "original": {
     "productSha": "30f303cde7b496bf640aadffcb0b70bf7fb2ad21",
     "definitionSha": "7594c1243ef0c2965c202dead1fd983ad7ab77e9",

@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 import { auditComparison } from './baseline-only.mjs'
 import { validateSelectors } from './targeted-sensitivity.mjs'
 import { auditPlan, createRecoveryPlan, hash, hashBytes } from './recovery-plan.mjs'
+import { bindSnapshotEvidence } from './recovery-snapshot-host.mjs'
 import { auditJob, mergeCompletions } from './recovery-audit.mjs'
 import { replayArchive } from './sensitivity-replay.mjs'
 
@@ -232,6 +233,29 @@ function loadCatalogs(product, manifest) {
   })
 }
 
+function snapshotOptions(driver, manifest, catalogs) {
+  if (!manifest.reuseSnapshot) return {}
+  assert.equal(manifest.reuseSnapshot.path, 'tools/main-diff/recovery-snapshot.json')
+  const bytes = readFileSync(join(driver, manifest.reuseSnapshot.path))
+  assert.equal(hashBytes(bytes), manifest.reuseSnapshot.sha256)
+  const snapshot = JSON.parse(bytes)
+  assert.equal(snapshot.capturedAt, manifest.reuseSnapshot.capturedAt)
+  const originalCatalogs = catalogs.map((catalog) => {
+    const expected = manifest.catalogs.find((entry) => entry.path === catalog.path)
+    const faults = structuredClone(catalog.faults)
+    for (const mutation of expected.mutations) {
+      if (mutation.originalSha256 !== mutation.productSha256) {
+        assert.equal(catalog.path, manifest.selectorLineage.catalog)
+        assert.equal(mutation.index, manifest.selectorLineage.index)
+        faults[mutation.index].fn = manifest.selectorLineage.originalSelectors
+      }
+      assert.equal(hash(faults[mutation.index]), mutation.originalSha256)
+    }
+    return { path: catalog.path, sha256: expected.originalSha256, faults }
+  })
+  return { snapshot, originalCatalogs }
+}
+
 function bindCompletion(plan, completion, catalogs, product, receiptSha256) {
   const catalog = catalogs.find((c) => c.path === completion.catalog?.path)
   assert.ok(catalog)
@@ -290,8 +314,12 @@ async function main(command, env) {
   }
   assert.equal(git(product, 'rev-parse', 'HEAD').toString().trim(), current.productSha)
   const catalogs = loadCatalogs(product, manifest)
-  const plan = createRecoveryPlan(manifest, catalogs, { definitionSha: current.definitionSha })
-  auditPlan(plan, manifest, catalogs)
+  const selection = snapshotOptions(driver, manifest, catalogs)
+  const plan = createRecoveryPlan(manifest, catalogs, {
+    definitionSha: current.definitionSha,
+    ...selection,
+  })
+  auditPlan(plan, manifest, catalogs, selection)
   const planPath = resolve(env.PLAN_PATH ?? 'recovery-plan.json')
   const receiptPath = resolve(env.RECEIPT_PATH ?? 'recovery-baseline-receipt.json')
   assert.ok(plan.batches[current.batch], 'Unknown manifest batch')
@@ -335,6 +363,25 @@ async function main(command, env) {
     ])
     const lanes = baselineEvidence(resolve(env.FULL_BASELINE_DIR ?? 'full-baseline'), manifest)
     const targetedReplay = await proofReplay(manifest, env, product, current.definitionSha)
+    assert.ok(selection.snapshot, 'A fixed completed snapshot is required for recovery dispatch')
+    const snapshotReceipt = await bindSnapshotEvidence(
+      manifest,
+      selection.snapshot,
+      selection.originalCatalogs,
+      {
+        archiveDir: resolve('snapshot-verification'),
+        sourceAt: (ref, path) => git(product, 'show', `${ref}:${path}`),
+        request: async (path) => {
+          const response = await fetch(
+            `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/${path}`,
+            { headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}` } },
+          )
+          assert.ok(response.ok, `Original snapshot evidence ${path}: ${response.status}`)
+          return Buffer.from(await response.arrayBuffer())
+        },
+      },
+    )
+    save(resolve('snapshot-verification-receipt.json'), snapshotReceipt)
     const receipt = {
       scope: 'explicit-f506-full-plus-375-targeted-replay-lineage',
       fullBaseline: manifest.fullBaseline,
@@ -343,6 +390,7 @@ async function main(command, env) {
       lanes,
       targetedReplay,
       lineage,
+      snapshotReceipt,
       legacyFaultGateCompatible: false,
     }
     if (current.batch > 0) {

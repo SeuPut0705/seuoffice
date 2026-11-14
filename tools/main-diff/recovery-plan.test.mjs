@@ -87,6 +87,8 @@ test('full provisional plan covers each original ID and preserves bounded shard 
   assert.deepEqual(plan, createRecoveryPlan(manifest, catalogs, { definitionSha }))
   assert.equal(plan.provisional, true)
   assert.equal(plan.unresolvedOriginalAudit, true)
+  assert.equal('snapshotSha256' in plan, false)
+  assert.equal('reusedIds' in plan, false)
   assert.equal(plan.requiredIds.length, 6121)
   assert.equal(plan.expandedIds.length, 6121)
   assert.equal(plan.maxParallel, 4)
@@ -119,6 +121,185 @@ test('full provisional plan covers each original ID and preserves bounded shard 
       }),
     /final original audit not attached/,
   )
+})
+
+test('planner never accepts unverified snapshot data or arbitrary reuse', () => {
+  const { manifest, catalogs } = productionFixture()
+  assert.throws(() =>
+    createRecoveryPlan(manifest, catalogs, {
+      definitionSha,
+      snapshot: {},
+      originalCatalogs: catalogs,
+    }),
+  )
+  assert.throws(
+    () =>
+      createRecoveryPlan(manifest, catalogs, {
+        definitionSha,
+        snapshot: {},
+        originalCatalogs: catalogs,
+        approvedReuse: [key(catalogs[1].path, 1)],
+      }),
+    /final original audit not attached/,
+  )
+  const plan = createRecoveryPlan(manifest, catalogs, { definitionSha })
+  assert.throws(() =>
+    auditPlan(plan, manifest, catalogs, {
+      snapshot: {},
+      originalCatalogs: catalogs,
+    }),
+  )
+})
+
+test('fixed snapshot subtracts only proved unaffected IDs and is reaudited', () => {
+  const { manifest, catalogs } = productionFixture()
+  for (const catalog of catalogs) {
+    for (const fault of catalog.faults) Object.assign(fault, { find: 'a', replace: 'b' })
+    catalog.sha256 = hashBytes(Buffer.from(JSON.stringify(catalog.faults)))
+  }
+  const originalCatalogs = structuredClone(catalogs)
+  originalCatalogs[0].faults[14].replace = 'original'
+  originalCatalogs[0].sha256 = hashBytes(Buffer.from(JSON.stringify(originalCatalogs[0].faults)))
+  for (let c = 0; c < catalogs.length; c++) {
+    const entry = manifest.catalogs[c]
+    entry.originalSha256 = originalCatalogs[c].sha256
+    entry.productSha256 = catalogs[c].sha256
+    for (let i = 0; i < entry.mutations.length; i++) {
+      entry.mutations[i].originalSha256 = hash(originalCatalogs[c].faults[i])
+      entry.mutations[i].productSha256 = hash(catalogs[c].faults[i])
+    }
+  }
+  manifest.catalogs[0].mutations[0].affectedReasons = []
+  manifest.catalogs[29].mutations[0].affectedReasons = ['affected']
+  const original = manifest.original
+  const path = catalogs[29].path
+  const jobs = manifest.catalogs.flatMap((catalog, c) =>
+    Array.from({ length: 4 }, (_, shard) => ({
+      id: c * 4 + shard + 1,
+      run_id: Number(original.runId),
+      run_attempt: original.attempt,
+      head_sha: original.definitionSha,
+      name: `main-faults-only (${catalog.path}, ${catalog.path.split('/').pop().slice(0, -5)}, ${shard})`,
+      status: 'queued',
+    })),
+  )
+  const job = jobs[29 * 4]
+  Object.assign(job, {
+    status: 'completed',
+    conclusion: 'success',
+    steps: ['Check plan identities', 'Faults', 'Audit fault results', 'Keep the result'].map(
+      (name) => ({ name, status: 'completed', conclusion: 'success' }),
+    ),
+  })
+  const failed = jobs[29 * 4 + 1]
+  Object.assign(failed, { status: 'completed', conclusion: 'failure' })
+  const selected = originalCatalogs[29].faults
+    .map((fault, index) => ({ fault, index }))
+    .filter(({ index }) => index === 0 || index % 4 === 0)
+  const archiveSha256 = 'a'.repeat(64)
+  const completedLog = [original.definitionSha, original.productSha]
+    .map((sha) => `time [command]/usr/bin/git log -1 --format=%H\ntime ${sha}`)
+    .join('\n')
+  const snapshot = {
+    contract: 'main-recovery-snapshot/v1',
+    capturedAt: '2026-11-14T12:37:43Z',
+    original: structuredClone(original),
+    productSha,
+    manifestBaseSha256: hash(manifest),
+    run: {
+      id: Number(original.runId),
+      run_attempt: original.attempt,
+      head_sha: original.definitionSha,
+      status: 'queued',
+      event: 'workflow_dispatch',
+      path: '.github/workflows/seuoffice-rust.yml',
+    },
+    jobs,
+    jobCount: jobs.length,
+    artifacts: [
+      {
+        id: 1000,
+        name: 'main-faults-only-catalog-29-0',
+        expired: false,
+        digest: `sha256:${archiveSha256}`,
+        workflow_run: { id: Number(original.runId), head_sha: original.definitionSha },
+      },
+    ],
+    artifactCount: 1,
+    complete: [
+      {
+        catalog: path,
+        shard: 0,
+        jobId: job.id,
+        artifactId: 1000,
+        archiveSha256,
+        logSha256: hashBytes(Buffer.from(completedLog)),
+        completedLog,
+        identity: {
+          definitionSha: original.definitionSha,
+          productSha: original.productSha,
+          gate: { id: '43554838447', attempt: 1 },
+          catalog: path,
+          shard: 0,
+          count: selected.length,
+        },
+        rows: selected.map(({ fault }) => ({
+          faults: path,
+          name: fault.name,
+          file: fault.file,
+          fn: fault.fn,
+          verdict: 'CAUGHT',
+          detail: `DIFF ${fault.fn[0]} case 1`,
+        })),
+        summaryText: `${selected.length} faults: ${selected.length} caught, 0 missed, 0 not building, 0 bad\nFinished \`node-faults\` profile\n`,
+      },
+    ],
+    incomplete: [
+      {
+        catalog: path,
+        shard: 1,
+        jobId: failed.id,
+        status: 'completed',
+        conclusion: 'failure',
+        artifactId: null,
+        reason: 'failed',
+      },
+    ],
+    reuseIds: selected
+      .slice(1)
+      .map(({ index }) => key(path, index))
+      .sort(),
+    reusedSourceHashes: {
+      'crates/source.ts': { originalSha256: 'b'.repeat(64), productSha256: 'b'.repeat(64) },
+    },
+  }
+  const options = { definitionSha, snapshot, originalCatalogs }
+  const plan = createRecoveryPlan(manifest, catalogs, options)
+  assert.equal(plan.provisional, false)
+  assert.equal(plan.unresolvedOriginalAudit, false)
+  assert.equal(plan.selectionBasis, 'fixed-completed-snapshot')
+  assert.equal(plan.originalRunStillOpenAllowed, true)
+  assert.equal(plan.snapshotSha256, hash(snapshot))
+  assert.deepEqual(plan.reusedIds, snapshot.reuseIds)
+  assert.equal(plan.requiredIds.length, 6121 - 33)
+  assert.throws(
+    () => createRecoveryPlan(manifest, catalogs, { ...options, approvedReuse: snapshot.reuseIds }),
+    /final original audit not attached/,
+  )
+  assert.ok(plan.requiredIds.includes(key(path, 0)))
+  assert.ok(plan.requiredIds.includes(key(path, 1)))
+  assert.ok(plan.requiredIds.includes(key(path, 2)))
+  assert.ok(!plan.requiredIds.includes(key(path, 4)))
+  assert.equal(auditPlan(plan, manifest, catalogs, { snapshot, originalCatalogs }), true)
+  assert.throws(() => auditPlan(plan, manifest, catalogs))
+  const altered = structuredClone(snapshot)
+  altered.complete[0].rows[1].verdict = 'MISSED'
+  assert.throws(() => createRecoveryPlan(manifest, catalogs, { ...options, snapshot: altered }))
+  assert.throws(() => auditPlan(plan, manifest, catalogs, { snapshot: altered, originalCatalogs }))
+  const forged = structuredClone(snapshot)
+  forged.reuseIds.push(key(path, 1))
+  forged.reuseIds.sort()
+  assert.throws(() => createRecoveryPlan(manifest, catalogs, { ...options, snapshot: forged }))
 })
 
 test('810 entries remain bounded and retain their original indices', () => {

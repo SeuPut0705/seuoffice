@@ -1134,6 +1134,7 @@ jobs:
             targeted-original-jobs.json
             targeted-original-artifact.json
             targeted-original.log
+            snapshot-verification-receipt.json
           if-no-files-found: error
 
   main-recovery-job:

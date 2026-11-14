@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { basename } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
+import { auditSnapshot } from './recovery-snapshot.mjs'
 
 const PRODUCT = '375b08bd0e1f7e8432e6514468cc9d25be01b100'
 const sha256 = /^[0-9a-f]{64}$/
@@ -146,8 +147,6 @@ export function validateManifest(manifest, catalogs) {
 const id = (path, index) => `${path}#${index}`
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
 
-// This scheduler accepts explicit required IDs for boundary testing. The public
-// recovery plan does not accept exclusions until the original audit is attached.
 export function scheduleRecovery(manifest, catalogs, requiredIds) {
   validateCatalogs(manifest, catalogs)
   requireValue(
@@ -216,14 +215,23 @@ export function scheduleRecovery(manifest, catalogs, requiredIds) {
   return { requiredIds: [...required].sort(compare), expandedIds, jobs, batches }
 }
 
-export function createRecoveryPlan(manifest, catalogs, { definitionSha, approvedReuse = [] } = {}) {
+export function createRecoveryPlan(
+  manifest,
+  catalogs,
+  { definitionSha, approvedReuse = [], snapshot, originalCatalogs } = {},
+) {
   requireValue(Array.isArray(approvedReuse), 'Invalid approved reuse')
   requireValue(approvedReuse.length === 0, 'final original audit not attached')
   requireValue(sha.test(definitionSha ?? ''), 'Invalid definition SHA')
   validateManifest(manifest, catalogs)
-  const requiredIds = manifest.catalogs.flatMap((catalog) =>
-    catalog.mutations.map((mutation) => id(catalog.path, mutation.index)),
-  )
+  const receipt =
+    snapshot === undefined ? undefined : auditSnapshot(manifest, snapshot, originalCatalogs)
+  const requiredIds =
+    receipt === undefined
+      ? manifest.catalogs.flatMap((catalog) =>
+          catalog.mutations.map((mutation) => id(catalog.path, mutation.index)),
+        )
+      : receipt.requiredIds
   return {
     contract: 'main-fault-recovery/v1',
     definitionSha,
@@ -232,8 +240,26 @@ export function createRecoveryPlan(manifest, catalogs, { definitionSha, approved
     original: structuredClone(manifest.original),
     fullBaseline: structuredClone(manifest.fullBaseline),
     targetedProof: structuredClone(manifest.targetedProof),
-    provisional: true,
-    unresolvedOriginalAudit: true,
+    provisional: receipt === undefined,
+    unresolvedOriginalAudit: receipt === undefined,
+    ...(receipt === undefined
+      ? {}
+      : {
+          selectionBasis: 'fixed-completed-snapshot',
+          originalRunStillOpenAllowed: true,
+          snapshotSha256: receipt.snapshotSha256,
+          reusedIds: receipt.reuseIds,
+          snapshotReceipt: {
+            scope: receipt.scope,
+            capturedAt: receipt.capturedAt,
+            original: receipt.original,
+            productSha: receipt.productSha,
+            completedJobCount: receipt.completedJobCount,
+            successfulProducerJobCount: receipt.successfulProducerJobCount,
+            rejectedEvidence: receipt.rejectedEvidence,
+            completeEvidence: receipt.completeEvidence,
+          },
+        }),
     ...scheduleRecovery(manifest, catalogs, requiredIds),
     maxParallel: 4,
     timeoutMinutes: 120,
@@ -241,9 +267,12 @@ export function createRecoveryPlan(manifest, catalogs, { definitionSha, approved
   }
 }
 
-export function auditPlan(plan, manifest, catalogs) {
+export function auditPlan(plan, manifest, catalogs, options = {}) {
   requireValue(plan && sha.test(plan.definitionSha ?? ''), 'Invalid plan definition')
-  const expected = createRecoveryPlan(manifest, catalogs, { definitionSha: plan.definitionSha })
+  const expected = createRecoveryPlan(manifest, catalogs, {
+    ...options,
+    definitionSha: plan.definitionSha,
+  })
   requireValue(
     isDeepStrictEqual(plan, expected),
     'Recovery plan does not match the complete bounded selection',
