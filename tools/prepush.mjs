@@ -138,7 +138,7 @@ if (crateFiles.length > 0 && existsSync('crates/Cargo.toml')) {
     ? [...new Set(owners.map((m) => m.name))].flatMap((name) => ['-p', name])
     : ['--workspace']
   // --check only reads: nothing under crates/ is rewritten
-  check('crates format', 'cargo', ['fmt', ...manifest, '--all', '--', '--check'])
+  check('crates format', 'cargo', ['fmt', ...manifest, '--', '--check'])
   check('crates clippy', 'cargo', [
     'clippy',
     ...manifest,
