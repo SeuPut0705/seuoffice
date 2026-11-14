@@ -5,47 +5,50 @@
 ## 지금 상태
 
 - `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다(엔진을 기다리는 모듈 제외; `shell/knowledge-base`는 검토 뒤 마저 옮김). 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
-- main 8b9fd99ea를 합쳤다(305eba4a8). 이 가지의 `apps/`, `packages/`는 그 main과 같다.
+- main b412c45e5의 검사 속도 수정과 결함 선택 규칙을 합쳤다. 이 가지의 `apps/`, `packages/`는 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
 - 합친 뒤 이 기계에서 본 것: `cargo check -p main-core --tests` 경고 없음, `cargo fmt --all --check`, `tools/main-diff`의 tsc·prettier, 결함 5,973개의 `find`가 모두 한 번.
-- 마지막 러너 결과(43415208707, e8208d3d2, 다섯 가지를 합치기 전): 비교 35,914번 다른 것 0, 적힌 것 10, 함수 1,223개; 결함 1,707개 모두 잡힘; Windows 비교, clippy, 서식 통과. 남았던 빨강(sites 시험, 비교 엔진의 `host_callback`)은 680d88362에서 고쳤다.
-- 소유자 결정으로 OMPdesk 1판이 나올 때까지 Actions 실행을 시작하지 않는다(`gh workflow run`, `gh run rerun`, 실행을 부르는 가지로의 푸시 모두). `feat/rust-stage2-*`로의 푸시는 실행을 부르지 않는다.
+- 진단 실행 43529326459(cb4dfada1)는 비교, Windows, DOCX·PPTX·ODT 관문과 ODT 결함 조각을 통과했다. `main-faults`와 `pptx-faults`는 생략했으므로 최종 합격이 아니다. 이후 인수한 provider·MCP 수정의 검증 결과로도 쓰지 않는다.
+- 새 Actions 실행은 메인 세션의 신호까지 보류한다. `feat/rust-stage2-plan`으로의 푸시는 실행을 부르지 않는다.
 
 ## 다음 할 일
 
-1. Actions가 다시 열리면: 이 가지에서 비교+clippy+이 가지 몫의 결함을 한 번, 다섯 가지는 각자 자기 결함 파일로 한 번(한 실행에 다 넣으면 120분 제한을 넘는다). 고친 것은 그 가지에서 고치고 여기로 다시 합친다.
-2. 다르게 나온 것과 놓친 결함을 고친다(새 케이스는 목록 끝에).
-3. main을 다시 합치고, 바뀐 TypeScript 가운데 이 가지가 옮긴 파일을 Rust로 따라 고친다.
+1. 다음 후보에 provider 1562196d3·1eec4bf1a와 MCP c2cde66c4·51ca1af04를 인수했다. provider의 추가 회귀 766419d90과 수정 d402555c4도 인수한다. 스트림의 host 종료 응답이 뒤의 abort보다 우선하며 `Cmd`·`Event` 계약은 그대로다. MCP `RELAY_TEXT`는 잘린 UTF-16 쌍을 JSON escape로 정확히 쓰고, 해당 차이 장부 항목은 지웠다.
+2. 메인 세션이 실행을 허용하면 최신 후보에서 비교와 결함을 확인한다. `tools/fault-reach.mjs`가 실제 차이로 선택한 엔진 결함을 모두 포함한다. `jscompat`·`ooxml-pkg`가 엔진 의존이므로 PPTX도 포함된다. DOCX는 네 결함 목록을 선택하며, 미분류 소스는 모든 엔진을 선택한다. DOCX의 `MISSED`·`SET ASIDE`는 실패다.
+3. 이 가지 몫과 다섯 묶음의 중심 프로세스 결함도 확인한다. 다르게 나온 것과 놓친 결함을 고치고 새 케이스는 목록 끝에 붙인다. main의 수동 선택 우선순위는 D3가 소유하며 여기서 별도 모드를 만들지 않는다.
 4. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
 
 ## 돌리는 법
 
-Node 22와 rustc 1.100.0을 쓴다. `npm ci`는 저장소 뿌리에서 돌린다. 이 MacBook에서는 무거운 일을 `/tmp/heavy.sh`로만 돌린다.
+Node 22와 rustc 1.100.0을 쓴다. `npm ci`는 저장소 뿌리에서 돌린다. 로컬 검사는 `ompdesk check -- <명령>`, 그 밖의 무거운 명령은 `ompdesk run --heavy -- <명령>`으로 감싼다.
 
 ```sh
+export SCRATCH=/Users/seuput/.cache/ompdesk/scratch/1eca6d513db26eeccf9b7721ee043cf8
+export MAIN_DIFF_ADDON="$SCRATCH/addon/main_node.node" MAIN_DIFF_OUT="$SCRATCH/out"
 cd tools/main-diff
-MAIN_DIFF_ADDON=/tmp/addon/main_node.node MAIN_DIFF_OUT=/tmp/out node build.mjs
-MAIN_DIFF_ADDON=/tmp/addon/main_node.node MAIN_DIFF_OUT=/tmp/out npx tsx main.ts            # 전체(그룹마다 프로세스 하나)
-npx tsx main.ts --group b6-tabs --fn 'tab-manager.split' --show 10                          # 일부
+node build.mjs
+npx tsx main.ts                                                                            # 전체(그룹마다 프로세스 하나)
+npx tsx main.ts --group b6-tabs --fn 'tab-manager.split' --show 10                           # 일부
 npx tsx main.ts --list                                                                       # 그룹과 함수
 
 # 결함: 하나씩 Rust를 바꿔 짓고 비교가 차이를 내는지 본다. 소스를 고쳐 쓰므로 다른 일과 같이 돌리지 않는다
 node faults.mjs faults/b1.json,faults/b2.json      # FAULT_SHARD=i/n 으로 나눠 돌림
 
-# 러너(비교 + Windows + 결함 6조각)
-# 실행 파일의 작업은 모두 `needs: quick`이다(main 0d78db19c의 규칙): 서식·clippy·단위 시험은 quick에서 돈다.
+# 러너: 메인 세션이 허용한 뒤에만 실행한다.
+# 모든 후속 작업은 quick에 의존한다. 서식·clippy·단위 시험은 quick에서 돈다.
 # 실행 파일은 main 것에 이 가지의 것을 더해 만든다: main을 합친 뒤
-#   git show origin/main:.github/workflows/seuoffice-rust.yml > /tmp/main.yml
-#   python3 tools/main-diff/compose-workflow.py /tmp/main.yml tools/main-diff/workflow-additions.txt > .github/workflows/seuoffice-rust.yml
-# 이 가지의 실행은 -f skip_pptx_faults=true로 슬라이드 결함 조각을 건너뛴다(병합 후보 실행은 false).
-# 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 6,109개 전부는 한 실행에 들지 않으므로
+#   git show origin/main:.github/workflows/seuoffice-rust.yml > "$SCRATCH/main.yml"
+#   python3 tools/main-diff/compose-workflow.py "$SCRATCH/main.yml" tools/main-diff/workflow-additions.txt > "$SCRATCH/composed.yml"
+# compose 결과로 실행 파일을 갱신한다. main의 엔진 job과 선택 조건은 그대로 보존한다.
+# skip_pptx_faults 우회는 제거했다. fault_shards=1,2,4,8은 DOCX와 main-faults 조각 수에 함께 적용된다.
+# 중심 프로세스 결함은 한 실행에 다 넣지 않고
 # 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store, b5-kb):
 gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \
-  -f main_faults=$(ls tools/main-diff/faults/{b1,b2,b3,b4,b5,d8,d9,b2-cli,b4-fonts,b4-pdf-store,b5-kb}.json tools/main-diff/faults/b6-*.json | paste -sd, -)
+  -f fault_shards=8 -f main_faults=$(ls tools/main-diff/faults/{b1,b2,b3,b4,b5,d8,d9,b2-cli,b4-fonts,b4-pdf-store,b5-kb}.json tools/main-diff/faults/b6-*.json | paste -sd, -)
 # 나머지는 실행마다 한 묶음: b3-projects.*, b3b4-rest-*, b5-agent-*, b5-mcp, b5-provider-*
 ```
 
-산출물은 `main-diff-out`, `main-diff-windows-out`, `main-diff-faults-0..5`다. 같은 가지에 푸시하면 돌던 실행이 취소된다.
+산출물은 `main-diff-out`, `main-diff-windows-out`, `main-diff-faults-<조각>`이다. 같은 가지에 푸시하면 돌던 실행이 취소된다.
 
 규칙(`crates/README.md`):
 

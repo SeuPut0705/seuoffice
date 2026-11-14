@@ -22,6 +22,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseShard, planShards, readCosts } from '../fault-shards.mjs'
 
 if (Number(process.versions.node.split('.')[0]) !== 22)
   throw new Error('fault probes require Node 22')
@@ -222,7 +223,9 @@ const env = {
   ...process.env,
   CARGO_BUILD_JOBS: '4',
   CARGO_TARGET_DIR: target,
-  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/debug/office_wasm.wasm'),
+  // probe-dev (crates/Cargo.toml): the dev profile's checks at opt-level 1, so
+  // a wire-command fault's whole gate takes minutes instead of over an hour
+  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/probe-dev/office_wasm.wasm'),
 }
 if (process.argv.includes('--inventory')) {
   let stale = 0
@@ -238,14 +241,21 @@ if (process.argv.includes('--inventory')) {
 }
 const onlyAt = process.argv.indexOf('--only')
 const only = onlyAt === -1 ? null : new Set(process.argv[onlyAt + 1].split(','))
-// `--shard INDEX/COUNT`: every COUNTth fault from INDEX, for runners side by side.
+// `--shard INDEX/COUNT`: one of COUNT runners side by side, each with the
+// faults tools/fault-shards.mjs gives it by the seconds in fault-costs.json
 const shardAt = process.argv.indexOf('--shard')
-const [shard, shards] = shardAt === -1 ? [0, 1] : process.argv[shardAt + 1].split('/').map(Number)
-if (!(Number.isInteger(shard) && Number.isInteger(shards) && shard >= 0 && shard < shards))
-  throw new Error('--shard takes INDEX/COUNT')
+const { index: shard, count: shards } =
+  shardAt === -1 ? { index: 0, count: 1 } : parseShard(process.argv[shardAt + 1])
 const named = faults.filter(([id]) => only === null || only.has(id))
 if (only !== null && named.length !== only.size) throw new Error('--only names an unknown fault')
-const selected = named.filter((_, index) => index % shards === shard)
+const planned = new Set(
+  planShards(
+    named.map(([id]) => id),
+    readCosts(resolve(here, 'fault-costs.json')),
+    shards,
+  ).shards[shard],
+)
+const selected = named.filter(([id]) => planned.has(id))
 mkdirSync(out, { recursive: true })
 if (selected.length === 0 && !process.argv.includes('--control-only')) {
   console.log('odt-diff faults: no fault selected, nothing to build')
@@ -270,6 +280,8 @@ const args = [
   resolve(workspace, 'crates/Cargo.toml'),
   '-p',
   'office-wasm',
+  '--profile',
+  'probe-dev',
   '-j4',
 ]
 const run = (program, programArgs, extraEnv = {}) =>
@@ -340,6 +352,7 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
   if (count !== occurrences)
     throw new Error(`${id}: source anchor occurs ${count}, expected ${occurrences}`)
   let result
+  const started = Date.now()
   try {
     // a function: `$` in the fault text is not a replacement pattern
     writeFileSync(
@@ -368,6 +381,8 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
       differences: differences ?? 0,
       aborted,
       caught: (differences ?? 0) > 0,
+      // its build and its comparison: the cost tools/fault-shards.mjs plans by
+      seconds: (Date.now() - started) / 1000,
     }
   } finally {
     writeFileSync(path, original)

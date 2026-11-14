@@ -2,13 +2,13 @@
 """Compose .github/workflows/seuoffice-rust.yml for the stage 2 branch.
 
 main owns the workflow; the stage 2 branch adds the central process to it:
-the `main_faults` and `skip_pptx_faults` inputs, the comparison steps at the
-end of main's `crates` job, and the `main-windows` and `main-faults` jobs.
+the `main_faults` input, the comparison steps at the end of main's `crates`
+job, and the `main-windows` and `main-faults` jobs.
 Run after every merge of main, then check `git diff origin/main` of the file:
 
-    git show origin/main:.github/workflows/seuoffice-rust.yml > /tmp/main.yml
-    python3 tools/main-diff/compose-workflow.py /tmp/main.yml \
-        tools/main-diff/workflow-additions.txt > .github/workflows/seuoffice-rust.yml
+    git show origin/main:.github/workflows/seuoffice-rust.yml > "$SCRATCH/main.yml"
+    python3 tools/main-diff/compose-workflow.py "$SCRATCH/main.yml" \
+        tools/main-diff/workflow-additions.txt > "$SCRATCH/composed.yml"
 """
 
 import re
@@ -51,16 +51,6 @@ def main() -> None:
         + "\n\n"
         + section(additions, "crates-steps")
         + workflow[crates_end:]
-    )
-    # the slides fault shards keep main's condition and add the branch's skip
-    faults_at = workflow.index("\n  pptx-faults:\n")
-    guard = re.compile(r"^    if: \$\{\{ (.*) \}\}\n", re.M).search(workflow, faults_at)
-    if not guard:
-        sys.exit("main workflow: pptx-faults has no if")
-    workflow = (
-        workflow[: guard.start()]
-        + f"    if: ${{{{ {guard.group(1)} && !inputs.skip_pptx_faults }}}}\n"
-        + workflow[guard.end() :]
     )
     workflow = workflow.rstrip("\n") + "\n\n" + section(additions, "jobs")
     sys.stdout.write(workflow)
