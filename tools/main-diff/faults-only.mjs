@@ -216,7 +216,7 @@ async function main(command, env) {
     writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, { flag: 'wx' })
     const matrix = plan.catalogs.map(({ path, label }) => ({ path, label }))
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `catalogs=${JSON.stringify(matrix)}\n`)
-    const summary = `Definition SHA: ${plan.definitionSha}\nProduct SHA: ${plan.productSha}\nGate: ${gate.id} attempt ${gate.attempt}\nCatalogs: ${catalogs.length}\nFaults: ${catalogs.reduce((n, c) => n + c.faults.length, 0)}\nScheduling: largest catalog first by fault-count proxy; product-catalog seconds unmeasured\n`
+    const summary = `Definition SHA: ${plan.definitionSha}\nProduct SHA: ${plan.productSha}\nGate: ${gate.id} attempt ${gate.attempt}\nCatalogs: ${catalogs.length}\nFaults: ${catalogs.reduce((n, c) => n + c.faults.length, 0)}\nMatrix creation order: descending fault-count proxy; actual start order is not guaranteed; product-catalog seconds unmeasured\n`
     console.log(summary)
     if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, summary)
   } else if (command === 'check' || command === 'audit') {

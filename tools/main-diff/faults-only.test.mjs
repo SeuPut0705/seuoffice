@@ -158,7 +158,7 @@ test('empty and ambiguous catalogs are rejected', () => {
   )
 })
 
-test('larger catalogs start first with deterministic ties and without mutating input order', () => {
+test('catalog emission is largest-first and leaves input order unchanged', () => {
   const small = {
     path: 'tools/main-diff/faults/small.json',
     label: 'small',
