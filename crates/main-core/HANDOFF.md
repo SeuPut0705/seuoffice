@@ -1,21 +1,21 @@
 # 2단계 넘김 글 (MacBook, 2026-11-14)
 
-중심 프로세스(Electron main)를 Rust로 옮기는 일(결정 0030)의 지금 상태. 가지는 `feat/rust-stage2-plan`이고 main에는 아직 합치지 않았다. 합치는 순서는 B → C2/C3 → D3 → 2단계다.
+중심 프로세스(Electron main)를 Rust로 옮기는 일(결정 0030)의 지금 상태. 고정 제품은 `feat/rust-stage2-plan`의 30f303cde이고, 최신 main을 합치는 별도 가지는 `feat/rust-stage2-main-d3`다. main에는 아직 합치지 않았다.
 
 ## 지금 상태
 
 - `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다(엔진을 기다리는 모듈 제외; `shell/knowledge-base`는 검토 뒤 마저 옮김). 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
-- main b412c45e5의 검사 속도 수정과 결함 선택 규칙, 1a4a391ff의 수동 선택 우선순위를 합쳤다. `faultMode`·`--mode`와 workflow의 `ALL_FAULTS`·`MODE` 대입은 main 그대로다. 이 가지의 `apps/`, `packages/`는 main과 같다.
+- main 682563d76(D3 포함)을 별도 통합 가지에 정상 merge했다. main의 5엔진 workflow job, 입력·출력, `faultMode`·`--mode`, `ALL_FAULTS`·`MODE` 대입과 RHWP 준비를 보존한다. `apps/`, `packages/`, 제품 잠금과 `vendor/`는 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
 - 408290026을 합친 직후 로컬 컴파일·서식·형 검사와 결함 5,973개의 위치 검사를 통과했다. 아래 후속 수정까지 포함한 후보의 로컬 검사와 러너 결과는 별도로 확인한다.
-- 진단 실행 43529326459(cb4dfada1)는 비교, Windows, DOCX·PPTX·ODT 관문과 ODT 결함 조각을 통과했다. `main-faults`와 `pptx-faults`는 생략했으므로 최종 합격이 아니다. 이후 인수한 provider·MCP 수정의 검증 결과로도 쓰지 않는다.
-- 새 Actions 실행은 메인 세션의 신호까지 보류한다. `feat/rust-stage2-plan`으로의 푸시는 실행을 부르지 않는다.
+- 고정 제품 30f303cde의 실행 43554838447(시도 1)은 전체 성공했다. 중심 프로세스 비교는 52,688개 검사·2,327개 함수, 미등록 차이 0개·등록 차이 13개다. Windows 비교와 DOCX 네 목록 80개·PPTX 317개·ODT 26개 결함을 산출물 전체에서 확인했다.
+- 중심 프로세스 결함 6,121개는 정의 7594c1243, 제품 30f303cde, 녹색 관문 43554838447을 고정한 전용 실행 43568242384에서 확인 중이다. 46개 목록마다 네 조각, 전체 최대 네 job이다. 이 실행과 별도 통합 후보의 코드를 섞지 않는다. 새 후보 Actions는 메인 세션의 범위 결정까지 보류한다.
 
 ## 다음 할 일
 
 1. 다음 후보에 provider 1562196d3·1eec4bf1a와 MCP c2cde66c4·51ca1af04를 인수했다. provider의 추가 회귀 766419d90과 수정 d402555c4도 인수했다. 스트림의 host 종료 응답이 뒤의 abort보다 우선하며 `Cmd`·`Event` 계약은 그대로다. MCP `RELAY_TEXT`는 잘린 UTF-16 쌍을 JSON escape로 정확히 쓰고, 해당 차이 장부 항목은 지웠다.
-2. 메인 세션이 실행을 허용하면 최신 후보에서 비교와 결함을 확인한다. `tools/fault-reach.mjs`가 실제 차이로 선택한 엔진 결함을 모두 포함한다. `jscompat`·`ooxml-pkg`가 엔진 의존이므로 PPTX도 포함된다. DOCX는 네 결함 목록을 선택하며, 미분류 소스는 모든 엔진을 선택한다. DOCX의 `MISSED`·`SET ASIDE`는 실패다.
-3. 이 가지 몫과 다섯 묶음의 중심 프로세스 결함도 확인한다. 다르게 나온 것과 놓친 결함을 고치고 새 케이스는 목록 끝에 붙인다. main의 수동 선택 우선순위는 D3가 소유하며 여기서 별도 모드를 만들지 않는다.
+2. 별도 통합 후보는 main의 5엔진과 RHWP source-only 준비를 보존한다. OOXML의 새 `load(bytes, keep_raw)`에는 MCP 압축 해제 호출에서 `false`를 넘겨 원시 압축 데이터 복사를 요구하지 않는다. main의 Cargo 잠금 316개 패키지 정체성을 유지하고 중심 프로세스 의존 50개를 더했다.
+3. 고정 결함 실행은 단일 watcher로 끝까지 보고, 모든 목록·조각의 빠짐·중복·순서와 `CAUGHT` 판정을 감사한다. 새 후보는 별도로 전체 비교·Windows·실제 차이로 도달하는 5엔진 결함을 확인해야 하며, 고정 제품의 성공을 새 후보 합격으로 쓰지 않는다.
 4. 엔진을 기다리는 모듈은 B4/C/D가 들어간 뒤에 한다.
 
 ## 돌리는 법

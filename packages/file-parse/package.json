@@ -4,12 +4,25 @@
   "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
-  "description": "shared attachment parsing: PDF, Office, HWP and plain-text formats to text; images flagged for multimodal input",
+  "description": "shared attachment parsing: PDF, Office, HWP and plain-text formats to text, read by the Rust readers (crates/file-parse) through the wasm engine; images flagged for multimodal input",
   "exports": {
-    ".": "./src/index.ts",
-    "./hwp": "./src/hwp.ts",
-    "./redaction": "./src/redaction.ts",
-    "./hidden-content": "./src/hidden-content.ts"
+    ".": {
+      "node": "./src/node/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./hwp": {
+      "node": "./src/node/hwp.ts",
+      "default": "./src/hwp.ts"
+    },
+    "./redaction": {
+      "node": "./src/node/redaction.ts",
+      "default": "./src/redaction.ts"
+    },
+    "./hidden-content": {
+      "node": "./src/node/hidden-content.ts",
+      "default": "./src/hidden-content.ts"
+    },
+    "./init": "./src/init.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -17,26 +30,27 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@seuoffice/agent-core": "*",
-    "@seuoffice/compound-file": "*",
-    "@seuoffice/docx-engine": "*",
     "@seuoffice/drawio-model": "*",
+    "@seuoffice/engine-wasm": "*",
     "@seuoffice/epub-engine": "*",
     "@seuoffice/odt-engine": "*",
     "@seuoffice/xlsx-gateway": "*",
     "@seuoffice/xmind-engine": "*",
     "@rhwp/core": "file:../../vendor/rhwp-core",
+    "parse5": "^8.0.1",
+    "pdfjs-dist": "^6.2.108"
+  },
+  "devDependencies": {
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/compound-file": "*",
+    "@seuoffice/docx-engine": "*",
+    "@types/node": "^24.10.1",
     "cfb": "^1.2.2",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",
-    "parse5": "^8.0.1",
-    "pdfjs-dist": "^6.2.108",
     "ppt-to-text": "^1.0.1",
-    "word-extractor": "^1.0.4"
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "word-extractor": "^1.0.4"
   }
 }

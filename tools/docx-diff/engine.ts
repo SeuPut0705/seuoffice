@@ -49,12 +49,39 @@ export class Engine {
 
   private constructor(private readonly exports: EngineExports) {}
 
-  static load(wasmPath: string): Engine {
+  /**
+   * `steps` answers callback slot 0 of the import `seu_host.host_callback`,
+   * the steps of crates/seu-host: `{ name, input }` in, `{ ok }` or
+   * `{ error: { name, message } }` out; a step that throws answers the latter.
+   * Any other slot is refused, as the loader refuses a slot no call registered.
+   */
+  static load(wasmPath: string, steps: Record<string, (input: unknown) => unknown> = {}): Engine {
     const wasi = new WASI({ version: 'preview1' })
     const module = new WebAssembly.Module(readFileSync(wasmPath))
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
       seu_host: {
+        host_callback: (slot: number, pointer: number, length: number): bigint => {
+          if (slot !== 0) return 0xffff_ffff_ffff_ffffn
+          let answer: unknown
+          try {
+            const { name, input } = JSON.parse(
+              decoder.decode(new Uint8Array(exports.memory.buffer, pointer, length)),
+            ) as { name: string; input: unknown }
+            const step = steps[name]
+            if (step === undefined)
+              throw Object.assign(new Error(`no host step ${name}`), { name: 'HostUnavailable' })
+            answer = { ok: step(input) ?? null }
+          } catch (error) {
+            const thrown = error instanceof Error ? error : new Error(String(error))
+            answer = { error: { name: thrown.name, message: thrown.message } }
+          }
+          const bytes = encoder.encode(JSON.stringify(answer))
+          const at = exports.seu_alloc(bytes.length)
+          // seu_alloc may have grown the memory: take the buffer after it
+          new Uint8Array(exports.memory.buffer, at, bytes.length).set(bytes)
+          return (BigInt(at) << 32n) | BigInt(bytes.length)
+        },
         host_collate: (
           a: number,
           aLength: number,
@@ -72,7 +99,6 @@ export class Engine {
           )
         },
         // the gate's calls register no callback: every slot answers "none"
-        host_callback: (): bigint => 0xffff_ffff_ffff_ffffn,
       },
     })
     const exports = instance.exports as unknown as EngineExports

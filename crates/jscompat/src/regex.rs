@@ -595,6 +595,12 @@ impl<'t> JsMatch<'t> {
         self.found.group(index).map(|range| &self.text[range])
     }
 
+    /// `m.indices[index]` of a regex with the `d` flag, as byte offsets;
+    /// `None` where JavaScript has `undefined`.
+    pub fn range(&self, index: usize) -> Option<std::ops::Range<usize>> {
+        self.found.group(index)
+    }
+
     /// `m[0]`
     pub fn as_str(&self) -> &'t str {
         &self.text[self.found.range()]

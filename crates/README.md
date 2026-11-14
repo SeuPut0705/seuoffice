@@ -19,6 +19,8 @@ A session that picks this work up starts at
 | `pptx-engine`        | Slide scan, XML helpers, slide ids, named actions, table-grid accounting, CRC-32 and the package reader. [Survey, unit order and evidence](pptx-engine/README.md).                                                                                                     | `packages/pptx-engine/src/{scan,xml-utils,slide-ids,named-action,table-grid,crc32,zip}.ts`                                                                                                                                                                                                                                                                                                                                                    |
 | `mtx`                | The MicroType Express font decoder of embedded fonts, a derived work of libeot and the one crate under MPL-2.0.                                                                                                                                                        | `packages/pptx-engine/src/vendor/mtx/{index,lzcomp,ctf}.ts`                                                                                                                                                                                                                                                                                                                                                                                   |
 | `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `file-parse`         | Attachment readers: docx, pptx and xlsx as text, the Markdown and slide redactors, the zip text copy, a bounded compound file reader, relationship targets, attachable extensions, spreadsheet date formats                                                            | `packages/file-parse`: `docx.ts`, `pptx.ts`, `xlsx.ts`, `markdown-redaction.ts`, `pptx-redaction.ts`, `zip-text-parts.ts`, `opc.ts`, `attachable.ts`, `xlsx-dates.ts`; the reading of `cfb`                                                                                                                                                                                                                                                   |
+| `epub-engine`        | The EPUB functions that take values and typed trees: paths, font obfuscation, SHA-1, entry encodings, replacement ranges, the vertical writing test, container, encryption, package, nav and NCX readers                                                               | `packages/epub-engine`: `paths.ts`, `fonts.ts`, `sha1.ts`, `encoding.ts`, `ranges.ts`, `writing-mode.ts`; the tree readers of `open.ts`, `package.ts` and `toc.ts`                                                                                                                                                                                                                                                                            |
 | `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `main-core`          | The central process (the Electron main process), batch by batch: decision 0030 on main. Paths, clocks and loggers come from the caller                                                                                                                                 | `apps/*/src/main`, the pieces of `packages/*` they call                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -44,6 +46,13 @@ clock or randomness. UUIDs come from the caller. Two modules of
 5. Write the Rust tests from answers the TypeScript gave, not from what the
    code should do. `tests/readers.rs` and `tests/styles.rs` say how each was
    generated.
+
+Engines are ported in whole-engine batches (decision 0025, rule 5): every
+module left in an engine is ported in one go, its gate cases written beside
+it, and the gate runs once at the end of the batch, as the batch's first
+comparison, then once on a runner. Runner jobs are started and not waited
+for. Fault injection, tidying the ledger and the review run once, before
+the batch is merged to main. A unit's gate is no longer run per module.
 
 ## jscompat rules
 
@@ -130,6 +139,15 @@ it. A search past the bound stops with `RegexLimit`:
   `RegexError`, the `SyntaxError` of the constructor or the limit.
 - `jscompat/examples/limit_wasm.rs` runs the same pattern over 25M characters
   on wasm32 in CI: it refuses where 0.12.0 trapped at 22.4M.
+
+Under `i` without `u` JavaScript never matches a character outside ASCII as an
+ASCII letter; `regress` does for U+0131 (`i`), U+017F (`s`) and U+212A (`k` in
+a class, and `\w`). `JsRegex` searches a copy of the text without those three,
+so a pattern that names only ASCII is copied as it is. A pattern that names a
+cased character outside ASCII under `i` without `u` does not build
+(`/\u0131/i` matches `I` in `regress`): `JsRegex::new` returns an error, and
+`jscompat/tests/icase.rs` reads every site of the workspace so that no literal
+one reaches that error at run time. Its 161 expected answers are Node 22's.
 
 Sizes and offsets read from a file are `u64` or `i64`, never `usize`: the wasm
 target is 32-bit and sums of 32-bit fields wrap.
@@ -389,6 +407,167 @@ main fixes the TypeScript, the fix is merged here, the entry and its class
 are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 `zone` runs its TypeScript side in that zone.
 
+## The other gates: tools/fileparse-diff and tools/epub-diff
+
+`file-parse` and `epub-engine` have a gate each, built on one runner
+(`tools/fileparse-diff/runner.ts`) that imports the engine, the comparison and
+the key-order check of `tools/docx-diff`. Nothing in the product calls either
+crate.
+
+```
+npm --prefix tools/fileparse-diff run gate      # build the wasm, compare, exit 1 on any failure
+npm --prefix tools/fileparse-diff run compare -- --group xlsx --save out/x.json
+npm --prefix tools/fileparse-diff run faults    # every fault of faults.json, in a scratch copy of crates/
+npm --prefix tools/epub-diff run gate
+npm --prefix tools/epub-diff run faults
+```
+
+A function is one `Spec` in a `*-cases.ts` file: the TypeScript reference, the
+inputs built for it, and how its inputs are mutated. The runner compares three
+populations per function, each with a floor in `floors.json`:
+
+- **corpus**: every tracked file with one of the spec's extensions.
+- **built**: the inputs the spec builds, hostile ones included.
+- **mutated**: 100 seeded mutants of the corpus and built inputs, one seed per
+  function. An input the ledger lists seeds none.
+
+It fails on a difference that is not listed, a key order that differs, a
+missing or unknown floor, a function with fewer than two distinct TypeScript
+results, a ledger entry that no longer reproduces, and any input where a
+reader did not answer (a trap, a host error, a child that died or timed out).
+An error is compared as its name and message; the message is compared up to
+`cannot be inflated:`, as in `tools/docx-diff`.
+
+What is particular to these gates:
+
+- **Every reader of bytes goes through the zip gate before it opens the
+  archive** (`ooxml_pkg::load_zip_package`, or `assert_zip_inflates_within_limits`
+  for the copy). The TypeScript `readZipTextParts` has no gate, so it is
+  compared twice: the bare export over built inputs, each difference listed,
+  and the TypeScript gate followed by the copy (`gatedReadZipTextParts`) over
+  corpus, built and mutated inputs, with no difference.
+- **A compound file is read with bounds.** `file_parse::compound` follows what
+  `cfb` reads, and refuses a FAT, MiniFAT or DIFAT chain that returns to a
+  sector, links that do not end, and streams that hold more than the file.
+  Every compound input, and every hostile zip, runs in a child process with a
+  30 second limit: `cfb` never returns from some cycles. The cycles `cfb`
+  never leaves are built only by the tests of `compound.rs` and never reach
+  `CFB.read`.
+- **`faults.json`** names one replacement in one source file per fault. The
+  fault runner applies each in a copy of `crates/` under `out/`, rebuilds, and
+  runs the fault's group: DETECTED when the gate fails with a difference or a
+  stale ledger entry, otherwise MISSED, INVALID, CRASHED or TIMEOUT. A source
+  line that `cargo fmt` rewraps makes its fault INVALID, so check the file
+  after formatting. `--group a,b` and `--id a,b` filter the catalog before
+  `--shard i/n` takes a cost-balanced subset using `tools/fault-shards.mjs`
+  and the gate's `fault-costs.json`. Unknown costs use the planner's median
+  fallback; an empty cost file records no measurements. CI runs eight shards.
+  Each fault builds `office-wasm` with the release-derived `probe` profile
+  (no LTO), then compares its group without changing the comparison.
+  Every result in `summary.json` records elapsed `seconds`, including rebuild
+  and compare when reached, also for INVALID, CRASHED and TIMEOUT results.
+  Refresh measured costs with
+  `node tools/fault-shards.mjs refresh <gate>/fault-costs.json <summary.json> ...`.
+  The fault jobs need both their baseline gate and quick's affected-engine
+  output; main and `all_faults=true` run every engine and every DOCX catalog.
+- **First runs** are kept in `evidence/`, untouched; those above 200 KB are
+  gzip-compressed. `decisions.tsv` is the trail.
+- **CSV decoding** (`file_parse::csv`, `decodeCsvBuffer` of xlsx-gateway)
+  decodes with `encoding_rs`, the WHATWG Encoding Standard, as the
+  TypeScript does through `@exodus/bytes` since main's cb4a067b5. Before
+  that it decoded with Node's `TextDecoder`, which differs from the standard
+  for `euc-kr` (KS X 1001, not windows-949), `big5` (no HKSCS), `shift_jis`
+  (0x1A, 0x1C, 0x7F moved, 0x80 rejected) and `x-user-defined` (unknown):
+  49 inputs of the gate showed it, and went from the ledger with the fix. The
+  TypeScript function is async; the Rust one decodes in place.
+
+Left to the host (`crates/seu-host`). In stage 1 the engines run as wasm
+inside the React screens (decision 0026), where pdfjs, parse5 and the
+TypeScript engines not ported yet already run. A step the engine cannot take
+itself is the import `seu_host.host_call(name, input)`, with JSON in and out.
+Each step is one call at the place where the TypeScript calls the library, and
+the host answers what the TypeScript computes there. The gates supply the
+steps in `tools/fileparse-diff/host-steps*.ts`, and each gate case sends the
+same inputs through both sides. A host step that copies TypeScript code (the
+`sourceElements` walk of html-redaction) is checked against the original by
+its gate, which fails once the original changes. The steps:
+
+- `fileparse.htmlSourceElements`: parse5's elements with source locations, for
+  `redactHtmlSource` (`file_parse::html`).
+- `fileparse.diagramFormatOf`, `fileparse.readDiagramText`: the draw.io reader
+  (drawio-model), for `parseFileToText`.
+- `fileparse.localOffsetSeconds`: the user's UTC offset at an instant
+  (`-new Date(ms).getTimezoneOffset() * 60`), for HWP memo dates. rhwp writes
+  them as local time with a literal Z through `chrono::Local`, which is the
+  browser's zone in the wasm-bindgen build and UTC in a WASI one; patch 0045
+  of `vendor/rhwp-core` opens `memo_time::set_local_offset`, and
+  `file_parse::hwp` sets it to this step. Without a host it keeps
+  `chrono::Local`. `tests/hwp.rs` pins +09:00, the zone its answers were
+  taken in, and the gate runs under `TZ=America/New_York` with memos on both
+  sides of a DST change.
+- PDF (pdfjs), mind maps (xmind-engine) and OpenDocument text (odt-engine)
+  await in the TypeScript, which an import of the wasm cannot. The host runs
+  the reader the extension names before `parseFileToText` and passes what it
+  read (`hosted`); every check the TypeScript makes before that reader is made
+  in Rust first, in the same order.
+- epub-engine: the three parse5 calls: `epub.parseHtml` (`parseHtml`),
+  `epub.parseFragmentText` (the lookup of `resolveHtmlEntity`, whose cache and
+  decision stay in Rust) and `epub.chapterTextRoots` (the HTML fallback of
+  `extractChapterText`). `tools/fileparse-diff/host-steps-epub.ts` has them;
+  the two that copy TypeScript are checked against its source text by
+  `tools/epub-diff/xml-cases.ts`.
+
+A native build has no host: those steps answer `HostUnavailable`.
+
+All of file-parse and epub-engine is ported (batch D1), with these
+exceptions. pdf, xmind, odt and draw.io go through the host as above. The
+job functions of epub translation hand over to pdf-structure's job engine,
+which is not ported. `hwp` compiles rhwp v0.9.0 with the 33 patches of
+`vendor/rhwp-core`, from the tree `node tools/build-rhwp-core.mjs
+--source-only` prepares in `crates/.rhwp-source` (gitignored, outside the
+workspace). Cargo reads that path dependency on every call, so the tree must
+exist before any cargo command; CI prepares it first in every job.
+
+### Notes for the odt port (stream C)
+
+- **Entry points** (`packages/odt-engine/src/index.ts`): `odtToText` (the text
+  file-parse attaches; `packages/file-parse/src/odt.ts` wraps it and maps
+  `OdtNotTextError`/`isOdtOpenError` in `parse.ts`), `odtToDocx` (the bridge
+  docx, the `BridgeMap` and the conversion report), `saveOdt` (narrow patches
+  back into the received ODT; untouched parts keep their bytes, no edit gives
+  the original bytes), `docxToOdt`, `protectedCellsOf`, `parseKeepName`. The
+  errors are `OdtOpenError` with an `OdtOpenErrorCode`, `OdtEncryptedError`
+  and `OdtNotTextError`.
+- **Corpus**: no `.odt` is tracked. The package's own tests build ODTs in
+  `tests/helpers/*-fixtures.ts`, and `tests/assemble-corpus.test.ts` reads a
+  folder named by `ODT_CORPUS`. A gate needs built ODTs from those helpers,
+  mutated content.xml/styles.xml through the `zip-xml` mutation of
+  `tools/fileparse-diff/runner.ts`, and container mutations.
+- **What to compare**: `odtToText` as a string. `odtToDocx` as the bridge
+  docx's parts (unzip both and compare part names, then each XML part as text
+  and the rest as bytes; JSZip writes entries in order) plus the BridgeMap
+  and the report as JSON, with their key order. `saveOdt` as bytes when there
+  is no edit (it must give back the original) and as parts otherwise. The odt
+  engine reads XML with saxes, which `crates/saxes` is.
+- **Shared with docx**: `odtToDocx` writes through the docx engine, so the
+  comparison follows stream B's docx-diff conventions for generated parts
+  (`tools/docx-diff/package-zips.ts`).
+
+Open on these crates:
+
+- The record of withheld cells in an xlsx is JSON. `serde_json` refuses three
+  things `JSON.parse` reads (a number past the range of a double, a lone
+  surrogate escape, nesting past 128 levels); Rust then refuses the workbook
+  where the TypeScript withholds and answers. Listed; a JSON reader that
+  follows `JSON.parse` would close it.
+- The compound reader is compared with `cfb` read directly. The TypeScript now
+  has a gate of its own (`@seuoffice/compound-file`, `assertCompoundFile`):
+  the refusals of `compound.rs` should be compared with it.
+- `xlsx.rs` holds a copy of the fast-xml-parser dialect of `pptx.rs` (`mod
+fxp`); the two should share one module.
+- `office-wasm` maps an error to its JavaScript name by the start of its
+  message (`file_parse.rs`). A typed error from the readers would replace it.
+
 ## Known debt
 
 - `JsRegex::new` refuses a pattern under `i` without `u` that names a cased
@@ -415,6 +594,28 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   (MIT OR Apache-2.0). Its licence files are in the directory; a shipped
   build needs it in the third-party notices like any other dependency, and
   the notices are not written yet.
+- Third-party code ported into the crates, each needing its notice in a
+  shipped build: saxes 6.0.0 (ISC, `crates/saxes`), ppt-to-text 1.0.1 and
+  cfb 1.2.2 (Apache-2.0, `file-parse` `ppt` and `compound`), word-extractor
+  (MIT, `file-parse` `doc`).
+- parse5 port needed when the central process becomes Rust (stage 2), unless
+  that process keeps a JS host for it. Until then html-redaction and the
+  three parse5 calls of epub-engine are host steps, and a native build
+  answers `HostUnavailable` there.
+- The EPUB translation reply is read with `serde_json`, which refuses a
+  number past f64 (`1e999`), nesting deeper than 128 and a lone surrogate
+  escape; `JSON.parse` reads all three. Such a reply is a batch failure
+  (`unparseable-response`) in Rust and a translation in TypeScript
+  (`epub-engine/src/translate/call.rs`). A model reply has never been seen
+  to carry one.
+- fast-xml-parser reads a DOCTYPE; `ooxml_xml::parse_ordered` refuses `<!D`,
+  so a workbook part with one is refused in Rust and read in TypeScript (two
+  ledger entries, `withheld: spelled mirror, a doctype before the root`). Excel
+  writes none; the port of that reader belongs to `ooxml-xml`.
+- Memory budgets the TypeScript does not have: `ppt` refuses once the text
+  it collects passes a budget, `doc` once the pieces it copies pass one.
+  TypeScript runs out of memory on those inputs, so neither the gate nor a
+  real file reaches them.
 - `cargo-deny` runs on the runner against `deny.toml` (licences only); it
   is not installed on the machine these crates were written on.
   Run by hand with 0.20.2 on the commit that vendored `regress`:

@@ -12,9 +12,6 @@ export const HWP_PREVIEW_CHARS = 20_000
  * attachments and search).
  */
 export async function hwpText(bytes: Uint8Array): Promise<string> {
-  // the reader looks in node_modules first; a packaged CLI has none, so it is told
-  // where the engine sits beside this bundle (src/resources.ts)
-  process.env.SEUOFFICE_RHWP_WASM ??= rhwpWasmPath()
   return hwpToText(bytes)
 }
 

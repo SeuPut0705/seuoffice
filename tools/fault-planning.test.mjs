@@ -80,7 +80,8 @@ test('the all-faults CLI emits every engine and all DOCX catalogs for the workfl
           return [line.slice(0, split), line.slice(split + 1)]
         }),
     )
-    for (const engine of ['docx', 'pptx', 'odt']) assert.equal(values[engine], 'true')
+    for (const engine of ['docx', 'pptx', 'odt', 'fileparse', 'epub'])
+      assert.equal(values[engine], 'true')
     assert.deepEqual(JSON.parse(values.docx_files), [
       'tools/docx-diff/faults-b2.json',
       'tools/docx-diff/faults-b3.json',
@@ -91,6 +92,47 @@ test('the all-faults CLI emits every engine and all DOCX catalogs for the workfl
     rmSync(directory, { recursive: true, force: true })
   }
 })
+
+test('attachment fault selection follows shared engine dependencies without skipping unknown code', () => {
+  const registered = reachability.ENGINES
+  const deps = {
+    'docx-engine': ['shared'],
+    'pptx-engine': ['shared'],
+    'odt-engine': ['shared'],
+    'epub-engine': ['shared', 'epub-only'],
+    'file-parse': ['shared', 'epub-engine', 'epub-only', 'attachment-only'],
+  }
+  const graph = {
+    dirs: new Map([
+      ['shared', 'crates/shared'],
+      ['epub-only', 'crates/epub-only'],
+      ['attachment-only', 'crates/attachment-only'],
+    ]),
+    closure: (crate) => new Set([crate, ...deps[crate]]),
+  }
+  const programs = Object.fromEntries(
+    Object.keys(registered).map((name) => [
+      name,
+      { files: new Set(), paths: new Set(), corpus: new Set() },
+    ]),
+  )
+  const select = (file) => {
+    const result = reachability.reach([file], {
+      engines: registered,
+      graph,
+      programs,
+      officeWasmText: {},
+    })
+    return Object.keys(result)
+      .filter((engine) => result[engine].length > 0)
+      .sort()
+  }
+  assert.deepEqual(select('crates/attachment-only/src/lib.rs'), ['fileparse'])
+  assert.deepEqual(select('crates/epub-only/src/lib.rs'), ['epub', 'fileparse'])
+  assert.deepEqual(select('crates/shared/src/lib.rs'), Object.keys(registered).sort())
+  assert.deepEqual(select('runtime/unknown.rs'), Object.keys(registered).sort())
+})
+
 test('a manual ODT selection on main uses affected mode, not all faults', () => {
   const result = spawnSync(
     process.execPath,

@@ -1,0 +1,324 @@
+[
+  {
+    "id": "opc-parent-segment",
+    "group": "opc",
+    "file": "crates/file-parse/src/opc.rs",
+    "from": "\"..\" => {",
+    "to": "\"...\" => {"
+  },
+  {
+    "id": "integrator-backslash-resolution",
+    "group": "opc",
+    "file": "crates/file-parse/src/opc.rs",
+    "from": "let normalized = decoded.replace('\\\\', \"/\");",
+    "to": "let normalized = decoded.to_owned();"
+  },
+  {
+    "id": "attachment-size-limit",
+    "group": "attachable",
+    "file": "crates/file-parse/src/attachable.rs",
+    "from": "pub const ATTACHABLE_IMAGE_MAX_BYTES: u64 = 5 * 1024 * 1024;",
+    "to": "pub const ATTACHABLE_IMAGE_MAX_BYTES: u64 = 50 * 1024 * 1024;"
+  },
+  {
+    "id": "attachment-own-extension",
+    "group": "attachable",
+    "file": "crates/file-parse/src/attachable.rs",
+    "from": "ATTACHABLE_EXTS.contains(&clean.as_str())",
+    "to": "!ATTACHABLE_EXTS.contains(&clean.as_str())"
+  },
+  {
+    "id": "diagram-suffix",
+    "group": "attachable",
+    "file": "crates/file-parse/src/attachable.rs",
+    "from": "Some(\"drawio.svg\")",
+    "to": "Some(\"drawio.png\")"
+  },
+  {
+    "id": "builtin-seconds",
+    "group": "dates",
+    "file": "crates/file-parse/src/xlsx_dates.rs",
+    "from": "[19., 21., 33., 45., 47.]",
+    "to": "[19., 21., 33., 45., 48.]"
+  },
+  {
+    "id": "quoted-format-tokens",
+    "group": "dates",
+    "file": "crates/file-parse/src/xlsx_dates.rs",
+    "from": "} else if !quoted {",
+    "to": "} else if true {"
+  },
+  {
+    "id": "excel-leap-day",
+    "group": "dates",
+    "file": "crates/file-parse/src/xlsx_dates.rs",
+    "from": "if !date_1904 && days == 60.",
+    "to": "if !date_1904 && days == 61."
+  },
+  {
+    "id": "integrator-regex-folds-past-ascii-dates",
+    "group": "dates",
+    "file": "crates/jscompat/src/regex.rs",
+    "from": "let shadows = flags.contains('i') && without_u;",
+    "to": "let shadows = false;"
+  },
+  {
+    "id": "markdown-placeholder",
+    "group": "redaction",
+    "file": "crates/file-parse/src/markdown.rs",
+    "from": "out.push_str(&placeholder_source(label));",
+    "to": "out.push_str(&placeholder_source(\"private\"));"
+  },
+  {
+    "id": "pptx-placeholder",
+    "group": "redaction",
+    "file": "crates/file-parse/src/pptx_redaction.rs",
+    "from": "out.push_str(&escape_text(&placeholder_source(label)));",
+    "to": "out.push_str(&escape_text(&placeholder_source(\"private\")));"
+  },
+  {
+    "id": "integrator-regex-folds-past-ascii-redaction",
+    "group": "redaction",
+    "file": "crates/jscompat/src/regex.rs",
+    "from": "let shadows = flags.contains('i') && without_u;",
+    "to": "let shadows = false;"
+  },
+  {
+    "id": "docx-text-budget",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "if self.chars >= self.max_chars {",
+    "to": "if self.chars > self.max_chars {"
+  },
+  {
+    "id": "integrator-docx-cell-boundary",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "join_units(row, \" | \")",
+    "to": "join_units(row, \" \")"
+  },
+  {
+    "id": "integrator-regex-folds-past-ascii-docx",
+    "group": "docx",
+    "file": "crates/jscompat/src/regex.rs",
+    "from": "let shadows = flags.contains('i') && without_u;",
+    "to": "let shadows = false;"
+  },
+  {
+    "id": "pptx-slide-relationships",
+    "group": "pptx",
+    "file": "crates/file-parse/src/pptx.rs",
+    "from": "!rel.external && !rel.target.is_empty() && rel.kind.ends_with(\"/slide\")",
+    "to": "rel.external && !rel.target.is_empty() && rel.kind.ends_with(\"/slide\")"
+  },
+  {
+    "id": "integrator-regex-folds-past-ascii-pptx",
+    "group": "pptx",
+    "file": "crates/jscompat/src/regex.rs",
+    "from": "let shadows = flags.contains('i') && without_u;",
+    "to": "let shadows = false;"
+  },
+  {
+    "id": "xlsx-empty-run",
+    "group": "xlsx",
+    "file": "crates/file-parse/src/xlsx.rs",
+    "from": "const MAX_EMPTY_RUN: usize = 8;",
+    "to": "const MAX_EMPTY_RUN: usize = 9;"
+  },
+  {
+    "id": "xlsx-clip-slack",
+    "group": "xlsx",
+    "file": "crates/file-parse/src/xlsx.rs",
+    "from": "const XML_CLIP_SLACK: f64 = 256.0 * 1024.0;",
+    "to": "const XML_CLIP_SLACK: f64 = 255.0 * 1024.0;"
+  },
+  {
+    "id": "integrator-xlsx-unknown-label",
+    "group": "xlsx",
+    "file": "crates/file-parse/src/xlsx.rs",
+    "from": "const UNKNOWN_LABEL: &str = \"private\";",
+    "to": "const UNKNOWN_LABEL: &str = \"hidden\";"
+  },
+  {
+    "id": "text-part-dotfile",
+    "group": "ziptext",
+    "file": "crates/file-parse/src/zip_text_parts.rs",
+    "from": "None | Some(0) => true,",
+    "to": "None | Some(0) => false,"
+  },
+  {
+    "id": "zip-descriptor-bit",
+    "group": "ziptext",
+    "file": "crates/file-parse/src/zip_text_parts.rs",
+    "from": "entry.flags & !FLAG_DATA_DESCRIPTOR",
+    "to": "entry.flags"
+  },
+  {
+    "id": "integrator-zip-gate-skipped",
+    "group": "ziptext",
+    "file": "crates/file-parse/src/zip_text_parts.rs",
+    "from": "    assert_zip_inflates_within_limits(bytes, &DEFAULT_ZIP_LIMITS)?;\n",
+    "to": ""
+  },
+  {
+    "id": "compound-stream-name",
+    "group": "compound",
+    "file": "crates/file-parse/src/compound.rs",
+    "from": ".map(|(name, bytes)| Stream {\n                name,",
+    "to": ".map(|(name, bytes)| Stream {\n                name: format!(\"{name}!\"),"
+  },
+  {
+    "id": "integrator-compound-mini-cutoff",
+    "group": "compound",
+    "file": "crates/file-parse/src/compound.rs",
+    "from": "const MINI_CUTOFF: i32 = 4096;",
+    "to": "const MINI_CUTOFF: i32 = 4097;"
+  },
+  {
+    "id": "csv-korean-ratio",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": "&& f64::from(hangul) / f64::from(non_ascii) >= 0.8",
+    "to": "&& f64::from(hangul) / f64::from(non_ascii) >= 0.5"
+  },
+  {
+    "id": "csv-replacement-penalty",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": "            -20",
+    "to": "            -2"
+  },
+  {
+    "id": "csv-utf16-tie-order",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": "Some(if odd_nul >= even_nul {",
+    "to": "Some(if odd_nul > even_nul {"
+  },
+  {
+    "id": "csv-score-tie",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": "if candidate_score > best_score {",
+    "to": "if candidate_score >= best_score {"
+  },
+  {
+    "id": "integrator-csv-bom-kept",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": "let (text, had_errors) = encoding.decode_with_bom_removal(bytes);",
+    "to": "let (text, had_errors) = encoding.decode_without_bom_handling(bytes);"
+  },
+  {
+    "id": "integrator-csv-replacement-label",
+    "group": "csv",
+    "file": "crates/file-parse/src/csv.rs",
+    "from": ".filter(|found| *found != REPLACEMENT)",
+    "to": ".filter(|_| true)"
+  },
+  {
+    "id": "html-code-span-start",
+    "group": "html",
+    "file": "crates/file-parse/src/html.rs",
+    "from": "return Some([i + 1, j]);",
+    "to": "return Some([i, j]);"
+  },
+  {
+    "id": "ppt-record-header-endianness",
+    "group": "legacy",
+    "file": "crates/file-parse/src/ppt.rs",
+    "from": "let value = match (self.byte(self.l), self.byte(self.l + 1.0)) {",
+    "to": "let value = match (self.byte(self.l + 1.0), self.byte(self.l)) {"
+  },
+  {
+    "id": "compound-gate-magic-ignored",
+    "group": "legacy",
+    "file": "crates/file-parse/src/compound_gate.rs",
+    "from": "bytes.len() >= OLE2_MAGIC.len() && bytes[..OLE2_MAGIC.len()] == OLE2_MAGIC",
+    "to": "bytes.len() >= OLE2_MAGIC.len()"
+  },
+  {
+    "id": "hwp-two-column-rows",
+    "group": "hwp",
+    "file": "crates/file-parse/src/hwp.rs",
+    "from": "let as_rows = dims.col_count >= 2",
+    "to": "let as_rows = dims.col_count >= 3"
+  },
+  {
+    "id": "hwp-row-cell-paragraph-limit",
+    "group": "hwp",
+    "file": "crates/file-parse/src/hwp.rs",
+    "from": ".all(|cell| cell.paragraphs.len() <= MAX_ROW_CELL_PARAGRAPHS);",
+    "to": ".all(|cell| cell.paragraphs.len() < MAX_ROW_CELL_PARAGRAPHS);"
+  },
+  {
+    "id": "dispatch-extension-keeps-dot",
+    "group": "parse",
+    "file": "crates/file-parse/src/parse.rs",
+    "from": "Some(at) => &name[at + 1..],",
+    "to": "Some(at) => &name[at..],"
+  },
+  {
+    "id": "dispatch-jpeg-mime",
+    "group": "parse",
+    "file": "crates/file-parse/src/parse.rs",
+    "from": "\"jpg\" | \"jpeg\" => \"image/jpeg\",",
+    "to": "\"jpg\" => \"image/jpeg\","
+  },
+  {
+    "id": "epub-chapter-number",
+    "group": "epub",
+    "file": "crates/file-parse/src/epub.rs",
+    "from": "item.index + 1,",
+    "to": "item.index,"
+  },
+  {
+    "id": "docx-withheld-run-text-kept",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "if run_labels.iter().any(Option::is_some) {",
+    "to": "if false && run_labels.iter().any(Option::is_some) {"
+  },
+  {
+    "id": "docx-adjacent-markers-not-collapsed",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "&& p.marker.as_deref() != Some(marker.as_str())",
+    "to": "&& p.marker.as_deref() != Some(\"\")"
+  },
+  {
+    "id": "pptx-unprefixed-mark-uncounted",
+    "group": "redaction",
+    "file": "crates/file-parse/src/pptx_redaction.rs",
+    "from": "+ unprefixed_marks(xml) != understood",
+    "to": "!= understood"
+  },
+  {
+    "id": "xlsx-withheld-sheet-ignores-case",
+    "group": "xlsx",
+    "file": "crates/file-parse/src/xlsx.rs",
+    "from": "position(|name| name == sheet)",
+    "to": "position(|name| name.eq_ignore_ascii_case(sheet))"
+  },
+  {
+    "id": "docx-comment-not-skipped",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "if rest.starts_with(\"<!--\") && !self.no_comment_end {",
+    "to": "if rest.starts_with(\"<!--x\") && !self.no_comment_end {"
+  },
+  {
+    "id": "docx-single-quoted-label-refused",
+    "group": "docx",
+    "file": "crates/file-parse/src/docx.rs",
+    "from": "if quote != b'\"' && quote != b'\\'' {",
+    "to": "if quote != b'\"' {"
+  },
+  {
+    "id": "xlsx-scan-cdata-is-comment",
+    "group": "xlsx",
+    "file": "crates/file-parse/src/xlsx_xml_scan.rs",
+    "from": "cdata: (opener == \"<![CDATA[\").then(|| &body[..close]),",
+    "to": "cdata: (opener == \"<!--\").then(|| &body[..close]),"
+  }
+]

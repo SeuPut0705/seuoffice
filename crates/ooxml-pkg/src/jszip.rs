@@ -171,9 +171,9 @@ struct ExtraField<'a> {
 struct ZipEntry<'a> {
     version_made_by: i64,
     bit_flag: i64,
+    dos_time: i64,
+    crc32: i64,
     compression_method: &'a [u8],
-    /// the DOS time (low half) and date (high half) of the central directory
-    dos_date_time: i64,
     compressed_size: i64,
     uncompressed_size: i64,
     extra_fields_length: i64,
@@ -200,9 +200,9 @@ impl<'a> ZipEntry<'a> {
         reader.skip(2)?;
         entry.bit_flag = reader.read_int(2)?;
         entry.compression_method = reader.read_data(2)?;
-        entry.dos_date_time = reader.read_int(4)?;
+        entry.dos_time = reader.read_int(4)?;
         // the checksum, which loadAsync does not verify
-        reader.read_int(4)?;
+        entry.crc32 = reader.read_int(4)?;
         entry.compressed_size = reader.read_int(4)?;
         entry.uncompressed_size = reader.read_int(4)?;
         let file_name_length = reader.read_int(2)?;
@@ -317,6 +317,38 @@ impl<'a> ZipEntry<'a> {
         ))
     }
 
+    /// `fileCommentStr` of `handleUTF8`.
+    fn comment_str(&self) -> Result<String, String> {
+        if self.bit_flag & 0x0800 == 0x0800 {
+            return Ok(decode_text(self.file_comment).into_owned());
+        }
+        let unicode_comment = self.unicode_extra_field(0x6375, self.file_comment)?;
+        Ok(unicode_comment.unwrap_or_else(|| decode_text(self.file_comment).into_owned()))
+    }
+
+    /// `readDate`: `Date.UTC` over the fields of the DOS date, which it
+    /// carries over where one is out of range.
+    fn date(&self) -> f64 {
+        let dos = self.dos_time as i32;
+        crate::write::utc_time_value(
+            i64::from(((dos >> 25) & 0x7f) + 1980),
+            i64::from(((dos >> 21) & 0x0f) - 1),
+            i64::from((dos >> 16) & 0x1f),
+            i64::from((dos >> 11) & 0x1f),
+            i64::from((dos >> 5) & 0x3f),
+            i64::from((dos & 0x1f) << 1),
+        )
+    }
+
+    /// The `dosPermissions` and `unixPermissions` of `processAttributes`.
+    fn permissions(&self) -> (Option<i64>, Option<i64>) {
+        let made_by = self.version_made_by >> 8;
+        let attributes = self.external_file_attributes as i32;
+        let dos = (made_by == 0).then(|| i64::from(attributes & 0x3F));
+        let unix = (made_by == MADE_BY_UNIX).then(|| i64::from((attributes >> 16) & 0xFFFF));
+        (dos, unix)
+    }
+
     /// `processAttributes`: a folder by its DOS attribute or by its name.
     fn is_dir(&self, file_name_str: &str) -> bool {
         self.external_file_attributes & 0x0010 != 0 || file_name_str.ends_with('/')
@@ -348,6 +380,31 @@ fn resolve(path: &str) -> String {
     result.join("/")
 }
 
+/// What `loadAsync` keeps of an entry besides its content, for writing the
+/// archive again as the TypeScript `saveEpub` does.
+pub struct RawRecord {
+    /// `file.date`, a time value in milliseconds.
+    pub date: f64,
+    /// `comment`: `null` for an entry that has none.
+    pub comment: Option<String>,
+    pub dos_permissions: Option<i64>,
+    pub unix_permissions: Option<i64>,
+    /// The loaded compressed data, which JSZip copies through when the
+    /// compression stays the same; `None` where JSZip holds an empty string
+    /// instead (folders and entries that declare no bytes).
+    pub compressed: Option<CompressedData>,
+}
+
+/// A `CompressedObject` of JSZip: the numbers are those of the central
+/// directory.
+pub struct CompressedData {
+    pub stored: bool,
+    pub crc32: i64,
+    pub compressed_size: i64,
+    pub uncompressed_size: i64,
+    pub bytes: Vec<u8>,
+}
+
 /// One entry as `loadAsync` adds it to the zip object.
 pub struct LoadedEntry {
     pub name: String,
@@ -363,28 +420,12 @@ pub struct LoadedEntry {
     pub unix_permissions: Option<u32>,
     /// `entry.date` as a time value: JSZip reads the DOS time and date as UTC.
     pub date: f64,
-}
-
-/// `DataReader.readDate`: `new Date(Date.UTC(...))` of the DOS fields, each
-/// field normalized the way `Date.UTC` carries it (month 13, day 0).
-fn dos_time_value(dos: i64) -> f64 {
-    let year = ((dos >> 25) & 0x7f) + 1980;
-    let month = ((dos >> 21) & 0x0f) - 1;
-    let day = (dos >> 16) & 0x1f;
-    let (hours, minutes, seconds) = ((dos >> 11) & 0x1f, (dos >> 5) & 0x3f, (dos & 0x1f) << 1);
-    // days_from_civil of Howard Hinnant's date algorithms, for the first of the month
-    let (y, m) = (year + month.div_euclid(12), month.rem_euclid(12) + 1);
-    let y = if m <= 2 { y - 1 } else { y };
-    let era = y.div_euclid(400);
-    let year_of_era = y - era * 400;
-    let day_of_year = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5;
-    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    let days = era * 146_097 + day_of_era - 719_468 + day - 1;
-    (days * 86_400_000 + hours * 3_600_000 + minutes * 60_000 + seconds * 1000) as f64
+    /// Present when the caller asked to keep the raw records.
+    pub raw: Option<RawRecord>,
 }
 
 /// `JSZip.loadAsync(bytes)`: the entries in central directory order.
-pub fn load(data: &[u8]) -> Result<Vec<LoadedEntry>, String> {
+pub fn load(data: &[u8], keep_raw: bool) -> Result<Vec<LoadedEntry>, String> {
     let mut reader = Reader::new(data);
     let (central_dir_records, central_dir_offset, zip64) = read_end_of_central(&mut reader)?;
 
@@ -422,18 +463,38 @@ pub fn load(data: &[u8]) -> Result<Vec<LoadedEntry>, String> {
             name.push('/');
         }
         let stored_empty = is_dir || file.uncompressed_size == 0;
+        let raw = if keep_raw {
+            let comment = file.comment_str()?;
+            let (dos_permissions, unix_permissions) = file.permissions();
+            Some(RawRecord {
+                date: file.date(),
+                comment: (!comment.is_empty()).then_some(comment),
+                dos_permissions,
+                unix_permissions,
+                compressed: (!stored_empty).then(|| CompressedData {
+                    stored: compression == Compression::Store,
+                    crc32: file.crc32,
+                    compressed_size: file.compressed_size,
+                    uncompressed_size: file.uncompressed_size,
+                    bytes: file.compressed_content.to_vec(),
+                }),
+            })
+        } else {
+            None
+        };
         loaded.push(LoadedEntry {
             name,
             is_dir,
             uncompressed_size: (!stored_empty).then_some(file.uncompressed_size as f64),
             unix_permissions: (file.version_made_by >> 8 == MADE_BY_UNIX)
                 .then_some(((file.external_file_attributes >> 16) & 0xFFFF) as u32),
-            date: dos_time_value(file.dos_date_time),
+            date: file.date(),
             content: if stored_empty {
                 Ok(Vec::new())
             } else {
                 content_of(compression, file.compressed_content, file.uncompressed_size)
             },
+            raw,
         });
     }
     Ok(loaded)
@@ -634,7 +695,7 @@ mod tests {
     fn load_in_time(bytes: Vec<u8>) -> Result<usize, String> {
         let (sender, receiver) = mpsc::channel();
         thread::spawn(move || {
-            let _ = sender.send(load(&bytes).map(|entries| entries.len()));
+            let _ = sender.send(load(&bytes, false).map(|entries| entries.len()));
         });
         receiver
             .recv_timeout(Duration::from_secs(5))

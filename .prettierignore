@@ -48,3 +48,7 @@ tools/*-diff/reference/
 crates/fixtures/
 crates/*/evidence/
 crates/vendor/
+tools/*-diff/evidence/
+# answers the TypeScript gave, written by the gates' generators (tools/epub-diff/*-fixture.ts,
+# gen-pure-tests.ts) and read back by the crates' tests
+crates/*/tests/*.json

@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 00:00:00 +0900
+Subject: [PATCH 33/33] feat(memo): 메모 날짜의 시간대를 바깥에서 줄 수 있다
+
+메모 명령의 FILETIME(UTC)에서 만드는 메모 날짜는 한글 SaveAs처럼 현지 시각에
+리터럴 Z를 붙여 적는다. 현지 시각은 chrono::Local이고, wasm-bindgen 빌드에서는
+브라우저의 시간대지만 WASI 빌드에는 시간대가 없어 UTC가 된다. 그래서 같은 메모가
+한국 사용자에게 9시간 이르게 읽혔다.
+
+memo_time::set_local_offset(fn(unix_seconds) -> Option<i32>)으로 그 시각의 UTC
+오프셋(동쪽으로 초)을 줄 수 있다. 처음 건 것이 남는다. 걸지 않거나 None을 주면
+chrono::Local을 그대로 쓴다. wasm-bindgen 빌드와 네이티브는 걸지 않으므로 결과가
+같다.
+---
+diff --git a/src/model/memo_time.rs b/src/model/memo_time.rs
+index e8e68c7e8..e8febf9b2 100644
+--- a/src/model/memo_time.rs
++++ b/src/model/memo_time.rs
+@@ -1,5 +1,20 @@
+ //! HWP 메모 명령은 UTC FILETIME을 하위·상위 DWORD 순으로 저장한다.
+-use chrono::{DateTime, Local, Utc};
++use std::sync::OnceLock;
++
++use chrono::{DateTime, FixedOffset, Local, Utc};
++
++/// The zone a memo date is written in: seconds east of UTC at a Unix time, or
++/// `None` for `chrono::Local`.
++pub type LocalOffset = fn(unix_seconds: i64) -> Option<i32>;
++
++static LOCAL_OFFSET: OnceLock<LocalOffset> = OnceLock::new();
++
++/// For a build whose `chrono::Local` is not the user's zone (a WASI build has
++/// none and reads UTC): the user's offset, asked once per memo date. The first
++/// call wins; unset, memo dates follow `chrono::Local` as before.
++pub fn set_local_offset(offset: LocalOffset) -> Result<(), LocalOffset> {
++    LOCAL_OFFSET.set(offset)
++}
+ 
+ const UNIX_EPOCH_TICKS: i64 = 116_444_736_000_000_000;
+ const TICKS_PER_SECOND: i64 = 10_000_000;
+@@ -25,9 +40,15 @@ pub(crate) fn date(command: &str) -> Option<String> {
+         (unix_ticks.rem_euclid(TICKS_PER_SECOND) * 100) as u32,
+     )?;
+     // 한글 SaveAs는 현지 시각에 리터럴 Z를 붙인다.
+-    Some(
+-        date.with_timezone(&Local)
++    let zone = LOCAL_OFFSET
++        .get()
++        .and_then(|offset| offset(date.timestamp()))
++        .and_then(FixedOffset::east_opt);
++    Some(match zone {
++        Some(zone) => date.with_timezone(&zone).format("%Y-%m-%dT%H:%M:%SZ").to_string(),
++        None => date
++            .with_timezone(&Local)
+             .format("%Y-%m-%dT%H:%M:%SZ")
+             .to_string(),
+-    )
++    })
+ }
+diff --git a/src/model/mod.rs b/src/model/mod.rs
+index b00dfcd20..42442f2f4 100644
+--- a/src/model/mod.rs
++++ b/src/model/mod.rs
+@@ -106,4 +106,4 @@ mod tests {
+     }
+ }
+ 
+-pub(crate) mod memo_time;
++pub mod memo_time;

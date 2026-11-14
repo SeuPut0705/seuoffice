@@ -26,10 +26,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 mod calls;
+mod epub;
+mod epub_pure;
+mod epub_xml;
+mod file_parse;
+mod file_parse_hwp;
+mod file_parse_legacy;
 mod invoke;
 mod odt;
 mod package;
 mod props;
+mod saxes_calls;
 
 const PROTOCOL_VERSION: u8 = 1;
 
@@ -56,6 +63,22 @@ enum Command {
     /// Every blob: a part as UTF-8. Reply blob `i`: part `i` as
     /// `normalizeOoxmlXml` rewrites it, as UTF-8.
     NormalizeOoxml,
+    /// Attachment readers. Blob 0 holds the input file where the reader takes bytes.
+    FileParse {
+        function: String,
+        #[serde(default)]
+        text: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
+    /// EPUB engine functions, called the same way.
+    EpubCall {
+        function: String,
+        #[serde(default)]
+        text: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Blob 0: one model value as JSON. Reply blob 0: typed value serialized again.
     ModelRoundTrip { type_name: String },
     /// Blob 0: a docx (blobs 1..: what `resolved` names). Reply blob 0: the
@@ -600,15 +623,14 @@ fn invoke_command(
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
     // the product's calls: a model value read as the TypeScript reads it (wire.rs)
-    // `pptx.<name>` and `odt.<name>`: the other engines' exports besides their commands
-    let result = jscompat::reading_leniently(|| {
-        if let Some(name) = function.strip_prefix("pptx.") {
-            invoke::pptx_table::invoke(&mut env, name, args)
-        } else if let Some(name) = function.strip_prefix("odt.") {
-            odt::invoke(name, &args.resolved()?)
-        } else {
-            invoke::table::invoke(&mut env, function, args)
-        }
+    // `fileParse.<name>`, `pptx.<name>` and `odt.<name>`: the other engines' exports besides their commands
+    let result = jscompat::reading_leniently(|| match function.split_once('.') {
+        Some(("fileParse", name)) => args
+            .resolved()
+            .and_then(|values| invoke::file_parse::invoke(&mut env, name, &values)),
+        Some(("pptx", name)) => invoke::pptx_table::invoke(&mut env, name, args),
+        Some(("odt", name)) => odt::invoke(name, &args.resolved()?),
+        _ => invoke::table::invoke(&mut env, function, args),
     });
     let warnings = docx_engine::warnings::take();
     let value = result?;
@@ -699,6 +721,22 @@ fn respond(input: &[u8]) -> Vec<u8> {
                 (Command::PackageParts { parts }, _) => json(&Reply::Package {
                     package: package::from_parts(parts),
                 }),
+                (
+                    Command::FileParse {
+                        function,
+                        text,
+                        args,
+                    },
+                    blob,
+                ) => file_parse::run(&function, &text, blob.copied().unwrap_or_default(), &args),
+                (
+                    Command::EpubCall {
+                        function,
+                        text,
+                        args,
+                    },
+                    blob,
+                ) => epub::run(&function, &text, blob.copied().unwrap_or_default(), &args),
                 (Command::NormalizeOoxml, _) => normalize(&frame.blobs, &mut reply_blobs),
                 (Command::ModelRoundTrip { type_name }, Some(bytes)) => {
                     match std::str::from_utf8(bytes)

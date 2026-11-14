@@ -34,7 +34,7 @@
   # table of node-fs) against the TypeScript on the same machine. The Linux job compares everything else.
   main-windows:
     needs: quick
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.odt_faults && !inputs.rhwp_core }}
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -45,6 +45,22 @@
         shell: bash
         run: |
           if [ -f crates/main-core/Cargo.toml ]; then echo "main=true" >> "$GITHUB_OUTPUT"; else echo "main=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.main == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.main == 'true'
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.has.outputs.main == 'true' && steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
 
       - name: Rust toolchain
         if: steps.has.outputs.main == 'true'
@@ -57,12 +73,6 @@
         if: steps.has.outputs.main == 'true'
         working-directory: crates
         run: cargo test -p main-core --lib libuv_table
-
-      - uses: actions/setup-node@v4
-        if: steps.has.outputs.main == 'true'
-        with:
-          node-version: 22
-          cache: npm
 
       - name: Install
         if: steps.has.outputs.main == 'true'
@@ -95,7 +105,7 @@
   # functions, which must then differ.
   main-faults:
     needs: quick
-    if: ${{ inputs.main_faults }}
+    if: ${{ inputs.main_faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -114,6 +124,15 @@
         with:
           node-version: 22
           cache: npm
+
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
 
       - name: Install
         run: npm ci

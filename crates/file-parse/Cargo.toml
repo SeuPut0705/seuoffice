@@ -1,0 +1,68 @@
+[package]
+name = "file-parse"
+description = "Document attachment text readers, compared with @seuoffice/file-parse"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+redaction = []
+docx = []
+pptx = ["redaction"]
+html = ["redaction", "dep:seu-host"]
+xlsx = ["redaction"]
+compound-gate = []
+hidden-content = ["xlsx", "pptx"]
+ppt = ["compound-gate"]
+doc = ["compound-gate", "dep:saxes", "dep:flate2"]
+# the rhwp engine, as the tree `node tools/build-rhwp-core.mjs --source-only` prepares
+hwp = ["compound-gate", "dep:rhwp", "dep:seu-host"]
+epub = ["dep:epub-engine"]
+# parseFileToText: every reader, the host's included
+dispatch = ["docx", "pptx", "xlsx", "html", "ppt", "doc", "hwp", "epub", "hidden-content"]
+
+[dependencies]
+encoding_rs.workspace = true
+jscompat.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+seu-host = { workspace = true, optional = true }
+saxes = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+# a path dependency is resolved even while its feature is off: the tree must exist for any cargo command
+rhwp = { path = "../.rhwp-source/v0.9.0", optional = true, default-features = false, features = ["wasm-api"] }
+epub-engine = { workspace = true, optional = true, features = ["book"] }
+
+[[package.metadata.notices.ported]]
+name = "word-extractor"
+version = "1.0.4"
+license = "MIT"
+npm = "word-extractor"
+
+[[package.metadata.notices.ported]]
+name = "ppt-to-text"
+version = "1.0.1"
+license = "Apache-2.0"
+npm = "ppt-to-text"
+
+[[package.metadata.notices.ported]]
+name = "cfb"
+version = "1.2.2"
+license = "Apache-2.0"
+npm = "cfb"
+
+[[package.metadata.notices.ported]]
+name = "yauzl"
+version = "2.10.0"
+license = "MIT"
+npm = "yauzl"
+
+[[package.metadata.notices.ported]]
+name = "fast-xml-parser"
+version = "5.10.1"
+license = "MIT"
+npm = "fast-xml-parser"

@@ -19,6 +19,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
+pub mod file_parse;
 pub mod host;
 pub mod pptx;
 pub mod pptx_routes;

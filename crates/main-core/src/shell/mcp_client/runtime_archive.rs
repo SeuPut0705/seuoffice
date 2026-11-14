@@ -327,7 +327,7 @@ fn extract_zip(file: &str, root: &str, dest: &str) -> Step {
     // plain object, so a name that is an array index sorts first), and the
     // replaced entry is never inflated
     let mut files: JsObject<ooxml_pkg::jszip::LoadedEntry> = JsObject::new();
-    for entry in ooxml_pkg::jszip::load(&bytes).map_err(Fail::Other)? {
+    for entry in ooxml_pkg::jszip::load(&bytes, false).map_err(Fail::Other)? {
         files.set(entry.name.clone(), entry);
     }
     for (_, entry) in files.entries() {

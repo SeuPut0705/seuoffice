@@ -11,10 +11,13 @@
  * are, with their placeholders; an element whose text was all matched stays
  * as an empty element, so an `id` on it is kept.
  */
-import type { ChapterBlock, XmlElement, XmlNode } from '@seuoffice/epub-engine'
+import type { ChapterBlock } from '@seuoffice/epub-engine'
 import { findInText } from '@seuoffice/ui'
 import { normalizeQuery } from '../reader/book-search'
 import { OPAQUE_ELEMENTS, escapeNotationText } from './engine'
+
+type XmlElement = ChapterBlock['element']
+type XmlNode = XmlElement['children'][number]
 
 /** A plain-text range `[start, end)` of a block and what it becomes. */
 export interface PlainReplacement {

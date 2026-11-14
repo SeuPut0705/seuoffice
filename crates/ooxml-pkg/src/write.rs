@@ -228,6 +228,166 @@ pub fn generate_storing(
     Ok(out)
 }
 
+/// `Date.UTC(year, month, day, hours, minutes, seconds)` for a year of 100
+/// or more: a field out of range carries into the next one.
+pub fn utc_time_value(
+    year: i64,
+    month: i64,
+    day: i64,
+    hours: i64,
+    minutes: i64,
+    seconds: i64,
+) -> f64 {
+    let years = year + month.div_euclid(12);
+    let month_of_year = month.rem_euclid(12) + 1;
+    // days_from_civil of Howard Hinnant's date algorithms
+    let y = years - i64::from(month_of_year <= 2);
+    let era = y.div_euclid(400);
+    let year_of_era = y.rem_euclid(400);
+    let shifted_month = (month_of_year + 9) % 12;
+    let day_of_year = (153 * shifted_month + 2) / 5;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    let first = era * 146_097 + day_of_era - 719_468;
+    let days = first + day - 1;
+    (days * 86_400_000 + hours * 3_600_000 + minutes * 60_000 + seconds * 1000) as f64
+}
+
+/// What one entry of [`generate_records`] holds.
+pub enum RecordData<'a> {
+    /// The content, stored or deflated; an empty content is always stored.
+    Content { bytes: &'a [u8], deflate: bool },
+    /// The compressed data of a loaded entry, which JSZip copies through when
+    /// the compression method stays the same.
+    Copied(&'a crate::jszip::CompressedData),
+}
+
+/// One entry as `out.file(name, data, { date, comment, dosPermissions, ... })`
+/// adds it to a zip.
+pub struct Record<'a> {
+    pub name: &'a str,
+    /// `file.comment || ""`
+    pub comment: &'a str,
+    pub dir: bool,
+    /// A `Date` as its time value.
+    pub date: f64,
+    pub dos_permissions: Option<i64>,
+    pub data: RecordData<'a>,
+}
+
+/// The zip JSZip 3.10.1 writes from these entries with `generateAsync({
+/// type: 'uint8array', compression: 'DEFLATE' })` and the default options
+/// (platform DOS, no data descriptors, no zip comment); see [`generate`] for
+/// the deflate stream.
+pub fn generate_records(records: &[Record<'_>]) -> io::Result<Vec<u8>> {
+    let mut out = Vec::new();
+    let mut directory = Vec::new();
+    for record in records {
+        let name = record.name.as_bytes();
+        let comment = record.comment.as_bytes();
+        let (dos_time, dos_date) = dos_time_and_date(record.date);
+        let deflated;
+        let (method, crc, compressed_size, uncompressed_size, stored): (u16, u64, u64, u64, &[u8]) =
+            match &record.data {
+                RecordData::Copied(data) if !record.dir => (
+                    if data.stored { STORE } else { DEFLATE },
+                    data.crc32 as u64,
+                    data.compressed_size as u64,
+                    data.uncompressed_size as u64,
+                    &data.bytes,
+                ),
+                RecordData::Content {
+                    bytes,
+                    deflate: wanted,
+                } => {
+                    let bytes: &[u8] = if record.dir { &[] } else { bytes };
+                    if bytes.is_empty() || !wanted {
+                        let length = bytes.len() as u64;
+                        (STORE, u64::from(crc32(bytes)), length, length, bytes)
+                    } else {
+                        deflated = deflate(bytes)?;
+                        (
+                            DEFLATE,
+                            u64::from(crc32(bytes)),
+                            deflated.len() as u64,
+                            bytes.len() as u64,
+                            &deflated,
+                        )
+                    }
+                }
+                RecordData::Copied(_) => (STORE, 0, 0, 0, &[]),
+            };
+        let utf8_name = !record.name.is_ascii();
+        let utf8_comment = !record.comment.is_ascii();
+        let mut extra = Vec::new();
+        for (id, bytes, used) in [(b"up", name, utf8_name), (b"uc", comment, utf8_comment)] {
+            if used {
+                extra.extend_from_slice(id);
+                put16(&mut extra, 1 + 4 + bytes.len() as u64);
+                extra.push(1);
+                put32(&mut extra, u64::from(crc32(bytes)));
+                extra.extend_from_slice(bytes);
+            }
+        }
+
+        let mut header = Vec::new();
+        put16(&mut header, u64::from(VERSION_NEEDED));
+        put16(
+            &mut header,
+            u64::from(if utf8_name || utf8_comment {
+                UTF8_NAME
+            } else {
+                0
+            }),
+        );
+        put16(&mut header, u64::from(method));
+        put16(&mut header, u64::from(dos_time));
+        put16(&mut header, u64::from(dos_date));
+        put32(&mut header, crc);
+        put32(&mut header, compressed_size);
+        put32(&mut header, uncompressed_size);
+        put16(&mut header, name.len() as u64);
+        put16(&mut header, extra.len() as u64);
+
+        let offset = out.len() as u64;
+        out.extend_from_slice(LOCAL_FILE_HEADER);
+        out.extend_from_slice(&header);
+        out.extend_from_slice(name);
+        out.extend_from_slice(&extra);
+        out.extend_from_slice(stored);
+
+        directory.extend_from_slice(CENTRAL_FILE_HEADER);
+        put16(&mut directory, u64::from(VERSION_MADE_BY));
+        directory.extend_from_slice(&header);
+        put16(&mut directory, comment.len() as u64);
+        // disk number start, internal attributes
+        put16(&mut directory, 0);
+        put16(&mut directory, 0);
+        let dos = (record.dos_permissions.unwrap_or(0) & 0x3F) as u64;
+        put32(
+            &mut directory,
+            u64::from(if record.dir { DOS_DIRECTORY } else { 0 }) | dos,
+        );
+        put32(&mut directory, offset);
+        directory.extend_from_slice(name);
+        directory.extend_from_slice(&extra);
+        directory.extend_from_slice(comment);
+    }
+
+    let entries = records.len() as u64;
+    let directory_offset = out.len() as u64;
+    let directory_length = directory.len() as u64;
+    out.extend_from_slice(&directory);
+    out.extend_from_slice(CENTRAL_DIRECTORY_END);
+    put16(&mut out, 0);
+    put16(&mut out, 0);
+    put16(&mut out, entries);
+    put16(&mut out, entries);
+    put32(&mut out, directory_length);
+    put32(&mut out, directory_offset);
+    put16(&mut out, 0);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
