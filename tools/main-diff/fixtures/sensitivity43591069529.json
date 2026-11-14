@@ -1,0 +1,113 @@
+{
+  "provenance": {
+    "runId": "43591069529",
+    "attempt": 1,
+    "definitionSha": "7d30359f16efc9a117963ae38787dfdbe3e88a39",
+    "productSha": "375b08bd0e1f7e8432e6514468cc9d25be01b100",
+    "artifactId": 14112519044,
+    "archiveSha256": "82c5405db05cb57d4dec94de2b07290bae038abbadaa2936c59f66a204e876e7"
+  },
+  "inventory": {
+    "planSha256": "76042ec4e319fd86aa81b3d98ef479327d7ecbfcaf23248b527d945c775a0a7a",
+    "catalog": {
+      "path": "tools/main-diff/faults/b5-mcp.json",
+      "sha256": "a45058cef79809d51c1eda0116ccb3086bd05df0838f4757e820db0c4fb8cc25",
+      "length": 810,
+      "originalShard": 3,
+      "faultShard": "203/812",
+      "selected": [
+        {
+          "index": 0,
+          "sha256": "3a0c319569d7760285e69a1cc2793585dc62fc6d4592794d45324240b4729cf0",
+          "name": "json schema writes a number for a string",
+          "file": "main-core/src/packages/zod.rs",
+          "find": "Kind::String => json.set(\"type\", text(\"string\")),",
+          "replace": "Kind::String => json.set(\"type\", text(\"number\")),",
+          "fn": ["zod.toJsonSchema"]
+        },
+        {
+          "index": 203,
+          "sha256": "0544ee04bf0d2ce6697e4a18b9a8ae67f47f3113c07dc6aa9e050958f720568d",
+          "name": "extract a global pax header is a file",
+          "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+          "find": "if matches!(kind, b'x' | b'L' | b'K' | b'g') {",
+          "replace": "if matches!(kind, b'x' | b'L' | b'K') {",
+          "fn": ["runtime-archive.extractRuntimeArchive"]
+        }
+      ]
+    },
+    "functions": [
+      {
+        "group": "b5-mcp",
+        "name": "zod.toJsonSchema",
+        "checks": 118,
+        "single": false
+      },
+      {
+        "group": "b5-mcp",
+        "name": "runtime-archive.extractRuntimeArchive",
+        "checks": 82,
+        "single": false
+      }
+    ],
+    "cases": [
+      {
+        "index": 80,
+        "sha256": "314ba1aff18ace68210df79b4d36c5cf700ce297cf69ac1fa1861924b25d0209"
+      },
+      {
+        "index": 81,
+        "sha256": "1fc1aa2e6d0f4aea6efe039790796c7016dd2221e9c19d0a0d3c88f2eebf610a"
+      }
+    ],
+    "sources": {
+      "crates/main-core/src/packages/zod.rs": "c26936c187d4afd3f8560f0bc6f88fb98da6441bb313e38894f9c69aea875e1c",
+      "crates/main-core/src/shell/mcp_client/runtime_archive.rs": "8b3c8927ebacc07d68b66dbfaa92d713e0afbaaa82cebb55ec991d032172a24e",
+      "tools/main-diff/faults.mjs": "5ee0052330c9b76197beb4a4056a1bffdfc2c063f98440f608ebca94644adc5b"
+    }
+  },
+  "rows": [
+    {
+      "faults": "tools/main-diff/faults/b5-mcp.json",
+      "name": "json schema writes a number for a string",
+      "file": "main-core/src/packages/zod.rs",
+      "fn": ["zod.toJsonSchema"],
+      "verdict": "CAUGHT",
+      "detail": "DIFF zod.toJsonSchema case 1 | DIFF zod.toJsonSchema case 2 | DIFF zod.toJsonSchema case 3 | 118 checks, 52 equal, 66 differences, 0 listed, 1 functions"
+    },
+    {
+      "faults": "tools/main-diff/faults/b5-mcp.json",
+      "name": "extract a global pax header is a file",
+      "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+      "fn": ["runtime-archive.extractRuntimeArchive"],
+      "verdict": "CAUGHT",
+      "detail": "DIFF runtime-archive.extractRuntimeArchive case 80 (a global pax header preserves the pending local path for the next file) | DIFF runtime-archive.extractRuntimeArchive case 81 (a global pax header name is ignored before validating extracted file paths) |   rust:       {\"answer\":\"{\\\"value\\\":{\\\"kind\\\":\\\"extract-failed\\\",\\\"name\\\":\\\"RuntimeArchiveError\\\",\\\"message\\\":\\\"entry leaves the archive: ../ignored-global\\\"}}\",\"files\":{\"archive.bin\":\"file 644 hex:1f8b0800000000000003edd4c10ec2200c0660ce3e052f305660eac9874141621c60b01a1fdf384d4cf0e0656326f6bb94706993e6af10edc1c7949d6d7c9fb6a667e303005875dd5001a0ac005abfdf8f7f2961a919f713ccf2e172469319408d5e3f48adf92e85e0226e9efbe7c1a1b106cd62eed148053159d75c656bf6e8f2eb0408bce1983dbee75f15f9575a4ac6ab64f2cff37f7427e4c3f27991ffb92723841032a53bcbb0fdda000c0000\",\"out\":\"dir 755\"}} | 82 checks, 80 equal, 2 differences, 0 listed, 1 functions"
+    }
+  ],
+  "report": {
+    "report": {
+      "runtime-archive.extractRuntimeArchive": {
+        "checks": 82,
+        "equal": 80,
+        "distinct": 82,
+        "listed": 0
+      }
+    },
+    "differences": [
+      {
+        "fn": "runtime-archive.extractRuntimeArchive",
+        "case": 80,
+        "note": "a global pax header preserves the pending local path for the next file",
+        "typescript": "{\"answer\":\"{\\\"value\\\":{\\\"ok\\\":true}}\",\"files\":{\"archive.bin\":\"file 644 hex:1f8b0800000000000003ed953d0e83300c4633f714b9405b87a43031d3b157702102a99020702b8e5f11a97f2c4ca148e42d8eb2d852fcbe5c70386b2c74c7fc0100102be52a004c2b80149fb3bb4f6229191f3ccef4e6de13760c60895e2b243af116a94a8d2df4fe218e37ddd28106dafd7bb0c02264b5bd62ed3702e6fd97bffe0b8862c578e96ba06fb6ee7fc273db34da505aba55e08d262c903024c01678e57e5fd9ce05bf871eb3fe0b35f17f84f1459cdcb8ffe37fcf736b481b1f4f1f0804028195f2048d4fa52500100000\",\"out\":\"dir 755\",\"out/kept.txt\":\"file 644 \\\"kept content\\\"\"}}",
+        "rust": "{\"answer\":\"{\\\"value\\\":{\\\"ok\\\":true}}\",\"files\":{\"archive.bin\":\"file 644 hex:1f8b0800000000000003ed953d0e83300c4633f714b9405b87a43031d3b157702102a99020702b8e5f11a97f2c4ca148e42d8eb2d852fcbe5c70386b2c74c7fc0100102be52a004c2b80149fb3bb4f6229191f3ccef4e6de13760c60895e2b243af116a94a8d2df4fe218e37ddd28106dafd7bb0c02264b5bd62ed3702e6fd97bffe0b8862c578e96ba06fb6ee7fc273db34da505aba55e08d262c903024c01678e57e5fd9ce05bf871eb3fe0b35f17f84f1459cdcb8ffe37fcf736b481b1f4f1f0804028195f2048d4fa52500100000\",\"out\":\"dir 755\",\"out/short.txt\":\"file 644 \\\"kept content\\\"\"}}"
+      },
+      {
+        "fn": "runtime-archive.extractRuntimeArchive",
+        "case": 81,
+        "note": "a global pax header name is ignored before validating extracted file paths",
+        "typescript": "{\"answer\":\"{\\\"value\\\":{\\\"ok\\\":true}}\",\"files\":{\"archive.bin\":\"file 644 hex:1f8b0800000000000003edd4c10ec2200c0660ce3e052f305660eac9874141621c60b01a1fdf384d4cf0e0656326f6bb94706993e6af10edc1c7949d6d7c9fb6a667e303005875dd5001a0ac005abfdf8f7f2961a919f713ccf2e172469319408d5e3f48adf92e85e0226e9efbe7c1a1b106cd62eed148053159d75c656bf6e8f2eb0408bce1983dbee75f15f9575a4ac6ab64f2cff37f7427e4c3f27991ffb92723841032a53bcbb0fdda000c0000\",\"out\":\"dir 755\",\"out/after-global.txt\":\"file 644 \\\"kept after global metadata\\\"\"}}",
+        "rust": "{\"answer\":\"{\\\"value\\\":{\\\"kind\\\":\\\"extract-failed\\\",\\\"name\\\":\\\"RuntimeArchiveError\\\",\\\"message\\\":\\\"entry leaves the archive: ../ignored-global\\\"}}\",\"files\":{\"archive.bin\":\"file 644 hex:1f8b0800000000000003edd4c10ec2200c0660ce3e052f305660eac9874141621c60b01a1fdf384d4cf0e0656326f6bb94706993e6af10edc1c7949d6d7c9fb6a667e303005875dd5001a0ac005abfdf8f7f2961a919f713ccf2e172469319408d5e3f48adf92e85e0226e9efbe7c1a1b106cd62eed148053159d75c656bf6e8f2eb0408bce1983dbee75f15f9575a4ac6ab64f2cff37f7427e4c3f27991ffb92723841032a53bcbb0fdda000c0000\",\"out\":\"dir 755\"}}"
+      }
+    ]
+  }
+}

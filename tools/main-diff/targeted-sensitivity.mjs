@@ -136,7 +136,15 @@ export function auditMutant(inventory, rows, report) {
         `(?:^| \\| )DIFF ${fault.fn[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} case [0-9]+(?: |$)`,
       ),
     )
-    assert.doesNotMatch(row.detail, /FLOOR|STALE|Error|no such group/)
+    const diagnosticText = row.detail.replace(/"(?:\\[\s\S]|[^"\\])*"/g, '""')
+    assert.doesNotMatch(
+      diagnosticText,
+      /(?:^| \| )(?:FLOOR(?: |:)|STALE(?: |:)|(?:[A-Za-z_$][A-Za-z0-9_$]*Error|Error)(?:\s+\[[^\]]+\])?(?: |:)|no such group(?: |:))/,
+    )
+    assert.doesNotMatch(
+      diagnosticText,
+      /(?:^| \| )\S+: \d+ checks, \d+ differences, \d+ listed, \d+ distinct {2}FLOOR: fewer than two distinct answers/,
+    )
   }
   assert.deepEqual(Object.keys(report.report), [target])
   const r = report.report[target]

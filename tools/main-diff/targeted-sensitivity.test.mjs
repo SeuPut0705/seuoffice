@@ -233,3 +233,39 @@ test('changed mutation source or fault runner is not restored', () => {
   assert.throws(() => verifySources(original, { ...original, target: 'changed' }))
   assert.throws(() => verifySources(original, { ...original, runner: 'changed' }))
 })
+
+test('actual hosted consumer error values are not fatal diagnostics', () => {
+  const evidence = JSON.parse(
+    readFileSync(new URL('./fixtures/sensitivity43591069529.json', import.meta.url), 'utf8'),
+  )
+  const proof = auditMutant(evidence.inventory, evidence.rows, evidence.report)
+  assert.deepEqual(
+    proof.differences.map((difference) => difference.case),
+    [80, 81],
+  )
+  assert.equal(proof.mutant.verdict, 'CAUGHT')
+})
+
+test('positive control differences cannot hide an actual function FLOOR summary', () => {
+  const inv = inventory()
+  const r = rows(inv)
+  r[0].detail += ` | ${control}: 118 checks, 1 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers`
+  assert.throws(() => auditMutant(inv, r, mutant()))
+})
+
+test('fatal JS diagnostics are rejected without treating quoted consumer data as diagnostics', () => {
+  const inv = inventory()
+  for (const diagnostic of [
+    'TypeError: failed',
+    'RangeError: failed',
+    'AssertionError [ERR_ASSERTION]: failed',
+  ]) {
+    const r = rows(inv)
+    r[0].detail += ` | ${diagnostic}`
+    assert.throws(() => auditMutant(inv, r, mutant()))
+  }
+  const r = rows(inv)
+  r[0].detail +=
+    ' |   rust: {"name":"RuntimeArchiveError","message":"value | TypeError: still data"}'
+  assert.equal(auditMutant(inv, r, mutant()).positiveControl.verdict, 'CAUGHT')
+})

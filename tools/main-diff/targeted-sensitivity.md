@@ -30,3 +30,11 @@
 이 모드를 고르면 `cancel-in-progress=false`이며 일반 quick·다른 엔진·Windows·전체 비교·기존 결함 행렬은 실행하지 않는다. 기존 고정 제품·정의·실행을 취소하거나 그 결과를 새 제품의 증거로 바꾸지 않는다. 같은 정확 제품·범위의 활성 실행이 있는지 먼저 확인하고 한 번만 dispatch한다.
 
 로컬에서는 감사기 단위 회귀와 workflow 선택·실패 전파를 확인한다. Rust 빌드·비교·변이 증명은 hosted 러너에서만 수행한다.
+
+## 실패 실행의 원본 artifact 재감사
+
+`43591069529`는 정상200사례와 원본0·203 실행 뒤 마지막 감사기가 JSON 값의 `RuntimeArchiveError`를 fatal 진단으로 읽어 실패했다. 원본 실행의 `failure`는 그대로 둔다. fatal 검사는 비교 출력의 진단 segment 시작점에만 적용하고 소비자 값의 오류 이름은 typed JSON 검사로 판정한다.
+
+`sensitivity-replay.mjs`는 정확 원본 ZIP 해시, 정의·제품·run·시도, 필수 producer step 성공, 알려진 감사 실패 로그와 새 감사기 정의 SHA를 `main-sensitivity-replay/v1`에 결속한다. 원본 artifact의 baseline identity와 실제80·81 사례 차이를 다시 감사한다. 미검출·누락·다른 오류를 허용하지 않는다.
+
+복구된 소스 파일 자체와 최종 WASM hash는 원본 artifact에 없다. 소스 복구는 원본 감사기가 복구 guard를 지난 뒤 알려진 typed assertion에서 실패한 코드·로그 경로로만 결속한다. 이 한계를 receipt에 기록하고 없는 WASM hash를 만들지 않는다. 이 재감사도 전체 baseline이나 전체 결함 성공이 아니다.
